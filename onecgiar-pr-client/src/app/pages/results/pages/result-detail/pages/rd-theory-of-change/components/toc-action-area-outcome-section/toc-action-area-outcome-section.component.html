@@ -9,7 +9,7 @@
 </app-alert-status>
 
 <app-toc-initiative-aao [initiative]="result_toc_result" [indexList]="0"
-    [editable]="(this.api.rolesSE.validateInitiative(result_toc_result[0]?.initiative_id) || this.api.rolesSE.isAdmin)">
+    [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.result_toc_results[0]?.initiative_id) || this.api.rolesSE.isAdmin)">
 </app-toc-initiative-aao>
 
 <div *ngIf="contributors_result_toc_result?.length">

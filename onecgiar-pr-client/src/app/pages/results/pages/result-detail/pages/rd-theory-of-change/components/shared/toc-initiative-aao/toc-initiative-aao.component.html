@@ -1,5 +1,5 @@
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
-    <app-pr-field-header label="{{initiative[0]?.official_code}} {{initiative[0]?.short_name}}"
+    <app-pr-field-header label="{{initiative?.result_toc_results?.[0]?.official_code}} {{initiative?.result_toc_results?.[0]?.short_name}}"
         [required]="true"></app-pr-field-header>
 
     <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"

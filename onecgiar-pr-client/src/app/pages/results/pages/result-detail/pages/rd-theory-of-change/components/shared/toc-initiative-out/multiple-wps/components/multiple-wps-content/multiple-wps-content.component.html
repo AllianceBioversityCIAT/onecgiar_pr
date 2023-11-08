@@ -1,37 +1,37 @@
-<div class="flex-no-wrap" *ngIf="this.initiative?.planned_result !== null && this.showMultipleWPsContent">
-  <app-pr-select *ngIf="this.initiative?.planned_result && resultLevelId == 1" [options]="this.outputList"
-    label="Output" optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!this.editable"
-    [editable]="editable" placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
+<div class="flex-no-wrap" *ngIf="initiative?.planned_result !== null && showMultipleWPsContent">
+  <app-pr-select *ngIf="initiative?.planned_result && resultLevelId === 1" 
+    [options]="outputList" label="Output" optionLabel="extraInformation" 
+    optionValue="toc_result_id" [disabled]="!editable" [editable]="editable" 
+    placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
     (selectOptionEvent)="getIndicator()">
   </app-pr-select>
 
-  <div style="max-width: 250px;"
-    *ngIf="this.showOutcomeLevel && (resultLevelId == 1 ? !this.initiative?.planned_result : true)">
-    <app-pr-select [options]="this.tocInitiativeOutcomeListsSE.outcomeLevelList|outcomeLevelFilter:2"
+  <div style="max-width: 250px;" *ngIf="showOutcomeLevel && (resultLevelId === 1 ? !initiative?.planned_result : true)">
+    <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | outcomeLevelFilter:2"
       label="Outcome level" [editable]="editable"
-      [disabled]="(resultLevelId == 1 ? true : !this.initiative?.planned_result == false) || !this.editable"
+      [disabled]="(resultLevelId === 1 ? true : !initiative?.planned_result) || !editable"
       optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="this.indicatorView = false">
+      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
     </app-pr-select>
   </div>
 
-  <app-pr-select *ngIf="(resultLevelId == 1 ? !this.initiative?.planned_result : true) && initiative?.toc_level_id != 3"
-    [options]="this.outcomeList" label="Outcome" [editable]="editable"
-    [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="extraInformation"
+  <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id !== 3"
+    [options]="outcomeList" label="Outcome" [editable]="editable"
+    [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation"
     [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
     [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
   </app-pr-select>
 
-  <app-pr-select *ngIf="(resultLevelId == 1 ? !this.initiative?.planned_result : true) && initiative?.toc_level_id == 3"
-    [options]="this.eoiList" label="Outcome" [editable]="editable"
-    [disabled]="(resultLevelId == 1 ? false : false) || !this.editable" optionLabel="title" optionValue="toc_result_id"
+  <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id === 3"
+    [options]="eoiList" label="Outcome" [editable]="editable"
+    [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="title" optionValue="toc_result_id"
     placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
   </app-pr-select>
 </div>
 
 <hr class="divider-20">
 
-<div *ngIf="this.indicatorView && this.showMultipleWPsContent">
+<div *ngIf="indicatorView && showMultipleWPsContent">
   <app-alert-status description="The selected ToC element does not have any indicators associated with it."
     *ngIf="initiative?.indicators?.length === 0"></app-alert-status>
 

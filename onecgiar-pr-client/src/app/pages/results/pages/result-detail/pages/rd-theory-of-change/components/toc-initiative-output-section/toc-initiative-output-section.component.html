@@ -3,7 +3,7 @@
 
 <div>
     <app-toc-initiative-out [initiative]="result_toc_result"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(this.theoryOfChangesServices?.primarySubmitter) || this.api.rolesSE.isAdmin)"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.result_toc_results[0]?.initiative_id) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>

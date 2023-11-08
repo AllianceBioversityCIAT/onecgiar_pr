@@ -25,10 +25,10 @@ export class TocInitiativeAaoComponent implements OnInit {
     this.getInformatioActionAreaResult();
   }
 
-  async getInformatioActionAreaResult() {
-    await this.api.resultsSE.GET_resultActionArea(this.initiative[0]?.results_id, this.initiative[0]?.initiative_id).subscribe(({ response }) => {
+  getInformatioActionAreaResult() {
+    this.api.resultsSE.GET_resultActionArea(this.initiative?.result_toc_results?.[0]?.results_id, this.initiative?.result_toc_results?.[0]?.initiative_id).subscribe(({ response }) => {
       this.theoryOfChangesServices.resultActionArea.push(response);
-      this.theoryOfChangesServices.resultActionArea[this.indexList].init = this.initiative?.initiative_id;
+      this.theoryOfChangesServices.resultActionArea[this.indexList].init = this.initiative?.result_toc_results?.initiative_id;
       this.theoryOfChangesServices.resultActionArea[this.indexList].consImpactTarget.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
       this.theoryOfChangesServices.resultActionArea[this.indexList].consSdgTargets.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
       this.theoryOfChangesServices.resultActionArea[this.indexList].action.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
@@ -38,14 +38,14 @@ export class TocInitiativeAaoComponent implements OnInit {
   }
 
   GET_fullInitiativeTocByinitId() {
-    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative[0].initiative_id).subscribe(
-      ({ response }) => {
+    this.api.tocApiSE.GET_fullInitiativeTocByinitId(this.initiative?.result_toc_results?.[0].initiative_id).subscribe({
+      next: ({ response }) => {
         this.fullInitiativeToc = response[0]?.toc_id;
         this.vesiondashboard = true;
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 }
