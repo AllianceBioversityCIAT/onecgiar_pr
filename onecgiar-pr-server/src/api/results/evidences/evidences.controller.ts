@@ -44,8 +44,6 @@ export class EvidencesController {
       user,
     );
 
-    console.log(files?.length);
-
     throw new HttpException({ message, response }, status);
   }
 

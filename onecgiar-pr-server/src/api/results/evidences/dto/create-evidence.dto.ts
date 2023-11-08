@@ -15,6 +15,7 @@ export interface EvidencesCreateInterface {
   poverty_related?: boolean;
   is_sharepoint?: number;
   fileUuid?: string;
+  is_public_file?: number;
 }
 
 export class JsonData {}

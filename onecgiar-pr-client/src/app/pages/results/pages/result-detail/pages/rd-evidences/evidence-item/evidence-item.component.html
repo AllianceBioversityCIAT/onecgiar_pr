@@ -30,6 +30,12 @@
 
             <input type="file" (change)="onFileSelected($event)">
 
+            <div class="check-box-information">
+                <app-pr-checkbox label="This is a public file." [(ngModel)]="this.evidence.is_public_file">
+                </app-pr-checkbox>
+                <div class="information" [innerHTML]="this.sd"></div>
+            </div>
+
         </ng-template>
 
         <app-pr-field-header label="Please indicate for which Impact Area tags this evidence is related to"

@@ -21,4 +21,5 @@ export interface EvidencesCreateInterface {
   is_sharepoint?: boolean;
   file?: File;
   fileUuid?: string;
+  is_public_file?: boolean;
 }

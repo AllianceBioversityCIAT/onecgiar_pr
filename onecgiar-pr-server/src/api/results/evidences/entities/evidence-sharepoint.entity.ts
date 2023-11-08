@@ -23,6 +23,8 @@ export class EvidenceSharepoint extends BaseEntity {
     name: 'document_id',
     type: 'varchar',
     length: 1000,
+    nullable: true,
+    default: null,
   })
   document_id;
 
@@ -30,6 +32,8 @@ export class EvidenceSharepoint extends BaseEntity {
     name: 'file_name',
     type: 'varchar',
     length: 1000,
+    nullable: true,
+    default: null,
   })
   file_name;
 
@@ -37,6 +41,8 @@ export class EvidenceSharepoint extends BaseEntity {
     name: 'folder_path',
     type: 'varchar',
     length: 1000,
+    nullable: true,
+    default: null,
   })
   folder_path;
 

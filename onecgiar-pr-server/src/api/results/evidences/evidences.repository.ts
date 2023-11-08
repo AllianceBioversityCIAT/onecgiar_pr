@@ -8,6 +8,7 @@ import {
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { VERSIONING } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { EvidenceWithEvidenceSharepoint } from './interfaces/evidence-with-evidence-sharepoint.interface';
 
 @Injectable()
 export class EvidencesRepository
@@ -391,7 +392,12 @@ export class EvidencesRepository
   ) {
     const query = `
     select 
-    e.id,
+    es.id,
+    es.document_id,
+    es.file_name,
+    es.folder_path,
+    es.is_public_file,
+    es.evidence_id,
     e.description,
     e.is_active,
     e.creation_date,
@@ -409,6 +415,7 @@ export class EvidencesRepository
     e.result_id,
     e.knowledge_product_related 
     from evidence e 
+    inner join evidence_sharepoint es on e.id = es.evidence_id
     where e.result_id = ?
       and e.is_supplementary = ?
       and e.is_active > 0
@@ -417,11 +424,10 @@ export class EvidencesRepository
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [
-        resultId,
-        is_supplementary,
-        type,
-      ]);
+      const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(
+        query,
+        [resultId, is_supplementary, type],
+      );
       return evidence;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

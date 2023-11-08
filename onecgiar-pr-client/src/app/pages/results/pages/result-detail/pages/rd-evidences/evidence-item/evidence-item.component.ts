@@ -21,6 +21,12 @@ export class EvidenceItemComponent {
     { id: 1, name: 'Upload file' }
   ];
 
+  sd = `
+  <li>You confirm that the SharePoint link is publicly accessible.</li>
+  <li>You confirm that all intellectual property rights related to the document at the SharePoint link have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>
+  <li>You agree to the SharePoint link being displayed on the CGIAR Results Dashboard.</li>
+  `;
+
   onFileSelected(event: any) {
     const selectedFile: File = event.target.files[0];
     if (selectedFile) {

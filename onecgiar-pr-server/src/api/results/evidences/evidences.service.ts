@@ -143,7 +143,7 @@ export class EvidencesService {
           await this.saveSPFileAndSaveInformation(
             files,
             evidence,
-            createEvidenceDto.result_id,
+            createEvidenceDto,
             evidenceSaved.id,
           );
 
@@ -215,37 +215,41 @@ export class EvidencesService {
   async saveSPFileAndSaveInformation(
     files: Express.Multer.File[],
     evidence: EvidencesCreateInterface,
-    currentResultID: number,
+    createEvidenceDto: CreateEvidenceDto,
     currentEvidenceID: number,
   ): Promise<void> {
     await this._sharePointService.getToken();
 
+    let filePath = '';
+    let originalname = '';
+    let file: Express.Multer.File;
+    let fileSaved: any;
     if (files?.length) {
-      const [pathInformation] =
-        await this._evidencesRepository.getResultInformation(currentResultID);
-
-      const file: Express.Multer.File = files.find(
-        (fileItem: Express.Multer.File) =>
-          fileItem.originalname.includes(evidence.fileUuid),
-      );
-      const evidenceSharepoint = new EvidenceSharepoint();
-
-      evidenceSharepoint.folder_path = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
-      evidenceSharepoint.file_name = file.originalname;
-      evidenceSharepoint.is_public_file = 0;
-      evidenceSharepoint.evidence_id = currentEvidenceID;
-
-      const fileSaved = await this._sharePointService.saveFile(
-        file,
-        evidenceSharepoint.folder_path,
+      file = files.find((fileItem: Express.Multer.File) =>
+        fileItem.originalname.includes(evidence.fileUuid),
       );
 
-      console.log(fileSaved?.data?.id);
+      if (file) {
+        const [pathInformation] =
+          await this._evidencesRepository.getResultInformation(
+            createEvidenceDto?.result_id,
+          );
 
-      evidenceSharepoint.document_id = fileSaved?.data?.id ?? 123;
-
-      await this._evidenceSharepointRepository.save(evidenceSharepoint);
+        filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
+        originalname = file.originalname;
+        fileSaved = await this._sharePointService.saveFile(file, filePath);
+      }
     }
+
+    const evidenceSharepoint = new EvidenceSharepoint();
+
+    evidenceSharepoint.folder_path = filePath;
+    evidenceSharepoint.file_name = originalname;
+    evidenceSharepoint.is_public_file = evidence.is_public_file;
+    evidenceSharepoint.evidence_id = currentEvidenceID;
+    evidenceSharepoint.document_id = fileSaved?.data?.id;
+
+    await this._evidenceSharepointRepository.save(evidenceSharepoint);
   }
 
   async saveSPFilesAndSaveInformation(
@@ -306,6 +310,7 @@ export class EvidencesService {
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
+        e.is_public_file = !!e.is_public_file;
       });
 
       supplementary.map((e) => {
