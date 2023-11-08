@@ -57,6 +57,11 @@ interface resultToResultInterfaceToc {
   planned_result?: boolean;
   initiative_id: number;
   indicators?: any[];
+  impactAreasTargets?: any[];
+  sdgTargest?: any[];
+  actionAreaOutcome?: any[];
+  targetsIndicators?: any[];
+  is_sdg_action_impact: boolean;
 }
 
 interface shareResultRequestInterface {

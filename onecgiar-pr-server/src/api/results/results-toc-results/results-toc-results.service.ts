@@ -63,10 +63,6 @@ export class ResultsTocResultsService {
         sdgTargets,
         bodyActionArea,
       } = createResultsTocResultDto;
-      console.log(
-        '🚀 ~ file: results-toc-results.service.ts:66 ~ ResultsTocResultsService ~ createResultsTocResultDto:',
-        createResultsTocResultDto.result_toc_result,
-      );
 
       const initSubmitter = await this._resultByInitiativesRepository.findOne({
         where: { result_id: result_id, initiative_role_id: 1 },

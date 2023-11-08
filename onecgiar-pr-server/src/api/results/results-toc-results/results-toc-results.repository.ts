@@ -1729,10 +1729,12 @@ select *
   ) {
     const { result_toc_result } = ResultTocResultIndicators;
     try {
+      console.clear();
       for (const toc of result_toc_result.result_toc_results) {
+        if (!toc.indicators) return;
+
         for (const itemIndicator of toc.indicators) {
-          console.log("🚀 ~ file: results-toc-results.repository.ts:1734 ~ itemIndicator:", itemIndicator)
-          if (itemIndicator.resultId != null && itemIndicator.resultId != 0) {
+          if (toc?.results_id != null && toc?.results_id != 0) {
             // const result = await this.query(`select *
             //                                 from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
             const rtrExist = await this.query(`
@@ -1753,40 +1755,44 @@ select *
                 debug: true,
               });
             }
-            if (rtrExist != null && rtrExist.length != 0) {
-              console.log('Entra a la validacion');
-              await this.update(
+
+            if (rtrExist) {
+              console.log('Shi');
+
+              const shi = await this.update(
                 { result_toc_result_id: rtrExist[0]?.result_toc_result_id },
                 {
                   // mapping_impact: itemIndicator.isImpactArea,
                   // mapping_sdg: itemIndicator.isSdg,
-                  is_sdg_action_impact: itemIndicator.is_sdg_action_impact,
+                  is_sdg_action_impact: toc?.is_sdg_action_impact,
                 },
               );
-              if (
-                itemIndicator.targetsIndicators != null &&
-                itemIndicator.targetsIndicators.length != 0
-              ) {
+              const ño = await this.findOne({
+                where: {
+                  result_toc_result_id: rtrExist[0]?.result_toc_result_id,
+                },
+              });
+              if (toc?.targetsIndicators[0].targets) {
                 await this.saveInditicatorsContributing(
                   rtrExist[0].result_toc_result_id,
-                  itemIndicator.targetsIndicators,
+                  toc?.targetsIndicators,
                 );
               }
               await this.saveImpact(
                 rtrExist[0].result_toc_result_id,
-                itemIndicator.impactAreasTargets,
-                itemIndicator.resultId,
-                itemIndicator.initiative,
+                toc?.impactAreasTargets,
+                toc?.results_id,
+                toc?.initiative_id,
               );
               await this.saveSdg(
                 rtrExist[0].result_toc_result_id,
-                itemIndicator.sdgTargest,
-                itemIndicator.resultId,
+                toc?.sdgTargest,
+                toc?.results_id,
               );
               await this.saveActionAreaToc(
                 rtrExist[0].result_toc_result_id,
-                itemIndicator.actionAreaOutcome,
-                itemIndicator.resultId,
+                toc?.actionAreaOutcome,
+                toc?.result_toc_result_id,
               );
             }
           }
