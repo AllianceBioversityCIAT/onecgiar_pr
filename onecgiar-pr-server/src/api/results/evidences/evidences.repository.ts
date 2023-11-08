@@ -396,7 +396,7 @@ export class EvidencesRepository
     es.document_id AS sp_document_id,
     es.file_name AS sp_file_name,
     es.folder_path AS sp_folder_path,
-    es.is_public_file AS sp_is_public_file,
+    es.is_public_file,
     es.evidence_id AS sp_evidence_id,
     e.description,
     e.is_active,
