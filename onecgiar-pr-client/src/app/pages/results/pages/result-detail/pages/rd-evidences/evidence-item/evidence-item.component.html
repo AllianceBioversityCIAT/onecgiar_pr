@@ -3,7 +3,8 @@
     <div class="evidence_fields">
 
         <app-pr-radio-button [options]="this.evidencesType" optionLabel="name" optionValue="id"
-            label="Source of the evidence" [(ngModel)]="this.evidence.is_sharepoint">
+            (ngModelChange)="cleanSource($event)" label="Source of the evidence"
+            [(ngModel)]="this.evidence.is_sharepoint">
         </app-pr-radio-button>
 
         <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
@@ -12,23 +13,47 @@
         </div>
 
 
+
+
+
         <ng-template #upload_file>
             <app-pr-field-header label="File to be uploaded on the repository"></app-pr-field-header>
             <app-alert-status
                 description="This repository will be managed through SharePoint in the: “One CGIAR – PRMS Repository“. The documents within it will be view-only and can not be edited. Also the access will be limited to CGIAR accounts.">
             </app-alert-status>
 
-            <div class="drag-and-drop-field" (drop)="onFileDropped($event)" (dragover)="onDragOver($event)"
-                (dragleave)="onDragLeave($event)">
-                <div class="content">
-                    <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
-                    <div class="title">Select a file or drag and drop here</div>
-                    <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 5GB</div>
-                    <app-pr-button text="Select file"></app-pr-button>
-                </div>
+
+            <div class="file-link-view" *ngIf="this.evidence?.sp_file_name;else uploadfilefield">
+                <i class="material-icons-round">
+                    description
+                </i>
+                <a *ngIf="this.evidence.link else nolinktext" [href]="this.evidence.link" target="_blank"
+                    rel="noopener noreferrer">{{this.evidence.link}}</a>
+                <ng-template #nolinktext>you are going to save the file:
+                    <strong>{{this.fileNameCache}}</strong></ng-template>
+
+                <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()">
+                    cancel
+                </i>
             </div>
 
-            <input type="file" (change)="onFileSelected($event)">
+
+            <ng-template #uploadfilefield>
+                <div class="drag-and-drop-field" (drop)="onFileDropped($event)" (dragover)="onDragOver($event)"
+                    (dragleave)="onDragLeave($event)">
+                    <div class="content">
+                        <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
+                        <div class="title">Select a file or drag and drop here</div>
+                        <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 5GB</div>
+                        <app-pr-button text="Select file" (click)="fileInput.click()"></app-pr-button>
+                    </div>
+                </div>
+                <input class="inputfieldHidden" #fileInput type="file" (change)="onFileSelected($event)">
+            </ng-template>
+
+
+
+
 
             <div class="check-box-information">
                 <app-pr-checkbox label="This is a public file." [(ngModel)]="this.evidence.is_public_file">

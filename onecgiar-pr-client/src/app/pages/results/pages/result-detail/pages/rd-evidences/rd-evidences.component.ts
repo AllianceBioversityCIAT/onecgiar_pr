@@ -36,6 +36,7 @@ export class RdEvidencesComponent implements OnInit {
       this.evidencesBody = response;
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
+      console.log(this.evidencesBody.evidences);
     });
   }
 

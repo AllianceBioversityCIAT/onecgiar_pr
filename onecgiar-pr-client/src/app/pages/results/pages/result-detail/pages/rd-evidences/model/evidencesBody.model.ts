@@ -22,4 +22,5 @@ export interface EvidencesCreateInterface {
   file?: File;
   fileUuid?: string;
   is_public_file?: boolean;
+  sp_file_name?: string;
 }

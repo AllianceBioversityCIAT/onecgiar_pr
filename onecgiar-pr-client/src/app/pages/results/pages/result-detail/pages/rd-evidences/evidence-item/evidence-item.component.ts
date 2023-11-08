@@ -15,6 +15,7 @@ export class EvidenceItemComponent {
   @Input() isSuppInfo: boolean;
   @Input() isOptional: boolean = false;
   @Output() deleteEvent = new EventEmitter();
+  fileNameCache = '';
 
   evidencesType = [
     { id: 0, name: 'Link' },
@@ -32,13 +33,19 @@ export class EvidenceItemComponent {
     if (selectedFile) {
       // Realiza las operaciones que necesites con el archivo seleccionado
       console.log(selectedFile);
-      const uniqueId = uuidv4();
-      const fileName = selectedFile.name;
-      const fileExtension = fileName.split('.').pop();
-      const newFileName = `${uniqueId}.${fileExtension}`;
-      this.evidence.file = new File([selectedFile], newFileName, { type: selectedFile.type });
-      this.evidence.fileUuid = uniqueId;
+      this.renameFileAndAddData(selectedFile);
     }
+  }
+
+  renameFileAndAddData(selectedFile) {
+    const uniqueId = uuidv4();
+    const fileName = selectedFile.name;
+    const fileExtension = fileName.split('.').pop();
+    const newFileName = `${uniqueId}.${fileExtension}`;
+    this.fileNameCache = selectedFile.name;
+    this.evidence.file = new File([selectedFile], newFileName, { type: selectedFile.type });
+    this.evidence.fileUuid = uniqueId;
+    this.evidence.sp_file_name = selectedFile.name;
   }
 
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
@@ -66,5 +73,30 @@ export class EvidenceItemComponent {
     // Aquí puedes manejar el archivo según tus requisitos.
     console.log('Archivo arrastrado:', file);
     this.evidence.file = file;
+    this.renameFileAndAddData(file);
+  }
+
+  onDeleteSPLink() {
+    this.cleanSP();
+  }
+
+  cleanSP() {
+    this.evidence.sp_file_name = null;
+    this.evidence.link = null;
+    this.evidence.file = null;
+    this.evidence.fileUuid = null;
+  }
+
+  cleanLink() {
+    this.evidence.link = null;
+    this.evidence.is_public_file = null;
+  }
+
+  cleanSource(e) {
+    if (e) {
+      this.cleanLink();
+    } else {
+      this.cleanSP();
+    }
   }
 }
