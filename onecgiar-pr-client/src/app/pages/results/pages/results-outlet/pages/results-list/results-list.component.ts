@@ -9,6 +9,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-results-list',
@@ -24,8 +25,8 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     { title: 'Phase', attr: 'phase_name' },
     // { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Indicator category', attr: 'result_type' },
-    { title: 'Submitter', attr: 'submitter' },
-    { title: 'Status', attr: 'status_name' },
+    { title: 'Submitter', attr: 'submitter', center: true },
+    { title: 'Status', attr: 'full_status_name_html', center: true },
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];

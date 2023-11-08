@@ -1,20 +1,26 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { RolesService } from '../../../../../../../../../shared/services/global/roles.service';
+import { Component, Input } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
-import { InnovationDevelopmentLinks, linkType } from '../../model/InnovationDevelopmentLinks.model';
+import { InnovationDevelopmentLinks } from '../../model/InnovationDevelopmentLinks.model';
 
 @Component({
   selector: 'app-innovation-links',
   templateUrl: './innovation-links.component.html',
   styleUrls: ['./innovation-links.component.scss']
 })
-export class InnovationLinksComponent implements OnInit {
+export class InnovationLinksComponent {
   @Input() body = new InnovationDevInfoBody();
   @Input() options: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
+
   constructor(public api: ApiService) {}
 
-  ngOnInit(): void {}
+  picturesLinksAlertText() {
+    return `Pictures links (Min. 3)`;
+  }
+
+  referencesLinksAlertText() {
+    return `References links (Min. 3)`;
+  }
 
   temporalLinkDescription() {
     return `<ul> 

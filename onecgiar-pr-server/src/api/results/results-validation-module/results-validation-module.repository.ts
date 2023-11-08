@@ -255,47 +255,7 @@ export class resultValidationRepository
 			WHERE npp.results_id = r.id
 			AND npp.is_active > 0
 		) = 0
-	) 
-			${
-        resultLevel == 3 || resultLevel == 4
-          ? `AND IF(rtr1.is_sdg_action_impact, IF(
-				(SELECT COUNT(*) 
-				FROM result_toc_impact_area_target rtiat 
-				WHERE rtiat.result_toc_result_id = rtr1.result_toc_result_id 
-				AND rtiat.is_active > 0) > 0
-				AND 
-				(SELECT COUNT(*) 
-				FROM result_toc_action_area rtaa  
-				WHERE rtaa.result_toc_result_id = rtr1.result_toc_result_id  
-				AND rtaa.is_active > 0) > 0
-				AND
-				(SELECT COUNT(*) 
-				FROM result_toc_sdg_targets rtst  
-				WHERE rtst.result_toc_result_id = rtr1.result_toc_result_id 
-				AND rtst.is_active > 0) > 0, TRUE, FALSE
-			), TRUE)
-													THEN TRUE`
-          : resultLevel == 1 || resultLevel == 2
-          ? `AND (SELECT COUNT(*) 
-		  FROM result_sdg_targets rst 
-		  WHERE rst.result_id = r.id
-			  AND rst.is_active > 0) > 0
-		${
-      resultLevel == 2
-        ? `AND (SELECT COUNT(*) 
-		FROM result_toc_action_area rtaa  
-		WHERE rtaa.result_toc_result_id = rtr1.result_toc_result_id  
-		AND rtaa.is_active > 0) > 0`
-        : ``
-    }
-		AND 
-			(SELECT COUNT(*) 
-			FROM results_impact_area_target riat 
-			WHERE riat.result_id = r.id
-				AND riat.is_active > 0) > 0
-		THEN TRUE`
-          : `THEN TRUE`
-      }
+		) THEN TRUE
 			ELSE FALSE
 		END AS validation
 	FROM

@@ -48,7 +48,7 @@ export class PartnersRequestComponent {
     this.requesting = true;
     const { application, initiative } = this.api.rolesSE.roles;
     const { id, email, user_name } = this.api.authSE.localStorageUser;
-    const { initiative_official_code, initiative_short_name, initiative_name, initiative_id } = this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.detailData : this.api?.dataControlSE?.currentResult || {};
+    const { initiative_official_code, initiative_short_name, initiative_name, initiative_id }: any = this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.detailData : this.api?.dataControlSE?.currentResult || {};
     //(this.ipsrDataControlSE.detailData);
     const initiativeFinded = this.api.rolesSE.roles.initiative.find(initiative => (initiative.initiative_id = initiative_id));
     this.partnersRequestBody.externalUserName = user_name;
