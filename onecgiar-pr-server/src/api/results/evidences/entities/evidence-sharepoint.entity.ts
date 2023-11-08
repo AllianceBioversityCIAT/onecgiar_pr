@@ -1,5 +1,4 @@
 import {
-  BaseEntity,
   Column,
   CreateDateColumn,
   Entity,
@@ -10,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Evidence } from './evidence.entity';
+import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('evidence_sharepoint')
 export class EvidenceSharepoint extends BaseEntity {

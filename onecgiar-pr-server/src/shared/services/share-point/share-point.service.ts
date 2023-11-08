@@ -13,7 +13,7 @@ export class SharePointService {
     private readonly GPCacheSE: GlobalParameterCacheService,
   ) {}
 
-  async saveFile(file: Express.Multer.File, pathInformation) {
+  async saveFile(file: Express.Multer.File, path: string) {
     const token = await this.getToken();
 
     const { originalname, buffer } = file;
@@ -22,7 +22,6 @@ export class SharePointService {
     );
     const siteId = await this.GPCacheSE.getParam('sp_site_id');
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-    const path = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
     const link = `${microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${originalname}:/content`;
 
     try {
@@ -34,7 +33,7 @@ export class SharePointService {
           },
         })
         .toPromise();
-
+      console.log(response);
       return response;
     } catch (error) {
       console.log(error);

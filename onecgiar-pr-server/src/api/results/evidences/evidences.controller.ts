@@ -40,14 +40,11 @@ export class EvidencesController {
 
     const { message, response, status } = await this.evidencesService.create(
       createEvidenceDto,
+      files,
       user,
     );
 
-    if (files?.length)
-      await this.evidencesService.saveSPFilesAndSaveInformation(
-        files,
-        createEvidenceDto,
-      );
+    console.log(files?.length);
 
     throw new HttpException({ message, response }, status);
   }

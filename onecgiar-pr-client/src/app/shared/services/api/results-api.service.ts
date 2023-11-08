@@ -8,7 +8,7 @@ import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
-import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
@@ -19,7 +19,6 @@ import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/
 import { Observable } from 'rxjs';
 import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
-
 @Injectable({
   providedIn: 'root'
 })
@@ -279,6 +278,22 @@ export class ResultsApiService {
   POST_evidences(body: EvidencesBody) {
     const formData = new FormData();
     formData.append('jsonData', JSON.stringify(body));
+    console.log(body.evidences);
+    body.evidences.forEach((evidence: EvidencesCreateInterface) => {
+      // console.log(evidence?.file);
+      // const newfile = new File([evidence.file], 'newFileName.png', { type: evidence.file.type });
+      // const newfile2 = new File([evidence.file], 'newFileName.png');
+      // console.log(newfile);
+      // console.log(newfile2);
+
+      // if (evidence?.file?.hasOwnProperty('type') && evidence?.file?.hasOwnProperty('name')) {
+      // const uniqueId = uuidv4();
+      // const fileName = evidence.file.name;
+      // const fileExtension = fileName.split('.').pop();
+      // const newFileName = `${uniqueId}.${fileExtension}`;
+      formData.append('files', evidence.file);
+      // }
+    });
     return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }
 

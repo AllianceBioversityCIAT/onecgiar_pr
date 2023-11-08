@@ -2,6 +2,7 @@ import { Component, Input, OnInit, EventEmitter, Output } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'app-evidence-item',
@@ -19,6 +20,20 @@ export class EvidenceItemComponent {
     { id: 0, name: 'Link' },
     { id: 1, name: 'Upload file' }
   ];
+
+  onFileSelected(event: any) {
+    const selectedFile: File = event.target.files[0];
+    if (selectedFile) {
+      // Realiza las operaciones que necesites con el archivo seleccionado
+      console.log(selectedFile);
+      const uniqueId = uuidv4();
+      const fileName = selectedFile.name;
+      const fileExtension = fileName.split('.').pop();
+      const newFileName = `${uniqueId}.${fileExtension}`;
+      this.evidence.file = new File([selectedFile], newFileName, { type: selectedFile.type });
+      this.evidence.fileUuid = uniqueId;
+    }
+  }
 
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
 
@@ -41,8 +56,9 @@ export class EvidenceItemComponent {
     event.stopPropagation();
   }
 
-  handleFile(file: any) {
+  handleFile(file: File) {
     // Aquí puedes manejar el archivo según tus requisitos.
     console.log('Archivo arrastrado:', file);
+    this.evidence.file = file;
   }
 }

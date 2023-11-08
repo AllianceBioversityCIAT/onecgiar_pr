@@ -1,5 +1,8 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateEvidenceDto } from './dto/create-evidence.dto';
+import {
+  CreateEvidenceDto,
+  EvidencesCreateInterface,
+} from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -14,6 +17,8 @@ import { Result } from '../entities/result.entity';
 import * as fs from 'fs';
 import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
+import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint.repository';
+import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
 
 @Injectable()
 export class EvidencesService {
@@ -26,8 +31,13 @@ export class EvidencesService {
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _globalParameterCacheService: GlobalParameterCacheService,
     private readonly _sharePointService: SharePointService,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
   ) {}
-  async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
+  async create(
+    createEvidenceDto: CreateEvidenceDto,
+    files: Express.Multer.File[],
+    user: TokenDto,
+  ) {
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
@@ -64,9 +74,9 @@ export class EvidencesService {
               false,
               1,
             );
-          if (!eExists) {
-            const newEvidence = new Evidence();
+          const newEvidence = new Evidence();
 
+          if (!eExists) {
             newEvidence.created_by = user.id;
             newEvidence.last_updated_by = user.id;
             newEvidence.description = evidence?.description ?? null;
@@ -125,8 +135,23 @@ export class EvidencesService {
 
             newsEvidencesArray.push(eExists);
           }
+
+          const evidenceSaved = await this._evidencesRepository.save(
+            eExists ? eExists : newEvidence,
+          );
+
+          await this.saveSPFileAndSaveInformation(
+            files,
+            evidence,
+            createEvidenceDto.result_id,
+            evidenceSaved.id,
+          );
+
+          // const quetu = await this._evidencesRepository.save(
+          //   newsEvidencesArray[0],
+          // );
+          // console.log(quetu);
         }
-        await this._evidencesRepository.save(newsEvidencesArray);
       }
 
       if (createEvidenceDto?.supplementary) {
@@ -187,6 +212,42 @@ export class EvidencesService {
     }
   }
 
+  async saveSPFileAndSaveInformation(
+    files: Express.Multer.File[],
+    evidence: EvidencesCreateInterface,
+    currentResultID: number,
+    currentEvidenceID: number,
+  ): Promise<void> {
+    await this._sharePointService.getToken();
+
+    if (files?.length) {
+      const [pathInformation] =
+        await this._evidencesRepository.getResultInformation(currentResultID);
+
+      const file: Express.Multer.File = files.find(
+        (fileItem: Express.Multer.File) =>
+          fileItem.originalname.includes(evidence.fileUuid),
+      );
+      const evidenceSharepoint = new EvidenceSharepoint();
+
+      evidenceSharepoint.folder_path = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
+      evidenceSharepoint.file_name = file.originalname;
+      evidenceSharepoint.is_public_file = 0;
+      evidenceSharepoint.evidence_id = currentEvidenceID;
+
+      const fileSaved = await this._sharePointService.saveFile(
+        file,
+        evidenceSharepoint.folder_path,
+      );
+
+      console.log(fileSaved?.data?.id);
+
+      evidenceSharepoint.document_id = fileSaved?.data?.id ?? 123;
+
+      await this._evidenceSharepointRepository.save(evidenceSharepoint);
+    }
+  }
+
   async saveSPFilesAndSaveInformation(
     files: Express.Multer.File[],
     createEvidenceDto: CreateEvidenceDto,
@@ -198,6 +259,7 @@ export class EvidencesService {
         createEvidenceDto.result_id,
       );
     console.log(pathInformation);
+    console.log(files);
     await Promise.all(
       files.map((file) =>
         this._sharePointService.saveFile(file, pathInformation),
