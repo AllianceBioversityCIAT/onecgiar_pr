@@ -1,6 +1,6 @@
 .modal_container {
   padding: 20px 40px 50px 40px;
-  max-width: 85vw !important;
+  max-width: 70vw !important;
   width: 100% !important;
   min-height: 70vh;
   font-family: 'Poppins', sans-serif !important;
@@ -9,7 +9,7 @@
   justify-content: space-between;
 
   @media screen and (max-width: 1000px) {
-    max-width: 90vw !important;
+    max-width: 80vw !important;
   }
 }
 

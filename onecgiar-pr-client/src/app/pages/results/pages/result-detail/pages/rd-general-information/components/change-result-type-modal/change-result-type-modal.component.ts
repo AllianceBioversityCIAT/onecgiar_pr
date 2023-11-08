@@ -25,7 +25,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   mqapJson: {};
   confirmationText: string = '';
   selectedResultType: IOption | null = null;
-  alertStatusDesc = 'Currently, we have only enabled the option to change a result from <strong>"Other output"</strong> to <strong>"Knowledge product"</strong>. We are actively working on extending this capability to include all the result types.';
+  alertStatusDesc = 'Currently, the functionality to change result type is still under development for results at the <strong>"Initiative output"</strong> level except for <strong>"other output"</strong> to <strong>"knowledge product"</strong>. We are actively working to extend this possibility to all output types.';
   alertStatusDescKnowledgeProduct = `<dl>
   <dt>Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool. The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.</dt> <br/>
   <dt>The handle will be verified, and only knowledge products from 2023 will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles Published online for a previous years will not be accepted to prevent double counting across consecutive years. </dt> <br/>
