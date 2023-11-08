@@ -358,6 +358,32 @@ export class EvidencesRepository
     }
   }
 
+  async getResultInformation(resultId) {
+    const query = `SELECT
+        r.result_code,
+        r.is_active,
+        r.version_id,
+        r.id as result_id,
+        r.title as result_title,
+        ci.official_code as initiative_official_code
+    FROM result r
+        inner join results_by_inititiative rbi ON rbi.result_id = r.id and rbi.is_active > 0
+        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
+    WHERE
+        r.is_active > 0 and result_id = ?;`;
+
+    try {
+      const result: any = await this.query(query, [resultId]);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getEvidencesByResultId(
     resultId: number,
     is_supplementary: boolean,

@@ -44,7 +44,7 @@ export class EvidencesController {
     );
 
     if (files?.length)
-      await this.evidencesService.createFilesAndSaveInformation(
+      await this.evidencesService.saveSPFilesAndSaveInformation(
         files,
         createEvidenceDto,
       );

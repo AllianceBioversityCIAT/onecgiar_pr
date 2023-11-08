@@ -13,8 +13,33 @@ export class SharePointService {
     private readonly GPCacheSE: GlobalParameterCacheService,
   ) {}
 
-  async saveFile() {
+  async saveFile(file: Express.Multer.File, pathInformation) {
     const token = await this.getToken();
+
+    const { originalname, buffer } = file;
+    const microsoftGraphApiUrl = await this.GPCacheSE.getParam(
+      'sp_microsoft_graph_api_url',
+    );
+    const siteId = await this.GPCacheSE.getParam('sp_site_id');
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const path = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
+    const link = `${microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${originalname}:/content`;
+
+    try {
+      const response = await this.httpService
+        .put(link, buffer, {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+
+      return response;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
   }
 
   async getToken() {

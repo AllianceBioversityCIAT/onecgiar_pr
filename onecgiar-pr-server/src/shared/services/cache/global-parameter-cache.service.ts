@@ -30,9 +30,6 @@ export class GlobalParameterCacheService {
       const globalParameterItem: GlobalParameter =
         await this._globalParameterService.findOneByName(key);
 
-      console.log(key);
-      console.log('globalParameterItem: ', globalParameterItem);
-
       let globalParameterList: any =
         await this._globalParameterService.findByCategoryId(
           Number(globalParameterItem?.categoryId),

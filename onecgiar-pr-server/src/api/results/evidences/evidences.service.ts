@@ -187,24 +187,22 @@ export class EvidencesService {
     }
   }
 
-  async createFilesAndSaveInformation(
+  async saveSPFilesAndSaveInformation(
     files: Express.Multer.File[],
     createEvidenceDto: CreateEvidenceDto,
   ): Promise<void> {
-    // Aquí puedes manejar los archivos y los datos del formulario según sea necesario
-    if (!fs.existsSync('uploads')) {
-      fs.mkdirSync('uploads');
-    }
-
-    for (const file of files) {
-      const filePath = `uploads/${file.originalname}`;
-      fs.writeFileSync(filePath, file.buffer);
-      console.log(`Archivo guardado en: ${filePath}`);
-    }
-
-    console.log(createEvidenceDto); // Datos JSON enviados con el formulario
-
-    // Agrega tu lógica aquí para manejar los archivos y los datos del formulario
+    await this._sharePointService.getToken();
+    console.log(createEvidenceDto);
+    const [pathInformation] =
+      await this._evidencesRepository.getResultInformation(
+        createEvidenceDto.result_id,
+      );
+    console.log(pathInformation);
+    await Promise.all(
+      files.map((file) =>
+        this._sharePointService.saveFile(file, pathInformation),
+      ),
+    );
   }
 
   async findAll(resultId: number) {
