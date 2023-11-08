@@ -47,7 +47,7 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   addEvidence() {
-    this.evidencesBody.evidences.push({});
+    this.evidencesBody.evidences.push({ is_sharepoint: false });
   }
 
   deleteEvidence(index) {

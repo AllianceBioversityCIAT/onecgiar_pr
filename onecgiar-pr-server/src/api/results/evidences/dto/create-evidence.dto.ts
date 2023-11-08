@@ -16,6 +16,7 @@ export interface EvidencesCreateInterface {
   is_sharepoint?: number;
   fileUuid?: string;
   is_public_file?: number;
+  sp_id?: string;
 }
 
 export class JsonData {}

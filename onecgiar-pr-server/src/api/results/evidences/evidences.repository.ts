@@ -391,13 +391,13 @@ export class EvidencesRepository
     type: number,
   ) {
     const query = `
-    select 
-    es.id,
-    es.document_id,
-    es.file_name,
-    es.folder_path,
+    SELECT 
+    es.id AS sp_id,
+    es.document_id AS sp_document_id,
+    es.file_name AS sp_file_name,
+    es.folder_path AS sp_folder_path,
     es.is_public_file,
-    es.evidence_id,
+    es.evidence_id AS sp_evidence_id,
     e.description,
     e.is_active,
     e.creation_date,
@@ -414,13 +414,22 @@ export class EvidencesRepository
     e.is_supplementary,
     e.result_id,
     e.knowledge_product_related 
-    from evidence e 
-    inner join evidence_sharepoint es on e.id = es.evidence_id
-    where e.result_id = ?
-      and e.is_supplementary = ?
-      and e.is_active > 0
-      and e.evidence_type_id = ?
-    order by e.creation_date asc;
+    FROM evidence e 
+    INNER JOIN (
+        SELECT es1.*
+        FROM evidence_sharepoint es1
+        INNER JOIN (
+            SELECT evidence_id, MAX(created_date) AS max_created_date
+            FROM evidence_sharepoint
+            WHERE is_active > 0
+            GROUP BY evidence_id
+        ) es2 ON es1.evidence_id = es2.evidence_id AND es1.created_date = es2.max_created_date
+    ) es ON e.id = es.evidence_id
+    WHERE e.result_id = ?
+      AND e.is_supplementary = ?
+      AND e.is_active > 0
+      AND e.evidence_type_id = ?
+    ORDER BY e.creation_date ASC;
     `;
 
     try {

@@ -241,15 +241,36 @@ export class EvidencesService {
       }
     }
 
-    const evidenceSharepoint = new EvidenceSharepoint();
+    // Busca un registro existente con el id dado
+    const currentSPId = Number(evidence?.sp_id);
+    const existingEvidenceSharepoint = currentSPId
+      ? await this._evidenceSharepointRepository.findOne({
+          where: {
+            id: currentSPId,
+          },
+        })
+      : false;
 
-    evidenceSharepoint.folder_path = filePath;
-    evidenceSharepoint.file_name = originalname;
-    evidenceSharepoint.is_public_file = evidence.is_public_file;
-    evidenceSharepoint.evidence_id = currentEvidenceID;
-    evidenceSharepoint.document_id = fileSaved?.data?.id;
+    if (existingEvidenceSharepoint) {
+      // Si el registro existe, actualízalo
+      existingEvidenceSharepoint.folder_path = filePath;
+      existingEvidenceSharepoint.file_name = originalname;
+      existingEvidenceSharepoint.is_public_file = evidence.is_public_file;
+      existingEvidenceSharepoint.evidence_id = currentEvidenceID;
+      existingEvidenceSharepoint.document_id = fileSaved?.data?.id;
 
-    await this._evidenceSharepointRepository.save(evidenceSharepoint);
+      await this._evidenceSharepointRepository.save(existingEvidenceSharepoint);
+    } else {
+      // Si el registro no existe, inserta uno nuevo
+      const newEvidenceSharepoint = new EvidenceSharepoint();
+      newEvidenceSharepoint.folder_path = filePath;
+      newEvidenceSharepoint.file_name = originalname;
+      newEvidenceSharepoint.is_public_file = evidence.is_public_file;
+      newEvidenceSharepoint.evidence_id = currentEvidenceID;
+      newEvidenceSharepoint.document_id = fileSaved?.data?.id;
+
+      await this._evidenceSharepointRepository.save(newEvidenceSharepoint);
+    }
   }
 
   async saveSPFilesAndSaveInformation(
@@ -310,7 +331,7 @@ export class EvidencesService {
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
-        e.is_public_file = !!e.is_public_file;
+        e.is_public_file = Boolean(e.is_public_file);
       });
 
       supplementary.map((e) => {
