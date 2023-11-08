@@ -66,7 +66,6 @@ export class EvidencesService {
         );
         const long: number =
           evidencesArray.length > 6 ? 6 : evidencesArray.length;
-        console.log('long ', long);
         for (let index = 0; index < long; index++) {
           const evidence = evidencesArray[index];
           const eExists =
@@ -140,35 +139,18 @@ export class EvidencesService {
             originalname: string;
             webUrl: string;
           } = null;
-          console.log('saveSPFile');
           if (currentEvidence.is_sharepoint) {
             fileSaved = await this.saveSPFile(
               files,
               evidence,
               createEvidenceDto,
             );
-            console.log(fileSaved);
             currentEvidence.link = fileSaved?.webUrl;
-            console.log('saveSPFile => ejecutado');
           }
-
-          console.log('save evidence');
-
           const evidenceSaved = await this._evidencesRepository.save(
             currentEvidence,
           );
-          console.log('save evidence => ejecutado');
-
-          console.log('saveSPData');
-          console.log(fileSaved);
-          if (fileSaved)
-            await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
-          console.log('saveSPData => ejecutado');
-
-          // const quetu = await this._evidencesRepository.save(
-          //   newsEvidencesArray[0],
-          // );
-          // console.log(quetu);
+          await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
         }
       }
 
@@ -230,77 +212,6 @@ export class EvidencesService {
     }
   }
 
-  // async saveSPFileAndSaveInformation(
-  //   files: Express.Multer.File[],
-  //   evidence: EvidencesCreateInterface,
-  //   createEvidenceDto: CreateEvidenceDto,
-  //   currentEvidenceID: number,
-  // ): Promise<void> {
-  //   await this._sharePointService.getToken();
-
-  //   let filePath = '';
-  //   let originalname = '';
-  //   let file: Express.Multer.File;
-  //   let fileSaved: any;
-  //   if (files?.length) {
-  //     file = files.find((fileItem: Express.Multer.File) =>
-  //       fileItem.originalname.includes(evidence.fileUuid),
-  //     );
-
-  //     if (file) {
-  //       const [pathInformation] =
-  //         await this._evidencesRepository.getResultInformation(
-  //           createEvidenceDto?.result_id,
-  //         );
-
-  //       filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
-  //       originalname = file.originalname;
-  //       fileSaved = await this._sharePointService.saveFile(file, filePath);
-
-  //       const updateLinkInEvidence = async () => {
-  //         const evidence = await this._evidencesRepository.findOne({
-  //           where: {
-  //             id: currentEvidenceID,
-  //           },
-  //         });
-  //         if (evidence) {
-  //           evidence.link = fileSaved.data.webUrl;
-  //           await this._evidencesRepository.save(evidence);
-  //         }
-  //       };
-
-  //       await updateLinkInEvidence();
-  //     }
-  //   }
-
-  //   const createOrUpdateEvidenceSharepoint = async (
-  //     evidenceSharepoint: EvidenceSharepoint | undefined,
-  //   ) => {
-  //     if (!evidenceSharepoint) {
-  //       evidenceSharepoint = new EvidenceSharepoint();
-  //     }
-
-  //     evidenceSharepoint.folder_path = filePath;
-  //     evidenceSharepoint.file_name = originalname;
-  //     evidenceSharepoint.is_public_file = evidence.is_public_file;
-  //     evidenceSharepoint.evidence_id = currentEvidenceID;
-  //     evidenceSharepoint.document_id = fileSaved?.data?.id;
-
-  //     await this._evidenceSharepointRepository.save(evidenceSharepoint);
-  //   };
-
-  //   const currentSPId = Number(evidence?.sp_id);
-  //   const existingEvidenceSharepoint = currentSPId
-  //     ? await this._evidenceSharepointRepository.findOne({
-  //         where: {
-  //           id: currentSPId,
-  //         },
-  //       })
-  //     : undefined;
-
-  //   await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
-  // }
-
   async saveSPFile(
     files: Express.Multer.File[],
     evidence: EvidencesCreateInterface,
@@ -341,11 +252,8 @@ export class EvidencesService {
     return null;
   }
 
-  async saveSPData(
-    currentEvidenceID: number,
-    { document_id, filePath, originalname },
-    evidence,
-  ) {
+  async saveSPData(currentEvidenceID: number, metadata, evidence) {
+    const { document_id, filePath, originalname } = metadata || {};
     const createOrUpdateEvidenceSharepoint = async (
       evidenceSharepoint: EvidenceSharepoint | undefined,
     ) => {
@@ -353,11 +261,16 @@ export class EvidencesService {
         evidenceSharepoint = new EvidenceSharepoint();
       }
 
-      evidenceSharepoint.folder_path = filePath;
-      evidenceSharepoint.file_name = originalname;
-      evidenceSharepoint.is_public_file = evidence.is_public_file;
-      evidenceSharepoint.evidence_id = currentEvidenceID;
-      evidenceSharepoint.document_id = document_id;
+      evidenceSharepoint.folder_path =
+        filePath ?? evidenceSharepoint.folder_path;
+      evidenceSharepoint.file_name =
+        originalname ?? evidenceSharepoint.file_name;
+      evidenceSharepoint.is_public_file =
+        evidence.is_public_file ?? evidenceSharepoint.is_public_file;
+      evidenceSharepoint.evidence_id =
+        currentEvidenceID ?? evidenceSharepoint.evidence_id;
+      evidenceSharepoint.document_id =
+        document_id ?? evidenceSharepoint.document_id;
 
       await this._evidenceSharepointRepository.save(evidenceSharepoint);
     };
@@ -373,7 +286,6 @@ export class EvidencesService {
 
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
-
   async saveSPFilesAndSaveInformation(
     files: Express.Multer.File[],
     createEvidenceDto: CreateEvidenceDto,
