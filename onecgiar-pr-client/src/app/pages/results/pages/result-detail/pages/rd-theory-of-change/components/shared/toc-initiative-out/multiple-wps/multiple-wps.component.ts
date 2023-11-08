@@ -29,6 +29,7 @@ interface Tab {
 export class MultipleWPsComponent implements OnInit {
   @Input() editable: boolean;
   @Input() initiative: any;
+  @Input() isContributor?: boolean = false;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
@@ -43,7 +44,6 @@ export class MultipleWPsComponent implements OnInit {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
 
-    console.log(this.initiative);
     // console.log(this.theoryOfChangesServices?.primarySubmitter);
   }
 
@@ -81,7 +81,11 @@ export class MultipleWPsComponent implements OnInit {
     }
 
     this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
-    this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+    if (this.isContributor) {
+      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+    } else {
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result.result_toc_results = this.initiative.result_toc_results;
+    }
     // this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
     // this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 

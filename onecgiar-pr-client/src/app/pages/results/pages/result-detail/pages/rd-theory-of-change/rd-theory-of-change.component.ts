@@ -104,20 +104,20 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
     console.log('Sended body', this.theoryOfChangeBody);
 
-    const saveSection = () => {
-      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-        this.getConsumed = false;
-        this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
-        this.contributingInitiativeNew = [];
-      });
-    };
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangesServices?.primarySubmitter?.id);
-    const newInitOfficialCode = newInit?.official_code;
-    if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
-        saveSection();
-      });
-    return saveSection();
+    // const saveSection = () => {
+    //   this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+    //     this.getConsumed = false;
+    //     this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+    //     this.contributingInitiativeNew = [];
+    //   });
+    // };
+    // const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangesServices?.primarySubmitter?.id);
+    // const newInitOfficialCode = newInit?.official_code;
+    // if (this.currentInitOfficialCode != newInitOfficialCode)
+    //   return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
+    //     saveSection();
+    //   });
+    // return saveSection();
   }
 
   someEditable() {

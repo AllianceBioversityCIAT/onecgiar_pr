@@ -9,6 +9,7 @@ import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-
 })
 export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;
+  @Input() isContributor: boolean = false;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;

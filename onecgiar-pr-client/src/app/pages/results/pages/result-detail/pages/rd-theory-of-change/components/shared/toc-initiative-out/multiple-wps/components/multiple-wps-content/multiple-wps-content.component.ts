@@ -101,6 +101,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
         this.initiative.sdgTargest = this.theoryOfChangesServices.sdgTargest;
         this.initiative.actionAreaOutcome = this.theoryOfChangesServices.actionAreaOutcome;
         this.initiative.is_sdg_action_impact = response?.is_sdg_action_impact;
+        this.initiative.targetsIndicators = this.theoryOfChangesServices.targetsIndicators;
 
         setTimeout(() => {
           this.indicatorView = true;
