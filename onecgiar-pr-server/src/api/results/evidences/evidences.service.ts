@@ -241,6 +241,20 @@ export class EvidencesService {
         filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
         originalname = file.originalname;
         fileSaved = await this._sharePointService.saveFile(file, filePath);
+
+        const updateLinkInEvidence = async () => {
+          const evidence = await this._evidencesRepository.findOne({
+            where: {
+              id: currentEvidenceID,
+            },
+          });
+          if (evidence) {
+            evidence.link = fileSaved.data.webUrl;
+            await this._evidencesRepository.save(evidence);
+          }
+        };
+
+        await updateLinkInEvidence();
       }
     }
 
