@@ -61,18 +61,6 @@ export class ChangeResultTypeModalComponent implements OnChanges {
       return true;
     }
 
-    if (result_level_id === 4) {
-      if (result_type_id === 8) {
-        return option.id === 5 || option.id === 7;
-      } else {
-        return this.IOutput.includes(option.id);
-      }
-    }
-
-    if (this.IOutcome.includes(option.resultLevelId)) {
-      return !this.IOutcome.includes(option.id);
-    }
-
     return false;
   }
 
