@@ -22,6 +22,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
   cgspaceDisabledList = [];
+  contributingCenterOptions = [];
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
@@ -29,6 +30,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
+    this.getContributingCenterOptions();
   }
 
   GET_AllWithoutResults() {
@@ -37,12 +39,21 @@ export class RdTheoryOfChangeComponent implements OnInit {
     });
   }
 
+  print() {
+    console.log(this.contributingCenterOptions);
+  }
+
   disabledCenters() {
     this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
   }
 
+  async getContributingCenterOptions() {
+    const list = await this.centersSE.getCentersList();
+    this.contributingCenterOptions = [...list];
+    this.contributingCenterOptions.forEach(center => (center.selected = false));
+  }
+
   async getSectionInformation() {
-    await this.centersSE.getCentersList();
     this.theoryOfChangesServices.body = [];
     this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
@@ -75,6 +86,9 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
         console.log('recived body', response);
         this.disabledCenters();
+        setTimeout(() => {
+          this.getConsumed = true;
+        }, 100);
       },
       error: err => {
         this.getConsumed = true;
