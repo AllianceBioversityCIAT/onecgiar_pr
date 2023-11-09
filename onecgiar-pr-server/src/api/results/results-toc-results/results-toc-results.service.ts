@@ -657,13 +657,25 @@ export class ResultsTocResultsService {
     toc_result_id: number,
     init: number,
   ) {
+    console.log(
+      '🚀 ~ file: results-toc-results.service.ts:660 ~ ResultsTocResultsService ~ resultIdToc:',
+      { resultIdToc, toc_result_id, init },
+    );
     try {
       let isSdg = null;
       let isImpactArea = null;
       let is_sdg_action_impact = null;
-      const result = await this._resultsTocResultRepository
-        .query(`select rtr.mapping_sdg as isSdg,  rtr.mapping_impact as isImpactArea,rtr.is_sdg_action_impact
-                                                                          from results_toc_result rtr where rtr.results_id = ${resultIdToc} and rtr.initiative_id = ${init}`);
+      const result = await this._resultsTocResultRepository.query(`
+      SELECT
+          rtr.is_sdg_action_impact
+      FROM
+          results_toc_result rtr
+      WHERE
+          rtr.results_id = ${resultIdToc}
+          AND rtr.initiative_id = ${init}
+          AND rtr.toc_result_id = ${toc_result_id}
+          AND rtr.is_active = TRUE
+      `);
       if (result.length != 0) {
         (isSdg = result[0].isSdg),
           (isImpactArea = result[0].isImpactArea),
@@ -793,3 +805,4 @@ export class ResultsTocResultsService {
     }
   }
 }
+
