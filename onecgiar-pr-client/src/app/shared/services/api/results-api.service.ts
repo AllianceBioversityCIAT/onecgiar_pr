@@ -272,7 +272,7 @@ export class ResultsApiService {
   }
 
   GET_evidences() {
-    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_evidences(body: EvidencesBody) {
@@ -280,19 +280,7 @@ export class ResultsApiService {
     formData.append('jsonData', JSON.stringify(body));
     console.log(body.evidences);
     body.evidences.forEach((evidence: EvidencesCreateInterface) => {
-      // console.log(evidence?.file);
-      // const newfile = new File([evidence.file], 'newFileName.png', { type: evidence.file.type });
-      // const newfile2 = new File([evidence.file], 'newFileName.png');
-      // console.log(newfile);
-      // console.log(newfile2);
-
-      // if (evidence?.file?.hasOwnProperty('type') && evidence?.file?.hasOwnProperty('name')) {
-      // const uniqueId = uuidv4();
-      // const fileName = evidence.file.name;
-      // const fileExtension = fileName.split('.').pop();
-      // const newFileName = `${uniqueId}.${fileExtension}`;
       formData.append('files', evidence.file);
-      // }
     });
     return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }

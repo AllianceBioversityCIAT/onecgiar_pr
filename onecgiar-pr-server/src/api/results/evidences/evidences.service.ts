@@ -44,11 +44,9 @@ export class EvidencesService {
       );
       await this._versionRepository.getBaseVersion();
       if (createEvidenceDto?.evidences?.length) {
-        console.log(createEvidenceDto?.evidences);
         const evidencesArray = createEvidenceDto?.evidences.filter(
           (e) => !!e?.link || e?.is_sharepoint,
         );
-        console.log(evidencesArray);
         const testDuplicate = evidencesArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
           throw {
@@ -261,6 +259,14 @@ export class EvidencesService {
         evidenceSharepoint = new EvidenceSharepoint();
       }
 
+      if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
+        console.log('Es diferente, se debe actualizar el acceso');
+        this._sharePointService.addFileAccess(
+          document_id ?? evidenceSharepoint.document_id,
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file,
+        );
+      }
+
       evidenceSharepoint.folder_path =
         filePath ?? evidenceSharepoint.folder_path;
       evidenceSharepoint.file_name =
@@ -285,21 +291,6 @@ export class EvidencesService {
       : undefined;
 
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
-  }
-  async saveSPFilesAndSaveInformation(
-    files: Express.Multer.File[],
-    createEvidenceDto: CreateEvidenceDto,
-  ): Promise<void> {
-    await this._sharePointService.getToken();
-    const [pathInformation] =
-      await this._evidencesRepository.getResultInformation(
-        createEvidenceDto.result_id,
-      );
-    await Promise.all(
-      files.map((file) =>
-        this._sharePointService.saveFile(file, pathInformation),
-      ),
-    );
   }
 
   async findAll(resultId: number) {

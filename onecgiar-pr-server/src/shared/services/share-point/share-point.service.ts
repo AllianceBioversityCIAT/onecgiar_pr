@@ -7,22 +7,28 @@ export class SharePointService {
   private token = null;
   private expiresIn = null;
   private creationTime = null;
-
+  private microsoftGraphApiUrl = '';
   constructor(
     private readonly httpService: HttpService,
     private readonly GPCacheSE: GlobalParameterCacheService,
-  ) {}
+  ) {
+    this.getMicrosoftGraphApiUrl();
+  }
+
+  async getMicrosoftGraphApiUrl() {
+    this.microsoftGraphApiUrl = await this.GPCacheSE.getParam(
+      'sp_microsoft_graph_api_url',
+    );
+  }
 
   async saveFile(file: Express.Multer.File, path: string) {
     const token = await this.getToken();
 
     const { originalname, buffer } = file;
-    const microsoftGraphApiUrl = await this.GPCacheSE.getParam(
-      'sp_microsoft_graph_api_url',
-    );
+
     const siteId = await this.GPCacheSE.getParam('sp_site_id');
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-    const link = `${microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${originalname}:/content`;
+    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${originalname}:/content`;
 
     try {
       const response = await this.httpService
@@ -40,6 +46,86 @@ export class SharePointService {
     }
   }
 
+  async addFileAccess(fileId, convertToPublic: boolean) {
+    await this.removeAllFilePermissions(fileId);
+
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}/createLink`;
+    const body = {
+      type: 'view',
+      scope: convertToPublic ? 'anonymous' : 'organization',
+    };
+    try {
+      const response = await this.httpService
+        .post(link, body, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async removeAllFilePermissions(fileId) {
+    console.log('***************Permissions******************');
+    const permissionsList = await this.getAllFilePermissions(fileId);
+    await Promise.all(
+      permissionsList.map((pId) => this.removeFilePermission(fileId, pId)),
+    );
+    console.log(permissionsList);
+  }
+
+  async getAllFilePermissions(fileId) {
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}/permissions`;
+    try {
+      const response = await this.httpService
+        .get(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response?.data?.value
+        ?.filter(
+          (p) =>
+            p?.link?.scope == 'organization' || p?.link?.scope == 'anonymous',
+        )
+        ?.map((p) => p.id);
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async removeFilePermission(fileId, permissionId) {
+    // DELETE https://graph.microsoft.com/v1.0/drives/{{testing_drive_id}}/items/012LTNW5BGG43ZSDLMRJBLR6S6663GB734/permissions/b4fc3914-b1b5-4147-8d44-13b1ce65eb45
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}/permissions/${permissionId}`;
+    try {
+      const response = await this.httpService
+        .delete(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
   async getToken() {
     if (this.isTokenExpired() || !this.expiresIn) {
       console.log('El token ha expirado. Renovando el token...');
