@@ -560,7 +560,8 @@ WHERE
     r.version_id,
     v.phase_name,
     v.phase_year,
-    v.status as phase_status
+    v.status as phase_status,
+    r.in_qa as inQA
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -847,7 +848,8 @@ WHERE
     v.phase_name,
     v.phase_year,
     r.is_discontinued,
-    r.is_replicated
+    r.is_replicated,
+    r.in_qa as inQA
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

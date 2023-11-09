@@ -22,6 +22,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
   psub = '';
   contributingInitiativeNew = [];
   currentInitOfficialCode = null;
+  cgspaceDisabledList = [];
+  contributingCenterOptions = [];
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
 
@@ -29,6 +31,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
+    this.getContributingCenterOptions();
   }
 
   GET_AllWithoutResults() {
@@ -37,29 +40,43 @@ export class RdTheoryOfChangeComponent implements OnInit {
     });
   }
 
+  print() {
+    console.log(this.contributingCenterOptions);
+  }
+
+  disabledCenters() {
+    this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
+    console.log(this.centersSE.centersList);
+  }
+
+  async getContributingCenterOptions() {
+    const list = await this.centersSE.getCentersList();
+    this.contributingCenterOptions = [...list];
+    this.contributingCenterOptions.forEach(center => (center.selected = false));
+  }
+
   async getSectionInformation() {
     this.theoryOfChangesServices.body = [];
     await this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
         this.theoryOfChangeBody = response;
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 100);
+
         if (this.theoryOfChangeBody?.result_toc_result) this.psub = `${this.theoryOfChangeBody?.result_toc_result.official_code} ${this.theoryOfChangeBody?.result_toc_result.short_name}`;
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
         this.currentInitOfficialCode = this.theoryOfChangeBody.result_toc_result.official_code;
         if (this.theoryOfChangeBody.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
         if (this.theoryOfChangeBody.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+        console.log(this.theoryOfChangeBody);
+        this.disabledCenters();
+        setTimeout(() => {
+          this.getConsumed = true;
+        }, 100);
       },
       error: err => {
         this.getConsumed = true;
         console.error(err);
       }
     });
-  }
-
-  get disabledCenters() {
-    return this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
   }
 
   get validateGranTitle() {
