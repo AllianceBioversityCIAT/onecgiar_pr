@@ -261,10 +261,16 @@ export class EvidencesService {
 
       if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
         console.log('Es diferente, se debe actualizar el acceso');
-        this._sharePointService.addFileAccess(
+        const data: any = await this._sharePointService.addFileAccess(
           document_id ?? evidenceSharepoint.document_id,
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
         );
+        if (data.link.webUrl) {
+          // update evidence link
+          await this._evidencesRepository.update(currentEvidenceID, {
+            link: data.link.webUrl,
+          });
+        }
       }
 
       evidenceSharepoint.folder_path =

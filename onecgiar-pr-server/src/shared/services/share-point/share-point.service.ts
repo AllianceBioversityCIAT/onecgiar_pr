@@ -65,7 +65,7 @@ export class SharePointService {
           },
         })
         .toPromise();
-      return response;
+      return response.data;
     } catch (error) {
       console.log(error);
       return error;
@@ -73,12 +73,10 @@ export class SharePointService {
   }
 
   async removeAllFilePermissions(fileId) {
-    console.log('***************Permissions******************');
     const permissionsList = await this.getAllFilePermissions(fileId);
     await Promise.all(
       permissionsList.map((pId) => this.removeFilePermission(fileId, pId)),
     );
-    console.log(permissionsList);
   }
 
   async getAllFilePermissions(fileId) {
@@ -128,16 +126,16 @@ export class SharePointService {
   }
   async getToken() {
     if (this.isTokenExpired() || !this.expiresIn) {
-      console.log('El token ha expirado. Renovando el token...');
+      // console.log('El token ha expirado. Renovando el token...');
       return await this.consumeToken();
     } else {
-      console.log('El token aún no ha expirado. No se requiere renovación.');
+      // console.log('El token aún no ha expirado. No se requiere renovación.');
       const remainingTimeInSeconds =
         this.creationTime + this.expiresIn - new Date().getTime() / 1000;
       const remainingTimeString = this.convertSecondsToTime(
         remainingTimeInSeconds,
       );
-      console.log(`El token caducará en: ${remainingTimeString}`);
+      // console.log(`El token caducará en: ${remainingTimeString}`);
       return this.token;
     }
   }
