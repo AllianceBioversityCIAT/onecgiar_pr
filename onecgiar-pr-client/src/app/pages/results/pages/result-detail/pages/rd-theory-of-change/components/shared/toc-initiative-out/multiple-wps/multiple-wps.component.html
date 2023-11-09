@@ -1,18 +1,19 @@
-<div class=" local_container section_container">
-  <div class="tabs-container" >
-    <div class="tabs" [style]="'grid-template-columns: repeat(' + (initiative.result_toc_results.length) + ', 1fr)'">
-      <div *ngFor="let tab of initiative.result_toc_results; let i = index">
-        <a class="tab" [ngClass]="{'active' : tab.uniqueId === this.activeTab.uniqueId}" (click)="onActiveTab(tab)">
+<div class="local_container section_container">
+  <div class="tabs-container">
+    <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
+      <div *ngFor="let tab of initiative?.result_toc_results; let i = index">
+        <a class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}" (click)="onActiveTab(tab)">
           <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
-            check_circle </i>
-            <p class="tab-title">{{dynamicTabTitle(i + 1)}}</p>
-            <i *ngIf="this.initiative.result_toc_results.length !== 1" class="material-icons-round close_icon tab-delete-button-item"
-            (click)="onDeleteTab(tab)">backspace</i>
-          </a>
-        </div>
+            check_circle
+          </i>
+          <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
+          <i *ngIf="initiative?.result_toc_results.length !== 1"
+            class="material-icons-round close_icon tab-delete-button-item" (click)="onDeleteTab(tab)">backspace</i>
+        </a>
       </div>
-      <div class="tab-add-button" (click)="onAddTab()">
-        <i class="material-icons-round close_icon tab-add-button-item"
+    </div>
+    <div class="tab-add-button" (click)="onAddTab()">
+      <i class="material-icons-round close_icon tab-add-button-item"
         style="font-size: 16px; color: var(--pr-color-primary);">
         add
       </i>
@@ -20,8 +21,7 @@
   </div>
 
   <div class="multiple-wps-container">
-    <app-multiple-wps-content [editable]="editable" [initiative]="this.activeTab" [resultLevelId]="resultLevelId"
-      [isIpsr]="isIpsr" [showMultipleWPsContent]="this.showMultipleWPsContent"></app-multiple-wps-content>
+    <app-multiple-wps-content [editable]="editable" [initiative]="activeTab" [resultLevelId]="resultLevelId"
+      [isIpsr]="isIpsr" [showMultipleWPsContent]="showMultipleWPsContent"></app-multiple-wps-content>
   </div>
-
 </div>

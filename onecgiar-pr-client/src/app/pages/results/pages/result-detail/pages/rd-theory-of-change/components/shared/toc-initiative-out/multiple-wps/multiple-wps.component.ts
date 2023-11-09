@@ -43,12 +43,14 @@ export class MultipleWPsComponent implements OnInit {
     this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
-
-    // console.log(this.theoryOfChangesServices?.primarySubmitter);
   }
 
   dynamicTabTitle(tabNumber) {
     return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
+  }
+
+  getGridTemplateColumns() {
+    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
   }
 
   onAddTab() {
@@ -81,16 +83,13 @@ export class MultipleWPsComponent implements OnInit {
     }
 
     this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
-    if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
-    } else {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result.result_toc_results = this.initiative.result_toc_results;
-    }
+
+    if (this.isContributor) this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result.result_toc_results = this.initiative.result_toc_results;
+    else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+
     // this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
     // this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
 
     this.activeTab = this.initiative?.result_toc_results[0];
-
-    console.log('borrado', this.initiative);
   }
 }

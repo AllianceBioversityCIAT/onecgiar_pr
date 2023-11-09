@@ -1,62 +1,64 @@
-<div class="flex-no-wrap" *ngIf="initiative?.planned_result !== null && showMultipleWPsContent">
-  <app-pr-select *ngIf="initiative?.planned_result && resultLevelId === 1" 
-    [options]="outputList" label="Output" optionLabel="extraInformation" 
-    optionValue="toc_result_id" [disabled]="!editable" [editable]="editable" 
-    placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
-    (selectOptionEvent)="getIndicator()">
-  </app-pr-select>
+<div class="prueba">
+  <div class="flex-no-wrap" *ngIf="initiative?.planned_result !== null && showMultipleWPsContent">
+    <app-pr-select *ngIf="initiative?.planned_result && resultLevelId === 1" [options]="outputList" label="Output"
+      optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
+      placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
+      (selectOptionEvent)="getIndicator()">
+    </app-pr-select>
 
-  <div style="max-width: 250px;" *ngIf="showOutcomeLevel && (resultLevelId === 1 ? !initiative?.planned_result : true)">
-    <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | outcomeLevelFilter:2"
-      label="Outcome level" [editable]="editable"
-      [disabled]="(resultLevelId === 1 ? true : !initiative?.planned_result) || !editable"
-      optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-      [(ngModel)]="initiative.toc_level_id" (selectOptionEvent)="indicatorView = false">
+    <div style="max-width: 250px;"
+      *ngIf="showOutcomeLevel && (resultLevelId === 1 ? !initiative?.planned_result : true)">
+      <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | outcomeLevelFilter:2"
+        label="Outcome level" [editable]="editable"
+        [disabled]="(resultLevelId === 1 ? true : !initiative?.planned_result) || !editable" optionLabel="name"
+        optionValue="toc_level_id" placeholder="Select outcome level" [(ngModel)]="initiative.toc_level_id"
+        (selectOptionEvent)="indicatorView = false">
+      </app-pr-select>
+    </div>
+
+    <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id !== 3"
+      [options]="outcomeList" label="Outcome" [editable]="editable"
+      [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation" [extraInformation]="true"
+      optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
+      (selectOptionEvent)="getIndicator()">
+    </app-pr-select>
+
+    <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id === 3"
+      [options]="eoiList" label="Outcome" [editable]="editable" [disabled]="(resultLevelId === 1 && false) || !editable"
+      optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome"
+      [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
     </app-pr-select>
   </div>
 
-  <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id !== 3"
-    [options]="outcomeList" label="Outcome" [editable]="editable"
-    [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation"
-    [extraInformation]="true" optionValue="toc_result_id" placeholder="Select outcome"
-    [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
-  </app-pr-select>
+  <hr class="divider-20">
 
-  <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id === 3"
-    [options]="eoiList" label="Outcome" [editable]="editable"
-    [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="title" optionValue="toc_result_id"
-    placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
-  </app-pr-select>
-</div>
+  <div *ngIf="indicatorView && showMultipleWPsContent">
+    <app-alert-status description="The selected ToC element does not have any indicators associated with it."
+      *ngIf="initiative?.indicators?.length === 0"></app-alert-status>
 
-<hr class="divider-20">
+    <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="initiative?.indicators?.length > 0">
+    </app-pr-field-header>
 
-<div *ngIf="indicatorView && showMultipleWPsContent">
-  <app-alert-status description="The selected ToC element does not have any indicators associated with it."
-    *ngIf="initiative?.indicators?.length === 0"></app-alert-status>
+    <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
+      *ngFor="let indicator of initiative?.indicators" [resultLevelId]="resultLevelId">
+    </app-target-indicator>
 
-  <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="initiative?.indicators?.length > 0">
-  </app-pr-field-header>
+    <div *ngIf="!isIpsr">
+      <app-pr-yes-or-not
+        label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
+        [(ngModel)]="initiative.is_sdg_action_impact">
+      </app-pr-yes-or-not>
 
-  <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-    *ngFor="let indicator of initiative?.indicators" [resultLevelId]="resultLevelId">
-  </app-target-indicator>
+      <div *ngIf="initiative.is_sdg_action_impact">
+        <app-action-area-outcome [body]="initiative?.actionAreaOutcome">
+        </app-action-area-outcome>
 
-  <div *ngIf="!isIpsr">
-    <app-pr-yes-or-not
-      label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
-      [(ngModel)]="initiative.is_sdg_action_impact">
-    </app-pr-yes-or-not>
+        <app-impact-area-targets [body]="initiative?.impactAreasTargets" [impactAreaRequid]="true">
+        </app-impact-area-targets>
 
-    <div *ngIf="initiative.is_sdg_action_impact">
-      <app-action-area-outcome [body]="initiative?.actionAreaOutcome">
-      </app-action-area-outcome>
-
-      <app-impact-area-targets [body]="initiative?.impactAreasTargets" [impactAreaRequid]="true">
-      </app-impact-area-targets>
-
-      <app-sdg-targets [body]="initiative?.sdgTargest" [sdgRequid]="true">
-      </app-sdg-targets>
+        <app-sdg-targets [body]="initiative?.sdgTargest" [sdgRequid]="true">
+        </app-sdg-targets>
+      </div>
     </div>
   </div>
 </div>

@@ -110,6 +110,17 @@ input:disabled {
   width: 93%;
 
   table {
+    border-collapse: collapse;
+    width: 100%;
+
+    .header {
+      background-color: #e8ebff;
+
+      .row-one {
+        width: 70%;
+      }
+    }
+
     .footer {
       background-color: #436280;
       color: white;
@@ -137,8 +148,6 @@ input:disabled {
         margin-right: 5px;
       }
 
-      // justify-content: space-evenly;
-
       .info-messurent-item {
         word-wrap: break-word;
       }
@@ -153,19 +162,6 @@ input:disabled {
       .overall-target {
         display: flex;
         flex-direction: row;
-      }
-    }
-  }
-
-  table {
-    border-collapse: collapse;
-    width: 100%;
-
-    .header {
-      background-color: #e8ebff;
-
-      .row-one {
-        width: 70%;
       }
     }
   }
