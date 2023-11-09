@@ -150,6 +150,14 @@ export class EvidencesService {
           );
           await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
         }
+      } else {
+        await this._evidencesRepository.updateEvidences(
+          createEvidenceDto.result_id,
+          [],
+          user.id,
+          false,
+          1,
+        );
       }
 
       if (createEvidenceDto?.supplementary) {
