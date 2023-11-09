@@ -83,6 +83,7 @@ import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geograph
 import { HttpModule } from '@nestjs/axios';
 import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.module';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -166,6 +167,7 @@ import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.mod
     VersionRepository,
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
+    EvidenceSharepointRepository,
   ],
   imports: [HttpModule, PrmsTablesTypesModule],
 })
