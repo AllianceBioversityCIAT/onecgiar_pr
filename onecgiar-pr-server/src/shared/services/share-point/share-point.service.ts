@@ -188,4 +188,105 @@ export class SharePointService {
       throw new Error('Error al obtener el token');
     }
   }
+
+  //? ------------------ Replicate file ------------------
+  async replicateFile(fileId) {
+    const newFolderId = await this.createFileFolder('/path/foldergif');
+    const fileInfo = await this.getFileInfo(fileId);
+    await this.copyFile(fileId, newFolderId, fileInfo?.name);
+  }
+
+  async createFileFolder(path: string) {
+    const token = await this.getToken();
+    const siteId = await this.GPCacheSE.getParam('sp_site_id');
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/.folder-reference:/content`;
+    const emptyBuffer = Buffer.alloc(0);
+    try {
+      const response = await this.httpService
+        .put(link, emptyBuffer, {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      if (response?.data?.name === '.folder-reference')
+        this.deleteFile(response?.data?.id);
+      return response?.data?.parentReference?.id;
+    } catch (error) {
+      console.log('erroooooooooooooooooooooooooooooooooooooooooooooooooooooor');
+      console.log(error);
+      return error;
+    }
+  }
+
+  async deleteFile(fileId) {
+    const token = await this.getToken();
+    const siteId = await this.GPCacheSE.getParam('sp_site_id');
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/${fileId}`;
+    try {
+      const response = await this.httpService
+        .delete(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async getFileInfo(fileId) {
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}`;
+    try {
+      const response = await this.httpService
+        .get(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async copyFile(currentFileId, destinationFolderId, currentFileName) {
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${currentFileId}/copy`;
+    const body = {
+      parentReference: {
+        driveId,
+        id: destinationFolderId,
+      },
+      name: currentFileName,
+    };
+
+    try {
+      const response = await this.httpService
+        .post(link, body, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
 }
