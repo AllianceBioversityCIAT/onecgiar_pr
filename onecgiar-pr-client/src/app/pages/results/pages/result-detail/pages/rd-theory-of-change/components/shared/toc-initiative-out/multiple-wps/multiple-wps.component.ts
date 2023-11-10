@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MultipleWPsServiceService } from './services/multiple-wps-service.service';
+import { CustomizedAlertsFeService } from 'src/app/shared/services/customized-alerts-fe.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -35,7 +36,7 @@ export class MultipleWPsComponent implements OnInit {
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
 
-  constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
+  constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   ngOnInit(): void {
     this.activeTab = this.initiative.result_toc_results[0];
@@ -76,16 +77,18 @@ export class MultipleWPsComponent implements OnInit {
   }
 
   onDeleteTab(tab: any) {
-    if (this.initiative.length === 1) {
-      return;
-    }
+    this.customizedAlertsFeSE.show({ id: 'delete-tab', title: 'Delete confirmation', description: 'Are you sure you want to delete this contribution to the TOC?', status: 'warning', confirmText: 'Yes, delete' }, () => {
+      if (this.initiative.result_toc_results.length === 1) {
+        return;
+      }
 
-    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+      this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
-    if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
-    } else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+      if (this.isContributor) {
+        this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
+      } else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
 
-    this.activeTab = this.initiative?.result_toc_results[0];
+      this.activeTab = this.initiative?.result_toc_results[0];
+    });
   }
 }

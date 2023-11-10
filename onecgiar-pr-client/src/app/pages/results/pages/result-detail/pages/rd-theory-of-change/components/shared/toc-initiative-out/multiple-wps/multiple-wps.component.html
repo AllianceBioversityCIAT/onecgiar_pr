@@ -12,8 +12,8 @@
         </a>
       </div>
     </div>
-    <div class="tab-add-button" (click)="onAddTab()">
-      <i class="material-icons-round close_icon tab-add-button-item"
+    <div class="tab-add-button" (click)="onAddTab()" *ngIf="initiative?.result_toc_results.length < 8">
+      <i class=" material-icons-round close_icon tab-add-button-item"
         style="font-size: 16px; color: var(--pr-color-primary);">
         add
       </i>
