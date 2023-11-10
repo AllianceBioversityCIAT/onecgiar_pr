@@ -370,7 +370,7 @@ export class EvidencesRepository
     FROM result r
       LEFT JOIN version v ON v.id = r.version_id  
     WHERE 
-      r.is_active > 0 AND r.id = 6819;  `;
+      r.is_active > 0 AND r.id = ?;`;
 
     try {
       const result: any = await this.query(query, [resultId]);

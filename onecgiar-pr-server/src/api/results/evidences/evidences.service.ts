@@ -267,13 +267,6 @@ export class EvidencesService {
         evidenceSharepoint = new EvidenceSharepoint();
       }
 
-      console.log(
-        'evidenceSharepoint.is_public_file: ',
-        evidenceSharepoint.is_public_file,
-      );
-
-      console.log('evidence.is_public_file: ', evidence.is_public_file);
-
       if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
         console.log('Es diferente, se debe actualizar el acceso');
         const data: any = await this._sharePointService.addFileAccess(
@@ -303,7 +296,6 @@ export class EvidencesService {
     };
 
     const currentSPId = Number(evidence?.sp_id);
-    console.log(currentSPId);
     const existingEvidenceSharepoint = currentSPId
       ? await this._evidenceSharepointRepository.findOne({
           where: {
@@ -311,18 +303,6 @@ export class EvidencesService {
           },
         })
       : undefined;
-
-    console.log(existingEvidenceSharepoint);
-
-    console.log(
-      'existingEvidenceSharepoint?.file_name: ',
-      existingEvidenceSharepoint?.file_name,
-    );
-    console.log('metadata?.file_name: ', metadata?.file_name);
-    console.log(
-      'existingEvidenceSharepoint?.id: ',
-      existingEvidenceSharepoint?.id,
-    );
 
     const replaceFile =
       typeof metadata?.file_name === 'string' &&
@@ -337,7 +317,6 @@ export class EvidencesService {
         },
       );
       existingEvidenceSharepoint.id = null;
-      console.log('replace');
     }
     //todo inactivar eivdencia su replace y guardar unanueva cambiar id por null
 
