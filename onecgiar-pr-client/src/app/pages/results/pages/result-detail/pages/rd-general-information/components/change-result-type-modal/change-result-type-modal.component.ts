@@ -61,6 +61,10 @@ export class ChangeResultTypeModalComponent implements OnChanges {
       return true;
     }
 
+    if (option.resultLevelId === 1 || option.resultLevelId === 2) {
+      return true;
+    }
+
     return false;
   }
 
