@@ -529,7 +529,7 @@ export class ResultsTocResultsService {
       let conResTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
-      let resTocResCon: any[] = [];
+      let result_toc_results: any[] = [];
       let resTocResConResponse: any[] = [];
       let individualResponses = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
@@ -558,13 +558,14 @@ export class ResultsTocResultsService {
             : resTocRes[0]['toc_level_id'];
 
         for (const init of conInit) {
-          resTocResCon = await this._resultsTocResultRepository.getRTRPrimary(
-            resultId,
-            [resultInit.id],
-            false,
-            [init.id],
-          );
-          resTocResCon.map((el) => {
+          result_toc_results =
+            await this._resultsTocResultRepository.getRTRPrimary(
+              resultId,
+              [resultInit.id],
+              false,
+              [init.id],
+            );
+          result_toc_results.map((el) => {
             el['toc_level_id'] =
               el['planned_result'] == false && el['planned_result'] != null
                 ? 3
@@ -574,11 +575,14 @@ export class ResultsTocResultsService {
           resTocResConResponse = [
             {
               planned_result: null,
-              initiative_id: resTocRes ? resTocResCon[0].initiative_id : null,
-              official_code: resTocRes ? resTocResCon[0].official_code : null,
-              short_name: resTocRes ? resTocResCon[0].short_name : null,
-              result_toc_results:
-                result.result_level_id == 1 ? null : resTocResCon,
+              initiative_id: resTocRes
+                ? result_toc_results[0].initiative_id
+                : null,
+              official_code: resTocRes
+                ? result_toc_results[0].official_code
+                : null,
+              short_name: resTocRes ? result_toc_results[0].short_name : null,
+              result_toc_results,
             },
           ];
 
@@ -680,6 +684,13 @@ export class ResultsTocResultsService {
           contributing_center: resCenters,
           result_toc_result: {
             planned_result: null,
+            initiative_id: resTocRes
+              ? resTocRes[0].initiative_id
+              : null,
+            official_code: resTocRes
+              ? resTocRes[0].official_code
+              : null,
+            short_name: resTocRes ? resTocRes[0].short_name : null,
             result_toc_results: resTocRes,
           },
           contributors_result_toc_result: individualResponses,
