@@ -62,8 +62,6 @@ export class ResultsKnowledgeProductsService {
         },
       },
       result_knowledge_product_metadata_array: true,
-      result_knowledge_product_keyword_array: true,
-      result_knowledge_product_author_array: true,
       result_object: {
         result_region_array: {
           region_object: true,
@@ -74,11 +72,6 @@ export class ResultsKnowledgeProductsService {
           },
         },
         obj_version: true,
-      },
-      result_knowledge_product_fair_score_array: {
-        fair_field_object: {
-          parent_object: true,
-        },
       },
     };
 
@@ -273,6 +266,16 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         true,
       );
+
+      //authors
+      updatedKnowledgeProduct.result_knowledge_product_keyword_array =
+        await this._resultsKnowledgeProductKeywordRepository.find({
+          where: {
+            result_knowledge_product_id:
+              updatedKnowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
       this._resultsKnowledgeProductMapper.patchAuthors(
         updatedKnowledgeProduct,
         newMetadata,
@@ -283,6 +286,16 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         true,
       );
+
+      //keywords
+      updatedKnowledgeProduct.result_knowledge_product_author_array =
+        await this._resultsKnowledgeProductAuthorRepository.find({
+          where: {
+            result_knowledge_product_id:
+              updatedKnowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
       this._resultsKnowledgeProductMapper.patchKeywords(
         updatedKnowledgeProduct,
         newMetadata,
@@ -353,6 +366,19 @@ export class ResultsKnowledgeProductsService {
       );
 
       //fair
+      updatedKnowledgeProduct.result_knowledge_product_fair_score_array =
+        await this._resultsKnowledgeProductFairScoreRepository.find({
+          where: {
+            result_knowledge_product_id:
+              updatedKnowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+          relations: {
+            fair_field_object: {
+              parent_object: true,
+            },
+          },
+        });
       await this.updateFair(updatedKnowledgeProduct, newMetadata, true);
       await this._resultsKnowledgeProductFairScoreRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
@@ -1386,6 +1412,38 @@ export class ResultsKnowledgeProductsService {
         where: { results_id: result.id },
         relations: this._resultsKnowledgeProductRelations,
       });
+
+      knowledgeProduct.result_knowledge_product_fair_score_array =
+        await this._resultsKnowledgeProductFairScoreRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+          relations: {
+            fair_field_object: {
+              parent_object: true,
+            },
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_keyword_array =
+        await this._resultsKnowledgeProductKeywordRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
+
+      knowledgeProduct.result_knowledge_product_author_array =
+        await this._resultsKnowledgeProductAuthorRepository.find({
+          where: {
+            result_knowledge_product_id:
+              knowledgeProduct.result_knowledge_product_id,
+            is_active: true,
+          },
+        });
 
       return {
         response: {},
