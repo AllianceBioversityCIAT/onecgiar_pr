@@ -114,29 +114,29 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onSaveSection() {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
     const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
-    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangesServices?.primarySubmitter?.id);
+    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangeBody?.result_toc_result?.initiative_id);
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
-    this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
+    this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
 
-    console.log('Sended body', this.theoryOfChangeBody.contributors_result_toc_result);
+    console.log('Sended body', this.theoryOfChangeBody);
 
-    const saveSection = () => {
-      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
-        this.getConsumed = false;
-        this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
-        this.contributingInitiativeNew = [];
-      });
-    };
+    // const saveSection = () => {
+    //   this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+    //     this.getConsumed = false;
+    //     this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+    //     this.contributingInitiativeNew = [];
+    //   });
+    // };
 
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangesServices?.primarySubmitter?.id);
-    const newInitOfficialCode = newInit?.official_code;
+    // const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.result_toc_result?.initiative_id);
+    // const newInitOfficialCode = newInit?.official_code;
 
-    if (this.currentInitOfficialCode != newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
-        saveSection();
-      });
+    // if (this.currentInitOfficialCode != newInitOfficialCode)
+    //   return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
+    //     saveSection();
+    //   });
 
-    return saveSection();
+    // return saveSection();
   }
 
   someEditable() {
@@ -145,7 +145,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   onSelectContributingInitiative() {
     this.theoryOfChangeBody?.contributing_initiatives.forEach((resp: any) => {
-      const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
+      const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
       const contributorToPush = new resultTocResultsInterface();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;
@@ -159,7 +159,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   onRemoveContributingInitiative(e) {
-    const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
+    const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id === e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
   }
 
