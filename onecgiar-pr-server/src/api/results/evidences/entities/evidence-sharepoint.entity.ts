@@ -49,6 +49,7 @@ export class EvidenceSharepoint extends BaseEntity {
   @Column({
     name: 'is_public_file',
     type: 'tinyint',
+    default: 0,
   })
   is_public_file;
 

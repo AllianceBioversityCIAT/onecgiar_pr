@@ -225,13 +225,10 @@ export class EvidencesService {
   ) {
     await this._sharePointService.getToken();
 
-    let filePath = '';
-    let originalname = '';
-    let file: Express.Multer.File;
-    let fileSaved: any;
     if (files?.length) {
-      file = files.find((fileItem: Express.Multer.File) =>
-        fileItem.originalname.includes(evidence.fileUuid),
+      const file: Express.Multer.File = files.find(
+        (fileItem: Express.Multer.File) =>
+          fileItem.originalname.includes(evidence.fileUuid),
       );
 
       if (file) {
@@ -240,16 +237,19 @@ export class EvidencesService {
             createEvidenceDto?.result_id,
           );
 
-        filePath = `/${pathInformation?.initiative_official_code}/result-${pathInformation?.result_id}/evidences`;
+        const filePath = `/${pathInformation?.phase_name}/Result ${pathInformation?.result_id}`;
         const fileSaved = await this._sharePointService.saveFile(
           file,
           filePath,
+          pathInformation,
         );
+
         return {
-          document_id: fileSaved?.data?.id,
+          document_id: fileSaved?.id,
           filePath,
           originalname: file.originalname,
-          webUrl: fileSaved?.data?.webUrl,
+          webUrl: fileSaved?.webUrl,
+          file_name: fileSaved?.name,
         };
 
         //TODO fileSaved.data.webUrl
@@ -259,13 +259,20 @@ export class EvidencesService {
   }
 
   async saveSPData(currentEvidenceID: number, metadata, evidence) {
-    const { document_id, filePath, originalname } = metadata || {};
+    const { document_id, filePath } = metadata || {};
     const createOrUpdateEvidenceSharepoint = async (
       evidenceSharepoint: EvidenceSharepoint | undefined,
     ) => {
       if (!evidenceSharepoint) {
         evidenceSharepoint = new EvidenceSharepoint();
       }
+
+      console.log(
+        'evidenceSharepoint.is_public_file: ',
+        evidenceSharepoint.is_public_file,
+      );
+
+      console.log('evidence.is_public_file: ', evidence.is_public_file);
 
       if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
         console.log('Es diferente, se debe actualizar el acceso');
@@ -284,7 +291,7 @@ export class EvidencesService {
       evidenceSharepoint.folder_path =
         filePath ?? evidenceSharepoint.folder_path;
       evidenceSharepoint.file_name =
-        originalname ?? evidenceSharepoint.file_name;
+        metadata?.file_name ?? evidenceSharepoint.file_name;
       evidenceSharepoint.is_public_file =
         evidence.is_public_file ?? evidenceSharepoint.is_public_file;
       evidenceSharepoint.evidence_id =
@@ -296,6 +303,7 @@ export class EvidencesService {
     };
 
     const currentSPId = Number(evidence?.sp_id);
+    console.log(currentSPId);
     const existingEvidenceSharepoint = currentSPId
       ? await this._evidenceSharepointRepository.findOne({
           where: {
@@ -303,6 +311,35 @@ export class EvidencesService {
           },
         })
       : undefined;
+
+    console.log(existingEvidenceSharepoint);
+
+    console.log(
+      'existingEvidenceSharepoint?.file_name: ',
+      existingEvidenceSharepoint?.file_name,
+    );
+    console.log('metadata?.file_name: ', metadata?.file_name);
+    console.log(
+      'existingEvidenceSharepoint?.id: ',
+      existingEvidenceSharepoint?.id,
+    );
+
+    const replaceFile =
+      typeof metadata?.file_name === 'string' &&
+      existingEvidenceSharepoint?.file_name !== metadata?.file_name &&
+      existingEvidenceSharepoint?.id;
+
+    if (replaceFile && existingEvidenceSharepoint) {
+      await this._evidenceSharepointRepository.update(
+        existingEvidenceSharepoint?.id,
+        {
+          is_active: false,
+        },
+      );
+      existingEvidenceSharepoint.id = null;
+      console.log('replace');
+    }
+    //todo inactivar eivdencia su replace y guardar unanueva cambiar id por null
 
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }

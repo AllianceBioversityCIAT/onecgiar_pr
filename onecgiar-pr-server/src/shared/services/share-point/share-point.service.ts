@@ -21,14 +21,19 @@ export class SharePointService {
     );
   }
 
-  async saveFile(file: Express.Multer.File, path: string) {
+  async saveFile(file: Express.Multer.File, path: string, metadata) {
+    const { date_as_name, result_id } = metadata || {};
     const token = await this.getToken();
 
     const { originalname, buffer } = file;
 
+    const fileExtension = originalname.split('.').pop();
+
+    const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
+
     const siteId = await this.GPCacheSE.getParam('sp_site_id');
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${originalname}:/content`;
+    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${fileName}:/content`;
 
     try {
       const response = await this.httpService
@@ -39,7 +44,7 @@ export class SharePointService {
           },
         })
         .toPromise();
-      return response;
+      return response?.data;
     } catch (error) {
       console.log(error);
       return error;

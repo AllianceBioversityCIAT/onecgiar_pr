@@ -360,18 +360,17 @@ export class EvidencesRepository
   }
 
   async getResultInformation(resultId) {
-    const query = `SELECT
-        r.result_code,
-        r.is_active,
-        r.version_id,
-        r.id as result_id,
-        r.title as result_title,
-        ci.official_code as initiative_official_code
+    const query = `
+    SELECT
+      r.result_code,
+      r.id as result_id,
+      r.title as result_title,
+      v.phase_name,
+      DATE_FORMAT(CONVERT_TZ(now(), '+00:00', '+02:00'), '%Y%m%d%H%i') as date_as_name
     FROM result r
-        inner join results_by_inititiative rbi ON rbi.result_id = r.id and rbi.is_active > 0
-        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
-    WHERE
-        r.is_active > 0 and result_id = ?;`;
+      LEFT JOIN version v ON v.id = r.version_id  
+    WHERE 
+      r.is_active > 0 AND r.id = 6819;  `;
 
     try {
       const result: any = await this.query(query, [resultId]);
@@ -424,6 +423,7 @@ export class EvidencesRepository
             WHERE is_active > 0
             GROUP BY evidence_id
         ) es2 ON es1.evidence_id = es2.evidence_id AND es1.created_date = es2.max_created_date
+        WHERE es1.is_active > 0
     ) es ON e.id = es.evidence_id
     WHERE e.result_id = ?
       AND e.is_supplementary = ?
@@ -431,6 +431,8 @@ export class EvidencesRepository
       AND e.evidence_type_id = ?
     ORDER BY e.creation_date ASC;
     `;
+
+    console.log([resultId, is_supplementary, type]);
 
     try {
       const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(

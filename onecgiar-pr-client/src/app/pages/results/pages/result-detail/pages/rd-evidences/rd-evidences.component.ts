@@ -84,12 +84,14 @@ export class RdEvidencesComponent implements OnInit {
 
     return `<ul>${text}</ul>`;
   }
-
   get validateCGSpaceLinks() {
-    for (const iterator of this.evidencesBody.evidences) {
+    for (const evidenteIterator of this.evidencesBody.evidences) {
       if (this.evidencesBody.evidences.find(evidence => !Boolean(evidence.link) && !evidence.is_sharepoint)) return true;
-      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == iterator.link && !evidence.is_sharepoint);
+      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);
       if (evidencesFinded.length >= 2) {
+        return true;
+      }
+      if (evidenteIterator.is_sharepoint && !(evidenteIterator?.file || evidenteIterator?.link)) {
         return true;
       }
     }
