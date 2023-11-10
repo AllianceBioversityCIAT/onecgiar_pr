@@ -232,12 +232,11 @@ export class EvidencesService {
       );
 
       if (file) {
-        const [pathInformation] =
-          await this._evidencesRepository.getResultInformation(
+        const { filePath, pathInformation } =
+          await this._sharePointService.generateFilePath(
             createEvidenceDto?.result_id,
           );
 
-        const filePath = `/${pathInformation?.phase_name}/Result ${pathInformation?.result_id}`;
         const fileSaved = await this._sharePointService.saveFile(
           file,
           filePath,
@@ -323,7 +322,18 @@ export class EvidencesService {
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
+  async replicateSPFile(resultIdDestination, fileId) {
+    console.log('replicate');
+    const { filePath, pathInformation } =
+      await this._sharePointService.generateFilePath(resultIdDestination);
+
+    await this._sharePointService.replicateFile(fileId, filePath);
+  }
+
   async findAll(resultId: number) {
+    try {
+      await this.replicateSPFile(4759, '012LTNW5G73W3MGN64RBFK77AF3SCC6UHW');
+    } catch (error) {}
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,

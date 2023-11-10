@@ -4,9 +4,15 @@ import { GlobalParameterCacheModule } from '../cache/global-parameter-cache.modu
 import { HttpModule } from '@nestjs/axios';
 import { EvidenceSharepointRepository } from '../../../api/results/evidences/repositories/evidence-sharepoint.repository';
 import { HandlersError } from '../../handlers/error.utils';
+import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 
 @Module({
-  providers: [SharePointService, EvidenceSharepointRepository, HandlersError],
+  providers: [
+    SharePointService,
+    EvidenceSharepointRepository,
+    HandlersError,
+    EvidencesRepository,
+  ],
   exports: [
     SharePointService,
     GlobalParameterCacheModule,

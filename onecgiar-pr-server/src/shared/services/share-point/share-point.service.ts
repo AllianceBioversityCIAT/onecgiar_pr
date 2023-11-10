@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
+import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 
 @Injectable()
 export class SharePointService {
@@ -11,6 +12,7 @@ export class SharePointService {
   constructor(
     private readonly httpService: HttpService,
     private readonly GPCacheSE: GlobalParameterCacheService,
+    private readonly _evidencesRepository: EvidencesRepository,
   ) {
     this.getMicrosoftGraphApiUrl();
   }
@@ -190,8 +192,8 @@ export class SharePointService {
   }
 
   //? ------------------ Replicate file ------------------
-  async replicateFile(fileId) {
-    const newFolderId = await this.createFileFolder('/path/foldergif');
+  async replicateFile(fileId, path) {
+    const newFolderId = await this.createFileFolder(path);
     const fileInfo = await this.getFileInfo(fileId);
     await this.copyFile(fileId, newFolderId, fileInfo?.name);
   }
@@ -288,5 +290,12 @@ export class SharePointService {
       console.log(error);
       return error;
     }
+  }
+
+  async generateFilePath(resultId) {
+    const [pathInformation] =
+      await this._evidencesRepository.getResultInformation(resultId);
+    const filePath = `/${pathInformation?.phase_name}/Result ${pathInformation?.result_id}`;
+    return { filePath, pathInformation };
   }
 }
