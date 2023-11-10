@@ -214,7 +214,7 @@ export class ResultsTocResultRepository
     }
   }
 
-  async getRTRById(trId: number) {
+  async getRTRById(rtrId: number) {
     const queryData = `
     SELECT
       rtr.result_toc_result_id,
@@ -236,7 +236,7 @@ export class ResultsTocResultRepository
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
-    where rtr.toc_result_id = ${trId || null};
+    where rtr.result_toc_result_id = ${rtrId || null};
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
@@ -932,21 +932,20 @@ export class ResultsTocResultRepository
                     where result_toc_result_indicator_id = ? and number_target = ?;
                 `;
 
-                const queryContributingPrimaryData = await this.query(
-                  queryContributingPrimary,
-                  [
-                    queryTargetContributingData[0]
-                      .result_toc_result_indicator_id,
-                    element.number_target,
-                  ],
-                );
-                if (queryContributingPrimaryData.length) {
-                  element.contributing =
-                    queryContributingPrimaryData[0].contributing_indicator;
-                  element.indicator_question =
-                    queryContributingPrimaryData[0].indicator_question;
-                }
-                const queryTargetContributing = `
+              const queryContributingPrimaryData = await this.query(
+                queryContributingPrimary,
+                [
+                  queryTargetContributingData[0].result_toc_result_indicator_id,
+                  element.number_target,
+                ],
+              );
+              if (queryContributingPrimaryData.length) {
+                element.contributing =
+                  queryContributingPrimaryData[0].contributing_indicator;
+                element.indicator_question =
+                  queryContributingPrimaryData[0].indicator_question;
+              }
+              const queryTargetContributing = `
                 select
                   r.description,
                   r.title,
@@ -985,11 +984,11 @@ export class ResultsTocResultRepository
                       auxTotal + Number(elementC.contributing_indicator);
                   });
                 }
-            } else {
-              itemIndicator.targets.forEach(async (element) => {
-                element.contributing = '';
-                element.indicator_question = null;
-                const queryTargetContributing = `
+              } else {
+                itemIndicator.targets.forEach(async (element) => {
+                  element.contributing = '';
+                  element.indicator_question = null;
+                  const queryTargetContributing = `
                 select
                   r.description,
                   r.title,
@@ -1008,139 +1007,141 @@ export class ResultsTocResultRepository
                   and rtr.is_active = 1;
                     `;
 
-                const queryTargetothercontributing = await this.query(
-                  queryTargetContributing,
-                  [
-                    itemIndicator.toc_results_indicator_id,
-                    element.number_target,
-                  ],
-                );
+                  const queryTargetothercontributing = await this.query(
+                    queryTargetContributing,
+                    [
+                      itemIndicator.toc_results_indicator_id,
+                      element.number_target,
+                    ],
+                  );
 
-                element.results_contributing = queryTargetothercontributing;
-                if (Number(element.target_value)) {
-                  itemIndicator.is_calculable = true;
-                  let auxTotal = 0;
-                  if (queryTargetothercontributing.length) {
-                    queryTargetothercontributing.forEach((elementC) => {
-                      auxTotal =
-                        auxTotal + Number(elementC.contributing_indicator);
-                    });
+                  element.results_contributing = queryTargetothercontributing;
+                  if (Number(element.target_value)) {
+                    itemIndicator.is_calculable = true;
+                    let auxTotal = 0;
+                    if (queryTargetothercontributing.length) {
+                      queryTargetothercontributing.forEach((elementC) => {
+                        auxTotal =
+                          auxTotal + Number(elementC.contributing_indicator);
+                      });
+                    }
+
+                    itemIndicator.total = auxTotal;
+                  } else {
+                    itemIndicator.is_calculable = false;
                   }
+                });
+              }
+            });
+          } else {
+            IndicatorTargetData = await this.query(queryDataIndicators, [
+              toc_result_id,
+              resultId,
+            ]);
 
-                  itemIndicator.total = auxTotal;
+            for (const itemIndicator of IndicatorTargetData) {
+              itemIndicator.result = resultInfo[0];
+              //Section get to location
+              if (itemIndicator.location == 'country') {
+                const regions = `select * 
+            from clarisa_countries cc WHERE 
+              cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`;
+                const region = await this.query(regions, [
+                  itemIndicator.toc_results_indicator_id,
+                ]);
+                let full_region = null;
+                region.map((item) => (full_region += `${item.name}`));
+
+                itemIndicator.location = `Country/ies`;
+                if (full_region != null) {
+                  itemIndicator.full_geo = full_region;
                 } else {
                   itemIndicator.is_calculable = false;
                 }
-              });
-            }
-          });
-        } else {
-          IndicatorTargetData = await this.query(queryDataIndicators, [
-            toc_result_id,
-            resultId,
-          ]);
-
-          for (const itemIndicator of IndicatorTargetData) {
-            itemIndicator.result = resultInfo[0];
-            //Section get to location
-            if (itemIndicator.location == 'country') {
-              const regions = `select * 
-            from clarisa_countries cc WHERE 
-              cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`;
-              const region = await this.query(regions, [
-                itemIndicator.toc_results_indicator_id,
-              ]);
-              let full_region = null;
-              region.map((item) => (full_region += `${item.name}`));
-
-              itemIndicator.location = `Country/ies`;
-              if (full_region != null) {
-                itemIndicator.full_geo = full_region;
               } else {
-                itemIndicator.is_calculable = false;
-              }
-          } else {
-            if (itemIndicator.location == 'regional') {
-              const regions = `select * 
+                if (itemIndicator.location == 'regional') {
+                  const regions = `select * 
                                 from clarisa_regions cr WHERE 
                                       cr.um49Code in (select trir.clarisa_regions_id  from Integration_information.toc_result_indicator_region trir where trir.toc_result_id = ?)`;
-              const region = await this.query(regions, [
-                itemIndicator.toc_results_indicator_id,
-              ]);
-              let full_region = null;
-              region.map((item) => (full_region += `${item.name}`));
+                  const region = await this.query(regions, [
+                    itemIndicator.toc_results_indicator_id,
+                  ]);
+                  let full_region = null;
+                  region.map((item) => (full_region += `${item.name}`));
 
-              itemIndicator.location = `Regional`;
-              if (full_region != null) {
-                itemIndicator.full_geo = '' + full_region;
-              } else {
-                itemIndicator.full_geo = ' No region(s) provided';
-              }
-            }
-            if (itemIndicator.location == 'global') {
-              itemIndicator.location = `Global`;
-              itemIndicator.full_geo = '';
-            }
+                  itemIndicator.location = `Regional`;
+                  if (full_region != null) {
+                    itemIndicator.full_geo = '' + full_region;
+                  } else {
+                    itemIndicator.full_geo = ' No region(s) provided';
+                  }
+                }
+                if (itemIndicator.location == 'global') {
+                  itemIndicator.location = `Global`;
+                  itemIndicator.full_geo = '';
+                }
 
-            //Finish Section get to location
+                //Finish Section get to location
 
-            //Section to get the type
+                //Section to get the type
 
-            if (
-              itemIndicator.type_value ==
-              'Change in the capacity of key (a) Individuals, (b) Organizations (government, civil society and private sector), and (c) Networks (e.g. multi-stakeholder platforms).'
-            ) {
-              itemIndicator.type = 'Capacity change';
-              itemIndicator.number_result_type = 3;
-            } else if (itemIndicator.type_value == 'Number of innovations') {
-              itemIndicator.type = 'Innovation Development';
-              itemIndicator.number_result_type = 7;
-            } else if (
-              itemIndicator.type_value ==
-              'Number of people trained, long-term (including Masters and PhDs) and short-term, disaggregated by gender'
-            ) {
-              itemIndicator.type = 'Capacity Sharing for Development';
-              itemIndicator.number_result_type = 5;
-            } else if (
-              itemIndicator.type_value ==
-              'Number of peer reviewed journal papers'
-            ) {
-              itemIndicator.type = 'Knowledge Product';
-              itemIndicator.number_result_type = 6;
-            } else if (
-              itemIndicator.type_value ==
-              'Number of other information products/data assets (including: reports, briefs, extension, training and e-learning content and other materials, books and book chapters, data and databases, data collection and analysis tools (e.g. models and survey tools), video, audio and images, graphics, maps, and other GIS outputs, computer software, models and code, digital and mobile applications, and web-based services (e.g. websites, data portals, online platforms)'
-            ) {
-              itemIndicator.type = 'Knowledge Product';
-              itemIndicator.number_result_type = 6;
-            } else if (
-              itemIndicator.type_value ==
-              'Number of policies/ strategies/ laws/ regulations/ budgets/ investments/ curricula modified in design or implementation, informed by CGIAR research.'
-            ) {
-              itemIndicator.type = 'Policy change';
-              itemIndicator.number_result_type = 1;
-            } else if (
-              itemIndicator.type_value ==
-              'Number of beneficiaries using the CGIAR innovation, disaggregated by gender.'
-            ) {
-              itemIndicator.type = 'Innovation use';
-              itemIndicator.number_result_type = 2;
-            } else if (
-              itemIndicator.type_value ==
-              'Other quantitative measure of CGIAR innovation use (e.g. area)'
-            ) {
-              itemIndicator.type = 'Innovation use';
-              itemIndicator.number_result_type = 2;
-            } else if (itemIndicator.type_value == 'Altmetric score') {
-              itemIndicator.type = 'Other outcome';
-              itemIndicator.number_result_type = 4;
-            } else {
-              itemIndicator.type = 'N/A';
-              itemIndicator.number_result_type = 0;
-            }
-            //Finish Section to get the type
-            //Section to get the targets
-            const queryTargetInfo = `
+                if (
+                  itemIndicator.type_value ==
+                  'Change in the capacity of key (a) Individuals, (b) Organizations (government, civil society and private sector), and (c) Networks (e.g. multi-stakeholder platforms).'
+                ) {
+                  itemIndicator.type = 'Capacity change';
+                  itemIndicator.number_result_type = 3;
+                } else if (
+                  itemIndicator.type_value == 'Number of innovations'
+                ) {
+                  itemIndicator.type = 'Innovation Development';
+                  itemIndicator.number_result_type = 7;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Number of people trained, long-term (including Masters and PhDs) and short-term, disaggregated by gender'
+                ) {
+                  itemIndicator.type = 'Capacity Sharing for Development';
+                  itemIndicator.number_result_type = 5;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Number of peer reviewed journal papers'
+                ) {
+                  itemIndicator.type = 'Knowledge Product';
+                  itemIndicator.number_result_type = 6;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Number of other information products/data assets (including: reports, briefs, extension, training and e-learning content and other materials, books and book chapters, data and databases, data collection and analysis tools (e.g. models and survey tools), video, audio and images, graphics, maps, and other GIS outputs, computer software, models and code, digital and mobile applications, and web-based services (e.g. websites, data portals, online platforms)'
+                ) {
+                  itemIndicator.type = 'Knowledge Product';
+                  itemIndicator.number_result_type = 6;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Number of policies/ strategies/ laws/ regulations/ budgets/ investments/ curricula modified in design or implementation, informed by CGIAR research.'
+                ) {
+                  itemIndicator.type = 'Policy change';
+                  itemIndicator.number_result_type = 1;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Number of beneficiaries using the CGIAR innovation, disaggregated by gender.'
+                ) {
+                  itemIndicator.type = 'Innovation use';
+                  itemIndicator.number_result_type = 2;
+                } else if (
+                  itemIndicator.type_value ==
+                  'Other quantitative measure of CGIAR innovation use (e.g. area)'
+                ) {
+                  itemIndicator.type = 'Innovation use';
+                  itemIndicator.number_result_type = 2;
+                } else if (itemIndicator.type_value == 'Altmetric score') {
+                  itemIndicator.type = 'Other outcome';
+                  itemIndicator.number_result_type = 4;
+                } else {
+                  itemIndicator.type = 'N/A';
+                  itemIndicator.number_result_type = 0;
+                }
+                //Finish Section to get the type
+                //Section to get the targets
+                const queryTargetInfo = `
             SELECT
               trit.target_value,
               trit.target_date,
@@ -1160,15 +1161,15 @@ export class ResultsTocResultRepository
                     AND v1.status = 1
               );
           `;
-            const queryTargetInfoData = await this.query(queryTargetInfo, [
-              itemIndicator.toc_results_indicator_id,
-            ]);
-            itemIndicator.targets = queryTargetInfoData;
+                const queryTargetInfoData = await this.query(queryTargetInfo, [
+                  itemIndicator.toc_results_indicator_id,
+                ]);
+                itemIndicator.targets = queryTargetInfoData;
 
-            itemIndicator.targets.forEach(async (element) => {
-              element.contributing = '';
-              element.indicator_question = null;
-              const queryTargetContributing = `
+                itemIndicator.targets.forEach(async (element) => {
+                  element.contributing = '';
+                  element.indicator_question = null;
+                  const queryTargetContributing = `
               select
                 r.description,
                 r.title,
@@ -1187,32 +1188,35 @@ export class ResultsTocResultRepository
                 and rtr.is_active = 1;
                 `;
 
-              const queryTargetothercontributing = await this.query(
-                queryTargetContributing,
-                [itemIndicator.toc_results_indicator_id, element.number_target],
-              );
+                  const queryTargetothercontributing = await this.query(
+                    queryTargetContributing,
+                    [
+                      itemIndicator.toc_results_indicator_id,
+                      element.number_target,
+                    ],
+                  );
 
-              element.results_contributing = queryTargetothercontributing;
-              if (Number(element.target_value)) {
-                itemIndicator.is_calculable = true;
-                let auxTotal = 0;
-                if (queryTargetothercontributing.length) {
-                  queryTargetothercontributing.forEach((elementC) => {
-                    auxTotal =
-                      auxTotal + Number(elementC.contributing_indicator);
-                  });
-                }
+                  element.results_contributing = queryTargetothercontributing;
+                  if (Number(element.target_value)) {
+                    itemIndicator.is_calculable = true;
+                    let auxTotal = 0;
+                    if (queryTargetothercontributing.length) {
+                      queryTargetothercontributing.forEach((elementC) => {
+                        auxTotal =
+                          auxTotal + Number(elementC.contributing_indicator);
+                      });
+                    }
 
-                itemIndicator.total = auxTotal;
-              } else {
-                itemIndicator.is_calculable = false;
+                    itemIndicator.total = auxTotal;
+                  } else {
+                    itemIndicator.is_calculable = false;
+                  }
+                });
               }
-            });
+            }
           }
         }
-      } 
-    } 
-  } else {
+      } else {
         IndicatorTargetData = await this.query(queryDataIndicators, [
           toc_result_id,
           resultId,
@@ -1980,7 +1984,7 @@ select *
     }
   }
 
-  async saveSectionNewTheoryOfChange(
+  async saveIndicatorsPrimarySubmitter(
     ResultTocResultIndicators: CreateResultsTocResultDto,
   ) {
     const { result_toc_result } = ResultTocResultIndicators;
@@ -2042,6 +2046,80 @@ select *
           }
         }
       }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `updateResultByInitiative ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async saveIndicatorsContributors(
+    ResultTocResultIndicators: CreateResultsTocResultDto,
+  ) {
+    const { contributors_result_toc_result } = ResultTocResultIndicators;
+    try {
+      contributors_result_toc_result.forEach(async (contributor) => {
+        for (const toc of contributor?.result_toc_results) {
+          for (const indicators of toc?.indicators) {
+            if (toc?.results_id) {
+              const rtrExist = await this.query(`
+                SELECT
+                  *
+                FROM
+                  results_toc_result rtr
+                WHERE rtr.results_id = ${toc?.results_id}
+                  AND rtr.initiative_id = ${toc?.initiative_id}
+                  AND rtr.result_toc_result_id = ${toc?.result_toc_result_id}
+                  AND rtr.is_active = true;
+              `);
+
+              if (!rtrExist) {
+                return this._handlersError.returnErrorRepository({
+                  className: ResultsTocResultRepository.name,
+                  error: `The result indicators result id ${indicators?.result_toc_result_id} does not exist`,
+                  debug: true,
+                });
+              }
+
+              if (rtrExist) {
+                await this.update(
+                  { result_toc_result_id: rtrExist[0]?.result_toc_result_id },
+                  {
+                    is_sdg_action_impact: toc?.is_sdg_action_impact,
+                  },
+                );
+                console.log("🚀 ~ file: results-toc-results.repository.ts:2104 ~ contributors_result_toc_result.forEach ~ indicators?.targets:", toc)
+                if (indicators?.targets) {
+                  await this.saveInditicatorsContributing(
+                    rtrExist[0].result_toc_result_id,
+                    toc?.indicators,
+                  );
+                } else {
+                  return;
+                }
+                await this.saveImpact(
+                  rtrExist[0].result_toc_result_id,
+                  toc?.impactAreasTargets,
+                  toc?.results_id,
+                  toc?.initiative_id,
+                );
+                await this.saveSdg(
+                  rtrExist[0].result_toc_result_id,
+                  toc?.sdgTargest,
+                  toc?.results_id,
+                );
+                await this.saveActionAreaToc(
+                  rtrExist[0].result_toc_result_id,
+                  toc?.actionAreaOutcome,
+                  toc?.result_toc_result_id,
+                );
+              }
+            }
+          }
+        }
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,

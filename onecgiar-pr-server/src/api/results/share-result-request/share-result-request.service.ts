@@ -320,7 +320,7 @@ export class ShareResultRequestService {
           }
         }
         const auxBody: any = data;
-        await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
+        await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
           auxBody?.bodyNewTheoryOfChanges,
         );
       }

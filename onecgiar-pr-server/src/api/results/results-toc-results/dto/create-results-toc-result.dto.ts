@@ -10,6 +10,7 @@ export class CreateResultsTocResultDto {
   contributors_result_toc_result: [
     {
       planned_result: boolean;
+      initiative_id: number;
       result_toc_results: resultToResultInterfaceToc[];
     }
   ];
