@@ -9,7 +9,7 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
   templateUrl: './ipsr-contributors-toc.component.html',
   styleUrls: ['./ipsr-contributors-toc.component.scss']
 })
-export class IpsrContributorsTocComponent {
+export class IpsrContributorsTocComponent implements OnInit {
   @Input() contributorsBody = new ContributorsBody();
   contributingInitiativesList = [];
   constructor(public api: ApiService, public rolesSE: RolesService) {}
@@ -21,7 +21,6 @@ export class IpsrContributorsTocComponent {
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
-      //(response);
     });
   }
 
@@ -29,30 +28,6 @@ export class IpsrContributorsTocComponent {
     return this.contributingInitiativesList.filter(init => init.id != this.contributorsBody.result_toc_result.initiative_id);
   }
 
-  // onSelectContributingInitiative() {
-  //   //();
-  //   //('onSelectContributingInitiative');
-  //   this.contributorsBody.contributing_initiatives?.map((resp: any) => {
-  //     //(resp);
-  //     //(this.contributorsBody.contributors_result_toc_result);
-  //     const contributorFinded = this.contributorsBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id == resp.id);
-  //     //(contributorFinded);
-  //     const contributorToPush = new resultToResultInterfaceToc();
-  //     contributorToPush.initiative_id = resp.id;
-  //     contributorToPush.short_name = resp.short_name;
-  //     contributorToPush.official_code = resp.official_code;
-  //     if (!contributorFinded) this.contributorsBody.contributors_result_toc_result?.push(contributorToPush);
-  //     //(contributorFinded);
-  //   });
-  // }
-
-  // onRemoveContributingInitiative(e) {
-  //   // console.clear();
-  //   //(e);
-  //   const contributorFinded = this.contributorsBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id == e.remove.id);
-  //   this.contributorsBody.contributors_result_toc_result.splice(contributorFinded, 1);
-  //   //(contributorFinded);
-  // }
   toggleActiveContributor(item) {
     item.is_active = !item.is_active;
   }

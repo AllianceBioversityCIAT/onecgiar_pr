@@ -13,12 +13,12 @@
         <app-pr-select class="segment_title_margin"
             [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
             optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an Initiative"
-            [(ngModel)]="this.theoryOfChangesServices?.primarySubmitter.id"
-            [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result?.result_toc_results[0]?.initiative_id)">
+            [(ngModel)]="this.theoryOfChangeBody?.result_toc_result.initiative_id"
+            [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)">
         </app-pr-select>
 
         <div class="no-primary-list"
-            *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody.result_toc_result?.result_toc_results[0]?.initiative_id">
+            *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id">
             Since this result has not been shared and accepted by other Initiatives, it is not possible to change the
             primary submitter.
         </div>
@@ -140,7 +140,7 @@
     </div>
 
     <div [ngSwitch]="this.resultLevelSE.currentResultLevelId"
-        *ngIf="getConsumed && this.theoryOfChangesServices?.primarySubmitter?.id || getConsumed && this.theoryOfChangeBody?.impacts">
+        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
         <div *ngSwitchCase="1">
             <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
                 [impacts]="this.theoryOfChangeBody.impactsTarge"
