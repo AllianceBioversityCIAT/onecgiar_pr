@@ -540,6 +540,9 @@ export class ResultsPackageTocResultService {
       });
       let resTocRes: any[] = [];
       let conResTocRes: any[] = [];
+      let result_toc_results: any[] = [];
+      let resTocResConResponse: any[] = [];
+      let individualResponses = [];
       resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
         resultId,
         [resultInit.id],
@@ -563,18 +566,45 @@ export class ResultsPackageTocResultService {
         resTocRes[0]['planned_result'] == 0
           ? 3
           : resTocRes[0]['toc_level_id'];
-      conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(
-        resultId,
-        [resultInit.id],
-        false,
-        conInit.map((el) => el.id),
-      );
-      conResTocRes.map((el) => {
-        el['toc_level_id'] =
-          el['planned_result'] == 0 && el['planned_result'] != null
-            ? 3
-            : el['toc_level_id'];
-      });
+      for (const init of conInit) {
+        result_toc_results =
+          await this._resultsTocResultRepository.getRTRPrimary(
+            resultId,
+            [resultInit.id],
+            false,
+            [init.id],
+          );
+        result_toc_results.map((el) => {
+          el['toc_level_id'] =
+            el['planned_result'] == false && el['planned_result'] != null
+              ? 3
+              : el['toc_level_id'];
+        });
+
+        resTocResConResponse = [
+          {
+            planned_result: null,
+            initiative_id: resTocRes
+              ? result_toc_results[0].initiative_id
+              : null,
+            official_code: resTocRes
+              ? result_toc_results[0].official_code
+              : null,
+            short_name: resTocRes ? result_toc_results[0].short_name : null,
+            result_toc_results,
+          },
+        ];
+
+        resTocResConResponse.forEach((response) => {
+          individualResponses.push({
+            planned_result: response.planned_result,
+            initiative_id: response.initiative_id,
+            official_code: response.official_code,
+            short_name: response.short_name,
+            result_toc_results: response.result_toc_results,
+          });
+        });
+      }
 
       return {
         response: {
@@ -583,7 +613,7 @@ export class ResultsPackageTocResultService {
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: resTocRes[0],
-          contributors_result_toc_result: conResTocRes,
+          contributors_result_toc_result: individualResponses,
           institutions: institutions,
         },
         message: 'The toc data is successfully',
@@ -603,3 +633,4 @@ interface resultToResultInterfaceToc {
   planned_result: boolean;
   initiative_id: number;
 }
+
