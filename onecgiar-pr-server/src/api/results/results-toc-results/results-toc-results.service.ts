@@ -360,89 +360,89 @@ export class ResultsTocResultsService {
           }
         }
 
-        if (contributors_result_toc_result?.length) {
-          contributors_result_toc_result =
-            contributors_result_toc_result.filter((el) =>
-              initiativeArray.includes(el.initiative_id),
-            );
-          const RtRArray: ResultsTocResult[] = [];
-          for (
-            let index = 0;
-            index < contributors_result_toc_result.length;
-            index++
-          ) {
-            const RtR = await this._resultsTocResultRepository.getRTRById(
-              contributors_result_toc_result[index].result_toc_result_id,
-            );
+        // if (contributors_result_toc_result.contributors_result_toc_results) {
+        //   contributors_result_toc_result =
+        //     contributors_result_toc_result.filter((el) =>
+        //       initiativeArray.includes(el.initiative_id),
+        //     );
+        //   const RtRArray: ResultsTocResult[] = [];
+        //   for (
+        //     let index = 0;
+        //     index < contributors_result_toc_result.length;
+        //     index++
+        //   ) {
+        //     const RtR = await this._resultsTocResultRepository.getRTRById(
+        //       contributors_result_toc_result[index].result_toc_result_id,
+        //     );
 
-            if (RtR) {
-              if (result.result_level_id == 2) {
-                RtR.action_area_outcome_id =
-                  contributors_result_toc_result[index]
-                    ?.action_area_outcome_id || null;
-              } else {
-                RtR.toc_result_id =
-                  contributors_result_toc_result[index]?.toc_result_id || null;
-              }
+        //     if (RtR) {
+        //       if (result.result_level_id == 2) {
+        //         RtR.action_area_outcome_id =
+        //           contributors_result_toc_result[index]
+        //             ?.action_area_outcome_id || null;
+        //       } else {
+        //         RtR.toc_result_id =
+        //           contributors_result_toc_result[index]?.toc_result_id || null;
+        //       }
 
-              RtR.is_active = true;
-              RtR.planned_result =
-                contributors_result_toc_result[index]?.planned_result;
-              RtR.last_updated_by = user.id;
-              RtRArray.push(RtR);
-            } else {
-              const newRtR = new ResultsTocResult();
-              newRtR.created_by = user.id;
-              newRtR.last_updated_by = user.id;
-              newRtR.planned_result =
-                contributors_result_toc_result[index]?.planned_result;
-              newRtR.results_id = result.id;
-              newRtR.initiative_id =
-                contributors_result_toc_result[index]?.initiative_id || null;
-              if (result.result_level_id == 2) {
-                newRtR.action_area_outcome_id =
-                  contributors_result_toc_result[index]
-                    ?.action_area_outcome_id || null;
-              } else {
-                newRtR.toc_result_id =
-                  contributors_result_toc_result[index]?.toc_result_id || null;
-              }
-              newRtR.planned_result =
-                contributors_result_toc_result[index]?.planned_result;
-              RtRArray.push(newRtR);
-            }
-          }
-          for (const i of RtRArray) {
-            const temp: any = i;
-            const res = await this._resultsTocResultRepository.findOne({
-              where: {
-                result_id: temp.results_id,
-                initiative_ids: temp.inititiative_id,
-              },
-            });
-            if (res) {
-              delete temp.result_toc_result_id;
-              await this._resultsTocResultRepository.update(
-                res.result_toc_result_id,
-                {
-                  toc_result_id: temp.toc_result_id,
-                  action_area_outcome_id: temp.action_area_outcome_id,
-                  planned_result: temp.planned_result,
-                  last_updated_by: user.id,
-                },
-              );
-            } else {
-              await this._resultsTocResultRepository.save({
-                initiative_id: res.initiative_id,
-                created_by: res.created_by,
-                last_updated_by: res.last_updated_by,
-                result_id: res.results_id,
-                planned_result: res.planned_result,
-                action_area_outcome_id: res.action_area_outcome_id,
-              });
-            }
-          }
-        }
+        //       RtR.is_active = true;
+        //       RtR.planned_result =
+        //         contributors_result_toc_result[index]?.planned_result;
+        //       RtR.last_updated_by = user.id;
+        //       RtRArray.push(RtR);
+        //     } else {
+        //       const newRtR = new ResultsTocResult();
+        //       newRtR.created_by = user.id;
+        //       newRtR.last_updated_by = user.id;
+        //       newRtR.planned_result =
+        //         contributors_result_toc_result[index]?.planned_result;
+        //       newRtR.results_id = result.id;
+        //       newRtR.initiative_id =
+        //         contributors_result_toc_result[index]?.initiative_id || null;
+        //       if (result.result_level_id == 2) {
+        //         newRtR.action_area_outcome_id =
+        //           contributors_result_toc_result[index]
+        //             ?.action_area_outcome_id || null;
+        //       } else {
+        //         newRtR.toc_result_id =
+        //           contributors_result_toc_result[index]?.toc_result_id || null;
+        //       }
+        //       newRtR.planned_result =
+        //         contributors_result_toc_result[index]?.planned_result;
+        //       RtRArray.push(newRtR);
+        //     }
+        //   }
+        //   for (const i of RtRArray) {
+        //     const temp: any = i;
+        //     const res = await this._resultsTocResultRepository.findOne({
+        //       where: {
+        //         result_id: temp.results_id,
+        //         initiative_ids: temp.inititiative_id,
+        //       },
+        //     });
+        //     if (res) {
+        //       delete temp.result_toc_result_id;
+        //       await this._resultsTocResultRepository.update(
+        //         res.result_toc_result_id,
+        //         {
+        //           toc_result_id: temp.toc_result_id,
+        //           action_area_outcome_id: temp.action_area_outcome_id,
+        //           planned_result: temp.planned_result,
+        //           last_updated_by: user.id,
+        //         },
+        //       );
+        //     } else {
+        //       await this._resultsTocResultRepository.save({
+        //         initiative_id: res.initiative_id,
+        //         created_by: res.created_by,
+        //         last_updated_by: res.last_updated_by,
+        //         result_id: res.results_id,
+        //         planned_result: res.planned_result,
+        //         action_area_outcome_id: res.action_area_outcome_id,
+        //       });
+        //     }
+        //   }
+        // }
 
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
@@ -504,6 +504,10 @@ export class ResultsTocResultsService {
         await this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         );
+      console.log(
+        '🚀 ~ file: results-toc-results.service.ts:504 ~ ResultsTocResultsService ~ getTocByResult ~ conInit:',
+        conInit,
+      );
       const conAndPriInit =
         await this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
@@ -525,6 +529,9 @@ export class ResultsTocResultsService {
       let conResTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
+      let resTocResCon: any[] = [];
+      let resTocResConResponse: any[] = [];
+      let individualResponses = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
           resultId,
@@ -549,18 +556,55 @@ export class ResultsTocResultsService {
           resTocRes[0]['planned_result'] == 0
             ? 3
             : resTocRes[0]['toc_level_id'];
-        conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(
-          resultId,
-          [resultInit.id],
-          false,
-          conInit.map((el) => el.id),
-        );
-        conResTocRes.map((el) => {
-          el['toc_level_id'] =
-            el['planned_result'] == 0 && el['planned_result'] != null
-              ? 3
-              : el['toc_level_id'];
-        });
+
+        for (const init of conInit) {
+          resTocResCon = await this._resultsTocResultRepository.getRTRPrimary(
+            resultId,
+            [resultInit.id],
+            false,
+            [init.id],
+          );
+          resTocResCon.map((el) => {
+            el['toc_level_id'] =
+              el['planned_result'] == false && el['planned_result'] != null
+                ? 3
+                : el['toc_level_id'];
+          });
+
+          resTocResConResponse = [
+            {
+              planned_result: null,
+              initiative_id: resTocRes ? resTocResCon[0].initiative_id : null,
+              official_code: resTocRes ? resTocResCon[0].official_code : null,
+              short_name: resTocRes ? resTocResCon[0].short_name : null,
+              result_toc_results:
+                result.result_level_id == 1 ? null : resTocResCon,
+            },
+          ];
+
+          resTocResConResponse.forEach((response) => {
+            individualResponses.push({
+              planned_result: response.planned_result,
+              initiative_id: response.initiative_id,
+              official_code: response.official_code,
+              short_name: response.short_name,
+              result_toc_results: response.result_toc_results,
+            });
+          });
+        }
+
+        // conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(
+        //   resultId,
+        //   [resultInit.id],
+        //   false,
+        //   conInit.map((el) => el.id),
+        // );
+        // conResTocRes.map((el) => {
+        //   el['toc_level_id'] =
+        //     el['planned_result'] == 0 && el['planned_result'] != null
+        //       ? 3
+        //       : el['toc_level_id'];
+        // });
       } else if (result.result_level_id == 2) {
         resTocRes =
           await this._resultsTocResultRepository.getRTRPrimaryActionArea(
@@ -638,8 +682,7 @@ export class ResultsTocResultsService {
             planned_result: null,
             result_toc_results: resTocRes,
           },
-          contributors_result_toc_result:
-            result.result_level_id == 1 ? null : conResTocRes,
+          contributors_result_toc_result: individualResponses,
           impacts: result.result_level_id == 1 ? impactAreaArray : null,
           impactsTarge: result.result_level_id == 1 ? consImpactTarget : null,
           sdgTargets: result.result_level_id == 1 ? consSdgTargets : null,
@@ -657,10 +700,6 @@ export class ResultsTocResultsService {
     toc_result_id: number,
     init: number,
   ) {
-    console.log(
-      '🚀 ~ file: results-toc-results.service.ts:660 ~ ResultsTocResultsService ~ resultIdToc:',
-      { resultIdToc, toc_result_id, init },
-    );
     try {
       let isSdg = null;
       let isImpactArea = null;

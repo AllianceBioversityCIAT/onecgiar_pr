@@ -7,7 +7,12 @@ export class CreateResultsTocResultDto {
     planned_result: boolean;
     result_toc_results: resultToResultInterfaceToc[];
   };
-  contributors_result_toc_result: resultToResultInterfaceToc[];
+  contributors_result_toc_result: [
+    {
+      planned_result: boolean;
+      result_toc_results: resultToResultInterfaceToc[];
+    }
+  ];
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: shareResultRequestInterface[];
   bodyNewTheoryOfChanges: any[];
