@@ -13,6 +13,10 @@
     </a>
 </div>
 
-<app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-    *ngIf="this.initiative.planned_result !== null" [isContributor]="isContributor"
-    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>
+<div class="in-construction" *ngIf="this.initiative.planned_result !== null">
+    <img class="img-construction" src="assets/work-in-progress.png" alt="" srcset="">
+
+    <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
+        [isContributor]="isContributor"
+        [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>
+</div>
