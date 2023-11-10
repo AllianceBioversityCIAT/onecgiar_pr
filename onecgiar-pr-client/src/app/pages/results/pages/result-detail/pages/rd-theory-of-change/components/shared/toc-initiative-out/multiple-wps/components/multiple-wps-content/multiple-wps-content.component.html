@@ -3,7 +3,7 @@
     <app-pr-select *ngIf="initiative?.planned_result && resultLevelId === 1" [options]="outputList" label="Output"
       optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
       placeholder="Select output" [(ngModel)]="initiative.toc_result_id" [extraInformation]="true"
-      (selectOptionEvent)="getIndicator()">
+      (ngModelChange)="getIndicator()">
     </app-pr-select>
 
     <div style="max-width: 250px;"
@@ -12,7 +12,7 @@
         label="Outcome level" [editable]="editable"
         [disabled]="(resultLevelId === 1 ? true : !initiative?.planned_result) || !editable" optionLabel="name"
         optionValue="toc_level_id" placeholder="Select outcome level" [(ngModel)]="initiative.toc_level_id"
-        (selectOptionEvent)="indicatorView = false">
+        (ngModelChange)="indicatorView = false">
       </app-pr-select>
     </div>
 
@@ -20,13 +20,13 @@
       [options]="outcomeList" label="Outcome" [editable]="editable"
       [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation" [extraInformation]="true"
       optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="initiative.toc_result_id"
-      (selectOptionEvent)="getIndicator()">
+      (ngModelChange)="getIndicator()">
     </app-pr-select>
 
     <app-pr-select *ngIf="(resultLevelId === 1 ? !initiative?.planned_result : true) && initiative?.toc_level_id === 3"
       [options]="eoiList" label="Outcome" [editable]="editable" [disabled]="(resultLevelId === 1 && false) || !editable"
       optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome"
-      [(ngModel)]="initiative.toc_result_id" (selectOptionEvent)="getIndicator()">
+      [(ngModel)]="initiative.toc_result_id" (ngModelChange)="getIndicator()">
     </app-pr-select>
   </div>
 
@@ -39,8 +39,8 @@
     <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="initiative?.indicators?.length > 0">
     </app-pr-field-header>
 
-    <app-target-indicator [initiative]="indicator" [disabledInputs]="disabledInput"
-      *ngFor="let indicator of initiative?.indicators" [resultLevelId]="resultLevelId">
+    <app-target-indicator [initiative]="indicator" *ngFor="let indicator of initiative?.indicators"
+      [resultLevelId]="resultLevelId">
     </app-target-indicator>
 
     <div *ngIf="!isIpsr">

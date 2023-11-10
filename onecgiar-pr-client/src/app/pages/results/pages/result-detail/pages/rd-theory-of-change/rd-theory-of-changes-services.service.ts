@@ -5,7 +5,6 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   providedIn: 'root'
 })
 export class RdTheoryOfChangesServicesService {
-  targetsIndicators: any = [];
   impactAreasTargets: any = [];
   sdgTargest: any = [];
   actionAreaOutcome: any = [];
@@ -35,7 +34,6 @@ export class RdTheoryOfChangesServicesService {
 }
 
 export class intefacesTheoryOfChanges {
-  targetsIndicators: any[];
   impactAreasTargets: any[];
   sdgTargest: any[];
   actionAreaOutcome: any[];

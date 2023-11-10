@@ -18,7 +18,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   outcomeList = [];
   outputList = [];
   eoiList = [];
-  disabledInput = false;
   showOutcomeLevel = true;
   indicatorView = false;
 
@@ -29,7 +28,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.GET_outputList();
     this.GET_EOIList();
     this.validateEOI();
-    if (this.initiative?.toc_result_id !== null) {
+    if (this.initiative?.toc_result_id !== null && this.initiative?.initiative_id !== null) {
       this.getIndicator();
     }
   }
@@ -89,19 +88,11 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
     this.api.resultsSE.Get_indicator(this.initiative?.toc_result_id, this.initiative?.initiative_id).subscribe({
       next: ({ response }) => {
-        this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
-        this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas.map(item => ({ full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.theoryOfChangesServices.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-        this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
-          full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
-        }));
-
         this.initiative.indicators = response?.informationIndicator;
-        this.initiative.impactAreasTargets = this.theoryOfChangesServices.impactAreasTargets;
-        this.initiative.sdgTargest = this.theoryOfChangesServices.sdgTargest;
-        this.initiative.actionAreaOutcome = this.theoryOfChangesServices.actionAreaOutcome;
+        this.initiative.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+        this.initiative.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.initiative.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
         this.initiative.is_sdg_action_impact = response?.is_sdg_action_impact;
-        this.initiative.targetsIndicators = this.theoryOfChangesServices.targetsIndicators;
 
         setTimeout(() => {
           this.indicatorView = true;
@@ -115,16 +106,16 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
   narrativeTypeResult() {
     let narrative = '';
-    if (this.resultLevelId == 1) {
+    if (this.resultLevelId === 1) {
       narrative = 'output';
     }
-    if (this.showOutcomeLevel && (this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true)) {
+    if (this.showOutcomeLevel && (this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true)) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id != 3) {
+    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.initiative.toc_level_id != 3) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId == 1 ? this.theoryOfChangesServices?.planned_result == false : true) && this.initiative.toc_level_id == 3) {
+    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.initiative.toc_level_id === 3) {
       narrative = 'outcome';
     }
 

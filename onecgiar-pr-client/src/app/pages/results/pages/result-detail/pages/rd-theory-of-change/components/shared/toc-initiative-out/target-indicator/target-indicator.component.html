@@ -121,7 +121,7 @@
                             </td>
 
                             <td *ngIf="initiative?.is_calculable">
-                                <input type="number" class="in-progress" min="0" style="width: 40px;"
+                                <input type="number" class="in-progress" min="0" style="width: 45px;"
                                     onkeypress="return event.charCode >= 48" [(ngModel)]="item.contributing" />
                                 out of {{item.target_value}}
                             </td>
