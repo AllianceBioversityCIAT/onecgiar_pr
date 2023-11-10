@@ -11,7 +11,7 @@ import { MultipleWPsServiceService } from '../../services/multiple-wps-service.s
 })
 export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() editable: boolean;
-  @Input() initiative: any;
+  @Input() activeTab: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
@@ -28,13 +28,13 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.GET_outputList();
     this.GET_EOIList();
     this.validateEOI();
-    if (this.initiative?.toc_result_id !== null && this.initiative?.initiative_id !== null) {
+    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 1).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.results_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
       next: ({ response }) => {
         this.outputList = [];
         this.outputList = response;
@@ -47,7 +47,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 2).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 2).subscribe({
       next: ({ response }) => {
         this.outcomeList = response;
       },
@@ -59,7 +59,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.initiative?.results_id || this.api.dataControlSE?.currentResult?.id, this.initiative?.initiative_id, 3).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
       },
@@ -73,8 +73,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   validateEOI() {
     this.showOutcomeLevel = false;
 
-    if (!this.initiative.planned_result) {
-      this.initiative.toc_level_id = 3;
+    if (!this.activeTab.planned_result) {
+      this.activeTab.toc_level_id = 3;
     }
 
     this.indicatorView = false;
@@ -86,13 +86,13 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   getIndicator() {
     this.indicatorView = false;
 
-    this.api.resultsSE.Get_indicator(this.initiative?.toc_result_id, this.initiative?.initiative_id).subscribe({
+    this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
       next: ({ response }) => {
-        this.initiative.indicators = response?.informationIndicator;
-        this.initiative.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.initiative.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-        this.initiative.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
-        this.initiative.is_sdg_action_impact = response?.is_sdg_action_impact;
+        this.activeTab.indicators = response?.informationIndicator;
+        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+        this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
 
         setTimeout(() => {
           this.indicatorView = true;
@@ -112,10 +112,10 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.showOutcomeLevel && (this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true)) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.initiative.toc_level_id != 3) {
+    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id != 3) {
       narrative = 'outcome';
     }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.initiative.toc_level_id === 3) {
+    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id === 3) {
       narrative = 'outcome';
     }
 
@@ -124,7 +124,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
   ngOnChanges() {
     this.validateEOI();
-    if (this.initiative?.toc_result_id !== null && this.initiative?.initiative_id !== null) {
+    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
   }

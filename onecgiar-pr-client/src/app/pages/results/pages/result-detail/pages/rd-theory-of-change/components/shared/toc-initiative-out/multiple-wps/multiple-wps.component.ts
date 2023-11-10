@@ -73,8 +73,6 @@ export class MultipleWPsComponent implements OnInit {
     setTimeout(() => {
       this.showMultipleWPsContent = true;
     }, 20);
-
-    // console.log('this.activeTab', this.activeTab);
   }
 
   onDeleteTab(tab: any) {
@@ -84,11 +82,9 @@ export class MultipleWPsComponent implements OnInit {
 
     this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
-    if (this.isContributor) this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result.result_toc_results = this.initiative.result_toc_results;
-    else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
-
-    // this.theoryOfChangesServices.result_toc_result = this.theoryOfChangesServices.result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
-    // this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result.filter(t => t.uniqueId !== tab.uniqueId);
+    if (this.isContributor) {
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
+    } else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
 
     this.activeTab = this.initiative?.result_toc_results[0];
   }

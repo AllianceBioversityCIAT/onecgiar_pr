@@ -3,7 +3,7 @@
 
 <div>
     <app-toc-initiative-out [initiative]="result_toc_result"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.result_toc_results[0]?.initiative_id) || this.api.rolesSE.isAdmin)"
+        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin)"
         [resultLevelId]="1">
     </app-toc-initiative-out>
 </div>
@@ -13,9 +13,8 @@
     <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
     </app-pr-field-header>
 
-    <!-- <div *ngFor="let item of contributors_result_toc_result; let i = index;"> -->
-    <app-toc-initiative-out [initiative]="contributors_result_toc_result"
-        [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(contributors_result_toc_result[0]?.initiative_id) || this.api.rolesSE.isAdmin)"
-        [resultLevelId]="1" [isContributor]="true"></app-toc-initiative-out>
-    <!-- </div> -->
+    <div *ngFor="let contributor of contributors_result_toc_result; let i = index;">
+        <app-toc-initiative-out [initiative]="contributor" [resultLevelId]="1" [isContributor]="true"
+            [editable]="!this.api.rolesSE.platformIsClosed && (this.api.rolesSE.validateInitiative(contributor?.initiative_id) || this.api.rolesSE.isAdmin)"></app-toc-initiative-out>
+    </div>
 </div>

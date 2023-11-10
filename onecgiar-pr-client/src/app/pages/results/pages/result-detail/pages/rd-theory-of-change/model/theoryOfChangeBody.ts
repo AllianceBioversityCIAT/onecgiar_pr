@@ -53,6 +53,9 @@ export interface centerInterfacesToc {
 
 export class resultToResultInterfaceToc {
   planned_result: boolean = null;
+  initiative_id: number = null;
+  official_code: string = null;
+  short_name: string = null;
   result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
 }
 
