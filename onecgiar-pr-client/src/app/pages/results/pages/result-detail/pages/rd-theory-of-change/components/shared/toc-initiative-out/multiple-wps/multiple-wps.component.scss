@@ -40,9 +40,17 @@
       text-decoration: none;
       padding: 10px 8px;
       display: grid;
-      grid-template-columns: 1fr 5fr 1fr;
+      grid-template-columns: 6fr 1fr;
       align-items: center;
       gap: 0.5rem;
+
+      .tab-content {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
 
       .tab-title {
         text-align: center;

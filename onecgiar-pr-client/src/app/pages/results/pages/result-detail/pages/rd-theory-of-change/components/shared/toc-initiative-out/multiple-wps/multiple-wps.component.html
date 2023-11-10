@@ -2,14 +2,17 @@
   <div class="tabs-container">
     <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
       <div *ngFor="let tab of initiative?.result_toc_results; let i = index">
-        <a class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}" (click)="onActiveTab(tab)">
-          <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
-            check_circle
-          </i>
-          <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
+        <div class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}">
+          <div class="tab-content" (click)="onActiveTab(tab)">
+            <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
+              check_circle
+            </i>
+            <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
+          </div>
           <i *ngIf="initiative?.result_toc_results.length !== 1"
-            class="material-icons-round close_icon tab-delete-button-item" (click)="onDeleteTab(tab)">backspace</i>
-        </a>
+            class="material-icons-round close_icon tab-delete-button-item"
+            (click)="onDeleteTab(tab, i + 1)">backspace</i>
+        </div>
       </div>
     </div>
     <div class="tab-add-button" (click)="onAddTab()" *ngIf="initiative?.result_toc_results.length < 8">

@@ -76,8 +76,8 @@ export class MultipleWPsComponent implements OnInit {
     }, 20);
   }
 
-  onDeleteTab(tab: any) {
-    this.customizedAlertsFeSE.show({ id: 'delete-tab', title: 'Delete confirmation', description: 'Are you sure you want to delete this contribution to the TOC?', status: 'warning', confirmText: 'Yes, delete' }, () => {
+  onDeleteTab(tab: any, tabNumber = 0) {
+    this.customizedAlertsFeSE.show({ id: 'delete-tab', title: 'Delete confirmation', description: `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`, status: 'warning', confirmText: 'Yes, delete' }, () => {
       if (this.initiative.result_toc_results.length === 1) {
         return;
       }
