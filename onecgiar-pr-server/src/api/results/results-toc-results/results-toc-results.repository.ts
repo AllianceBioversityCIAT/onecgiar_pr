@@ -1091,9 +1091,24 @@ export class ResultsTocResultRepository
             //Finish Section to get the type
             //Section to get the targets
             const queryTargetInfo = `
-          SELECT trit.target_value, trit.target_date, trit.number_target
-            from Integration_information.toc_result_indicator_target trit 
-              WHERE trit.toc_result_indicator_id = ?
+            SELECT
+              trit.target_value,
+              trit.target_date,
+              trit.number_target
+            FROM
+              Integration_information.toc_result_indicator_target trit
+            WHERE
+              trit.toc_result_indicator_id = ?
+              AND YEAR(DATE(trit.target_date)) = (
+                  SELECT
+                    v1.phase_year
+                  FROM
+                    prdb.version v1
+                  WHERE
+                    v1.phase_name LIKE '%Reporting%'
+                    AND v1.is_active = 1
+                    AND v1.status = 1
+              );
           `;
             const queryTargetInfoData = await this.query(queryTargetInfo, [
               itemIndicator.toc_results_indicator_id,
