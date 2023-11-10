@@ -932,25 +932,38 @@ export class ResultsTocResultRepository
                     where result_toc_result_indicator_id = ? and number_target = ?;
                 `;
 
-              const queryContributingPrimaryData = await this.query(
-                queryContributingPrimary,
-                [
-                  queryTargetContributingData[0].result_toc_result_indicator_id,
-                  element.number_target,
-                ],
-              );
-              if (queryContributingPrimaryData.length) {
-                element.contributing =
-                  queryContributingPrimaryData[0].contributing_indicator;
-                element.indicator_question =
-                  queryContributingPrimaryData[0].indicator_question;
-              }
-              const queryTargetContributing = `
-                select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
-		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
-      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
-      	          join result r on r.id = rtr.results_id 
-      	          where rtri.results_toc_results_id != ? and rtri.toc_results_indicator_id = ? and rit.number_target = ? and rtr.is_active = 1;
+                const queryContributingPrimaryData = await this.query(
+                  queryContributingPrimary,
+                  [
+                    queryTargetContributingData[0]
+                      .result_toc_result_indicator_id,
+                    element.number_target,
+                  ],
+                );
+                if (queryContributingPrimaryData.length) {
+                  element.contributing =
+                    queryContributingPrimaryData[0].contributing_indicator;
+                  element.indicator_question =
+                    queryContributingPrimaryData[0].indicator_question;
+                }
+                const queryTargetContributing = `
+                select
+                  r.description,
+                  r.title,
+                  r.result_code,
+                  rit.contributing_indicator
+                from
+                  results_toc_result rtr
+                  join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+                  and rtri.is_active = 1
+                  join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                  and rit.is_active = 1
+                  join result r on r.id = rtr.results_id
+                where
+                  rtri.results_toc_results_id != ?
+                  and rtri.toc_results_indicator_id = ?
+                  and rit.number_target = ?
+                  and rtr.is_active = 1;
                 `;
 
               const queryTargetothercontributing = await this.query(
@@ -972,12 +985,80 @@ export class ResultsTocResultRepository
                       auxTotal + Number(elementC.contributing_indicator);
                   });
                 }
-                auxTotal = auxTotal + Number(element.contributing);
-                itemIndicator.total = auxTotal;
+            } else {
+              itemIndicator.targets.forEach(async (element) => {
+                element.contributing = '';
+                element.indicator_question = null;
+                const queryTargetContributing = `
+                select
+                  r.description,
+                  r.title,
+                  r.result_code,
+                  rit.contributing_indicator
+                from
+                  results_toc_result rtr
+                  join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+                  and rtri.is_active = 1
+                  join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                  and rit.is_active = 1
+                  join result r on r.id = rtr.results_id
+                where
+                  rtri.toc_results_indicator_id = ?
+                  and rit.number_target = ?
+                  and rtr.is_active = 1;
+                    `;
+
+                const queryTargetothercontributing = await this.query(
+                  queryTargetContributing,
+                  [
+                    itemIndicator.toc_results_indicator_id,
+                    element.number_target,
+                  ],
+                );
+
+                element.results_contributing = queryTargetothercontributing;
+                if (Number(element.target_value)) {
+                  itemIndicator.is_calculable = true;
+                  let auxTotal = 0;
+                  if (queryTargetothercontributing.length) {
+                    queryTargetothercontributing.forEach((elementC) => {
+                      auxTotal =
+                        auxTotal + Number(elementC.contributing_indicator);
+                    });
+                  }
+
+                  itemIndicator.total = auxTotal;
+                } else {
+                  itemIndicator.is_calculable = false;
+                }
+              });
+            }
+          });
+        } else {
+          IndicatorTargetData = await this.query(queryDataIndicators, [
+            toc_result_id,
+            resultId,
+          ]);
+
+          for (const itemIndicator of IndicatorTargetData) {
+            itemIndicator.result = resultInfo[0];
+            //Section get to location
+            if (itemIndicator.location == 'country') {
+              const regions = `select * 
+            from clarisa_countries cc WHERE 
+              cc.id  in (select trir.clarisa_countries_id  from Integration_information.toc_result_indicator_country trir where trir.toc_result_id =?)`;
+              const region = await this.query(regions, [
+                itemIndicator.toc_results_indicator_id,
+              ]);
+              let full_region = null;
+              region.map((item) => (full_region += `${item.name}`));
+
+              itemIndicator.location = `Country/ies`;
+              if (full_region != null) {
+                itemIndicator.full_geo = full_region;
               } else {
                 itemIndicator.is_calculable = false;
               }
-            });
           } else {
             if (itemIndicator.location == 'regional') {
               const regions = `select * 
@@ -1088,23 +1169,23 @@ export class ResultsTocResultRepository
               element.contributing = '';
               element.indicator_question = null;
               const queryTargetContributing = `
-                select
-                  r.description,
-                  r.title,
-                  r.result_code,
-                  rit.contributing_indicator
-                from
-                  results_toc_result rtr
-                  join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
-                  and rtri.is_active = 1
-                  join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
-                  and rit.is_active = 1
-                  join result r on r.id = rtr.results_id
-                where
-                  rtri.toc_results_indicator_id = ?
-                  and rit.number_target = ?
-                  and rtr.is_active = 1;
-                    `;
+              select
+                r.description,
+                r.title,
+                r.result_code,
+                rit.contributing_indicator
+              from
+                results_toc_result rtr
+                join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+                and rtri.is_active = 1
+                join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                and rit.is_active = 1
+                join result r on r.id = rtr.results_id
+              where
+                rtri.toc_results_indicator_id = ?
+                and rit.number_target = ?
+                and rtr.is_active = 1;
+                `;
 
               const queryTargetothercontributing = await this.query(
                 queryTargetContributing,
@@ -1129,7 +1210,9 @@ export class ResultsTocResultRepository
             });
           }
         }
-      } else {
+      } 
+    } 
+  } else {
         IndicatorTargetData = await this.query(queryDataIndicators, [
           toc_result_id,
           resultId,
