@@ -60,9 +60,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         this.theoryOfChangeBody = response;
 
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
-        this.theoryOfChangesServices.primarySubmitter = this.theoryOfChangeBody?.contributing_and_primary_initiative.filter(item => item.initiative_role_id === '1')[0];
 
-        this.currentInitOfficialCode = this.theoryOfChangesServices.primarySubmitter?.official_code;
         if (this.theoryOfChangeBody?.impactsTarge) this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
         if (this.theoryOfChangeBody?.sdgTargets) this.theoryOfChangeBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
 

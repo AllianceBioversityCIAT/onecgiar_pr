@@ -44,6 +44,7 @@ export class MultipleWPsComponent implements OnInit {
     this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
+    console.log('this.initiative', this.initiative);
   }
 
   dynamicTabTitle(tabNumber) {
@@ -57,11 +58,11 @@ export class MultipleWPsComponent implements OnInit {
   onAddTab() {
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.theoryOfChangesServices?.primarySubmitter.id,
-      official_code: this.theoryOfChangesServices?.primarySubmitter.official_code,
+      initiative_id: this.initiative.id,
+      official_code: this.initiative.official_code,
       planned_result: this.initiative.planned_result,
       results_id: null,
-      short_name: this.theoryOfChangesServices?.primarySubmitter.short_name,
+      short_name: this.initiative.short_name,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });

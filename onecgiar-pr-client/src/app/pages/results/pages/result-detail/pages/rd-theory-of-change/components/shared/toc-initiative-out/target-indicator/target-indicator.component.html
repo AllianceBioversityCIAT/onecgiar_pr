@@ -43,12 +43,12 @@
 
     <div class="line"></div>
 
-    <div *ngIf="initiative.targets.length === 0">
+    <div *ngIf="initiative?.targets?.length === 0">
         <app-alert-status [description]="'This indicator has no targets for the current year.'"
             status="warning"></app-alert-status>
     </div>
 
-    <div class="messurement" *ngIf="initiative?.targets.length">
+    <div class="messurement" *ngIf="initiative?.targets?.length">
         <div class="title-mesuren">
             <div class="square-messerunet"></div>
             <div style="margin-top: -15px;">
@@ -98,7 +98,8 @@
 
                 <div style="margin-bottom: 10px;"
                     *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)">
-                    <app-pr-yes-or-not id="table-desc" [label]="'Have you achieved the target of this indicator?'"
+                    <app-pr-yes-or-not id="table-desc"
+                        [label]="'After reporting this result, will the target for this indicator be achieved?'"
                         [required]="true" [(ngModel)]="item.indicator_question"
                         (selectOptionEvent)="item.contributing = item.indicator_question === true ? 1 : 0"></app-pr-yes-or-not>
                 </div>
@@ -153,7 +154,7 @@
                             </td>
                         </tr>
 
-                        <tr *ngIf="item?.results_contributing.length === 0">
+                        <tr *ngIf="item?.results_contributing?.length === 0">
                             <td colspan="2">Currently there are no other results contributing to this target.</td>
                         </tr>
 
@@ -161,7 +162,10 @@
                             <th id="overall_progress_is_calculable" class="row-one">
                                 Overall progress against planned target
                             </th>
-                            <th id="total_out_of_is_calculable">{{initiative?.total}} out of {{item.target_value}}</th>
+                            <th id="total_out_of_is_calculable">
+                                {{getOverallProgress(initiative?.total,item?.contributing)}} out of
+                                {{item.target_value}}
+                            </th>
                         </tr>
                     </table>
                 </div>

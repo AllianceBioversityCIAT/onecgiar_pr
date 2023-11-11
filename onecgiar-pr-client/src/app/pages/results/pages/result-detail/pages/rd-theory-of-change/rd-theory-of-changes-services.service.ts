@@ -13,7 +13,6 @@ export class RdTheoryOfChangesServicesService {
   body: intefacesTheoryOfChanges[] = [];
   resultActionArea: any = [];
   theoryOfChangeBody: any = [];
-  primarySubmitter: any = null;
   planned_result = null;
   result_toc_result = null;
   contributors_result_toc_result = null;

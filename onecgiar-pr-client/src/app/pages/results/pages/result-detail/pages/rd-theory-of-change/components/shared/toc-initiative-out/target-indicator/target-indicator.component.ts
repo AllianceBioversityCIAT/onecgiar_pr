@@ -19,6 +19,10 @@ export class TargetIndicatorComponent {
     return `Please ensure the planned location is reflected in section <a class='open_route alert-event' href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location" target='_blank'>4. Geographic location</a>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`;
   }
 
+  getOverallProgress(overallContributing, contributing) {
+    return Number(overallContributing) + Number(contributing);
+  }
+
   descriptionWarning(type1: string, type2: string) {
     return `The type of result ${type1} you are reporting does not match the type ${type2} of this indicator, therefore, progress cannot be reported. Please ensure that the indicator category matches the indicator type for accurate reporting.`;
   }

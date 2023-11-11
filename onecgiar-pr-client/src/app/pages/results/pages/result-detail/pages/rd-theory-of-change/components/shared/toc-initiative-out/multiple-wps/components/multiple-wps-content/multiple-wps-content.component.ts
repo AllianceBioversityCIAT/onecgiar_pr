@@ -39,7 +39,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
         this.outputList = [];
         this.outputList = response;
       },
-      error: (err) => {
+      error: err => {
         this.outputList = [];
         console.error(err);
       }
@@ -51,7 +51,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       next: ({ response }) => {
         this.outcomeList = response;
       },
-      error: (err) => {
+      error: err => {
         this.outcomeList = [];
         console.error(err);
       }
@@ -63,7 +63,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       next: ({ response }) => {
         this.eoiList = response;
       },
-      error: (err) => {
+      error: err => {
         this.eoiList = [];
         console.error(err);
       }
@@ -89,16 +89,16 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
       next: ({ response }) => {
         this.activeTab.indicators = response?.informationIndicator;
-        this.activeTab.impactAreasTargets = response?.impactAreas.map((item) => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.activeTab.sdgTargest = response?.sdgTargets.map((item) => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map((item) => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
         this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
 
         setTimeout(() => {
           this.indicatorView = true;
         }, 100);
       },
-      error: (err) => {
+      error: err => {
         console.error(err);
       }
     });
