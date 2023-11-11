@@ -2,7 +2,7 @@
 
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-yes-or-not [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
-        (selectOptionEvent)="clearTocResultId(); mapPlannedResult()" [(ngModel)]="this.initiative.planned_result"
+        [(ngModel)]="this.initiative.planned_result" (selectOptionEvent)="clearTocResultId()"
         [description]="this.headerDescription(this.initiative.official_code)" [readOnly]="!editable"
         [editable]="editable" [hideDescription]="this.initiative.planned_result === null">
     </app-pr-yes-or-not>
@@ -17,6 +17,6 @@
     <img class="img-construction" src="assets/work-in-progress.png" alt="" srcset="">
 
     <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-        [isContributor]="isContributor"
+        [isContributor]="isContributor" [isNotifications]="isNotifications"
         [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>
 </div>

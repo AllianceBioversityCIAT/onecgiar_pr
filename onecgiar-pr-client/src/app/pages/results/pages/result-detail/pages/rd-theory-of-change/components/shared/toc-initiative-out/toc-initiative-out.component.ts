@@ -10,6 +10,7 @@ import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-
 export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;
   @Input() isContributor: boolean = false;
+  @Input() isNotifications?: boolean = false;
   @Input() initiative: any;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
@@ -37,24 +38,21 @@ export class TocInitiativeOutComponent implements OnInit {
   }
 
   clearTocResultId() {
-    this.initiative.result_toc_results.forEach(element => {
-      element.toc_level_id = !this.initiative.planned_result ? 3 : null;
-    });
-    this.initiative.result_toc_results.forEach(element => {
-      element.toc_result_id = null;
-    });
-  }
+    this.initiative.showMultipleWPsContent = false;
 
-  mapPlannedResult() {
-    this.initiative.result_toc_results.forEach(element => {
-      element.planned_result = this.initiative.planned_result;
-      element.showOutcomeLevel = this.initiative.showOutcomeLevel;
-      element.indicatorView = this.initiative.indicatorView;
-    });
+    setTimeout(() => {
+      this.initiative.result_toc_results.forEach(element => {
+        element.toc_level_id = !this.initiative.planned_result ? 3 : null;
+        element.planned_result = this.initiative.planned_result;
+        element.toc_result_id = null;
+      });
+
+      this.initiative.showMultipleWPsContent = true;
+    }, 20);
   }
 
   get_versionDashboard() {
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative.result_toc_results[0].toc_result_id, this.initiative.result_toc_results[0].initiative_id).subscribe({
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.toc_result_id, this.initiative?.result_toc_results[0]?.initiative_id).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },

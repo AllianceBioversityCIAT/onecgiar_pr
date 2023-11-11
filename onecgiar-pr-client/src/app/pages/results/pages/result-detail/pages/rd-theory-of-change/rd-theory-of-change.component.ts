@@ -20,7 +20,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
   disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   contributingInitiativeNew = [];
-  currentInitOfficialCode = null;
   cgspaceDisabledList = [];
   contributingCenterOptions = [];
 
@@ -81,15 +80,13 @@ export class RdTheoryOfChangeComponent implements OnInit {
           });
         }
 
+        this.disabledCenters();
+
         setTimeout(() => {
           this.getConsumed = true;
-        }, 0);
+        }, 50);
 
         console.log('recived body', response);
-        this.disabledCenters();
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 100);
       },
       error: err => {
         this.getConsumed = true;
@@ -121,7 +118,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;
-        this.currentInitOfficialCode !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+        this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
       });
     };
@@ -129,8 +126,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.result_toc_result?.initiative_id);
     const newInitOfficialCode = newInit?.official_code;
 
-    if (this.currentInitOfficialCode !== newInitOfficialCode)
-      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.currentInitOfficialCode}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
+    if (this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode)
+      return this.api.alertsFe.show({ id: 'primary-submitter', title: 'Change in primary submitter', description: `The <strong>${newInitOfficialCode}</strong> will now be the primary submitter of this result and will have exclusive editing rights for all sections and submission. <strong>${this.theoryOfChangeBody?.result_toc_result?.official_code}</strong> will lose editing and submission rights but will remain as a contributing Initiative in this result. <br> <br> Please ensure that the new primary submitter of this result is aware of this change.`, status: 'success', confirmText: 'Proceed' }, () => {
         saveSection();
       });
 

@@ -31,6 +31,7 @@ export class MultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() isContributor?: boolean = false;
+  @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
@@ -73,7 +74,7 @@ export class MultipleWPsComponent implements OnChanges {
 
     setTimeout(() => {
       this.showMultipleWPsContent = true;
-    }, 20);
+    }, 50);
   }
 
   onDeleteTab(tab: any, tabNumber = 0) {
@@ -83,12 +84,13 @@ export class MultipleWPsComponent implements OnChanges {
       }
 
       this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+      this.activeTab = this.initiative?.result_toc_results[0];
+
+      if (this.isNotifications) return;
 
       if (this.isContributor) {
         this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
       } else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
-
-      this.activeTab = this.initiative?.result_toc_results[0];
     });
   }
 }

@@ -1,4 +1,4 @@
-<div class="prueba">
+<div class="container">
   <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
     <app-pr-select *ngIf="activeTab?.planned_result && resultLevelId === 1" [options]="outputList" label="Output"
       optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
