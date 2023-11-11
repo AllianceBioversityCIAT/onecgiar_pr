@@ -1,6 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { resultToResultInterfaceToc, ContributorsBody } from '../../model/contributorsBody';
-import { environment } from 'src/environments/environment';
+import { ContributorsBody } from '../../model/contributorsBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 

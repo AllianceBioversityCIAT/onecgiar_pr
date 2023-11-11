@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MultipleWPsServiceService } from './services/multiple-wps-service.service';
 import { CustomizedAlertsFeService } from 'src/app/shared/services/customized-alerts-fe.service';
@@ -27,7 +27,7 @@ interface Tab {
   templateUrl: './multiple-wps.component.html',
   styleUrls: ['./multiple-wps.component.scss']
 })
-export class MultipleWPsComponent implements OnInit {
+export class MultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() isContributor?: boolean = false;
@@ -38,13 +38,12 @@ export class MultipleWPsComponent implements OnInit {
 
   constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
-  ngOnInit(): void {
-    this.activeTab = this.initiative.result_toc_results[0];
-
+  ngOnChanges() {
     this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
-    console.log('this.initiative', this.initiative);
+
+    this.activeTab = this.initiative?.result_toc_results[0];
   }
 
   dynamicTabTitle(tabNumber) {
