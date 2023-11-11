@@ -33,7 +33,7 @@ export class ImpactAreaTargetsComponent implements OnInit {
   }
 
   filterImpactAreaIndicatorsByImpactAreaID(iaID) {
-    return this.allImpactAreaIndicators.filter((item: any) => item?.impactAreaId == iaID);
+    return this.allImpactAreaIndicators.filter((item: any) => item?.impactAreaId === iaID);
   }
 
   removeOption(option) {
@@ -45,6 +45,5 @@ export class ImpactAreaTargetsComponent implements OnInit {
     if (this.api.rolesSE.readOnly) return;
     this.impactAreasData.forEach((iaitem: any) => (iaitem.selected = false));
     impactAreaItem.selected = true;
-    this.currentImpactAreaID = impactAreaItem.id;
   }
 }

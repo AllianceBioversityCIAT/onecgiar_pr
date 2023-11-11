@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
+import { RdTheoryOfChangesServicesService } from 'src/app/pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -11,7 +12,7 @@ import { ContributorsBody } from './model/contributorsBody';
 export class IpsrContributorsComponent implements OnInit {
   contributorsBody = new ContributorsBody();
 
-  constructor(public api: ApiService, public rolesSE: RolesService) {}
+  constructor(public api: ApiService, public rolesSE: RolesService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -25,10 +26,35 @@ export class IpsrContributorsComponent implements OnInit {
       this.contributorsBody = response;
       this.contributorsBody.contributors_result_toc_result.forEach(item => (item.planned_result = Boolean(item.planned_result)));
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
+
+      this.theoryOfChangesServices.theoryOfChangeBody = this.contributorsBody;
+
+      if (this.contributorsBody?.result_toc_result?.result_toc_results !== null) {
+        this.theoryOfChangesServices.result_toc_result = this.contributorsBody?.result_toc_result;
+        this.theoryOfChangesServices.result_toc_result.planned_result = this.contributorsBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
+        this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
+      }
+
+      if (this.contributorsBody?.contributors_result_toc_result !== null) {
+        this.theoryOfChangesServices.contributors_result_toc_result = this.contributorsBody?.contributors_result_toc_result;
+        this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
+          tab.planned_result = tab.result_toc_results[0].planned_result ?? null;
+          tab.index = index;
+          tab.showMultipleWPsContent = true;
+        });
+      }
+
+      console.log('recived data', response);
     });
   }
 
   onSaveSection() {
+    this.contributorsBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
+
+    this.contributorsBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
+
+    console.log('sended data', this.contributorsBody);
+
     this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
       this.getSectionInformation();
     });

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ImpactAreasService } from '../../../../../../../../shared/services/global/impact-areas.service';
 
 @Component({
@@ -10,5 +10,11 @@ export class TocImpactSectionComponent {
   @Input() impacts: any;
   @Input() sdg: any = [];
   @Input() contributing_initiatives: any = [];
+  isFalse = false;
+
   constructor(public impactAreasSE: ImpactAreasService) {}
+
+  getLabel(full_name) {
+    return `Is this result planned in the ${full_name} SAPLING ToC?:`;
+  }
 }

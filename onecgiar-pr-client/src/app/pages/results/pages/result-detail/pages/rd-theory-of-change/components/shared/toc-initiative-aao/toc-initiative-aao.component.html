@@ -1,21 +1,21 @@
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-field-header label="{{initiative?.official_code}} {{initiative?.short_name}}"
         [required]="true"></app-pr-field-header>
+
     <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"
-        *ngIf="vesiondashboard == true"><span>See
-            ToC</span>
+        *ngIf="vesiondashboard == true">
+        <span>See ToC</span>
         <img src="assets/icons/toc_icon.png" alt="">
     </a>
-
 </div>
 
 <div class="step_divider"></div>
 
-<!-- <div *ngIf="informationGet">
+<div *ngIf="informationGet">
     <app-action-area-outcome
         [body]="this.theoryOfChangesServices.resultActionArea[indexList]?.action"></app-action-area-outcome>
     <app-impact-area-targets [impactAreaRequid]="true"
         [body]="this.theoryOfChangesServices.resultActionArea[indexList]?.consImpactTarget"></app-impact-area-targets>
     <app-sdg-targets [sdgRequid]="true"
         [body]="this.theoryOfChangesServices.resultActionArea[indexList]?.consSdgTargets"></app-sdg-targets>
-</div> -->
+</div>

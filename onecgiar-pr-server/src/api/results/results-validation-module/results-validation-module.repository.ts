@@ -194,16 +194,16 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) - (
+			) = (
 				SELECT COUNT(*)
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) = 0
+			) 
 		)
 		AND (
 			(
-				SELECT IF(rtr.toc_result_id IS NOT NULL, 1, 0)
+				SELECT IF(COUNT(rtr.toc_result_id IS NOT NULL) = 0, 0, 1)
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
@@ -214,7 +214,7 @@ export class resultValidationRepository
 			(
 				IFNULL(
 					(
-						SELECT SUM(IF(rtr.toc_result_id IS NULL, 1, 0))
+						SELECT IF(COUNT(rtr.toc_result_id IS NULL) > 0, 1, 0)
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id

@@ -55,7 +55,6 @@ export class ApiService {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(
       resp => {
         this.dataControlSE.resultsList = resp.response;
-        console.log(this.dataControlSE.resultsList);
         this.resultsListSE.showLoadingResultSpinner = false;
 
         this.dataControlSE.resultsList.forEach((result: any) => {

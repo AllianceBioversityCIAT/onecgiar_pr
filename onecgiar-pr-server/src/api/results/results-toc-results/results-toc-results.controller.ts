@@ -3,7 +3,9 @@ import {
   Get,
   Post,
   Body,
+  Patch,
   Param,
+  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';

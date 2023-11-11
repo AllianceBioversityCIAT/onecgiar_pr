@@ -1,0 +1,31 @@
+<div class="local_container section_container">
+  <div class="tabs-container">
+    <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
+      <div *ngFor="let tab of initiative?.result_toc_results; let i = index">
+        <div class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}">
+          <div class="tab-content" (click)="onActiveTab(tab)">
+            <i class="material-icons-round {{ completnessStatusValidation(tab)? 'valid' : 'invalid' }}"
+              style="font-size: 20px;">
+              check_circle
+            </i>
+            <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
+          </div>
+          <i *ngIf="initiative?.result_toc_results.length !== 1" (click)="onDeleteTab(tab, i + 1)"
+            pTooltip="Delete TOC contributio" tooltipPosition="top"
+            class="material-icons-round close_icon tab-delete-button-item">backspace</i>
+        </div>
+      </div>
+    </div>
+    <div class="tab-add-button" (click)="onAddTab()" *ngIf="initiative?.result_toc_results.length < 8">
+      <i class=" material-icons-round close_icon tab-add-button-item"
+        style="font-size: 16px; color: var(--pr-color-primary);" pTooltip="Add other TOC result">
+        add
+      </i>
+    </div>
+  </div>
+
+  <div class="multiple-wps-container">
+    <app-multiple-wps-content [editable]="editable" [activeTab]="activeTab" [resultLevelId]="resultLevelId"
+      [isIpsr]="isIpsr" [showMultipleWPsContent]="showMultipleWPsContent"></app-multiple-wps-content>
+  </div>
+</div>
