@@ -345,7 +345,6 @@ export class ResultsTocResultsService {
               (toc) => toc.toc_result_id,
             );
           if (!tocResultIds.includes(rtr.toc_result_id)) {
-
             rtr.is_active = false;
             rtr.last_updated_by = user.id;
             await this._resultsTocResultRepository.update(
@@ -374,7 +373,6 @@ export class ResultsTocResultsService {
               );
 
               if (RtR) {
-
                 await this._resultsTocResultRepository.update(
                   RtR.result_toc_result_id,
                   {

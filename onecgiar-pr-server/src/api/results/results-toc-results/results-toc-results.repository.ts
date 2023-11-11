@@ -975,6 +975,7 @@ export class ResultsTocResultRepository
               );
 
               element.results_contributing = queryTargetothercontributing;
+
               if (Number(element.target_value)) {
                 itemIndicator.is_calculable = true;
                 let auxTotal = 0;
@@ -987,8 +988,9 @@ export class ResultsTocResultRepository
                 itemIndicator.total = auxTotal;
               } else {
                 itemIndicator.targets.forEach(async (element) => {
-                  element.contributing = '';
-                  element.indicator_question = null;
+                  element.contributing =
+                    queryContributingPrimaryData[0].contributing_indicator;
+                  element.indicator_question = queryContributingPrimaryData[0].indicator_question;
                   const queryTargetContributing = `
                 select
                   r.description,
