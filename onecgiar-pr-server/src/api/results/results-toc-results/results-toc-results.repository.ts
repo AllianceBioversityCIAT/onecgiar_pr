@@ -984,6 +984,7 @@ export class ResultsTocResultRepository
                       auxTotal + Number(elementC.contributing_indicator);
                   });
                 }
+                itemIndicator.total = auxTotal;
               } else {
                 itemIndicator.targets.forEach(async (element) => {
                   element.contributing = '';
@@ -1478,10 +1479,6 @@ export class ResultsTocResultRepository
     toc_result_id: number,
     init: number,
   ) {
-    console.log(
-      '🚀 ~ file: results-toc-results.repository.ts:1289 ~ toc_result_id:',
-      toc_result_id,
-    );
     try {
       const queryTocIndicators = `
       select
@@ -2059,8 +2056,15 @@ select *
     ResultTocResultIndicators: CreateResultsTocResultDto,
   ) {
     const { contributors_result_toc_result } = ResultTocResultIndicators;
+    if (
+      !contributors_result_toc_result.map((i) =>
+        i.result_toc_results.map((e) => e.indicators),
+      )
+    )
+      return;
+
     try {
-      contributors_result_toc_result.forEach(async (contributor) => {
+      for (const contributor of contributors_result_toc_result) {
         for (const toc of contributor?.result_toc_results) {
           for (const indicators of toc?.indicators) {
             if (toc?.results_id) {
@@ -2090,7 +2094,6 @@ select *
                     is_sdg_action_impact: toc?.is_sdg_action_impact,
                   },
                 );
-                console.log("🚀 ~ file: results-toc-results.repository.ts:2104 ~ contributors_result_toc_result.forEach ~ indicators?.targets:", toc)
                 if (indicators?.targets) {
                   await this.saveInditicatorsContributing(
                     rtrExist[0].result_toc_result_id,
@@ -2119,7 +2122,7 @@ select *
             }
           }
         }
-      });
+      }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
