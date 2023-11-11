@@ -221,7 +221,7 @@ export class ResultsPackageTocResultService {
       }
 
       // * Save Primary Submitter ResultTocResult
-      await this._resultTocResultService.saveResultTocReseultPrimary(
+      await this._resultTocResultService.saveResultTocResultPrimary(
         crtr,
         user,
         rip,

@@ -990,7 +990,8 @@ export class ResultsTocResultRepository
                 itemIndicator.targets.forEach(async (element) => {
                   element.contributing =
                     queryContributingPrimaryData[0].contributing_indicator;
-                  element.indicator_question = queryContributingPrimaryData[0].indicator_question;
+                  element.indicator_question =
+                    queryContributingPrimaryData[0].indicator_question;
                   const queryTargetContributing = `
                 select
                   r.description,
@@ -1380,19 +1381,30 @@ export class ResultsTocResultRepository
   }
 
   async saveInditicatorsContributing(
-    id_result_toc_result: number,
     targetsIndicator: any[],
+    id_result_toc_result?: number,
+    resultId?: number,
+    toc_result_id?: number,
   ) {
     try {
-      await this._resultsTocResultIndicator.update(
-        { results_toc_results_id: id_result_toc_result },
-        { is_active: false },
-      );
+      if (id_result_toc_result) {
+        await this._resultsTocResultIndicator.update(
+          { results_toc_results_id: id_result_toc_result },
+          { is_active: false },
+        );
+      }
 
       for (const itemIndicator of targetsIndicator) {
+        const rtrExist = await this.findOne({
+          where: {
+            result_id: resultId,
+            toc_result_id: toc_result_id,
+            initiative_id: itemIndicator.initiative_id,
+          },
+        });
         const targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
-            results_toc_results_id: id_result_toc_result,
+            results_toc_results_id: rtrExist.result_toc_result_id,
             toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
           },
         });
@@ -1401,7 +1413,7 @@ export class ResultsTocResultRepository
           targetIndicators.is_active = true;
           await this._resultsTocResultIndicator.update(
             {
-              results_toc_results_id: id_result_toc_result,
+              results_toc_results_id: rtrExist.result_toc_result_id,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
             },
             targetIndicators,
@@ -1470,7 +1482,7 @@ export class ResultsTocResultRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Indicators Primary Contributors ${error}`,
         debug: true,
       });
     }
@@ -1788,7 +1800,7 @@ export class ResultsTocResultRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Impact Area ${error}`,
         debug: true,
       });
     }
@@ -1884,7 +1896,7 @@ select *
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving SDG Target ToC ${error}`,
         debug: true,
       });
     }
@@ -1954,8 +1966,8 @@ select *
                                       from result r 	
                                       join version v on r.version_id = v.id  
                                         where r.id  = ?)
-    )
- `;
+            )
+        `;
 
             const sdgToc = await this.query(queryTocIndicators, [
               innovatonUseInterface[0]?.toc_result_id,
@@ -1977,7 +1989,7 @@ select *
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Action Area ToC ${error}`,
         debug: true,
       });
     }
@@ -1990,8 +2002,6 @@ select *
     try {
       for (const toc of result_toc_result?.result_toc_results) {
         if (toc?.results_id) {
-          // const result = await this.query(`select *
-          //                                 from results_toc_result rtr where rtr.results_id = ${toc.resultId} and rtr.initiative_id = ${toc.initiative}`);
           const rtrExist = await this.query(`
             SELECT
               *
@@ -1999,17 +2009,9 @@ select *
               results_toc_result rtr
             WHERE rtr.results_id = ${toc?.results_id}
               AND rtr.initiative_id = ${toc?.initiative_id}
-              AND rtr.result_toc_result_id = ${toc?.result_toc_result_id}
+              AND rtr.toc_result_id = ${toc?.toc_result_id}
               AND rtr.is_active = true;
           `);
-
-          if (!rtrExist) {
-            return this._handlersError.returnErrorRepository({
-              className: ResultsTocResultRepository.name,
-              error: `The result toc result id ${toc?.result_toc_result_id} does not exist`,
-              debug: true,
-            });
-          }
 
           if (rtrExist) {
             await this.update(
@@ -2019,36 +2021,47 @@ select *
               },
             );
             if (toc?.indicators && toc?.indicators[0]?.targets) {
+              console.log('Si indicators');
+
               await this.saveInditicatorsContributing(
-                rtrExist[0].result_toc_result_id,
                 toc?.indicators,
+                rtrExist[0]?.result_toc_result_id,
+                toc?.results_id,
+                toc?.toc_result_id,
               );
             } else {
               return;
             }
+            console.log('Si impact/sdg/action');
             await this.saveImpact(
-              rtrExist[0].result_toc_result_id,
+              rtrExist[0]?.result_toc_result_id,
               toc?.impactAreasTargets,
               toc?.results_id,
               toc?.initiative_id,
             );
             await this.saveSdg(
-              rtrExist[0].result_toc_result_id,
+              rtrExist[0]?.result_toc_result_id,
               toc?.sdgTargest,
               toc?.results_id,
             );
             await this.saveActionAreaToc(
-              rtrExist[0].result_toc_result_id,
+              rtrExist[0]?.result_toc_result_id,
               toc?.actionAreaOutcome,
               toc?.result_toc_result_id,
             );
+          } else {
+            return this._handlersError.returnErrorRepository({
+              className: ResultsTocResultRepository.name,
+              error: `The result toc result id ${toc?.result_toc_result_id} does not exist`,
+              debug: true,
+            });
           }
         }
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Indicators Primary Submitter ${error}`,
         debug: true,
       });
     }
@@ -2081,14 +2094,6 @@ select *
                   AND rtr.is_active = true;
               `);
 
-              if (!rtrExist) {
-                return this._handlersError.returnErrorRepository({
-                  className: ResultsTocResultRepository.name,
-                  error: `The result indicators result id ${indicators?.result_toc_result_id} does not exist`,
-                  debug: true,
-                });
-              }
-
               if (rtrExist) {
                 await this.update(
                   { result_toc_result_id: rtrExist[0]?.result_toc_result_id },
@@ -2098,20 +2103,22 @@ select *
                 );
                 if (indicators?.targets) {
                   await this.saveInditicatorsContributing(
-                    rtrExist[0].result_toc_result_id,
                     toc?.indicators,
+                    rtrExist[0]?.result_toc_result_id,
+                    toc?.results_id,
+                    toc?.toc_result_id,
                   );
                 } else {
                   return;
                 }
                 await this.saveImpact(
-                  rtrExist[0].result_toc_result_id,
+                  rtrExist[0]?.result_toc_result_id,
                   toc?.impactAreasTargets,
                   toc?.results_id,
                   toc?.initiative_id,
                 );
                 await this.saveSdg(
-                  rtrExist[0].result_toc_result_id,
+                  rtrExist[0]?.result_toc_result_id,
                   toc?.sdgTargest,
                   toc?.results_id,
                 );
@@ -2120,6 +2127,12 @@ select *
                   toc?.actionAreaOutcome,
                   toc?.result_toc_result_id,
                 );
+              } else {
+                return this._handlersError.returnErrorRepository({
+                  className: ResultsTocResultRepository.name,
+                  error: `The result indicators result id ${indicators?.result_toc_result_id} does not exist`,
+                  debug: true,
+                });
               }
             }
           }
@@ -2128,7 +2141,7 @@ select *
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Indicators Contributors ${error}`,
         debug: true,
       });
     }
@@ -2193,7 +2206,7 @@ select *
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving SDG Target ${error}`,
         debug: true,
       });
     }
@@ -2275,7 +2288,7 @@ select *
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `Error saving Action Area Result ${error}`,
         debug: true,
       });
     }

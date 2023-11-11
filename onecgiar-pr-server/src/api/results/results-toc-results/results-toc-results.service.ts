@@ -271,7 +271,7 @@ export class ResultsTocResultsService {
         );
 
         // * Save Primary Submitter ResultTocResult
-        await this.saveResultTocReseultPrimary(
+        await this.saveResultTocResultPrimary(
           createResultsTocResultDto,
           user,
           result,
@@ -695,13 +695,41 @@ export class ResultsTocResultsService {
     }
   }
 
-  async saveResultTocReseultPrimary(
+  async saveResultTocResultPrimary(
     createResultsTocResultDto: CreateResultsTocResultDto,
     user: TokenDto,
     result: any,
     result_id: number,
   ) {
     try {
+      // * Remove WPs that are not in the incoming DTO
+      let incomingResultTocResultIds = [];
+      createResultsTocResultDto.result_toc_result.result_toc_results.forEach(
+        (toc) => {
+          if (toc?.result_toc_result_id) {
+            incomingResultTocResultIds.push(toc.result_toc_result_id);
+          }
+        },
+      );
+
+      const storedResultTocResults =
+        await this._resultsTocResultRepository.find({
+          where: { result_id: result_id },
+        });
+
+      storedResultTocResults.forEach(async (storedResultTocResult) => {
+        if (
+          !incomingResultTocResultIds.includes(
+            storedResultTocResult.result_toc_result_id,
+          )
+        ) {
+          await this._resultsTocResultRepository.update(
+            storedResultTocResult.result_toc_result_id,
+            { is_active: false },
+          );
+        }
+      });
+
       // * Map multiple WPs to the same initiative
       for (const toc of createResultsTocResultDto?.result_toc_result
         ?.result_toc_results) {
@@ -751,31 +779,6 @@ export class ResultsTocResultsService {
             action_area_outcome_id: toc?.action_area_outcome_id,
             is_active: true,
           });
-        }
-      }
-
-      // * Logic delete a WP from Primary Submitter
-      const allRtRsPrimary = await this._resultsTocResultRepository.find({
-        where: { result_id },
-      });
-      for (const rtr of allRtRsPrimary) {
-        const tocResultIds =
-          createResultsTocResultDto?.result_toc_result?.result_toc_results.map(
-            (toc) => toc.toc_result_id,
-          );
-        if (!tocResultIds.includes(rtr.toc_result_id)) {
-          rtr.is_active = false;
-          rtr.last_updated_by = user.id;
-          await this._resultsTocResultRepository.update(
-            {
-              result_toc_result_id: rtr.result_toc_result_id,
-              initiative_id: rtr.initiative_id,
-            },
-            {
-              is_active: false,
-              last_updated_by: user.id,
-            },
-          );
         }
       }
     } catch (error) {
