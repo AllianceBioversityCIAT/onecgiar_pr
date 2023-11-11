@@ -85,8 +85,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
         setTimeout(() => {
           this.getConsumed = true;
         }, 50);
-
-        console.log('recived body', response);
       },
       error: err => {
         this.getConsumed = true;
@@ -112,8 +110,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangeBody?.result_toc_result?.initiative_id);
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
-
-    console.log('Sended body', this.theoryOfChangeBody);
 
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {

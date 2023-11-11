@@ -52,6 +52,8 @@ export class TocInitiativeOutComponent implements OnInit {
   }
 
   get_versionDashboard() {
+    if (this.isNotifications) return;
+
     this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.toc_result_id, this.initiative?.result_toc_results[0]?.initiative_id).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;

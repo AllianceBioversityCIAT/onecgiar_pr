@@ -3,7 +3,7 @@
     <app-pr-select *ngIf="activeTab?.planned_result && resultLevelId === 1" [options]="outputList" label="Output"
       optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
       placeholder="Select output" [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true"
-      (ngModelChange)="getIndicator()">
+      (ngModelChange)="getIndicator();validateSelectedOptionOutPut()">
     </app-pr-select>
 
     <div style="max-width: 250px;"
@@ -20,13 +20,13 @@
       [options]="outcomeList" label="Outcome" [editable]="editable"
       [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation" [extraInformation]="true"
       optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator()">
+      (ngModelChange)="getIndicator();validateSelectedOptionOutCome()">
     </app-pr-select>
 
     <app-pr-select *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
       [options]="eoiList" label="Outcome" [editable]="editable" [disabled]="(resultLevelId === 1 && false) || !editable"
       optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator()">
+      (ngModelChange)="getIndicator();validateSelectedOptionEOI()">
     </app-pr-select>
   </div>
 
