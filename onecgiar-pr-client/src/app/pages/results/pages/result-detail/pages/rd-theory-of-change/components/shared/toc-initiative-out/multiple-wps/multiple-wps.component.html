@@ -4,7 +4,8 @@
       <div *ngFor="let tab of initiative?.result_toc_results; let i = index">
         <div class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}">
           <div class="tab-content" (click)="onActiveTab(tab)">
-            <i class="material-icons-round {{ tab.validation ? 'valid' : 'invalid' }}" style="font-size: 20px;">
+            <i class="material-icons-round {{ completnessStatusValidation(tab)? 'valid' : 'invalid' }}"
+              style="font-size: 20px;">
               check_circle
             </i>
             <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>

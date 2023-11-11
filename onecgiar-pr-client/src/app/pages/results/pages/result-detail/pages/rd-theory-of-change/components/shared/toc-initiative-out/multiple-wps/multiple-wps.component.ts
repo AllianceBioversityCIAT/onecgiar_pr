@@ -55,6 +55,14 @@ export class MultipleWPsComponent implements OnChanges {
     return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
   }
 
+  completnessStatusValidation(tab) {
+    if (this.resultLevelId === 1) {
+      return tab.toc_result_id !== null;
+    }
+
+    return tab.toc_level_id !== null && tab.toc_result_id !== null;
+  }
+
   onAddTab() {
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
@@ -63,6 +71,7 @@ export class MultipleWPsComponent implements OnChanges {
       planned_result: this.initiative.planned_result,
       results_id: null,
       short_name: this.initiative.short_name,
+      toc_level_id: null,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
