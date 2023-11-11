@@ -1,25 +1,25 @@
 export class CreateResultsTocResultDto {
-  result_id: number;
-  contributing_initiatives: initiativeInterfaces[];
-  contributing_np_projects: donorInterfaceToc[];
-  contributing_center: centerInterfacesToc[];
+  result_id?: number;
+  contributing_initiatives?: initiativeInterfaces[];
+  contributing_np_projects?: donorInterfaceToc[];
+  contributing_center?: centerInterfacesToc[];
   result_toc_result: {
     planned_result: boolean;
     result_toc_results: resultToResultInterfaceToc[];
   };
-  contributors_result_toc_result: [
+  contributors_result_toc_result?: [
     {
       planned_result: boolean;
       initiative_id: number;
       result_toc_results: resultToResultInterfaceToc[];
     }
   ];
-  impacts: ResultTocImpactsInterface[];
-  pending_contributing_initiatives: shareResultRequestInterface[];
-  bodyNewTheoryOfChanges: any[];
-  impactsTarge: any[];
-  sdgTargets: any[];
-  bodyActionArea: any[];
+  impacts?: ResultTocImpactsInterface[];
+  pending_contributing_initiatives?: shareResultRequestInterface[];
+  bodyNewTheoryOfChanges?: any[];
+  impactsTarge?: any[];
+  sdgTargets?: any[];
+  bodyActionArea?: any[];
 }
 
 interface ResultTocImpactsInterface {

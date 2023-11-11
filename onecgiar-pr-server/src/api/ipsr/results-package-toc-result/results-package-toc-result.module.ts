@@ -26,10 +26,12 @@ import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-to
 import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/result-toc-result-target-indicator.repository';
+import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
+import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
-  imports: [VersioningModule],
+  imports: [VersioningModule, ResultsTocResultsModule],
   providers: [
     ResultsPackageTocResultService,
     ResultRepository,
@@ -55,7 +57,8 @@ import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ReturnResponse,
+    ResultsTocResultRepository
   ],
-  exports: [],
+  exports: [ResultsPackageTocResultService],
 })
 export class ResultsPackageTocResultModule {}

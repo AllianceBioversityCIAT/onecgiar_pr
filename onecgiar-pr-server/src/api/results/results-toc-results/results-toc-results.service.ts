@@ -270,176 +270,24 @@ export class ResultsTocResultsService {
           user.id,
         );
 
-        // * Map multiple WPs to the same initiative
-        for (const toc of createResultsTocResultDto?.result_toc_result
-          ?.result_toc_results) {
-          let RtR: ResultsTocResult | null;
-          if (toc?.result_toc_result_id) {
-            RtR =
-              (await this._resultsTocResultRepository.findOne({
-                where: {
-                  result_toc_result_id: toc?.result_toc_result_id,
-                },
-              })) || null;
-          } else {
-            RtR = null;
-          }
+        // * Save Primary Submitter ResultTocResult
+        await this.saveResultTocReseultPrimary(
+          createResultsTocResultDto,
+          user,
+          result,
+          result_id,
+        );
 
-          if (RtR) {
-            if (result.result_level_id == 2) {
-              RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
-            } else {
-              RtR.toc_result_id = toc?.toc_result_id || null;
-            }
-            RtR.is_active = true;
-            RtR.last_updated_by = user.id;
-            RtR.planned_result =
-              createResultsTocResultDto.result_toc_result?.planned_result;
+        // * Save Contributors ResultTocResult
+        await this.saveResultTocResultContributor(
+          createResultsTocResultDto,
+          user,
+          result,
+          result_id,
+          initSubmitter.initiative_id,
+        );
 
-            await this._resultsTocResultRepository.update(
-              RtR.result_toc_result_id,
-              {
-                toc_result_id: toc.toc_result_id,
-                action_area_outcome_id: toc.action_area_outcome_id,
-                last_updated_by: user.id,
-                planned_result:
-                  createResultsTocResultDto.result_toc_result?.planned_result,
-                is_active: true,
-              },
-            );
-          } else if (toc) {
-            const newRtR = new ResultsTocResult();
-            newRtR.initiative_id = toc?.initiative_id;
-            newRtR.created_by = user.id;
-            newRtR.last_updated_by = user.id;
-            newRtR.results_id = result.id;
-            newRtR.planned_result =
-              createResultsTocResultDto.result_toc_result?.planned_result;
-            if (result.result_level_id == 2) {
-              newRtR.action_area_outcome_id =
-                toc?.action_area_outcome_id || null;
-            } else {
-              newRtR.toc_result_id = toc?.toc_result_id || null;
-            }
-            newRtR.planned_result = toc?.planned_result || null;
-            await this._resultsTocResultRepository.save({
-              initiative_ids: newRtR.initiative_id,
-              toc_result_id: newRtR.toc_result_id,
-              created_by: newRtR.created_by,
-              last_updated_by: newRtR.last_updated_by,
-              result_id: newRtR.results_id,
-              planned_result: newRtR.planned_result,
-              action_area_outcome_id: newRtR.action_area_outcome_id,
-              is_active: true,
-            });
-          }
-        }
-
-        // * Logic delete a WP from Primary Submitter
-        const allRtRsPrimary = await this._resultsTocResultRepository.find({
-          where: { result_id },
-        });
-        for (const rtr of allRtRsPrimary) {
-          const tocResultIds =
-            createResultsTocResultDto?.result_toc_result?.result_toc_results.map(
-              (toc) => toc.toc_result_id,
-            );
-          if (!tocResultIds.includes(rtr.toc_result_id)) {
-            rtr.is_active = false;
-            rtr.last_updated_by = user.id;
-            await this._resultsTocResultRepository.update(
-              {
-                result_toc_result_id: rtr.result_toc_result_id,
-                initiative_id: rtr.initiative_id,
-              },
-              {
-                is_active: false,
-                last_updated_by: user.id,
-              },
-            );
-          }
-        }
-
-        // * Logic to map multiple WPs to multiple Initiatives Contributors
-        if (contributors_result_toc_result?.length) {
-          const RtRArray: ResultsTocResult[] = [];
-          contributors_result_toc_result.forEach(async (contributor) => {
-            for (const rtrc of contributor.result_toc_results) {
-              if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
-                return;
-              }
-              const RtR = await this._resultsTocResultRepository.getRTRById(
-                rtrc?.result_toc_result_id,
-              );
-
-              if (RtR) {
-                await this._resultsTocResultRepository.update(
-                  RtR.result_toc_result_id,
-                  {
-                    toc_result_id: rtrc?.toc_result_id,
-                    action_area_outcome_id:
-                      rtrc?.action_area_outcome_id || null,
-                    planned_result: contributor?.planned_result,
-                    last_updated_by: user.id,
-                    is_active: true,
-                  },
-                );
-              } else {
-                const newRtR = new ResultsTocResult();
-                newRtR.created_by = user.id;
-                newRtR.last_updated_by = user.id;
-                newRtR.planned_result = contributor?.planned_result;
-                newRtR.results_id = result.id;
-                newRtR.initiative_id = contributor?.initiative_id || null;
-                newRtR.is_active = true;
-                if (result.result_level_id == 2) {
-                  newRtR.action_area_outcome_id =
-                    rtrc?.action_area_outcome_id || null;
-                } else {
-                  newRtR.toc_result_id = rtrc?.toc_result_id || null;
-                }
-                newRtR.planned_result = contributor?.planned_result || null;
-                RtRArray.push(newRtR);
-
-                await this._resultsTocResultRepository.save({
-                  initiative_ids: newRtR.initiative_id,
-                  toc_result_id: newRtR.toc_result_id,
-                  created_by: newRtR.created_by,
-                  last_updated_by: newRtR.last_updated_by,
-                  result_id: newRtR.results_id,
-                  planned_result: newRtR.planned_result,
-                  action_area_outcome_id: newRtR.action_area_outcome_id,
-                  is_active: true,
-                });
-              }
-            }
-          });
-
-          // * Logic to delete a WP from Contributors
-          let incomingRtRIds = [];
-          contributors_result_toc_result.forEach((contributor) => {
-            contributor.result_toc_results.forEach((rtrc) => {
-              incomingRtRIds.push(rtrc?.result_toc_result_id);
-            });
-          });
-
-          const allRtRsContributors =
-            await this._resultsTocResultRepository.findBy({
-              result_id,
-              initiative_id: Not(initSubmitter.initiative_id),
-              is_active: true,
-            });
-
-          allRtRsContributors.forEach(async (storedRtR) => {
-            if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
-              await this._resultsTocResultRepository.update(
-                storedRtR.result_toc_result_id,
-                { is_active: false },
-              );
-            }
-          });
-        }
-
+        // * Save Indicators & Indicators Targets
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
             createResultsTocResultDto,
@@ -449,6 +297,7 @@ export class ResultsTocResultsService {
           );
         }
 
+        // * Save Action Area, Impact Area & SDGs
         if (result.result_level_id == 2) {
           for (const resultAction of bodyActionArea) {
             await this._resultsImpactAreaTargetRepository.saveImpactAreaTarget(
@@ -841,6 +690,186 @@ export class ResultsTocResultsService {
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveResultTocReseultPrimary(
+    createResultsTocResultDto: CreateResultsTocResultDto,
+    user: TokenDto,
+    result: any,
+    result_id: number,
+  ) {
+    try {
+      // * Map multiple WPs to the same initiative
+      for (const toc of createResultsTocResultDto?.result_toc_result
+        ?.result_toc_results) {
+        let RtR: ResultsTocResult | null;
+        if (toc?.result_toc_result_id) {
+          RtR =
+            (await this._resultsTocResultRepository.findOne({
+              where: {
+                result_toc_result_id: toc?.result_toc_result_id,
+              },
+            })) || null;
+        } else {
+          RtR = null;
+        }
+
+        if (RtR) {
+          if (result.result_level_id == 2) {
+            RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
+          } else {
+            RtR.toc_result_id = toc?.toc_result_id || null;
+          }
+          RtR.is_active = true;
+          RtR.last_updated_by = user.id;
+          RtR.planned_result =
+            createResultsTocResultDto.result_toc_result?.planned_result;
+
+          await this._resultsTocResultRepository.update(
+            RtR.result_toc_result_id,
+            {
+              toc_result_id: toc.toc_result_id,
+              action_area_outcome_id: toc.action_area_outcome_id,
+              last_updated_by: user.id,
+              planned_result:
+                createResultsTocResultDto.result_toc_result?.planned_result,
+              is_active: true,
+            },
+          );
+        } else if (toc) {
+          await this._resultsTocResultRepository.save({
+            initiative_ids: toc?.initiative_id,
+            toc_result_id: toc?.toc_result_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id: result.id,
+            planned_result:
+              createResultsTocResultDto?.result_toc_result?.planned_result,
+            action_area_outcome_id: toc?.action_area_outcome_id,
+            is_active: true,
+          });
+        }
+      }
+
+      // * Logic delete a WP from Primary Submitter
+      const allRtRsPrimary = await this._resultsTocResultRepository.find({
+        where: { result_id },
+      });
+      for (const rtr of allRtRsPrimary) {
+        const tocResultIds =
+          createResultsTocResultDto?.result_toc_result?.result_toc_results.map(
+            (toc) => toc.toc_result_id,
+          );
+        if (!tocResultIds.includes(rtr.toc_result_id)) {
+          rtr.is_active = false;
+          rtr.last_updated_by = user.id;
+          await this._resultsTocResultRepository.update(
+            {
+              result_toc_result_id: rtr.result_toc_result_id,
+              initiative_id: rtr.initiative_id,
+            },
+            {
+              is_active: false,
+              last_updated_by: user.id,
+            },
+          );
+        }
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveResultTocResultContributor(
+    createResultsTocResultDto: CreateResultsTocResultDto,
+    user: TokenDto,
+    result: any,
+    result_id: number,
+    initSubmitter: any,
+  ) {
+    const { contributors_result_toc_result } = createResultsTocResultDto;
+    try {
+      // * Logic to map multiple WPs to multiple Initiatives Contributors
+      if (contributors_result_toc_result?.length) {
+        const RtRArray: ResultsTocResult[] = [];
+        contributors_result_toc_result.forEach(async (contributor) => {
+          for (const rtrc of contributor.result_toc_results) {
+            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
+              return;
+            }
+            const RtR = await this._resultsTocResultRepository.getRTRById(
+              rtrc?.result_toc_result_id,
+            );
+
+            if (RtR) {
+              await this._resultsTocResultRepository.update(
+                RtR.result_toc_result_id,
+                {
+                  toc_result_id: rtrc?.toc_result_id,
+                  action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+                  planned_result: contributor?.planned_result,
+                  last_updated_by: user.id,
+                  is_active: true,
+                },
+              );
+            } else {
+              const newRtR = new ResultsTocResult();
+              newRtR.created_by = user.id;
+              newRtR.last_updated_by = user.id;
+              newRtR.planned_result = contributor?.planned_result;
+              newRtR.results_id = result.id;
+              newRtR.initiative_id = contributor?.initiative_id || null;
+              newRtR.is_active = true;
+              if (result.result_level_id == 2) {
+                newRtR.action_area_outcome_id =
+                  rtrc?.action_area_outcome_id || null;
+              } else {
+                newRtR.toc_result_id = rtrc?.toc_result_id || null;
+              }
+              newRtR.planned_result = contributor?.planned_result || null;
+              RtRArray.push(newRtR);
+
+              await this._resultsTocResultRepository.save({
+                initiative_ids: newRtR.initiative_id,
+                toc_result_id: newRtR.toc_result_id,
+                created_by: newRtR.created_by,
+                last_updated_by: newRtR.last_updated_by,
+                result_id: newRtR.results_id,
+                planned_result: newRtR.planned_result,
+                action_area_outcome_id: newRtR.action_area_outcome_id,
+                is_active: true,
+              });
+            }
+          }
+        });
+
+        // * Logic to delete a WP from Contributors
+        let incomingRtRIds = [];
+        contributors_result_toc_result.forEach((contributor) => {
+          contributor.result_toc_results.forEach((rtrc) => {
+            incomingRtRIds.push(rtrc?.result_toc_result_id);
+          });
+        });
+
+        const allRtRsContributors =
+          await this._resultsTocResultRepository.findBy({
+            result_id,
+            initiative_id: Not(initSubmitter),
+            is_active: true,
+          });
+
+        allRtRsContributors.forEach(async (storedRtR) => {
+          if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
+            await this._resultsTocResultRepository.update(
+              storedRtR.result_toc_result_id,
+              { is_active: false },
+            );
+          }
+        });
+      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

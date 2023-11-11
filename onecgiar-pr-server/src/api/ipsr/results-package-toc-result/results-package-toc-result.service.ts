@@ -24,6 +24,8 @@ import { NonPooledProject } from '../../results/non-pooled-projects/entities/non
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
+import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
+import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -43,6 +45,7 @@ export class ResultsPackageTocResultService {
     private readonly _handlersError: HandlersError,
     private readonly _returnResponse: ReturnResponse,
     private readonly _versioningService: VersioningService,
+    private readonly _resultTocResultService: ResultsTocResultsService,
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
@@ -123,8 +126,7 @@ export class ResultsPackageTocResultService {
         }
       }
 
-      //!contributing_np_projects
-
+      // * Save contributing np projects
       if (crtr?.contributing_np_projects?.length) {
         const { contributing_np_projects: cnpp } = crtr;
         const titles = cnpp.map((el) => el.grant_title);
@@ -185,8 +187,7 @@ export class ResultsPackageTocResultService {
         );
       }
 
-      //!contributing_center
-
+      // * Save contributing center
       if (crtr?.contributing_center?.length) {
         const { contributing_center: cc } = crtr;
         const code = cc.map((el) => el.code);
@@ -219,41 +220,35 @@ export class ResultsPackageTocResultService {
         await this._resultsCenterRepository.updateCenter(rip.id, [], user.id);
       }
 
-      const { result_toc_result, contributors_result_toc_result } = crtr;
-
-      // !result_toc_result
-      await this.saveResultPackageTocResult(
+      // * Save Primary Submitter ResultTocResult
+      await this._resultTocResultService.saveResultTocReseultPrimary(
+        crtr,
+        user,
         rip,
-        user,
-        version,
-        true,
-        result_toc_result,
+        crtr.result_id,
       );
 
-      // * Save EOI
-      await this.saveIpEoi(
-        result_toc_result.toc_result_id,
-        rip.id,
+      // * Save Contributors ResultTocResult
+      await this._resultTocResultService.saveResultTocResultContributor(
+        crtr,
         user,
-        version,
-        result_toc_result,
+        rip,
+        crtr.result_id,
+        rip.initiative_id,
       );
 
-      // !agregar la logica de cancelacion iniciativa
-      // !con_result_toc_result
-
-      const crpi =
-        await this._resultByInitiativesRepository.getContributorInitiativeByResult(
-          rip.id,
+      // * Save Indicators & Indicators Targets
+      if (crtr?.result_toc_result?.result_toc_results?.length) {
+        await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+          crtr,
         );
-      const iniId = crpi.map((el) => el.id);
-      const saveConInit = contributors_result_toc_result.filter((el) =>
-        iniId.includes(el.initiative_id),
-      );
-      for (const crtr of saveConInit) {
-        await this.saveResultPackageTocResult(rip, user, version, false, crtr);
+        await this._resultsTocResultRepository.saveIndicatorsContributors(crtr);
       }
 
+      // * Save EOI
+      await this.saveIpEoi(crtr, rip.id, user);
+
+      // * Save Institutions
       if (crtr?.institutions.length) {
         const { institutions: inst } = crtr;
         await this._resultByIntitutionsRepository.updateIstitutions(
@@ -309,6 +304,8 @@ export class ResultsPackageTocResultService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
+      console.error(error);
+
       return this._handlersError.returnErrorRes({ error });
     }
   }
@@ -342,162 +339,75 @@ export class ResultsPackageTocResultService {
     }
   }
 
-  protected async saveResultPackageTocResult(
-    rip: Result,
-    user: TokenDto,
-    version: Version,
-    owner: boolean,
-    rtr: resultToResultInterfaceToc,
-  ) {
-    const {
-      planned_result,
-      initiative_id,
-      toc_result_id,
-      result_toc_result_id,
-    } = rtr;
-    const rptr = await this._resultsTocResultRepository.getNewRTRById(
-      result_toc_result_id,
-      rip.id,
-      rip.initiative_id,
-    );
-    if (rptr) {
-      await this._resultsTocResultRepository.update(rptr.result_toc_result_id, {
-        toc_result_id: toc_result_id,
-        is_active: true,
-        last_updated_by: user.id,
-        planned_result: planned_result,
-      });
-    } else {
-      await this._resultsTocResultRepository.save({
-        result_id: rip.id,
-        initiative_ids: owner ? rip.initiative_id : initiative_id,
-        toc_result_id: toc_result_id,
-        planned_result: planned_result,
-        last_updated_by: user.id,
-        created_by: user.id,
-      });
-    }
-  }
-
   async saveIpEoi(
-    tocResultId: number,
+    createResultsPackageTocResultDto: CreateResultsPackageTocResultDto,
     resultByInnovationPackageId: number,
     user: TokenDto,
-    version: Version,
-    result_toc_result: resultToResultInterfaceToc,
   ) {
+    const { result_toc_results } =
+      createResultsPackageTocResultDto?.result_toc_result;
     try {
-      const searchTocResult = await this._resultsTocResultRepository.findOne({
-        where: { toc_result_id: tocResultId, is_active: true },
-      });
+      if (result_toc_results?.length) {
+        result_toc_results.forEach(async (rtr) => {
+          const searchTocResult =
+            await this._resultsTocResultRepository.findOne({
+              where: { toc_result_id: rtr.toc_result_id, is_active: true },
+            });
 
-      if (!searchTocResult) {
-        return {
-          response: { valid: true },
-          message: 'No End of Initiative Outcomes were found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+          if (!searchTocResult) {
+            return {
+              response: { valid: true },
+              message: 'No End of Initiative Outcomes were found',
+              status: HttpStatus.NOT_FOUND,
+            };
+          }
 
-      const resultByInnoPckg = await this._ipsrRepository.findOne({
-        where: {
-          result_innovation_package_id: resultByInnovationPackageId,
-          is_active: true,
-          ipsr_role_id: 1,
-        },
-      });
+          const resultByInnoPckg = await this._ipsrRepository.findOne({
+            where: {
+              result_innovation_package_id: resultByInnovationPackageId,
+              is_active: true,
+              ipsr_role_id: 1,
+            },
+          });
 
-      const searchIpEoi = await this._resultIpEoiOutcomesRepository.findOne({
-        where: {
-          result_by_innovation_package_id:
-            resultByInnoPckg?.result_by_innovation_package_id,
-          contributing_toc: true,
-          is_active: true,
-        },
-      });
-
-      if (
-        result_toc_result['toc_level_id'] !== 3 &&
-        searchIpEoi?.result_ip_eoi_outcome_id
-      ) {
-        await this._resultIpEoiOutcomesRepository.update(
-          searchIpEoi?.result_ip_eoi_outcome_id,
-          {
-            is_active: false,
-            contributing_toc: false,
-            last_updated_by: user.id,
-          },
-        );
-
-        return {
-          response: { valid: true },
-          message: 'No End of Initiative Outcomes were saved',
-          status: HttpStatus.OK,
-        };
-      } else {
-        return this._returnResponse.format({
-          message: `The EOI cannot be saved because the Toc level is 3 or the EOI does not have an eoi result ID.`,
-          statusCode: HttpStatus.BAD_REQUEST,
-          response: { valid: false },
+          const searchIpEoi = await this._resultIpEoiOutcomesRepository.findOne(
+            {
+              where: {
+                result_by_innovation_package_id:
+                  resultByInnoPckg?.result_by_innovation_package_id,
+                contributing_toc: true,
+                is_active: true,
+              },
+            },
+          );
+          if (
+            rtr?.['toc_level_id'] !== 3 &&
+            searchIpEoi?.result_ip_eoi_outcome_id
+          ) {
+            await this._resultIpEoiOutcomesRepository.update(
+              searchIpEoi?.result_ip_eoi_outcome_id,
+              {
+                is_active: false,
+                contributing_toc: false,
+                last_updated_by: user.id,
+              },
+            );
+    
+            return {
+              response: { valid: true },
+              message: 'No End of Initiative Outcomes were saved',
+              status: HttpStatus.OK,
+            };
+          } else {
+            return this._returnResponse.format({
+              message: `The EOI cannot be saved because the Toc level is 3 or the EOI does not have an eoi result ID.`,
+              statusCode: HttpStatus.BAD_REQUEST,
+              response: { valid: false },
+            });
+          }
         });
       }
 
-      const searchContributingToc =
-        await this._resultIpEoiOutcomesRepository.find({
-          where: {
-            result_by_innovation_package_id:
-              resultByInnoPckg?.result_by_innovation_package_id,
-            is_active: true,
-            toc_result_id: tocResultId,
-          },
-        });
-
-      const filterEoiToc = searchContributingToc.filter(
-        (i) => i.toc_result_id !== searchIpEoi?.toc_result_id,
-      );
-
-      if (filterEoiToc.length) {
-        await this._resultIpEoiOutcomesRepository.update(
-          filterEoiToc[0].result_ip_eoi_outcome_id,
-          {
-            contributing_toc: true,
-            last_updated_by: user.id,
-          },
-        );
-
-        await this._resultIpEoiOutcomesRepository.update(
-          searchIpEoi.result_ip_eoi_outcome_id,
-          {
-            is_active: false,
-            contributing_toc: false,
-            last_updated_by: user.id,
-          },
-        );
-
-        return {
-          response: { valid: true },
-          message: 'The EOI have been updated',
-          status: HttpStatus.OK,
-        };
-      } else {
-        await this._resultIpEoiOutcomesRepository.save({
-          toc_result_id: tocResultId,
-          result_by_innovation_package_id:
-            resultByInnoPckg?.result_by_innovation_package_id,
-          created_by: user.id,
-          last_updated_by: user.id,
-          contributing_toc: true,
-        });
-
-        await this._resultIpEoiOutcomesRepository.update(
-          searchIpEoi.result_ip_eoi_outcome_id,
-          {
-            is_active: false,
-            contributing_toc: false,
-            last_updated_by: user.id,
-          },
-        );
-      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -630,13 +540,3 @@ export class ResultsPackageTocResultService {
     }
   }
 }
-
-interface resultToResultInterfaceToc {
-  result_toc_result_id?: number;
-  toc_result_id?: number;
-  action_area_outcome_id?: number;
-  results_id: number;
-  planned_result: boolean;
-  initiative_id: number;
-}
-
