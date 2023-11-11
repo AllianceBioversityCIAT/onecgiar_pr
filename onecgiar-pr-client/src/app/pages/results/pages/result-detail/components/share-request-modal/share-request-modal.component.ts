@@ -107,8 +107,6 @@ export class ShareRequestModalComponent implements OnInit {
     const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
     this.requesting = true;
 
-    console.log('sended body notification', body);
-
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
