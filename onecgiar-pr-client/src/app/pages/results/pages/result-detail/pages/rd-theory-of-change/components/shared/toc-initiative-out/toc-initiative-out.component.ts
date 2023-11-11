@@ -27,16 +27,12 @@ export class TocInitiativeOutComponent implements OnInit {
     return this.isIpsr ? contributorsText : tocText;
   }
 
-  headerDescription(allText) {
-    let text = '<ul>';
+  headerDescription(init) {
+    const text = `<ul>
+      <li>At least 1 TOC result of ${init} should be provided.</li>
+      <li>In most cases a result should be mapped to a single WP for simplicity. In some cases, however, it may be necessary to map a result to two WPs.</li> 
+    </ul>`;
 
-    if (allText) {
-      text += '<li>Specify to which Work Package or End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geolocation</li>';
-    } else {
-      text += '<li>Which End of Initiative outcome does it link to most closely?. You will have time during the reflect moment to update your ToC</li> ';
-    }
-
-    text += '</ul>';
     return text;
   }
 

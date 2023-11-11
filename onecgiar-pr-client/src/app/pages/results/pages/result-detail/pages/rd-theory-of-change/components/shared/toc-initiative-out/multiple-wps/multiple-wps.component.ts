@@ -57,7 +57,7 @@ export class MultipleWPsComponent implements OnChanges {
   onAddTab() {
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.initiative.id,
+      initiative_id: this.initiative.initiative_id,
       official_code: this.initiative.official_code,
       planned_result: this.initiative.planned_result,
       results_id: null,

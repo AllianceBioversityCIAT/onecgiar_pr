@@ -3,7 +3,7 @@
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-yes-or-not [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
         (selectOptionEvent)="clearTocResultId(); mapPlannedResult()" [(ngModel)]="this.initiative.planned_result"
-        [description]="this.headerDescription(this.initiative.planned_result)" [readOnly]="!editable"
+        [description]="this.headerDescription(this.initiative.official_code)" [readOnly]="!editable"
         [editable]="editable" [hideDescription]="this.initiative.planned_result === null">
     </app-pr-yes-or-not>
 
