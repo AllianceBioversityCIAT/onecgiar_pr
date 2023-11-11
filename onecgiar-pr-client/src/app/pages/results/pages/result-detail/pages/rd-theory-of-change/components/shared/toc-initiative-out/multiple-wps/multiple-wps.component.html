@@ -26,6 +26,7 @@
 
   <div class="multiple-wps-container">
     <app-multiple-wps-content [editable]="editable" [activeTab]="activeTab" [resultLevelId]="resultLevelId"
-      [isIpsr]="isIpsr" [showMultipleWPsContent]="showMultipleWPsContent"></app-multiple-wps-content>
+      [allTabs]="initiative?.result_toc_results" [isIpsr]="isIpsr"
+      [showMultipleWPsContent]="showMultipleWPsContent"></app-multiple-wps-content>
   </div>
 </div>

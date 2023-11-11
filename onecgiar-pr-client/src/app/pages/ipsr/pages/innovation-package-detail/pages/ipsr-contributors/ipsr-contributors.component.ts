@@ -43,8 +43,6 @@ export class IpsrContributorsComponent implements OnInit {
           tab.showMultipleWPsContent = true;
         });
       }
-
-      console.log('recived data', response);
     });
   }
 
@@ -52,8 +50,6 @@ export class IpsrContributorsComponent implements OnInit {
     this.contributorsBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
 
     this.contributorsBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
-
-    console.log('sended data', this.contributorsBody);
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
       this.getSectionInformation();

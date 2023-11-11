@@ -5,7 +5,8 @@
         [editable]="editable" [hideDescription]="this.initiative.planned_result === null">
     </app-pr-yes-or-not>
 
-    <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button">
+    <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"
+        *ngIf="!isNotifications">
         <span>See ToC</span>
         <img src="assets/icons/toc_icon.png" alt="">
     </a>
