@@ -75,7 +75,8 @@ export class MultipleWPsComponent implements OnChanges {
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
-    this.activeTab = this.initiative?.result_toc_results[this.initiative?.result_toc_results.length - 1];
+
+    this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
   }
 
   onActiveTab(tab: any) {
