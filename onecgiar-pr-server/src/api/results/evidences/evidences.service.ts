@@ -322,18 +322,43 @@ export class EvidencesService {
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
-  async replicateSPFile(resultIdDestination, fileId) {
-    console.log('replicate');
-    const { filePath, pathInformation } =
-      await this._sharePointService.generateFilePath(resultIdDestination);
+  async replicateSPFile(
+    currentEvidenceID,
+    evidenceSharepointId,
+    fileId,
+    resultIdDestination,
+  ) {
+    const { filePath } = await this._sharePointService.generateFilePath(
+      resultIdDestination,
+    );
 
-    await this._sharePointService.replicateFile(fileId, filePath);
+    const existingEvidenceSharepoint =
+      await this._evidenceSharepointRepository.findOne({
+        where: {
+          id: evidenceSharepointId,
+        },
+      });
+
+    const newEvidenceSharepoint: any = { ...existingEvidenceSharepoint };
+
+    const document_id = await this._sharePointService.replicateFile(
+      fileId,
+      filePath,
+    );
+
+    newEvidenceSharepoint.document_id = document_id;
+
+    const accessData = await this._sharePointService.addFileAccess(
+      document_id,
+      newEvidenceSharepoint.is_public_file,
+    );
+
+    await this._evidencesRepository.update(currentEvidenceID, {
+      link: accessData?.link?.webUrl,
+    });
   }
 
   async findAll(resultId: number) {
-    try {
-      await this.replicateSPFile(4759, '012LTNW5G73W3MGN64RBFK77AF3SCC6UHW');
-    } catch (error) {}
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,

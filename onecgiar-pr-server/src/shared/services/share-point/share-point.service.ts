@@ -196,6 +196,9 @@ export class SharePointService {
     const newFolderId = await this.createFileFolder(path);
     const fileInfo = await this.getFileInfo(fileId);
     await this.copyFile(fileId, newFolderId, fileInfo?.name);
+    const filesList = await this.getFolderFilesList(newFolderId);
+    const fileFound = filesList.find((f) => f.name === fileInfo?.name);
+    return fileFound?.id;
   }
 
   async createFileFolder(path: string) {
@@ -217,7 +220,6 @@ export class SharePointService {
         this.deleteFile(response?.data?.id);
       return response?.data?.parentReference?.id;
     } catch (error) {
-      console.log('erroooooooooooooooooooooooooooooooooooooooooooooooooooooor');
       console.log(error);
       return error;
     }
@@ -286,6 +288,26 @@ export class SharePointService {
         })
         .toPromise();
       return response.data;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async getFolderFilesList(folderId) {
+    const token = await this.getToken();
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${folderId}/children`;
+    try {
+      const response = await this.httpService
+        .get(link, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .toPromise();
+      return response?.data?.value;
     } catch (error) {
       console.log(error);
       return error;
