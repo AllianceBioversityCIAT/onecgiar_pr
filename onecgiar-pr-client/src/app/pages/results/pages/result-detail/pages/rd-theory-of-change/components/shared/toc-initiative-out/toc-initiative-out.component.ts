@@ -42,7 +42,7 @@ export class TocInitiativeOutComponent implements OnInit {
 
     setTimeout(() => {
       this.initiative.result_toc_results.forEach(element => {
-        element.toc_level_id = !this.initiative.planned_result ? 3 : null;
+        element.toc_level_id = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
         element.planned_result = this.initiative.planned_result;
         element.toc_result_id = null;
       });
