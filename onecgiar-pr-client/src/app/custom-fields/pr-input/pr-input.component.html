@@ -25,7 +25,7 @@
             </p-inputNumber>
 
             <p-inputNumber class="" *ngIf="this.type == 'currency'" [(ngModel)]="value" mode="currency" currency="USD"
-                locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder">
+                locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder" [min]="0">
             </p-inputNumber>
             <div class="hints_container">
                 <div class="hint">{{this.hint}}</div>

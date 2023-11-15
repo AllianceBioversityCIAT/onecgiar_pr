@@ -3,7 +3,6 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
-import { env } from 'process';
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 
 @Injectable()
@@ -255,61 +254,7 @@ export class resultValidationRepository
 			WHERE npp.results_id = r.id
 			AND npp.is_active > 0
 		) = 0
-	) 
-			${
-        resultLevel == 3 || resultLevel == 4
-          ? `AND IF((select count(*)
-		  from  ${env.DB_TOC}.toc_results tr
-			  join ${env.DB_TOC}.toc_results_indicators tri on tri.toc_results_id = tr.id
-			  where tri.id = rtr1.toc_result_id and tr.phase = (select v.toc_pahse_id
-												from result r2
-												join version v on r2.version_id = v.id
-												where r2.id = r.id)) > 0, IF((select SUM(IF(rit.indicator_question IS NOT NULL AND rit.contributing_indicator <> '' AND rit.contributing_indicator IS NOT NULL, 1, 0)) 
-												from results_toc_result rtr 
-												left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id 
-																							and rtri.is_active > 0
-												left join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id 
-																							and rit.is_active > 0
-												where rtr.results_id = r.id
-													and rtr.is_active > 0) > 0, TRUE, FALSE), TRUE )
-			AND IF(rtr1.is_sdg_action_impact, IF(
-				(SELECT COUNT(*) 
-				FROM result_toc_impact_area_target rtiat 
-				WHERE rtiat.result_toc_result_id = rtr1.result_toc_result_id 
-				AND rtiat.is_active > 0) > 0
-				AND 
-				(SELECT COUNT(*) 
-				FROM result_toc_action_area rtaa  
-				WHERE rtaa.result_toc_result_id = rtr1.result_toc_result_id  
-				AND rtaa.is_active > 0) > 0
-				AND
-				(SELECT COUNT(*) 
-				FROM result_toc_sdg_targets rtst  
-				WHERE rtst.result_toc_result_id = rtr1.result_toc_result_id 
-				AND rtst.is_active > 0) > 0, TRUE, FALSE
-			), TRUE)
-													THEN TRUE`
-          : resultLevel == 1 || resultLevel == 2
-          ? `AND (SELECT COUNT(*) 
-		  FROM result_sdg_targets rst 
-		  WHERE rst.result_id = r.id
-			  AND rst.is_active > 0) > 0
-		${
-      resultLevel == 2
-        ? `AND (SELECT COUNT(*) 
-		FROM result_toc_action_area rtaa  
-		WHERE rtaa.result_toc_result_id = rtr1.result_toc_result_id  
-		AND rtaa.is_active > 0) > 0`
-        : ``
-    }
-		AND 
-			(SELECT COUNT(*) 
-			FROM results_impact_area_target riat 
-			WHERE riat.result_id = r.id
-				AND riat.is_active > 0) > 0
-		THEN TRUE`
-          : `THEN TRUE`
-      }
+		) THEN TRUE
 			ELSE FALSE
 		END AS validation
 	FROM
@@ -1429,18 +1374,14 @@ export class resultValidationRepository
 				rcd.unkown_using = 0
 				AND (
 					rcd.female_using IS NULL
-					OR rcd.female_using = 0
 					OR rcd.male_using IS NULL
-					OR rcd.male_using = 0
 					OR non_binary_using IS NULL
-					OR non_binary_using = 0
 				)
 			) THEN FALSE
 			WHEN (
 				rcd.unkown_using = 1
 				AND (
 					rcd.has_unkown_using IS NULL
-					OR rcd.has_unkown_using = 0
 				)
 			) THEN FALSE
 			WHEN (

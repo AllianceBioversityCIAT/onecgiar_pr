@@ -13,10 +13,11 @@
     </div>
     <div class="buttons">
         <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
-            (click)="this.ipsrDataControlSE.modals.submission = false">
+            (clickEvent)="this.ipsrDataControlSE.modals.submission = false">
         </app-pr-button>
         <app-pr-button [ngClass]="{'globalDisabled': this.requesting}" [text]="this.requesting?'Submitting':'Submit'"
-            [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onSubmit()">
+            [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'" padding="medium"
+            (clickEvent)="onSubmit()">
         </app-pr-button>
     </div>
 </p-dialog>

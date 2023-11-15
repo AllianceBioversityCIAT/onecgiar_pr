@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
 import { Title } from '@angular/platform-browser';
+import { CurrentResult } from '../interfaces/current-result.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ export class DataControlService {
   myInitiativesList = [];
   myInitiativesLoaded = false;
   resultsList: ResultItem[];
-  currentResult: any = {};
+  currentResult: CurrentResult = {};
   showSectionSpinner = false;
   currentSectionName = '';
   fieldFeedbackList = [];

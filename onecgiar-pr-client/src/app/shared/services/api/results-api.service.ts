@@ -330,7 +330,7 @@ export class ResultsApiService {
     }
   }
   get_vesrsionDashboard(id_toc, init) {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
   }
 
   GET_resultActionArea(resultId, initiative) {

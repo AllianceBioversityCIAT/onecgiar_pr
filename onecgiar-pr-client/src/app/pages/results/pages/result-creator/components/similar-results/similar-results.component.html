@@ -27,7 +27,7 @@
             </div>
         </div>
 
-        <app-pr-button text="Map to TOC" icon="account_tree" [verticalMargin]="0" *ngIf="!item?.is_legacy"
+        <app-pr-button text="Map to TOC" icon="account_tree" [verticalMargin]="0" *ngIf="!item?.is_legacy "
             (clickEvent)="onPressAction(item);this.api.dataControlSE.showShareRequest = true"
             [disabled]="!item?.phase?.status"
             [tooltipText]="!item?.phase?.status ? 'Sharing of results between initiatives cannot be done in results from closed phases' : null">
