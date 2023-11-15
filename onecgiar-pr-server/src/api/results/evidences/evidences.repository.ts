@@ -266,7 +266,7 @@ export class EvidencesRepository
 
   async getEvidencesByResultIdAndLink(
     resultId: number,
-    link: string,
+    evidenceId: string,
     is_supplementary: boolean,
     type: number,
   ) {
@@ -278,16 +278,16 @@ export class EvidencesRepository
     from evidence e 
     where e.result_id = ?
     	and e.is_active > 0
-    	and e.link = ?
       and e.is_supplementary = ?
+      and e.id = ?
       and e.evidence_type_id = ?;
     `;
 
     try {
       const evidence: Evidence[] = await this.query(query, [
         resultId,
-        link,
         is_supplementary,
+        evidenceId,
         type,
       ]);
       return evidence?.length ? evidence[0] : undefined;
@@ -302,61 +302,78 @@ export class EvidencesRepository
 
   async updateEvidences(
     resultId: number,
-    linkArray: string[],
+    evidenceIdList: string[],
     userId: number,
     is_supplementary: boolean,
     type: number,
   ) {
-    const evidences = linkArray ?? [];
-    const upDateInactive = `
-      update evidence 
-      set is_active = 0, 
+    const evidenceIdListString = evidenceIdList.filter((e) => e).join(',');
+
+    evidenceIdList = evidenceIdList ?? [];
+    const inactiveAll = `
+      update evidence
+      set is_active = 0,
         last_updated_date  = NOW(),
         last_updated_by  = ${userId}
-      where is_active  > 0 
+      where is_active  > 0
         and result_id = ${resultId}
-        and link not in (${`'${evidences.toString().replace(/,/g, "','")}'`})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
 
-    const upDateActive = `
-      update evidence 
-      set is_active = 1, 
+    const justActivateList = `
+      update evidence
+      set is_active = 1,
         last_updated_date  = NOW(),
         last_updated_by  = ${userId}
       where result_id = ${resultId}
-        and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
+        and id in (${evidenceIdListString})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
 
-    const upDateAllInactive = `
-      update evidence 
-      set is_active = 0, 
-        last_updated_date  = NOW(),
-        last_updated_by  = ${userId}
-      where is_active  > 0 
-      and result_id = ${resultId}
-      and is_supplementary = ${is_supplementary}
-      and evidence_type_id = ${type};
-    `;
+    // const upDateActive = `
+    //   update evidence
+    //   set is_active = 1,
+    //     last_updated_date  = NOW(),
+    //     last_updated_by  = ${userId}
+    //   where result_id = ${resultId}
+    //     and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
+    //     and is_supplementary = ${is_supplementary}
+    //     and evidence_type_id = ${type};
+    // `;
+
+    // const upDateAllInactive = `
+    //   update evidence
+    //   set is_active = 0,
+    //     last_updated_date  = NOW(),
+    //     last_updated_by  = ${userId}
+    //   where is_active  > 0
+    //   and result_id = ${resultId}
+    //   and is_supplementary = ${is_supplementary}
+    //   and evidence_type_id = ${type};
+    // `;
 
     try {
-      if (evidences?.length) {
-        await this.query(upDateInactive);
+      await this.query(inactiveAll);
+      await this.query(justActivateList);
+    } catch (error) {}
 
-        return await this.query(upDateActive);
-      } else {
-        return await this.query(upDateAllInactive);
-      }
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: EvidencesRepository.name,
-        error: `updateEvidences ${error}`,
-        debug: true,
-      });
-    }
+    // try {
+    //   if (evidenceIdList?.length) {
+    //     await this.query(upDateInactive);
+
+    //     return await this.query(upDateActive);
+    //   } else {
+    //     return await this.query(upDateAllInactive);
+    //   }
+    // } catch (error) {
+    //   throw this._handlersError.returnErrorRepository({
+    //     className: EvidencesRepository.name,
+    //     error: `updateEvidences ${error}`,
+    //     debug: true,
+    //   });
+    // }
   }
 
   async getResultInformation(resultId) {
@@ -391,6 +408,7 @@ export class EvidencesRepository
   ) {
     const query = `
     SELECT 
+    e.id,
     es.id AS sp_id,
     es.document_id AS sp_document_id,
     es.file_name AS sp_file_name,
@@ -431,8 +449,6 @@ export class EvidencesRepository
       AND e.evidence_type_id = ?
     ORDER BY e.creation_date ASC;
     `;
-
-    console.log([resultId, is_supplementary, type]);
 
     try {
       const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(

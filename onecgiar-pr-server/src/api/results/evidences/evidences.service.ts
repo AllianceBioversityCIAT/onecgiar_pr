@@ -38,6 +38,7 @@ export class EvidencesService {
     files: Express.Multer.File[],
     user: TokenDto,
   ) {
+    console.log('create');
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
@@ -55,13 +56,15 @@ export class EvidencesService {
             status: HttpStatus.BAD_REQUEST,
           };
         }
+
         await this._evidencesRepository.updateEvidences(
           createEvidenceDto.result_id,
-          evidencesArray.map((e) => e.link?.trim()),
+          evidencesArray.map((e) => e?.id),
           user.id,
           false,
           1,
         );
+
         const long: number =
           evidencesArray.length > 6 ? 6 : evidencesArray.length;
         for (let index = 0; index < long; index++) {
@@ -69,10 +72,11 @@ export class EvidencesService {
           const eExists =
             await this._evidencesRepository.getEvidencesByResultIdAndLink(
               result.id,
-              evidence.link,
+              evidence.id,
               false,
               1,
             );
+
           const newEvidence = new Evidence();
           if (!eExists) {
             newEvidence.created_by = user.id;
@@ -115,6 +119,7 @@ export class EvidencesService {
             eExists.environmental_biodiversity_related =
               evidence.environmental_biodiversity_related;
             eExists.poverty_related = evidence.poverty_related;
+            eExists.link = evidence.link;
 
             if (!eExists.knowledge_product_related) {
               const knowledgeProduct =
@@ -145,9 +150,11 @@ export class EvidencesService {
             );
             currentEvidence.link = fileSaved?.webUrl;
           }
+
           const evidenceSaved = await this._evidencesRepository.save(
             currentEvidence,
           );
+
           await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
         }
       } else {
@@ -257,7 +264,11 @@ export class EvidencesService {
     return null;
   }
 
-  async saveSPData(currentEvidenceID: number, metadata, evidence) {
+  async saveSPData(
+    currentEvidenceID: number,
+    metadata,
+    evidence: EvidencesCreateInterface,
+  ) {
     const { document_id, filePath } = metadata || {};
     const createOrUpdateEvidenceSharepoint = async (
       evidenceSharepoint: EvidenceSharepoint | undefined,
@@ -267,7 +278,6 @@ export class EvidencesService {
       }
 
       if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
-        console.log('Es diferente, se debe actualizar el acceso');
         const data: any = await this._sharePointService.addFileAccess(
           document_id ?? evidenceSharepoint.document_id,
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
@@ -308,7 +318,10 @@ export class EvidencesService {
       existingEvidenceSharepoint?.file_name !== metadata?.file_name &&
       existingEvidenceSharepoint?.id;
 
-    if (replaceFile && existingEvidenceSharepoint) {
+    if (
+      existingEvidenceSharepoint &&
+      (replaceFile || !evidence?.is_sharepoint)
+    ) {
       await this._evidenceSharepointRepository.update(
         existingEvidenceSharepoint?.id,
         {
@@ -318,47 +331,48 @@ export class EvidencesService {
       existingEvidenceSharepoint.id = null;
     }
     //todo inactivar eivdencia su replace y guardar unanueva cambiar id por null
-
+    if (!evidence?.is_sharepoint) return;
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
   async replicateSPFile(
-    currentEvidenceID,
-    evidenceSharepointId,
-    fileId,
     resultIdDestination,
+    replicatedEvidenceSharepointId,
+    replicatedEvidenceID,
   ) {
     const { filePath } = await this._sharePointService.generateFilePath(
       resultIdDestination,
     );
 
-    const existingEvidenceSharepoint =
+    const replicatedEvidenceSharepoint =
       await this._evidenceSharepointRepository.findOne({
         where: {
-          id: evidenceSharepointId,
+          id: replicatedEvidenceSharepointId,
         },
       });
 
-    const newEvidenceSharepoint: any = { ...existingEvidenceSharepoint };
-
     const document_id = await this._sharePointService.replicateFile(
-      fileId,
+      replicatedEvidenceSharepoint?.document_id,
       filePath,
     );
 
-    newEvidenceSharepoint.document_id = document_id;
+    replicatedEvidenceSharepoint.document_id = document_id;
 
     const accessData = await this._sharePointService.addFileAccess(
       document_id,
-      newEvidenceSharepoint.is_public_file,
+      replicatedEvidenceSharepoint.is_public_file,
     );
 
-    await this._evidencesRepository.update(currentEvidenceID, {
+    await this._evidencesRepository.update(replicatedEvidenceID, {
       link: accessData?.link?.webUrl,
     });
   }
 
   async findAll(resultId: number) {
+    // try {
+    //   await this.replicateSPFile(6855, 89, 8903);
+    // } catch (error) {}
+    console.log('findAll');
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,
