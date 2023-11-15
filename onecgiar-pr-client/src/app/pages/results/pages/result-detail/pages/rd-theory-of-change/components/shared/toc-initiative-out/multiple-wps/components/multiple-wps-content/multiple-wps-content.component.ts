@@ -29,6 +29,9 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
+    this.multipleWpsService.GET_outcomeList();
+    this.multipleWpsService.GET_outputList();
+    this.multipleWpsService.GET_EOIList();
     this.currentPlannedResult = this.activeTab?.planned_result;
   }
 
