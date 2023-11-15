@@ -335,44 +335,40 @@ export class EvidencesService {
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 
-  async replicateSPFile(
-    resultIdDestination,
-    replicatedEvidenceSharepointId,
-    replicatedEvidenceID,
-  ) {
+  async replicateSPFiles(config: any) {
+    const resultReplicatedId = config?.new_result_id;
     const { filePath } = await this._sharePointService.generateFilePath(
-      resultIdDestination,
+      resultReplicatedId,
     );
 
-    const replicatedEvidenceSharepoint =
-      await this._evidenceSharepointRepository.findOne({
-        where: {
-          id: replicatedEvidenceSharepointId,
-        },
+    const evidevenceList =
+      await this._evidencesRepository.getEvidencesByResultId(
+        resultReplicatedId,
+        false,
+        1,
+      );
+
+    for (const sharePointIterator of evidevenceList) {
+      if (!sharePointIterator?.is_sharepoint) continue;
+      console.log(sharePointIterator?.result_id);
+
+      const document_id = await this._sharePointService.replicateFile(
+        sharePointIterator?.document_id,
+        filePath,
+      );
+
+      const accessData = await this._sharePointService.addFileAccess(
+        document_id,
+        sharePointIterator.is_public_file,
+      );
+
+      await this._evidencesRepository.update(sharePointIterator, {
+        link: accessData?.link?.webUrl,
       });
-
-    const document_id = await this._sharePointService.replicateFile(
-      replicatedEvidenceSharepoint?.document_id,
-      filePath,
-    );
-
-    replicatedEvidenceSharepoint.document_id = document_id;
-
-    const accessData = await this._sharePointService.addFileAccess(
-      document_id,
-      replicatedEvidenceSharepoint.is_public_file,
-    );
-
-    await this._evidencesRepository.update(replicatedEvidenceID, {
-      link: accessData?.link?.webUrl,
-    });
+    }
   }
 
   async findAll(resultId: number) {
-    // try {
-    //   await this.replicateSPFile(6855, 89, 8903);
-    // } catch (error) {}
-    console.log('findAll');
     try {
       const result: Result = await this._resultRepository.getResultById(
         resultId,
