@@ -55,6 +55,24 @@ export class MultipleWPsServiceService {
     });
   }
 
+  maximunOfTabs(planned_result: boolean, resultLevelId: number | string) {
+    let uniqueWorkPackageIds = new Set();
+
+    if (resultLevelId === 1 && planned_result) {
+      uniqueWorkPackageIds = new Set(this?.outputList.map(item => item.work_package_id));
+    } else {
+      const uniqueWorkPackageIdsOutcome = new Set(this?.outcomeList.map(item => item.work_package_id));
+      const uniqueWorkPackageIdsEOI = new Set(this?.eoiList.map(item => item.toc_result_id));
+      uniqueWorkPackageIds = new Set([...Array.from(uniqueWorkPackageIdsOutcome), ...Array.from(uniqueWorkPackageIdsEOI)]);
+    }
+
+    if (!planned_result) {
+      uniqueWorkPackageIds = new Set(this?.eoiList.map(item => item.toc_result_id));
+    }
+
+    return uniqueWorkPackageIds.size;
+  }
+
   pushSelectedOptions(allTabs) {
     allTabs.forEach(tab => {
       if (tab?.toc_level_id === 1) {
@@ -95,15 +113,11 @@ export class MultipleWPsServiceService {
     });
   }
 
-  deleteSelectedOptionEOI(tab) {
+  deleteSelectedOptionEOI(tab: any) {
     this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.toc_result_id !== tab?.toc_result_id);
     this.eoiList = this.eoiList.map(item => {
-      const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
-      if (finded) {
-        item.disabledd = true;
-      } else {
-        item.disabledd = false;
-      }
+      const found = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
+      item.disabledd = !!found;
       return item;
     });
   }

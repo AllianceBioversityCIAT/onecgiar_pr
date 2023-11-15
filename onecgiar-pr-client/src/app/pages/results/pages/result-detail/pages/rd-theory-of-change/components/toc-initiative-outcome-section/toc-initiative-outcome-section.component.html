@@ -16,7 +16,7 @@
 
 
     <div *ngFor="let contributor of contributors_result_toc_result; let i = index;">
-        <app-toc-initiative-out [initiative]="contributor" [resultLevelId]="1" [isContributor]="true"
+        <app-toc-initiative-out [initiative]="contributor" [resultLevelId]="2" [isContributor]="true"
             [editable]="!this.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(contributor?.initiative_id) || this.rolesSE.isAdmin)"></app-toc-initiative-out>
     </div>
 </div>

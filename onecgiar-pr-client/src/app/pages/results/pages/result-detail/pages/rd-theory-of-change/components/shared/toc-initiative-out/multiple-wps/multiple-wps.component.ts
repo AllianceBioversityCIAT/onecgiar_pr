@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MultipleWPsServiceService } from './services/multiple-wps-service.service';
 import { CustomizedAlertsFeService } from 'src/app/shared/services/customized-alerts-fe.service';
@@ -36,8 +36,17 @@ export class MultipleWPsComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
+  maxTabs = 2;
 
   constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+
+  ngOnInit(): void {
+    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
+    //Add 'implements OnInit' to the class.
+    this.multipleWpsService.GET_outcomeList();
+    this.multipleWpsService.GET_outputList();
+    this.multipleWpsService.GET_EOIList();
+  }
 
   ngOnChanges() {
     this.initiative.result_toc_results.forEach((tab: any) => {
@@ -47,6 +56,7 @@ export class MultipleWPsComponent implements OnChanges {
     this.activeTab = this.initiative?.result_toc_results[0];
     this.multipleWpsService.allTabs = this.initiative?.result_toc_results;
     this.multipleWpsService.activeTab = this.activeTab;
+    this.maxTabs = this.multipleWpsService.maximunOfTabs(this.initiative?.planned_result, this.resultLevelId);
   }
 
   dynamicTabTitle(tabNumber) {
@@ -96,6 +106,7 @@ export class MultipleWPsComponent implements OnChanges {
     const isOutputTab = tab.toc_level_id === 1 || tab.toc_result_id !== null;
     const isOutcomeTab = tab.toc_level_id === 2;
     const isEOITab = tab.toc_level_id === 3;
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     const deleteTab = () => {
       this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
@@ -110,25 +121,23 @@ export class MultipleWPsComponent implements OnChanges {
       } else {
         this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
       }
+
+      if (isLastTab) {
+        return;
+      }
+
+      if (isOutputTab) {
+        this.multipleWpsService.deleteSelectedOptionOutPut(tab);
+      }
+
+      if (isOutcomeTab) {
+        this.multipleWpsService.deleteSelectedOptionOutCome(tab);
+      }
+
+      if (isEOITab) {
+        this.multipleWpsService.deleteSelectedOptionEOI(tab);
+      }
     };
-
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
-
-    if (isLastTab) {
-      return;
-    }
-
-    if (isOutputTab) {
-      this.multipleWpsService.deleteSelectedOptionOutPut(tab);
-    }
-
-    if (isOutcomeTab) {
-      this.multipleWpsService.deleteSelectedOptionOutCome(tab);
-    }
-
-    if (isEOITab) {
-      this.multipleWpsService.deleteSelectedOptionEOI(tab);
-    }
 
     this.customizedAlertsFeSE.show(
       {
