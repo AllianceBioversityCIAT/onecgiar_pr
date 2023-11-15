@@ -45,6 +45,8 @@ export class MultipleWPsComponent implements OnChanges {
     });
 
     this.activeTab = this.initiative?.result_toc_results[0];
+    this.multipleWpsService.allTabs = this.initiative?.result_toc_results;
+    this.multipleWpsService.activeTab = this.activeTab;
   }
 
   dynamicTabTitle(tabNumber) {
@@ -71,7 +73,7 @@ export class MultipleWPsComponent implements OnChanges {
       planned_result: this.initiative.planned_result,
       results_id: null,
       short_name: this.initiative.short_name,
-      toc_level_id: null,
+      toc_level_id: this.resultLevelId === 1 ? 1 : 2,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
@@ -81,6 +83,7 @@ export class MultipleWPsComponent implements OnChanges {
 
   onActiveTab(tab: any) {
     this.activeTab = tab;
+    this.multipleWpsService.activeTab = this.activeTab;
     this.showMultipleWPsContent = false;
 
     setTimeout(() => {
@@ -88,20 +91,54 @@ export class MultipleWPsComponent implements OnChanges {
     }, 50);
   }
 
-  onDeleteTab(tab: any, tabNumber = 0) {
-    this.customizedAlertsFeSE.show({ id: 'delete-tab', title: 'Delete confirmation', description: `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`, status: 'warning', confirmText: 'Yes, delete' }, () => {
-      if (this.initiative.result_toc_results.length === 1) {
-        return;
-      }
+  onDeleteTab(tab: Tab, tabNumber = 0) {
+    const isLastTab = this.initiative.result_toc_results.length === 1;
+    const isOutputTab = tab.toc_level_id === 1 || tab.toc_result_id !== null;
+    const isOutcomeTab = tab.toc_level_id === 2;
+    const isEOITab = tab.toc_level_id === 3;
 
+    const deleteTab = () => {
       this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+
       this.activeTab = this.initiative?.result_toc_results[0];
+      this.multipleWpsService.activeTab = this.initiative?.result_toc_results[0];
 
       if (this.isNotifications) return;
 
       if (this.isContributor) {
         this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
-      } else this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
-    });
+      } else {
+        this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+      }
+    };
+
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+
+    if (isLastTab) {
+      return;
+    }
+
+    if (isOutputTab) {
+      this.multipleWpsService.deleteSelectedOptionOutPut(tab);
+    }
+
+    if (isOutcomeTab) {
+      this.multipleWpsService.deleteSelectedOptionOutCome(tab);
+    }
+
+    if (isEOITab) {
+      this.multipleWpsService.deleteSelectedOptionEOI(tab);
+    }
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Delete confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      deleteTab
+    );
   }
 }
