@@ -1,8 +1,9 @@
 <div class="container">
   <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
-    <app-pr-select *ngIf="activeTab?.planned_result && resultLevelId === 1" [options]="this.multipleWpsService.outputList" label="Output"
-      optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
-      placeholder="Select output" [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true"
+    <app-pr-select *ngIf="activeTab?.planned_result && resultLevelId === 1"
+      [options]="this.multipleWpsService.outputList" label="Output" optionLabel="extraInformation"
+      optionValue="toc_result_id" [disabled]="!editable" [editable]="editable" placeholder="Select output"
+      [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true"
       (ngModelChange)="getIndicator();this.multipleWpsService.validateSelectedOptionOutPut()">
     </app-pr-select>
 
@@ -24,8 +25,9 @@
     </app-pr-select>
 
     <app-pr-select *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
-      [options]="this.multipleWpsService.eoiList" label="Outcome" [editable]="editable" [disabled]="(resultLevelId === 1 && false) || !editable"
-      optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
+      [options]="this.multipleWpsService.eoiList" label="Outcome" [editable]="editable"
+      [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="title" optionValue="toc_result_id"
+      placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
       (ngModelChange)="getIndicator();this.multipleWpsService.validateSelectedOptionEOI()">
     </app-pr-select>
   </div>

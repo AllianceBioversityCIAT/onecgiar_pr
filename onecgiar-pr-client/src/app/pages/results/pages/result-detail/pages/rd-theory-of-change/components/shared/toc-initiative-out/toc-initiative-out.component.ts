@@ -40,13 +40,17 @@ export class TocInitiativeOutComponent implements OnInit {
   clearTocResultId() {
     this.initiative.showMultipleWPsContent = false;
 
-    setTimeout(() => {
-      this.initiative.result_toc_results.forEach(element => {
-        element.toc_level_id = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
-        element.planned_result = this.initiative.planned_result;
-        element.toc_result_id = null;
-      });
+    const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+    this.initiative.result_toc_results.forEach(element => {
+      element.toc_level_id = tocLevelId;
+      element.planned_result = this.initiative.planned_result;
+      element.toc_result_id = null;
+    });
 
+    // Set result_toc_results to the first element of the array
+    this.initiative.result_toc_results = [this.initiative.result_toc_results[0]];
+
+    setTimeout(() => {
       this.initiative.showMultipleWPsContent = true;
     }, 20);
   }

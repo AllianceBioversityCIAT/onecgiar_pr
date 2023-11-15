@@ -25,13 +25,13 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
 
   ngOnInit(): void {
-    this.multipleWpsService.GET_outcomeList();
-    this.multipleWpsService.GET_outputList();
-    this.multipleWpsService.GET_EOIList();
     this.validateEOI();
     if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
+    this.multipleWpsService.GET_outcomeList();
+    this.multipleWpsService.GET_outputList();
+    this.multipleWpsService.GET_EOIList();
     this.currentPlannedResult = this.activeTab?.planned_result;
   }
 
