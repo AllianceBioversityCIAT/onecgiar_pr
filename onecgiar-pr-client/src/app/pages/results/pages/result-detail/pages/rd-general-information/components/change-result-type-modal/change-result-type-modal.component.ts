@@ -32,8 +32,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
   <dt>If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager. <strong>And do the sync again.</strong></dt>
 </dl>`;
   isChagingType: boolean = false;
-  IOutput = [5, 6, 7, 8];
-  IOutcome = [1, 2, 4, 9];
+  IOutcome = [1, 2];
 
   constructor(public api: ApiService, public resultsListFilterSE: ResultsListFilterService, public changeType: ChangeResultTypeServiceService, private router: Router) {}
 
@@ -58,6 +57,10 @@ export class ChangeResultTypeModalComponent implements OnChanges {
     const { result_type_id, result_level_id } = this.body;
 
     if (option.id === result_type_id && option.resultLevelId === result_level_id) {
+      return true;
+    }
+
+    if (option.resultLevelId === 1 || option.resultLevelId === 2) {
       return true;
     }
 
