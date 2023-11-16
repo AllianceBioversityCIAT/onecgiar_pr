@@ -59,6 +59,7 @@ export class EvidencesRepository
           e.environmental_biodiversity_related,
           e.poverty_related,
           e.is_supplementary,
+          e.is_sharepoint,
           ? as result_id,
           ${VERSIONING.QUERY.Get_result_phases(
             `e.knowledge_product_related`,
@@ -94,6 +95,7 @@ export class EvidencesRepository
           link,
           youth_related,
           is_supplementary,
+          is_sharepoint,
           result_id,
           knowledge_product_related,
           evidence_type_id
@@ -111,6 +113,7 @@ export class EvidencesRepository
           e.link,
           e.youth_related,
           e.is_supplementary,
+          e.is_sharepoint,
           ? as result_id,
           ${VERSIONING.QUERY.Get_result_phases(
             `e.knowledge_product_related`,
@@ -451,6 +454,7 @@ export class EvidencesRepository
     `;
 
     try {
+      console.log([resultId, is_supplementary, type]);
       const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(
         query,
         [resultId, is_supplementary, type],

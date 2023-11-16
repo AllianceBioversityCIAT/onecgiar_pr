@@ -350,10 +350,9 @@ export class EvidencesService {
 
     for (const sharePointIterator of evidevenceList) {
       if (!sharePointIterator?.is_sharepoint) continue;
-      console.log(sharePointIterator?.result_id);
 
       const document_id = await this._sharePointService.replicateFile(
-        sharePointIterator?.document_id,
+        sharePointIterator['sp_document_id'],
         filePath,
       );
 
