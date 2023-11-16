@@ -63,9 +63,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
       this.selectedOptionsOutput = [];
       this.selectedOptionsOutcome = [];
       this.selectedOptionsEOI = [];
-      this.GET_outcomeList();
-      this.GET_outputList();
-      this.GET_EOIList();
+
       this.currentPlannedResult = this.activeTab?.planned_result;
     }
 
@@ -168,9 +166,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   GET_outputList() {
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
       next: ({ response }) => {
-        response.forEach((item, index) => {
-          item.uniqueId = `${item.toc_result_id}-${index}`;
-        });
         this.outputList = response;
       },
       error: err => {
@@ -183,9 +178,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   GET_outcomeList() {
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 2).subscribe({
       next: ({ response }) => {
-        response.forEach((item, index) => {
-          item.uniqueId = `${item.toc_result_id}-${index}`;
-        });
         this.outcomeList = response;
       },
       error: err => {
