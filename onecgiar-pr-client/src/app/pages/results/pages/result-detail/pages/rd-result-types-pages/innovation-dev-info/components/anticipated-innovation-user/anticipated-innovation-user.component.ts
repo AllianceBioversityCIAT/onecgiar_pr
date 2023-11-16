@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model/innovationDevInfoBody';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 
@@ -20,28 +20,22 @@ export class AnticipatedInnovationUserComponent {
 
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      //(response);
       this.actorsTypeList = response;
     });
   }
 
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      //(response);
-      // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
 
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    //(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
 
   removeOrganization(organizationItem) {
-    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;
@@ -64,10 +58,8 @@ export class AnticipatedInnovationUserComponent {
   }
 
   get disableOrganizations() {
-    //(this.institutionsTypeTreeList);
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
-      //(resp);
       if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
     });
     return list;
@@ -97,7 +89,6 @@ export class AnticipatedInnovationUserComponent {
   }
 
   addActor() {
-    //('addActor');
     this.body.innovatonUse.actors.push(new Actor());
   }
 
