@@ -64,7 +64,7 @@ export const resultDetailRouting: PrRoute[] = [
   { prName: 'Partners', path: 'partners', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule) },
   { prName: 'Geographic location', path: 'geographic-location', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module').then(m => m.RdGeographicLocationModule) },
   { prName: 'Links to results', path: 'links-to-results', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule) },
-  { prName: 'Evidence', path: 'evidences', underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
+  { prName: 'Evidence', path: 'evidences', underConstruction: true, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule) },
   ...rdResultTypesPages,
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];
