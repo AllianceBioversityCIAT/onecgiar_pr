@@ -1,7 +1,7 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
-import { MultipleWPsServiceService } from './services/multiple-wps-service.service';
 import { CustomizedAlertsFeService } from 'src/app/shared/services/customized-alerts-fe.service';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -27,7 +27,7 @@ interface Tab {
   templateUrl: './multiple-wps.component.html',
   styleUrls: ['./multiple-wps.component.scss']
 })
-export class MultipleWPsComponent implements OnChanges {
+export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() editable: boolean;
   @Input() initiative: any;
   @Input() isContributor?: boolean = false;
@@ -37,16 +37,39 @@ export class MultipleWPsComponent implements OnChanges {
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
 
-  constructor(public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  //
+  currentPlannedResult = null;
+  outcomeList = [];
+  outputList = [];
+  eoiList = [];
+  selectedOptionsOutput = [];
+  selectedOptionsOutcome = [];
+  selectedOptionsEOI = [];
+
+  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+
+  ngOnInit(): void {
+    this.GET_outcomeList();
+    this.GET_outputList();
+    this.GET_EOIList();
+  }
 
   ngOnChanges() {
     this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
 
+    if (this.initiative?.planned_result !== this.currentPlannedResult) {
+      this.selectedOptionsOutput = [];
+      this.selectedOptionsOutcome = [];
+      this.selectedOptionsEOI = [];
+      this.GET_outcomeList();
+      this.GET_outputList();
+      this.GET_EOIList();
+      this.currentPlannedResult = this.activeTab?.planned_result;
+    }
+
     this.activeTab = this.initiative?.result_toc_results[0];
-    this.multipleWpsService.allTabs = this.initiative?.result_toc_results;
-    this.multipleWpsService.activeTab = this.activeTab;
   }
 
   dynamicTabTitle(tabNumber) {
@@ -83,7 +106,6 @@ export class MultipleWPsComponent implements OnChanges {
 
   onActiveTab(tab: any) {
     this.activeTab = tab;
-    this.multipleWpsService.activeTab = this.activeTab;
     this.showMultipleWPsContent = false;
 
     setTimeout(() => {
@@ -117,7 +139,6 @@ export class MultipleWPsComponent implements OnChanges {
     this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
     this.activeTab = this.initiative?.result_toc_results[0];
-    this.multipleWpsService.activeTab = this.initiative?.result_toc_results[0];
 
     if (this.isNotifications) return;
 
@@ -132,15 +153,106 @@ export class MultipleWPsComponent implements OnChanges {
     }
 
     if (isOutputTab) {
-      this.multipleWpsService.deleteSelectedOptionOutPut(tab);
+      this.deleteSelectedOptionOutPut(tab);
     }
 
     if (isOutcomeTab) {
-      this.multipleWpsService.deleteSelectedOptionOutCome(tab);
+      this.deleteSelectedOptionOutCome(tab);
     }
 
     if (isEOITab) {
-      this.multipleWpsService.deleteSelectedOptionEOI(tab);
+      this.deleteSelectedOptionEOI(tab);
     }
+  }
+
+  GET_outputList() {
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
+      next: ({ response }) => {
+        response.forEach((item, index) => {
+          item.uniqueId = `${item.toc_result_id}-${index}`;
+        });
+        this.outputList = response;
+      },
+      error: err => {
+        this.outputList = [];
+        console.error(err);
+      }
+    });
+  }
+
+  GET_outcomeList() {
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 2).subscribe({
+      next: ({ response }) => {
+        response.forEach((item, index) => {
+          item.uniqueId = `${item.toc_result_id}-${index}`;
+        });
+        this.outcomeList = response;
+      },
+      error: err => {
+        this.outcomeList = [];
+        console.error(err);
+      }
+    });
+  }
+
+  GET_EOIList() {
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 3).subscribe({
+      next: ({ response }) => {
+        response.forEach((item, index) => {
+          item.uniqueId = `${item.toc_result_id}-${index}`;
+        });
+        this.eoiList = response;
+      },
+      error: err => {
+        this.eoiList = [];
+        console.error(err);
+      }
+    });
+  }
+
+  getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string) {
+    let uniqueWorkPackageIds = new Set();
+
+    if (resultLevelId === 1 && plannedResult) {
+      uniqueWorkPackageIds = new Set(this?.outputList.map(item => item.work_package_id));
+    } else {
+      const uniqueWorkPackageIdsOutcome = new Set(this?.outcomeList.map(item => item.work_package_id));
+      const uniqueWorkPackageIdsEOI = new Set(this?.eoiList.map(item => item.toc_result_id));
+      uniqueWorkPackageIds = new Set([...Array.from(uniqueWorkPackageIdsOutcome), ...Array.from(uniqueWorkPackageIdsEOI)]);
+    }
+
+    if (!plannedResult) {
+      uniqueWorkPackageIds = new Set(this?.eoiList.map(item => item.uniqueId));
+    }
+
+    return uniqueWorkPackageIds.size;
+  }
+
+  deleteSelectedOptionOutPut(tab: any) {
+    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.toc_result_id !== tab?.toc_result_id);
+
+    this.outputList = this.outputList.map(item => {
+      const found = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
+      item.disabledd = !!found;
+      return item;
+    });
+  }
+
+  deleteSelectedOptionOutCome(tab: any) {
+    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.toc_result_id !== tab?.toc_result_id);
+    this.outcomeList = this.outcomeList.map(item => {
+      const found = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
+      item.disabledd = !!found;
+      return item;
+    });
+  }
+
+  deleteSelectedOptionEOI(tab: any) {
+    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.toc_result_id !== tab?.toc_result_id);
+    this.eoiList = this.eoiList.map(item => {
+      const found = this.selectedOptionsEOI.find(option => option.uniqueId === item.uniqueId);
+      item.disabledd = !!found;
+      return item;
+    });
   }
 }

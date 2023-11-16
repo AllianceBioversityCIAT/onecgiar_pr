@@ -1,39 +1,34 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
-import { MultipleWPsServiceService } from '../../services/multiple-wps-service.service';
 
 @Component({
   selector: 'app-multiple-wps-content',
   templateUrl: './multiple-wps-content.component.html',
   styleUrls: ['./multiple-wps-content.component.scss']
 })
-export class MultipleWPsContentComponent implements OnInit, OnChanges {
+export class MultipleWPsContentComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() activeTab: any;
-  @Input() allTabs: any = [];
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
 
-  currentPlannedResult = null;
+  @Input() allTabsCreated = [];
+  @Input() outcomeList = [];
+  @Input() outputList = [];
+  @Input() eoiList = [];
+
+  @Input() selectedOptionsOutput = [];
+  @Input() selectedOptionsOutcome = [];
+  @Input() selectedOptionsEOI = [];
+  //
 
   showOutcomeLevel = true;
   indicatorView = false;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public multipleWpsService: MultipleWPsServiceService) {}
-
-  ngOnInit(): void {
-    this.validateEOI();
-    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
-      this.getIndicator();
-    }
-    this.multipleWpsService.GET_outcomeList();
-    this.multipleWpsService.GET_outputList();
-    this.multipleWpsService.GET_EOIList();
-    this.currentPlannedResult = this.activeTab?.planned_result;
-  }
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   validateEOI() {
     this.showOutcomeLevel = false;
@@ -90,18 +85,75 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   ngOnChanges() {
     this.validateEOI();
 
-    if (this.activeTab?.planned_result !== this.currentPlannedResult) {
-      this.multipleWpsService.selectedOptionsOutput = [];
-      this.multipleWpsService.selectedOptionsOutcome = [];
-      this.multipleWpsService.selectedOptionsEOI = [];
-      this.multipleWpsService.GET_outputList();
-      this.multipleWpsService.GET_outcomeList();
-      this.multipleWpsService.GET_EOIList();
-      this.currentPlannedResult = this.activeTab?.planned_result;
-    }
-
     if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
+
+    this.pushSelectedOptions();
+  }
+
+  pushSelectedOptions() {
+    this.allTabsCreated.forEach(tab => {
+      if (tab?.toc_level_id === 1) {
+        this.validateSelectedOptionOutPut(tab);
+      }
+      if (tab?.toc_level_id === 2) {
+        this.validateSelectedOptionOutCome(tab);
+      }
+      if (tab?.toc_level_id === 3) {
+        this.validateSelectedOptionEOI(tab);
+      }
+    });
+  }
+
+  validateSelectedOptionOutPut(tab?: any) {
+    const selectedOption = tab ? this.outputList.find(item => item.toc_result_id === tab.toc_result_id) : this.outputList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+
+    if (!selectedOption) return;
+
+    selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
+
+    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsOutput.push(selectedOption);
+
+    this.outputList = this.outputList.map(item => {
+      const finded = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
+      item.disabledd = !!finded;
+      return item;
+    });
+  }
+
+  validateSelectedOptionOutCome(tab?: any) {
+    const selectedOption = tab ? this.outcomeList.find(item => item.toc_result_id === tab.toc_result_id) : this.outcomeList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+
+    if (!selectedOption) return;
+
+    selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
+
+    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsOutcome.push(selectedOption);
+
+    this.outcomeList = this.outcomeList.map(item => {
+      const finded = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
+      item.disabledd = !!finded;
+      return item;
+    });
+  }
+
+  validateSelectedOptionEOI(tab?: any) {
+    const selectedOption = tab ? this.eoiList.find(item => item.toc_result_id === tab.toc_result_id) : this.eoiList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+
+    if (!selectedOption) return;
+
+    selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
+
+    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsEOI.push(selectedOption);
+
+    this.eoiList = this.eoiList.map(item => {
+      const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
+      item.disabledd = !!finded;
+      return item;
+    });
   }
 }

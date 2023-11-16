@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="tab-add-button" (click)="onAddTab()"
-      *ngIf="initiative?.result_toc_results.length < this.multipleWpsService.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId)">
+      *ngIf="initiative?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId)">
       <i class=" material-icons-round close_icon tab-add-button-item"
         style="font-size: 16px; color: var(--pr-color-primary);" pTooltip="Add other TOC result">
         add
@@ -27,7 +27,9 @@
 
   <div class="multiple-wps-container">
     <app-multiple-wps-content [editable]="editable" [activeTab]="activeTab" [resultLevelId]="resultLevelId"
-      [allTabs]="initiative?.result_toc_results" [isIpsr]="isIpsr"
-      [showMultipleWPsContent]="showMultipleWPsContent"></app-multiple-wps-content>
+      [isIpsr]="isIpsr" [showMultipleWPsContent]="showMultipleWPsContent" [outcomeList]="outcomeList"
+      [eoiList]="eoiList" [outputList]="outputList" [allTabsCreated]="this.initiative?.result_toc_results"
+      [selectedOptionsOutput]="selectedOptionsOutput" [selectedOptionsOutcome]="selectedOptionsOutcome"
+      [selectedOptionsEOI]="selectedOptionsEOI"></app-multiple-wps-content>
   </div>
 </div>
