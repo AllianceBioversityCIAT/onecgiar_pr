@@ -46,6 +46,7 @@ import { In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { EvidencesService } from '../results/evidences/evidences.service';
 
 @Injectable()
 export class VersioningService {
@@ -81,6 +82,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
+    private readonly _evidencesService: EvidencesService,
   ) {}
 
   /**
@@ -252,6 +254,7 @@ export class VersioningService {
       await this._linkedResultRepository.replicable(config);
       await this._evidencesRepository.replicable(config);
       await this._evidenceSharepointRepository.replicable(config);
+      await this._evidencesService.replicateSPFiles(config);
       //await this._resultsImpactAreaIndicatorRepository.replicable(config);
 
       this._logger.log(

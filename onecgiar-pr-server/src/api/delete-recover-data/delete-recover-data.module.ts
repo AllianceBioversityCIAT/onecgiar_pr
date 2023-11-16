@@ -84,6 +84,8 @@ import { HttpModule } from '@nestjs/axios';
 import { ApplicationModulesRepository } from '../versioning/repositories/application-modules.repository';
 import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.module';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
+import { EvidencesService } from '../results/evidences/evidences.service';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -168,7 +170,9 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
     EvidenceSharepointRepository,
+    EvidencesService,
   ],
-  imports: [HttpModule, PrmsTablesTypesModule],
+  exports: [EvidencesService],
+  imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
 })
 export class DeleteRecoverDataModule {}

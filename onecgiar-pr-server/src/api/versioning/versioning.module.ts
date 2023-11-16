@@ -42,6 +42,8 @@ import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-resul
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { EvidencesService } from '../results/evidences/evidences.service';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 
 @Module({
   controllers: [VersioningController],
@@ -86,8 +88,10 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
+    EvidencesService,
   ],
   exports: [
+    EvidencesService,
     VersioningService,
     VersionRepository,
     HandlersError,
@@ -122,5 +126,6 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
   ],
+  imports: [SharePointModule],
 })
 export class VersioningModule {}
