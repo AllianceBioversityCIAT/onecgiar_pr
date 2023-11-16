@@ -330,8 +330,8 @@ export class DeleteRecoverDataService {
    */
   async changeResultType(
     result_id: number,
-    result_level_id: number,
-    result_type_id: number,
+    new_result_level_id: number,
+    new_result_type_id: number,
     justification: string,
     user: TokenDto,
     from_endpoint = true,
@@ -341,10 +341,10 @@ export class DeleteRecoverDataService {
       if (
         !result_id ||
         result_id < 1 ||
-        !result_level_id ||
-        result_level_id < 1 ||
-        !result_type_id ||
-        result_type_id < 1 ||
+        !new_result_level_id ||
+        new_result_level_id < 1 ||
+        !new_result_type_id ||
+        new_result_type_id < 1 ||
         !justification ||
         justification.length < 1
       ) {
@@ -372,7 +372,10 @@ export class DeleteRecoverDataService {
         });
       }
 
-      if (resultToUpdate.result_type_id == 6 && from_endpoint) {
+      if (
+        new_result_type_id == ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+        from_endpoint
+      ) {
         throw this._returnResponse.format({
           message: `The result with id ${result_id} is a knowledge product and can not be changed from the endpoint`,
           response: null,
@@ -380,8 +383,8 @@ export class DeleteRecoverDataService {
         });
       }
 
-      resultToUpdate.result_type_id = result_type_id;
-      resultToUpdate.result_level_id = result_level_id;
+      resultToUpdate.result_type_id = new_result_type_id;
+      resultToUpdate.result_level_id = new_result_level_id;
       resultToUpdate.last_action_type = Actions.CHANGE_RESULT_TYPE;
       resultToUpdate.justification_action_type = justification;
       resultToUpdate.title = new_name ? new_name : resultToUpdate.title;
@@ -400,8 +403,8 @@ export class DeleteRecoverDataService {
       //TODO add validations when the result changes its type
       await this.manageChangedResultTypeData(
         resultAfterbefore,
-        result_level_id,
-        result_type_id,
+        new_result_level_id,
+        new_result_type_id,
         user,
       );
 
