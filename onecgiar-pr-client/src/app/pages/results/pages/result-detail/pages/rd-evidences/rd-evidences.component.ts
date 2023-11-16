@@ -19,7 +19,7 @@ export class RdEvidencesComponent implements OnInit {
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
-    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files cannot be uploaded; only links can be entered.</li>';
+    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files can be uploaded.</li>';
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
     mainText += '</ul> ';
     return mainText;
@@ -36,17 +36,23 @@ export class RdEvidencesComponent implements OnInit {
       this.evidencesBody = response;
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
+      console.log(this.evidencesBody.evidences);
     });
   }
 
+  underConstructionText() {
+    return 'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
+  }
+
   onSaveSection() {
+    console.log(this.evidencesBody);
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });
   }
 
   addEvidence() {
-    this.evidencesBody.evidences.push({});
+    this.evidencesBody.evidences.push({ is_sharepoint: false });
   }
 
   deleteEvidence(index) {
@@ -82,13 +88,15 @@ export class RdEvidencesComponent implements OnInit {
 
     return `<ul>${text}</ul>`;
   }
-
   get validateCGSpaceLinks() {
-    for (const iterator of this.evidencesBody.evidences) {
-      if (this.evidencesBody.evidences.find(evidence => !Boolean(evidence.link))) return true;
-      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == iterator.link);
+    for (const evidenteIterator of this.evidencesBody.evidences) {
+      if (this.evidencesBody.evidences.find(evidence => !Boolean(evidence.link) && !evidence.is_sharepoint)) return true;
+      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);
       if (evidencesFinded.length >= 2) {
-        return evidencesFinded.length >= 2;
+        return true;
+      }
+      if (evidenteIterator.is_sharepoint && !(evidenteIterator?.file || evidenteIterator?.link)) {
+        return true;
       }
     }
 

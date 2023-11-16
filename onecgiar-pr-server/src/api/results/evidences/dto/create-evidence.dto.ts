@@ -1,10 +1,11 @@
 export class CreateEvidenceDto {
   public result_id: number;
-  public evidences: evidencesCreateInterface[];
-  public supplementary: evidencesCreateInterface[];
+  public evidences: EvidencesCreateInterface[];
+  public supplementary: EvidencesCreateInterface[];
 }
 
-interface evidencesCreateInterface {
+export interface EvidencesCreateInterface {
+  id: string;
   is_knowledge_product?: boolean;
   link: string;
   description?: string;
@@ -13,4 +14,10 @@ interface evidencesCreateInterface {
   nutrition_related?: boolean;
   environmental_biodiversity_related?: boolean;
   poverty_related?: boolean;
+  is_sharepoint?: number;
+  fileUuid?: string;
+  is_public_file?: number;
+  sp_id?: string;
 }
+
+export class JsonData {}

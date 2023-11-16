@@ -1,6 +1,10 @@
 <app-detail-section-title sectionName="Evidence" title="Evidence"></app-detail-section-title>
 
 <div class="detail_container">
+
+    <app-alert-status [description]="underConstructionText()" status="warning">
+    </app-alert-status>
+
     <app-alert-status [description]="alertStatus()">
     </app-alert-status>
 

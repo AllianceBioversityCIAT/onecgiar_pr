@@ -75,6 +75,7 @@ import { InstitutionRoleEnum } from '../results/results_by_institutions/entities
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -140,6 +141,7 @@ export class DeleteRecoverDataService {
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
     private readonly _knowledgeProductFairBaselineRepository: KnowledgeProductFairBaselineRepository,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultsService: ResultsService,
     private readonly _logRepository: LogRepository,
@@ -243,6 +245,7 @@ export class DeleteRecoverDataService {
       );
       await this._resultsTocResultRepository.logicalDelete(resultData.id);
       await this._resultValidationRepository.logicalDelete(resultData.id);
+      await this._evidenceSharepointRepository.logicalDelete(resultData.id);
       await this._resultByEvidencesRepository.logicalDelete(resultData.id);
       await this._resultByInitiativesRepository.logicalDelete(resultData.id);
       await this._resultByIntitutionsTypeRepository.logicalDelete(

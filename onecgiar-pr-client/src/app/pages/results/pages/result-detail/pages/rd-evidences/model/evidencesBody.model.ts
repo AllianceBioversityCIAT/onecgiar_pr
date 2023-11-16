@@ -18,4 +18,9 @@ export interface EvidencesCreateInterface {
   nutrition_related?: boolean;
   environmental_biodiversity_related?: boolean;
   poverty_related?: boolean;
+  is_sharepoint?: boolean;
+  file?: File;
+  fileUuid?: string;
+  is_public_file?: boolean;
+  sp_file_name?: string;
 }

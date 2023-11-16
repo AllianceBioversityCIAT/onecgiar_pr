@@ -12,6 +12,7 @@ import {
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
+import { EvidenceWithEvidenceSharepoint } from './interfaces/evidence-with-evidence-sharepoint.interface';
 
 @Injectable()
 export class EvidencesRepository
@@ -93,6 +94,7 @@ export class EvidencesRepository
           e.environmental_biodiversity_related,
           e.poverty_related,
           e.is_supplementary,
+          e.is_sharepoint,
           ? as result_id,
           ${VERSIONING.QUERY.Get_result_phases(
             `e.knowledge_product_related`,
@@ -128,6 +130,7 @@ export class EvidencesRepository
           link,
           youth_related,
           is_supplementary,
+          is_sharepoint,
           result_id,
           knowledge_product_related,
           evidence_type_id
@@ -147,6 +150,7 @@ export class EvidencesRepository
           e.link,
           e.youth_related,
           e.is_supplementary,
+          e.is_sharepoint,
           ? as result_id,
           ${VERSIONING.QUERY.Get_result_phases(
             `e.knowledge_product_related`,
@@ -299,7 +303,7 @@ export class EvidencesRepository
 
   async getEvidencesByResultIdAndLink(
     resultId: number,
-    link: string,
+    evidenceId: string,
     is_supplementary: boolean,
     type: number,
   ) {
@@ -311,16 +315,16 @@ export class EvidencesRepository
     from evidence e 
     where e.result_id = ?
     	and e.is_active > 0
-    	and e.link = ?
       and e.is_supplementary = ?
+      and e.id = ?
       and e.evidence_type_id = ?;
     `;
 
     try {
       const evidence: Evidence[] = await this.query(query, [
         resultId,
-        link,
         is_supplementary,
+        evidenceId,
         type,
       ]);
       return evidence?.length ? evidence[0] : undefined;
@@ -335,58 +339,100 @@ export class EvidencesRepository
 
   async updateEvidences(
     resultId: number,
-    linkArray: string[],
+    evidenceIdList: string[],
     userId: number,
     is_supplementary: boolean,
     type: number,
   ) {
-    const evidences = linkArray ?? [];
-    const upDateInactive = `
-      update evidence 
-      set is_active = 0, 
+    const evidenceIdListString = evidenceIdList.filter((e) => e).join(',');
+
+    evidenceIdList = evidenceIdList ?? [];
+    const inactiveAll = `
+      update evidence
+      set is_active = 0,
         last_updated_date  = NOW(),
         last_updated_by  = ${userId}
-      where is_active  > 0 
+      where is_active  > 0
         and result_id = ${resultId}
-        and link not in (${`'${evidences.toString().replace(/,/g, "','")}'`})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
 
-    const upDateActive = `
-      update evidence 
-      set is_active = 1, 
+    const justActivateList = `
+      update evidence
+      set is_active = 1,
         last_updated_date  = NOW(),
         last_updated_by  = ${userId}
       where result_id = ${resultId}
-        and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
+        and id in (${evidenceIdListString})
         and is_supplementary = ${is_supplementary}
         and evidence_type_id = ${type};
     `;
 
-    const upDateAllInactive = `
-      update evidence 
-      set is_active = 0, 
-        last_updated_date  = NOW(),
-        last_updated_by  = ${userId}
-      where is_active  > 0 
-      and result_id = ${resultId}
-      and is_supplementary = ${is_supplementary}
-      and evidence_type_id = ${type};
-    `;
+    // const upDateActive = `
+    //   update evidence
+    //   set is_active = 1,
+    //     last_updated_date  = NOW(),
+    //     last_updated_by  = ${userId}
+    //   where result_id = ${resultId}
+    //     and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
+    //     and is_supplementary = ${is_supplementary}
+    //     and evidence_type_id = ${type};
+    // `;
+
+    // const upDateAllInactive = `
+    //   update evidence
+    //   set is_active = 0,
+    //     last_updated_date  = NOW(),
+    //     last_updated_by  = ${userId}
+    //   where is_active  > 0
+    //   and result_id = ${resultId}
+    //   and is_supplementary = ${is_supplementary}
+    //   and evidence_type_id = ${type};
+    // `;
 
     try {
-      if (evidences?.length) {
-        await this.query(upDateInactive);
+      await this.query(inactiveAll);
+      await this.query(justActivateList);
+    } catch (error) {}
 
-        return await this.query(upDateActive);
-      } else {
-        return await this.query(upDateAllInactive);
-      }
+    // try {
+    //   if (evidenceIdList?.length) {
+    //     await this.query(upDateInactive);
+
+    //     return await this.query(upDateActive);
+    //   } else {
+    //     return await this.query(upDateAllInactive);
+    //   }
+    // } catch (error) {
+    //   throw this._handlersError.returnErrorRepository({
+    //     className: EvidencesRepository.name,
+    //     error: `updateEvidences ${error}`,
+    //     debug: true,
+    //   });
+    // }
+  }
+
+  async getResultInformation(resultId) {
+    const query = `
+    SELECT
+      r.result_code,
+      r.id as result_id,
+      r.title as result_title,
+      v.phase_name,
+      DATE_FORMAT(CONVERT_TZ(now(), '+00:00', '+02:00'), '%Y%m%d%H%i') as date_as_name
+    FROM result r
+      LEFT JOIN version v ON v.id = r.version_id  
+    WHERE 
+      r.is_active > 0 AND r.id = ?;`;
+
+    try {
+      const result: any = await this.query(query, [resultId]);
+      return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,
-        error: `updateEvidences ${error}`,
+        error: error,
         debug: true,
       });
     }
@@ -398,8 +444,14 @@ export class EvidencesRepository
     type: number,
   ) {
     const query = `
-    select 
+    SELECT 
     e.id,
+    es.id AS sp_id,
+    es.document_id AS sp_document_id,
+    es.file_name AS sp_file_name,
+    es.folder_path AS sp_folder_path,
+    es.is_public_file,
+    es.evidence_id AS sp_evidence_id,
     e.description,
     e.is_active,
     e.creation_date,
@@ -408,6 +460,7 @@ export class EvidencesRepository
     e.last_updated_by,
     e.gender_related,
     e.link,
+    e.is_sharepoint,
     e.youth_related,
     e.nutrition_related,
     e.environmental_biodiversity_related,
@@ -415,20 +468,31 @@ export class EvidencesRepository
     e.is_supplementary,
     e.result_id,
     e.knowledge_product_related 
-    from evidence e 
-    where e.result_id = ?
-      and e.is_supplementary = ?
-      and e.is_active > 0
-      and e.evidence_type_id = ?
-    order by e.creation_date asc;
+    FROM evidence e 
+    LEFT JOIN (
+        SELECT es1.*
+        FROM evidence_sharepoint es1
+        INNER JOIN (
+            SELECT evidence_id, MAX(created_date) AS max_created_date
+            FROM evidence_sharepoint
+            WHERE is_active > 0
+            GROUP BY evidence_id
+        ) es2 ON es1.evidence_id = es2.evidence_id AND es1.created_date = es2.max_created_date
+        WHERE es1.is_active > 0
+    ) es ON e.id = es.evidence_id
+    WHERE e.result_id = ?
+      AND e.is_supplementary = ?
+      AND e.is_active > 0
+      AND e.evidence_type_id = ?
+    ORDER BY e.creation_date ASC;
     `;
 
     try {
-      const evidence: Evidence[] = await this.query(query, [
-        resultId,
-        is_supplementary,
-        type,
-      ]);
+      console.log([resultId, is_supplementary, type]);
+      const evidence: EvidenceWithEvidenceSharepoint[] = await this.query(
+        query,
+        [resultId, is_supplementary, type],
+      );
       return evidence;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

@@ -43,6 +43,9 @@ import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultTypeRepository } from '../../api/results/result_types/resultType.repository';
+import { EvidenceSharepointRepository } from '../../api/results/evidences/repositories/evidence-sharepoint.repository';
+import { EvidencesService } from '../../api/results/evidences/evidences.service';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 
 @Module({
   controllers: [TocResultsController],
@@ -88,7 +91,10 @@ import { ResultTypeRepository } from '../../api/results/result_types/resultType.
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
     ResultTypeRepository,
+    EvidenceSharepointRepository,
+    EvidencesService,
   ],
+  imports: [SharePointModule],
   exports: [TocResultsRepository],
 })
 export class TocResultsModule {}

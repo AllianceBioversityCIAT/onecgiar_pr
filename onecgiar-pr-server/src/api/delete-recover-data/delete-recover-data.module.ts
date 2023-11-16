@@ -87,6 +87,9 @@ import { ResultInstitutionsBudgetRepository } from '../results/result_budget/rep
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
+import { EvidencesService } from '../results/evidences/evidences.service';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -175,7 +178,7 @@ import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_pro
     ResultCountriesSubNationalRepository,
     KnowledgeProductFairBaselineRepository,
   ],
-  imports: [HttpModule, PrmsTablesTypesModule],
+  imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [
     ResultInstitutionsBudgetRepository,
     NonPooledProjectBudgetRepository,
@@ -261,6 +264,8 @@ import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_pro
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
     DeleteRecoverDataService,
+    EvidenceSharepointRepository,
+    EvidencesService,
   ],
 })
 export class DeleteRecoverDataModule {}

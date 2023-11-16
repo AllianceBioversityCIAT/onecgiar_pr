@@ -8,7 +8,7 @@ import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
-import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
@@ -19,7 +19,6 @@ import { getInnovationComInterface } from '../../../../../../onecgiar-pr-server/
 import { Observable } from 'rxjs';
 import { IpsrCompletenessStatusService } from '../../../pages/ipsr/services/ipsr-completeness-status.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
-
 @Injectable({
   providedIn: 'root'
 })
@@ -273,11 +272,17 @@ export class ResultsApiService {
   }
 
   GET_evidences() {
-    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    console.log(body.evidences);
+    body.evidences.forEach((evidence: EvidencesCreateInterface) => {
+      formData.append('files', evidence.file);
+    });
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   POST_toc(body: TheoryOfChangeBody) {
