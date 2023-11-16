@@ -148,4 +148,7 @@ export class EvidenceSharepointRepository
         }),
       );
   }
+  async fisicalDelete(resultId: number): Promise<any> {
+    // Implement your deletion logic here
+  }
 }

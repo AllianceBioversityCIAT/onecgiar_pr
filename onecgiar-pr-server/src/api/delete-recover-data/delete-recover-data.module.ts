@@ -94,6 +94,8 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 @Module({
   controllers: [DeleteRecoverDataController],
   providers: [
+    EvidencesService,
+    EvidenceSharepointRepository,
     DeleteRecoverDataService,
     HandlersError,
     ReturnResponse,
