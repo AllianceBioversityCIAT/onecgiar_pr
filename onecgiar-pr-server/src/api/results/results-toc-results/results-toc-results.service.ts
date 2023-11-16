@@ -778,7 +778,6 @@ export class ResultsTocResultsService {
   }
 
   async getVersionId(result_id: number, init: number) {
-    console.log("🚀 ~ file: results-toc-results.service.ts:781 ~ ResultsTocResultsService ~ getVersionId ~ result_id:", result_id)
     try {
       const resultinit = await this._clarisaInitiatives.findOne({
         select: ['toc_id'],
@@ -824,4 +823,3 @@ export class ResultsTocResultsService {
     }
   }
 }
-
