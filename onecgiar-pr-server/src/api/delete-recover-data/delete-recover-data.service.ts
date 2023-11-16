@@ -590,6 +590,10 @@ export class DeleteRecoverDataService {
             result_id,
             [InstitutionRoleEnum.PARTNER],
           );
+          await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+            result_id,
+            [EvidenceTypeEnum.MAIN],
+          );
           break;
       }
 
