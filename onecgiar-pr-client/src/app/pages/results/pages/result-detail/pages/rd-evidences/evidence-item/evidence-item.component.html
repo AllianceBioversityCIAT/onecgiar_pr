@@ -2,10 +2,14 @@
     <div class="index">{{this.index}}</div>
     <div class="evidence_fields">
 
-        <app-pr-radio-button *ngIf="!this.dataControlSE.isKnowledgeProduct" [options]="this.evidencesType"
-            optionLabel="name" optionValue="id" (ngModelChange)="cleanSource($event)" label="Source of the evidence"
-            [(ngModel)]="this.evidence.is_sharepoint">
-        </app-pr-radio-button>
+        <div style="display: flex; align-items: center; gap: 50px">
+            <app-pr-radio-button *ngIf="!this.dataControlSE.isKnowledgeProduct" [options]="this.evidencesType"
+                optionLabel="name" optionValue="id" (ngModelChange)="cleanSource($event)" label="Source of the evidence"
+                [(ngModel)]="this.evidence.is_sharepoint">
+            </app-pr-radio-button>
+            <img style="width: 40px;" *ngIf="this.evidence.is_sharepoint" src="assets/work-in-progress.png" alt=""
+                srcset="">
+        </div>
 
         <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
@@ -39,16 +43,19 @@
 
 
             <ng-template #uploadfilefield>
-                <div class="drag-and-drop-field" (drop)="onFileDropped($event)" (dragover)="onDragOver($event)"
-                    (dragleave)="onDragLeave($event)">
+                <div class="drag-and-drop-field" [ngClass]="{'incorrect-drag-and-drop-field': this.incorrectFile}"
+                    (drop)="onFileDropped($event)" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)">
                     <div class="content">
                         <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
                         <div class="title">Select a file or drag and drop here</div>
-                        <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 5GB</div>
+                        <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 1GB</div>
                         <app-pr-button text="Select file" (click)="fileInput.click()"></app-pr-button>
                     </div>
                 </div>
-                <input class="inputfieldHidden" #fileInput type="file" (change)="onFileSelected($event)">
+                <input class="inputfieldHidden" #fileInput type="file" (change)="onFileSelected($event)"
+                    accept=".jpg, .png, .pdf, .doc, .pptx, .xlsx" multiple="false">
+                <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg,
+                    .png, .pdf, .doc, .pptx, .xlsx</div>
             </ng-template>
 
 

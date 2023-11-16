@@ -31,6 +31,14 @@
                 color: rgb(54, 54, 54);
             }
         }
+
+        .incorrect-file {
+            color: var(--pr-color-danger);
+            font-weight: 500;
+            margin-top: -10px;
+            margin-bottom: 20px;
+
+        }
     }
 
     .index {
@@ -69,6 +77,15 @@
     .information {}
 }
 
+.incorrect-drag-and-drop-field {
+    border: 2px dashed #EB4E4E !important;
+
+    .description {
+        color: #EB4E4E !important;
+        ;
+    }
+}
+
 .drag-and-drop-field {
     border: 2px dashed var(--pr-color-primary);
     display: flex;
@@ -77,6 +94,7 @@
     flex-direction: column;
     padding: 30px 0px;
     margin-bottom: 20px;
+    transition: all 0.3s ease-in-out;
 
     .content {
         display: flex;
@@ -90,6 +108,7 @@
 
         .description {
             color: rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease-in-out;
         }
     }
 }

@@ -16,6 +16,7 @@ export class EvidenceItemComponent {
   @Input() isOptional: boolean = false;
   @Output() deleteEvent = new EventEmitter();
   fileNameCache = '';
+  incorrectFile = false;
 
   evidencesType = [
     { id: 0, name: 'Link' },
@@ -31,9 +32,16 @@ export class EvidenceItemComponent {
   onFileSelected(event: any) {
     const selectedFile: File = event.target.files[0];
     if (selectedFile) {
-      // Realiza las operaciones que necesites con el archivo seleccionado
-      console.log(selectedFile);
-      this.renameFileAndAddData(selectedFile);
+      const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
+      const extension = '.' + selectedFile.name.split('.').pop();
+      if (validFileTypes.includes(extension)) {
+        // Realiza las operaciones que necesites con el archivo seleccionado
+        console.log(selectedFile);
+        this.renameFileAndAddData(selectedFile);
+        this.incorrectFile = false;
+      } else {
+        this.incorrectFile = true;
+      }
     }
   }
 
@@ -55,7 +63,18 @@ export class EvidenceItemComponent {
     event.stopPropagation();
     const files = event.dataTransfer.files;
     if (files.length > 0) {
-      this.handleFile(files[0]);
+      const file = files[0];
+      const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
+      const extension = '.' + file.name.split('.').pop();
+      if (validFileTypes.includes(extension)) {
+        this.handleFile(file);
+        this.incorrectFile = false;
+      } else {
+        this.incorrectFile = true;
+        setTimeout(() => {
+          this.incorrectFile = false;
+        }, 3000);
+      }
     }
   }
 
@@ -70,8 +89,6 @@ export class EvidenceItemComponent {
   }
 
   handleFile(file: File) {
-    // Aquí puedes manejar el archivo según tus requisitos.
-    console.log('Archivo arrastrado:', file);
     this.evidence.file = file;
     this.renameFileAndAddData(file);
   }
