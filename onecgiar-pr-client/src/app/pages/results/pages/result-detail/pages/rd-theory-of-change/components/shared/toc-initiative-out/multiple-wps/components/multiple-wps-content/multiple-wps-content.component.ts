@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
@@ -8,7 +8,7 @@ import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of
   templateUrl: './multiple-wps-content.component.html',
   styleUrls: ['./multiple-wps-content.component.scss']
 })
-export class MultipleWPsContentComponent implements OnChanges {
+export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() editable: boolean;
   @Input() activeTab: any;
   @Input() resultLevelId: number | string;
@@ -29,6 +29,14 @@ export class MultipleWPsContentComponent implements OnChanges {
   indicatorView = false;
 
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+
+  ngOnInit() {
+    this.validateEOI();
+
+    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
+      this.getIndicator();
+    }
+  }
 
   validateEOI() {
     this.showOutcomeLevel = false;
