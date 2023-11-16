@@ -198,6 +198,7 @@ export class ShareResultRequestService {
             false,
           );
         if (!exists) {
+
           const newResultByInitiative = new ResultsByInititiative();
           newResultByInitiative.initiative_id = shared_inititiative_id;
           newResultByInitiative.initiative_role_id = 2;
@@ -217,10 +218,6 @@ export class ShareResultRequestService {
 
           // * Map multiple WPs to the same initiative
           for (const toc of rtr?.result_toc_results) {
-            console.log(
-              '🚀 ~ file: share-result-request.service.ts:245 ~ ShareResultRequestService ~ toc:',
-              toc,
-            );
             let RtR: ResultsTocResult | null;
             if (toc?.result_toc_result_id) {
               RtR =
@@ -266,6 +263,13 @@ export class ShareResultRequestService {
                 is_active: true,
               });
             }
+          }
+
+          if (rtr?.result_toc_results?.length) {
+            await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+              createShareResultsRequestDto,
+              result_id
+            );
           }
         } else {
           const result = await this._resultRepository.getResultById(result_id);
@@ -341,6 +345,11 @@ export class ShareResultRequestService {
                 is_active: true,
               });
             }
+          }
+          if (rtr?.result_toc_results?.length) {
+            await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+              createShareResultsRequestDto,
+            );
           }
         }
         const auxBody: any = rr;

@@ -1718,7 +1718,7 @@ export class ResultsTocResultRepository
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
       );
-      if (impactAreaTargets.length != 0) {
+      if (impactAreaTargets) {
         for (const impact of impactAreaTargets) {
           const targetIndicators =
             await this._resultsTocImpactAreaTargetRepository.findOne({
@@ -1812,7 +1812,7 @@ export class ResultsTocResultRepository
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
       );
-      if (sdgTargets.length != 0) {
+      if (sdgTargets) {
         for (const impact of sdgTargets) {
           const targetIndicators =
             await this._resultsTocSdgTargetRepository.findOne({
@@ -1909,7 +1909,7 @@ select *
         { is_active: false },
       );
 
-      if (actionarea.length != 0) {
+      if (actionarea) {
         for (const impact of actionarea) {
           const targetIndicators =
             await this._resultActionAreaRepository.findOne({
@@ -1997,17 +1997,20 @@ select *
 
   async saveIndicatorsPrimarySubmitter(
     ResultTocResultIndicators: CreateResultsTocResultDto,
+    result_id?: number,
   ) {
+    if (!ResultTocResultIndicators) return;
     const { result_toc_result } = ResultTocResultIndicators;
     try {
       for (const toc of result_toc_result?.result_toc_results) {
+        if (!toc) return;
         if (toc?.results_id) {
           const rtrExist = await this.query(`
             SELECT
               *
             FROM
               results_toc_result rtr
-            WHERE rtr.results_id = ${toc?.results_id}
+            WHERE rtr.results_id = ${toc?.results_id || result_id}
               AND rtr.initiative_id = ${toc?.initiative_id}
               AND rtr.toc_result_id = ${toc?.toc_result_id}
               AND rtr.is_active = true;
@@ -2021,28 +2024,25 @@ select *
               },
             );
             if (toc?.indicators && toc?.indicators[0]?.targets) {
-              console.log('Si indicators');
-
               await this.saveInditicatorsContributing(
                 toc?.indicators,
                 rtrExist[0]?.result_toc_result_id,
-                toc?.results_id,
+                toc?.results_id || result_id,
                 toc?.toc_result_id,
               );
             } else {
               return;
             }
-            console.log('Si impact/sdg/action');
             await this.saveImpact(
               rtrExist[0]?.result_toc_result_id,
               toc?.impactAreasTargets,
-              toc?.results_id,
+              toc?.results_id || result_id,
               toc?.initiative_id,
             );
             await this.saveSdg(
               rtrExist[0]?.result_toc_result_id,
               toc?.sdgTargest,
-              toc?.results_id,
+              toc?.results_id || result_id,
             );
             await this.saveActionAreaToc(
               rtrExist[0]?.result_toc_result_id,
