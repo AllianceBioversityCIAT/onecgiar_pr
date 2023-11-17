@@ -441,18 +441,6 @@ export class ResultsTocResultsService {
           });
         }
 
-        // conResTocRes = await this._resultsTocResultRepository.getRTRPrimary(
-        //   resultId,
-        //   [resultInit.id],
-        //   false,
-        //   conInit.map((el) => el.id),
-        // );
-        // conResTocRes.map((el) => {
-        //   el['toc_level_id'] =
-        //     el['planned_result'] == 0 && el['planned_result'] != null
-        //       ? 3
-        //       : el['toc_level_id'];
-        // });
       } else if (result.result_level_id == 2) {
         resTocRes =
           await this._resultsTocResultRepository.getRTRPrimaryActionArea(

@@ -33,9 +33,6 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      /*const result: any = await this._resultRepository.getResultById(
-        parseInt(`${resultId}`),
-      );*/
       const result: { initiative_id: number } = { initiative_id: null };
       const res = await this._resultByInitiativesRepository.InitiativeByResult(
         resultId,
@@ -198,7 +195,6 @@ export class ShareResultRequestService {
             false,
           );
         if (!exists) {
-
           const newResultByInitiative = new ResultsByInititiative();
           newResultByInitiative.initiative_id = shared_inititiative_id;
           newResultByInitiative.initiative_role_id = 2;
@@ -218,40 +214,7 @@ export class ShareResultRequestService {
 
           // * Map multiple WPs to the same initiative
           for (const toc of rtr?.result_toc_results) {
-            let RtR: ResultsTocResult | null;
-            if (toc?.result_toc_result_id) {
-              RtR =
-                (await this._resultsTocResultRepository.findOne({
-                  where: {
-                    result_toc_result_id: toc?.result_toc_result_id,
-                  },
-                })) || null;
-            } else {
-              RtR = null;
-            }
-
-            if (RtR) {
-              if (result.result_level_id == 2) {
-                RtR.action_area_outcome_id =
-                  toc?.action_area_outcome_id || null;
-              } else {
-                RtR.toc_result_id = toc?.toc_result_id || null;
-              }
-              RtR.is_active = true;
-              RtR.last_updated_by = user.id;
-              RtR.planned_result = rtr.planned_result;
-
-              await this._resultsTocResultRepository.update(
-                RtR.result_toc_result_id,
-                {
-                  toc_result_id: toc.toc_result_id,
-                  action_area_outcome_id: toc.action_area_outcome_id,
-                  last_updated_by: user.id,
-                  planned_result: rtr.planned_result,
-                  is_active: true,
-                },
-              );
-            } else if (toc) {
+            if (toc) {
               await this._resultsTocResultRepository.save({
                 initiative_ids: shared_inititiative_id,
                 toc_result_id: toc?.toc_result_id,
@@ -268,7 +231,7 @@ export class ShareResultRequestService {
           if (rtr?.result_toc_results?.length) {
             await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
               createShareResultsRequestDto,
-              result_id
+              result_id,
             );
           }
         } else {
@@ -300,40 +263,7 @@ export class ShareResultRequestService {
 
           // * Map multiple WPs to the same initiative
           for (const toc of rtr?.result_toc_results) {
-            let RtR: ResultsTocResult | null;
-            if (toc?.result_toc_result_id) {
-              RtR =
-                (await this._resultsTocResultRepository.findOne({
-                  where: {
-                    result_toc_result_id: toc?.result_toc_result_id,
-                  },
-                })) || null;
-            } else {
-              RtR = null;
-            }
-
-            if (RtR) {
-              if (result.result_level_id == 2) {
-                RtR.action_area_outcome_id =
-                  toc?.action_area_outcome_id || null;
-              } else {
-                RtR.toc_result_id = toc?.toc_result_id || null;
-              }
-              RtR.is_active = true;
-              RtR.last_updated_by = user.id;
-              RtR.planned_result = rtr.planned_result;
-
-              await this._resultsTocResultRepository.update(
-                RtR.result_toc_result_id,
-                {
-                  toc_result_id: toc.toc_result_id,
-                  action_area_outcome_id: toc.action_area_outcome_id,
-                  last_updated_by: user.id,
-                  planned_result: rtr.planned_result,
-                  is_active: true,
-                },
-              );
-            } else if (toc) {
+            if (toc) {
               await this._resultsTocResultRepository.save({
                 initiative_ids: shared_inititiative_id,
                 toc_result_id: toc?.toc_result_id,
