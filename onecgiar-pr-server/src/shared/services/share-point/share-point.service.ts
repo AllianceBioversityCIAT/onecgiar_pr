@@ -317,7 +317,7 @@ export class SharePointService {
   async generateFilePath(resultId) {
     const [pathInformation] =
       await this._evidencesRepository.getResultInformation(resultId);
-    const filePath = `/${pathInformation?.phase_name}/Result ${pathInformation?.result_id}`;
+    const filePath = `/${pathInformation?.phase_name}/Result ${pathInformation?.result_code}`;
     return { filePath, pathInformation };
   }
 }
