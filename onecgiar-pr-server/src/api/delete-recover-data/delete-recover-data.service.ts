@@ -548,18 +548,17 @@ export class DeleteRecoverDataService {
         );
       }
 
-      switch (new_result_type) {
-        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
-          await this._resultByIntitutionsRepository.changePartnersType(
-            result_id,
-            [InstitutionRoleEnum.PARTNER],
-            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-          );
-          await this._resultRepository.update(result_id, {
-            geographic_scope_id: null,
-          });
-          break;
+      if (new_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+        await this._resultByIntitutionsRepository.changePartnersType(
+          result_id,
+          [InstitutionRoleEnum.PARTNER],
+          InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+        );
+        await this._resultRepository.update(result_id, {
+          geographic_scope_id: null,
+        });
       }
+
       return this._returnResponse.format({
         message: `The result with code ${result_id} has been migrated`,
         response: result_id,
@@ -594,17 +593,16 @@ export class DeleteRecoverDataService {
       await this._resultsTocImpactAreaTargetRepository.fisicalDelete(result_id);
       await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
       await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
-      switch (old_result_type) {
-        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
-          await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
-            result_id,
-            [InstitutionRoleEnum.PARTNER],
-          );
-          await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
-            result_id,
-            [EvidenceTypeEnum.MAIN],
-          );
-          break;
+
+      if (old_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+        await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
+          result_id,
+          [InstitutionRoleEnum.PARTNER],
+        );
+        await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
+          result_id,
+          [EvidenceTypeEnum.MAIN],
+        );
       }
 
       if (new_result_level != old_result_level) {
@@ -742,10 +740,7 @@ export class DeleteRecoverDataService {
     );
   }
 
-  private async DELETE_action_area_outcome(
-    result_id: number,
-    _result_level: ResultLevelEnum,
-  ) {
+  private async CoomonDelete(result_id: number) {
     await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
     await this._resultActorRepository.fisicalDelete(result_id);
     await this._resultAnswerRepository.fisicalDelete(result_id);
@@ -758,6 +753,13 @@ export class DeleteRecoverDataService {
       result_id,
     );
     await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+  }
+
+  private async DELETE_action_area_outcome(
+    result_id: number,
+    _result_level: ResultLevelEnum,
+  ) {
+    await this.CoomonDelete(result_id);
     await this.DELETE_common_kp_data(result_id);
     await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
       result_id,
@@ -802,18 +804,7 @@ export class DeleteRecoverDataService {
     result_id: number,
     _result_level: ResultLevelEnum,
   ) {
-    await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
-    await this._resultActorRepository.fisicalDelete(result_id);
-    await this._resultAnswerRepository.fisicalDelete(result_id);
-    await this._resultInitiativeBudgetRepository.fisicalDelete(result_id);
-    await this._resultInstitutionsBudgetRepository.fisicalDelete(result_id);
-    await this._resultByIntitutionsTypeRepository.fisicalDelete(result_id);
-    await this._resultsCapacityDevelopmentsRepository.fisicalDelete(result_id);
-    await this._resultsInnovationsDevRepository.fisicalDelete(result_id);
-    await this._resultsInnovationsUseMeasuresRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
+    await this.CoomonDelete(result_id);
     await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
     this.DELETE_common_kp_data(result_id);
     await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(

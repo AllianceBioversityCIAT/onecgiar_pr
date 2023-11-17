@@ -9,6 +9,4 @@ export class ChangeResultTypeServiceService {
   showConfirmation = false;
   showFilters = true;
   step = 0;
-
-  constructor() {}
 }

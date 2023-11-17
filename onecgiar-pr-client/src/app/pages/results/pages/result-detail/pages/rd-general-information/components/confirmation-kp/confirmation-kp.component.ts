@@ -28,7 +28,7 @@ export class ConfirmationKPComponent {
           if (key.toLowerCase() === 'content-disposition') {
             const contentDisposition = response.headers.get(key);
             const match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
-            if (match && match[1]) {
+            if (match[1]) {
               fileName = match[1].replace(/['"]/g, '');
             }
           }

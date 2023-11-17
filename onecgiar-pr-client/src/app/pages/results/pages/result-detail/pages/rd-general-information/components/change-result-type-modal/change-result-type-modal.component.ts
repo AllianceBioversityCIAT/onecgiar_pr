@@ -80,7 +80,7 @@ export class ChangeResultTypeModalComponent implements OnChanges {
       this.resultsListFilterSE.filters.resultLevel.find((resultLevelOption: any) => resultLevelOption.id === option.resultLevelId).options.find((resultTypeOption: any) => resultTypeOption.id === option.id).selected = true;
 
       this.changeType.showFilters = true;
-      this.changeType.showConfirmation = this.selectedResultType.id !== 6 ? true : false;
+      this.changeType.showConfirmation = this.selectedResultType.id !== 6;
     }
   }
 
