@@ -1,0 +1,80 @@
+::ng-deep .support_information {
+  #change-phase {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .content-change-phase {
+      padding-top: 0;
+      min-height: 50px;
+      width: 715px;
+
+      .phase-info-result {
+        background-color: #f3f3f3;
+        margin: 1.5rem;
+        border-radius: 25px;
+        padding: 2rem 2.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .phase-info-result-desc {
+          margin: 0;
+        }
+
+        .link_button {
+          color: white;
+          background-color: var(--pr-color-primary);
+          padding: 8px 20px;
+          width: 170px;
+          border-radius: 5px;
+          cursor: pointer;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.625rem;
+        }
+      }
+      .info-phase-change {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 1.25rem 0;
+
+        .icon-change {
+          width: 30%;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .phase-data {
+          color: var(--pr-color-primary) !important;
+          width: 35%;
+        }
+
+        .pa-l {
+          position: relative;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .pa-r {
+          position: relative;
+
+          display: flex;
+          justify-content: flex-start;
+        }
+      }
+    }
+  }
+}
+
+.rotate-right {
+  transform: rotate(90deg);
+  font-size: 70px;
+}

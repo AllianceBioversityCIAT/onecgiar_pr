@@ -16,6 +16,21 @@ export class ResultsByIpInnovationUseMeasureRepository
     super(ResultsByIpInnovationUseMeasure, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const query = `delete rirm from result_ip_result_measures rirm 
+    inner join result_ip_measure rim on rim.result_ip_measure_id = rirm.result_ip_result_id 
+    where rim.result_id = ?;`;
+    return this.query(query, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsByIpInnovationUseMeasureRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultsByIpInnovationUseMeasure> {
     const query = `update result_ip_result_measures rirm 
     inner join result_ip_measure rim on rim.result_ip_measure_id = rirm.result_ip_result_id 

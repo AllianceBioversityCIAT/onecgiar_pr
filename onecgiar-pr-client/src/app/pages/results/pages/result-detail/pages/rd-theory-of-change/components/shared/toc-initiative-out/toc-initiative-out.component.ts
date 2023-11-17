@@ -141,19 +141,34 @@ export class TocInitiativeOutComponent implements OnInit {
     }
   }
 
-  async getIndicator() {
+  getIndicator() {
     this.indicators = [];
 
     this.indicatorView = false;
     this.disabledInput = false;
-    await this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
+
+    this.api.resultsSE.Get_indicator(this.initiative.toc_result_id, this.initiative.initiative_id).subscribe(({ response }) => {
       this.theoryOfChangesServices.targetsIndicators = response?.informationIndicator;
       this.theoryOfChangesServices.impactAreasTargets = response?.impactAreas;
       this.theoryOfChangesServices.sdgTargest = response?.sdgTargets;
       this.theoryOfChangesServices.actionAreaOutcome = response?.actionAreaOutcome;
-      this.theoryOfChangesServices.impactAreasTargets.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-      this.theoryOfChangesServices.sdgTargest.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-      this.theoryOfChangesServices.actionAreaOutcome.map(item => (item.full_name = `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+
+      this.theoryOfChangesServices.impactAreasTargets.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      this.theoryOfChangesServices.sdgTargest.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+      this.theoryOfChangesServices.actionAreaOutcome.forEach(item => {
+        let actionArea = '';
+
+        if (item.actionAreaId === 1) {
+          actionArea = '<strong>Systems Transformation</strong>';
+        } else if (item.actionAreaId === 2) {
+          actionArea = '<strong>Resilient Agrifood Systems</strong>';
+        } else {
+          actionArea = '<strong>Genetic Innovation</strong>';
+        }
+
+        item.full_name = `${actionArea} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`;
+      });
+
       this.theoryOfChangesServices.body[this.indexYesorNo] = {
         impactAreasTargets: this.theoryOfChangesServices.impactAreasTargets,
         sdgTargest: this.theoryOfChangesServices.sdgTargest,
@@ -166,9 +181,7 @@ export class TocInitiativeOutComponent implements OnInit {
         is_sdg_action_impact: response?.is_sdg_action_impact
       };
 
-      if (this.indicators.length == 1) {
-        this.disabledInput = true;
-      }
+      this.disabledInput = this.indicators.length === 1;
       setTimeout(() => {
         this.indicatorView = true;
       }, 100);

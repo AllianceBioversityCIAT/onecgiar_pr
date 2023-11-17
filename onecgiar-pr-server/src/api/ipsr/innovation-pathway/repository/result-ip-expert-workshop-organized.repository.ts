@@ -16,6 +16,19 @@ export class ResultIpExpertWorkshopOrganizedRepostory
     super(ResultIpExpertWorkshopOrganized, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete riewo from result_ip_expert_workshop_organized riewo where riewo.result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpExpertWorkshopOrganizedRepostory.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultIpExpertWorkshopOrganized> {
     const dataQuery = `update result_ip_expert_workshop_organized riewo set riewo.is_active = 0 where riewo.result_id = ?;`;
     return this.query(dataQuery, [resultId])

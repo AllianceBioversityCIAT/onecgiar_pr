@@ -14,6 +14,7 @@ import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -37,6 +38,19 @@ export class ResultsTocResultRepository
     private readonly _resultTocIndicatorTargetRepository: ResultsTocTargetIndicatorRepository,
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rtr from results_toc_result rtr where rtr.results_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsTocResultRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsTocResult> {
@@ -63,7 +77,9 @@ export class ResultsTocResultRepository
           null as result_toc_result_id,
           null as planned_result,
           rtr.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           null as toc_result_id,
           ? as results_id,
@@ -105,7 +121,9 @@ export class ResultsTocResultRepository
         SELECT 
         null as planned_result,
         rtr.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         null as toc_result_id,
         ? as results_id,
@@ -147,9 +165,7 @@ export class ResultsTocResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

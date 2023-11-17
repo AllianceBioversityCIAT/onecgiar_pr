@@ -17,6 +17,19 @@ export class resultValidationRepository
     super(Validation, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete v from validation v where v.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: resultValidationRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<Validation> {
     const queryData = `update validation v set v.is_active = 0 where v.results_id = ? and v.is_active > 0;`;
     return this.query(queryData, [resultId])
@@ -114,13 +127,11 @@ export class resultValidationRepository
 				and r.climate_change_tag_level_id <> ''
 			)
 			and (
-				case 
-					when r.is_replicated = false then true
-				else case 
-						when r.is_discontinued = false then true
-					else case 
-						when (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas from results_investment_discontinued_options rido where rido.is_active > 0 and rido.result_id = r.id ) = 0 then true
-					else false end end end
+				if(r.result_type_id = 7, if(r.is_discontinued = 0 or r.is_replicated = 0, 
+				0, 
+				(select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas 
+				from results_investment_discontinued_options rido 
+				where rido.is_active > 0 and rido.result_id = r.id)), 0) = 0
 			)
 			and (
 				r.nutrition_tag_level_id is not null
@@ -145,6 +156,7 @@ export class resultValidationRepository
 		and r.is_active > 0
 		and r.version_id = ${version};
     `;
+    console.log('Esto es una prueba del green: ', queryData);
     try {
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);

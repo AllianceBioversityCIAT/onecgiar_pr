@@ -7,6 +7,7 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsInnovationsUseRepository
@@ -24,6 +25,18 @@ export class ResultsInnovationsUseRepository
     private _handlersError: HandlersError,
   ) {
     super(ResultsInnovationsUse, dataSource.createEntityManager());
+  }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete riu from results_innovations_use riu where riu.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInnovationsUseRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsInnovationsUse> {
@@ -51,7 +64,9 @@ export class ResultsInnovationsUseRepository
           riu.male_using,
           riu.female_using,
           riu.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           ? as created_by,
@@ -86,7 +101,9 @@ export class ResultsInnovationsUseRepository
           riu.male_using,
           riu.female_using,
           riu.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           null as last_updated_date,
           ? as results_id,
           ? as created_by,
@@ -122,9 +139,7 @@ export class ResultsInnovationsUseRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

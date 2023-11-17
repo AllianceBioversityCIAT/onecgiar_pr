@@ -16,6 +16,19 @@ export class ResultAnswerRepository
     super(ResultAnswer, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete ra from result_answers ra where ra.result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultAnswerRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultAnswer> {
     const dataQuery = `update result_answers ra set ra.is_active = 0 where ra.result_id = ? and ra.is_active > 0;`;
     return this.query(dataQuery, [resultId])
