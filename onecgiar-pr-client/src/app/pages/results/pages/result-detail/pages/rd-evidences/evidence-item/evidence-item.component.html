@@ -2,14 +2,10 @@
     <div class="index">{{this.index}}</div>
     <div class="evidence_fields">
 
-        <div style="display: flex; align-items: center; gap: 50px">
-            <app-pr-radio-button *ngIf="!this.dataControlSE.isKnowledgeProduct" [options]="this.evidencesType"
-                optionLabel="name" optionValue="id" (ngModelChange)="cleanSource($event)" label="Source of the evidence"
-                [(ngModel)]="this.evidence.is_sharepoint">
-            </app-pr-radio-button>
-            <img style="width: 40px;" *ngIf="this.evidence.is_sharepoint" src="assets/work-in-progress.png" alt=""
-                srcset="">
-        </div>
+        <app-pr-radio-button *ngIf="!this.dataControlSE.isKnowledgeProduct" [options]="this.evidencesType"
+            optionLabel="name" optionValue="id" (ngModelChange)="cleanSource($event)" label="Source of the evidence"
+            [(ngModel)]="this.evidence.is_sharepoint">
+        </app-pr-radio-button>
 
         <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
             <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
