@@ -21,6 +21,7 @@ export class GeneralInfoBody {
   public is_discontinued: boolean;
   public discontinued_options: any[] = [];
   public is_replicated: boolean = false;
+  public result_code: string | number = null;
 }
 
 interface institutionsInterface {

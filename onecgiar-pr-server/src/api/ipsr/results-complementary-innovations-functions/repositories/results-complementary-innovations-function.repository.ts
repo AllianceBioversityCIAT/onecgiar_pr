@@ -19,6 +19,21 @@ export class ResultsComplementaryInnovationsFunctionRepository
     );
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rcif from results_complementary_innovations_function rcif 
+    inner join results_complementary_innovation rci on rci.result_complementary_innovation_id = rcif.result_complementary_innovation_id 
+    where rci.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsComplementaryInnovationsFunctionRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(
     resultId: number,
   ): Promise<ResultsComplementaryInnovationsFunction> {

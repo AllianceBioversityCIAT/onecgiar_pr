@@ -17,6 +17,20 @@ export class ShareResultRequestRepository
     super(ShareResultRequest, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete srr from share_result_request srr 
+		where srr.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ShareResultRequestRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ShareResultRequest> {
     const queryData = `update share_result_request srr 
 		set srr.is_active = 0

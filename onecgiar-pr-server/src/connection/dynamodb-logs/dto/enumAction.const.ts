@@ -3,5 +3,5 @@ export enum Actions {
   UPDATE = 'Update',
   SELECT = 'Select',
   CREATE = 'Create',
-  CHANGE_RESULT_TYPE = 'ChangeResultType',
+  CHANGE_RESULT_TYPE = 'Change Result Type',
 }

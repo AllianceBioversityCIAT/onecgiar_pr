@@ -16,6 +16,21 @@ export class ResultsTocSdgTargetRepository
     super(ResultTocSdgTargets, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rtrt from result_toc_sdg_targets rtrt 
+    inner join results_toc_result rtr on rtr.result_toc_result_id = rtrt.result_toc_result_id 
+  where rtr.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsTocSdgTargetRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultTocSdgTargets> {
     const queryData = `update result_toc_sdg_targets rtrt 
     inner join results_toc_result rtr on rtr.result_toc_result_id = rtrt.result_toc_result_id 

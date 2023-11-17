@@ -7,7 +7,10 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { VERSIONING } from '../../../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsKnowledgeProductAuthorRepository
@@ -25,6 +28,21 @@ export class ResultsKnowledgeProductAuthorRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsKnowledgeProductAuthor, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rka from results_kp_authors rka 
+    inner join results_knowledge_product rkp on rka.result_knowledge_product_id = rkp.result_knowledge_product_id 
+      where rkp.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductAuthorRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsKnowledgeProductAuthor> {
@@ -56,7 +74,9 @@ export class ResultsKnowledgeProductAuthorRepository
         rkpa.author_name,
         rkpa.orcid,
         rkpa.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -91,7 +111,9 @@ export class ResultsKnowledgeProductAuthorRepository
         rkpa.author_name,
         rkpa.orcid,
         rkpa.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         ${VERSIONING.QUERY.Get_kp_phases(
           config.new_result_id,
@@ -129,9 +151,7 @@ export class ResultsKnowledgeProductAuthorRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

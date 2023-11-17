@@ -1,86 +1,86 @@
 .pr_button.small {
-    padding: 6px 12px;
+  padding: 6px 12px;
 }
 
 .pr_button.medium {
-    padding: 10px 40px;
+  padding: 10px 40px;
 }
 
 .pr_button.big {
-    padding: 10px 15px;
-    gap: 20px;
-    font-size: 1.1em;
+  padding: 10px 15px;
+  gap: 20px;
+  font-size: 1.1em;
 
-    i {
-        font-size: 1.7em;
-    }
+  i {
+    font-size: 1.7em;
+  }
 }
 
 .under_construction {
-    width: 25px;
+  width: 25px;
 }
 
 .pr_button {
+  width: max-content;
+  border-radius: 5px;
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  align-items: center;
 
-    width: max-content;
-    border-radius: 5px;
-    display: flex;
-    gap: 10px;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    align-items: center;
+  .text,
+  i {
+    color: #5569dd;
+    z-index: 1;
+  }
 
-    .text,
-    i {
-        color: #5569DD;
-        z-index: 1;
-    }
+  .text {
+    font-size: 0.9em;
+  }
 
-    .text {
-        font-size: .9em;
-    }
-
-    i {
-        font-size: 1.4em;
-        margin-right: -6px;
-    }
-
+  i {
+    font-size: 1.4em;
+    margin-right: -6px;
+  }
 }
 
 .reverse {
-    flex-direction: row-reverse;
+  flex-direction: row-reverse;
 }
 
 .show_background {
+  .text,
+  i {
+    color: white;
+  }
 
-    .text,
-    i {
-        color: white;
-    }
+  .filter {
+    // background: #5569DD;
+    position: absolute;
+    left: -60%;
+    top: 0px;
+    height: 100%;
+    width: 100%;
+    transition: all ease-in-out 0.4s;
+    z-index: 0;
+    // rotate: 15deg;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+  }
 
+  &:hover {
     .filter {
-        // background: #5569DD;
-        position: absolute;
-        left: -60%;
-        top: 0px;
-        height: 100%;
-        width: 100%;
-        transition: all ease-in-out .4s;
-        z-index: 0;
-        // rotate: 15deg;
-        transform: translateX(-50%);
-        box-sizing: border-box;
+      left: 50%;
     }
-
-    &:hover {
-        .filter {
-            left: 50%;
-        }
-    }
+  }
 }
 
-
 .b-disabled {
-    opacity: 0.5;
+  opacity: 0.5;
+}
+
+.rotate-right {
+  transform: rotate(90deg);
 }
