@@ -7,6 +7,7 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultActorRepository
@@ -18,6 +19,19 @@ export class ResultActorRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultActor, dataSource.createEntityManager());
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete ra from \`result_actors\` ra where ra.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultActorRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
   private readonly _logger: Logger = new Logger(ResultActorRepository.name);
 
@@ -44,7 +58,9 @@ export class ResultActorRepository
         SELECT 
         ra.actor_type_id
         ,? as created_by
-        ,ra.created_date
+        ,${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
         ,ra.has_men
         ,ra.has_men_youth
         ,ra.has_women
@@ -98,7 +114,9 @@ export class ResultActorRepository
           SELECT 
           ra.actor_type_id
           ,? as created_by
-          ,ra.created_date
+          ,${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
           ,ra.has_men
           ,ra.has_men_youth
           ,ra.has_women
@@ -159,9 +177,7 @@ export class ResultActorRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 }

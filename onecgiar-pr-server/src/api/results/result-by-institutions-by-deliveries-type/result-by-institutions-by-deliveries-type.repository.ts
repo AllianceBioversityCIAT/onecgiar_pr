@@ -6,6 +6,7 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
@@ -26,6 +27,21 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
       ResultByInstitutionsByDeliveriesType,
       dataSource.createEntityManager(),
     );
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbibdt from result_by_institutions_by_deliveries_type rbibdt 
+    inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
+  where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultByInstitutionsByDeliveriesType.name,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(
@@ -55,7 +71,9 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         const queryData = `
         select null as id,
         rbibdt.is_active,
-        now() as created_date,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
         null as last_updated_date,
         rbibdt.partner_delivery_type_id,
         rbi2.id as result_by_institution_id,
@@ -96,7 +114,9 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           )
           select
           rbibdt.is_active,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           now() as last_updated_date,
           rbibdt.partner_delivery_type_id,
           rbi2.id as result_by_institution_id,
@@ -142,9 +162,7 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

@@ -17,6 +17,21 @@ export class ResultIpSdgTargetRepository
     super(ResultIpSdgTargets, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rist from result_ip_sdg_targets rist 
+    inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = rist.result_by_innovation_package_id 
+    where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultIpSdgTargetRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<ResultIpSdgTargets> {
     const dataQuery = `update result_ip_sdg_targets rist 
     inner join result_by_innovation_package rbip on rbip.result_by_innovation_package_id = rist.result_by_innovation_package_id 

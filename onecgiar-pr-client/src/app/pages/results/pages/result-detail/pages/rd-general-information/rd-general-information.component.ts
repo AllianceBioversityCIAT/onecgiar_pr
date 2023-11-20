@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -15,10 +15,13 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
   templateUrl: './rd-general-information.component.html',
   styleUrls: ['./rd-general-information.component.scss']
 })
-export class RdGeneralInformationComponent {
+export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
+  isPhaseOpen = false;
+
   constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
@@ -26,14 +29,17 @@ export class RdGeneralInformationComponent {
   get disableOptions() {
     return this.generalInfoBody.institutions;
   }
+
   getSectionInformation() {
     this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
       this.GET_investmentDiscontinuedOptions();
+      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
     });
   }
+
   GET_investmentDiscontinuedOptions() {
     this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
       this.convertChecklistToDiscontinuedOptions(response);
@@ -42,7 +48,7 @@ export class RdGeneralInformationComponent {
 
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
-    options.map(option => {
+    options.forEach(option => {
       const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
       if (found) {
         (option.value = true), (option.description = found?.description);
@@ -53,7 +59,7 @@ export class RdGeneralInformationComponent {
 
   discontinuedOptionsToIds() {
     this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
-    this.generalInfoBody.discontinued_options.map(option => (option.is_active = true));
+    this.generalInfoBody.discontinued_options.forEach(option => (option.is_active = true));
   }
 
   onSaveSection() {
@@ -61,24 +67,26 @@ export class RdGeneralInformationComponent {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
+      next: resp => {
         this.currentResultSE.GET_resultById();
 
         this.getSectionInformation();
       },
-      err => {
+      error: err => {
         console.error(err);
         this.getSectionInformation();
       }
-    );
+    });
   }
+
   titleTextInfo() {
     return `<ul>
     <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
     <li>Avoid abbreviations or (technical) jargon.</li>
     </ul>`;
   }
+
   descriptionTextInfo() {
     return `<ul>
     <li>Ensure the description is understandable for a non-specialist reader.</li>
@@ -86,6 +94,7 @@ export class RdGeneralInformationComponent {
     <li>Avoid repetition of the title.</li>
     </ul>`;
   }
+
   genderInformation() {
     return `<strong>Gender tag guidance</strong> 
     <br/>
@@ -189,6 +198,7 @@ export class RdGeneralInformationComponent {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
     this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
   }
+
   onChangeKrs() {
     if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
   }
@@ -214,7 +224,6 @@ export class RdGeneralInformationComponent {
       querySelector: '#climate_change_tag_alert',
       position: 'beforeend'
     });
-    // Todo - new fields
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
