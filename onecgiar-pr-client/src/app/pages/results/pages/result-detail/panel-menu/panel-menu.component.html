@@ -41,8 +41,9 @@
         become available once all sections are completed.</div>
       <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">Quality Assessed
         results cannot be un-submited.</div>
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.inQA && platformInQA">This result
-        is part of a QA
+      <div class="button_access_information"
+        *ngIf="this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa">This result is part of
+        a QA
         process and cannot be un-submitted
         for editing.</div>
     </div>
