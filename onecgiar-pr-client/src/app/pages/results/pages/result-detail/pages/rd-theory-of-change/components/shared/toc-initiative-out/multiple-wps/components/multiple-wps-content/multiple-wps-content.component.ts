@@ -36,6 +36,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
+
+    // this.pushSelectedOptions();
   }
 
   validateEOI() {
@@ -101,6 +103,15 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   pushSelectedOptions() {
+    // tab.toc_level_id = 1;
+    if (this.allTabsCreated.length === 1) {
+      if (this.resultLevelId === 1) {
+        this.allTabsCreated[0].toc_level_id = 1;
+      } else {
+        this.allTabsCreated[0].toc_level_id = 2;
+      }
+    }
+
     this.allTabsCreated.forEach(tab => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
@@ -124,13 +135,9 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutput.push(selectedOption);
 
-    // console.log('outputList', this.outputList.slice(0, 5));
-    // console.log('tabId', tab?.uniqueId);
-    // console.log('active', this.activeTab?.uniqueId);
-
     this.outputList = this.outputList.map(item => {
-      // const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
-      const finded = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
+      const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
+      // const finded = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;
     });
@@ -147,7 +154,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.selectedOptionsOutcome.push(selectedOption);
 
     this.outcomeList = this.outcomeList.map(item => {
-      const finded = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
+      const finded = this.selectedOptionsOutcome.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;
     });
