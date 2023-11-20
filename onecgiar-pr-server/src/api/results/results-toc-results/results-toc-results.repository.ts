@@ -14,8 +14,8 @@ import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
-import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -805,17 +805,19 @@ export class ResultsTocResultRepository
           );
       `;
 
+      // * Validate if the result has a target
       if (IndicatorTarget.length) {
         const IndicatorTargetId = IndicatorTarget[0].result_toc_result_id;
         IndicatorTargetData = await this.query(queryDataIndicators, [
           toc_result_id,
           resultId,
         ]);
-        for (const itemIndicator of IndicatorTargetData) {
-          //Informartion result
 
+        // * Iterate the indicators
+        for (const itemIndicator of IndicatorTargetData) {
           itemIndicator.result = resultInfo[0];
-          //Section get to location
+
+          // * Validate if the indicator has a location equal to country
           if (itemIndicator.location == 'country') {
             const regions = `select * 
             from clarisa_countries cc WHERE 
@@ -833,6 +835,8 @@ export class ResultsTocResultRepository
               itemIndicator.full_geo = 'No country/ies provided';
             }
           }
+
+          // * Validate if the indicator has a location equal to regional
           if (itemIndicator.location == 'regional') {
             const regions = `select * 
                                 from clarisa_regions cr WHERE 
@@ -851,10 +855,7 @@ export class ResultsTocResultRepository
             }
           }
 
-          //Finish Section get to location
-
-          //Section to get the type
-
+          // * Validate the type of the indicator
           if (
             itemIndicator.type_value ==
             'Change in the capacity of key (a) Individuals, (b) Organizations (government, civil society and private sector), and (c) Networks (e.g. multi-stakeholder platforms).'
@@ -906,8 +907,8 @@ export class ResultsTocResultRepository
             itemIndicator.type = 'N/A';
             itemIndicator.number_result_type = 0;
           }
-          //Finish Section to get the type
 
+          // * Validate if the indicator has a target
           const queryTargetInfo = `
             SELECT
               trit.target_value,
@@ -933,6 +934,7 @@ export class ResultsTocResultRepository
           ]);
           itemIndicator.targets = queryTargetInfoData;
 
+          // * Validate if the indicator has a target contributing
           const queryTargetContributing = `
               select * from results_toc_result_indicators
                 where results_toc_results_id = ? and toc_results_indicator_id = ?;
@@ -941,6 +943,8 @@ export class ResultsTocResultRepository
             queryTargetContributing,
             [IndicatorTargetId, itemIndicator.toc_results_indicator_id],
           );
+
+          // * Validate if the indicator has a target contributing
           if (queryTargetContributingData.length) {
             itemIndicator.targets.forEach(async (element) => {
               const queryContributingPrimary = ` 
@@ -955,6 +959,7 @@ export class ResultsTocResultRepository
                   element.number_target,
                 ],
               );
+
               if (queryContributingPrimaryData.length) {
                 element.contributing =
                   queryContributingPrimaryData[0].contributing_indicator;
@@ -1383,7 +1388,6 @@ export class ResultsTocResultRepository
             }
           });
 
-          //Finish section get targets
         }
       }
       return IndicatorTargetData;
@@ -1455,7 +1459,7 @@ export class ResultsTocResultRepository
               await this._resultTocIndicatorTargetRepository.update(
                 {
                   result_toc_result_indicator_id:
-                    targetIndicators.result_toc_result_indicator_id,
+                    targetInfo.result_toc_result_indicator_id,
                   number_target: target.number_target,
                 },
                 {
@@ -2017,6 +2021,7 @@ select *
   ) {
     if (!ResultTocResultIndicators) return;
     const { result_toc_result } = ResultTocResultIndicators;
+    if (!result_toc_result?.result_toc_results.map((e) => e.indicators)) return;
     try {
       for (const toc of result_toc_result?.result_toc_results) {
         if (!toc) return;

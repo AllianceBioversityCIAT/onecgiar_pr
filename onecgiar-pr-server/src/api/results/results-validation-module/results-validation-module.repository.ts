@@ -156,7 +156,6 @@ export class resultValidationRepository
 		and r.is_active > 0
 		and r.version_id = ${version};
     `;
-    console.log('Esto es una prueba del green: ', queryData);
     try {
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
