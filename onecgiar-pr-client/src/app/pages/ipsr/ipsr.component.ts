@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
-import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-ipsr',
@@ -11,6 +10,6 @@ import { environment } from 'src/environments/environment';
 export class IpsrComponent {
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {
     this.ipsrDataControlSE.inIpsr = true;
-    this.api.rolesSE.platformIsClosed = environment.IPSRModuleIsClosed;
+    this.api.rolesSE.platformIsClosed = this.api.globalVariablesSE.get?.ipsr_is_closed;
   }
 }
