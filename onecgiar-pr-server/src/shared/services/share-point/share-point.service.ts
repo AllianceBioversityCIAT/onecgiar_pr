@@ -25,6 +25,11 @@ export class SharePointService {
 
   async saveFile(file: Express.Multer.File, path: string, metadata) {
     const fileSizeInMB = file.size / (1024 * 1024); // Convert bytes to MB
+    const fileSizeInGB = fileSizeInMB / 1024; // Convert MB to GB
+
+    if (fileSizeInGB > 1) {
+      throw new Error('File size exceeds 1GB');
+    }
 
     if (fileSizeInMB > 200) {
       return this.saveLargeFile(file, path, metadata);
