@@ -31,11 +31,11 @@ export class SharePointService {
       throw new Error('File size exceeds 1GB');
     }
 
-    if (fileSizeInMB > 200) {
-      return this.saveLargeFile(file, path, metadata);
-    } else {
-      return this.saveSmallFile(file, path, metadata);
-    }
+    // if (fileSizeInMB > 200) {
+    return this.saveLargeFile(file, path, metadata);
+    // } else {
+    // return this.saveSmallFile(file, path, metadata);
+    // }
   }
 
   async saveSmallFile(file: Express.Multer.File, path: string, metadata) {
