@@ -17,6 +17,11 @@ export class GlobalParameterController {
     return this.globalParameterService.findByCategoryId(Number(categoryId));
   }
 
+  @Get('platform/global/variables')
+  getPlatformGlobalVariables() {
+    return this.globalParameterService.getPlatformGlobalVariables();
+  }
+
   @Get('name/:name')
   findByName(@Param('name') name: string) {
     return this.globalParameterService.findOneByName(name);

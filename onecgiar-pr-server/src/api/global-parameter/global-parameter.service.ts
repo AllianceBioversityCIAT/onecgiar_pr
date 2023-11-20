@@ -29,6 +29,16 @@ export class GlobalParameterService {
     return globalParametersList;
   }
 
+  async getPlatformGlobalVariables() {
+    const globalVariableList =
+      await this._globalParameterRepository.getPlatformGlobalVariables();
+    const jsonObject = globalVariableList.reduce((obj, item) => {
+      obj[item.name] = item.value === '1' ? true : false;
+      return obj;
+    }, {});
+    return jsonObject;
+  }
+
   async findOneByName(name: string) {
     const [globalParameter] =
       await this._globalParameterRepository.findOneByName(name);

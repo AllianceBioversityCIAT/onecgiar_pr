@@ -4,6 +4,7 @@ import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
+import { GlobalVariables } from './shared/services/global-variables.service';
 
 @Component({
   selector: 'app-root',
@@ -15,7 +16,7 @@ export class AppComponent implements OnInit {
   isProduction = environment.production;
   constructor(public AuthService: AuthService, public rolesSE: RolesService, private api: ApiService, public footerSE: FooterService) {}
   ngOnInit(): void {
-    // this.AuthService.inLogin = false;
+    this.getGlobalParametersByCategory();
     setTimeout(() => {
       if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
     }, 500);
@@ -42,5 +43,13 @@ export class AppComponent implements OnInit {
       }
       return false;
     };
+  }
+
+  private getGlobalParametersByCategory() {
+    console.log('getGlobalParametersByCategory');
+    this.api.resultsSE.GET_platformGlobalVariables().subscribe((globalVariables: GlobalVariables) => {
+      this.api.globalVariablesSE.get = globalVariables;
+      console.log(this.api.globalVariablesSE.get);
+    });
   }
 }

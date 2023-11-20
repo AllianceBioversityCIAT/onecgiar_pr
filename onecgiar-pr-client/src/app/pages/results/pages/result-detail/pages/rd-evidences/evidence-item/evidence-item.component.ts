@@ -29,12 +29,17 @@ export class EvidenceItemComponent {
   <li>You agree to the SharePoint link being displayed on the CGIAR Results Dashboard.</li>
   `;
 
+  validateFileTypes(file: File) {
+    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
+    const extension = '.' + file.name.split('.').pop();
+    const fileSizeInGB = file.size / (1024 * 1024 * 1024);
+    return validFileTypes.includes(extension) && fileSizeInGB <= 1;
+  }
+
   onFileSelected(event: any) {
     const selectedFile: File = event.target.files[0];
     if (selectedFile) {
-      const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
-      const extension = '.' + selectedFile.name.split('.').pop();
-      if (validFileTypes.includes(extension)) {
+      if (this.validateFileTypes(selectedFile)) {
         // Realiza las operaciones que necesites con el archivo seleccionado
         console.log(selectedFile);
         this.renameFileAndAddData(selectedFile);
@@ -64,9 +69,7 @@ export class EvidenceItemComponent {
     const files = event.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
-      const extension = '.' + file.name.split('.').pop();
-      if (validFileTypes.includes(extension)) {
+      if (this.validateFileTypes(file)) {
         this.handleFile(file);
         this.incorrectFile = false;
       } else {

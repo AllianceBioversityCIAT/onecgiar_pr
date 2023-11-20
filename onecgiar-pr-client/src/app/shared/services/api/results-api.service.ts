@@ -838,4 +838,8 @@ export class ResultsApiService {
   GET_allResultStatuses() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/result-status/all`);
   }
+
+  GET_platformGlobalVariables() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
+  }
 }

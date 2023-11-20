@@ -34,4 +34,32 @@ export class GlobalParameterRepository extends Repository<GlobalParameter> {
       });
     }
   }
+
+  async getPlatformGlobalVariables() {
+    const queryData = `
+    SELECT 
+    CASE 
+        WHEN LOCATE('pgv_', gp.name) = 1 THEN SUBSTRING(gp.name, 5)
+        ELSE gp.name
+    END AS name, 
+    value,
+    gp.description
+    FROM 
+        global_parameters gp
+    LEFT JOIN 
+        global_parameter_categories gpc ON gp.global_parameter_category_id = gpc.id
+    WHERE 
+        gpc.name = 'platform_global_variables';
+    `;
+    try {
+      const globalParameter = await this.query(queryData);
+      return globalParameter;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: GlobalParameterRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }
