@@ -124,7 +124,12 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutput.push(selectedOption);
 
+    // console.log('outputList', this.outputList.slice(0, 5));
+    // console.log('tabId', tab?.uniqueId);
+    // console.log('active', this.activeTab?.uniqueId);
+
     this.outputList = this.outputList.map(item => {
+      // const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
       const finded = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;

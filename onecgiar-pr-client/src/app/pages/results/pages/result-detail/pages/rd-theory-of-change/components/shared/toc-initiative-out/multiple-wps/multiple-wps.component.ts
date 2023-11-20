@@ -52,19 +52,24 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
-  }
-
-  ngOnChanges() {
+    this.currentPlannedResult = this.initiative?.planned_result;
     this.initiative.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
+  }
 
-    if (this.initiative?.planned_result !== this.currentPlannedResult) {
-      this.selectedOptionsOutput = [];
-      this.selectedOptionsOutcome = [];
-      this.selectedOptionsEOI = [];
+  ngOnChanges() {
+    if (this.currentPlannedResult !== null) {
+      if (this.initiative?.planned_result !== this.currentPlannedResult) {
+        this.selectedOptionsOutput = [];
+        this.selectedOptionsOutcome = [];
+        this.selectedOptionsEOI = [];
+        this.GET_outcomeList();
+        this.GET_outputList();
+        this.GET_EOIList();
 
-      this.currentPlannedResult = this.activeTab?.planned_result;
+        this.currentPlannedResult = this.activeTab?.planned_result;
+      }
     }
 
     this.activeTab = this.initiative?.result_toc_results[0];
