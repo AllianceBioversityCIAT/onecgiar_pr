@@ -41,6 +41,7 @@ export class TocInitiativeOutComponent implements OnInit {
     this.initiative.showMultipleWPsContent = false;
 
     const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+
     this.initiative.result_toc_results.forEach(element => {
       element.toc_level_id = tocLevelId;
       element.planned_result = this.initiative.planned_result;
