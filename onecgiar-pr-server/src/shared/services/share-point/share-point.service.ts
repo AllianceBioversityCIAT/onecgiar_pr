@@ -24,6 +24,16 @@ export class SharePointService {
   }
 
   async saveFile(file: Express.Multer.File, path: string, metadata) {
+    const fileSizeInMB = file.size / (1024 * 1024); // Convert bytes to MB
+
+    if (fileSizeInMB > 200) {
+      return this.saveLargeFile(file, path, metadata);
+    } else {
+      return this.saveSmallFile(file, path, metadata);
+    }
+  }
+
+  async saveSmallFile(file: Express.Multer.File, path: string, metadata) {
     const { date_as_name, result_id } = metadata || {};
     const token = await this.getToken();
 
@@ -47,6 +57,67 @@ export class SharePointService {
         })
         .toPromise();
       return response?.data;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async saveLargeFile(file: Express.Multer.File, path: string, metadata) {
+    const uploadUrl = await this.createUploadSession(file, path, metadata);
+    return await this.uploadLargeFileInUploadUrl(uploadUrl, file);
+  }
+
+  async uploadLargeFileInUploadUrl(uploadUrl, file: Express.Multer.File) {
+    const token = await this.getToken();
+    const { buffer } = file;
+
+    try {
+      const response = await this.httpService
+        .put(uploadUrl, buffer, {
+          maxBodyLength: Infinity,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/octet-stream',
+            'Content-Length': file.size,
+            'Content-Range': `bytes 0-${file.size - 1}/${file.size}`,
+          },
+        })
+        .toPromise();
+      return response?.data;
+    } catch (error) {
+      console.log(error);
+      return error;
+    }
+  }
+
+  async createUploadSession(file: Express.Multer.File, path: string, metadata) {
+    const token = await this.getToken();
+    const newFolderId = await this.createFileFolder(path);
+    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+
+    const { originalname, buffer } = file;
+
+    const { date_as_name, result_id } = metadata || {};
+    const fileExtension = originalname.split('.').pop();
+
+    const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${fileName}:/createUploadSession`;
+
+    try {
+      const response = await this.httpService
+        .post(
+          link,
+          {},
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        )
+        .toPromise();
+      return response?.data?.uploadUrl;
     } catch (error) {
       console.log(error);
       return error;
@@ -133,16 +204,13 @@ export class SharePointService {
   }
   async getToken() {
     if (this.isTokenExpired() || !this.expiresIn) {
-      // console.log('El token ha expirado. Renovando el token...');
       return await this.consumeToken();
     } else {
-      // console.log('El token aún no ha expirado. No se requiere renovación.');
       const remainingTimeInSeconds =
         this.creationTime + this.expiresIn - new Date().getTime() / 1000;
       const remainingTimeString = this.convertSecondsToTime(
         remainingTimeInSeconds,
       );
-      // console.log(`El token caducará en: ${remainingTimeString}`);
       return this.token;
     }
   }
