@@ -70,6 +70,7 @@ export class SharePointService {
 
   async saveLargeFile(file: Express.Multer.File, path: string, metadata) {
     const uploadUrl = await this.createUploadSession(file, path, metadata);
+    console.log(uploadUrl);
     return await this.uploadLargeFileInUploadUrl(uploadUrl, file);
   }
 
