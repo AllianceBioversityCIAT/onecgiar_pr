@@ -213,7 +213,7 @@ export class resultValidationRepository
 			(
 				IFNULL(
 					(
-						SELECT SUM(IF(rtr.toc_result_id IS NULL, 1, 0))
+						SELECT SUM(IF(rtr.toc_result_id IS NOT NULL, 1, 0))
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
