@@ -1,11 +1,13 @@
 <div class="segment_title segment_title_margin">What do you want to report?</div>
 
-<app-alert-status description="Impact/Action Area level temporarily disabled."></app-alert-status>
+<app-alert-status
+    description="Impact/Action Area Outcome level reporting has been temporarily disabled. Please contact your AA MELIA contact point (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place) if you have a result to report at this level."></app-alert-status>
 <div class="segment">
     <div class="segmet_title">Impact/Action Area level</div>
-    <div class="all_results_level_Container"  style="cursor: not-allowed;">
-        <div class="resultLevel shadow-1" style="background-color: #fafafa;" [ngClass]="{'selected': resultLevel?.selected, 'globalDisabled': true}"
-            [hidden]="i >= 2" *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i=index"
+    <div class="all_results_level_Container" style="cursor: not-allowed;">
+        <div class="resultLevel shadow-1" style="background-color: #fafafa;"
+            [ngClass]="{'selected': resultLevel?.selected, 'globalDisabled': true}" [hidden]="i >= 2"
+            *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i=index"
             (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
             <div class="name" [style.background]="'#666'">
                 {{resultLevel.name}}
