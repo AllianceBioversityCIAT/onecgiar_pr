@@ -24,7 +24,7 @@
             <cdk-virtual-scroll-viewport itemSize="151" class="custom_scroll virtual_scroll all_notifications">
                 <div style="display: flex; flex-direction: column; gap: 10px;"
                     *cdkVirtualFor="let notification of this.resultsNotificationsSE?.data | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter; let i = index">
-                    <app-notification-item [comes]="true" [readOnly]="notification.readOnly"
+                    <app-notification-item [comes]="!notification.pending" [readOnly]="notification.readOnly"
                         (requestEvent)="this.resultsNotificationsSE.get_section_information()"
                         [notification]="notification" style="margin-bottom: 10px;">
                     </app-notification-item>
