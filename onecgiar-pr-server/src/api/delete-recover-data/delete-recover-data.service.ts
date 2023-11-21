@@ -387,7 +387,7 @@ export class DeleteRecoverDataService {
       resultToUpdate.result_level_id = new_result_level_id;
       resultToUpdate.last_action_type = Actions.CHANGE_RESULT_TYPE;
       resultToUpdate.justification_action_type = justification;
-      resultToUpdate.title = new_name ? new_name : resultToUpdate.title;
+      resultToUpdate.title = new_name || resultToUpdate.title;
 
       await this._resultRepository.update(
         { id: resultToUpdate.id },
@@ -400,7 +400,6 @@ export class DeleteRecoverDataService {
         },
       );
 
-      //TODO add validations when the result changes its type
       await this.manageChangedResultTypeData(
         resultAfterbefore,
         new_result_level_id,
@@ -430,9 +429,7 @@ export class DeleteRecoverDataService {
                 elasticOperations,
               );
 
-            const bulk = await this._elasticService.sendBulkOperationToElastic(
-              elasticJson,
-            );
+            await this._elasticService.sendBulkOperationToElastic(elasticJson);
           } catch (error) {
             this._logger.warn(
               `the elastic removal failed for the result #${resultToUpdate.id}`,

@@ -1,4 +1,4 @@
-import { Delete, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
 import { ResultsKnowledgeProductsController } from './results-knowledge-products.controller';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
@@ -41,7 +41,6 @@ import { ResultsByInititiativesModule } from '../results_by_inititiatives/result
 import { ResultsByEvidencesModule } from '../results_by_evidences/results_by_evidences.module';
 import { LegacyResultModule } from '../legacy-result/legacy-result.module';
 import { ClarisaInstitutionsTypeModule } from '../../../clarisa/clarisa-institutions-type/clarisa-institutions-type.module';
-import { ResultRegionsService } from '../result-regions/result-regions.service';
 import { ResultRegionsModule } from '../result-regions/result-regions.module';
 import { ResultCountriesModule } from '../result-countries/result-countries.module';
 import { GenderTagLevelsModule } from '../gender_tag_levels/gender_tag_levels.module';
