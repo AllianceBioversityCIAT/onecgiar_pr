@@ -26,10 +26,15 @@
                         [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="actorItem.actor_type_id">
                     </app-pr-select>
                     <div style="margin-top: 13px;"></div>
-                    <app-pr-input *ngIf="actorItem.actor_type_id == 5"
-                        description="Specify the other actor type in the text box below" placeholder="Specify other.."
-                        type="text" [required]="false" [(ngModel)]="this.actorItem.other_actor_type">
-                    </app-pr-input>
+                    <div *ngIf="actorItem.actor_type_id == 5">
+                        <div appFeedbackValidation labelText="Specify the other actor type"
+                            [isComplete]="!!this.actorItem.other_actor_type">
+                        </div>
+                        <app-pr-input description="Specify the other actor type in the text box below"
+                            placeholder="Specify other.." type="text" [required]="true"
+                            [(ngModel)]="this.actorItem.other_actor_type">
+                        </app-pr-input>
+                    </div>
                 </div>
                 <div style="margin: 25px 0;">
                     <div *ngIf="!this.actorItem.sex_and_age_disaggregation">

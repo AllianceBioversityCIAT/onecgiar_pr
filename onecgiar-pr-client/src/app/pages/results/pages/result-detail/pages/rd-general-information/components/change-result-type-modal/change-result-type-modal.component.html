@@ -10,7 +10,6 @@
 
   <div class="modal_container">
     <div *ngIf="this.changeType.showFilters">
-      <app-alert-status [description]="alertStatusDesc"></app-alert-status>
 
       <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text"
         label="Current result type" type="text" [required]="false" [readOnly]="true"
@@ -24,16 +23,18 @@
         <div class="result_level_title">Result level</div>
         <div class="filters">
           <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter">
-            <div class="filter_title">{{filter.name}}</div>
-            <div class="chips">
-              <div class="chip"
-                [ngClass]="{'chip_selected': !disableOptionValidation(option) && option.selected, 'chip_disabled' : disableOptionValidation(option)}"
-                [style.background]="!disableOptionValidation(option) && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
-                (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option)"
-                *ngFor="let option of filter?.options">
-                {{option.name}}
+            <ng-container *ngIf="!IOutcome.includes(filter.id)">
+              <div class="filter_title">{{filter.name}}</div>
+              <div class="chips">
+                <div class="chip"
+                  [ngClass]="{'chip_selected': !disableOptionValidation(option) && option.selected, 'chip_disabled' : disableOptionValidation(option)}"
+                  [style.background]="!disableOptionValidation(option) && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
+                  (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option)"
+                  *ngFor="let option of filter?.options">
+                  {{option.name}}
+                </div>
               </div>
-            </div>
+            </ng-container>
           </div>
         </div>
       </div>

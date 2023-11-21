@@ -20,7 +20,6 @@
         optionLabel="extraInformation" optionValue="code" placeholder="Select innovation type" [extraInformation]="true"
         [(ngModel)]="this.innovationDevInfoBody.innovation_nature_id">
     </app-pr-select>
-    <!-- Todo only for Technological innovation -->
     <div *ngIf="this.innovationDevInfoBody.innovation_nature_id == 12">
         <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?"
             [(ngModel)]="innovationDevInfoBody.is_new_variety">
@@ -31,8 +30,6 @@
         </app-pr-input>
     </div>
 
-    <!-- Todo New field -->
-    <!-- Innovation dev -->
     <app-anticipated-innovation-user [body]="innovationDevInfoBody"
         [saving]="this.savingSection"></app-anticipated-innovation-user>
 
@@ -47,7 +44,6 @@
 
     <app-intellectual-property-rights [body]="innovationDevInfoBody"
         [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
-    <!-- Innovation dev -->
 
     <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
         description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
@@ -62,10 +58,8 @@
         [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
     </app-pr-textarea>
 
-    <!-- Innovation dev -->
     <app-innovation-team-diversity [body]="innovationDevInfoBody"
         [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
-    <!-- Innovation dev -->
 
     <app-pr-field-header label="How would you assess the current readiness of this innovation?"
         [description]="readiness_of_this_innovation_description()">
@@ -93,9 +87,7 @@
         description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
     </app-pr-textarea>
 
-    <!-- Innovation dev -->
     <app-estimates [body]="innovationDevInfoBody"></app-estimates>
-    <!-- Innovation dev -->
 
     <app-pr-radio-button label="Would you like this innovation to be published as a CGIAR IPSR Innovation Profile PDF?"
         [description]="pdfDescription()" [options]="this.pdfOptions" optionLabel="name" optionValue='value'
@@ -107,9 +99,7 @@
         [(ngModel)]="innovationDevInfoBody.innovation_acknowledgement">
     </app-pr-textarea>
 
-    <!-- Innovation dev -->
     <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
-    <!-- Innovation dev -->
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
