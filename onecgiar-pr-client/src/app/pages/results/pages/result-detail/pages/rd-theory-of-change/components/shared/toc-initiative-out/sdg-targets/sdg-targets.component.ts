@@ -17,6 +17,11 @@ export class SdgTargetsComponent implements OnInit {
   ngOnInit(): void {
     this.GETAllClarisaSdgsTargets();
   }
+
+  dropDownPlaceHolder(name: string) {
+    return `Select ${name} target(s)`;
+  }
+
   GETAllClarisaSdgsTargets() {
     this.api.resultsSE.GETAllClarisaSdgsTargets().subscribe({
       next: ({ response }) => {
@@ -24,7 +29,7 @@ export class SdgTargetsComponent implements OnInit {
         this.sdgTargetLis.forEach(sdg => {
           sdg.sdgId = sdg.sdg.usnd_code;
           sdg.short_name = sdg.sdg.short_name;
-          sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+          sdg.sdgList.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
         });
       },
       error: err => {
@@ -34,7 +39,7 @@ export class SdgTargetsComponent implements OnInit {
   }
 
   removeOption(option) {
-    const index = this.body.findIndex((valueItem: any) => valueItem.id == option.id);
+    const index = this.body.findIndex((valueItem: any) => valueItem.id === option.id);
     this.body.splice(index, 1);
   }
 

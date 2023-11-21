@@ -8,7 +8,7 @@ import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
-import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
@@ -268,11 +268,17 @@ export class ResultsApiService {
   }
 
   GET_evidences() {
-    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    console.log(body.evidences);
+    body.evidences.forEach((evidence: EvidencesCreateInterface) => {
+      formData.append('files', evidence.file);
+    });
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   POST_toc(body: TheoryOfChangeBody) {
@@ -831,5 +837,9 @@ export class ResultsApiService {
 
   GET_allResultStatuses() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/result-status/all`);
+  }
+
+  GET_platformGlobalVariables() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
   }
 }

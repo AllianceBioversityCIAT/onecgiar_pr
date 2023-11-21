@@ -36,6 +36,10 @@ import { PlatformReportModule } from './api/platform-report/platform-report.modu
 import { VersioningModule } from './api/versioning/versioning.module';
 import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
+import { MulterModule } from '@nestjs/platform-express';
+import * as multer from 'multer';
+import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
+import { SharePointModule } from './shared/services/share-point/share-point.module';
 
 @Module({
   imports: [
@@ -46,6 +50,9 @@ import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recove
     ResultsModule,
     IpsrModule,
     TypeOneReportModule,
+    MulterModule.register({
+      storage: multer.memoryStorage(),
+    }),
     TypeOrmModule.forRoot({
       ...dataSource.options,
       keepConnectionAlive: true,
@@ -68,6 +75,8 @@ import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recove
     VersioningModule,
     GlobalNarrativesModule,
     DeleteRecoverDataModule,
+    GlobalParameterModule,
+    SharePointModule,
   ],
   controllers: [AppController],
   providers: [
