@@ -10,7 +10,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 })
 export class NotificationItemComponent {
   @Input() notification: any;
-  @Input() comes: boolean;
+  @Input() comes: boolean = true;
   @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
