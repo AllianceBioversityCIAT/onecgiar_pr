@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
-
+import axios from 'axios';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -16,6 +16,7 @@ export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
+  showExample = false;
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
@@ -29,6 +30,52 @@ export class RdEvidencesComponent implements OnInit {
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
+
+    console.log(2);
+    document.onkeyup = () => {
+      var e = e || window.event; // for IE to cover IEs window event-object
+      if (e.altKey && e.which == 83) {
+        console.log('event');
+        this.showExample = true;
+      }
+    };
+  }
+
+  filExample = null;
+
+  withaxios() {
+    let element = document.getElementById('linku') as HTMLInputElement;
+    let value = element.value;
+
+    axios({
+      method: 'put',
+      url: value,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Content-Range': `bytes 0-${this.filExample.size - 1}/${this.filExample.size}`,
+        eampleee: 'asasas'
+      },
+      data: this.filExample
+    })
+      .then(response => {
+        console.log('Solicitud exitosa:', response.data);
+      })
+      .catch(error => {
+        console.log('%c ' + error.response.data.error.message, 'background: #ffffff; color: #ff0000');
+
+        console.error('Error en la solicitud:', error.response.data.error.message);
+      });
+  }
+
+  async saveExample() {
+    this.withaxios();
+    this.api.resultsSE.saveFileExample(this.filExample).subscribe(resp => {
+      console.log(resp);
+    });
+  }
+
+  onFileSelected(event: any) {
+    this.filExample = event.target.files[0];
   }
 
   getSectionInformation() {
