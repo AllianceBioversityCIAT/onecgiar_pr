@@ -5,13 +5,18 @@ import {
   Body,
   Param,
   HttpException,
-  Headers,
+  Query,
+  UseInterceptors,
+  Patch,
 } from '@nestjs/common';
 import { AdminPanelService } from './admin-panel.service';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilterResultsDto } from './dto/filter-results.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { BulkKpDto } from './dto/bulk-kp.dto';
 
 @Controller()
 export class AdminPanelController {
@@ -58,15 +63,19 @@ export class AdminPanelController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('bulk/kps')
-  async kpBulkSync(@Headers() auth: HeadersDto) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+  @Patch('bulk/kps')
+  @UseInterceptors(ResponseInterceptor)
+  async kpBulkSync(
+    @UserToken() token: TokenDto,
+    @Query('status') status: string,
+    @Query('phase') phases: number,
+    @Body() bulkKpDto: BulkKpDto,
+  ) {
+    return await this.adminPanelService.kpBulkSync(
+      token,
+      status,
+      phases,
+      bulkKpDto,
     );
-
-    const { message, response, status } =
-      await this.adminPanelService.kpBulkSync(token);
-
-    throw new HttpException({ message, response }, status);
   }
 }

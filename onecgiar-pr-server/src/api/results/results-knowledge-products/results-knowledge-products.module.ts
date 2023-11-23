@@ -72,6 +72,7 @@ import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recov
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
+    ReturnResponse,
     ResultsKnowledgeProductsService,
     HandlersError,
     ResultsKnowledgeProductsRepository,
