@@ -1,10 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import {
-  HandlersError,
-  returnErrorDto,
-} from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
@@ -19,12 +16,9 @@ import { ResultsKnowledgeProductInstitutionRepository } from './repositories/res
 import { ResultsKnowledgeProductKeywordRepository } from './repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from './repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
-import { returnFormatResult } from '../dto/return-format-result.dto';
-import { CreateResultDto } from '../dto/create-result.dto';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultByLevelRepository } from '../result-by-level/result-by-level.repository';
 import { ResultLevelRepository } from '../result_levels/resultLevel.repository';
-import { ResultLevel } from '../result_levels/entities/result_level.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultTypeRepository } from '../result_types/resultType.repository';
 import { EvidencesRepository } from '../evidences/evidences.repository';
@@ -49,7 +43,6 @@ import { ResultsKnowledgeProductFairScoreRepository } from './repositories/resul
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
-import { Actions } from '../../../connection/dynamodb-logs/dto/enumAction.const';
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 
