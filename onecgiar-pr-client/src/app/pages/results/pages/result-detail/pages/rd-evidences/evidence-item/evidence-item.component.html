@@ -85,7 +85,7 @@
       [required]="false" [(ngModel)]="this.evidence.description" [maxWords]="50" placeholder="Add description">
     </app-pr-textarea>
   </div>
-  <app-edit-or-delete-item-button (click)="deleteEvent.emit()"
+  <app-edit-or-delete-item-button (click)="this.deleteItem()"
     *ngIf="!this.dataControlSE.isKnowledgeProduct  && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
   </app-edit-or-delete-item-button>
 
