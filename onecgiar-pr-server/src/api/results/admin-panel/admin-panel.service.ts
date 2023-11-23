@@ -502,7 +502,7 @@ export class AdminPanelService implements OnModuleInit {
 
       for (const kp of kps) {
         this._logger.debug(
-          `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}`,
+          `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}; Current Result code: ${kp.result_object.result_code}; Current Phase Id: ${kp.result_object.version_id};`,
         );
 
         const response = await this._resultsKnowledgeProductsService.syncAgain(
