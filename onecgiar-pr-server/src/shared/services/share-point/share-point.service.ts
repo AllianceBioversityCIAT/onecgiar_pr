@@ -32,48 +32,9 @@ export class SharePointService {
       throw new Error('File size exceeds 1GB');
     }
     return this.saveLargeFile(file, path, metadata);
-
-    // if (fileSizeInMB > 200) {
-    // } else {
-    // return this.saveSmallFile(file, path, metadata);
-    // }
   }
 
-  // async saveSmallFile(file: Express.Multer.File, path: string, metadata) {
-  //   const { date_as_name, result_id } = metadata || {};
-  //   const token = await this.getToken();
-
-  //   const { originalname, buffer } = file;
-
-  //   const fileExtension = originalname.split('.').pop();
-
-  //   const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
-
-  //   const siteId = await this.GPCacheSE.getParam('sp_site_id');
-  //   const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-  //   const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${fileName}:/content`;
-
-  //   try {
-  //     const response = await this.httpService
-  //       .put(link, buffer, {
-  //         headers: {
-  //           'Content-Type': 'application/octet-stream',
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       })
-  //       .toPromise();
-  //     return response?.data;
-  //   } catch (error) {
-  //     console.log(error);
-  //     return error;
-  //   }
-  // }
-
-  async saveLargeFile(file: Express.Multer.File, path: string, metadata) {
-    // const uploadUrl = await this.createUploadSession(file, path, metadata);
-    // console.log(uploadUrl);
-    // return await this.uploadLargeFileInUploadUrl(uploadUrl, file);
-  }
+  async saveLargeFile(file: Express.Multer.File, path: string, metadata) {}
 
   async uploadLargeFileInUploadUrl(uploadUrl, file: Express.Multer.File) {
     const token = await this.getToken();
@@ -122,7 +83,7 @@ export class SharePointService {
     const newFolderId = await this.createFileFolder(filePath);
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
     const fileExtension = fileName.split('.').pop();
-    const finalFileName = `result-${resultId}-Document-${pathInformation?.date_as_name}.${fileExtension}`;
+    const finalFileName = `result-${pathInformation?.result_code}-Document-${pathInformation?.date_as_name}.${fileExtension}`;
     const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${finalFileName}:/createUploadSession`;
     console.log(finalFileName);
 

@@ -30,10 +30,16 @@ export class EvidenceItemComponent {
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
 
   validateFileTypes(file: File) {
-    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.xlsx'];
+    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.pptx', '.jpeg', '.xlsx'];
     const extension = '.' + file.name.split('.').pop();
     const fileSizeInGB = file.size / (1024 * 1024 * 1024);
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
+  }
+
+  deleteItem() {
+    this.api.alertsFe.show({ id: 'confirm-delete-evidence', title: `Are you sure you want to delete this evidence?`, status: 'warning', confirmText: 'Yes, delete' }, () => {
+      this.deleteEvent.emit();
+    });
   }
 
   onFileSelected(event: any) {
