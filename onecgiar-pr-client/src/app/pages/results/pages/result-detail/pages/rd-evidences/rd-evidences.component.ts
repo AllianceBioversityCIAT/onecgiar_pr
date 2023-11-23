@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
-import axios from 'axios';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 @Component({
   selector: 'app-rd-evidences',
