@@ -440,7 +440,6 @@ export class ResultsTocResultsService {
             });
           });
         }
-
       } else if (result.result_level_id == 2) {
         resTocRes =
           await this._resultsTocResultRepository.getRTRPrimaryActionArea(
