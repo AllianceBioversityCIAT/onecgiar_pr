@@ -33,11 +33,7 @@ export class EvidencesService {
     private readonly _sharePointService: SharePointService,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
   ) {}
-  async create(
-    createEvidenceDto: CreateEvidenceDto,
-    files: Express.Multer.File[],
-    user: TokenDto,
-  ) {
+  async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     console.log('create');
     try {
       const result = await this._resultRepository.getResultById(
@@ -136,26 +132,12 @@ export class EvidencesService {
           }
           const currentEvidence = eExists ? eExists : newEvidence;
 
-          let fileSaved: {
-            document_id: string;
-            filePath: string;
-            originalname: string;
-            webUrl: string;
-          } = null;
-          if (currentEvidence.is_sharepoint) {
-            fileSaved = await this.saveSPFile(
-              files,
-              evidence,
-              createEvidenceDto,
-            );
-            currentEvidence.link = fileSaved?.webUrl;
-          }
-
           const evidenceSaved = await this._evidencesRepository.save(
             currentEvidence,
           );
-
-          await this.saveSPData(evidenceSaved?.id, fileSaved, evidence);
+          console.log(evidenceSaved);
+          if (evidenceSaved?.id)
+            await this.saveSPData(evidence, evidenceSaved?.id);
         }
       } else {
         await this._evidencesRepository.updateEvidences(
@@ -225,86 +207,11 @@ export class EvidencesService {
     }
   }
 
-  async saveSPFile(
-    files: Express.Multer.File[],
-    evidence: EvidencesCreateInterface,
-    createEvidenceDto: CreateEvidenceDto,
-  ) {
-    await this._sharePointService.getToken();
+  async saveSPData(evidence: EvidencesCreateInterface, newEvidenceId) {
+    const { sp_document_id, sp_file_name, sp_folder_path, sp_evidence_id } =
+      evidence || {};
 
-    if (files?.length) {
-      const file: Express.Multer.File = files.find(
-        (fileItem: Express.Multer.File) =>
-          fileItem.originalname.includes(evidence.fileUuid),
-      );
-
-      if (file) {
-        const { filePath, pathInformation } =
-          await this._sharePointService.generateFilePath(
-            createEvidenceDto?.result_id,
-          );
-
-        const fileSaved = await this._sharePointService.saveFile(
-          file,
-          filePath,
-          pathInformation,
-        );
-
-        return {
-          document_id: fileSaved?.id,
-          filePath,
-          originalname: file.originalname,
-          webUrl: fileSaved?.webUrl,
-          file_name: fileSaved?.name,
-        };
-
-        //TODO fileSaved.data.webUrl
-      }
-    }
-    return null;
-  }
-
-  async saveSPData(
-    currentEvidenceID: number,
-    metadata,
-    evidence: EvidencesCreateInterface,
-  ) {
-    const { document_id, filePath } = metadata || {};
-    const createOrUpdateEvidenceSharepoint = async (
-      evidenceSharepoint: EvidenceSharepoint | undefined,
-    ) => {
-      if (!evidenceSharepoint) {
-        evidenceSharepoint = new EvidenceSharepoint();
-      }
-
-      if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
-        const data: any = await this._sharePointService.addFileAccess(
-          document_id ?? evidenceSharepoint.document_id,
-          evidence.is_public_file ?? evidenceSharepoint.is_public_file,
-        );
-        if (data.link.webUrl) {
-          // update evidence link
-          await this._evidencesRepository.update(currentEvidenceID, {
-            link: data.link.webUrl,
-          });
-        }
-      }
-
-      evidenceSharepoint.folder_path =
-        filePath ?? evidenceSharepoint.folder_path;
-      evidenceSharepoint.file_name =
-        metadata?.file_name ?? evidenceSharepoint.file_name;
-      evidenceSharepoint.is_public_file =
-        evidence.is_public_file ?? evidenceSharepoint.is_public_file;
-      evidenceSharepoint.evidence_id =
-        currentEvidenceID ?? evidenceSharepoint.evidence_id;
-      evidenceSharepoint.document_id =
-        document_id ?? evidenceSharepoint.document_id;
-
-      await this._evidenceSharepointRepository.save(evidenceSharepoint);
-    };
-
-    const currentSPId = Number(evidence?.sp_id);
+    const currentSPId = Number(sp_evidence_id);
     const existingEvidenceSharepoint = currentSPId
       ? await this._evidenceSharepointRepository.findOne({
           where: {
@@ -313,9 +220,13 @@ export class EvidencesService {
         })
       : undefined;
 
+    console.log('>>>>>>>>>>>>>>> existingEvidenceSharepoint <<<<<<<<<<<<<');
+    console.log(sp_evidence_id);
+    console.log(existingEvidenceSharepoint);
+
     const replaceFile =
-      typeof metadata?.file_name === 'string' &&
-      existingEvidenceSharepoint?.file_name !== metadata?.file_name &&
+      typeof sp_file_name === 'string' &&
+      existingEvidenceSharepoint?.file_name !== sp_file_name &&
       existingEvidenceSharepoint?.id;
 
     if (
@@ -332,6 +243,40 @@ export class EvidencesService {
     }
     //todo inactivar eivdencia su replace y guardar unanueva cambiar id por null
     if (!evidence?.is_sharepoint) return;
+    const createOrUpdateEvidenceSharepoint = async (
+      evidenceSharepoint: EvidenceSharepoint | undefined,
+    ) => {
+      if (!evidenceSharepoint) {
+        evidenceSharepoint = new EvidenceSharepoint();
+      }
+
+      if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
+        const data: any = await this._sharePointService.addFileAccess(
+          sp_document_id ?? evidenceSharepoint.document_id,
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file,
+        );
+        if (data.link.webUrl) {
+          // update evidence link
+          await this._evidencesRepository.update(newEvidenceId, {
+            link: data.link.webUrl,
+          });
+        }
+      }
+
+      evidenceSharepoint.folder_path =
+        sp_folder_path ?? evidenceSharepoint.folder_path;
+      evidenceSharepoint.file_name =
+        sp_file_name ?? evidenceSharepoint.file_name;
+      evidenceSharepoint.is_public_file =
+        evidence.is_public_file ?? evidenceSharepoint.is_public_file;
+      evidenceSharepoint.evidence_id =
+        newEvidenceId ?? evidenceSharepoint.evidence_id;
+      evidenceSharepoint.document_id =
+        sp_document_id ?? evidenceSharepoint.document_id;
+
+      await this._evidenceSharepointRepository.save(evidenceSharepoint);
+    };
+
     await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
   }
 

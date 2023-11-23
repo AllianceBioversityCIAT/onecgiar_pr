@@ -20,7 +20,9 @@ export interface EvidencesCreateInterface {
   poverty_related?: boolean;
   is_sharepoint?: boolean;
   file?: File;
-  fileUuid?: string;
   is_public_file?: boolean;
+  sp_document_id?: string;
+  sp_evidence_id?: string;
   sp_file_name?: string;
+  sp_folder_path?: string;
 }

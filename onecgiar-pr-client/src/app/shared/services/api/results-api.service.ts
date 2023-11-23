@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from 'src/environments/environment';
-import { map, Observable } from 'rxjs';
+import { map, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -14,7 +14,6 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
-
 @Injectable({
   providedIn: 'root'
 })
@@ -281,19 +280,16 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
   }
 
-  saveFileExample(file: File) {
+  PUT_loadFileInUploadSession(file: File, link) {
     const options = { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream', 'Content-Range': `bytes 0-${file.size - 1}/${file.size}`, eampleee: 'asasas' }) };
+    return firstValueFrom(this.http.put<any>(link, file, options));
+  }
 
-    return this.http.put<any>(
-      `https://cgiar.sharepoint.com/sites/OneCGIARPRMSRepository/_api/v2.0/drives/b!MPR75cshhEGIx3zU818TunM4QgBitQpGmLc45IgMuTpXerZw1hHpRaom-rwPqLnI/items/012LTNW5FQXJ75SLTCTZH2R4SR2LWIBU2S/uploadSession?guid='f9d0243e-4ab5-42c7-8929-5ee63b9be1c7'&overwrite=True&rename=False&dc=0&tempauth=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwMDAwMDAwMy0wMDAwLTBmZjEtY2UwMC0wMDAwMDAwMDAwMDAvY2dpYXIuc2hhcmVwb2ludC5jb21ANmFmYTBlMDAtZmExNC00MGI3LThhMmUtMjJhN2Y4YzM1N2Q1IiwiaXNzIjoiMDAwMDAwMDMtMDAwMC0wZmYxLWNlMDAtMDAwMDAwMDAwMDAwIiwibmJmIjoiMTcwMDY2OTQ3NiIsImV4cCI6IjE3MDA3NTU4NzYiLCJlbmRwb2ludHVybCI6Ijk1OW5KM014NXJXK3M0em51QVBXSk9BZWZmZEVJaEZCR0xoZnVaRlZuZEE9IiwiZW5kcG9pbnR1cmxMZW5ndGgiOiIyNzMiLCJpc2xvb3BiYWNrIjoiVHJ1ZSIsImNpZCI6IlR0cmN1WjVTcDBtTEhtbTRYQVVWR2c9PSIsInZlciI6Imhhc2hlZHByb29mdG9rZW4iLCJzaXRlaWQiOiJaVFUzWW1ZME16QXRNakZqWWkwME1UZzBMVGc0WXpjdE4yTmtOR1l6TldZeE0ySmgiLCJhcHBfZGlzcGxheW5hbWUiOiJBbGxpYW5jZVBSTVNBcHAiLCJuYW1laWQiOiI0YTVkY2Q4YS05ZmFkLTQwMzctOTBhYS04ZTBjZGJmMDE3OTZANmFmYTBlMDAtZmExNC00MGI3LThhMmUtMjJhN2Y4YzM1N2Q1Iiwicm9sZXMiOiJzZWxlY3RlZHNpdGVzIiwidHQiOiIxIiwiaXBhZGRyIjoiNDAuMTI2LjIzLjE2MiJ9.rrtIxruayobSmkCyKhznpwaXYTeoMQ4R60HALlIVTKY`,
-      file,
-      options
-    );
+  POST_createUploadSession(body: { fileName: string; resultId: string | number }) {
+    return firstValueFrom(this.http.post<any>(`${this.apiBaseUrl}evidences/createUploadSession`, body));
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    //(body);
-
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 

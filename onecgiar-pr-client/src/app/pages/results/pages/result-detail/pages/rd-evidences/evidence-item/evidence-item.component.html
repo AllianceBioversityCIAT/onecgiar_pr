@@ -30,7 +30,7 @@
         <a *ngIf="this.evidence.link else nolinktext" [href]="this.evidence.link" target="_blank"
           rel="noopener noreferrer">{{this.evidence.link}}</a>
         <ng-template #nolinktext>You are going to save the file:
-          <strong>{{this.fileNameCache}}</strong></ng-template>
+          <strong>{{this.evidence?.sp_file_name}}</strong></ng-template>
 
         <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()">
           cancel
@@ -61,7 +61,7 @@
       <div class="check-box-information">
         <app-pr-checkbox label="This is a public file." [(ngModel)]="this.evidence.is_public_file">
         </app-pr-checkbox>
-        <div class="information" [innerHTML]="this.sd"></div>
+        <div class="information" [innerHTML]="this.publicFileDesc"></div>
       </div>
 
     </ng-template>

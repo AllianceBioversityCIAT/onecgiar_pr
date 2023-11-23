@@ -15,9 +15,11 @@ export interface EvidencesCreateInterface {
   environmental_biodiversity_related?: boolean;
   poverty_related?: boolean;
   is_sharepoint?: number;
-  fileUuid?: string;
   is_public_file?: number;
-  sp_id?: string;
+  sp_document_id?: string;
+  sp_evidence_id?: string;
+  sp_file_name?: string;
+  sp_folder_path?: string;
 }
 
 export class JsonData {}
