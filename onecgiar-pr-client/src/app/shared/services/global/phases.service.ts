@@ -18,7 +18,6 @@ export class PhasesService {
   private phasesSubject = new Subject<any[]>();
 
   constructor(private readonly api: ResultsApiService, private filterService: ResultsListFilterService, private ipsrFilterService: IpsrListFilterService) {
-    console.log('phase service open');
     this.api.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe({
       next: ({ response }) => {
         this.phases.ipsr = response.filter(item => item.app_module_id == 2).map(item => ({ ...item, selected: item.status }));

@@ -19,15 +19,20 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
+import { CreateUploadSessionDto } from './dto/create-upload-session.dto';
+import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
+import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 
 @Controller()
 export class EvidencesController {
-  constructor(private readonly evidencesService: EvidencesService) {}
+  constructor(
+    private readonly evidencesService: EvidencesService,
+    private readonly sharePointService: SharePointService,
+  ) {}
 
   @Post('create/:resultId')
   @UseInterceptors(FilesInterceptor('files'))
   async create(
-    @UploadedFiles() files: Express.Multer.File[],
     @Body() formDataJson: FormDataJson,
     @Headers() auth: HeadersDto,
     @UserToken() user: TokenDto,
@@ -40,11 +45,19 @@ export class EvidencesController {
 
     const { message, response, status } = await this.evidencesService.create(
       createEvidenceDto,
-      files,
       user,
     );
 
     throw new HttpException({ message, response }, status);
+  }
+
+  @Post('createUploadSession')
+  async createUploadSession(
+    @Body() createUploadSessionDto: CreateUploadSessionDto,
+  ) {
+    return await this.sharePointService.createUploadSession(
+      createUploadSessionDto,
+    );
   }
 
   @Get('get/:resultId')

@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
+import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';
 
 @Injectable()
 export class SharePointService {
@@ -30,48 +31,48 @@ export class SharePointService {
     if (fileSizeInGB > 1) {
       throw new Error('File size exceeds 1GB');
     }
+    return this.saveLargeFile(file, path, metadata);
 
     // if (fileSizeInMB > 200) {
-    return this.saveLargeFile(file, path, metadata);
     // } else {
     // return this.saveSmallFile(file, path, metadata);
     // }
   }
 
-  async saveSmallFile(file: Express.Multer.File, path: string, metadata) {
-    const { date_as_name, result_id } = metadata || {};
-    const token = await this.getToken();
+  // async saveSmallFile(file: Express.Multer.File, path: string, metadata) {
+  //   const { date_as_name, result_id } = metadata || {};
+  //   const token = await this.getToken();
 
-    const { originalname, buffer } = file;
+  //   const { originalname, buffer } = file;
 
-    const fileExtension = originalname.split('.').pop();
+  //   const fileExtension = originalname.split('.').pop();
 
-    const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
+  //   const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
 
-    const siteId = await this.GPCacheSE.getParam('sp_site_id');
-    const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-    const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${fileName}:/content`;
+  //   const siteId = await this.GPCacheSE.getParam('sp_site_id');
+  //   const driveId = await this.GPCacheSE.getParam('sp_drive_id');
+  //   const link = `${this.microsoftGraphApiUrl}/sites/${siteId}/drives/${driveId}/items/root:${path}/${fileName}:/content`;
 
-    try {
-      const response = await this.httpService
-        .put(link, buffer, {
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        .toPromise();
-      return response?.data;
-    } catch (error) {
-      console.log(error);
-      return error;
-    }
-  }
+  //   try {
+  //     const response = await this.httpService
+  //       .put(link, buffer, {
+  //         headers: {
+  //           'Content-Type': 'application/octet-stream',
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       })
+  //       .toPromise();
+  //     return response?.data;
+  //   } catch (error) {
+  //     console.log(error);
+  //     return error;
+  //   }
+  // }
 
   async saveLargeFile(file: Express.Multer.File, path: string, metadata) {
-    const uploadUrl = await this.createUploadSession(file, path, metadata);
-    console.log(uploadUrl);
-    return await this.uploadLargeFileInUploadUrl(uploadUrl, file);
+    // const uploadUrl = await this.createUploadSession(file, path, metadata);
+    // console.log(uploadUrl);
+    // return await this.uploadLargeFileInUploadUrl(uploadUrl, file);
   }
 
   async uploadLargeFileInUploadUrl(uploadUrl, file: Express.Multer.File) {
@@ -111,18 +112,19 @@ export class SharePointService {
     return response?.data;
   }
 
-  async createUploadSession(file: Express.Multer.File, path: string, metadata) {
+  async createUploadSession(createUploadSessionDto: CreateUploadSessionDto) {
+    const { fileName, resultId } = createUploadSessionDto || {};
+
     const token = await this.getToken();
-    const newFolderId = await this.createFileFolder(path);
+    const { filePath, pathInformation } = await this.generateFilePath(resultId);
+    console.log(filePath);
+    console.log(pathInformation);
+    const newFolderId = await this.createFileFolder(filePath);
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
-
-    const { originalname, buffer } = file;
-
-    const { date_as_name, result_id } = metadata || {};
-    const fileExtension = originalname.split('.').pop();
-
-    const fileName = `result-${result_id}-Document-${date_as_name}.${fileExtension}`;
-    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${fileName}:/createUploadSession`;
+    const fileExtension = fileName.split('.').pop();
+    const finalFileName = `result-${resultId}-Document-${pathInformation?.date_as_name}.${fileExtension}`;
+    const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${finalFileName}:/createUploadSession`;
+    console.log(finalFileName);
 
     try {
       const response = await this.httpService
@@ -137,7 +139,7 @@ export class SharePointService {
           },
         )
         .toPromise();
-      return response?.data?.uploadUrl;
+      return { uploadUrl: response?.data?.uploadUrl };
     } catch (error) {
       console.log(error);
       return error;

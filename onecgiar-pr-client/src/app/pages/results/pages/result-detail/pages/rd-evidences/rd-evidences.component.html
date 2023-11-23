@@ -15,17 +15,6 @@
   <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
   </app-alert-status>
 
-  <div *ngIf="showExample">
-    <input class="inputfieldHidden" #fileInput type="file" (change)="onFileSelected($event)" multiple="false">
-
-    <button (click)="saveExample()">save</button>
-
-    <h1>Size: {{this.filExample?.size}}</h1>
-
-    <textarea name="" id="linku" cols="30" rows="10"></textarea>
-
-  </div>
-
   <div class="evidences">
     <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
       <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)"

@@ -3,6 +3,7 @@ import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import axios from 'axios';
+import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -16,7 +17,6 @@ export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
-  showExample = false;
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
@@ -25,57 +25,11 @@ export class RdEvidencesComponent implements OnInit {
     mainText += '</ul> ';
     return mainText;
   }
-  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService) {}
+  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService, private saveButtonSE: SaveButtonService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
-
-    console.log(2);
-    document.onkeyup = () => {
-      var e = e || window.event; // for IE to cover IEs window event-object
-      if (e.altKey && e.which == 83) {
-        console.log('event');
-        this.showExample = true;
-      }
-    };
-  }
-
-  filExample = null;
-
-  withaxios() {
-    let element = document.getElementById('linku') as HTMLInputElement;
-    let value = element.value;
-
-    axios({
-      method: 'put',
-      url: value,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Content-Range': `bytes 0-${this.filExample.size - 1}/${this.filExample.size}`,
-        eampleee: 'asasas'
-      },
-      data: this.filExample
-    })
-      .then(response => {
-        console.log('Solicitud exitosa:', response.data);
-      })
-      .catch(error => {
-        console.log('%c ' + error.response.data.error.message, 'background: #ffffff; color: #ff0000');
-
-        console.error('Error en la solicitud:', error.response.data.error.message);
-      });
-  }
-
-  async saveExample() {
-    this.withaxios();
-    this.api.resultsSE.saveFileExample(this.filExample).subscribe(resp => {
-      console.log(resp);
-    });
-  }
-
-  onFileSelected(event: any) {
-    this.filExample = event.target.files[0];
   }
 
   getSectionInformation() {
@@ -83,7 +37,6 @@ export class RdEvidencesComponent implements OnInit {
       this.evidencesBody = response;
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
-      console.log(this.evidencesBody.evidences);
     });
   }
 
@@ -91,8 +44,28 @@ export class RdEvidencesComponent implements OnInit {
     return 'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
   }
 
-  onSaveSection() {
-    console.log(this.evidencesBody);
+  async loadAllFiles() {
+    const { evidences } = this.evidencesBody;
+    for (const evidenceIterator of evidences) {
+      if (!evidenceIterator?.file) continue;
+      try {
+        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name });
+        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidenceIterator.file, uploadUrl);
+        evidenceIterator.link = response?.webUrl;
+        evidenceIterator.sp_document_id = response?.id;
+        evidenceIterator.sp_file_name = response?.name;
+        evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }
+
+  async onSaveSection() {
+    this.saveButtonSE.showSaveSpinner();
+    await this.loadAllFiles();
+    this.saveButtonSE.hideSaveSpinner();
+
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });
