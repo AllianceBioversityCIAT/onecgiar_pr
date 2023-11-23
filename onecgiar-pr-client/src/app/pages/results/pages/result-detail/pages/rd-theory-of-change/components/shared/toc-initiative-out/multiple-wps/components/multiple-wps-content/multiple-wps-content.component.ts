@@ -23,7 +23,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() selectedOptionsOutput = [];
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
-  //
 
   showOutcomeLevel = true;
   indicatorView = false;
@@ -36,8 +35,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
       this.getIndicator();
     }
-
-    // this.pushSelectedOptions();
   }
 
   validateEOI() {
@@ -103,7 +100,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   pushSelectedOptions() {
-    // tab.toc_level_id = 1;
     if (this.allTabsCreated.length === 1) {
       if (this.resultLevelId === 1) {
         this.allTabsCreated[0].toc_level_id = 1;
@@ -137,7 +133,6 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
     this.outputList = this.outputList.map(item => {
       const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
-      // const finded = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;
     });

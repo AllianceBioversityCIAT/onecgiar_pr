@@ -14,10 +14,7 @@
     </a>
 </div>
 
-<div class="in-construction" *ngIf="this.initiative.planned_result !== null">
-    <img class="img-construction" src="assets/work-in-progress.png" alt="" srcset="">
 
-    <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-        [isContributor]="isContributor" [isNotifications]="isNotifications"
-        [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>
-</div>
+<app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
+    [isContributor]="isContributor" [isNotifications]="isNotifications"
+    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"></app-multiple-wps>
