@@ -37,7 +37,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
 
-  //
   currentPlannedResult = null;
   outcomeList = [];
   outputList = [];

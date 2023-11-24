@@ -3,10 +3,9 @@
 </app-pr-field-header>
 
 <div *ngFor="let item of this.contributing_initiatives">
-    <app-pr-yes-or-not
-        [label]="getLabel(item.full_name)" [(ngModel)]="isFalse" [readOnly]="true" [editable]="false">
+    <app-pr-yes-or-not [label]="getLabel(item.full_name)" [(ngModel)]="isFalse" [readOnly]="true" [editable]="false">
     </app-pr-yes-or-not>
 </div>
 
-<app-impact-area-targets [impactAreaRequid]="true" [body]="impacts"></app-impact-area-targets>
-<app-sdg-targets [sdgRequid]="true" [body]="sdg"></app-sdg-targets>
+<!-- <app-impact-area-targets [impactAreaRequid]="true" [body]="impacts"></app-impact-area-targets>
+<app-sdg-targets [sdgRequid]="true" [body]="sdg"></app-sdg-targets> -->

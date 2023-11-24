@@ -48,7 +48,6 @@ export class TocInitiativeOutComponent implements OnInit {
       element.toc_result_id = null;
     });
 
-    // Set result_toc_results to the first element of the array
     this.initiative.result_toc_results = [this.initiative.result_toc_results[0]];
 
     setTimeout(() => {

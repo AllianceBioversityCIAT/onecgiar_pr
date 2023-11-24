@@ -2044,6 +2044,27 @@ select *
                 is_sdg_action_impact: toc?.is_sdg_action_impact,
               },
             );
+            // * Save Impact Area
+            await this.saveImpact(
+              rtrExist[0]?.result_toc_result_id,
+              toc?.impactAreasTargets,
+              toc?.results_id || result_id,
+              toc?.initiative_id,
+            );
+            // * Save SDG
+            await this.saveSdg(
+              rtrExist[0]?.result_toc_result_id,
+              toc?.sdgTargest,
+              toc?.results_id || result_id,
+            );
+            // * Save Action Area
+            await this.saveActionAreaToc(
+              rtrExist[0]?.result_toc_result_id,
+              toc?.actionAreaOutcome,
+              toc?.result_toc_result_id,
+            );
+
+            // * Save Indicators
             if (toc?.indicators && toc?.indicators[0]?.targets) {
               await this.saveInditicatorsContributing(
                 toc?.indicators,
@@ -2051,25 +2072,7 @@ select *
                 toc?.results_id || result_id,
                 toc?.toc_result_id,
               );
-            } else {
-              return;
             }
-            await this.saveImpact(
-              rtrExist[0]?.result_toc_result_id,
-              toc?.impactAreasTargets,
-              toc?.results_id || result_id,
-              toc?.initiative_id,
-            );
-            await this.saveSdg(
-              rtrExist[0]?.result_toc_result_id,
-              toc?.sdgTargest,
-              toc?.results_id || result_id,
-            );
-            await this.saveActionAreaToc(
-              rtrExist[0]?.result_toc_result_id,
-              toc?.actionAreaOutcome,
-              toc?.result_toc_result_id,
-            );
           } else {
             return this._handlersError.returnErrorRepository({
               className: ResultsTocResultRepository.name,
