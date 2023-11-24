@@ -103,6 +103,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     if (this.allTabsCreated.length === 1) {
       if (this.resultLevelId === 1) {
         this.allTabsCreated[0].toc_level_id = 1;
+      } else if (!this.activeTab.planned_result) {
+        this.allTabsCreated[0].toc_level_id = 3;
       } else {
         this.allTabsCreated[0].toc_level_id = 2;
       }
