@@ -409,7 +409,7 @@ export class ResultsTocResultsService {
               false,
               [init.id],
             );
-          result_toc_results.map((el) => {
+          result_toc_results.forEach((el) => {
             el['toc_level_id'] =
               el['planned_result'] == false && el['planned_result'] != null
                 ? 3
@@ -718,8 +718,8 @@ export class ResultsTocResultsService {
       });
 
       // * Map multiple WPs to the same initiative
-      for (const toc of createResultsTocResultDto?.result_toc_result
-        ?.result_toc_results) {
+      for (const toc of createResultsTocResultDto.result_toc_result
+        .result_toc_results) {
         let RtR: ResultsTocResult | null;
         if (toc?.result_toc_result_id) {
           RtR =
@@ -785,14 +785,20 @@ export class ResultsTocResultsService {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
       if (contributors_result_toc_result?.length) {
         const RtRArray: ResultsTocResult[] = [];
-        contributors_result_toc_result.forEach(async (contributor) => {
+        for (const contributor of contributors_result_toc_result) {
           for (const rtrc of contributor.result_toc_results) {
             if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
-              return;
+              continue;
             }
             const RtR = await this._resultsTocResultRepository.getRTRById(
               rtrc?.result_toc_result_id,
             );
+
+            const commonFields = {
+              planned_result: contributor?.planned_result,
+              last_updated_by: user.id,
+              is_active: true,
+            };
 
             if (RtR) {
               await this._resultsTocResultRepository.update(
@@ -800,15 +806,12 @@ export class ResultsTocResultsService {
                 {
                   toc_result_id: rtrc?.toc_result_id,
                   action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-                  planned_result: contributor?.planned_result,
-                  last_updated_by: user.id,
-                  is_active: true,
+                  ...commonFields,
                 },
               );
             } else {
               const newRtR = new ResultsTocResult();
               newRtR.created_by = user.id;
-              newRtR.last_updated_by = user.id;
               newRtR.planned_result = contributor?.planned_result;
               newRtR.results_id = result.id;
               newRtR.initiative_id = contributor?.initiative_id || null;
@@ -834,7 +837,7 @@ export class ResultsTocResultsService {
               });
             }
           }
-        });
+        }
 
         // * Logic to delete a WP from Contributors
         let incomingRtRIds = [];
