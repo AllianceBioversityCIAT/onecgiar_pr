@@ -12,6 +12,7 @@ import { ResultsTocResult } from '../results-toc-results/entities/results-toc-re
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -32,9 +33,6 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      /*const result: any = await this._resultRepository.getResultById(
-        parseInt(`${resultId}`),
-      );*/
       const result: { initiative_id: number } = { initiative_id: null };
       const res = await this._resultByInitiativesRepository.InitiativeByResult(
         resultId,
@@ -138,11 +136,17 @@ export class ShareResultRequestService {
     }
   }
 
-  async updateResultRequestByUser(data: ShareResultRequest, user: TokenDto) {
+  async updateResultRequestByUser(
+    createShareResultsRequestDto: CreateShareResultRequestDto,
+    user: TokenDto,
+  ) {
     try {
+      const { result_request: rr, result_toc_result: rtr } =
+        createShareResultsRequestDto;
+
       const res = await this._resultRepository.findOne({
         where: {
-          id: data.result_id,
+          id: rr.result_id,
           is_active: true,
         },
         relations: {
@@ -158,12 +162,7 @@ export class ShareResultRequestService {
         };
       }
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
-
-      if (!data?.share_result_request_id) {
+      if (!rr?.share_result_request_id) {
         throw {
           response: {},
           message: 'No valid share_result_request_id found',
@@ -171,9 +170,13 @@ export class ShareResultRequestService {
         };
       }
 
-      data.approved_by = user.id;
-      data.aprovaed_date = new Date();
-      const requestData = await this._shareResultRequestRepository.save(data);
+      rr.approved_by = user.id;
+      rr.aprovaed_date = new Date();
+      rr.request_status_id = createShareResultsRequestDto.request_status_id;
+      const requestData = await this._shareResultRequestRepository.save({
+        ...rr,
+        last_updated_by: user.id,
+      });
 
       const {
         shared_inititiative_id,
@@ -183,6 +186,7 @@ export class ShareResultRequestService {
         action_area_outcome_id,
         planned_result,
       } = requestData;
+
       if (request_status_id == 2) {
         const exists =
           await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(
@@ -198,18 +202,6 @@ export class ShareResultRequestService {
           newResultByInitiative.last_updated_by = user.id;
           newResultByInitiative.created_by = user.id;
           const result = await this._resultRepository.getResultById(result_id);
-          const newRtR = new ResultsTocResult();
-          newRtR.planned_result = planned_result;
-          newRtR.created_by = user.id;
-          newRtR.last_updated_by = user.id;
-          newRtR.results_id = result.id;
-          newRtR.initiative_id = shared_inititiative_id;
-          if (result.result_level_id == 2) {
-            newRtR.action_area_outcome_id = action_area_outcome_id || null;
-          } else {
-            newRtR.toc_result_id = toc_result_id || null;
-          }
-
           const newReIni = await this._resultByInitiativesRepository.save(
             newResultByInitiative,
           );
@@ -220,30 +212,26 @@ export class ShareResultRequestService {
             last_updated_by: user.id,
           });
 
-          const resultTocResult =
-            await this._resultsTocResultRepository.existsResultTocResult(
-              result.id,
-              shared_inititiative_id,
-            );
-          if (!resultTocResult) {
-            await this._resultsTocResultRepository.save({
-              initiative_ids: newRtR.initiative_id,
-              toc_result_id: newRtR.toc_result_id,
-              created_by: newRtR.created_by,
-              last_updated_by: newRtR.last_updated_by,
-              result_id: newRtR.results_id,
-              planned_result: newRtR.planned_result,
-              action_area_outcome_id: newRtR.action_area_outcome_id,
-            });
-          } else {
-            await this._resultsTocResultRepository.update(
-              resultTocResult.result_toc_result_id,
-              {
-                planned_result: planned_result,
-                toc_result_id: toc_result_id,
-                action_area_outcome_id: action_area_outcome_id,
+          // * Map multiple WPs to the same initiative
+          for (const toc of rtr.result_toc_results) {
+            if (toc) {
+              await this._resultsTocResultRepository.save({
+                initiative_ids: shared_inititiative_id,
+                toc_result_id: toc?.toc_result_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+                result_id: result.id,
+                planned_result: rtr?.planned_result,
+                action_area_outcome_id: toc?.action_area_outcome_id,
                 is_active: true,
-              },
+              });
+            }
+          }
+
+          if (rtr?.result_toc_results?.length) {
+            await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+              createShareResultsRequestDto,
+              result_id,
             );
           }
         } else {
@@ -273,60 +261,35 @@ export class ShareResultRequestService {
             });
           }
 
-          const resultTocResult =
-            await this._resultsTocResultRepository.existsResultTocResult(
-              result.id,
-              shared_inititiative_id,
+          // * Map multiple WPs to the same initiative
+          for (const toc of rtr.result_toc_results) {
+            if (toc) {
+              await this._resultsTocResultRepository.save({
+                initiative_ids: shared_inititiative_id,
+                toc_result_id: toc?.toc_result_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+                result_id: result.id,
+                planned_result: rtr?.planned_result,
+                action_area_outcome_id: toc?.action_area_outcome_id,
+                is_active: true,
+              });
+            }
+          }
+          if (rtr?.result_toc_results?.length) {
+            await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+              createShareResultsRequestDto,
             );
-          if (!resultTocResult) {
-            const newRtR = new ResultsTocResult();
-            newRtR.planned_result = planned_result;
-            newRtR.created_by = user.id;
-            newRtR.last_updated_by = user.id;
-            newRtR.results_id = result.id;
-            newRtR.initiative_id = shared_inititiative_id;
-            if (result.result_level_id == 2) {
-              newRtR.action_area_outcome_id = action_area_outcome_id || null;
-            } else {
-              newRtR.toc_result_id = toc_result_id || null;
-            }
-            await this._resultsTocResultRepository.save({
-              initiative_ids: newRtR.initiative_id,
-              toc_result_id: newRtR.toc_result_id,
-              created_by: newRtR.created_by,
-              last_updated_by: newRtR.last_updated_by,
-              result_id: newRtR.results_id,
-              planned_result: newRtR.planned_result,
-              action_area_outcome_id: newRtR.action_area_outcome_id,
-            });
-          } else {
-            resultTocResult.is_active = true;
-            resultTocResult.planned_result = planned_result;
-            if (result.result_level_id == 2) {
-              resultTocResult.action_area_outcome_id =
-                action_area_outcome_id || null;
-            } else {
-              resultTocResult.toc_result_id = toc_result_id || null;
-            }
-            const rtr_id = resultTocResult.result_toc_result_id;
-            delete resultTocResult.result_toc_result_id;
-            await this._resultsTocResultRepository.update(rtr_id, {
-              toc_result_id: resultTocResult.toc_result_id,
-              action_area_outcome_id: resultTocResult.action_area_outcome_id,
-              planned_result: resultTocResult.planned_result,
-              last_updated_by: user.id,
-              is_active: true,
-            });
           }
         }
-        const auxBody: any = data;
-        await this._resultsTocResultRepository.saveSectionNewTheoryOfChange(
+        const auxBody: any = rr;
+        await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
           auxBody?.bodyNewTheoryOfChanges,
         );
       }
 
       return {
-        response: requestData,
+        response: 'requestData',
         message: 'The requests have been updated successfully',
         status: HttpStatus.OK,
       };
@@ -335,3 +298,4 @@ export class ShareResultRequestService {
     }
   }
 }
+

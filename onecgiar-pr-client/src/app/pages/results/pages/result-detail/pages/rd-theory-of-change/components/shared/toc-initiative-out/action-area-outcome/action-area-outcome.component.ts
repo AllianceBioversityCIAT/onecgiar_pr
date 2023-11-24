@@ -25,17 +25,17 @@ export class ActionAreaOutcomeComponent implements OnInit {
   }
 
   GET_AllClarisaImpactAreaIndicators() {
-    this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe({
+      next: ({ response }) => {
         this.actionAreasOutcomesList = response;
-        this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>Systems Transformation</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
-        this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>Resilient Agrifood Systems</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
-        this.actionAreasOutcomesList.geneticInnovation.map(item => (item.full_name = `<strong>Genetic Innovation</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+        this.actionAreasOutcomesList.systemTrasnformation.forEach(item => (item.full_name = `<strong>Systems Transformation</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+        this.actionAreasOutcomesList.resilientAgrifoodSystems.forEach(item => (item.full_name = `<strong>Resilient Agrifood Systems</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
+        this.actionAreasOutcomesList.geneticInnovation.forEach(item => (item.full_name = `<strong>Genetic Innovation</strong> (${item.outcomeSMOcode}) - ${item.outcomeStatement}`));
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 
   filterImpactAreaIndicatorsByImpactAreaID(iaID) {
@@ -49,7 +49,7 @@ export class ActionAreaOutcomeComponent implements OnInit {
 
   selectImpactArea(impactAreaItem) {
     if (this.api.rolesSE.readOnly) return;
-    this.impactAreasData.map((iaitem: any) => (iaitem.selected = false));
+    this.impactAreasData.forEach((iaitem: any) => (iaitem.selected = false));
     impactAreaItem.selected = true;
     this.currentImpactAreaID = impactAreaItem.id;
   }

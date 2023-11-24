@@ -63,6 +63,6 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
     ResultsTocTargetIndicatorRepository,
     ClarisaInitiativesRepository,
   ],
-  exports: [ResultsTocResultRepository],
+  exports: [ResultsTocResultRepository, ResultsTocResultsService],
 })
 export class ResultsTocResultsModule {}

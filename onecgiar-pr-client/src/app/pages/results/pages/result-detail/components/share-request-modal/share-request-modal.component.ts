@@ -31,6 +31,14 @@ export class ShareRequestModalComponent implements OnInit {
     this.GET_AllInitiatives();
   }
 
+  validateAcceptOrReject() {
+    const resultWithoutTRI = this.shareRequestModalSE.shareRequestBody.result_toc_results.find(result => !result.toc_result_id);
+
+    if (this.requesting || !this.shareRequestModalSE.shareRequestBody.initiative_id || resultWithoutTRI) return true;
+
+    return false;
+  }
+
   cleanObject() {
     this.showForm = false;
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
@@ -42,7 +50,6 @@ export class ShareRequestModalComponent implements OnInit {
 
   onRequest() {
     this.requesting = true;
-    this.shareRequestModalSE.shareRequestBody.initiativeShareId.push(this.shareRequestModalSE.shareRequestBody.initiative_id);
     this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
@@ -68,17 +75,39 @@ export class ShareRequestModalComponent implements OnInit {
   modelChange() {
     this.showTocOut = false;
 
+    const selectedInitiative = this.allInitiatives.find(initiative => initiative.initiative_id === this.shareRequestModalSE.shareRequestBody.initiative_id);
+
     setTimeout(() => {
-      const iniciativeSelected = this.allInitiatives.filter(resp => resp.initiative_id == this.shareRequestModalSE.shareRequestBody.initiative_id);
-      this.shareRequestModalSE.shareRequestBody['official_code'] = iniciativeSelected[0].official_code;
-      this.shareRequestModalSE.shareRequestBody['short_name'] = iniciativeSelected[0].short_name;
+      if (selectedInitiative) {
+        const { initiative_id, official_code, short_name } = selectedInitiative;
+
+        this.shareRequestModalSE.shareRequestBody.initiative_id = initiative_id;
+        this.shareRequestModalSE.shareRequestBody.official_code = official_code;
+        this.shareRequestModalSE.shareRequestBody.short_name = short_name;
+
+        this.shareRequestModalSE.shareRequestBody.result_toc_results = [
+          {
+            action_area_outcome_id: null,
+            initiative_id,
+            official_code,
+            planned_result: this.shareRequestModalSE.shareRequestBody.planned_result,
+            results_id: null,
+            short_name,
+            toc_result_id: null,
+            uniqueId: Math.random().toString(36).substring(7)
+          }
+        ];
+      }
+
       this.showTocOut = true;
-    }, 500);
+    }, 50);
   }
 
   acceptOrReject() {
-    const body = { ...this.api.dataControlSE.currentNotification, ...this.shareRequestModalSE.shareRequestBody, request_status_id: 2, bodyNewTheoryOfChanges: this.theoryOfChangesServices.body };
+    const body = { result_request: this.api.dataControlSE.currentNotification, result_toc_result: this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
+
     this.requesting = true;
+
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;

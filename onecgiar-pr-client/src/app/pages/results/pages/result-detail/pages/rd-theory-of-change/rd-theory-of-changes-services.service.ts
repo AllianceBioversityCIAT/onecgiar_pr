@@ -1,28 +1,44 @@
 import { Injectable } from '@angular/core';
+import { ApiService } from 'src/app/shared/services/api/api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RdTheoryOfChangesServicesService {
-  targetsIndicators: any = [];
   impactAreasTargets: any = [];
   sdgTargest: any = [];
-  actionAreaOutcome:any = [];
+  actionAreaOutcome: any = [];
   isSdg: boolean;
   isImpactArea: boolean;
-  body:intefacesTheoryOfChanges[]= [];
+  body: intefacesTheoryOfChanges[] = [];
   resultActionArea: any = [];
-  constructor() { }
+  theoryOfChangeBody: any = [];
+  planned_result = null;
+  result_toc_result = null;
+  contributors_result_toc_result = null;
+  fullInitiativeToc = null;
+
+  constructor(public api: ApiService) {}
+
+  get_versionDashboard(initiative) {
+    this.api.resultsSE.get_vesrsionDashboard(initiative.toc_result_id, initiative.initiative_id).subscribe({
+      next: ({ response }) => {
+        this.fullInitiativeToc = response?.version_id;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
 }
 
-export class intefacesTheoryOfChanges{
-  targetsIndicators: any[];
+export class intefacesTheoryOfChanges {
   impactAreasTargets: any[];
   sdgTargest: any[];
-  actionAreaOutcome:any[];
+  actionAreaOutcome: any[];
   isSdg: boolean;
   isImpactArea: boolean;
-  initiative:number;
-  resultId:number;
-  is_sdg_action_impact:string;
+  initiative: number;
+  resultId: number;
+  is_sdg_action_impact: string;
 }

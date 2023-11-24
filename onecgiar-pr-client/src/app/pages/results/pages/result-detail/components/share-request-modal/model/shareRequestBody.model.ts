@@ -1,9 +1,22 @@
 export class ShareRequestBody {
-  public initiativeShareId: number[] = [];
-  public initiative_id: number;
-  public toc_result_id!: number; //opcional dependiendo de donde se haga list /toc
-  public action_area_outcome_id!: number; //opcional dependiendo de donde se haga list /toc
-  public isToc: boolean; //si se hace desde el toc true de resto false
-  public planned_result!: number;
-  public toc_level_id: number;
+  planned_result: boolean = null;
+  initiative_id: number = null;
+  official_code: string = null;
+  short_name: string = null;
+  result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
+  showMultipleWPsContent = true;
+}
+
+export class resultTocResultsInterface {
+  result_toc_result_id?: number = null;
+  toc_result_id?: number = null;
+  action_area_outcome_id?: number = null;
+  results_id: number = null;
+  planned_result: boolean = null;
+  id?: number = null;
+  short_name: string = null;
+  official_code: string = null;
+  initiative_id: number | string = null;
+  toc_level_id?: number | string = null;
+  uniqueId?: string | null = null;
 }

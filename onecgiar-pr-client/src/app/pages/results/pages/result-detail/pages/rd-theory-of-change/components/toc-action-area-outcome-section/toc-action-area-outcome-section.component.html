@@ -12,18 +12,17 @@
     [editable]="(this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id) || this.api.rolesSE.isAdmin)">
 </app-toc-initiative-aao>
 
+<div *ngIf="contributors_result_toc_result?.length">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+    </app-pr-field-header>
 
-<app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"
-    *ngIf="contributors_result_toc_result?.length">
-</app-pr-field-header>
-
-<div *ngFor="let initiative of contributors_result_toc_result; let i = index">
-    <app-toc-initiative-aao [initiative]="initiative" [indexList]="i + 1"
-        [editable]="(this.api.rolesSE.validateInitiative(initiative?.initiative_id) || this.api.rolesSE.isAdmin)">
-    </app-toc-initiative-aao>
+    <div *ngFor="let contributor of contributors_result_toc_result; let i = index">
+        <app-toc-initiative-aao [initiative]="contributor" [indexList]="1"
+            [editable]="(this.api.rolesSE.validateInitiative(contributor?.initiative_id) || this.api.rolesSE.isAdmin)">
+        </app-toc-initiative-aao>
+    </div>
 </div>
 
 <app-no-data-text
- *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
- title = "No Action Area outcomes selected."
-></app-no-data-text>
+    *ngIf="this.api.rolesSE.readOnly && !result_toc_result?.result_toc_results[0]?.action_area_outcome_id && !this.api.rolesSE.validateInitiative(result_toc_result?.initiative_id)"
+    title="No Action Area outcomes selected."></app-no-data-text>
