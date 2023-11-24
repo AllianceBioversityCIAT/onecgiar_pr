@@ -2023,7 +2023,7 @@ select *
     const { result_toc_result } = ResultTocResultIndicators;
     if (!result_toc_result?.result_toc_results.map((e) => e.indicators)) return;
     try {
-      for (const toc of result_toc_result?.result_toc_results) {
+      for (const toc of result_toc_result.result_toc_results) {
         if (!toc) return;
         if (toc?.results_id) {
           const rtrExist = await this.query(`
@@ -2104,8 +2104,8 @@ select *
 
     try {
       for (const contributor of contributors_result_toc_result) {
-        for (const toc of contributor?.result_toc_results) {
-          for (const indicators of toc?.indicators) {
+        for (const toc of contributor.result_toc_results) {
+          for (const indicators of toc.indicators) {
             if (toc?.results_id) {
               const rtrExist = await this.query(`
                 SELECT

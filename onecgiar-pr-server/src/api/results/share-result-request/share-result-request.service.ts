@@ -213,7 +213,7 @@ export class ShareResultRequestService {
           });
 
           // * Map multiple WPs to the same initiative
-          for (const toc of rtr?.result_toc_results) {
+          for (const toc of rtr.result_toc_results) {
             if (toc) {
               await this._resultsTocResultRepository.save({
                 initiative_ids: shared_inititiative_id,
@@ -262,7 +262,7 @@ export class ShareResultRequestService {
           }
 
           // * Map multiple WPs to the same initiative
-          for (const toc of rtr?.result_toc_results) {
+          for (const toc of rtr.result_toc_results) {
             if (toc) {
               await this._resultsTocResultRepository.save({
                 initiative_ids: shared_inititiative_id,

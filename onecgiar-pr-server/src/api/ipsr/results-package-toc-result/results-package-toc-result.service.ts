@@ -345,10 +345,10 @@ export class ResultsPackageTocResultService {
     user: TokenDto,
   ) {
     const { result_toc_results } =
-      createResultsPackageTocResultDto?.result_toc_result;
+      createResultsPackageTocResultDto.result_toc_result;
     try {
       if (result_toc_results?.length) {
-        result_toc_results.forEach(async (rtr) => {
+        for (const rtr of result_toc_results) {
           const searchTocResult =
             await this._resultsTocResultRepository.findOne({
               where: { toc_result_id: rtr.toc_result_id, is_active: true },
@@ -380,34 +380,31 @@ export class ResultsPackageTocResultService {
               },
             },
           );
-          if (
-            rtr?.['toc_level_id'] !== 3 &&
-            searchIpEoi?.result_ip_eoi_outcome_id
-          ) {
-            await this._resultIpEoiOutcomesRepository.update(
-              searchIpEoi?.result_ip_eoi_outcome_id,
-              {
-                is_active: false,
-                contributing_toc: false,
-                last_updated_by: user.id,
-              },
-            );
-    
-            return {
-              response: { valid: true },
-              message: 'No End of Initiative Outcomes were saved',
-              status: HttpStatus.OK,
-            };
-          } else {
+
+          if (!searchIpEoi || rtr?.['toc_level_id'] === 3) {
             return this._returnResponse.format({
               message: `The EOI cannot be saved because the Toc level is 3 or the EOI does not have an eoi result ID.`,
               statusCode: HttpStatus.BAD_REQUEST,
               response: { valid: false },
             });
           }
-        });
-      }
 
+          await this._resultIpEoiOutcomesRepository.update(
+            searchIpEoi?.result_ip_eoi_outcome_id,
+            {
+              is_active: false,
+              contributing_toc: false,
+              last_updated_by: user.id,
+            },
+          );
+
+          return {
+            response: { valid: true },
+            message: 'No End of Initiative Outcomes were saved',
+            status: HttpStatus.OK,
+          };
+        }
+      }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -484,7 +481,7 @@ export class ResultsPackageTocResultService {
             false,
             [init.id],
           );
-        result_toc_results.map((el) => {
+        result_toc_results.forEach((el) => {
           el['toc_level_id'] =
             el['planned_result'] == false && el['planned_result'] != null
               ? 3
