@@ -1166,7 +1166,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select 
-    r.result_code as "Result Code",
+    DISTINCT r.result_code as "Result Code",
     (
       SELECT
         v.phase_name
@@ -1202,7 +1202,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     GROUP_CONCAT(distinct CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
    /* GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as "Contributing Center(s)", */
     GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ') as "Contributing Center(s)",
-    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
+    GROUP_CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
     if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
