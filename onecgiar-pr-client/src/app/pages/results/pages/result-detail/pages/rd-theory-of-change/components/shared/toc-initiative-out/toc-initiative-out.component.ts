@@ -48,7 +48,7 @@ export class TocInitiativeOutComponent implements OnInit {
       element.toc_result_id = null;
     });
 
-    this.initiative.result_toc_results = [this.initiative.result_toc_results[0]];
+    console.log(this.initiative.result_toc_results);
 
     setTimeout(() => {
       this.initiative.showMultipleWPsContent = true;
