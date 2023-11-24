@@ -1,7 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { MQAPResultDto } from '../../m-qap/dtos/m-qap.dto';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { Result } from '../entities/result.entity';
@@ -45,6 +48,7 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
+import { env } from 'process';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -101,6 +105,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _resultCenterRepository: ResultsCenterRepository,
     private readonly _clarisaInstitutionRepository: ClarisaInstitutionsRepository,
     private readonly _deleteRecoverDataService: DeleteRecoverDataService,
+    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   async syncAgain(resultId: number, user: TokenDto) {
@@ -1385,28 +1390,46 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  async findAllActiveKps() {
+  async findByFilterActiveKps(filter?: {
+    resultCodes?: number[];
+    resultStatus?: number;
+    phase?: number;
+  }) {
     try {
+      let result_object: any = {
+        is_active: true,
+      };
+
+      if (filter?.resultCodes?.length) {
+        result_object.result_code = In(filter.resultCodes);
+      }
+
+      if (filter?.resultStatus) {
+        result_object.status_id = filter.resultStatus;
+      }
+
+      if (filter?.phase) {
+        result_object.version_id = filter.phase;
+      }
+
       const kps = await this._resultsKnowledgeProductRepository.find({
         where: {
           is_active: true,
-          result_object: {
-            is_active: true,
-          },
+          result_object: result_object,
         },
         relations: {
           result_object: true,
         },
       });
 
-      return {
-        response: kps,
+      return this._returnResponse.format({
         message:
-          'The active knowledge products have been retrieved successfully',
-        status: HttpStatus.OK,
-      };
+          'The active knowledge products have not been retrieved successfully',
+        response: kps,
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
+      return this._returnResponse.format(error, !env.IS_PRODUCTION);
     }
   }
 
