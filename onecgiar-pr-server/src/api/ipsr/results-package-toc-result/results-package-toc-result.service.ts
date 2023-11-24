@@ -481,11 +481,10 @@ export class ResultsPackageTocResultService {
             false,
             [init.id],
           );
-        result_toc_results.forEach((el) => {
-          el['toc_level_id'] =
-            el['planned_result'] == false && el['planned_result'] != null
-              ? 3
-              : el['toc_level_id'];
+        result_toc_results.forEach(el => {
+          if (el['planned_result'] === false) {
+            el['toc_level_id'] = 3;
+          }
         });
 
         resTocResConResponse = [
