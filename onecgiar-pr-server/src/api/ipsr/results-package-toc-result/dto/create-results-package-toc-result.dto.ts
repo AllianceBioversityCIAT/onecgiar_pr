@@ -3,10 +3,20 @@ export class CreateResultsPackageTocResultDto {
   contributing_initiatives: initiativeInterfaces[];
   contributing_np_projects: donorInterfaceToc[];
   contributing_center: centerInterfacesToc[];
-  result_toc_result: resultToResultInterfaceToc;
-  contributors_result_toc_result: resultToResultInterfaceToc[];
+  result_toc_result: {
+    planned_result: boolean;
+    result_toc_results: resultToResultInterfaceToc[];
+  };
+  contributors_result_toc_result: [
+    {
+      planned_result: boolean;
+      initiative_id: number;
+      result_toc_results: resultToResultInterfaceToc[];
+    }
+  ];
   pending_contributing_initiatives: shareResultRequestInterface[];
   institutions: institutionsInterface[];
+  impacts?: any[];
 }
 
 interface institutionsInterface {
@@ -36,8 +46,14 @@ interface resultToResultInterfaceToc {
   toc_result_id?: number;
   action_area_outcome_id?: number;
   results_id: number;
-  planned_result: boolean;
+  planned_result?: boolean;
   initiative_id: number;
+  indicators?: any[];
+  impactAreasTargets?: any[];
+  sdgTargest?: any[];
+  actionAreaOutcome?: any[];
+  targetsIndicators?: any[];
+  is_sdg_action_impact: boolean;
 }
 
 interface shareResultRequestInterface {

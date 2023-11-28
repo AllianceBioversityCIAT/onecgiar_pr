@@ -13,6 +13,8 @@ import { ResultsPolicyChangesRepository } from '../summary/repositories/results-
 import { ResultsInnovationsUseRepository } from '../summary/repositories/results-innovations-use.repository';
 import { ResultsCapacityDevelopmentsRepository } from '../summary/repositories/results-capacity-developments.repository';
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
+import { BulkKpDto } from './dto/bulk-kp.dto';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 
 @Injectable()
 export class AdminPanelService implements OnModuleInit {
@@ -465,12 +467,21 @@ export class AdminPanelService implements OnModuleInit {
     }
   }
 
-  async kpBulkSync(user: TokenDto) {
+  async kpBulkSync(
+    user: TokenDto,
+    status: string,
+    phases: number,
+    bulkKpDto: BulkKpDto,
+  ) {
     try {
       const allKpsResponse =
-        await this._resultsKnowledgeProductsService.findAllActiveKps();
+        await this._resultsKnowledgeProductsService.findByFilterActiveKps({
+          resultStatus: ResultStatusData.getFromName(status)?.value,
+          resultCodes: bulkKpDto.results_code,
+          phase: phases,
+        });
 
-      if (allKpsResponse.status >= 300) {
+      if (allKpsResponse.statusCode >= 300) {
         throw this._handlersError.returnErrorRes({ error: allKpsResponse });
       }
 
@@ -491,7 +502,7 @@ export class AdminPanelService implements OnModuleInit {
 
       for (const kp of kps) {
         this._logger.debug(
-          `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}`,
+          `Current KP ID: ${kp.result_knowledge_product_id}; Current Result ID: ${kp.results_id}; Current Result code: ${kp.result_object.result_code}; Current Phase Id: ${kp.result_object.version_id};`,
         );
 
         const response = await this._resultsKnowledgeProductsService.syncAgain(

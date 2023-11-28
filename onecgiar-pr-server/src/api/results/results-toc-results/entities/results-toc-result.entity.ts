@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -41,6 +42,7 @@ export class ResultsTocResult {
   })
   results_id: number;
 
+  // ! Remove
   @ManyToOne(() => ClarisaActionAreaOutcome, (caao) => caao.id, {
     nullable: true,
   })
@@ -56,6 +58,7 @@ export class ResultsTocResult {
   })
   planned_result!: boolean;
 
+  // ! Remove
   @Column({
     name: 'action_area_id',
     type: 'int',
@@ -82,6 +85,7 @@ export class ResultsTocResult {
   })
   initiative_id!: number;
 
+  // TODO - Review 
   @Column({
     name: 'mapping_sdg',
     type: 'boolean',
@@ -89,6 +93,7 @@ export class ResultsTocResult {
   })
   mapping_sdg: boolean;
 
+  // TODO - Review 
   @Column({
     name: 'mapping_impact',
     type: 'boolean',

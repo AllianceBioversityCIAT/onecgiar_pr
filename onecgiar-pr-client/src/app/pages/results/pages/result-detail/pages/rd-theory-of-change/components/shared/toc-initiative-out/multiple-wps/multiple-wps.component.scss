@@ -1,0 +1,97 @@
+.local_container {
+  margin-top: 30px;
+  padding-bottom: 10px;
+  margin-bottom: 50px;
+  border-radius: 5px;
+  width: 100%;
+
+  .section_container {
+    padding: 50px 50px 50px 50px;
+    margin-bottom: 120px;
+  }
+
+  // .multiple-wps-container {
+  //   height: 70vh;
+  //   overflow-y: auto;
+  //   padding: 1rem;
+  // }
+
+  .tabs-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    background-color: var(--pr-color-medium-2);
+
+    .active {
+      background-color: var(--pr-color-primary) !important;
+      color: white !important;
+      font-weight: 600;
+    }
+
+    .tabs {
+      display: grid;
+      overflow-x: auto;
+    }
+
+    .tab {
+      background-color: var(--pr-color-medium-2);
+      color: var(--pr-color-medium);
+      text-decoration: none;
+      padding: 10px 8px;
+      display: grid;
+      grid-template-columns: 6fr 1fr;
+      align-items: center;
+      gap: 0.5rem;
+
+      .tab-content {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+
+      .tab-title {
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+      }
+    }
+
+    .tab-add-button {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      cursor: pointer;
+      padding: 0.5rem;
+      width: 40px;
+
+      .tab-add-button-item {
+        padding: 0.5rem;
+        background-color: #fff;
+        border-radius: 5px;
+      }
+    }
+
+    .tab-delete-button-item {
+      cursor: pointer;
+      font-size: 16px;
+      text-align: end;
+    }
+  }
+}
+
+.valid {
+  color: #34b734;
+}
+
+.invalid {
+  color: #c0c0c0;
+}
+
+.p-tooltip-text {
+  font-size: 5px;
+}

@@ -10,7 +10,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
 })
 export class NotificationItemInnovationComponent {
   @Input() notification: any;
-  @Input() comes: boolean;
+  @Input() comes: boolean = true;
   @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
@@ -41,8 +41,20 @@ export class NotificationItemInnovationComponent {
     this.api.dataControlSE.currentResult.result_type = result_type_name;
     this.api.dataControlSE.currentNotification = notification;
     this.shareRequestModalSE.shareRequestBody.initiative_id = approving_inititiative_id;
-    this.shareRequestModalSE.shareRequestBody['official_code'] = approving_official_code;
-    this.shareRequestModalSE.shareRequestBody['short_name'] = approving_short_name;
+    this.shareRequestModalSE.shareRequestBody.official_code = approving_official_code;
+    this.shareRequestModalSE.shareRequestBody.short_name = approving_short_name;
+
+    this.shareRequestModalSE.shareRequestBody.result_toc_results.push({
+      action_area_outcome_id: null,
+      initiative_id: this.shareRequestModalSE.shareRequestBody.initiative_id,
+      official_code: this.shareRequestModalSE.shareRequestBody.official_code,
+      planned_result: this.shareRequestModalSE.shareRequestBody.planned_result,
+      results_id: null,
+      short_name: this.shareRequestModalSE.shareRequestBody.short_name,
+      toc_result_id: null,
+      uniqueId: Math.random().toString(36).substring(7)
+    });
+
     this.api.dataControlSE.showShareRequest = true;
   }
 

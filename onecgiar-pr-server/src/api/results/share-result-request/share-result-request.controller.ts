@@ -13,6 +13,7 @@ import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ShareResultRequest } from './entities/share-result-request.entity';
+import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 
 @Controller()
 export class ShareResultRequestController {
@@ -51,14 +52,14 @@ export class ShareResultRequestController {
   @Patch('update')
   async updateRequest(
     @Headers() auth: HeadersDto,
-    @Body() updateShareResultRequestDto: ShareResultRequest,
+    @Body() createShareResultsRequestDto: CreateShareResultRequestDto,
   ) {
     const token: TokenDto = <TokenDto>(
       JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
     );
     const { message, response, status } =
       await this.shareResultRequestService.updateResultRequestByUser(
-        updateShareResultRequestDto,
+        createShareResultsRequestDto,
         token,
       );
     throw new HttpException({ message, response }, status);
@@ -71,3 +72,4 @@ export class ShareResultRequestController {
     throw new HttpException({ message, response }, status);
   }
 }
+
