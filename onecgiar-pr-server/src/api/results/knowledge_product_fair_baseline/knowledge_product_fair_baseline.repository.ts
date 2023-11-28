@@ -1,22 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { KnowledgeProductFairBaseline } from './entities/knowledge_product_fair_baseline.entity';
-import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import {
+  LogicalDelete,
+  onlyFisicalDelete,
+} from '../../../shared/globalInterfaces/delete.interface';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class KnowledgeProductFairBaselineRepository
   extends Repository<KnowledgeProductFairBaseline>
-  implements LogicalDelete<KnowledgeProductFairBaseline>
+  implements onlyFisicalDelete
 {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(KnowledgeProductFairBaseline, dataSource.createEntityManager());
-  }
-  logicalDelete(resultId: number): Promise<KnowledgeProductFairBaseline> {
-    throw new Error('Method not implemented.');
   }
 
   fisicalDeleteLegacy(resultId: number): Promise<any> {
