@@ -9,10 +9,6 @@ import { SaveButtonService } from '../../../../../../custom-fields/save-button/s
   styleUrls: ['./rd-evidences.component.scss']
 })
 export class RdEvidencesComponent implements OnInit {
-  links1 = 'https://www.google.com/doodles/dragon-boat-festival-2023';
-  links2 = 'http://localhost:4200/result/result-detail/4800/evidences';
-  links3 = 'testing';
-  links4 = 'texto';
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
@@ -43,13 +39,35 @@ export class RdEvidencesComponent implements OnInit {
     return 'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
   }
 
+  async getAndCalculateFilePercentage(response, evidenceIterator) {
+    let nextRange = response?.nextExpectedRanges[0];
+    let [startByte, totalBytes] = nextRange?.split('-')?.map(Number);
+    if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
+    let progressPercentage = (startByte / totalBytes) * 100;
+    evidenceIterator.percentage = progressPercentage.toFixed(0);
+  }
+
+  endLoadFile(intervalId, evidenceIterator) {
+    clearInterval(intervalId);
+    evidenceIterator.percentage = 100;
+  }
+
   async loadAllFiles() {
     const { evidences } = this.evidencesBody;
     for (const evidenceIterator of evidences) {
       if (!evidenceIterator?.file) continue;
       try {
         const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name });
+        const intervalId = setInterval(async () => {
+          try {
+            const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
+            if (response?.nextExpectedRanges[0]) this.getAndCalculateFilePercentage(response, evidenceIterator);
+          } catch (error) {
+            this.endLoadFile(intervalId, evidenceIterator);
+          }
+        }, 2000);
         const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidenceIterator.file, uploadUrl);
+        this.endLoadFile(intervalId, evidenceIterator);
         evidenceIterator.link = response?.webUrl;
         evidenceIterator.sp_document_id = response?.id;
         evidenceIterator.sp_file_name = response?.name;
