@@ -17,6 +17,14 @@
 
 
     <ng-template #upload_file>
+
+      <app-pr-radio-button [options]="this.isPubilcFileOptions" optionLabel="name" optionValue="id"
+        label="Is this a pubilc file?" [(ngModel)]="this.evidence.is_public_file">
+      </app-pr-radio-button>
+
+      <app-alert-status [description]="this.publicFileDesc">
+      </app-alert-status>
+
       <app-pr-field-header label="File to be uploaded on the repository"></app-pr-field-header>
       <app-alert-status
         description="This repository will be managed through SharePoint in the: “One CGIAR – PRMS Repository“. The documents within it will be view-only and can not be edited. Also the access will be limited to CGIAR accounts.">
@@ -24,17 +32,40 @@
 
 
       <div class="file-link-view" *ngIf="this.evidence?.sp_file_name;else uploadfilefield">
-        <i class="material-icons-round">
-          description
-        </i>
-        <a *ngIf="this.evidence.link else nolinktext" [href]="this.evidence.link" target="_blank"
-          rel="noopener noreferrer">{{this.evidence.link}}</a>
-        <ng-template #nolinktext>You are going to save the file:
-          <strong>{{this.evidence?.sp_file_name}}</strong></ng-template>
+        <div class="file-name">
+          <i class="material-icons-round">
+            description
+          </i>
+          <a *ngIf="this.evidence.link else nolinktext" [href]="this.evidence.link" target="_blank"
+            rel="noopener noreferrer">{{this.evidence?.sp_file_name}}</a>
+          <ng-template #nolinktext>You are going to save the file:
+            <strong>{{this.evidence?.sp_file_name}}</strong></ng-template>
+        </div>
+        <div class="file-actions">
 
-        <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()">
-          cancel
-        </i>
+          <div class="size" *ngIf="!this.evidence?.link">
+            {{(this.evidence?.file.size / 1048576) | number:'1.2-2' }} MB
+          </div>
+
+          <div class="line">
+
+          </div>
+
+          <div class="percentage" pTooltip="Uploading"
+            *ngIf="this.evidence?.percentage !== 100 && !this.evidence.link; else fileloaded">
+            {{this.evidence?.percentage}} <div *ngIf="this.evidence?.percentage">%</div>
+          </div>
+          <ng-template #fileloaded>
+            <i class="material-icons-round" pTooltip="Uploaded" style="margin-right: 5px;" (click)="onDeleteSPLink()">
+              check_circle
+            </i>
+          </ng-template>
+          <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()">
+            delete
+          </i>
+        </div>
+        <div class="floating-line-animated" [style.width.%]="this.evidence?.percentage"></div>
+
       </div>
 
 
@@ -53,16 +84,6 @@
         <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg,
           .png, .pdf, .doc, .pptx, .xlsx</div>
       </ng-template>
-
-
-
-
-
-      <div class="check-box-information">
-        <app-pr-checkbox label="This is a public file." [(ngModel)]="this.evidence.is_public_file">
-        </app-pr-checkbox>
-        <div class="information" [innerHTML]="this.publicFileDesc"></div>
-      </div>
 
     </ng-template>
 

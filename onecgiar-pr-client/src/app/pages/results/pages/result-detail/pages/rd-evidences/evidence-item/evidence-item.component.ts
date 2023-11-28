@@ -21,6 +21,11 @@ export class EvidenceItemComponent {
     { id: 1, name: 'Upload file' }
   ];
 
+  isPubilcFileOptions = [
+    { id: 0, name: 'No' },
+    { id: 1, name: 'Yes' }
+  ];
+
   publicFileDesc = `
   <li>You confirm that the SharePoint link is publicly accessible.</li>
   <li>You confirm that all intellectual property rights related to the document at the SharePoint link have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>

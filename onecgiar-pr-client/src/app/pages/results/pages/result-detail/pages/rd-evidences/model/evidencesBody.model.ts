@@ -25,4 +25,5 @@ export interface EvidencesCreateInterface {
   sp_evidence_id?: string;
   sp_file_name?: string;
   sp_folder_path?: string;
+  percentage?: string | number;
 }
