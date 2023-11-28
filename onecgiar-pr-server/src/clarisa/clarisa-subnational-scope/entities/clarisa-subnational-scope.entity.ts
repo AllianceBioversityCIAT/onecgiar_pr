@@ -8,7 +8,9 @@ export class ClarisaSubnationalScope {
   id: number;
 
   @Column({
-    type: 'text',
+    type: 'varchar',
+    length: '255',
+    unique: true,
   })
   code: string;
 

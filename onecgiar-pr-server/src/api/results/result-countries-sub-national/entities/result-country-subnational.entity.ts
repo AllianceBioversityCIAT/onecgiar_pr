@@ -20,8 +20,8 @@ export class ResultCountrySubnational extends BaseEntity {
   @Column({ nullable: false, type: 'bigint' })
   result_country_id: number;
 
-  @Column({ nullable: false, type: 'bigint' })
-  clarisa_subnational_scope_id: number;
+  @Column({ nullable: false, type: 'varchar', length: '255' })
+  clarisa_subnational_scope_code: string;
 
   //object relations
   @ManyToOne(() => ResultCountry, (rc) => rc.result_countries_subnational_array)
@@ -35,7 +35,8 @@ export class ResultCountrySubnational extends BaseEntity {
     (css) => css.result_countries_subnational_array,
   )
   @JoinColumn({
-    name: 'clarisa_subnational_scope_id',
+    name: 'clarisa_subnational_scope_code',
+    referencedColumnName: 'code',
   })
   clarisa_subnational_scope_object: ClarisaSubnationalScope;
 }
