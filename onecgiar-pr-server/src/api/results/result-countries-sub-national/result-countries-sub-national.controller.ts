@@ -1,9 +1,21 @@
-import { Controller } from '@nestjs/common';
-import { ResultCountriesSubNationalService } from './result-countries-sub-national.service';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { ResultCountrySubnationalService } from './result-countries-sub-national.service';
 
-@Controller('result-countries-sub-national')
-export class ResultCountriesSubNationalController {
+@Controller()
+@UseInterceptors(ResponseInterceptor)
+export class ResultCountrySubnationalController {
   constructor(
-    private readonly resultCountriesSubNationalService: ResultCountriesSubNationalService,
+    private readonly resultCountrySubnationalService: ResultCountrySubnationalService,
   ) {}
+
+  @Get('get/all')
+  async findAll() {
+    return await this.resultCountrySubnationalService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: number) {
+    return await this.resultCountrySubnationalService.findOne(id);
+  }
 }

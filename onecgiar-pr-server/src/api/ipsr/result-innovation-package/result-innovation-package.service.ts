@@ -34,7 +34,7 @@ import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/re
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { UnitTimeRepository } from './repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { Year } from '../../results/years/entities/year.entity';
 import { YearRepository } from '../../results/years/year.repository';
@@ -431,9 +431,8 @@ export class ResultInnovationPackageService {
           }
         }
       }
-      const newInnovationRegions = await this._resultRegionRepository.save(
-        resultRegions,
-      );
+      const newInnovationRegions =
+        await this._resultRegionRepository.save(resultRegions);
 
       const retriveAAOutcome = await this.retrievedAAOutcome(
         result.id,
@@ -492,24 +491,24 @@ export class ResultInnovationPackageService {
                 el.result_countries_sub_national_id,
             }
           : el?.sub_level_one_id && el?.sub_level_two_id
-          ? {
-              sub_level_one_id: el.sub_level_one_id,
-              sub_level_two_id: el.sub_level_two_id,
-              result_countries_id: reCoId,
-            }
-          : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
-          ? {
-              sub_level_one_id: el.sub_level_one_id,
-              sub_level_two_id: IsNull(),
-              result_countries_id: reCoId,
-            }
-          : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
-          ? {
-              sub_level_one_id: IsNull(),
-              sub_level_two_id: IsNull(),
-              result_countries_id: reCoId,
-            }
-          : null;
+            ? {
+                sub_level_one_id: el.sub_level_one_id,
+                sub_level_two_id: el.sub_level_two_id,
+                result_countries_id: reCoId,
+              }
+            : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
+              ? {
+                  sub_level_one_id: el.sub_level_one_id,
+                  sub_level_two_id: IsNull(),
+                  result_countries_id: reCoId,
+                }
+              : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
+                ? {
+                    sub_level_one_id: IsNull(),
+                    sub_level_two_id: IsNull(),
+                    result_countries_id: reCoId,
+                  }
+                : null;
 
         if (whereConditions) {
           reCoSub = await this._resultCountriesSubNationalRepository.findOne({
@@ -585,9 +584,8 @@ export class ResultInnovationPackageService {
         newAAOutcome.last_updated_by = user;
         newAAOutcome.created_date = new Date();
         newAAOutcome.last_updated_date = new Date();
-        saveAAOutcome = await this._resultIpAAOutcomeRepository.save(
-          newAAOutcome,
-        );
+        saveAAOutcome =
+          await this._resultIpAAOutcomeRepository.save(newAAOutcome);
       }
       return {
         response: {
@@ -623,9 +621,8 @@ export class ResultInnovationPackageService {
         newImpactArea.last_updated_by = user;
         newImpactArea.created_date = new Date();
         newImpactArea.last_updated_date = new Date();
-        saveImpactArea = await this._resultIpImpactAreaRespository.save(
-          newImpactArea,
-        );
+        saveImpactArea =
+          await this._resultIpImpactAreaRespository.save(newImpactArea);
       }
 
       return {

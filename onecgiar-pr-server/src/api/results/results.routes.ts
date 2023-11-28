@@ -32,6 +32,7 @@ import { ResultQuestionsModule } from './result-questions/result-questions.modul
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultStatusModule } from './result-status/result-status.module';
+import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -165,5 +166,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'results-investment-discontinued-options',
     module: ResultsInvestmentDiscontinuedOptionsModule,
+  },
+  {
+    path: 'subnational',
+    module: ResultCountriesSubNationalModule,
   },
 ];

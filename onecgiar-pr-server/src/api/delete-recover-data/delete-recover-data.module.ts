@@ -85,7 +85,7 @@ import { ApplicationModulesRepository } from '../versioning/repositories/applica
 import { PrmsTablesTypesModule } from './prms-tables-types/prms-tables-types.module';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
-import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 
 @Module({

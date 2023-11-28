@@ -72,7 +72,7 @@ import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
-import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
+import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 

@@ -1,18 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ReturnResponse } from '../../../shared/handlers/error.utils';
-import { ResultCountrySubnationalRepository } from './repositories/result-country-subnational.repository';
+import { ReturnResponse } from '../../shared/handlers/error.utils';
+import { ClarisaSubnationalScopeRepository } from './clarisa-subnational-scope.repository';
 import { env } from 'process';
 
 @Injectable()
-export class ResultCountrySubnationalService {
+export class ClarisaSubnationalScopeService {
   constructor(
     private readonly _returnResponse: ReturnResponse,
-    private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
+    private readonly _clarisaSubnationalScopeRepository: ClarisaSubnationalScopeRepository,
   ) {}
 
   async findAll() {
     try {
-      const response = await this._resultCountrySubnationalRepository.find();
+      const response = await this._clarisaSubnationalScopeRepository.find();
 
       return this._returnResponse.format({
         response: response,
@@ -26,8 +26,8 @@ export class ResultCountrySubnationalService {
 
   async findOne(id: number) {
     try {
-      const response = await this._resultCountrySubnationalRepository.findBy({
-        result_country_subnational_id: id,
+      const response = await this._clarisaSubnationalScopeRepository.findBy({
+        id,
       });
 
       return this._returnResponse.format({

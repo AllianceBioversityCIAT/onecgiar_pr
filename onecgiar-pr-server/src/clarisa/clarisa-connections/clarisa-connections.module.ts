@@ -29,6 +29,7 @@ import { ClarisaPolicyTypeRepository } from '../clarisa-policy-types/clarisa-pol
 import { ClarisaSdgsRepository } from '../clarisa-sdgs/clarisa-sdgs.repository';
 import { ClarisaSdgsTargetsRepository } from '../clarisa-sdgs-targets/clarisa-sdgs-targets.repository';
 import { ClarisaTocPhaseRepository } from '../clarisa-toc-phases/clarisa-toc-phases.repository';
+import { ClarisaSubnationalScopeRepository } from '../clarisa-subnational-scope/clarisa-subnational-scope.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
@@ -61,6 +62,7 @@ import { ClarisaTocPhaseRepository } from '../clarisa-toc-phases/clarisa-toc-pha
     ClarisaSdgsRepository,
     ClarisaSdgsTargetsRepository,
     ClarisaTocPhaseRepository,
+    ClarisaSubnationalScopeRepository,
   ],
   imports: [HttpModule],
 })
