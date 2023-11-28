@@ -1541,7 +1541,7 @@ export class resultValidationRepository
   async resultIsValid(resultId: number) {
     const queryData = `
 	SELECT
-		IFNULL(v.section_seven, 1) *
+		IF(r.result_type_id in (4,8,9),1, v.section_seven) *
   		v.general_information *
   		v.theory_of_change *
   		v.partners *
@@ -1549,6 +1549,8 @@ export class resultValidationRepository
   		v.links_to_results *
   		v.evidence as validation
   	from validation v 
+	  inner join \`result\` r on r.id = v.results_id 
+	  and r.is_active > 0
   		WHERE v.results_id = ?
 		  and v.is_active > 0;
     `;
