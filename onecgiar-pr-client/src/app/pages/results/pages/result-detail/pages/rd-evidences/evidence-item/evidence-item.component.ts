@@ -48,12 +48,9 @@ export class EvidenceItemComponent {
   }
 
   onFileSelected(event: any) {
-    console.log('onFileSelected');
     const selectedFile: File = event.target.files[0];
     if (selectedFile) {
       if (this.validateFileTypes(selectedFile)) {
-        // Realiza las operaciones que necesites con el archivo seleccionado
-        console.log(selectedFile);
         this.evidence.file = selectedFile;
         this.evidence.sp_file_name = selectedFile.name;
         this.incorrectFile = false;
