@@ -40,9 +40,8 @@ export class ResultByLevelRepository extends Repository<ResultByLevel> {
                                 and rt.is_active > 0;
     `;
     try {
-      const resultByLevel: getResultTypeLevelDto[] = await this.query(
-        queryData,
-      );
+      const resultByLevel: getResultTypeLevelDto[] =
+        await this.query(queryData);
       return resultByLevel;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

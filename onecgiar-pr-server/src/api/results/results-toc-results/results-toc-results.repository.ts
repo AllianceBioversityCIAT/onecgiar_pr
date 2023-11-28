@@ -335,8 +335,8 @@ export class ResultsTocResultRepository
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId ? initiativeId.toString() : null
-    })
+        initiativeId ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -422,8 +422,8 @@ export class ResultsTocResultRepository
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId.length ? initiativeId.toString() : null
-    })
+        initiativeId.length ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -1387,7 +1387,6 @@ export class ResultsTocResultRepository
               itemIndicator.is_calculable = false;
             }
           });
-
         }
       }
       return IndicatorTargetData;
@@ -2318,4 +2317,3 @@ select *
     }
   }
 }
-

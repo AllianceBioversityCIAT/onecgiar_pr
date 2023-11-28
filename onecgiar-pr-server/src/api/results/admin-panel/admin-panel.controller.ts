@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { AdminPanelService } from './admin-panel.service';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilterResultsDto } from './dto/filter-results.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';

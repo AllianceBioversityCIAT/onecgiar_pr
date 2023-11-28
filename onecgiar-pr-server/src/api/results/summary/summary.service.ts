@@ -182,9 +182,8 @@ export class SummaryService {
         capDevExists.capdev_term_id = capdev_term_id;
         capDevExists.is_attending_for_organization =
           is_attending_for_organization;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
-          capDevExists,
-        );
+        CapDevData =
+          await this._resultsCapacityDevelopmentsRepository.save(capDevExists);
       } else {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
@@ -200,9 +199,8 @@ export class SummaryService {
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
         newCapDev.is_attending_for_organization = is_attending_for_organization;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
-          newCapDev,
-        );
+        CapDevData =
+          await this._resultsCapacityDevelopmentsRepository.save(newCapDev);
       }
 
       if (institutions?.length) {
@@ -348,9 +346,8 @@ export class SummaryService {
         innDevExists.innovation_pdf = innovation_pdf;
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
-        InnDevRes = await this._resultsInnovationsDevRepository.save(
-          innDevExists,
-        );
+        InnDevRes =
+          await this._resultsInnovationsDevRepository.save(innDevExists);
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
@@ -627,9 +624,8 @@ export class SummaryService {
         resultsPolicyChanges.result_related_engagement =
           result_related_engagement;
         resultsPolicyChanges.status_amount = status_amount;
-        policyChangesData = await this._resultsPolicyChangesRepository.save(
-          resultsPolicyChanges,
-        );
+        policyChangesData =
+          await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
       } else {
         const newResultsPolicyChanges = new ResultsPolicyChanges();
         newResultsPolicyChanges.amount = amount || null;

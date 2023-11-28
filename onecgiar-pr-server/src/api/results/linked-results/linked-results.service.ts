@@ -160,13 +160,11 @@ export class LinkedResultsService {
 
   async findAllLinksByResult(resultId: number) {
     try {
-      const links = await this._linkedResultRepository.getLinkResultByIdResult(
-        resultId,
-      );
+      const links =
+        await this._linkedResultRepository.getLinkResultByIdResult(resultId);
 
-      const result: Result = await this._resultRepository.getResultById(
-        resultId,
-      );
+      const result: Result =
+        await this._resultRepository.getResultById(resultId);
 
       let linkedInnovation: any = null;
       if (result.result_type_id == 1) {

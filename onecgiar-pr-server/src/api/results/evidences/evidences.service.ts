@@ -182,9 +182,8 @@ export class EvidencesService {
 
   async findAll(resultId: number) {
     try {
-      const result: Result = await this._resultRepository.getResultById(
-        resultId,
-      );
+      const result: Result =
+        await this._resultRepository.getResultById(resultId);
       if (!result) {
         throw {
           response: {},

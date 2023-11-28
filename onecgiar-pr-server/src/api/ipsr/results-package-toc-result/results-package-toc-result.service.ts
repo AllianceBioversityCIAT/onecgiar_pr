@@ -8,7 +8,6 @@ import { VersionsService } from '../../results/versions/versions.service';
 import { ResultRepository } from '../../results/result.repository';
 import { Version } from '../../versioning/entities/version.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { Result } from '../../results/entities/result.entity';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
@@ -24,7 +23,6 @@ import { NonPooledProject } from '../../results/non-pooled-projects/entities/non
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
-import { ResultsTocResult } from '../../results/results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 
 @Injectable()
@@ -446,10 +444,9 @@ export class ResultsPackageTocResultService {
           .map((del) => del.partner_delivery_type_id);
       });
       let resTocRes: any[] = [];
-      let conResTocRes: any[] = [];
       let result_toc_results: any[] = [];
       let resTocResConResponse: any[] = [];
-      let individualResponses = [];
+      const individualResponses = [];
       resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
         resultId,
         [resultInit.id],
@@ -481,7 +478,7 @@ export class ResultsPackageTocResultService {
             false,
             [init.id],
           );
-        result_toc_results.forEach(el => {
+        result_toc_results.forEach((el) => {
           if (el['planned_result'] === false) {
             el['toc_level_id'] = 3;
           }
