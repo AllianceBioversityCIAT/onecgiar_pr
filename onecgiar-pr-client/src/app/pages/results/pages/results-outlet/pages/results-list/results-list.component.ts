@@ -9,7 +9,6 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
-import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-results-list',
@@ -19,20 +18,17 @@ import { TooltipModule } from 'primeng/tooltip';
 export class ResultsListComponent implements OnInit, OnDestroy {
   gettingReport = false;
   combine = true;
+  currentPhase;
+
   columnOrder = [
-    // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Phase', attr: 'phase_name' },
-    // { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter', center: true },
     { title: 'Status', attr: 'full_status_name_html', center: true },
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];
-
-  currentPhase;
-
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -42,7 +38,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       }
     }
   ];
-
   itemsWithDelete: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -66,7 +61,9 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       }
     }
   ];
+
   @ViewChild('table') table: Table;
+
   constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
   validateOrder(columnAttr) {
@@ -77,15 +74,9 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       return null;
     }, 100);
   }
-  resetSort() {
-    this.table.sortOrder = 0;
-    this.table.sortField = '';
-    this.table.reset();
-  }
 
   ngOnInit(): void {
     this.api.updateResultsList();
-    this.items;
     this.shareRequestModalSE.inNotifications = false;
     this.getAllPhases();
   }
@@ -99,16 +90,16 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   onDownLoadTableAsExcel() {
     this.gettingReport = true;
-    this.api.resultsSE.GET_reportingList().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_reportingList().subscribe({
+      next: ({ response }) => {
         this.exportTablesSE.exportExcel(response, 'results_list');
         this.gettingReport = false;
       },
-      err => {
+      error: err => {
         console.error(err);
         this.gettingReport = false;
       }
-    );
+    });
   }
 
   onDeleteREsult() {
@@ -117,18 +108,18 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         document.getElementById('custom-spinner').scrollIntoView({ behavior: 'smooth' });
       }, 100);
-      this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe(
-        resp => {
+      this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe({
+        next: resp => {
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
           this.api.updateResultsList();
           this.resultsListService.showDeletingResultSpinner = false;
         },
-        err => {
+        error: err => {
           console.error(err);
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
           this.resultsListService.showDeletingResultSpinner = false;
         }
-      );
+      });
     });
   }
 

@@ -1295,7 +1295,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			WHEN (
 				rid.innovation_pdf = 1
@@ -1308,7 +1312,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
@@ -1382,18 +1390,10 @@ export class resultValidationRepository
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.unkown_using = 0
-				AND (
-					rcd.female_using IS NULL
-					OR rcd.male_using IS NULL
-					OR non_binary_using IS NULL
-				)
-			) THEN FALSE
-			WHEN (
-				rcd.unkown_using = 1
-				AND (
-					rcd.has_unkown_using IS NULL
-				)
+				rcd.female_using IS NULL
+				OR rcd.male_using IS NULL
+				OR non_binary_using IS NULL
+				OR rcd.has_unkown_using IS NULL
 			) THEN FALSE
 			WHEN (
 				rcd.capdev_term_id IS NULL
