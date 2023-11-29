@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -1387,7 +1387,6 @@ export class ResultsTocResultRepository
               itemIndicator.is_calculable = false;
             }
           });
-
         }
       }
       return IndicatorTargetData;
@@ -1734,6 +1733,13 @@ export class ResultsTocResultRepository
 
   async saveImpact(id_result_toc_result, impactAreaTargets, result_id, init) {
     try {
+      if (!impactAreaTargets) {
+        return {
+          response: {},
+          message: 'No SDG Targets provided',
+          status: HttpStatus.ACCEPTED,
+        };
+      }
       await this._resultsTocImpactAreaTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
@@ -1828,6 +1834,13 @@ export class ResultsTocResultRepository
 
   async saveSdg(id_result_toc_result, sdgTargets, result_id) {
     try {
+      if (!sdgTargets) {
+        return {
+          response: {},
+          message: 'No SDG Targets provided',
+          status: HttpStatus.ACCEPTED,
+        };
+      }
       await this._resultsTocSdgTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
@@ -1924,6 +1937,13 @@ select *
 
   async saveActionAreaToc(id_result_toc_result, actionarea, result_id) {
     try {
+      if (!actionarea) {
+        return {
+          response: {},
+          message: 'No SDG Targets provided',
+          status: HttpStatus.ACCEPTED,
+        };
+      }
       await this._resultActionAreaRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
