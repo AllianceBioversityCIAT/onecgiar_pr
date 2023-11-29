@@ -24,55 +24,6 @@ export class SharePointService {
     );
   }
 
-  async saveFile(file: Express.Multer.File, path: string, metadata) {
-    const fileSizeInMB = file.size / (1024 * 1024); // Convert bytes to MB
-    const fileSizeInGB = fileSizeInMB / 1024; // Convert MB to GB
-
-    if (fileSizeInGB > 1) {
-      throw new Error('File size exceeds 1GB');
-    }
-    return this.saveLargeFile(file, path, metadata);
-  }
-
-  async saveLargeFile(file: Express.Multer.File, path: string, metadata) {}
-
-  async uploadLargeFileInUploadUrl(uploadUrl, file: Express.Multer.File) {
-    const token = await this.getToken();
-    const { buffer } = file;
-    const chunkSize = 320 * 1024 * 31; // Approximately 10MB, but a multiple of 320 KiB
-    let start = 0;
-    let response;
-
-    console.log('Saving files');
-    while (start < buffer.length) {
-      const end = Math.min(start + chunkSize, buffer.length);
-      const chunk = buffer.slice(start, end);
-
-      try {
-        response = await this.httpService
-          .put(uploadUrl, chunk, {
-            maxBodyLength: Infinity,
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/octet-stream',
-              'Content-Length': chunk.length,
-              'Content-Range': `bytes ${start}-${end - 1}/${buffer.length}`,
-            },
-          })
-          .toPromise();
-      } catch (error) {
-        console.log(error);
-        return error;
-      }
-      console.log('start: ' + start);
-
-      start += chunkSize;
-    }
-    console.log('--------- end ---------');
-
-    return response?.data;
-  }
-
   async createUploadSession(createUploadSessionDto: CreateUploadSessionDto) {
     const { fileName, resultId } = createUploadSessionDto || {};
 
