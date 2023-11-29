@@ -18,6 +18,8 @@ import { PrTextareaComponent } from './../../../../../../custom-fields/pr-textar
 import { PrFieldValidationsComponent } from './../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from './../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe'
+import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
+import { DialogModule } from 'primeng/dialog';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -128,7 +130,8 @@ describe('RdGeneralInformationComponent', () => {
         PrTextareaComponent,
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
-        YesOrNotByBooleanPipe
+        YesOrNotByBooleanPipe,
+        ChangeResultTypeModalComponent
       ],
       providers: [
         {
@@ -149,13 +152,13 @@ describe('RdGeneralInformationComponent', () => {
       ],
       imports: [
         HttpClientModule,
-        FormsModule
+        FormsModule,
+        DialogModule
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   describe('ngOnInit', () => {
@@ -247,7 +250,7 @@ describe('RdGeneralInformationComponent', () => {
 
       expect(spyOnSaveSection).toHaveBeenCalled();
       expect(spyDiscontinuedOptionsToIds).toHaveBeenCalled();
-      expect(component.generalInfoBody.institutions_type).toEqual([mockInstitutions_typeNoId]);
+      expect(component.generalInfoBody.institutions_type).toEqual(mockGET_generalInformationByResultIdResponse.institutions_type);
       expect(spyPATCH_generalInformation).toHaveBeenCalled();
       expect(spyGET_investmentDiscontinuedOptions).toHaveBeenCalled();
     });
@@ -265,6 +268,103 @@ describe('RdGeneralInformationComponent', () => {
       expect(spyGetSectionInformation).toHaveBeenCalled();
     });
   });
+
+  describe('titleTextInfo', () => {
+    it('should return a string containing the specified list items', () => {
+      const result = component.titleTextInfo();
+ 
+      expect(result).toContain('<ul>');
+      expect(result).toContain('<li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>');
+      expect(result).toContain('<li>Avoid abbreviations or (technical) jargon.</li>');
+      expect(result).toContain('</ul>');
+    });
+  });
+
+  describe('descriptionTextInfo', () => {
+    it('should return a string containing the specified list items', () => {
+      const result = component.descriptionTextInfo();
+
+      expect(result).toContain('<ul>');
+      expect(result).toContain('<li>Ensure the description is understandable for a non-specialist reader.</li>');
+      expect(result).toContain('<li>Avoid acronyms and technical jargon.</li>');
+      expect(result).toContain('<li>Avoid repetition of the title.</li>');
+      expect(result).toContain('</ul>');
+    });
+  });
+
+  describe('genderInformation', () => {
+    it('should return a string containing gender-related information', () => {
+      const result = component.genderInformation();
+  
+      expect(result).toContain('<strong>Gender tag guidance</strong>');
+      expect(result).toContain('There are two gender-related targets at systems level.');
+      expect(result).toContain('To close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems.');
+      expect(result).toContain('To offer rewardable opportunities to 267 million young people who are not in employment, education or training.');
+      expect(result).toContain('<li><strong>0 = Not targeted:</strong>  The output/outcome/activity has been screened against the marker but has not been found to target gender equality.</li>');
+      expect(result).toContain('<li><strong>1 = Significant:</strong> Gender equality is an important and deliberate objective, but not the principal reason for undertaking the output/outcome/activity.</li>');
+      expect(result).toContain('<li><strong>2 = Principal:</strong> Gender equality is the main objective of the output/outcome/activity and is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this gender equality objective.</li>');
+    });
+  });
+
+  describe('nutritionInformation', () => {
+    it('should return a string containing nutrition-related information', () => {
+      const result = component.nutritionInformation();
+
+      expect(result).toContain('<strong>Nutrition tag guidance</strong>');
+      expect(result).toContain('There are two food security and nutrition targets for at systems level:');
+      expect(result).toContain('<li>To end hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food. </li>');
+      expect(result).toContain('<li>To reduce cases of foodborne illness (600 million annually) and zoonotic disease (1 billion annually) by one third.</li>');
+      expect(result).toContain('<li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>');
+      expect(result).toContain('<li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the above-described aspects of nutrition, health and food security, but nutrition, health and food security is not the principal reason for undertaking the output/outcome/activity.</li>');
+      expect(result).toContain('<li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of nutrition, health and food security, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>');
+    });
+  });
+
+  describe('environmentInformation', () => {
+    it('should return a string containing environmental-related information', () => {
+      const result = component.environmentInformation();
+
+      expect(result).toContain('<strong>Environment tag guidance</strong>');
+      expect(result).toContain('There are three environmental targets and one biodiversity target at systems level:');
+      expect(result).toContain('<li>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km³ per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.</li>');
+      expect(result).toContain('<li>Maintain the genetic diversity of seed varieties, cultivated plants and farmed and domesticated animals and their related wild species, including through soundly managed genebanks at the national, regional, and international levels.</li>');
+      expect(result).toContain('<li>In addition, water conservation and management, restoration of degraded lands/soils, restoration of biodiversity in situ, and management of pollution related to food systems are key areas of environmental impacts to which the CGIAR should contribute. </li>');
+      expect(result).toContain('<li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker (see reference list above), but it has not been found to target any aspect of environmental health and biodiversity.</li>');
+      expect(result).toContain('<li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the above-described aspects of environmental health and biodiversity, but environmental health and biodiversity is not the principal reason for undertaking the output/outcome/activity.</li>');
+      expect(result).toContain('<li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of environmental health and biodiversity, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>');
+    });
+  });
+
+  describe('povertyInformation', () => {
+    it('should return a string containing poverty-related information', () => {
+      const result = component.povertyInformation();
+  
+      expect(result).toContain('<strong> Poverty tag guidance</strong>');
+      expect(result).toContain('There are two poverty reduction, livelihoods and jobs targets at systems level:');
+      expect(result).toContain('<li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>');
+      expect(result).toContain('<li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>');
+      expect(result).toContain('<li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target any aspects of poverty reduction, livelihoods and jobs.</li>');
+      expect(result).toContain('<li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any aspect of poverty reduction, livelihoods and jobs, but poverty reduction, livelihoods and jobs is not the principal reason for undertaking the output/outcome/activity.</li>');
+      expect(result).toContain('<li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of poverty reduction, livelihoods and jobs, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>');
+    });
+  });
+  
+  describe('climateInformation', () => {
+    it('should return a string containing climate-related information', () => {
+      const result = component.climateInformation();
+  
+      expect(result).toContain('<strong>Climate change tag guidance</strong>');
+      expect(result).toContain('There are three climate targets at systems level:');
+      expect(result).toContain('<li>Turn agriculture and forest systems into a net sink for carbon by 2050 (climate mitigation target).</li>');
+      expect(result).toContain('<li>Equip 500 million small-scale producers to be more resilient by 2030 (climate adaptation target).</li>');
+      expect(result).toContain('<li>Support countries in implementing NAPs and NDCs, and increased ambition in climate actions by 2030 (climate policy target).</li>');
+      expect(result).toContain('<ul>');
+      expect(result).toContain('<li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target the climate mitigation, adaptation and climate policy objectives of CGIAR as put forward in its strategy.</li>');
+      expect(result).toContain('<li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, even though it is not the principal focus of output/outcome/activity.</li>');
+      expect(result).toContain('<li><strong>2 = Principal:</strong> The output/outcome/activity is principally about meeting any of the three CGIAR climate-related strategy objectives – namely, climate mitigation, climate adaptation and climate policy, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>');
+    });
+  });
+  
   describe('sendIntitutionsTypes', () => {
     it('should call sendIntitutionsTypes function and update generalInfoBody.institutions_type', () => {
       const spySendIntitutionsTypes = jest.spyOn(component, 'sendIntitutionsTypes');
@@ -278,6 +378,7 @@ describe('RdGeneralInformationComponent', () => {
 
   describe('onChangeKrs', () => {
     it('should call sendIntitutionsTypes function and update generalInfoBody.institutions_type', () => {
+      component.generalInfoBody.is_krs = false;
       const spyOnChangeKrs = jest.spyOn(component, 'onChangeKrs');
 
       component.onChangeKrs();
