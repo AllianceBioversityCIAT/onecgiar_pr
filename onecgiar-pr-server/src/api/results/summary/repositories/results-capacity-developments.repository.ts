@@ -163,7 +163,6 @@ export class ResultsCapacityDevelopmentsRepository
     	rcd.female_using,
     	rcd.non_binary_using,
       rcd.has_unkown_using,
-      rcd.unkown_using,
     	rcd.capdev_delivery_method_id,
     	rcd.capdev_term_id,
       rcd.is_attending_for_organization,
