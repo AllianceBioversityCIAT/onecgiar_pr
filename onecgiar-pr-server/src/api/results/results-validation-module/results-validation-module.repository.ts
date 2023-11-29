@@ -1295,7 +1295,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			WHEN (
 				rid.innovation_pdf = 1
@@ -1308,7 +1312,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
