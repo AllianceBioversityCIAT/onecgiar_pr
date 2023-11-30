@@ -149,6 +149,17 @@ export class EvidenceSharepointRepository
       );
   }
   async fisicalDelete(resultId: number): Promise<any> {
-    // Implement your deletion logic here
+    const dataQuery = `delete es from evidence_sharepoint es 
+    inner join evidence e on e.id = es.evidence_id
+  where e.result_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: EvidenceSharepointRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 }
