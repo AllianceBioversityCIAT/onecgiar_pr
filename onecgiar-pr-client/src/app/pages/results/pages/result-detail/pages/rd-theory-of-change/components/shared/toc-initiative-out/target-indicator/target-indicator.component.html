@@ -110,7 +110,8 @@
                             </app-pr-yes-or-not>
 
                             <app-pr-button icon="featured_play_list" [verticalMargin]="20"
-                                text="See all results contributing to this target"></app-pr-button>
+                                text="See all results contributing to this target"
+                                (clickEvent)="mappedResultsModal(initiative?.statement,initiative?.unit_messurament, item?.target_value, item?.target_date ,item?.results_contributing)"></app-pr-button>
                         </div>
 
                         <div style=" display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;"

@@ -1,0 +1,71 @@
+<p-dialog class="support_information" header="Title" [(visible)]="this.mappedResultService.mappedResultsModal"
+  [draggable]="false" [modal]="true" [showHeader]="false" [dismissableMask]="true" [closeOnEscape]="true"
+  [style]="{padding: '0px'}" (onHide)="onCloseModal()">
+
+  <div class="modal_header">
+    <h1 class="modal_title">{{dynamicModalTitle()}}</h1>
+    <i class="material-icons-round modal_close_icon" (click)="onCloseModal()">close</i>
+  </div>
+
+  <div class="modal_container">
+
+    <div>
+      <div *ngIf="!this.mappedResultService.isTarget" style="margin-bottom: 25px;">
+        <app-pr-select [options]="outputList" label="Output" optionLabel="extraInformation" optionValue="toc_result_id"
+          [readOnly]="true" placeholder="Select output" [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true">
+        </app-pr-select>
+      </div>
+
+      <div class="target_info" *ngIf="this.mappedResultService.isTarget">
+        <h4 class="target_info_item"><strong>Indicator statement:</strong>
+          {{this.mappedResultService.targetData.statement}}</h4>
+        <div class="target_info_content">
+          <h4 class="target_info_item"><strong>Unit of measure:</strong> {{this.mappedResultService.targetData.measure}}
+          </h4>
+          <h4 class="target_info_item"><strong>Overall target:</strong> {{this.mappedResultService.targetData.overall}}
+          </h4>
+          <h4 class="target_info_item"><strong>Target date:</strong> {{this.mappedResultService.targetData.date | date:
+            'dd-MM-yyyy'}} </h4>
+        </div>
+
+        <div class="line"></div>
+
+        <h1 class="target_info_content_title">Results contributing to the target:</h1>
+      </div>
+
+      <p-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" responsiveLayout="scroll" [rows]="5"
+        styleClass="p-datatable-gridlines" selectionMode="single" [rowsPerPageOptions]="[5,10,15]"
+        [value]="this.mappedResultService.targetData.contributors"
+        [paginator]="this.mappedResultService.targetData.contributors.length > 5">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
+              *ngFor="let column of selectColumnOrder()" id="{{column.attr}}">
+              <p style="margin: 0;">
+                <p-sortIcon field="{{column.attr}}"></p-sortIcon>
+                {{column.title}}
+              </p>
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-target>
+          <tr>
+            <td *ngFor="let column of selectColumnOrder()" class="{{column.attr}}">
+              <p [ngClass]="{'open_route': column.link}" (click)="openInNewPage(target.result_code, '18', column.link)"
+                style="margin: 0;">
+                {{ target[column.attr]}}
+              </p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <div *ngIf="this.mappedResultService.isTarget" class="overall_progress_container">
+        <h1 class="target_info_content_title">Overall progress against planned target:</h1>
+        <p class="overall_progress_result">{{calcOverallProgress()}}</p>
+      </div>
+    </div>
+  </div>
+</p-dialog>

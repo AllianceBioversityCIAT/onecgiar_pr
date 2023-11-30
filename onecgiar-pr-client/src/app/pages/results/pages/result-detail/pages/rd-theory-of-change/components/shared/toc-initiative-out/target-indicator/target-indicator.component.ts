@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { environment } from '../../../../../../../../../../../environments/environment';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
+import { MappedResultsModalServiceService } from '../multiple-wps/components/mapped-results-modal/mapped-results-modal-service.service';
 @Component({
   selector: 'app-target-indicator',
   templateUrl: './target-indicator.component.html',
@@ -11,9 +12,20 @@ export class TargetIndicatorComponent {
   @Input() initiative: any;
   @Input() resultLevelId: any;
 
-  text = `<span style="color: #6777D8; font-weight: bold;">4. Geographic location</span>`;
+  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
 
-  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  mappedResultsModal(statement, measure, overall, date, contributors: any) {
+    this.mappedResultService.mappedResultsModal = true;
+    this.mappedResultService.isTarget = true;
+
+    this.mappedResultService.targetData = {
+      statement: statement,
+      measure: measure,
+      overall: overall,
+      date: date,
+      contributors: contributors
+    };
+  }
 
   descriptionAlert() {
     return `Please ensure the planned location is reflected in section <a class='open_route alert-event' href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location?phase=${this.api.resultsSE.currentResultPhase}" target='_blank'>4. Geographic location</a>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`;

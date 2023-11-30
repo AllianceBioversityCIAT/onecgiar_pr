@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
+import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 
 @Component({
   selector: 'app-multiple-wps-content',
@@ -27,7 +28,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   showOutcomeLevel = true;
   indicatorView = false;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
 
   ngOnInit() {
     this.validateEOI();
@@ -52,22 +53,21 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
   getIndicator() {
     if (this.resultLevelId === 1) {
-      console.log('epa');
       this.indicatorView = false;
 
       this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
         next: ({ response }) => {
           this.activeTab.indicators = response?.informationIndicator;
-          this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-          this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-          this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+          this.activeTab.impactAreasTargets = response?.impactAreas.map((item) => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+          this.activeTab.sdgTargest = response?.sdgTargets.map((item) => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+          this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map((item) => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
           this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
 
           setTimeout(() => {
             this.indicatorView = true;
           }, 100);
         },
-        error: err => {
+        error: (err) => {
           console.error(err);
         }
       });
@@ -111,7 +111,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       }
     }
 
-    this.allTabsCreated.forEach(tab => {
+    this.allTabsCreated.forEach((tab) => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
       }
@@ -125,51 +125,51 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   validateSelectedOptionOutPut(tab?: any) {
-    const selectedOption = tab ? this.outputList.find(item => item.toc_result_id === tab.toc_result_id) : this.outputList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab ? this.outputList.find((item) => item.toc_result_id === tab.toc_result_id) : this.outputList.find((item) => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
     selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
 
-    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsOutput = this.selectedOptionsOutput.filter((item) => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutput.push(selectedOption);
 
-    this.outputList = this.outputList.map(item => {
-      const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
+    this.outputList = this.outputList.map((item) => {
+      const finded = this.selectedOptionsOutput.find((option) => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;
     });
   }
 
   validateSelectedOptionOutCome(tab?: any) {
-    const selectedOption = tab ? this.outcomeList.find(item => item.toc_result_id === tab.toc_result_id) : this.outcomeList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab ? this.outcomeList.find((item) => item.toc_result_id === tab.toc_result_id) : this.outcomeList.find((item) => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
     selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
 
-    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter((item) => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutcome.push(selectedOption);
 
-    this.outcomeList = this.outcomeList.map(item => {
-      const finded = this.selectedOptionsOutcome.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
+    this.outcomeList = this.outcomeList.map((item) => {
+      const finded = this.selectedOptionsOutcome.find((option) => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
       item.disabledd = !!finded;
       return item;
     });
   }
 
   validateSelectedOptionEOI(tab?: any) {
-    const selectedOption = tab ? this.eoiList.find(item => item.toc_result_id === tab.toc_result_id) : this.eoiList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab ? this.eoiList.find((item) => item.toc_result_id === tab.toc_result_id) : this.eoiList.find((item) => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
     selectedOption.tabId = tab?.uniqueId ?? this.activeTab?.uniqueId;
 
-    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.tabId !== selectedOption.tabId);
+    this.selectedOptionsEOI = this.selectedOptionsEOI.filter((item) => item.tabId !== selectedOption.tabId);
     this.selectedOptionsEOI.push(selectedOption);
 
-    this.eoiList = this.eoiList.map(item => {
-      const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
+    this.eoiList = this.eoiList.map((item) => {
+      const finded = this.selectedOptionsEOI.find((option) => option.toc_result_id === item.toc_result_id);
       item.disabledd = !!finded;
       return item;
     });

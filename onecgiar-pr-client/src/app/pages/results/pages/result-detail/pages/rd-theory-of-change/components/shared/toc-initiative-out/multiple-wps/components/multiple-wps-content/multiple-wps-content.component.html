@@ -66,7 +66,9 @@
     <app-pr-textarea [label]="dynamicProgressLabel()" [required]="false" placeholder="Enter text" [rows]="3">
     </app-pr-textarea>
 
-    <app-pr-button icon="featured_play_list" text="See all results contirbuting to this TOC Output"></app-pr-button>
-
+    <app-pr-button icon="featured_play_list" text="See all results contirbuting to this TOC Output"
+      (clickEvent)="this.mappedResultService.mappedResultsModal = true"></app-pr-button>
   </div>
 </div>
+
+<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList"></app-mapped-results-modal>
