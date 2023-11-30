@@ -105,10 +105,7 @@ export class SharePointService {
         })
         .toPromise();
       return response?.data?.value
-        ?.filter(
-          (p) =>
-            p?.link?.scope == 'organization' || p?.link?.scope == 'anonymous',
-        )
+        ?.filter((p) => p?.link?.hasOwnProperty('webUrl'))
         ?.map((p) => p.id);
     } catch (error) {
       console.log(error);
