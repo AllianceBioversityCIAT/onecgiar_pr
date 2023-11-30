@@ -33,15 +33,17 @@
   <hr class="divider-20">
 
   <div *ngIf="indicatorView && showMultipleWPsContent && activeTab?.toc_result_id">
-    <app-alert-status description="The selected ToC element does not have any indicators associated with it."
-      *ngIf="activeTab?.indicators?.length === 0"></app-alert-status>
+    <ng-container *ngIf="activeTab?.planned_result && resultLevelId === 1">
+      <app-alert-status description="The selected ToC element does not have any indicators associated with it."
+        *ngIf="activeTab?.indicators?.length === 0"></app-alert-status>
 
-    <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="activeTab?.indicators?.length > 0">
-    </app-pr-field-header>
+      <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="activeTab?.indicators?.length > 0">
+      </app-pr-field-header>
 
-    <app-target-indicator [initiative]="indicator" *ngFor="let indicator of activeTab?.indicators"
-      [resultLevelId]="resultLevelId">
-    </app-target-indicator>
+      <app-target-indicator [initiative]="indicator" *ngFor="let indicator of activeTab?.indicators"
+        [resultLevelId]="resultLevelId">
+      </app-target-indicator>
+    </ng-container>
 
     <!-- <div *ngIf="!isIpsr">
       <app-pr-yes-or-not
@@ -60,5 +62,11 @@
         </app-sdg-targets>
       </div>
     </div> -->
+
+    <app-pr-textarea [label]="dynamicProgressLabel()" [required]="false" placeholder="Enter text" [rows]="3">
+    </app-pr-textarea>
+
+    <app-pr-button icon="featured_play_list" text="See all results contirbuting to this TOC Output"></app-pr-button>
+
   </div>
 </div>

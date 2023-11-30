@@ -51,42 +51,43 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   getIndicator() {
-    this.indicatorView = false;
+    if (this.resultLevelId === 1) {
+      console.log('epa');
+      this.indicatorView = false;
 
-    this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
-      next: ({ response }) => {
-        this.activeTab.indicators = response?.informationIndicator;
-        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
-        this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
+      this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
+        next: ({ response }) => {
+          this.activeTab.indicators = response?.informationIndicator;
+          this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+          this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+          this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+          this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
 
-        setTimeout(() => {
-          this.indicatorView = true;
-        }, 100);
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
+          setTimeout(() => {
+            this.indicatorView = true;
+          }, 100);
+        },
+        error: err => {
+          console.error(err);
+        }
+      });
+    } else {
+      this.indicatorView = true;
+    }
   }
 
   narrativeTypeResult() {
-    let narrative = '';
-    if (this.resultLevelId === 1) {
-      narrative = 'output';
-    }
-    if (this.showOutcomeLevel && (this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true)) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id != 3) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id === 3) {
-      narrative = 'outcome';
+    if (this.activeTab?.planned_result && this.resultLevelId === 1) {
+      return 'Indicator(s) of the output selected';
     }
 
-    return `Indicator(s) of the ${narrative} selected`;
+    return `Indicator(s) of the outcome selected`;
+  }
+
+  dynamicProgressLabel() {
+    if (this.activeTab?.planned_result && this.resultLevelId === 1) return `Progress narrative of the Output`;
+
+    return `Progress narrative of the Outcome`;
   }
 
   ngOnChanges() {

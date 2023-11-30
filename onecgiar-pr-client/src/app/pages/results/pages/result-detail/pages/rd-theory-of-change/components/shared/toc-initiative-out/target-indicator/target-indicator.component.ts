@@ -16,7 +16,7 @@ export class TargetIndicatorComponent {
   constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
   descriptionAlert() {
-    return `Please ensure the planned location is reflected in section <a class='open_route alert-event' href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location" target='_blank'>4. Geographic location</a>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`;
+    return `Please ensure the planned location is reflected in section <a class='open_route alert-event' href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/geographic-location?phase=${this.api.resultsSE.currentResultPhase}" target='_blank'>4. Geographic location</a>. If you decide to change remember to update your TOC result framework. DD is working to automate the geolocation and in the near future you will not need to fill section 4 again.`;
   }
 
   getOverallProgress(overallContributing, contributing) {
@@ -30,7 +30,7 @@ export class TargetIndicatorComponent {
   descriptionWarningYear(dateFormat: string, year: number) {
     const dateFormatYear = new Date(dateFormat).getFullYear();
     const isAlert = dateFormatYear === year;
-    const description = isAlert ? 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.' : '';
+    const description = !isAlert ? 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.' : '';
 
     return { is_alert: isAlert, description: description };
   }

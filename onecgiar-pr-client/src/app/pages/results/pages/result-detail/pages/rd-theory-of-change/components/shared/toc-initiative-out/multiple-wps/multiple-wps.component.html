@@ -17,7 +17,7 @@
       </div>
     </div>
     <div class="tab-add-button" (click)="onAddTab()"
-      *ngIf="initiative?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId)">
+      *ngIf="initiative?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId) && editable">
       <i class=" material-icons-round close_icon tab-add-button-item"
         style="font-size: 16px; color: var(--pr-color-primary);" pTooltip="Add other TOC result">
         add
