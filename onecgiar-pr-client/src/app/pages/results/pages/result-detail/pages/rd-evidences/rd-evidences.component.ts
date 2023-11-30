@@ -41,7 +41,7 @@ export class RdEvidencesComponent implements OnInit {
 
   async getAndCalculateFilePercentage(response, evidenceIterator) {
     let nextRange = response?.nextExpectedRanges[0];
-    let [startByte, totalBytes] = nextRange?.split('-')?.map(Number);
+    let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
     if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
     let progressPercentage = (startByte / totalBytes) * 100;
     evidenceIterator.percentage = progressPercentage.toFixed(0);
