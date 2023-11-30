@@ -54,13 +54,6 @@ export class ResultsCapacityDevelopments {
   })
   has_unkown_using!: number;
 
-  @Column({
-    name: 'unkown_using',
-    type: 'boolean',
-    nullable: true,
-  })
-  unkown_using!: boolean;
-
   @ManyToOne(
     () => CapdevsDeliveryMethod,
     (cdm) => cdm.capdev_delivery_method_id,

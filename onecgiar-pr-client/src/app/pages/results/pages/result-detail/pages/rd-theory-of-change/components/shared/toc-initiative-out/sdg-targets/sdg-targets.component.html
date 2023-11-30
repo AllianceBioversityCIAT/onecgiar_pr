@@ -1,7 +1,8 @@
-<app-pr-field-header
-    label="Mapping to SDG targets" [required]="sdgRequid"></app-pr-field-header>
+<app-pr-field-header label="Mapping to SDG targets" [required]="sdgRequid">
+</app-pr-field-header>
 
-    <div>Select an SDG to filter SDG Targets:</div>
+<div>Select an SDG to filter SDG Targets:</div>
+
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
         <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""
@@ -12,8 +13,8 @@
 <div class="sdg_targets_dropdowns">
     <div class="dropdown-100p" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="full_name" optionValue="id"
-            *ngIf="this.currentsdgID ==item?.sdgId" selectedOptionLabel="indicator_statement"
-            [placeholder]="'Select ' +item?.short_name+ ' target(s)'" [(ngModel)]="this.body">
+            *ngIf="this.currentsdgID === item?.sdgId" selectedOptionLabel="indicator_statement"
+            [placeholder]="dropDownPlaceHolder(item?.short_name)" [(ngModel)]="this.body">
         </app-pr-multi-select>
     </div>
 </div>
@@ -22,11 +23,14 @@
     <br>
     <app-pr-field-header [description]="'All SDG target(s) selected('+this.body?.length+'):'">
     </app-pr-field-header>
+
     <div class="chips_container">
         <div class="pr_chip_selected" *ngFor="let option of this.body; let i=index"
             [ngClass]="{'is_active_false': false}">
-            <div class="name" [innerHtml]="option?.full_name"></div><i *ngIf="!this.api.rolesSE.readOnly"
-                class="material-icons-round" (click)="removeOption(option)">remove_circle
+            <div class="name" [innerHtml]="option?.full_name"></div>
+
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="removeOption(option)">
+                remove_circle
             </i>
         </div>
     </div>

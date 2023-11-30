@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -12,15 +11,6 @@ export class ResultsListFilterService {
         attr: 'submitter',
         options: []
       },
-      /*{
-        filter_title: 'Reporting year',
-        attr: 'reported_year',
-        options: [
-          { attr: '2022', selected: true, name: '2022' },
-          { attr: '2023', name: '2023' },
-          { attr: '2024', name: '2024' }
-        ]
-      },*/
       {
         filter_title: 'Phases',
         attr: 'phase_name',
@@ -30,18 +20,16 @@ export class ResultsListFilterService {
     resultLevel: []
   };
 
-  constructor() {}
   filtersPipeList = [];
   filterJoin: number = 0;
 
   updateMyInitiatives(initiatives) {
-    initiatives?.map(init => {
+    initiatives?.forEach(init => {
       init.selected = true;
       init.attr = init.name;
       init.id = init.initiative_id;
     });
     this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives, { attr: 'is_legacy', name: 'Pre-2022 results' }];
-    // , { attr: '', name: 'Other submitters' }
   }
 
   onSelectChip(option: any) {
@@ -52,13 +40,13 @@ export class ResultsListFilterService {
   cleanAllFilters(option) {
     if (!option.selected) return;
     if (option?.cleanAll !== true) return;
-    this.filters.general.map(filter => {
-      filter.options.map(option => {
+    this.filters.general.forEach(filter => {
+      filter.options.forEach(option => {
         option.selected = false;
       });
     });
-    this.filters.resultLevel.map(filter => {
-      filter.options.map(option => {
+    this.filters.resultLevel.forEach(filter => {
+      filter.options.forEach(option => {
         option.selected = false;
       });
     });
@@ -67,6 +55,11 @@ export class ResultsListFilterService {
 
   setFiltersByResultLevelTypes(resultLevelTypes) {
     this.filters.resultLevel = resultLevelTypes;
-    this.filters.resultLevel.map(resultLevel => (resultLevel.options = resultLevel?.result_type));
+    this.filters.resultLevel.forEach(resultLevel => (resultLevel.options = resultLevel?.result_type));
+    this.filters.resultLevel.forEach((resultLevelOption: any) => {
+      resultLevelOption.options.forEach((resultTypeOption: any) => {
+        resultTypeOption.resultLevelId = resultLevelOption.id;
+      });
+    });
   }
 }

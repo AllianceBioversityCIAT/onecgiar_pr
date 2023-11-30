@@ -16,6 +16,7 @@ import {
 } from '../../shared/globalInterfaces/replicable.interface';
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultRepository
@@ -28,6 +29,18 @@ export class ResultRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
+  }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete r from \`result\` r where r.id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<Result> {
@@ -61,7 +74,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -129,7 +144,9 @@ export class ResultRepository
           ? as created_by,
           ? as last_updated_by,
           (select v.phase_year  from \`version\` v where v.id = ?) as reported_year_id,
-          now() as created_date,
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date,
           r2.result_level_id,
           r2.title,
           r2.legacy_id,
@@ -196,9 +213,7 @@ export class ResultRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 
@@ -590,13 +605,16 @@ WHERE
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
       (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
       (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
+      (Select gtl2.description from gender_tag_level gtl2 where id = r.nutrition_tag_level_id) as \`Nutrition Tag Level\`, 
+      (Select gtl2.description from gender_tag_level gtl2 where id = r.environmental_biodiversity_tag_level_id) as \`Environment and/or biodiversity Tag Level\`,
+      (Select gtl2.description from gender_tag_level gtl2 where id = r.poverty_tag_level_id) as \`Poverty Tag Level\`,
     	ci.official_code as \`Submitter\` ,
     	rs.status_name as \`Status\`,
     	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creation date\`,
-    	tr.work_package_id as \`Work package id\`,
+    	wp.id as \`Work package id\`,
     	wp.name as \`Work package title\`,
     	rtr.toc_result_id as \`Toc result id\`,
-    	tr.title as \`ToC result\`,
+    	tr.result_title as \`ToC result\`,
     	rtr.action_area_outcome_id as \`Action area outcome id\`,
     	caao.outcomeStatement as \`Action area outcome name\`,
     	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
@@ -632,12 +650,12 @@ WHERE
     left join clarisa_institutions ci2 on
     	ci2.id = cc.institutionId
       and ci2.is_active > 0
-    left join toc_result tr on
-    	tr.toc_result_id = rtr.toc_result_id
+    left join ${env.DB_TOC}.toc_results tr on
+      tr.id = rtr.toc_result_id
     left join clarisa_action_area_outcome caao ON
     	caao.id = rtr.action_area_outcome_id
-    left join ${env.DB_OST}.work_packages wp on
-    	wp.id = tr.work_package_id
+    left join ${env.DB_TOC}.work_packages wp on
+      wp.id = tr.work_packages_id 
     	and wp.active > 0
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id
     inner join version on version.id = r.version_id 
@@ -645,21 +663,23 @@ WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
     GROUP by
-    	r.id,
-    	r.reported_year_id,
-    	r.title,
-    	rl.name,
-    	rt.name,
-    	ci.official_code,
-    	rs.status_name,
-    	r.created_date,
-    	tr.work_package_id,
-    	wp.name,
-    	rtr.toc_result_id,
-    	tr.title,
-    	rtr.action_area_outcome_id,
-    	caao.outcomeStatement
+      r.id,
+      r.reported_year_id,
+      r.title,
+      rl.name,
+      rt.name,
+      ci.official_code,
+      rs.status_name,
+      r.created_date,
+      wp.id,
+      wp.name,
+      rtr.toc_result_id,
+      tr.result_title,
+      rtr.action_area_outcome_id,
+      caao.outcomeStatement
     order by r.created_date DESC;`;
+
+    console.log(queryData);
 
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
@@ -1146,7 +1166,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const resultIds = (resultIdsArray ?? []).join(',');
     const query = `
     select 
-    r.result_code as "Result Code",
+    DISTINCT r.result_code as "Result Code",
     (
       SELECT
         v.phase_name
@@ -1182,7 +1202,56 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     GROUP_CONCAT(distinct CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
    /* GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as "Contributing Center(s)", */
     GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ') as "Contributing Center(s)",
-    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
+    IF (
+      r.result_level_id = 1
+      OR r.result_level_id = 2,
+      '<Not applicable>',
+      (
+          SELECT
+              GROUP_CONCAT(
+                  '(',
+                  ci9.official_code,
+                  ' - ',
+                  ci9.name,
+                  ')',
+                  ' ',
+                  IFNULL(
+                      (
+                          SELECT
+                              CONCAT(
+                                  wp.acronym,
+                                  ' - ',
+                                  wp.name
+                              )
+                          FROM
+                              Integration_information.work_packages wp
+                          WHERE
+                              wp.id = tr.work_packages_id
+                      ),
+                      ''
+                  ),
+                  ' ',
+                  ' Title: ',
+                  tr.result_title,
+                  ' - ',
+                  IF(
+                      (
+                          tr.result_description IS NULL
+                          OR tr.result_description = ''
+                      ),
+                      '',
+                      CONCAT(' Description: ', tr.result_description)
+                  ) SEPARATOR '\n'
+              )
+          FROM
+              Integration_information.toc_results tr
+              LEFT JOIN prdb.results_toc_result rtr ON rtr.results_id = r.id
+              AND rtr.is_active = 1
+              LEFT JOIN prdb.clarisa_initiatives ci9 ON ci9.id = rtr.initiative_id
+          WHERE
+              tr.id = rtr.toc_result_id
+      )
+    ) AS "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
     if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
@@ -1384,7 +1453,7 @@ left join clarisa_countries cc3
 
     const query = `
     select 
-    r.result_code as "Result Code",
+    DISTINCT r.result_code as "Result Code",
     (
       SELECT
         v.phase_name
@@ -1420,7 +1489,56 @@ left join clarisa_countries cc3
     GROUP_CONCAT(distinct CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
    /* GROUP_CONCAT(CONCAT(if(rc.is_primary,'(Primary: ','('),ci4.acronym,' - ',ci4.name,')') SEPARATOR ', ') as "Contributing Center(s)", */
     GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ') as "Contributing Center(s)",
-    CONCAT('(',ci.official_code,' - ',ci.short_name,'): ', 'Toc Level: ' ,IFNULL(tl.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr.title, 'Not provider')) as "ToC Mapping (Primary submitter)",
+    IF (
+      r.result_level_id = 1
+      OR r.result_level_id = 2,
+      '<Not applicable>',
+      (
+          SELECT
+              GROUP_CONCAT(
+                  '(',
+                  ci9.official_code,
+                  ' - ',
+                  ci9.name,
+                  ')',
+                  ' ',
+                  IFNULL(
+                      (
+                          SELECT
+                              CONCAT(
+                                  wp.acronym,
+                                  ' - ',
+                                  wp.name
+                              )
+                          FROM
+                              Integration_information.work_packages wp
+                          WHERE
+                              wp.id = tr.work_packages_id
+                      ),
+                      ''
+                  ),
+                  ' ',
+                  ' Title: ',
+                  tr.result_title,
+                  ' - ',
+                  IF(
+                      (
+                          tr.result_description IS NULL
+                          OR tr.result_description = ''
+                      ),
+                      '',
+                      CONCAT(' Description: ', tr.result_description)
+                  ) SEPARATOR '\n'
+              )
+          FROM
+              Integration_information.toc_results tr
+              LEFT JOIN prdb.results_toc_result rtr ON rtr.results_id = r.id
+              AND rtr.is_active = 1
+              LEFT JOIN prdb.clarisa_initiatives ci9 ON ci9.id = rtr.initiative_id
+          WHERE
+              tr.id = rtr.toc_result_id
+      )
+    ) AS "ToC Mapping (Primary submitter)",
     GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
     -- section 3
     if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",

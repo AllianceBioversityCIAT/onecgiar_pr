@@ -28,15 +28,15 @@ export class ResultsNotificationsService {
         }
       });
 
-      requestPendingData.forEach(item => {
+      const updateRequestPendingData = requestPendingData.map(item => {
         if (item.request_status_id === 1) {
-          return { ...item, request_status_id: 4 };
+          return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
         }
 
         return item;
       });
 
-      this.data = [...requestData, ...requestPendingData];
+      this.data = [...requestData, ...updateRequestPendingData];
     });
 
     this.api.resultsSE.GET_requestStatus().subscribe();
@@ -52,10 +52,14 @@ export class ResultsNotificationsService {
 
       requestData.filter(word => word.result_type_id === 10);
 
-      requestPendingData
+      const updateRequestPendingData = requestPendingData
         .filter(word => word.result_type_id === 10)
-        .forEach(item => {
-          return item.request_status_id === 1 ? { ...item, request_status_id: 4 } : item;
+        .map(item => {
+          if (item.request_status_id === 1) {
+            return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
+          }
+
+          return item;
         });
 
       this.api.dataControlSE.myInitiativesList.forEach(myInit => {
@@ -67,7 +71,7 @@ export class ResultsNotificationsService {
         }
       });
 
-      this.dataIPSR = [...requestData, ...requestPendingData];
+      this.dataIPSR = [...requestData, ...updateRequestPendingData];
     });
 
     this.api.resultsSE.GET_requestStatus().subscribe();

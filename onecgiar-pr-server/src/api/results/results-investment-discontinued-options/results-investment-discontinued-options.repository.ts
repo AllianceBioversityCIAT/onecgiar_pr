@@ -19,6 +19,19 @@ export class ResultsInvestmentDiscontinuedOptionRepository
     );
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rido from results_investment_discontinued_options rido where rido.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsInvestmentDiscontinuedOptionRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(
     resultId: number,
   ): Promise<ResultsInvestmentDiscontinuedOption> {

@@ -8,6 +8,7 @@ import {
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultByInitiativesRepository
@@ -24,6 +25,45 @@ export class ResultByInitiativesRepository
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
+  }
+
+  fisicalContributorsDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbi from results_by_inititiative rbi where result_id = ? and initiative_role_id = 2;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByInitiativesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
+  logicalContributorsDelete(resultId: number): Promise<ResultsByInititiative> {
+    const queryData = `update results_by_inititiative set is_active = false where result_id = ? and initiative_role_id = 2`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByInitiativesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
+  }
+
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete rbi from results_by_inititiative rbi where result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          className: ResultByInitiativesRepository.name,
+          error: err,
+          debug: true,
+        }),
+      );
   }
 
   logicalDelete(resultId: number): Promise<ResultsByInititiative> {
@@ -55,8 +95,10 @@ export class ResultByInitiativesRepository
           rbi.initiative_role_id,
           ? as created_by,
           null as last_updated_by,
-          now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
         `;
         const response = await (<Promise<ResultsByInititiative[]>>(
           this.query(queryData, [
@@ -89,8 +131,10 @@ export class ResultByInitiativesRepository
           rbi.initiative_role_id,
           ? as created_by,
           null as last_updated_by,
-          now() as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1`;
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
@@ -118,10 +162,7 @@ export class ResultByInitiativesRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
-
+    config.f?.completeFunction?.({ ...final_data });
     return final_data;
   }
 
@@ -523,13 +564,10 @@ export class ResultByInitiativesRepository
         );
       }
 
-      console.log(
-        'Log',
-        await this.findOneBy({
-          result_id: resultId,
-          initiative_id: initiative_id,
-        }),
-      );
+      await this.findOneBy({
+        result_id: resultId,
+        initiative_id: initiative_id,
+      });
 
       return {
         initiative_id: initiative_id,

@@ -6,17 +6,52 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultInitiativeBudgetRepository
   extends Repository<ResultInitiativeBudget>
-  implements ReplicableInterface<ResultInitiativeBudget>
+  implements
+    ReplicableInterface<ResultInitiativeBudget>,
+    LogicalDelete<ResultInitiativeBudget>
 {
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultInitiativeBudget, dataSource.createEntityManager());
+  }
+
+  logicalDelete(resultId: number): Promise<ResultInitiativeBudget> {
+    const queryData = `update result_initiative_budget rib 
+    inner join results_by_inititiative rbi 
+    set rib.is_active = 0
+    where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultInitiativeBudgetRepository.name,
+          debug: true,
+        }),
+      );
+  }
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `
+    delete rib from result_initiative_budget rib 
+    inner join results_by_inititiative rbi 
+    where rbi.result_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultInitiativeBudgetRepository.name,
+          debug: true,
+        }),
+      );
   }
 
   private readonly _logger: Logger = new Logger(
@@ -32,7 +67,9 @@ export class ResultInitiativeBudgetRepository
         const queryData = `
         SELECT 
         ? as created_by
-        ,rib.created_date
+        ,${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
         ,rib.current_year
         ,1 as is_active
         ,rib.is_determined
@@ -69,7 +106,8 @@ export class ResultInitiativeBudgetRepository
       } else {
         const queryData = `
         INSERT INTO result_initiative_budget (
-          created_by
+          created_date
+          ,created_by
           ,current_year
           ,is_active
           ,is_determined
@@ -80,7 +118,10 @@ export class ResultInitiativeBudgetRepository
           ,result_initiative_id
           )
           SELECT 
-          ? as created_by
+          ${predeterminedDateValidation(
+            config?.predetermined_date,
+          )} as created_date
+          ,? as created_by
           ,rib.current_year
           ,1 as is_active
           ,rib.is_determined
@@ -133,9 +174,7 @@ export class ResultInitiativeBudgetRepository
       final_data = null;
     }
 
-    config.f?.completeFunction
-      ? config.f.completeFunction({ ...final_data })
-      : null;
+    config.f?.completeFunction?.({ ...final_data });
 
     return final_data;
   }

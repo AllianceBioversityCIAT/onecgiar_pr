@@ -17,6 +17,18 @@ export class IpsrRepository
   ) {
     super(Ipsr, dataSource.createEntityManager());
   }
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rbip from result_by_innovation_package rbip where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: IpsrRepository.name,
+          debug: true,
+        }),
+      );
+  }
 
   logicalDelete(resultId: number): Promise<Ipsr> {
     const dataQuery = `update result_by_innovation_package rbip set rbip.is_active = 0 where rbip.result_innovation_package_id = ?;`;

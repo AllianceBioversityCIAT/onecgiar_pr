@@ -1,6 +1,5 @@
 <div [ngSwitch]="notification?.request_status_id" class="noti_container">
-    <i class="material-icons-round direction_icon" *ngIf="notification?.request_status_id != 4"
-        [style]="'rotate:'+ (this.comes ? '130deg' : '320deg')">
+    <i class="material-icons-round direction_icon" [style]="'rotate:'+ (this.comes ? '130deg' : '320deg')">
         arrow_right_alt
     </i>
     <div *ngSwitchCase="1">

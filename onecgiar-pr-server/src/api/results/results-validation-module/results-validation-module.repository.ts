@@ -17,6 +17,19 @@ export class resultValidationRepository
     super(Validation, dataSource.createEntityManager());
   }
 
+  fisicalDelete(resultId: number): Promise<any> {
+    const queryData = `delete v from validation v where v.results_id = ?;`;
+    return this.query(queryData, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: resultValidationRepository.name,
+          debug: true,
+        }),
+      );
+  }
+
   logicalDelete(resultId: number): Promise<Validation> {
     const queryData = `update validation v set v.is_active = 0 where v.results_id = ? and v.is_active > 0;`;
     return this.query(queryData, [resultId])
@@ -114,13 +127,11 @@ export class resultValidationRepository
 				and r.climate_change_tag_level_id <> ''
 			)
 			and (
-				case 
-					when r.is_replicated = false then true
-				else case 
-						when r.is_discontinued = false then true
-					else case 
-						when (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas from results_investment_discontinued_options rido where rido.is_active > 0 and rido.result_id = r.id ) = 0 then true
-					else false end end end
+				if(r.result_type_id = 7, if(r.is_discontinued = 0 or r.is_replicated = 0, 
+				0, 
+				(select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas 
+				from results_investment_discontinued_options rido 
+				where rido.is_active > 0 and rido.result_id = r.id)), 0) = 0
 			)
 			and (
 				r.nutrition_tag_level_id is not null
@@ -181,16 +192,16 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) - (
+			) = (
 				SELECT COUNT(*)
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) = 0
+			) 
 		)
 		AND (
 			(
-				SELECT IF(rtr.toc_result_id IS NOT NULL, 1, 0)
+				SELECT IF(COUNT(rtr.toc_result_id IS NOT NULL) = 0, 0, 1)
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
@@ -201,7 +212,7 @@ export class resultValidationRepository
 			(
 				IFNULL(
 					(
-						SELECT SUM(IF(rtr.toc_result_id IS NULL, 1, 0))
+						SELECT SUM(IF(rtr.toc_result_id IS NOT NULL, 1, 0))
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
@@ -1284,7 +1295,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			WHEN (
 				rid.innovation_pdf = 1
@@ -1297,7 +1312,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
@@ -1371,18 +1390,10 @@ export class resultValidationRepository
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.unkown_using = 0
-				AND (
-					rcd.female_using IS NULL
-					OR rcd.male_using IS NULL
-					OR non_binary_using IS NULL
-				)
-			) THEN FALSE
-			WHEN (
-				rcd.unkown_using = 1
-				AND (
-					rcd.has_unkown_using IS NULL
-				)
+				rcd.female_using IS NULL
+				OR rcd.male_using IS NULL
+				OR non_binary_using IS NULL
+				OR rcd.has_unkown_using IS NULL
 			) THEN FALSE
 			WHEN (
 				rcd.capdev_term_id IS NULL
@@ -1530,7 +1541,7 @@ export class resultValidationRepository
   async resultIsValid(resultId: number) {
     const queryData = `
 	SELECT
-		IFNULL(v.section_seven, 1) *
+		IF(r.result_type_id in (4,8,9),1, v.section_seven) *
   		v.general_information *
   		v.theory_of_change *
   		v.partners *
@@ -1538,6 +1549,8 @@ export class resultValidationRepository
   		v.links_to_results *
   		v.evidence as validation
   	from validation v 
+	  inner join \`result\` r on r.id = v.results_id 
+	  and r.is_active > 0
   		WHERE v.results_id = ?
 		  and v.is_active > 0;
     `;

@@ -32,7 +32,6 @@ export class PhasesService {
           selected: item.status,
           name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
         }));
-        console.log(this.phases.reporting);
         this.phasesSubject.next(this.phases.reporting);
       }
     });
