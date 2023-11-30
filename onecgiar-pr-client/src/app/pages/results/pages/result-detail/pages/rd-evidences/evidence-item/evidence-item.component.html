@@ -68,9 +68,9 @@
 
       </div>
 
-
       <ng-template #uploadfilefield>
-        <div class="drag-and-drop-field" [ngClass]="{'incorrect-drag-and-drop-field': this.incorrectFile}"
+        <div *ngIf="this.evidence.is_public_file == true || this.evidence.is_public_file == false"
+          class="drag-and-drop-field" [ngClass]="{'incorrect-drag-and-drop-field': this.incorrectFile}"
           (drop)="onFileDropped($event)" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)">
           <div class="content">
             <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
