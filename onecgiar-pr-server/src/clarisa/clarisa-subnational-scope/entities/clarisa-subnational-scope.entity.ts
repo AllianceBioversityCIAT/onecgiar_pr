@@ -65,7 +65,7 @@ export class ClarisaSubnationalScope {
   @Column({
     type: 'tinyint',
   })
-  is_active: number;
+  is_active: boolean;
 
   //object relations
   @OneToMany(
