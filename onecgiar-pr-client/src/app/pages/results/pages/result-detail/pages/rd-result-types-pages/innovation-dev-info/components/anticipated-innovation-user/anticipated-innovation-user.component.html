@@ -84,11 +84,19 @@
 
         <app-pr-field-header label="Organizations" [useColon]="false" [required]="false"></app-pr-field-header>
 
-        <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
+        <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length  ">
             <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
                 [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
                 *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
-                <div>
+                <div *ngIf="saving">
+                    <div style="margin-top: 20px; margin-bottom: 7px;">
+                        <p-skeleton width="50%" height="20px"></p-skeleton>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <p-skeleton width="100%" height="40px"></p-skeleton>
+                    </div>
+                </div>
+                <div *ngIf="!saving">
                     <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i"
                         label="Organization type" [required]="!!organizationItem?.id" optionLabel="name"
                         optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
@@ -103,7 +111,15 @@
                         [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.other_institution">
                     </app-pr-input>
                 </div>
-                <div>
+                <div *ngIf="saving">
+                    <div style="margin-top: 20px; margin-bottom: 7px;">
+                        <p-skeleton width="50%" height="20px"></p-skeleton>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <p-skeleton width="100%" height="40px"></p-skeleton>
+                    </div>
+                </div>
+                <div *ngIf="!saving">
                     <app-pr-select
                         *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
                         [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)"
