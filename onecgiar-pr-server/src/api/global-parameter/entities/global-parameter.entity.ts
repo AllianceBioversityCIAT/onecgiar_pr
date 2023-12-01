@@ -1,12 +1,10 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { GlobalParameterCategory } from './global-parameter-category.entity';
 import { BaseEntity } from '../../../shared/entities/base-entity';

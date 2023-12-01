@@ -21,5 +21,3 @@ export interface EvidencesCreateInterface {
   sp_file_name?: string;
   sp_folder_path?: string;
 }
-
-export class JsonData {}

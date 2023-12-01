@@ -4,7 +4,6 @@ import { DataSource, Repository } from 'typeorm';
 import { EvidenceSharepoint } from '../entities/evidence-sharepoint.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { env } from 'process';
 import {
   ReplicableConfigInterface,
   ReplicableInterface,

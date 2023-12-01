@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { GlobalParameterService } from './global-parameter.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 

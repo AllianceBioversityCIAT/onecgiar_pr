@@ -60,7 +60,8 @@
               check_circle
             </i>
           </ng-template>
-          <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()">
+          <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()"
+            *ngIf="!this.api.rolesSE.readOnly">
             delete
           </i>
         </div>

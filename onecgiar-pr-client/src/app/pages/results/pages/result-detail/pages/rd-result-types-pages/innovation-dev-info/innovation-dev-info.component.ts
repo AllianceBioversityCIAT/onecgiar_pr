@@ -72,6 +72,7 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   onSaveSection() {
+    this.savingSection = true;
     this.convertOrganizationsTosave();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
       this.innovationDevInfoBody.number_of_varieties = null;
@@ -80,9 +81,11 @@ export class InnovationDevInfoComponent implements OnInit {
     this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
       next: ({ response }) => {
         this.getSectionInformation();
+        this.savingSection = false;
       },
       error: err => {
         console.error(err);
+        this.savingSection = false;
       }
     });
   }

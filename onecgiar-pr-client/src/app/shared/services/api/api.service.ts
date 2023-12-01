@@ -13,7 +13,7 @@ import { QualityAssuranceService } from '../../../pages/quality-assurance/qualit
 import { Title } from '@angular/platform-browser';
 import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/services/ipsr-list-filter.service';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
-import { GlobalVariables, GlobalVariablesService } from '../global-variables.service';
+import { GlobalVariablesService } from '../global-variables.service';
 
 @Injectable({
   providedIn: 'root'
