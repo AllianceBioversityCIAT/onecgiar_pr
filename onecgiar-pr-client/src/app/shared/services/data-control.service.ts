@@ -72,7 +72,7 @@ export class DataControlService {
         }
         if (seconds == 10) {
           clearInterval(timer);
-          reject('error');
+          resolve(false);
         }
       }, 1000);
     });
