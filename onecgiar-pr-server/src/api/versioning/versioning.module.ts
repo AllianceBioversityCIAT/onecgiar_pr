@@ -41,6 +41,9 @@ import { ResultStatusRepository } from '../results/result-status/result-status.r
 import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { EvidencesService } from '../results/evidences/evidences.service';
+import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 
 @Module({
   controllers: [VersioningController],
@@ -84,8 +87,11 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
+    EvidenceSharepointRepository,
+    EvidencesService,
   ],
   exports: [
+    EvidencesService,
     VersioningService,
     VersionRepository,
     HandlersError,
@@ -118,6 +124,8 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
     ResultInitiativeBudgetRepository,
+    EvidenceSharepointRepository,
   ],
+  imports: [SharePointModule],
 })
 export class VersioningModule {}

@@ -9,6 +9,7 @@ import { resultValidationRepository } from '../results-validation-module/results
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { IpsrService } from '../../ipsr/ipsr.service';
 import { ResultsInnovationPackagesValidationModuleService } from '../../ipsr/results-innovation-packages-validation-module/results-innovation-packages-validation-module.service';
+import { RoleEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class SubmissionsService {
@@ -32,7 +33,7 @@ export class SubmissionsService {
       const role = await this._roleByUserRepository.validationRolePermissions(
         user.id,
         result.id,
-        [3, 4, 5],
+        [RoleEnum.ADMIN, RoleEnum.LEAD, RoleEnum.CO_LEAD, RoleEnum.COORDINATOR],
       );
       if (!role) {
         throw {

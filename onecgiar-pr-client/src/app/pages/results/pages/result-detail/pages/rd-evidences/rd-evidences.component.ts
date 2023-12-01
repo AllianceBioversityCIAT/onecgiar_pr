@@ -2,29 +2,25 @@ import { Component, OnInit } from '@angular/core';
 import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
-
+import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
   styleUrls: ['./rd-evidences.component.scss']
 })
 export class RdEvidencesComponent implements OnInit {
-  links1 = 'https://www.google.com/doodles/dragon-boat-festival-2023';
-  links2 = 'http://localhost:4200/result/result-detail/4800/evidences';
-  links3 = 'testing';
-  links4 = 'texto';
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
-    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files cannot be uploaded; only links can be entered.</li>';
+    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files can be uploaded.</li>';
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
     mainText += '</ul> ';
     return mainText;
   }
-  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService) {}
+  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService, private saveButtonSE: SaveButtonService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -39,14 +35,61 @@ export class RdEvidencesComponent implements OnInit {
     });
   }
 
-  onSaveSection() {
+  underConstructionText() {
+    return 'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
+  }
+
+  async getAndCalculateFilePercentage(response, evidenceIterator) {
+    let nextRange = response?.nextExpectedRanges[0];
+    let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
+    if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
+    let progressPercentage = (startByte / totalBytes) * 100;
+    evidenceIterator.percentage = progressPercentage.toFixed(0);
+  }
+
+  endLoadFile(intervalId, evidenceIterator) {
+    clearInterval(intervalId);
+    evidenceIterator.percentage = 100;
+  }
+
+  async loadAllFiles() {
+    const { evidences } = this.evidencesBody;
+    for (const evidenceIterator of evidences) {
+      if (!evidenceIterator?.file) continue;
+      try {
+        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name });
+        const intervalId = setInterval(async () => {
+          try {
+            const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
+            if (response?.nextExpectedRanges[0]) this.getAndCalculateFilePercentage(response, evidenceIterator);
+          } catch (error) {
+            this.endLoadFile(intervalId, evidenceIterator);
+          }
+        }, 2000);
+        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidenceIterator.file, uploadUrl);
+        this.endLoadFile(intervalId, evidenceIterator);
+        evidenceIterator.link = response?.webUrl;
+        evidenceIterator.sp_document_id = response?.id;
+        evidenceIterator.sp_file_name = response?.name;
+        evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }
+
+  async onSaveSection() {
+    this.saveButtonSE.showSaveSpinner();
+    await this.loadAllFiles();
+    this.saveButtonSE.hideSaveSpinner();
+
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });
   }
 
   addEvidence() {
-    this.evidencesBody.evidences.push({});
+    this.evidencesBody.evidences.push({ is_sharepoint: false });
   }
 
   deleteEvidence(index) {
@@ -82,13 +125,15 @@ export class RdEvidencesComponent implements OnInit {
 
     return `<ul>${text}</ul>`;
   }
-
   get validateCGSpaceLinks() {
-    for (const iterator of this.evidencesBody.evidences) {
-      if (this.evidencesBody.evidences.find(evidence => !Boolean(evidence.link))) return true;
-      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == iterator.link);
+    for (const evidenteIterator of this.evidencesBody.evidences) {
+      if (this.evidencesBody.evidences.find(evidence => !evidence?.link && !evidence?.is_sharepoint)) return true;
+      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);
       if (evidencesFinded.length >= 2) {
-        return evidencesFinded.length >= 2;
+        return true;
+      }
+      if (evidenteIterator.is_sharepoint && !(evidenteIterator?.file || evidenteIterator?.link)) {
+        return true;
       }
     }
 
