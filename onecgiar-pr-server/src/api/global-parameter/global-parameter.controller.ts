@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseInterceptors } from '@nestjs/common';
 import { GlobalParameterService } from './global-parameter.service';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class GlobalParameterController {
   constructor(
     private readonly globalParameterService: GlobalParameterService,
