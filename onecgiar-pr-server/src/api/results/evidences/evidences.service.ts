@@ -14,7 +14,6 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
-import * as fs from 'fs';
 import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint.repository';
