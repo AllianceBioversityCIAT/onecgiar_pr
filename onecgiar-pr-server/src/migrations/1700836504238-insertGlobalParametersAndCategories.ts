@@ -24,12 +24,11 @@ export class insertGlobalParametersAndCategories1700836504238
         ('sp_site_id','Site id','',1),
         ('sp_drive_id','Drive id','',1),
         ('sp_microsoft_graph_api_url','Microsoft graph api url','',1),
-        ('pgv_in_qa',NULL,'',1),
-        ('pgv_ipsr_is_closed',NULL,'',1),
-        ('pgv_result_is_closed',NULL,'',1);`,
+        ('pgv_in_qa',NULL,'',2),
+        ('pgv_ipsr_is_closed',NULL,'',2),
+        ('pgv_result_is_closed',NULL,'',2);`,
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
 }
-
