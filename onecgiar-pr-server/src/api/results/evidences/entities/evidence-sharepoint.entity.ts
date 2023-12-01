@@ -1,12 +1,9 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { Evidence } from './evidence.entity';
 import { BaseEntity } from '../../../../shared/entities/base-entity';

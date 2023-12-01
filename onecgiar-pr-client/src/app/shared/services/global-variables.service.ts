@@ -5,7 +5,6 @@ import { Injectable } from '@angular/core';
 })
 export class GlobalVariablesService {
   get: GlobalVariables = {};
-  constructor() {}
 }
 
 export interface GlobalVariables {

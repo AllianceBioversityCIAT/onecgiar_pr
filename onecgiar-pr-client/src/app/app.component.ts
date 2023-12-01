@@ -4,7 +4,6 @@ import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
-import { GlobalVariables } from './shared/services/global-variables.service';
 
 @Component({
   selector: 'app-root',
