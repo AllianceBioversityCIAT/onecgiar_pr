@@ -46,8 +46,8 @@ export class AppComponent implements OnInit {
   }
 
   private getGlobalParametersByCategory() {
-    this.api.resultsSE.GET_platformGlobalVariables().subscribe((globalVariables: GlobalVariables) => {
-      this.api.globalVariablesSE.get = globalVariables;
+    this.api.resultsSE.GET_platformGlobalVariables().subscribe(({ response }) => {
+      this.api.globalVariablesSE.get = response;
     });
   }
 }

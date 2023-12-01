@@ -9,7 +9,6 @@ import {
   Headers,
   HttpException,
   UseInterceptors,
-  UploadedFiles,
 } from '@nestjs/common';
 import { EvidencesService } from './evidences.service';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
@@ -20,7 +19,6 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { CreateUploadSessionDto } from './dto/create-upload-session.dto';
-import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 
 @Controller()

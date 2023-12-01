@@ -29,14 +29,11 @@ export class SharePointService {
 
     const token = await this.getToken();
     const { filePath, pathInformation } = await this.generateFilePath(resultId);
-    console.log(filePath);
-    console.log(pathInformation);
     const newFolderId = await this.createFileFolder(filePath);
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
     const fileExtension = fileName.split('.').pop();
     const finalFileName = `result-${pathInformation?.result_code}-Document-${pathInformation?.date_as_name}.${fileExtension}`;
     const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${finalFileName}:/createUploadSession`;
-    console.log(finalFileName);
 
     try {
       const response = await this.httpService
@@ -114,7 +111,6 @@ export class SharePointService {
   }
 
   async removeFilePermission(fileId, permissionId) {
-    // DELETE https://graph.microsoft.com/v1.0/drives/{{testing_drive_id}}/items/012LTNW5BGG43ZSDLMRJBLR6S6663GB734/permissions/b4fc3914-b1b5-4147-8d44-13b1ce65eb45
     const token = await this.getToken();
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
     const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${fileId}/permissions/${permissionId}`;
@@ -161,11 +157,9 @@ export class SharePointService {
   }
 
   async consumeToken() {
-    // Estructure URL
     const sp_token_url = await this.GPCacheSE.getParam('sp_token_url');
     const sp_tenant_id = await this.GPCacheSE.getParam('sp_tenant_id');
     const url = `${sp_token_url}/${sp_tenant_id}/oauth2/v2.0/token`;
-    // ----
     const data = new URLSearchParams();
     const da = (param, value) => data.append(param, value);
     da('client_id', await this.GPCacheSE.getParam('sp_application_id'));
@@ -190,7 +184,6 @@ export class SharePointService {
     }
   }
 
-  //? ------------------ Replicate file ------------------
   async replicateFile(fileId, path) {
     const newFolderId = await this.createFileFolder(path);
     const fileInfo = await this.getFileInfo(fileId);

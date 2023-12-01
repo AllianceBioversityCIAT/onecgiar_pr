@@ -6,7 +6,7 @@ import { GlobalParameter } from '../../../../src/api/global-parameter/interfaces
 @Injectable()
 export class GlobalParameterCacheService {
   constructor(private _globalParameterService: GlobalParameterService) {}
-  private dataCache: DataCache = {}; // This is where the information will be cached.
+  private dataCache: DataCache = {};
 
   async getParam(key: string): Promise<any> {
     await this.loadAllGlobalParamatersByCategory(key);
@@ -27,13 +27,14 @@ export class GlobalParameterCacheService {
 
   async loadAllGlobalParamatersByCategory(key) {
     if (this.dataCache[key] === undefined) {
-      const globalParameterItem: GlobalParameter =
-        await this._globalParameterService.findOneByName(key);
+      const data = await this._globalParameterService.findOneByName(key);
+      const globalParameterItem: GlobalParameter = data?.response;
 
-      let globalParameterList: any =
-        await this._globalParameterService.findByCategoryId(
-          Number(globalParameterItem?.categoryId),
-        );
+      const { response } = await this._globalParameterService.findByCategoryId(
+        Number(globalParameterItem?.categoryId),
+      );
+      const globalParameterList: any = response;
+      console.log(globalParameterList);
 
       globalParameterList.forEach((globalParameter: GlobalParameter) => {
         this.dataCache[globalParameter.name] = globalParameter.value;

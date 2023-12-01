@@ -11,8 +11,8 @@ import {
   predeterminedDateValidation,
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
-import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 import { EvidenceWithEvidenceSharepoint } from './interfaces/evidence-with-evidence-sharepoint.interface';
+import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
 
 @Injectable()
 export class EvidencesRepository
@@ -369,48 +369,10 @@ export class EvidencesRepository
         and evidence_type_id = ${type};
     `;
 
-    // const upDateActive = `
-    //   update evidence
-    //   set is_active = 1,
-    //     last_updated_date  = NOW(),
-    //     last_updated_by  = ${userId}
-    //   where result_id = ${resultId}
-    //     and link in (${`'${evidences.toString().replace(/,/g, "','")}'`})
-    //     and is_supplementary = ${is_supplementary}
-    //     and evidence_type_id = ${type};
-    // `;
-
-    // const upDateAllInactive = `
-    //   update evidence
-    //   set is_active = 0,
-    //     last_updated_date  = NOW(),
-    //     last_updated_by  = ${userId}
-    //   where is_active  > 0
-    //   and result_id = ${resultId}
-    //   and is_supplementary = ${is_supplementary}
-    //   and evidence_type_id = ${type};
-    // `;
-
     try {
       await this.query(inactiveAll);
       await this.query(justActivateList);
     } catch (error) {}
-
-    // try {
-    //   if (evidenceIdList?.length) {
-    //     await this.query(upDateInactive);
-
-    //     return await this.query(upDateActive);
-    //   } else {
-    //     return await this.query(upDateAllInactive);
-    //   }
-    // } catch (error) {
-    //   throw this._handlersError.returnErrorRepository({
-    //     className: EvidencesRepository.name,
-    //     error: `updateEvidences ${error}`,
-    //     debug: true,
-    //   });
-    // }
   }
 
   async getResultInformation(resultId) {

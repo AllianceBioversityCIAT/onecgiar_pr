@@ -34,7 +34,6 @@ export class EvidencesService {
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
-    console.log('create');
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
@@ -135,7 +134,6 @@ export class EvidencesService {
           const evidenceSaved = await this._evidencesRepository.save(
             currentEvidence,
           );
-          console.log(evidenceSaved);
           if (evidenceSaved?.id)
             await this.saveSPData(evidence, evidenceSaved?.id);
         }
@@ -220,10 +218,6 @@ export class EvidencesService {
         })
       : undefined;
 
-    console.log('>>>>>>>>>>>>>>> existingEvidenceSharepoint <<<<<<<<<<<<<');
-    console.log(sp_evidence_id);
-    console.log(existingEvidenceSharepoint);
-
     const replaceFile =
       typeof sp_file_name === 'string' &&
       existingEvidenceSharepoint?.file_name !== sp_file_name &&
@@ -241,7 +235,6 @@ export class EvidencesService {
       );
       existingEvidenceSharepoint.id = null;
     }
-    //todo inactivar eivdencia su replace y guardar unanueva cambiar id por null
     if (!evidence?.is_sharepoint) return;
     const createOrUpdateEvidenceSharepoint = async (
       evidenceSharepoint: EvidenceSharepoint | undefined,
@@ -256,7 +249,6 @@ export class EvidencesService {
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
         );
         if (data.link.webUrl) {
-          // update evidence link
           await this._evidencesRepository.update(newEvidenceId, {
             link: data.link.webUrl,
           });
