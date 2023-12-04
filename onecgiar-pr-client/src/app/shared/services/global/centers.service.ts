@@ -9,23 +9,19 @@ export class CentersService {
   constructor(private api: ApiService) {
     this.getData();
   }
-  async getCentersList() {
-    if (!this.centersList?.length) await this.getData();
-    return this.centersList;
-  }
 
-  async getData() {
+  async getData(): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.GET_AllCLARISACenters().subscribe(
-        ({ response }) => {
+      if (this.centersList?.length) return resolve(JSON.parse(JSON.stringify(this.centersList)));
+      this.api.resultsSE.GET_AllCLARISACenters().subscribe({
+        next: ({ response }) => {
+          resolve([...response]);
           this.centersList = response;
-          //(response);
-          resolve(response);
         },
-        err => {
+        error: err => {
           reject(err);
         }
-      );
+      });
     });
   }
 }
