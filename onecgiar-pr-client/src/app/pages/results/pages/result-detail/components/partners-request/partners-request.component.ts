@@ -4,7 +4,7 @@ import { PartnersRequestBody } from './models/partnersRequestBody.model';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { FormGroup } from '@angular/forms';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
+import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-partners-request',

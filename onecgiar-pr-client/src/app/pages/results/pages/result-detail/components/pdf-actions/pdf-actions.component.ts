@@ -1,8 +1,8 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
-import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
-import { environment } from 'src/environments/environment';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+import { environment } from '../../../../../../../environments/environment';
 
 @Component({
   selector: 'app-pdf-actions',
