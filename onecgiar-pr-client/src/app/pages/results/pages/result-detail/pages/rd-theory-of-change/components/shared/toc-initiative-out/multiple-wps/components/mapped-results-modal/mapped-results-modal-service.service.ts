@@ -24,4 +24,6 @@ export class MappedResultsModalServiceService {
     date: '',
     contributors: []
   };
+
+  columnsOrder = [];
 }

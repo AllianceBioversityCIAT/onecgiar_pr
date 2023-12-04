@@ -13,27 +13,6 @@ export class MappedResultsModalComponent {
 
   constructor(public mappedResultService: MappedResultsModalServiceService) {}
 
-  selectColumnOrder() {
-    if (this.mappedResultService.isTarget) {
-      return [
-        { title: 'Result code', attr: 'result_code' },
-        { title: 'Title', attr: 'title', link: true },
-        { title: 'Indicator category', attr: 'result_type' },
-        { title: 'Phase', attr: 'phase_name' },
-        { title: 'Contribution', attr: 'contributing_indicator' },
-        { title: 'Progress narrative against the target', attr: 'progress_narrative' }
-      ];
-    } else {
-      return [
-        { title: 'Result code', attr: 'result_code' },
-        { title: 'Title', attr: 'title', link: true },
-        { title: 'Indicator category', attr: 'result_type' },
-        { title: 'Phase', attr: 'phase_name' },
-        { title: 'Progress narrative against the target', attr: 'progress_narrative' }
-      ];
-    }
-  }
-
   openInNewPage(resultCode: string, phase: string, isLink: boolean) {
     if (!isLink) return null;
 

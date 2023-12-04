@@ -25,6 +25,15 @@ export class TargetIndicatorComponent {
       date: date,
       contributors: contributors
     };
+
+    this.mappedResultService.columnsOrder = [
+      { title: 'Result code', attr: 'result_code' },
+      { title: 'Title', attr: 'title', link: true },
+      { title: 'Indicator category', attr: 'result_type' },
+      { title: 'Phase', attr: 'phase_name' },
+      { title: 'Contribution', attr: 'contributing_indicator' },
+      { title: 'Progress narrative against the target', attr: 'progress_narrative' }
+    ];
   }
 
   descriptionAlert() {

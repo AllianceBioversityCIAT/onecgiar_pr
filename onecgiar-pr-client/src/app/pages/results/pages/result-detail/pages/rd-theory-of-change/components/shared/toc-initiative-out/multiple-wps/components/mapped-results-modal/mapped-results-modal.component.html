@@ -41,7 +41,7 @@
         <ng-template pTemplate="header">
           <tr>
             <th (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
-              *ngFor="let column of selectColumnOrder()" id="{{column.attr}}">
+              *ngFor="let column of this.mappedResultService.columnsOrder" id="{{column.attr}}">
               <p style="margin: 0;">
                 <p-sortIcon field="{{column.attr}}"></p-sortIcon>
                 {{column.title}}
@@ -52,7 +52,7 @@
 
         <ng-template pTemplate="body" let-target>
           <tr>
-            <td *ngFor="let column of selectColumnOrder()" class="{{column.attr}}">
+            <td *ngFor="let column of this.mappedResultService.columnsOrder" class="{{column.attr}}">
               <p [ngClass]="{'open_route': column.link}" (click)="openInNewPage(target.result_code, '18', column.link)"
                 style="margin: 0;">
                 {{ target[column.attr]}}
