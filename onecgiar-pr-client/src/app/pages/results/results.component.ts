@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { IpsrDataControlService } from '../ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../app/shared/services/api/api.service';
 
 @Component({
   selector: 'app-results',
