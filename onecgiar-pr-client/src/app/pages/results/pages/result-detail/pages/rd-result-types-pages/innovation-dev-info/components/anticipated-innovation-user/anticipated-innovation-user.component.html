@@ -20,11 +20,18 @@
 
         <!-- Actors section -->
         <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
-            <div class="fields" appYmzListStructureItem
-                (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
+            <div class="fields" appYmzListStructureItem (deleteEvent)="removeActor(actorItem, i)"
                 *ngFor="let actorItem of body?.innovatonUse?.actors; let i=index"
                 [ngClass]="{'hideElement': actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly)}">
                 <div>
+                    <div *ngIf="saving">
+                        <div style="margin-top: 20px; margin-bottom: 7px;">
+                            <p-skeleton width="50%" height="20px"></p-skeleton>
+                        </div>
+                        <div style="margin-top: 6px;">
+                            <p-skeleton width="100%" height="40px"></p-skeleton>
+                        </div>
+                    </div>
                     <app-pr-select *ngIf="!this.saving" [options]="this.actorsTypeList" [indexReference]="i"
                         label="Actor type" optionLabel="name" optionValue="actor_type_id"
                         [(ngModel)]="actorItem.actor_type_id" (ngModelChange)="this.actorItem.other_actor_type = null"
@@ -91,7 +98,7 @@
         <app-pr-field-header label="Organizations" [useColon]="false" [required]="false"></app-pr-field-header>
 
         <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length  ">
-            <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
+            <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem, i)"
                 [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
                 *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
                 <div *ngIf="saving">

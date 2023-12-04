@@ -51,10 +51,25 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     return fundedList?.childrens ?? [];
   }
 
-  removeOrganization(organizationItem) {
-    organizationItem.institution_sub_type_id = null;
-    organizationItem.institution_types_id = null;
-    organizationItem.is_active = false;
+  removeOrganization(organizationItem, index) {
+    if (organizationItem.id) {
+      organizationItem.is_active = false;
+      organizationItem.institution_types_id = null;
+      organizationItem.institution_sub_type_id = null;
+      return;
+    }
+
+    this.body.innovatonUse.organization.splice(index, 1);
+  }
+
+  removeActor(actorItem, i) {
+    if (actorItem.result_actors_id) {
+      actorItem.is_active = false;
+      actorItem.actor_type_id = null;
+      return;
+    }
+
+    this.body.innovatonUse.actors.splice(i, 1);
   }
 
   reloadSelect(organizationItem) {
