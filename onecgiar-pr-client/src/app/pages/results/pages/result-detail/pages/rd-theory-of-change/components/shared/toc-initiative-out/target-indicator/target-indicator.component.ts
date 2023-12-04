@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { environment } from '../../../../../../../../../../../environments/environment';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../multiple-wps/components/mapped-results-modal/mapped-results-modal-service.service';
 @Component({
@@ -55,9 +55,5 @@ export class TargetIndicatorComponent {
     if (this.initiative.type_value !== 'custom' && this.initiative.number_result_type !== this.initiative?.result.result_type_id && this.initiative?.result.result_type_id != 4 && this.initiative?.result.result_type_id != 8) return true;
 
     return false;
-  }
-
-  showOutComeOrOutput() {
-    return `Other results contributing to the indicator of the ${this.theoryOfChangesServices?.planned_result && this.resultLevelId === 1 ? 'output' : 'outcome'}`;
   }
 }
