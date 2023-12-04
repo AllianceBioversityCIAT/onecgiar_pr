@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { NoEditContainerComponent } from './no-edit-container.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('NoEditContainerComponent', () => {
   let component: NoEditContainerComponent;
@@ -8,7 +9,10 @@ describe('NoEditContainerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ NoEditContainerComponent ]
+      declarations: [ NoEditContainerComponent ],
+      imports: [
+        HttpClientTestingModule,
+      ],
     })
     .compileComponents();
 
