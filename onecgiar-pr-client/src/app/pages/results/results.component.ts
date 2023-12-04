@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { Title } from '@angular/platform-browser';
 import { IpsrDataControlService } from '../ipsr/services/ipsr-data-control.service';
 import { ApiService } from '../../../app/shared/services/api/api.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-results',
@@ -15,6 +13,6 @@ export class ResultsComponent implements OnInit {
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Results');
     this.ipsrDataControlSE.inIpsr = false;
-    this.api.rolesSE.platformIsClosed = environment.resultModuleIsClosed;
+    this.api.rolesSE.platformIsClosed = this.api.globalVariablesSE.get?.result_is_closed;
   }
 }

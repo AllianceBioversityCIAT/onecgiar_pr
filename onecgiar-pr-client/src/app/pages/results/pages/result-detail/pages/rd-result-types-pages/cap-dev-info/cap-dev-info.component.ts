@@ -21,6 +21,7 @@ export class CapDevInfoComponent implements OnInit {
     { id: true, name: 'Yes' },
     { id: false, name: 'No' }
   ];
+  peopleTrainedDesc = `If gender disaggregated data is not available, please indicate the number of people trained in the "Unknown" field.`;
 
   constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
 
@@ -46,7 +47,6 @@ export class CapDevInfoComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
       this.capDevInfoRoutingBody = response;
-      this.capDevInfoRoutingBody.unkown_using = Boolean(this.capDevInfoRoutingBody.unkown_using);
 
       this.get_capdev_term_id();
     });

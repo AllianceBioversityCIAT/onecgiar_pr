@@ -13,12 +13,13 @@ import { QualityAssuranceService } from '../../../pages/quality-assurance/qualit
 import { Title } from '@angular/platform-browser';
 import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/services/ipsr-list-filter.service';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
+import { GlobalVariablesService } from '../global-variables.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(private titleService: Title, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService) {}
+  constructor(private titleService: Title, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService, public globalVariablesSE: GlobalVariablesService) {}
   isStepTwoTwo: boolean = false;
   isStepTwoOne: boolean = false;
 
@@ -58,7 +59,6 @@ export class ApiService {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe(
       resp => {
         this.dataControlSE.resultsList = resp.response;
-        console.log(this.dataControlSE.resultsList);
         this.resultsListSE.showLoadingResultSpinner = false;
 
         this.dataControlSE.resultsList.forEach((result: any) => {

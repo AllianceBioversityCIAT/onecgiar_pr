@@ -156,7 +156,6 @@ export class resultValidationRepository
 		and r.is_active > 0
 		and r.version_id = ${version};
     `;
-    console.log('Esto es una prueba del green: ', queryData);
     try {
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
@@ -193,16 +192,16 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) - (
+			) = (
 				SELECT COUNT(*)
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) = 0
+			) 
 		)
 		AND (
 			(
-				SELECT IF(rtr.toc_result_id IS NOT NULL, 1, 0)
+				SELECT IF(COUNT(rtr.toc_result_id IS NOT NULL) = 0, 0, 1)
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
@@ -1296,7 +1295,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			WHEN (
 				rid.innovation_pdf = 1
@@ -1309,7 +1312,11 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
@@ -1383,18 +1390,10 @@ export class resultValidationRepository
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.unkown_using = 0
-				AND (
-					rcd.female_using IS NULL
-					OR rcd.male_using IS NULL
-					OR non_binary_using IS NULL
-				)
-			) THEN FALSE
-			WHEN (
-				rcd.unkown_using = 1
-				AND (
-					rcd.has_unkown_using IS NULL
-				)
+				rcd.female_using IS NULL
+				OR rcd.male_using IS NULL
+				OR non_binary_using IS NULL
+				OR rcd.has_unkown_using IS NULL
 			) THEN FALSE
 			WHEN (
 				rcd.capdev_term_id IS NULL
@@ -1542,7 +1541,7 @@ export class resultValidationRepository
   async resultIsValid(resultId: number) {
     const queryData = `
 	SELECT
-		IFNULL(v.section_seven, 1) *
+		IF(r.result_type_id in (4,8,9),1, v.section_seven) *
   		v.general_information *
   		v.theory_of_change *
   		v.partners *
@@ -1550,6 +1549,8 @@ export class resultValidationRepository
   		v.links_to_results *
   		v.evidence as validation
   	from validation v 
+	  inner join \`result\` r on r.id = v.results_id 
+	  and r.is_active > 0
   		WHERE v.results_id = ?
 		  and v.is_active > 0;
     `;

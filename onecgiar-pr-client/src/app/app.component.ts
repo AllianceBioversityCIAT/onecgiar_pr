@@ -15,7 +15,7 @@ export class AppComponent implements OnInit {
   isProduction = environment.production;
   constructor(public AuthService: AuthService, public rolesSE: RolesService, private api: ApiService, public footerSE: FooterService) {}
   ngOnInit(): void {
-    // this.AuthService.inLogin = false;
+    this.getGlobalParametersByCategory();
     setTimeout(() => {
       if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
     }, 500);
@@ -42,5 +42,11 @@ export class AppComponent implements OnInit {
       }
       return false;
     };
+  }
+
+  private getGlobalParametersByCategory() {
+    this.api.resultsSE.GET_platformGlobalVariables().subscribe(({ response }) => {
+      this.api.globalVariablesSE.get = response;
+    });
   }
 }
