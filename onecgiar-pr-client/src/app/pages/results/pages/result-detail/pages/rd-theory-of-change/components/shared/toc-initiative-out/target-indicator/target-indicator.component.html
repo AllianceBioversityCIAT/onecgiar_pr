@@ -121,8 +121,8 @@
                                 [disabled]="!item.indicator_question"></app-pr-input>
 
                             <app-pr-textarea label="Short progress narrative" [required]="false"
-                                [(ngModel)]="item.contributing_indicator" [disabled]="!item.indicator_question"
-                                placeholder="Enter text" [rows]="2">
+                                [(ngModel)]="item.target_progress_narrative"
+                                [disabled]="!item.target_progress_narrative" placeholder="Enter text" [rows]="2">
                             </app-pr-textarea>
                         </div>
                     </div>

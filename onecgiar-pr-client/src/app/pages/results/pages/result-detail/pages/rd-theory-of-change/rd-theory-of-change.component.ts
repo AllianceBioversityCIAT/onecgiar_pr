@@ -80,6 +80,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
           });
         }
 
+        console.log('recibido', this.theoryOfChangeBody);
+
         this.disabledCenters();
 
         setTimeout(() => {
@@ -110,6 +112,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangeBody?.result_toc_result?.initiative_id);
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
+
+    console.log('enviado', this.theoryOfChangeBody);
 
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {

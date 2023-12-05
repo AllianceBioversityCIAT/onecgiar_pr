@@ -63,7 +63,8 @@
       </div>
     </div> -->
 
-    <app-pr-textarea [label]="dynamicProgressLabel()" [required]="false" placeholder="Enter text" [rows]="3">
+    <app-pr-textarea [label]="dynamicProgressLabel()" [required]="false" placeholder="Enter text" [rows]="3"
+      [(ngModel)]="activeTab.toc_progressive_narrative">
     </app-pr-textarea>
 
     <app-pr-button icon="featured_play_list" text="See all results contirbuting to this TOC Output"
