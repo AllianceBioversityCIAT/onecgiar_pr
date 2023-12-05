@@ -13,9 +13,7 @@ export class MappedResultsModalComponent {
 
   constructor(public mappedResultService: MappedResultsModalServiceService) {}
 
-  openInNewPage(resultCode: string, phase: string, isLink: boolean) {
-    if (!isLink) return null;
-
+  openInNewPage(resultCode: string, phase: string) {
     window.open(`/result/result-detail/${resultCode}/general-information?phase=${phase}`, '_blank');
   }
 
@@ -30,8 +28,8 @@ export class MappedResultsModalComponent {
   validateOrder(columnAttr) {
     setTimeout(() => {
       if (columnAttr == 'result_code') return (this.combine = true);
-      const resultListTableHTML = document.getElementById('resultListTable');
-      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      const mappedResultTableHTML = document.getElementById('mappedResultTable');
+      this.combine = !mappedResultTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !mappedResultTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
 
       return null;
     }, 100);
