@@ -1,7 +1,7 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
-import { ResultsListFilterService } from 'src/app/pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { ResultsListFilterService } from '../../../../../../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 import { Router } from '@angular/router';
 

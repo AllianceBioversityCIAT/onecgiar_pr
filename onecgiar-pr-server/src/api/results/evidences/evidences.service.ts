@@ -1,5 +1,8 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateEvidenceDto } from './dto/create-evidence.dto';
+import {
+  CreateEvidenceDto,
+  EvidencesCreateInterface,
+} from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -11,6 +14,10 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { Like } from 'typeorm';
 import { Result } from '../entities/result.entity';
+import { GlobalParameterCacheService } from '../../../shared/services/cache/global-parameter-cache.service';
+import { SharePointService } from '../../../shared/services/share-point/share-point.service';
+import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint.repository';
+import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
 
 @Injectable()
 export class EvidencesService {
@@ -21,6 +28,9 @@ export class EvidencesService {
     private readonly _versionRepository: VersionRepository,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    private readonly _globalParameterCacheService: GlobalParameterCacheService,
+    private readonly _sharePointService: SharePointService,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -28,9 +38,9 @@ export class EvidencesService {
         createEvidenceDto.result_id,
       );
       await this._versionRepository.getBaseVersion();
-      if (createEvidenceDto?.evidences) {
+      if (createEvidenceDto?.evidences?.length) {
         const evidencesArray = createEvidenceDto?.evidences.filter(
-          (e) => !!e?.link,
+          (e) => !!e?.link || e?.is_sharepoint,
         );
         const testDuplicate = evidencesArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
@@ -40,32 +50,34 @@ export class EvidencesService {
             status: HttpStatus.BAD_REQUEST,
           };
         }
+
         await this._evidencesRepository.updateEvidences(
           createEvidenceDto.result_id,
-          evidencesArray.map((e) => e.link.trim()),
+          evidencesArray.map((e) => e?.id),
           user.id,
           false,
           1,
         );
+
         const long: number =
           evidencesArray.length > 6 ? 6 : evidencesArray.length;
-        const newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < long; index++) {
           const evidence = evidencesArray[index];
           const eExists =
             await this._evidencesRepository.getEvidencesByResultIdAndLink(
               result.id,
-              evidence.link,
+              evidence.id,
               false,
               1,
             );
-          if (!eExists) {
-            const newEvidence = new Evidence();
 
+          const newEvidence = new Evidence();
+          if (!eExists) {
             newEvidence.created_by = user.id;
             newEvidence.last_updated_by = user.id;
             newEvidence.description = evidence?.description ?? null;
             newEvidence.gender_related = evidence.gender_related;
+            newEvidence.is_sharepoint = evidence.is_sharepoint;
             newEvidence.youth_related = evidence.youth_related;
             newEvidence.nutrition_related = evidence.nutrition_related;
             newEvidence.environmental_biodiversity_related =
@@ -92,16 +104,16 @@ export class EvidencesService {
               newEvidence.knowledge_product_related =
                 knowledgeProduct.result_object.id;
             }
-
-            newsEvidencesArray.push(newEvidence);
           } else {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
+            eExists.is_sharepoint = evidence.is_sharepoint;
             eExists.youth_related = evidence.youth_related;
             eExists.nutrition_related = evidence.nutrition_related;
             eExists.environmental_biodiversity_related =
               evidence.environmental_biodiversity_related;
             eExists.poverty_related = evidence.poverty_related;
+            eExists.link = evidence.link;
 
             if (!eExists.knowledge_product_related) {
               const knowledgeProduct =
@@ -115,11 +127,23 @@ export class EvidencesService {
                   knowledgeProduct.result_object.id;
               }
             }
-
-            newsEvidencesArray.push(eExists);
           }
+          const currentEvidence = eExists ? eExists : newEvidence;
+
+          const evidenceSaved = await this._evidencesRepository.save(
+            currentEvidence,
+          );
+          if (evidenceSaved?.id)
+            await this.saveSPData(evidence, evidenceSaved?.id);
         }
-        await this._evidencesRepository.save(newsEvidencesArray);
+      } else {
+        await this._evidencesRepository.updateEvidences(
+          createEvidenceDto.result_id,
+          [],
+          user.id,
+          false,
+          1,
+        );
       }
 
       if (createEvidenceDto?.supplementary) {
@@ -180,6 +204,105 @@ export class EvidencesService {
     }
   }
 
+  async saveSPData(evidence: EvidencesCreateInterface, newEvidenceId) {
+    const { sp_document_id, sp_file_name, sp_folder_path, sp_evidence_id } =
+      evidence || {};
+
+    const currentSPId = Number(sp_evidence_id);
+    const existingEvidenceSharepoint = currentSPId
+      ? await this._evidenceSharepointRepository.findOne({
+          where: {
+            id: currentSPId,
+          },
+        })
+      : undefined;
+
+    const replaceFile =
+      typeof sp_file_name === 'string' &&
+      existingEvidenceSharepoint?.file_name !== sp_file_name &&
+      existingEvidenceSharepoint?.id;
+
+    if (
+      existingEvidenceSharepoint &&
+      (replaceFile || !evidence?.is_sharepoint)
+    ) {
+      await this._evidenceSharepointRepository.update(
+        existingEvidenceSharepoint?.id,
+        {
+          is_active: false,
+        },
+      );
+      existingEvidenceSharepoint.id = null;
+    }
+    if (!evidence?.is_sharepoint) return;
+    const createOrUpdateEvidenceSharepoint = async (
+      evidenceSharepoint: EvidenceSharepoint | undefined,
+    ) => {
+      if (!evidenceSharepoint) {
+        evidenceSharepoint = new EvidenceSharepoint();
+      }
+
+      if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
+        const data: any = await this._sharePointService.addFileAccess(
+          sp_document_id ?? evidenceSharepoint.document_id,
+          evidence.is_public_file ?? evidenceSharepoint.is_public_file,
+        );
+        if (data.link.webUrl) {
+          await this._evidencesRepository.update(newEvidenceId, {
+            link: data.link.webUrl,
+          });
+        }
+      }
+
+      evidenceSharepoint.folder_path =
+        sp_folder_path ?? evidenceSharepoint.folder_path;
+      evidenceSharepoint.file_name =
+        sp_file_name ?? evidenceSharepoint.file_name;
+      evidenceSharepoint.is_public_file =
+        evidence.is_public_file ?? evidenceSharepoint.is_public_file;
+      evidenceSharepoint.evidence_id =
+        newEvidenceId ?? evidenceSharepoint.evidence_id;
+      evidenceSharepoint.document_id =
+        sp_document_id ?? evidenceSharepoint.document_id;
+
+      await this._evidenceSharepointRepository.save(evidenceSharepoint);
+    };
+
+    await createOrUpdateEvidenceSharepoint(existingEvidenceSharepoint);
+  }
+
+  async replicateSPFiles(config: any) {
+    const resultReplicatedId = config?.new_result_id;
+    const { filePath } = await this._sharePointService.generateFilePath(
+      resultReplicatedId,
+    );
+
+    const evidevenceList =
+      await this._evidencesRepository.getEvidencesByResultId(
+        resultReplicatedId,
+        false,
+        1,
+      );
+
+    for (const sharePointIterator of evidevenceList) {
+      if (!sharePointIterator?.is_sharepoint) continue;
+
+      const document_id = await this._sharePointService.replicateFile(
+        sharePointIterator['sp_document_id'],
+        filePath,
+      );
+
+      const accessData = await this._sharePointService.addFileAccess(
+        document_id,
+        sharePointIterator.is_public_file,
+      );
+
+      await this._evidencesRepository.update(sharePointIterator, {
+        link: accessData?.link?.webUrl,
+      });
+    }
+  }
+
   async findAll(resultId: number) {
     try {
       const result: Result =
@@ -202,6 +325,7 @@ export class EvidencesService {
         false,
         1,
       );
+
       const supplementary =
         await this._evidencesRepository.getEvidencesByResultId(
           resultId,
@@ -216,6 +340,8 @@ export class EvidencesService {
         e.environmental_biodiversity_related =
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
+        e.is_sharepoint = Number(!!e?.is_sharepoint);
+        e.is_public_file = Boolean(e.is_public_file);
       });
 
       supplementary.map((e) => {

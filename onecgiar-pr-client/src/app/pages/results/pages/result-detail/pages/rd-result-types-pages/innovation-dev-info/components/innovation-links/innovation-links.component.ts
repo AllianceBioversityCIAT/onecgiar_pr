@@ -15,11 +15,11 @@ export class InnovationLinksComponent {
   constructor(public api: ApiService) {}
 
   picturesLinksAlertText() {
-    return `Pictures links (Min. 3)`;
+    return `Pictures links (Min. 1)`;
   }
 
   referencesLinksAlertText() {
-    return `References links (Min. 3)`;
+    return `References links (Min.1)`;
   }
 
   temporalLinkDescription() {

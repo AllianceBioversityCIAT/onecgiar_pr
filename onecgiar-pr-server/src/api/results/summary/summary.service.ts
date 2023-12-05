@@ -168,15 +168,10 @@ export class SummaryService {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       if (capDevExists) {
-        capDevExists.female_using = unkown_using ? 0 : female_using || 0;
-        capDevExists.male_using = unkown_using ? 0 : male_using || 0;
-        capDevExists.has_unkown_using = !unkown_using
-          ? null
-          : has_unkown_using || null;
-        capDevExists.non_binary_using = unkown_using
-          ? 0
-          : non_binary_using || 0;
-        capDevExists.unkown_using = unkown_using;
+        capDevExists.female_using = female_using || 0;
+        capDevExists.male_using = male_using || 0;
+        capDevExists.has_unkown_using = has_unkown_using || 0;
+        capDevExists.non_binary_using = non_binary_using || 0;
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
@@ -188,13 +183,10 @@ export class SummaryService {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
-        newCapDev.female_using = unkown_using ? 0 : female_using || 0;
-        newCapDev.male_using = unkown_using ? 0 : male_using || 0;
-        newCapDev.has_unkown_using = !unkown_using
-          ? null
-          : has_unkown_using || null;
-        newCapDev.non_binary_using = unkown_using ? 0 : non_binary_using || 0;
-        newCapDev.unkown_using = unkown_using;
+        newCapDev.female_using = female_using || 0;
+        newCapDev.male_using = male_using || 0;
+        newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.non_binary_using = non_binary_using || 0;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;

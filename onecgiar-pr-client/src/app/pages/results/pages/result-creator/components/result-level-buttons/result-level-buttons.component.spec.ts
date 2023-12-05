@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { ResultLevelButtonsComponent } from './result-level-buttons.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 
 describe('ResultLevelButtonsComponent', () => {
   let component: ResultLevelButtonsComponent;
@@ -8,7 +9,13 @@ describe('ResultLevelButtonsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ResultLevelButtonsComponent]
+      declarations: [
+        ResultLevelButtonsComponent,
+        AlertStatusComponent
+      ],
+      imports: [
+        HttpClientTestingModule,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultLevelButtonsComponent);
