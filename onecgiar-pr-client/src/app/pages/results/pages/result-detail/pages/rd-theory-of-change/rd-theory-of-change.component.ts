@@ -6,7 +6,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
-import { DataControlService } from 'src/app/shared/services/data-control.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
