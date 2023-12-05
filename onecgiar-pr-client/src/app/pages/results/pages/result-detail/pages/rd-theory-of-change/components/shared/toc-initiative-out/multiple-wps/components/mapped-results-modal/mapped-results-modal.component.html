@@ -54,8 +54,8 @@
           <tr>
             <td *ngFor="let column of this.mappedResultService.columnsOrder" class="{{column.attr}}">
               <p [ngClass]="{'open_route': column.link}"
-                (click)="column.link ? openInNewPage(target.result_code, '18') : null" style="margin: 0;">
-                {{ target[column.attr]}}
+                (click)="column.link ? openInNewPage(target.result_code, target.version_id) : null" style="margin: 0;">
+                {{target[column.attr]}}
               </p>
             </td>
           </tr>
