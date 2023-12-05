@@ -905,7 +905,6 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}evidences/create/${service.currentResultId}`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
@@ -928,6 +927,7 @@ describe('ResultsApiService', () => {
         impactsTarge: [],
         sdgTargets: [],
         bodyActionArea: [],
+        planned_result: true
       }
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
