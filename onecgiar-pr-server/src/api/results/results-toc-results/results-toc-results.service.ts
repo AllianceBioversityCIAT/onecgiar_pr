@@ -409,7 +409,7 @@ export class ResultsTocResultsService {
               false,
               [init.id],
             );
-          result_toc_results.forEach(el => {
+          result_toc_results.forEach((el) => {
             if (el['planned_result'] === false) {
               el['toc_level_id'] = 3;
             }
@@ -751,6 +751,7 @@ export class ResultsTocResultsService {
               planned_result:
                 createResultsTocResultDto.result_toc_result?.planned_result,
               is_active: true,
+              toc_progressive_narrative: toc.toc_progressive_narrative,
             },
           );
         } else if (toc) {
@@ -761,9 +762,10 @@ export class ResultsTocResultsService {
             last_updated_by: user.id,
             result_id: result.id,
             planned_result:
-              createResultsTocResultDto?.result_toc_result?.planned_result,
+              createResultsTocResultDto.result_toc_result?.planned_result,
             action_area_outcome_id: toc?.action_area_outcome_id,
             is_active: true,
+            toc_progressive_narrative: toc.toc_progressive_narrative,
           });
         }
       }

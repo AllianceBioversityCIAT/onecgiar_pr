@@ -324,6 +324,7 @@ export class ResultsTocResultRepository
       rtr.action_area_outcome_id ,
       rtr.created_by ,
       rtr.last_updated_by,
+      rtr.toc_progressive_narrative,
       ci.id as initiative_id,
       ci.official_code,
       ci.name,
@@ -971,7 +972,8 @@ export class ResultsTocResultRepository
                   r.description,
                   r.title,
                   r.result_code,
-                  rit.contributing_indicator
+                  rit.contributing_indicator,
+                  rit.target_progress_narrative
                 from
                   results_toc_result rtr
                   join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
@@ -1018,7 +1020,8 @@ export class ResultsTocResultRepository
                   r.description,
                   r.title,
                   r.result_code,
-                  rit.contributing_indicator
+                  rit.contributing_indicator,
+                  rit.target_progress_narrative
                 from
                   results_toc_result rtr
                   join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
@@ -1199,7 +1202,8 @@ export class ResultsTocResultRepository
                 r.description,
                 r.title,
                 r.result_code,
-                rit.contributing_indicator
+                rit.contributing_indicator,
+                rit.target_progress_narrative
               from
                 results_toc_result rtr
                 join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
@@ -1360,11 +1364,23 @@ export class ResultsTocResultRepository
             element.contributing = '';
             element.indicator_question = null;
             const queryTargetContributing = `
-                select r.description, r.title, r.result_code, rit.contributing_indicator from results_toc_result rtr 
-		              join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id and rtri.is_active = 1
-      	          join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id and rit.is_active = 1
-      	          join result r on r.id = rtr.results_id 
-      	          where rtri.toc_results_indicator_id = ? and rit.number_target = ? and rtr.is_active = 1;
+            SELECT
+              r.description,
+              r.title,
+              r.result_code,
+              rit.contributing_indicator,
+              rit.target_progress_narrative
+            FROM
+              results_toc_result rtr
+              JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+              AND rtri.is_active = 1
+              JOIN result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+              AND rit.is_active = 1
+              JOIN result r ON r.id = rtr.results_id
+            WHERE
+              rtri.toc_results_indicator_id = ?
+              AND rit.number_target = ?
+              AND rtr.is_active = 1;
                 `;
 
             const queryTargetothercontributing = await this.query(
@@ -1387,7 +1403,6 @@ export class ResultsTocResultRepository
               itemIndicator.is_calculable = false;
             }
           });
-
         }
       }
       return IndicatorTargetData;
@@ -1455,6 +1470,10 @@ export class ResultsTocResultRepository
                   number_target: target.number_target,
                 },
               });
+
+            const formattedContributing: number =
+              target.contributing.toFixed(2);
+
             if (targetInfo) {
               await this._resultTocIndicatorTargetRepository.update(
                 {
@@ -1464,18 +1483,20 @@ export class ResultsTocResultRepository
                 },
                 {
                   is_active: true,
-                  contributing_indicator: target.contributing,
+                  contributing_indicator: formattedContributing,
                   indicator_question: target.indicator_question,
                   number_target: target.number_target,
+                  target_progress_narrative: target.target_progress_narrative,
                 },
               );
             } else {
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   targetIndicators.result_toc_result_indicator_id,
-                contributing_indicator: target.contributing,
+                contributing_indicator: formattedContributing,
                 indicator_question: target.indicator_question,
                 number_target: target.number_target,
+                target_progress_narrative: target.target_progress_narrative,
                 is_active: true,
               });
             }
@@ -1488,13 +1509,16 @@ export class ResultsTocResultRepository
               is_active: true,
             });
           for (const target of itemIndicator.targets) {
+            const formattedContributing: number =
+              target.contributing.toFixed(2);
             await this._resultTocIndicatorTargetRepository.save({
               result_toc_result_indicator_id:
                 resultTocResultIndicator.result_toc_result_indicator_id,
-              contributing_indicator: target.contributing,
+              contributing_indicator: formattedContributing,
               indicator_question: target.indicator_question,
               is_active: true,
               number_target: target.number_target,
+              target_progress_narrative: target.target_progress_narrative,
             });
           }
         }
