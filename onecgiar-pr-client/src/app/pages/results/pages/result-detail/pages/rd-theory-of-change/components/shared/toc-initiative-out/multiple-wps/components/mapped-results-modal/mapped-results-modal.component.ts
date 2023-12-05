@@ -11,6 +11,8 @@ export class MappedResultsModalComponent {
   @Input() outputList?: any = null;
   combine = true;
 
+  text = `<strong>WP1-ReFOCUS</strong> <br> <div class="select_item_description"> 1.2.3 Target product profile aligned selection index</div>`;
+
   constructor(public mappedResultService: MappedResultsModalServiceService) {}
 
   openInNewPage(resultCode: string, phase: string) {

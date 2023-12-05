@@ -180,9 +180,9 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     this.mappedResultService.columnsOrder = [
       { title: 'Result code', attr: 'result_code' },
       { title: 'Title', attr: 'title', link: true },
-      { title: 'Indicator category', attr: 'name' },
+      { title: 'Indicator category', attr: 'result_type_name' },
       { title: 'Phase', attr: 'phase_name' },
-      { title: 'Progress narrative against the target', attr: 'target_progress_narrative' }
+      { title: 'Progress narrative against the target', attr: 'toc_progressive_narrative' }
     ];
   }
 }

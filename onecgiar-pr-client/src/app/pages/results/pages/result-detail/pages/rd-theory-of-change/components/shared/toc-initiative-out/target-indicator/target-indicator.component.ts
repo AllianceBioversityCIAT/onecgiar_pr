@@ -29,7 +29,7 @@ export class TargetIndicatorComponent {
     this.mappedResultService.columnsOrder = [
       { title: 'Result code', attr: 'result_code' },
       { title: 'Title', attr: 'title', link: true },
-      { title: 'Indicator category', attr: 'name' },
+      { title: 'Indicator category', attr: 'result_type_name' },
       { title: 'Phase', attr: 'phase_name' },
       { title: 'Contribution', attr: 'contributing_indicator' },
       { title: 'Progress narrative against the target', attr: 'target_progress_narrative' }

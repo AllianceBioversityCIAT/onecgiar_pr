@@ -10,10 +10,9 @@
   <div class="modal_container">
 
     <div>
-      <div *ngIf="!this.mappedResultService.isTarget" style="margin-bottom: 25px;">
-        <app-pr-select [options]="outputList" label="Output" optionLabel="extraInformation" optionValue="toc_result_id"
-          [readOnly]="true" placeholder="Select output" [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true">
-        </app-pr-select>
+      <div *ngIf="!this.mappedResultService.isTarget" style="margin: 12px 0 25px 0; font-size: 14px;">
+        <div class="label" [innerHtml]="activeTab.extraInformation">
+        </div>
       </div>
 
       <div class="target_info" *ngIf="this.mappedResultService.isTarget">
