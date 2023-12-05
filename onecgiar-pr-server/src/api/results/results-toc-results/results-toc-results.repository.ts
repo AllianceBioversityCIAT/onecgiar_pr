@@ -972,6 +972,9 @@ export class ResultsTocResultRepository
                   r.description,
                   r.title,
                   r.result_code,
+                  v.phase_name,
+                  v.id AS version_id,
+                  rt.name,
                   rit.contributing_indicator,
                   rit.target_progress_narrative
                 from
@@ -981,6 +984,8 @@ export class ResultsTocResultRepository
                   join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
                   and rit.is_active = 1
                   join result r on r.id = rtr.results_id
+                  join version v on v.id = r.version_id
+                  join result_type rt ON rt.id = r.result_type_id
                 where
                   rtri.results_toc_results_id != ?
                   and rtri.toc_results_indicator_id = ?
@@ -1020,6 +1025,9 @@ export class ResultsTocResultRepository
                   r.description,
                   r.title,
                   r.result_code,
+                  v.phase_name,
+                  v.id AS version_id,
+                  rt.name,
                   rit.contributing_indicator,
                   rit.target_progress_narrative
                 from
@@ -1029,6 +1037,8 @@ export class ResultsTocResultRepository
                   join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
                   and rit.is_active = 1
                   join result r on r.id = rtr.results_id
+                  join version v on v.id = r.version_id
+                  join result_type rt ON rt.id = r.result_type_id
                 where
                   rtri.toc_results_indicator_id = ?
                   and rit.number_target = ?
@@ -1202,6 +1212,9 @@ export class ResultsTocResultRepository
                 r.description,
                 r.title,
                 r.result_code,
+                v.phase_name,
+                v.id AS version_id,
+                rt.name,
                 rit.contributing_indicator,
                 rit.target_progress_narrative
               from
@@ -1211,6 +1224,8 @@ export class ResultsTocResultRepository
                 join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
                 and rit.is_active = 1
                 join result r on r.id = rtr.results_id
+                join version v on v.id = r.version_id
+                join result_type rt ON rt.id = r.result_type_id
               where
                 rtri.toc_results_indicator_id = ?
                 and rit.number_target = ?
@@ -1368,6 +1383,9 @@ export class ResultsTocResultRepository
               r.description,
               r.title,
               r.result_code,
+              v.phase_name,
+              v.id AS version_id,
+              rt.name,
               rit.contributing_indicator,
               rit.target_progress_narrative
             FROM
@@ -1377,6 +1395,8 @@ export class ResultsTocResultRepository
               JOIN result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
               AND rit.is_active = 1
               JOIN result r ON r.id = rtr.results_id
+              join version v on v.id = r.version_id
+              join result_type rt ON rt.id = r.result_type_id
             WHERE
               rtri.toc_results_indicator_id = ?
               AND rit.number_target = ?
@@ -1471,8 +1491,10 @@ export class ResultsTocResultRepository
                 },
               });
 
-            const formattedContributing: number =
-              target.contributing.toFixed(2);
+            let formattedContributing: number = 0;
+            if (target.contributing) {
+              formattedContributing = target.contributing.toFixed(2);
+            }
 
             if (targetInfo) {
               await this._resultTocIndicatorTargetRepository.update(
