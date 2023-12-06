@@ -370,6 +370,7 @@ export class ResultsTocResultsService {
       const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
+      let wpcontributing: any = {};
       let conResTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
@@ -583,6 +584,15 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+      const extra_info = await this._resultsTocResultRepository.getWpExtraInfo(
+        resultIdToc,
+        toc_result_id,
+        init,
+      );
+      const wp_info = await this._resultsTocResultRepository.getWpInformation(
+        resultIdToc,
+        toc_result_id,
+      );
 
       return {
         response: {
@@ -595,6 +605,10 @@ export class ResultsTocResultsService {
           isSdg: isSdg,
           isImpactArea: isImpactArea,
           is_sdg_action_impact: is_sdg_action_impact,
+          wpinformation: {
+            extraInformation: extra_info[0],
+            wp_info,
+          },
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
@@ -719,10 +733,6 @@ export class ResultsTocResultsService {
       // * Map multiple WPs to the same initiative
       for (const toc of createResultsTocResultDto.result_toc_result
         .result_toc_results) {
-        console.log(
-          '🚀 ~ file: results-toc-results.service.ts:721 ~ ResultsTocResultsService ~ toc:',
-          toc,
-        );
         let RtR: ResultsTocResult | null;
         if (toc?.result_toc_result_id) {
           RtR =

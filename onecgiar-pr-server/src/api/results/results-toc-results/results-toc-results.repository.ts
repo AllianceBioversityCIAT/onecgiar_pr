@@ -333,7 +333,7 @@ export class ResultsTocResultRepository
     FROM
       results_toc_result rtr	
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
-      left join clarisa_initiatives ci on ci.id = rtr.initiative_id  
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
       initiativeId ? initiativeId.toString() : null
@@ -351,6 +351,69 @@ export class ResultsTocResultRepository
       const resultTocResult: ResultsTocResult[] = await this.query(queryData, [
         resultId,
       ]);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getWpExtraInfo(
+    resultId: number,
+    toc_result_id: number,
+    initiativeId: number,
+  ) {
+    const queryData = `
+    SELECT
+      tr.result_title,
+      IFNULL(wp.acronym, NULL) AS wp_acronym
+    FROM
+      results_toc_result rtr	
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id
+      left join ${env.DB_OST}.work_packages wp on wp.id = tr.work_packages_id
+    where rtr.results_id = ${resultId}
+      and rtr.initiative_id = ${initiativeId}
+      and ${toc_result_id ? `rtr.toc_result_id = ${toc_result_id}` : ``}
+      and rtr.is_active > 0;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getWpInformation(resultId: number, toc_result_id: number) {
+    const queryData = `
+      select
+        r.description,
+        r.title,
+        r.result_code,
+        v.phase_name,
+        v.id AS version_id,
+        rt.name AS result_type_name,
+        rtr.toc_progressive_narrative
+      from
+        results_toc_result rtr
+        join result r on r.id = rtr.results_id
+        join version v on v.id = r.version_id
+        join result_type rt ON rt.id = r.result_type_id
+      where
+        rtr.results_id = ${resultId}
+        AND rtr.toc_result_id = ${toc_result_id}
+        AND rtr.is_active = 1
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
       return resultTocResult;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -1370,9 +1433,24 @@ export class ResultsTocResultRepository
           //Finish Section to get the type
           //Section to get the targets
           const queryTargetInfo = `
-          SELECT trit.target_value, trit.target_date, trit.number_target
-            from Integration_information.toc_result_indicator_target trit 
-              WHERE trit.toc_result_indicator_id = ?
+          SELECT
+            trit.target_value,
+            trit.target_date,
+            trit.number_target
+          FROM
+            Integration_information.toc_result_indicator_target trit
+          WHERE
+            trit.toc_result_indicator_id = ?
+            AND YEAR(DATE(trit.target_date)) = (
+                SELECT
+                  v1.phase_year
+                FROM
+                  prdb.version v1
+                WHERE
+                  v1.phase_name LIKE '%Reporting%'
+                  AND v1.is_active = 1
+                  AND v1.status = 1
+            );
           `;
           const queryTargetInfoData = await this.query(queryTargetInfo, [
             itemIndicator.toc_results_indicator_id,
@@ -1495,11 +1573,6 @@ export class ResultsTocResultRepository
                 },
               });
 
-            let formattedContributing: number = 0;
-            if (target.contributing) {
-              formattedContributing = target.contributing.toFixed(2);
-            }
-
             if (targetInfo) {
               await this._resultTocIndicatorTargetRepository.update(
                 {
@@ -1509,20 +1582,32 @@ export class ResultsTocResultRepository
                 },
                 {
                   is_active: true,
-                  contributing_indicator: formattedContributing,
+                  contributing_indicator:
+                    target.indicator_question == 1
+                      ? parseFloat(target.contributing)
+                      : null,
                   indicator_question: target.indicator_question,
                   number_target: target.number_target,
-                  target_progress_narrative: target.target_progress_narrative,
+                  target_progress_narrative:
+                    target.indicator_question == 1
+                      ? target.target_progress_narrative
+                      : null,
                 },
               );
             } else {
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   targetIndicators.result_toc_result_indicator_id,
-                contributing_indicator: formattedContributing,
+                contributing_indicator:
+                  target.indicator_question == 1
+                    ? parseFloat(target.contributing)
+                    : null,
                 indicator_question: target.indicator_question,
                 number_target: target.number_target,
-                target_progress_narrative: target.target_progress_narrative,
+                target_progress_narrative:
+                  target.indicator_question == 1
+                    ? target.target_progress_narrative
+                    : null,
                 is_active: true,
               });
             }
@@ -1535,16 +1620,20 @@ export class ResultsTocResultRepository
               is_active: true,
             });
           for (const target of itemIndicator.targets) {
-            const formattedContributing: number =
-              target.contributing.toFixed(2);
             await this._resultTocIndicatorTargetRepository.save({
               result_toc_result_indicator_id:
                 resultTocResultIndicator.result_toc_result_indicator_id,
-              contributing_indicator: formattedContributing,
+              contributing_indicator:
+                target.indicator_question == 1
+                  ? parseFloat(target.contributing)
+                  : null,
               indicator_question: target.indicator_question,
               is_active: true,
               number_target: target.number_target,
-              target_progress_narrative: target.target_progress_narrative,
+              target_progress_narrative:
+                target.indicator_question == 1
+                  ? target.target_progress_narrative
+                  : null,
             });
           }
         }
