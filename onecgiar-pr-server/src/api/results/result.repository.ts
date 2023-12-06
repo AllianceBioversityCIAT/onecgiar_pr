@@ -1133,7 +1133,7 @@ WHERE
 
   async getTypesOfResultByInitiative(
     initiativeId: number,
-    version = 1,
+    phase?: number,
   ): Promise<ResultTypeDto[]> {
     const queryData = `
     select
@@ -1147,11 +1147,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     where rbi3.inititiative_id = ?
       and r.status_id = 3
       and r.is_active = 1
-      and r.version_id = ?
+      ${phase ? `and r.version_id = ${phase}` : ''}
     ;
     `;
     try {
-      const results = await this.query(queryData, [initiativeId, version]);
+      const results = await this.query(queryData, [initiativeId]);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -1448,7 +1448,10 @@ left join clarisa_countries cc3
     }
   }
 
-  async getBasicResultDataForReportByInitiative(initiativeId: number) {
+  async getBasicResultDataForReportByInitiative(
+    initiativeId: number,
+    phase?: number,
+  ) {
     const inititiative_id = initiativeId;
 
     const query = `
@@ -1632,9 +1635,9 @@ left join clarisa_countries cc3
     result r
     left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
     left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
-    left join gender_tag_level gtl2 on gtl3.id = r.nutrition_tag_level_id 
-    left join gender_tag_level gtl2 on gtl4.id = r.environmental_biodiversity_tag_level_id 
-    left join gender_tag_level gtl2 on gtl5.id = r.poverty_tag_level_id 
+    left join gender_tag_level gtl3 on gtl3.id = r.nutrition_tag_level_id 
+    left join gender_tag_level gtl4 on gtl4.id = r.environmental_biodiversity_tag_level_id 
+    left join gender_tag_level gtl5 on gtl5.id = r.poverty_tag_level_id 
     left join results_by_inititiative rbi on rbi.result_id = r.id 
     and rbi.initiative_role_id = 1
     and rbi.is_active > 0
@@ -1698,6 +1701,7 @@ left join clarisa_countries cc3
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE rbi3.inititiative_id = ${inititiative_id}
+      ${phase ? `and r.version_id = ${phase}` : ''}
       AND r.status_id = 3
     GROUP by 
     r.result_code,
@@ -1863,7 +1867,7 @@ left join clarisa_countries cc3
     }
   }
 
-  async getTocDataForReportByInitiative(initiativeId: number) {
+  async getTocDataForReportByInitiative(initiativeId: number, phase?: number) {
     const inititiative_id = initiativeId;
     const query = `
     select
@@ -1872,8 +1876,12 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', caa.name) separator '\n')
           from ${env.DB_OST}.toc_results_action_area_results traar
-          join ${env.DB_OST}.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
-          join ${env.DB_OST}.clarisa_action_areas caa on caa.id = taar.action_areas_id
+          join ${
+            env.DB_OST
+          }.toc_action_area_results taar on traar.action_area_toc_result_id = taar.toc_result_id
+          join ${
+            env.DB_OST
+          }.clarisa_action_areas caa on caa.id = taar.action_areas_id
           WHERE traar.toc_result_id in (
             SELECT tr.toc_internal_id
             from result r8
@@ -1885,8 +1893,12 @@ left join clarisa_countries cc3
       (
           SELECT GROUP_CONCAT(DISTINCT concat('• ', cia.name) separator '\n')
           from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1898,9 +1910,15 @@ left join clarisa_countries cc3
         (
           SELECT GROUP_CONCAT(DISTINCT concat('• ', cgt.target) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST}.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST}.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1912,11 +1930,21 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ', cst.sdg_target_code, ' - ', cst.sdg_target) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST}.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST}.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
-            join ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
-            join ${env.DB_OST}.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1928,11 +1956,21 @@ left join clarisa_countries cc3
       (
         SELECT GROUP_CONCAT(DISTINCT concat('• ',replace(cst.sdg -> "$.shortName", '"', "")) separator '\n')
             from ${env.DB_OST}.toc_results_impact_area_results triar
-            join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-            join ${env.DB_OST}.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
-            join ${env.DB_OST}.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
-            join ${env.DB_OST}.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
-            join ${env.DB_OST}.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_impact_area_results_sdg_results tiarsr on tiarsr.impact_area_toc_result_id = tiar.toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results tsr on tsr.toc_result_id = tiarsr.sdg_toc_result_id
+            join ${
+              env.DB_OST
+            }.toc_sdg_results_sdg_targets tsrst on tsrst.sdg_toc_result_id = tsr.toc_result_id
+            join ${
+              env.DB_OST
+            }.clarisa_sdg_targets cst on cst.id = tsrst.sdg_target_id
             WHERE triar.toc_result_id in (
               SELECT tr.toc_internal_id
                 from result r8
@@ -1943,7 +1981,9 @@ left join clarisa_countries cc3
       ) as "SDG(s)"
     from result r
     left join results_by_inititiative rbi on rbi.result_id = r.id
-    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status_id = 3
+    WHERE rbi.inititiative_id = ${inititiative_id} AND r.status_id = 3 ${
+      phase ? `and r.version_id = ${phase}` : ''
+    }
     ;
     `;
 

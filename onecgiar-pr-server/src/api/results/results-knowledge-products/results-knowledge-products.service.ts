@@ -1433,11 +1433,15 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     try {
       const data =
         await this._resultsKnowledgeProductRepository.getSectionSevenDataForReport(
           resultCodesArray,
+          phase,
         );
 
       return {
