@@ -964,6 +964,8 @@ export class ResultsTocResultRepository
               if (queryContributingPrimaryData.length) {
                 element.contributing =
                   queryContributingPrimaryData[0].contributing_indicator;
+                element.target_progress_narrative =
+                  queryContributingPrimaryData[0].target_progress_narrative;
                 element.indicator_question =
                   queryContributingPrimaryData[0].indicator_question;
               }
@@ -974,7 +976,7 @@ export class ResultsTocResultRepository
                   r.result_code,
                   v.phase_name,
                   v.id AS version_id,
-                  rt.name,
+                  rt.name AS result_type_name,
                   rit.contributing_indicator,
                   rit.target_progress_narrative
                 from
@@ -1018,6 +1020,8 @@ export class ResultsTocResultRepository
                 itemIndicator.targets.forEach(async (element) => {
                   element.contributing =
                     queryContributingPrimaryData[0].contributing_indicator;
+                  element.target_progress_narrative =
+                    queryContributingPrimaryData[0].target_progress_narrative;
                   element.indicator_question =
                     queryContributingPrimaryData[0].indicator_question;
                   const queryTargetContributing = `
@@ -1027,7 +1031,7 @@ export class ResultsTocResultRepository
                   r.result_code,
                   v.phase_name,
                   v.id AS version_id,
-                  rt.name,
+                  rt.name AS result_type_name,
                   rit.contributing_indicator,
                   rit.target_progress_narrative
                 from
@@ -1180,25 +1184,25 @@ export class ResultsTocResultRepository
                 //Finish Section to get the type
                 //Section to get the targets
                 const queryTargetInfo = `
-            SELECT
-              trit.target_value,
-              trit.target_date,
-              trit.number_target
-            FROM
-              Integration_information.toc_result_indicator_target trit
-            WHERE
-              trit.toc_result_indicator_id = ?
-              AND YEAR(DATE(trit.target_date)) = (
                   SELECT
-                    v1.phase_year
+                    trit.target_value,
+                    trit.target_date,
+                    trit.number_target
                   FROM
-                    prdb.version v1
+                    Integration_information.toc_result_indicator_target trit
                   WHERE
-                    v1.phase_name LIKE '%Reporting%'
-                    AND v1.is_active = 1
-                    AND v1.status = 1
-              );
-          `;
+                    trit.toc_result_indicator_id = ?
+                    AND YEAR(DATE(trit.target_date)) = (
+                        SELECT
+                          v1.phase_year
+                        FROM
+                          prdb.version v1
+                        WHERE
+                          v1.phase_name LIKE '%Reporting%'
+                          AND v1.is_active = 1
+                          AND v1.status = 1
+                    );
+                `;
                 const queryTargetInfoData = await this.query(queryTargetInfo, [
                   itemIndicator.toc_results_indicator_id,
                 ]);
@@ -1208,29 +1212,29 @@ export class ResultsTocResultRepository
                   element.contributing = '';
                   element.indicator_question = null;
                   const queryTargetContributing = `
-              select
-                r.description,
-                r.title,
-                r.result_code,
-                v.phase_name,
-                v.id AS version_id,
-                rt.name,
-                rit.contributing_indicator,
-                rit.target_progress_narrative
-              from
-                results_toc_result rtr
-                join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
-                and rtri.is_active = 1
-                join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
-                and rit.is_active = 1
-                join result r on r.id = rtr.results_id
-                join version v on v.id = r.version_id
-                join result_type rt ON rt.id = r.result_type_id
-              where
-                rtri.toc_results_indicator_id = ?
-                and rit.number_target = ?
-                and rtr.is_active = 1;
-                `;
+                    select
+                      r.description,
+                      r.title,
+                      r.result_code,
+                      v.phase_name,
+                      v.id AS version_id,
+                      rt.name AS result_type_name,
+                      rit.contributing_indicator,
+                      rit.target_progress_narrative
+                    from
+                      results_toc_result rtr
+                      join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+                      and rtri.is_active = 1
+                      join result_indicators_targets rit on rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+                      and rit.is_active = 1
+                      join result r on r.id = rtr.results_id
+                      join version v on v.id = r.version_id
+                      join result_type rt ON rt.id = r.result_type_id
+                    where
+                      rtri.toc_results_indicator_id = ?
+                      and rit.number_target = ?
+                      and rtr.is_active = 1;
+                  `;
 
                   const queryTargetothercontributing = await this.query(
                     queryTargetContributing,
@@ -1385,7 +1389,7 @@ export class ResultsTocResultRepository
               r.result_code,
               v.phase_name,
               v.id AS version_id,
-              rt.name,
+              rt.name AS result_type_name,
               rit.contributing_indicator,
               rit.target_progress_narrative
             FROM
