@@ -2264,16 +2264,6 @@ select *
                     is_sdg_action_impact: toc?.is_sdg_action_impact,
                   },
                 );
-                if (indicators?.targets) {
-                  await this.saveInditicatorsContributing(
-                    toc?.indicators,
-                    rtrExist[0]?.result_toc_result_id,
-                    toc?.results_id,
-                    toc?.toc_result_id,
-                  );
-                } else {
-                  return;
-                }
                 await this.saveImpact(
                   rtrExist[0]?.result_toc_result_id,
                   toc?.impactAreasTargets,
@@ -2290,6 +2280,16 @@ select *
                   toc?.actionAreaOutcome,
                   toc?.result_toc_result_id,
                 );
+
+                // * Save Indicators
+                if (indicators?.targets) {
+                  await this.saveInditicatorsContributing(
+                    toc?.indicators,
+                    rtrExist[0]?.result_toc_result_id,
+                    toc?.results_id,
+                    toc?.toc_result_id,
+                  );
+                }
               } else {
                 return this._handlersError.returnErrorRepository({
                   className: ResultsTocResultRepository.name,
