@@ -1,6 +1,6 @@
 import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 
@@ -41,7 +41,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   validateEOI() {
     this.showOutcomeLevel = false;
 
-    if (!this.activeTab.planned_result) {
+    if (!this.activeTab?.planned_result) {
       this.activeTab.toc_level_id = 3;
     }
 
@@ -101,8 +101,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   }
 
   pushSelectedOptions() {
-    if (this.allTabsCreated.length === 1) {
-      if (!this.activeTab.planned_result) {
+    if (this.allTabsCreated?.length === 1) {
+      if (!this.activeTab?.planned_result) {
         this.allTabsCreated[0].toc_level_id = 3;
       } else if (this.resultLevelId === 1) {
         this.allTabsCreated[0].toc_level_id = 1;
@@ -111,7 +111,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
       }
     }
 
-    this.allTabsCreated.forEach(tab => {
+    this.allTabsCreated?.forEach(tab => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
       }
