@@ -4,16 +4,16 @@ import { BiReportsController } from './bi-reports.controller';
 import { ClarisaCredentialsBiService } from '../clarisa-credentials-bi.service';
 import { HttpModule } from '@nestjs/axios';
 import { BiReportRepository } from './repository/bi-report.repository';
-import { TokenBiReport } from './entities/token-bi-reports.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TokenBiReportRepository } from './repository/token-bi-reports.repository';
 
 @Module({
-  imports: [HttpModule, TypeOrmModule.forFeature([TokenBiReport])],
+  imports: [HttpModule],
   controllers: [BiReportsController],
   providers: [
     BiReportsService,
     ClarisaCredentialsBiService,
     BiReportRepository,
+    TokenBiReportRepository,
   ],
 })
 export class BiReportsModule {}
