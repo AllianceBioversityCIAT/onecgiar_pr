@@ -51,7 +51,6 @@ export class MultipleWPsContentComponent implements OnChanges {
           this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
           this.activeTab.wpinformation = response?.wpinformation;
           this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
-          console.log(response);
 
           setTimeout(() => {
             this.indicatorView = true;
