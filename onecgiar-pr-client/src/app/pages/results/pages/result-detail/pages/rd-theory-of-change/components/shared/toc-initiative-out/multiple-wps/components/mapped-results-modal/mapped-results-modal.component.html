@@ -11,7 +11,7 @@
 
     <div>
       <div *ngIf="!this.mappedResultService.isTarget" style="margin: 12px 0 25px 0; font-size: 14px;">
-        <div class="label" [innerHtml]="activeTab?.extraInformation">
+        <div class="label" [innerHtml]="activeTab?.wpinformation?.wpTitle">
         </div>
       </div>
 
@@ -34,7 +34,7 @@
 
       <p-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" responsiveLayout="scroll" [rows]="5"
         styleClass="p-datatable-gridlines" selectionMode="single" [rowsPerPageOptions]="[5,10,15]"
-        [value]="this.mappedResultService.targetData.contributors"
+        [value]="this.mappedResultService.isTarget ? this.mappedResultService.targetData.contributors : activeTab?.wpinformation?.wp_info"
         [paginator]="this.mappedResultService.targetData.contributors.length > 5">
 
         <ng-template pTemplate="header">

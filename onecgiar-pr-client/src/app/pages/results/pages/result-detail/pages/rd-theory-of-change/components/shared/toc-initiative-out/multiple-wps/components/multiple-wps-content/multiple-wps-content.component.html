@@ -67,8 +67,8 @@
       [(ngModel)]="activeTab.toc_progressive_narrative">
     </app-pr-textarea>
 
-    <app-pr-button icon="featured_play_list" text="See all results contirbuting to this TOC Output"
-      (clickEvent)="openMappedResultsModal()"></app-pr-button>
+    <app-pr-button icon="featured_play_list" text="See all results contributing to this TOC Output"
+      (clickEvent)="openMappedResultsModal()" *ngIf="activeTab?.wpinformation?.wp_info.length"></app-pr-button>
   </div>
 </div>
 
