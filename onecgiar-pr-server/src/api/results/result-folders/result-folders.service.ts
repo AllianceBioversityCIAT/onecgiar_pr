@@ -5,11 +5,11 @@ import { ResultFolderRepository } from './repositories/result-folder-type.reposi
 import { ResultFolderTypeRepository } from './repositories/result-folder-type.repository';
 import { ReturnResponse } from '../../../shared/handlers/error.utils';
 import { ResultFolder } from './entities/result-folder.entity';
-import { env } from 'process';
 import { CreateResultFolderTypeDto } from './dto/create-result-folder-type.dto';
 import { ResultFolderType } from './entities/result-folder-type.entity';
 import { ResultFolderTypeData } from '../../../shared/constants/result-folder-type.enum';
 import { ActiveElementData } from '../../../shared/constants/active-element.enum';
+import { isProduction } from '../../../shared/utils/validation.utils';
 
 @Injectable()
 export class ResultFoldersService {
@@ -36,7 +36,7 @@ export class ResultFoldersService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -56,7 +56,7 @@ export class ResultFoldersService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -96,7 +96,7 @@ export class ResultFoldersService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -122,7 +122,7 @@ export class ResultFoldersService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

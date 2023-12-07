@@ -3,7 +3,7 @@ import { GlobalParameterRepository } from './repositories/global-parameter.repos
 import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { env } from 'process';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class GlobalParameterService {
@@ -28,7 +28,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -44,7 +44,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -62,7 +62,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -76,7 +76,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

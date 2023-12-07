@@ -17,6 +17,7 @@ import {
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class ResultRepository
@@ -2094,7 +2095,7 @@ left join clarisa_countries cc3
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
-          env.IS_PRODUCTION === 'false' ? `COLLATE utf8mb3_general_ci` : ``
+          !isProduction() ? `COLLATE utf8mb3_general_ci` : ``
         }
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
