@@ -9,7 +9,7 @@ import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped
   templateUrl: './multiple-wps-content.component.html',
   styleUrls: ['./multiple-wps-content.component.scss']
 })
-export class MultipleWPsContentComponent implements OnInit, OnChanges {
+export class MultipleWPsContentComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() activeTab: any;
   @Input() resultLevelId: number | string;
@@ -25,30 +25,17 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
 
-  showOutcomeLevel = true;
   indicatorView = false;
 
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
 
-  ngOnInit() {
-    this.validateEOI();
-
-    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
-      this.getIndicator();
+  ngOnChanges() {
+    if (this.showMultipleWPsContent && this.outcomeList.length > 0 && this.outputList.length > 0 && this.eoiList.length > 0) {
+      if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
+        this.getIndicator();
+      }
+      this.pushSelectedOptions();
     }
-  }
-
-  validateEOI() {
-    this.showOutcomeLevel = false;
-
-    if (!this.activeTab?.planned_result) {
-      this.activeTab.toc_level_id = 3;
-    }
-
-    this.indicatorView = false;
-    setTimeout(() => {
-      this.showOutcomeLevel = true;
-    }, 100);
   }
 
   getIndicator() {
@@ -68,7 +55,7 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
 
           setTimeout(() => {
             this.indicatorView = true;
-          }, 100);
+          }, 80);
         },
         error: err => {
           console.error(err);
@@ -93,28 +80,8 @@ export class MultipleWPsContentComponent implements OnInit, OnChanges {
     return `Progress narrative of the Outcome`;
   }
 
-  ngOnChanges() {
-    this.validateEOI();
-
-    if (this.activeTab?.toc_result_id !== null && this.activeTab?.initiative_id !== null) {
-      this.getIndicator();
-    }
-
-    this.pushSelectedOptions();
-  }
-
   pushSelectedOptions() {
-    if (this.allTabsCreated?.length === 1) {
-      if (!this.activeTab?.planned_result) {
-        this.allTabsCreated[0].toc_level_id = 3;
-      } else if (this.resultLevelId === 1) {
-        this.allTabsCreated[0].toc_level_id = 1;
-      } else {
-        this.allTabsCreated[0].toc_level_id = 2;
-      }
-    }
-
-    this.allTabsCreated?.forEach(tab => {
+    this.allTabsCreated.forEach(tab => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
       }
