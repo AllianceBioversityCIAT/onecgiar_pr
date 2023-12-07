@@ -1,5 +1,3 @@
-<!-- this.theoryOfChangesServices.validateEOI(initiative); -->
-
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-yes-or-not [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
         [(ngModel)]="this.initiative.planned_result" (selectOptionEvent)="clearTocResultId()"
@@ -17,4 +15,5 @@
 
 <app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
     [isContributor]="isContributor" [isNotifications]="isNotifications"
-    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent" *ngIf="this.initiative.planned_result !== null"></app-multiple-wps>
+    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"
+    *ngIf="this.initiative.planned_result !== null"></app-multiple-wps>
