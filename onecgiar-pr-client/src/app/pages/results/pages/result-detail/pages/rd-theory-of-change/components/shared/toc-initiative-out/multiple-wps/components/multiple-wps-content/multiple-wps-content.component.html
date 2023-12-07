@@ -6,13 +6,11 @@
       (ngModelChange)="getIndicator();validateSelectedOptionOutPut()">
     </app-pr-select>
 
-    <div style="max-width: 250px;"
-      *ngIf="showOutcomeLevel && (resultLevelId === 1 ? !activeTab?.planned_result : true)">
-      <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | outcomeLevelFilter:2"
-        label="Outcome level" [editable]="editable"
-        [disabled]="(resultLevelId === 1 ? true : !activeTab?.planned_result) || !editable" optionLabel="name"
-        optionValue="toc_level_id" placeholder="Select outcome level" [(ngModel)]="activeTab.toc_level_id"
-        (ngModelChange)="indicatorView = false">
+    <div style="max-width: 250px;" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
+      <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList" label="Outcome level"
+        [editable]="editable" [disabled]="(resultLevelId === 1 ? true : !activeTab?.planned_result) || !editable"
+        optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
+        [(ngModel)]="activeTab.toc_level_id" (ngModelChange)="indicatorView = false">
       </app-pr-select>
     </div>
 
