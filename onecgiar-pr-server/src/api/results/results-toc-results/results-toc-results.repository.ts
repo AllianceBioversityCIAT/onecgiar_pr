@@ -871,7 +871,7 @@ export class ResultsTocResultRepository
 
       // * Validate if the result has a target
       if (IndicatorTarget.length) {
-        const IndicatorTargetId = IndicatorTarget[0].result_toc_result_id;
+        const ResultTocResultId = IndicatorTarget[0].result_toc_result_id;
         IndicatorTargetData = await this.query(queryDataIndicators, [
           toc_result_id,
           resultId,
@@ -1005,7 +1005,7 @@ export class ResultsTocResultRepository
             `;
           const queryTargetContributingData = await this.query(
             queryTargetContributing,
-            [IndicatorTargetId, itemIndicator.toc_results_indicator_id],
+            [ResultTocResultId, itemIndicator.toc_results_indicator_id],
           );
 
           // * Validate if the indicator has a target contributing
@@ -1061,7 +1061,7 @@ export class ResultsTocResultRepository
               const queryTargetothercontributing = await this.query(
                 queryTargetContributing,
                 [
-                  IndicatorTargetId,
+                  ResultTocResultId,
                   itemIndicator.toc_results_indicator_id,
                   element.number_target,
                 ],
@@ -1539,6 +1539,7 @@ export class ResultsTocResultRepository
             initiative_id: itemIndicator.initiative_id,
           },
         });
+
         const targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
             results_toc_results_id: rtrExist.result_toc_result_id,
@@ -1546,94 +1547,68 @@ export class ResultsTocResultRepository
           },
         });
 
-        if (targetIndicators) {
-          targetIndicators.is_active = true;
-          await this._resultsTocResultIndicator.update(
-            {
-              results_toc_results_id: rtrExist.result_toc_result_id,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
-            },
-            targetIndicators,
-          );
-          await this._resultTocIndicatorTargetRepository.update(
-            {
-              result_toc_result_indicator_id:
-                targetIndicators.result_toc_result_indicator_id,
-            },
-            { is_active: false },
-          );
+        if (!targetIndicators) {
+          await this._resultsTocResultIndicator.save({
+            results_toc_results_id: id_result_toc_result,
+            toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+          });
+        }
 
-          for (const target of itemIndicator.targets) {
-            const targetInfo =
-              await this._resultTocIndicatorTargetRepository.findOne({
-                where: {
-                  result_toc_result_indicator_id:
-                    targetIndicators.result_toc_result_indicator_id,
-                  number_target: target.number_target,
-                },
-              });
+        targetIndicators.is_active = true;
+        await this._resultsTocResultIndicator.update(
+          {
+            results_toc_results_id: rtrExist.result_toc_result_id,
+            toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+          },
+          targetIndicators,
+        );
 
-            if (targetInfo) {
-              await this._resultTocIndicatorTargetRepository.update(
-                {
-                  result_toc_result_indicator_id:
-                    targetInfo.result_toc_result_indicator_id,
-                  number_target: target.number_target,
-                },
-                {
-                  is_active: true,
-                  contributing_indicator:
-                    target.indicator_question == 1
-                      ? parseFloat(target.contributing)
-                      : null,
-                  indicator_question: target.indicator_question,
-                  number_target: target.number_target,
-                  target_progress_narrative:
-                    target.indicator_question == 1
-                      ? target.target_progress_narrative
-                      : null,
-                },
-              );
-            } else {
-              await this._resultTocIndicatorTargetRepository.save({
+        await this._resultTocIndicatorTargetRepository.update(
+          {
+            result_toc_result_indicator_id:
+              targetIndicators.result_toc_result_indicator_id,
+          },
+          { is_active: false },
+        );
+
+        for (const target of itemIndicator.targets) {
+          const targetInfo =
+            await this._resultTocIndicatorTargetRepository.findOne({
+              where: {
                 result_toc_result_indicator_id:
                   targetIndicators.result_toc_result_indicator_id,
-                contributing_indicator:
-                  target.indicator_question == 1
-                    ? parseFloat(target.contributing)
-                    : null,
-                indicator_question: target.indicator_question,
                 number_target: target.number_target,
-                target_progress_narrative:
-                  target.indicator_question == 1
-                    ? target.target_progress_narrative
-                    : null,
-                is_active: true,
-              });
-            }
-          }
-        } else {
-          const resultTocResultIndicator =
-            await this._resultsTocResultIndicator.save({
-              results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
-              is_active: true,
+              },
             });
-          for (const target of itemIndicator.targets) {
+
+          const targetData = {
+            is_active: true,
+            contributing_indicator:
+              target.indicator_question == 1
+                ? parseFloat(target.contributing)
+                : null,
+            indicator_question: target.indicator_question,
+            number_target: target.number_target,
+            target_progress_narrative:
+              target.indicator_question == 1
+                ? target.target_progress_narrative
+                : null,
+          };
+
+          if (targetInfo) {
+            await this._resultTocIndicatorTargetRepository.update(
+              {
+                result_toc_result_indicator_id:
+                  targetInfo.result_toc_result_indicator_id,
+                number_target: target.number_target,
+              },
+              targetData,
+            );
+          } else {
             await this._resultTocIndicatorTargetRepository.save({
               result_toc_result_indicator_id:
-                resultTocResultIndicator.result_toc_result_indicator_id,
-              contributing_indicator:
-                target.indicator_question == 1
-                  ? parseFloat(target.contributing)
-                  : null,
-              indicator_question: target.indicator_question,
-              is_active: true,
-              number_target: target.number_target,
-              target_progress_narrative:
-                target.indicator_question == 1
-                  ? target.target_progress_narrative
-                  : null,
+                targetIndicators.result_toc_result_indicator_id,
+              ...targetData,
             });
           }
         }
