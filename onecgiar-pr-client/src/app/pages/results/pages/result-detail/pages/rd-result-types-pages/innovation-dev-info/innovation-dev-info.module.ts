@@ -15,9 +15,10 @@ import { YmzListStructureItemModule } from '../../../../../../../shared/directiv
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
 import { DialogModule } from 'primeng/dialog';
 import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @NgModule({
   declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent, NonPooledInfoComponent],
-  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule, DialogModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule, DialogModule, FeedbackValidationDirectiveModule, SkeletonModule]
 })
 export class InnovationDevInfoModule {}

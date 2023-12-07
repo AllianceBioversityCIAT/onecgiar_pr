@@ -123,6 +123,7 @@ export class IpsrRepository
             r.title,
             r.status,
             r.status_id,
+            r.in_qa as inQA,
             rs.status_name,
             rbi.inititiative_id,
             ci.official_code AS initiative_official_code,
