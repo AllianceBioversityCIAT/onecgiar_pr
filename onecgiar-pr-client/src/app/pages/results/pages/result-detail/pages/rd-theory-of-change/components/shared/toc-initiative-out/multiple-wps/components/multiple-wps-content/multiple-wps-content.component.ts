@@ -39,7 +39,6 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   getIndicator() {
-    if (this.resultLevelId === 1) {
       this.indicatorView = false;
 
       this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
@@ -60,9 +59,6 @@ export class MultipleWPsContentComponent implements OnChanges {
           console.error(err);
         }
       });
-    } else {
-      this.indicatorView = true;
-    }
   }
 
   narrativeTypeResult() {
