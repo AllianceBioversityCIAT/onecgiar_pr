@@ -106,7 +106,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
       initiative_id: this.initiative.initiative_id,
       official_code: this.initiative.official_code,
       planned_result: this.initiative.planned_result,
-      results_id: null,
+      results_id: this.initiative.result_toc_results[0].results_id ?? null,
       short_name: this.initiative.short_name,
       toc_level_id: tocLevelId,
       toc_result_id: null,

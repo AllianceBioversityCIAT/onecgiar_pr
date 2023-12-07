@@ -28,6 +28,15 @@ export class MultipleWPsContentComponent implements OnChanges {
 
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
+  ngOnChanges() {
+    if (this.showMultipleWPsContent && this.outcomeList.length > 0 && this.outputList.length > 0 && this.eoiList.length > 0) {
+      if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
+        this.getIndicator();
+      }
+      this.pushSelectedOptions();
+    }
+  }
+
   getIndicator() {
     this.indicatorView = false;
 
@@ -65,15 +74,6 @@ export class MultipleWPsContentComponent implements OnChanges {
     }
 
     return `Indicator(s) of the ${narrative} selected`;
-  }
-
-  ngOnChanges() {
-    if (this.showMultipleWPsContent && this.outcomeList.length > 0 && this.outputList.length > 0 && this.eoiList.length > 0) {
-      if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
-        this.getIndicator();
-      }
-      this.pushSelectedOptions();
-    }
   }
 
   pushSelectedOptions() {
