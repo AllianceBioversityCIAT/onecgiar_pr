@@ -16,7 +16,8 @@
         </div>
     </div>
     <div class="description" *ngIf="!hideDescription">
-        <app-pr-field-header [description]="this.description">
+        <app-pr-field-header [description]="this.description" [showDescriptionLabel]="showDescriptionLabel"
+            [descInlineStyles]="descInlineStyles">
         </app-pr-field-header>
     </div>
 

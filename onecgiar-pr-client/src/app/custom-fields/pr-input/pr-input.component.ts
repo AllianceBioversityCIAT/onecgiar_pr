@@ -33,6 +33,7 @@ export class PrInputComponent implements ControlValueAccessor {
 
   @Input() variant?: 'xs' | 'sm';
   @Input() numberMode?: 'decimal';
+  @Input() maxDecimals?: number = 2;
   @Input() showDescription?: boolean = true;
   @Input() InlineStyles?: string = '';
   @Input() descInlineStyles?: string = '';

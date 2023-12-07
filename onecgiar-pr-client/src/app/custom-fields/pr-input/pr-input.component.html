@@ -19,7 +19,7 @@
 
             <p-inputNumber class="" *ngIf="this.type == 'number'" [(ngModel)]="value" [disabled]="this.disabled"
                 [mode]="this.numberMode" [minFractionDigits]="this.numberMode && 2"
-                [maxFractionDigits]="this.numberMode && 5" [min]="0"
+                [maxFractionDigits]="this.numberMode && this.maxDecimals" [min]="0"
                 [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto'}"
                 [placeholder]="this.placeholder">
             </p-inputNumber>
