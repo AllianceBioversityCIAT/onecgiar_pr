@@ -5,6 +5,10 @@ import { ClarisaCredentialsBiService } from '../clarisa-credentials-bi.service';
 import { HttpModule } from '@nestjs/axios';
 import { BiReportRepository } from './repository/bi-report.repository';
 import { TokenBiReportRepository } from './repository/token-bi-reports.repository';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../shared/handlers/error.utils';
 
 @Module({
   imports: [HttpModule],
@@ -14,6 +18,8 @@ import { TokenBiReportRepository } from './repository/token-bi-reports.repositor
     ClarisaCredentialsBiService,
     BiReportRepository,
     TokenBiReportRepository,
+    HandlersError,
+    ReturnResponse,
   ],
 })
 export class BiReportsModule {}
