@@ -27,11 +27,12 @@ export class TypeOneReportComponent {
     this.api.dataControlSE.detailSectionTitle('Type one report');
     this.GET_AllInitiatives();
     this.getThePhases();
-    // if (!this.rolesSE.isAdmin) this.router.navigate(['/result/results-outlet/results-list']);
   }
 
   getThePhases() {
-    const autoSelectOpenPhases = (phases: any[]) => (this.typeOneReportSE.phasesSelected = phases.filter((phase: any) => phase.status));
+    const autoSelectOpenPhases = (phases: any[]) => {
+      this.typeOneReportSE.phaseSelected = phases.find((phase: any) => phase.status)?.id;
+    };
     const useLoadedPhases = () => {
       autoSelectOpenPhases(this.phasesSE.phases.reporting);
       this.typeOneReportSE.reportingPhases = this.phasesSE.phases.reporting;
