@@ -13,13 +13,14 @@ export class TypeOneReportService {
   sanitizedUrl: any = null;
   allInitiatives = [];
   t1rBiUrl = environment.t1rBiUrl;
+  reportingPhases: any[] = [];
+  phaseSelected = null;
   constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
   sanitizeUrl() {
     this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}?official_code=${this.initiativeSelected}`);
   }
 
   getInitiativeID(official_code) {
-    //(official_code);
     if (!this.api.rolesSE.isAdmin) return this.api.dataControlSE.myInitiativesList.find(init => init.official_code == official_code);
     return this.allInitiatives.find(init => init.official_code == official_code);
   }

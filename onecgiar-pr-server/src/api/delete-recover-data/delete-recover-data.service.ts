@@ -54,7 +54,6 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
-import { env } from 'process';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
@@ -76,6 +75,7 @@ import { InstitutionRoleEnum } from '../results/results_by_institutions/entities
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -316,7 +316,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -457,7 +457,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -514,7 +514,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -562,7 +562,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -652,7 +652,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 

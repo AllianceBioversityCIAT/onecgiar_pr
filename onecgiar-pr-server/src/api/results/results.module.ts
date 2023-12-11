@@ -75,6 +75,7 @@ import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-o
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
+import { ResultFoldersModule } from './result-folders/result-folders.module';
 
 @Module({
   controllers: [ResultsController],
@@ -128,6 +129,7 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
     ResultQuestionsModule,
     InvestmentDiscontinuedOptionsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
+    ResultFoldersModule,
   ],
   providers: [
     ResultsService,

@@ -208,7 +208,10 @@ export class ResultsKnowledgeProductsRepository
     return final_data;
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     const resultCodes = (resultCodesArray ?? []).join(',');
     const queryData = `
     select 
@@ -248,6 +251,7 @@ export class ResultsKnowledgeProductsRepository
     where 
       r.is_active 
       and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      ${phase ? `and r.version_id = ${phase}` : ''}
       and	rt.name = 'Knowledge Product'
     group by 1, 2, 3, 4, 6, 9, 10, 13, 14, 15, 16, 17, 18
     order by 1

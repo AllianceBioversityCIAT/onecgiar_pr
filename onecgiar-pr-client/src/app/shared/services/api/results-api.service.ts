@@ -560,12 +560,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/fact-sheet/initiative/${initiativeId}`);
   }
 
-  GET_keyResultStoryInitiativeId(initiativeId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}`);
+  GET_keyResultStoryInitiativeId(initiativeId, phase) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}?phase=${phase}`);
   }
 
-  GET_excelFullReportByInitiativeId(initiativeId) {
-    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}`);
+  GET_excelFullReportByInitiativeId(initiativeId, phase) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}?phase=${phase}`);
   }
 
   PATCH_primaryImpactAreaKrs(body) {

@@ -11,7 +11,6 @@ import {
   ReturnResponse,
   ReturnResponseDto,
 } from '../../shared/handlers/error.utils';
-import { env } from 'process';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
@@ -48,6 +47,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class VersioningService {
@@ -134,7 +134,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -149,7 +149,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -396,7 +396,7 @@ export class VersioningService {
         });
       }
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -434,7 +434,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -474,7 +474,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -491,7 +491,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -535,7 +535,7 @@ export class VersioningService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -581,7 +581,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -651,7 +651,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -691,7 +691,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -709,7 +709,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -730,7 +730,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }
