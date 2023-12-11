@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model/innovationDevInfoBody';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 
@@ -7,15 +7,31 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './anticipated-innovation-user.component.html',
   styleUrls: ['./anticipated-innovation-user.component.scss']
 })
-export class AnticipatedInnovationUserComponent {
+export class AnticipatedInnovationUserComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
   @Input() saving: boolean = false;
   actorsTypeList = [];
   institutionsTypeTreeList = [];
 
-  constructor(public api: ApiService) {
+  constructor(public api: ApiService) {}
+
+  ngOnInit() {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
+  }
+
+  checkAlert() {
+    const actors = this.body.innovatonUse.actors.filter(item => item.actor_type_id !== null);
+    const organizations = this.body.innovatonUse.organization.filter(item => item.is_active !== false);
+    const measures = this.body.innovatonUse.measures.filter(item => item.is_active !== false);
+    if (!this.body.innovation_user_to_be_determined) {
+      if (actors?.length > 0 || organizations?.length > 0 || measures?.length > 0) {
+        return true;
+      }
+      return false;
+    } else {
+      return true;
+    }
   }
 
   GETAllActorsTypes() {
@@ -35,10 +51,25 @@ export class AnticipatedInnovationUserComponent {
     return fundedList?.childrens ?? [];
   }
 
-  removeOrganization(organizationItem) {
-    organizationItem.institution_sub_type_id = null;
-    organizationItem.institution_types_id = null;
-    organizationItem.is_active = false;
+  removeOrganization(organizationItem, index) {
+    if (organizationItem.id) {
+      organizationItem.is_active = false;
+      organizationItem.institution_types_id = null;
+      organizationItem.institution_sub_type_id = null;
+      return;
+    }
+
+    this.body.innovatonUse.organization.splice(index, 1);
+  }
+
+  removeActor(actorItem, i) {
+    if (actorItem.result_actors_id) {
+      actorItem.is_active = false;
+      actorItem.actor_type_id = null;
+      return;
+    }
+
+    this.body.innovatonUse.actors.splice(i, 1);
   }
 
   reloadSelect(organizationItem) {
