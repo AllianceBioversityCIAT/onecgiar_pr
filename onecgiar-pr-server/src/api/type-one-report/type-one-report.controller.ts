@@ -1,60 +1,22 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpException,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
 import { TypeOneReportService } from './type-one-report.service';
-import { CreateTypeOneReportDto } from './dto/create-type-one-report.dto';
-import { UpdateTypeOneReportDto } from './dto/update-type-one-report.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class TypeOneReportController {
   constructor(private readonly typeOneReportService: TypeOneReportService) {}
 
   @Get('fact-sheet/initiative/:initId')
-  async getFactSheetByInit(@Param('initId') initId: number) {
-    const { message, response, status } =
-      await this.typeOneReportService.getFactSheetByInit(initId);
-    throw new HttpException({ message, response }, status);
+  getFactSheetByInit(@Param('initId') initId: number) {
+    return this.typeOneReportService.getFactSheetByInit(initId);
   }
 
   @Get('key-result-story/initiative/:initId')
-  async getKeyResultStoryByInt(@Param('initId') initId: number) {
-    const { message, response, status } =
-      await this.typeOneReportService.getKeyResultStory(initId);
-    throw new HttpException({ message, response }, status);
-  }
-
-  @Post()
-  create(@Body() createTypeOneReportDto: CreateTypeOneReportDto) {
-    return this.typeOneReportService.create(createTypeOneReportDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.typeOneReportService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.typeOneReportService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateTypeOneReportDto: UpdateTypeOneReportDto,
+  getKeyResultStoryByInt(
+    @Param('initId') initId: number,
+    @Query('phase') phase: string,
   ) {
-    return this.typeOneReportService.update(+id, updateTypeOneReportDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.typeOneReportService.remove(+id);
+    return this.typeOneReportService.getKeyResultStory(initId, +phase);
   }
 }

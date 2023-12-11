@@ -225,9 +225,10 @@ export class ResultsInnovationsDevRepository
     }
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
-    console.log('Si llega');
-
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     const resultCodes = (resultCodesArray ?? []).join(',');
     const queryData = `
     select
@@ -440,6 +441,7 @@ export class ResultsInnovationsDevRepository
     where
       rid.is_active = 1
       and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      ${phase ? `and r.version_id = ${phase}` : ''}
     ;
     `;
     try {

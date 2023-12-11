@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { env } from 'process';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class IpsrService {
@@ -23,7 +23,7 @@ export class IpsrService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
