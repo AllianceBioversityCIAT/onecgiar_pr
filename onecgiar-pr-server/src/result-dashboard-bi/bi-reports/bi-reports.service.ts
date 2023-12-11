@@ -17,7 +17,9 @@ export class BiReportsService {
 
   async findAll() {
     try {
-      const response = await this.biReportRepository.find();
+      const response = await this.biReportRepository.find({
+        order: { report_order: 'ASC' },
+      });
       return this._returnResponse.format({
         message: 'Global parameters found',
         response,
