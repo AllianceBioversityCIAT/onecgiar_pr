@@ -20,7 +20,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   contributingInitiativeNew = [];
-  cgspaceDisabledList = [];
+  cgspaceDisabledList: any = [];
   contributingCenterOptions = [];
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
@@ -47,9 +47,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   async getContributingCenterOptions() {
-    const list = await this.centersSE.getCentersList();
-    this.contributingCenterOptions = [...list];
-    this.contributingCenterOptions.forEach(center => (center.selected = false));
+    this.contributingCenterOptions = await this.centersSE.getData();
   }
 
   async getSectionInformation() {
