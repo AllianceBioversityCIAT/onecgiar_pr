@@ -97,7 +97,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   genderInformation() {
-    return `<strong>Gender tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong> 
     <br/>
 
     There are two gender-related targets at systems level.
@@ -116,7 +116,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong> 
     <br>
     There are two food security and nutrition targets for at systems level:
 
@@ -135,7 +135,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   environmentInformation() {
-    return `<strong>Environment tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong> 
     <br>
     
     There are three environmental targets and one biodiversity target at systems level:
@@ -156,7 +156,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   povertyInformation() {
-    return `<strong> Poverty tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
@@ -196,8 +196,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   sendIntitutionsTypes() {
-    this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
-    this.generalInfoBody.institutions_type = [...this.generalInfoBody?.institutions_type, ...this.generalInfoBody?.institutions] as any;
+    this.generalInfoBody.institutions_type = [...(this.generalInfoBody?.institutions_type ?? []), ...(this.generalInfoBody?.institutions ?? [])] as any;
   }
 
   onChangeKrs() {
