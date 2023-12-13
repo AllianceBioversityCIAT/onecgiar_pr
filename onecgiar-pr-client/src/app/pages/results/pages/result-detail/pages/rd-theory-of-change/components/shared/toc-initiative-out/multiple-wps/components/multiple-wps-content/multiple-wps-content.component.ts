@@ -39,26 +39,26 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   getIndicator() {
-      this.indicatorView = false;
+    this.indicatorView = false;
 
-      this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
-        next: ({ response }) => {
-          this.activeTab.indicators = response?.informationIndicator;
-          this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-          this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-          this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
-          this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
-          this.activeTab.wpinformation = response?.wpinformation;
-          this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
+    this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
+      next: ({ response }) => {
+        this.activeTab.indicators = response?.informationIndicator;
+        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
+        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
+        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+        this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
+        this.activeTab.wpinformation = response?.wpinformation;
+        this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
 
-          setTimeout(() => {
-            this.indicatorView = true;
-          }, 80);
-        },
-        error: err => {
-          console.error(err);
-        }
-      });
+        setTimeout(() => {
+          this.indicatorView = true;
+        }, 80);
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
   }
 
   narrativeTypeResult() {
@@ -138,6 +138,10 @@ export class MultipleWPsContentComponent implements OnChanges {
       item.disabledd = !!finded;
       return item;
     });
+  }
+
+  dynamicMappedResultButtonText() {
+    return `See all results contributing to this TOC ${this.activeTab?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'}`;
   }
 
   openMappedResultsModal() {
