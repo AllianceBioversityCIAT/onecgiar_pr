@@ -19,7 +19,7 @@
 
   <div style="display: flex; gap: 1rem; align-items: flex-end;">
     <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
-      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
+      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name" >
     </app-pr-input>
 
     <div *ngIf="!this.api.rolesSE.readOnly && isPhaseOpen">

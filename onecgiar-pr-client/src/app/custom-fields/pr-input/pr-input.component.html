@@ -14,7 +14,7 @@
             <div class="input-validation">{{value}}</div>
             <input *ngIf="this.type != 'currency' && this.type != 'number'" [disabled]="this.disabled" pInputText
                 [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
-                [ngClass]="{'pr-valid': true}"
+                [ngClass]="{'pr-valid': true, 'invalid' : wordCount > maxWords && !autogenerate, 'warning' : wordCount > maxWords && autogenerate}"
                 [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto'}" />
 
             <p-inputNumber class="" *ngIf="this.type == 'number'" [(ngModel)]="value" [disabled]="this.disabled"
@@ -29,7 +29,7 @@
             </p-inputNumber>
             <div class="hints_container">
                 <div class="hint">{{this.hint}}</div>
-                <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords">
+                <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate">
                 </app-pr-word-counter>
             </div>
             <div class="custom_validation_tooltip_container"
