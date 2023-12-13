@@ -83,6 +83,8 @@ export class InnovationPackageCreatorComponent {
       }
     });
 
+    console.log(this.innovationPackageCreatorBody);
+    return 1;
     this.api.resultsSE.POSTResultInnovationPackage(this.innovationPackageCreatorBody).subscribe(
       ({ response }) => {
         this.router.navigateByUrl(`/ipsr/detail/${response.newInnovationHeader.result_code}`);

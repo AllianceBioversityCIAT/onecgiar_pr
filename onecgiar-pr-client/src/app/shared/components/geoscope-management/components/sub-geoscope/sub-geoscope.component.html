@@ -1,0 +1,37 @@
+
+<div class="content">
+
+    <div class="h-ct"><strong class="title-ct">{{obj_country.name}}</strong> 
+        <i *ngIf="true"
+        class="material-icons-round delete"
+        (click)="deleteCountry(index)">delete</i>
+    </div>
+
+    
+
+    <div class="b-ct" >
+        <div class="dhs" *ngIf="!subNationList?.length">
+            <i>Does not have any subnational to select</i>
+        </div>
+        <div style=" width: 40%;" *ngIf="subNationList?.length">
+            <app-pr-multi-select label="Sub-national levels"
+                [options]="this.subNationList" optionLabel="formatedName" selectedLabel="Sub-national selected" optionValue="id"
+                placeholder="Select Sub-national level" [(ngModel)]="this.obj_country.sub_national">
+            </app-pr-multi-select>
+        </div>
+
+    <div class="medal_selector selected_container" *ngIf="subNationList?.length">
+        <div class="centers chips_container">
+            <div class="center pr_chip_selected"
+                *ngFor="let sub of this.obj_country.sub_national; let i=index">
+                <div class="name" [innerHtml]="sub?.formatedName"></div><i
+                    *ngIf="true"
+                    class="material-icons-round" 
+                    (click)="deleteSubNational(i)">cancel</i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

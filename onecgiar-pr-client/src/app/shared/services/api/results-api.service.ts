@@ -832,4 +832,8 @@ export class ResultsApiService {
   GET_allResultStatuses() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/result-status/all`);
   }
+
+  GET_subNationalByIsoAlpha2(isoAlpha2: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/subnational-scope/get/by-country-iso2/${isoAlpha2}`);
+  }
 }

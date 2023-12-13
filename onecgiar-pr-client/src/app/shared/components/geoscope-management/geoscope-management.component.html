@@ -1,0 +1,23 @@
+<button type="button" (click)="test()">asdasdasd</button>
+
+<app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
+    label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
+     [(ngModel)]="body.geo_scope_id" (ngModelChange)="cleanSubNationals()">
+</app-pr-radio-button>
+
+<app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
+    label="Select regions" selectedLabel="Regions(s) selected"
+    selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
+    [(ngModel)]="body.regions">
+</app-pr-multi-select>
+
+<app-pr-multi-select *ngIf="body.geo_scope_id == 4 || body.geo_scope_id == 5" [options]="this.regionsCountriesSE.countriesList"
+    label="Select countries" selectedLabel="Countries selected" [selectedOptionLabel]="body.geo_scope_id == 4? 'name':''" optionLabel="full_name"
+    optionValue="id" placeholder="Select countries" [(ngModel)]="body.countries">
+</app-pr-multi-select>
+
+<div *ngIf="body.geo_scope_id == 5">
+    <div *ngFor="let el of body.countries; let i=index">
+        <app-sub-geoscope [obj_country]="el" [index]="i" [obj_countrySelected]="body.countries" [name]="el.name"></app-sub-geoscope>
+    </div>
+</div>
