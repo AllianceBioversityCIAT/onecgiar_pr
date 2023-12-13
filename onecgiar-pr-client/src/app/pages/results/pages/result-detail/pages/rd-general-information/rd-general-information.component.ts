@@ -213,7 +213,7 @@ export class RdGeneralInformationComponent implements OnInit {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the gender tag in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank' class="open_route">Evidence</a> section `,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank' class="open_route">Evidence</a> section `,
       querySelector: '#gender_tag_alert',
       position: 'beforeend'
     });
@@ -227,21 +227,21 @@ export class RdGeneralInformationComponent implements OnInit {
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the nutrition tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
       querySelector: '#nutrition_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the Environment tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
       querySelector: '#environment_tag_alert',
       position: 'beforeend'
     });
     this.api.alertsFs.show({
       status: 'success',
       title: 'sd',
-      description: `As a score of 2 has been selected, you are required to provide evidence of the poverty tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
+      description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${environment.frontBaseUrl}result/result-detail/${this.api.resultsSE.currentResultCode}/evidences" target='_blank'>Evidence</a> section`,
       querySelector: '#poverty_tag_alert',
       position: 'beforeend'
     });
