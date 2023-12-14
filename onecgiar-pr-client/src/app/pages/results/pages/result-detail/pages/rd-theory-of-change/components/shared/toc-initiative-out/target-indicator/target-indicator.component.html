@@ -53,12 +53,13 @@
     </div>
 
     <div class="targets_container" *ngIf="initiative?.targets?.length">
-        <div *ngFor="let item of initiative?.targets">
-            <!-- <div appFeedbackValidation labelText="Contribution to an indicator's target" [isComplete]="!checkAlert()"></div> -->
+        <div *ngFor="let item of initiative?.targets; let i = index;">
+            <div appFeedbackValidation labelText="Contribution to an indicator's target" [isComplete]="!checkAlert()">
+            </div>
 
             <div class="target_id">
                 <div class="square"></div>
-                <h1 class="target_title">Target #{{sumIndicator(item.number_target)}}</h1>
+                <h1 class="target_title">Target #{{i + 1}}</h1>
             </div>
 
             <div class="target_content">
@@ -77,11 +78,11 @@
                 </header>
 
                 <div class="indicator_content_information">
-                    <!-- <div
+                    <div
                         *ngIf="initiative.type_value !== 'custom' && initiative.number_result_type !== initiative?.result.result_type_id && (initiative?.result.result_type_id !== 4 && initiative?.result.result_type_id !== 8)">
                         <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
                             [description]="descriptionWarning(initiative?.result.name, initiative?.type)"></app-alert-status>
-                    </div> -->
+                    </div>
 
                     <div *ngIf="!initiative?.is_calculable">
                         <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
@@ -95,8 +96,8 @@
                             [description]="descriptionWarningYear(item?.target_date, initiative?.result?.phase_year).description"></app-alert-status>
                     </div>
 
-                    <!-- *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)"> -->
-                    <div>
+                    <div
+                        *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)">
 
                         <div class="indicator_content_information_item">
                             <app-pr-yes-or-not id="table-desc"
