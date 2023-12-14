@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { RdLinksToResultsComponent } from './rd-links-to-results.component';
+import { LinksToResultsGlobalComponent } from '../../../../../../shared/sections-components/links-to-results-global/links-to-results-global.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { FilterResultNotLinkedPipe } from './pipe/filter-result-not-linked.pipe';
 
 describe('RdLinksToResultsComponent', () => {
   let component: RdLinksToResultsComponent;
@@ -8,7 +10,14 @@ describe('RdLinksToResultsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [RdLinksToResultsComponent]
+      declarations: [
+        RdLinksToResultsComponent,
+        LinksToResultsGlobalComponent,
+        FilterResultNotLinkedPipe
+      ],
+      imports: [
+        HttpClientTestingModule,
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdLinksToResultsComponent);
