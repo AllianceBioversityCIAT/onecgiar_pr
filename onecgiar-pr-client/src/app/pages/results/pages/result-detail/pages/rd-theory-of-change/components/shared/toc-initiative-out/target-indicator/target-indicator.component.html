@@ -53,12 +53,13 @@
     </div>
 
     <div class="targets_container" *ngIf="initiative?.targets?.length">
-        <div *ngFor="let item of initiative?.targets">
-            <!-- <div appFeedbackValidation labelText="Contribution to an indicator's target" [isComplete]="!checkAlert()"></div> -->
+        <div *ngFor="let item of initiative?.targets; let i = index;">
+            <div appFeedbackValidation labelText="Contribution to an indicator's target" [isComplete]="!checkAlert()">
+            </div>
 
             <div class="target_id">
                 <div class="square"></div>
-                <h1 class="target_title">Target #{{sumIndicator(item.number_target)}}</h1>
+                <h1 class="target_title">Target #{{i + 1}}</h1>
             </div>
 
             <div class="target_content">
@@ -77,11 +78,11 @@
                 </header>
 
                 <div class="indicator_content_information">
-                    <!-- <div
+                    <div
                         *ngIf="initiative.type_value !== 'custom' && initiative.number_result_type !== initiative?.result.result_type_id && (initiative?.result.result_type_id !== 4 && initiative?.result.result_type_id !== 8)">
                         <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
                             [description]="descriptionWarning(initiative?.result.name, initiative?.type)"></app-alert-status>
-                    </div> -->
+                    </div>
 
                     <div *ngIf="!initiative?.is_calculable">
                         <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
@@ -95,8 +96,8 @@
                             [description]="descriptionWarningYear(item?.target_date, initiative?.result?.phase_year).description"></app-alert-status>
                     </div>
 
-                    <!-- *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)"> -->
-                    <div>
+                    <div
+                        *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)">
 
                         <div class="indicator_content_information_item">
                             <app-pr-yes-or-not id="table-desc"
@@ -126,81 +127,11 @@
                         </div>
                     </div>
                 </div>
-
-
-
-                <!-- <div class="table-indicator">
-                    <table aria-describedby="table-desc">
-                        <tr class="header"
-                            *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)">
-                            <th id="result_being_reported_is_calculable" class="row-one">Result being reported</th>
-                            <th id="target_contribution_is_calculable">Target contribution</th>
-                        </tr>
-
-                        <tr
-                            *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)">
-                            <td>
-                                <a [routerLink]="'/result/result-detail/' + initiative?.result.result_code"
-                                    target="_blank" [queryParams]="{ phase: initiative?.result.version_id }">
-                                    {{initiative?.result.result_code}} - {{initiative?.result.title}}
-                                </a>
-                            </td>
-
-
-                            <td *ngIf="initiative?.is_calculable">
-                                <input type="number" class="in-progress" min="0" style="width: 45px;"
-                                    onkeypress="return event.charCode >= 48" [(ngModel)]="item.contributing" />
-                                out of {{item.target_value}}
-                            </td>
-
-                            <td *ngIf="!initiative?.is_calculable">
-                                <textarea type="text" class="input-not-calculable" [(ngModel)]="item.contributing"
-                                    style="resize: none;">
-                                    {{item.contributing}}
-                                </textarea>
-                            </td>
-                        </tr>
-
-                        <tr class="header">
-                            <th id="other_results_contributing_is_calculable" class="row-one">
-                                {{showOutComeOrOutput()}}
-                            </th>
-                            <th id="target_contribution_is_calculable_row_two">Target contribution</th>
-                        </tr>
-
-                        <tr *ngFor="let itemsContri of item?.results_contributing">
-                            <td>
-                                <a [routerLink]="'/result/result-detail/' + itemsContri?.result_code" target="_blank"
-                                    [queryParams]="{ phase: initiative?.result.version_id }">
-                                    {{itemsContri.result_code}} - {{itemsContri.title}}
-                                </a>
-                            </td>
-                            <td> {{itemsContri.contributing_indicator}}
-                                <span *ngIf="initiative?.is_calculable">out of {{item.target_value}}</span>
-                            </td>
-                        </tr>
-
-                        <tr *ngIf="item?.results_contributing?.length === 0">
-                            <td colspan="2">Currently there are no other results contributing to this target.</td>
-                        </tr>
-
-                        <tr class="footer" *ngIf="initiative?.is_calculable">
-                            <th id="overall_progress_is_calculable" class="row-one">
-                                Overall progress against planned target
-                            </th>
-                            <th id="total_out_of_is_calculable">
-                                {{getOverallProgress(initiative?.total,item?.contributing)}} out of
-                                {{item.target_value}}
-                            </th>
-                        </tr>
-                    </table>
-                </div> -->
             </div>
         </div>
     </div>
 
 
-    <!-- <div class="bigger-line" style="margin-top: 30px;"></div> -->
     <div class="line" style="margin-top: 30px;"></div>
 
 </div>
