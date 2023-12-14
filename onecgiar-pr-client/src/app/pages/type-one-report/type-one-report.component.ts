@@ -5,6 +5,7 @@ import { TypeOneReportService } from './type-one-report.service';
 import { Router } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
+import { TypePneReportRouting } from '../../shared/routing/routing-data';
 
 @Component({
   selector: 'app-type-one-report',
@@ -12,17 +13,19 @@ import { PhasesService } from '../../shared/services/global/phases.service';
   styleUrls: ['./type-one-report.component.scss']
 })
 export class TypeOneReportComponent {
-  sections = [
-    { path: 'fact-sheet', icon: '', name: 'Fact sheet', underConstruction: true },
-    { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results', underConstruction: true },
-    { path: 'impact-pathway-integration', icon: '', name: 'Impact pathway integration' },
+  sections: any = [
+    // { path: 'fact-sheet', icon: '', name: 'Fact sheet', underConstruction: true },
+    // { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results', underConstruction: true },
+    // { path: 'impact-pathway-integration', icon: '', name: 'Impact pathway integration' },
     // { path: 'ipi-external-partners', icon: '', name: 'Impact pathway integration - External partners' },
     // { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
-    { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
+    // { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
   ];
 
   constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router, public phasesSE: PhasesService) {}
   ngOnInit(): void {
+    TypePneReportRouting.forEach((section: any) => (section.prName ? this.sections.push({ ...section, name: section.prName }) : null));
+
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Type one report');
     this.GET_AllInitiatives();
