@@ -1561,50 +1561,52 @@ export class ResultsTocResultRepository
             { is_active: false },
           );
 
-          for (let target of itemIndicator.targets) {
-            let targetInfo =
-              await this._resultTocIndicatorTargetRepository.findOne({
-                where: {
-                  result_toc_result_indicator_id:
-                    targetIndicators.result_toc_result_indicator_id,
-                  number_target: target.number_target,
-                },
-              });
-            if (targetInfo != null) {
-              targetInfo.is_active = true;
-              targetInfo.contributing_indicator =
-                target.indicator_question == 1
-                  ? parseFloat(target.contributing)
-                  : null;
-              targetInfo.indicator_question = target.indicator_question;
-              targetInfo.target_progress_narrative =
-                target.indicator_question == 1
-                  ? target.target_progress_narrative
-                  : null;
-              await this._resultTocIndicatorTargetRepository.update(
-                {
-                  result_toc_result_indicator_id:
-                    targetIndicators.result_toc_result_indicator_id,
-                  number_target: target.number_target,
-                },
-                targetInfo,
-              );
-            } else {
-              await this._resultTocIndicatorTargetRepository.save({
-                result_toc_result_indicator_id:
-                  targetIndicators.result_toc_result_indicator_id,
-                contributing_indicator:
+          if (itemIndicator.targets) {
+            for (let target of itemIndicator.targets) {
+              let targetInfo =
+                await this._resultTocIndicatorTargetRepository.findOne({
+                  where: {
+                    result_toc_result_indicator_id:
+                      targetIndicators.result_toc_result_indicator_id,
+                    number_target: target.number_target,
+                  },
+                });
+              if (targetInfo != null) {
+                targetInfo.is_active = true;
+                targetInfo.contributing_indicator =
                   target.indicator_question == 1
                     ? parseFloat(target.contributing)
-                    : null,
-                indicator_question: target.indicator_question,
-                number_target: target.number_target,
-                is_active: true,
-                target_progress_narrative:
+                    : null;
+                targetInfo.indicator_question = target.indicator_question;
+                targetInfo.target_progress_narrative =
                   target.indicator_question == 1
                     ? target.target_progress_narrative
-                    : null,
-              });
+                    : null;
+                await this._resultTocIndicatorTargetRepository.update(
+                  {
+                    result_toc_result_indicator_id:
+                      targetIndicators.result_toc_result_indicator_id,
+                    number_target: target.number_target,
+                  },
+                  targetInfo,
+                );
+              } else {
+                await this._resultTocIndicatorTargetRepository.save({
+                  result_toc_result_indicator_id:
+                    targetIndicators.result_toc_result_indicator_id,
+                  contributing_indicator:
+                    target.indicator_question == 1
+                      ? parseFloat(target.contributing)
+                      : null,
+                  indicator_question: target.indicator_question,
+                  number_target: target.number_target,
+                  is_active: true,
+                  target_progress_narrative:
+                    target.indicator_question == 1
+                      ? target.target_progress_narrative
+                      : null,
+                });
+              }
             }
           }
         } else {
@@ -1614,22 +1616,24 @@ export class ResultsTocResultRepository
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
             });
-          for (let target of itemIndicator.targets) {
-            await this._resultTocIndicatorTargetRepository.save({
-              result_toc_result_indicator_id:
-                resultTocResultIndicator.result_toc_result_indicator_id,
-              contributing_indicator:
-                target.indicator_question == 1
-                  ? parseFloat(target.contributing)
-                  : null,
-              indicator_question: target.indicator_question,
-              is_active: true,
-              number_target: target.number_target,
-              target_progress_narrative:
-                target.indicator_question == 1
-                  ? target.target_progress_narrative
-                  : null,
-            });
+          if (itemIndicator.targets) {
+            for (let target of itemIndicator.targets) {
+              await this._resultTocIndicatorTargetRepository.save({
+                result_toc_result_indicator_id:
+                  resultTocResultIndicator.result_toc_result_indicator_id,
+                contributing_indicator:
+                  target.indicator_question == 1
+                    ? parseFloat(target.contributing)
+                    : null,
+                indicator_question: target.indicator_question,
+                is_active: true,
+                number_target: target.number_target,
+                target_progress_narrative:
+                  target.indicator_question == 1
+                    ? target.target_progress_narrative
+                    : null,
+              });
+            }
           }
         }
       }
@@ -2202,7 +2206,7 @@ select *
             if (toc?.indicators) {
               await this.saveInditicatorsContributing(
                 toc?.indicators,
-                rtrExist[0]?.result_toc_result_id
+                rtrExist[0]?.result_toc_result_id,
               );
             }
           } else {
