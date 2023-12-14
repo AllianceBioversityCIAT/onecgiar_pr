@@ -1052,11 +1052,12 @@ export class ResultsTocResultRepository
                   join version v on v.id = r.version_id
                   join result_type rt ON rt.id = r.result_type_id
                 where
-                  rtri.results_toc_results_id != ?
+                  rtri.results_toc_results_id = ?
                   and rtri.toc_results_indicator_id = ?
                   and rit.number_target = ?
                   and rtr.is_active = 1
-                  and r.is_active = 1;
+                  and r.is_active = 1
+                  AND rit.indicator_question = 1;
                 `;
 
               const queryTargetothercontributing = await this.query(
@@ -1111,7 +1112,8 @@ export class ResultsTocResultRepository
                   rtri.toc_results_indicator_id = ?
                   and rit.number_target = ?
                   and rtr.is_active = 1
-                  and r.is_active = 1;
+                  and r.is_active = 1
+                  AND rit.indicator_question = 1;
                     `;
 
                   const queryTargetothercontributing = await this.query(
@@ -1486,7 +1488,8 @@ export class ResultsTocResultRepository
               rtri.toc_results_indicator_id = ?
               AND rit.number_target = ?
               AND rtr.is_active = 1
-              and r.is_active = 1;
+              and r.is_active = 1
+              AND rit.indicator_question = 1;
                 `;
 
             const queryTargetothercontributing = await this.query(
@@ -1524,8 +1527,6 @@ export class ResultsTocResultRepository
   async saveInditicatorsContributing(
     targetsIndicator: any[],
     id_result_toc_result?: number,
-    resultId?: number,
-    toc_result_id?: number,
   ) {
     try {
       if (id_result_toc_result) {
@@ -1535,26 +1536,19 @@ export class ResultsTocResultRepository
         );
       }
 
-      for (const itemIndicator of targetsIndicator) {
-        const rtrExist = await this.findOne({
+      for (let itemIndicator of targetsIndicator) {
+        let targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
-            result_id: resultId,
-            toc_result_id: toc_result_id,
-            initiative_id: itemIndicator.initiative_id,
-          },
-        });
-        const targetIndicators = await this._resultsTocResultIndicator.findOne({
-          where: {
-            results_toc_results_id: rtrExist.result_toc_result_id,
+            results_toc_results_id: id_result_toc_result,
             toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
           },
         });
 
-        if (targetIndicators) {
+        if (targetIndicators != null) {
           targetIndicators.is_active = true;
           await this._resultsTocResultIndicator.update(
             {
-              results_toc_results_id: rtrExist.result_toc_result_id,
+              results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
             },
             targetIndicators,
@@ -1567,8 +1561,8 @@ export class ResultsTocResultRepository
             { is_active: false },
           );
 
-          for (const target of itemIndicator.targets) {
-            const targetInfo =
+          for (let target of itemIndicator.targets) {
+            let targetInfo =
               await this._resultTocIndicatorTargetRepository.findOne({
                 where: {
                   result_toc_result_indicator_id:
@@ -1576,27 +1570,24 @@ export class ResultsTocResultRepository
                   number_target: target.number_target,
                 },
               });
-
-            if (targetInfo) {
+            if (targetInfo != null) {
+              targetInfo.is_active = true;
+              targetInfo.contributing_indicator =
+                target.indicator_question == 1
+                  ? parseFloat(target.contributing)
+                  : null;
+              targetInfo.indicator_question = target.indicator_question;
+              targetInfo.target_progress_narrative =
+                target.indicator_question == 1
+                  ? target.target_progress_narrative
+                  : null;
               await this._resultTocIndicatorTargetRepository.update(
                 {
                   result_toc_result_indicator_id:
-                    targetInfo.result_toc_result_indicator_id,
+                    targetIndicators.result_toc_result_indicator_id,
                   number_target: target.number_target,
                 },
-                {
-                  is_active: true,
-                  contributing_indicator:
-                    target.indicator_question == 1
-                      ? parseFloat(target.contributing)
-                      : null,
-                  indicator_question: target.indicator_question,
-                  number_target: target.number_target,
-                  target_progress_narrative:
-                    target.indicator_question == 1
-                      ? target.target_progress_narrative
-                      : null,
-                },
+                targetInfo,
               );
             } else {
               await this._resultTocIndicatorTargetRepository.save({
@@ -1608,22 +1599,22 @@ export class ResultsTocResultRepository
                     : null,
                 indicator_question: target.indicator_question,
                 number_target: target.number_target,
+                is_active: true,
                 target_progress_narrative:
                   target.indicator_question == 1
                     ? target.target_progress_narrative
                     : null,
-                is_active: true,
               });
             }
           }
         } else {
-          const resultTocResultIndicator =
+          let resultTocResultIndicator =
             await this._resultsTocResultIndicator.save({
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
             });
-          for (const target of itemIndicator.targets) {
+          for (let target of itemIndicator.targets) {
             await this._resultTocIndicatorTargetRepository.save({
               result_toc_result_indicator_id:
                 resultTocResultIndicator.result_toc_result_indicator_id,
@@ -2208,12 +2199,10 @@ select *
             );
 
             // * Save Indicators
-            if (toc?.indicators && toc?.indicators[0]?.targets) {
+            if (toc?.indicators) {
               await this.saveInditicatorsContributing(
                 toc?.indicators,
-                rtrExist[0]?.result_toc_result_id,
-                toc?.results_id || result_id,
-                toc?.toc_result_id,
+                rtrExist[0]?.result_toc_result_id
               );
             }
           } else {
@@ -2290,8 +2279,6 @@ select *
                   await this.saveInditicatorsContributing(
                     toc?.indicators,
                     rtrExist[0]?.result_toc_result_id,
-                    toc?.results_id,
-                    toc?.toc_result_id,
                   );
                 }
               } else {
