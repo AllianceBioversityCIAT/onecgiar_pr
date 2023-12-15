@@ -22,7 +22,12 @@ export class PrButtonComponent {
   @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
   @Output() clickEvent = new EventEmitter<any>();
 
-  constructor() {}
+  png_icons = ['excel_white'];
+  use_png_icon = false;
+
+  ngOnInit(): void {
+    this.icon && (this.use_png_icon = this.png_icons.includes(this.icon));
+  }
 
   onClick() {
     if (!this.disabled) this.clickEvent.emit();

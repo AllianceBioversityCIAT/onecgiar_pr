@@ -1,1 +1,12 @@
-<p>tor-key-results works!</p>
+<div class="local_container">
+  <div class="tor_sub_title">
+    Key results
+  </div>
+  <app-alert-status [description]="this.keyResultsDesc">
+  </app-alert-status>
+
+  <div class="text_button">
+    The following information can be extracted in Excel by clicking on the PRMS download button.
+    <app-pr-button text="Download excel file" icon="excel_white" [reverse]="true"></app-pr-button>
+  </div>
+</div>
