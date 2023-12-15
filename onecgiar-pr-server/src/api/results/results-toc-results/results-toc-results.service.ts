@@ -838,9 +838,9 @@ export class ResultsTocResultsService {
                 newRtR.toc_result_id = rtrc?.toc_result_id || null;
               }
               newRtR.planned_result = contributor?.planned_result || null;
-              (newRtR.toc_progressive_narrative =
-                rtrc?.toc_progressive_narrative || null),
-                RtRArray.push(newRtR);
+              newRtR.toc_progressive_narrative =
+                rtrc?.toc_progressive_narrative || null;
+              RtRArray.push(newRtR);
 
               await this._resultsTocResultRepository.save({
                 initiative_ids: newRtR.initiative_id,
