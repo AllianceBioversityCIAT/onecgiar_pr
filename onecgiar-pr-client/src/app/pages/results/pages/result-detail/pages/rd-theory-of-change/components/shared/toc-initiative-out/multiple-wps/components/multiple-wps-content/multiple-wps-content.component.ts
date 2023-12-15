@@ -157,7 +157,7 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   showNarrative(): boolean {
-    if (this.resultLevelId == 2 || (this.resultLevelId == 1 && this.activeTab?.planned_result)) return true;
+    if (this.resultLevelId === 2 || (this.resultLevelId === 1 && !this.activeTab?.planned_result)) return true;
 
     if (!this.activeTab?.indicators) {
       return false;

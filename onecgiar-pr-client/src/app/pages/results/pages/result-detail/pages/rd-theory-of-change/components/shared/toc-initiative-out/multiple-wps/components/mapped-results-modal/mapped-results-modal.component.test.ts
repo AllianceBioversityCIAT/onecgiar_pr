@@ -26,7 +26,7 @@ describe('MappedResultsModalComponent', () => {
 
     fixture = TestBed.createComponent(MappedResultsModalComponent);
     component = fixture.componentInstance;
-    mappedResultService = TestBed.inject(MappedResultsModalServiceService);
+    TestBed.inject(MappedResultsModalServiceService);
   });
 
   it('should create the component', () => {
