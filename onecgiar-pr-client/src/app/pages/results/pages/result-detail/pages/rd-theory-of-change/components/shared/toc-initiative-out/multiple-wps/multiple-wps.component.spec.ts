@@ -67,7 +67,6 @@ describe('MultipleWPsComponent', () => {
 
     fixture = TestBed.createComponent(MultipleWPsComponent);
     component = fixture.componentInstance;
-    // fixture.detectChanges();
   });
 
   it('should create', () => {
