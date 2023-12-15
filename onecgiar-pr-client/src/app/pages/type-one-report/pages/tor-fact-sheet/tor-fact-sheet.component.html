@@ -1,30 +1,11 @@
 <div class="local_container">
 
-    <div class="tor_sub_title">
-        1. Fact sheet
-    </div>
+  <div class="tor_sub_title">
+    Fact sheet
+  </div>
 
-    This information is sourced from the PRMS
-    <app-simple-table-with-clipboard [loadingData]="loadingData" distribution="left" [data]="data" [header]="header"
-        tableTitle="Fact sheet"></app-simple-table-with-clipboard>
-
-    <br>
-    <div class="tor_sub_title">
-        Budget
-    </div>
-    <div class="half_size">
-        <app-simple-table-with-clipboard [loadingData]="loadingData" [data]="budgetProposal.data"
-            [header]="budgetProposal.header"
-            tableTitle="Proposal Budget from initial submission (USD)"></app-simple-table-with-clipboard>
-    </div>
-    <br><br>
-    <div class="half_size">
-        <app-simple-table-with-clipboard [loadingData]="loadingData" [data]="budgetAnaPlan.data"
-            [header]="budgetAnaPlan.header" tableTitle="Approved 2022 budget (USD)"></app-simple-table-with-clipboard>
-        <div class="footnote">2022 Disbursement Target based on Approved FinPlan</div>
-
-    </div>
-
-    <br><br><br><br><br>
+  This information is sourced from the PRMS
+  <app-simple-table-with-clipboard [loadingData]="loadingData" distribution="left" [data]="data" [header]="header"
+    tableTitle="Fact sheet"></app-simple-table-with-clipboard>
 
 </div>
