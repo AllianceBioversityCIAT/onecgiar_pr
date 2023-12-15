@@ -12,11 +12,20 @@ input[type='number'] {
 
 .pr-input.readOnly {
   padding: 8px 10px;
-  // border: 1px solid #ebebeb;
   box-shadow: 0px 0px 10px -1px #dcdcdc;
   border-radius: 5px;
 }
 
 .input-validation {
   display: none !important;
+}
+
+.invalid {
+  border-color: red !important;
+  box-shadow: 0 0 0 1px red !important;
+}
+
+.warning {
+  border-color: #ffce31 !important;
+  box-shadow: 0px 0px 0px 1px #ffce31 !important;
 }

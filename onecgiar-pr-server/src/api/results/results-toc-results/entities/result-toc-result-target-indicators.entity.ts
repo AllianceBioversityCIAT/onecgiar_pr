@@ -26,11 +26,13 @@ export class ResultIndicatorTarget extends BaseEntity {
   result_toc_result_indicator_id: number;
 
   @Column({
-    type: 'text',
+    type: 'decimal',
+    precision: 6,
+    scale: 2,
     name: 'contributing_indicator',
     nullable: true,
   })
-  contributing_indicator: string;
+  contributing_indicator: number;
 
   @Column({
     type: 'boolean',
@@ -38,6 +40,13 @@ export class ResultIndicatorTarget extends BaseEntity {
     nullable: true,
   })
   indicator_question: boolean;
+
+  @Column({
+    type: 'text',
+    name: 'target_progress_narrative',
+    nullable: true,
+  })
+  target_progress_narrative: string;
 
   @ManyToOne(
     () => ResultsTocResultIndicators,
@@ -49,3 +58,4 @@ export class ResultIndicatorTarget extends BaseEntity {
   })
   obj_result_toc_result_indicator_id: ResultsTocResultIndicators;
 }
+
