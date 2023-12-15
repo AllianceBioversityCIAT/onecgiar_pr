@@ -27,7 +27,10 @@ export class MappedResultsModalComponent {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      if (columnAttr == 'result_code') return (this.combine = true);
+      if (columnAttr == 'result_code') {
+        this.combine = true;
+        return;
+      }
       const mappedResultTableHTML = document.getElementById('mappedResultTable');
       this.combine = !mappedResultTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !mappedResultTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
 

@@ -9,7 +9,6 @@ import { ResultsApiService } from '../../../../../../../../../../shared/services
 describe('TargetIndicatorComponent', () => {
   let component: TargetIndicatorComponent;
   let fixture: ComponentFixture<TargetIndicatorComponent>;
-  let router: Router;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -20,7 +19,6 @@ describe('TargetIndicatorComponent', () => {
 
     fixture = TestBed.createComponent(TargetIndicatorComponent);
     component = fixture.componentInstance;
-    router = TestBed.inject(Router);
   });
 
   it('should create', () => {
