@@ -17,9 +17,10 @@ export class NonPooledProjectBudgetRepository
   }
 
   logicalDelete(resultId: number): Promise<NonPooledProjectBudget> {
-    const queryData = `delete nppb from non_pooled_projetct_budget nppb
+    const queryData = `update  non_pooled_projetct_budget nppb
     inner join non_pooled_project npp on npp.id = nppb.non_pooled_projetct_id 
-    where npp.results_id = ?;`;
+    set nppb.is_active = 0
+    where npp.results_id = ?`;
     return this.query(queryData, [resultId])
       .then((res) => res)
       .catch((err) =>
@@ -31,10 +32,9 @@ export class NonPooledProjectBudgetRepository
       );
   }
   fisicalDelete(resultId: number): Promise<any> {
-    const queryData = `update  non_pooled_projetct_budget nppb
+    const queryData = `delete nppb from non_pooled_projetct_budget nppb
     inner join non_pooled_project npp on npp.id = nppb.non_pooled_projetct_id 
-    set nppb.is_active = 0
-    where npp.results_id = ?`;
+    where npp.results_id = ?;`;
     return this.query(queryData, [resultId])
       .then((res) => res)
       .catch((err) =>

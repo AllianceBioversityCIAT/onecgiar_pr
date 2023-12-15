@@ -254,21 +254,31 @@ export class ResultsByInstitutionsService {
           in case we have additional contributors, we need to merge them with the 
           mqap manually mapped institutions
         */
-        data.institutions = [
-          ...(data.institutions ?? []).map((i) => {
-            i['institution_roles_id'] =
-              InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
-            return i;
-          }),
-          ...data.mqap_institutions
-            .filter((ma) => ma.user_matched_institution?.institutions_id)
-            .map((ma) => {
-              const institution = ma.user_matched_institution;
-              institution['institution_mqap_id'] =
-                ma.result_kp_mqap_institution_id;
-              return institution;
-            }),
-        ];
+        const additionalContributors = (data.institutions ?? []).map((i) => {
+          i['institution_roles_id'] =
+            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
+          return i;
+        });
+
+        const partners = data.mqap_institutions
+          .filter((ma) => ma.user_matched_institution?.institutions_id)
+          .map((ma) => {
+            const institution = ma.user_matched_institution;
+            institution['institution_mqap_id'] =
+              ma.result_kp_mqap_institution_id;
+            return institution;
+          });
+
+        await this._resultByIntitutionsRepository.updateIstitutions(
+          data.result_id,
+          additionalContributors,
+          user.id,
+          data?.no_applicable_partner,
+          [InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS],
+        );
+        data.institutions = data?.no_applicable_partner
+          ? partners
+          : [...additionalContributors, ...partners];
       }
 
       const result =
@@ -277,76 +287,119 @@ export class ResultsByInstitutionsService {
           data.institutions,
           user.id,
           data?.no_applicable_partner,
-          knowledgeProduct
-            ? [
-                InstitutionRoleEnum.PARTNER,
-                InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-              ]
-            : [InstitutionRoleEnum.PARTNER],
+          [InstitutionRoleEnum.PARTNER],
         );
       const vrs: Version = <Version>version.response;
       incomingResult.no_applicable_partner = data.no_applicable_partner;
       await this._resultRepository.save(incomingResult);
-      if (!data?.no_applicable_partner) {
-        for (let index = 0; index < data.institutions.length; index++) {
-          const incomingInstitution = data.institutions[index];
-          const isInstitutions =
-            await this._resultByIntitutionsRepository.getResultByInstitutionExists(
-              data.result_id,
-              incomingInstitution.institutions_id,
-              incomingInstitution?.institution_roles_id ??
-                InstitutionRoleEnum.PARTNER,
-            );
-          if (!isInstitutions) {
-            const institutionsNew: ResultsByInstitution =
-              new ResultsByInstitution();
-            institutionsNew.created_by = user.id;
-            institutionsNew.institution_roles_id =
-              incomingInstitution['institution_roles_id'] ??
-              InstitutionRoleEnum.PARTNER;
-            institutionsNew.institutions_id =
-              incomingInstitution.institutions_id;
-            institutionsNew.last_updated_by = user.id;
-            institutionsNew.result_id = data.result_id;
-            institutionsNew.is_active = true;
-            const responseInstitution =
-              await this._resultByIntitutionsRepository.save(institutionsNew);
+      for (let index = 0; index < data.institutions.length; index++) {
+        const incomingInstitution = data.institutions[index];
+        const isInstitutions =
+          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+            data.result_id,
+            incomingInstitution.institutions_id,
+            incomingInstitution?.institution_roles_id ??
+              InstitutionRoleEnum.PARTNER,
+          );
+        if (!isInstitutions) {
+          const institutionsNew: ResultsByInstitution =
+            new ResultsByInstitution();
+          institutionsNew.created_by = user.id;
+          institutionsNew.institution_roles_id =
+            incomingInstitution['institution_roles_id'] ??
+            InstitutionRoleEnum.PARTNER;
+          institutionsNew.institutions_id = incomingInstitution.institutions_id;
+          institutionsNew.last_updated_by = user.id;
+          institutionsNew.result_id = data.result_id;
+          institutionsNew.is_active = true;
+          const responseInstitution =
+            await this._resultByIntitutionsRepository.save(institutionsNew);
 
-            await this._resultInstitutionsBudgetRepository.save({
-              result_institution_id: institutionsNew.id,
-              created_by: user.id,
-              last_updated_by: user.id,
-            });
+          await this._resultInstitutionsBudgetRepository.save({
+            result_institution_id: institutionsNew.id,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
 
-            if (knowledgeProduct) {
-              const kpInstitution =
-                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
-                  {
-                    result_kp_mqap_institution_id:
-                      incomingInstitution.institution_mqap_id ?? 0,
-                  },
-                );
+          if (knowledgeProduct) {
+            const kpInstitution =
+              await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                {
+                  result_kp_mqap_institution_id:
+                    incomingInstitution.institution_mqap_id ?? 0,
+                },
+              );
 
-              if (kpInstitution) {
-                this._resultsKnowledgeProductInstitutionRepository.update(
-                  {
-                    result_kp_mqap_institution_id:
-                      incomingInstitution.institution_mqap_id,
-                  },
-                  { results_by_institutions_id: responseInstitution.id },
-                );
-              }
+            if (kpInstitution) {
+              this._resultsKnowledgeProductInstitutionRepository.update(
+                {
+                  result_kp_mqap_institution_id:
+                    incomingInstitution.institution_mqap_id,
+                },
+                { results_by_institutions_id: responseInstitution.id },
+              );
             }
+          }
 
-            const delivery = incomingInstitution.deliveries;
-            if (delivery) {
-              const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
-                [];
-              for (let i = 0; i < delivery.length; i++) {
+          const delivery = incomingInstitution.deliveries;
+          if (delivery) {
+            const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+              [];
+            for (let i = 0; i < delivery.length; i++) {
+              const newInstitutionsDeliveries =
+                new ResultByInstitutionsByDeliveriesType();
+              newInstitutionsDeliveries.result_by_institution_id =
+                responseInstitution.id;
+              newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
+              newInstitutionsDeliveries.last_updated_by = user.id;
+              newInstitutionsDeliveries.versions_id = vrs.id;
+              newInstitutionsDeliveries.created_by = user.id;
+              InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
+            }
+            await this._resultByInstitutionsByDeliveriesTypeRepository.save(
+              InstitutionsDeliveriesArray,
+            );
+          }
+        } else {
+          if (knowledgeProduct) {
+            const kpInstitution =
+              await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
+                {
+                  result_kp_mqap_institution_id:
+                    incomingInstitution.institution_mqap_id ?? 0,
+                },
+              );
+
+            if (kpInstitution) {
+              this._resultsKnowledgeProductInstitutionRepository.update(
+                {
+                  result_kp_mqap_institution_id:
+                    incomingInstitution.institution_mqap_id,
+                },
+                { results_by_institutions_id: isInstitutions.id },
+              );
+            }
+          }
+          const delivery = incomingInstitution.deliveries;
+          await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
+            isInstitutions.id,
+            incomingInstitution.deliveries,
+            user.id,
+          );
+          const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
+            [];
+          if (delivery) {
+            for (let i = 0; i < delivery.length; i++) {
+              const exist =
+                await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(
+                  isInstitutions.id,
+                  incomingInstitution.deliveries[i],
+                );
+              if (!exist) {
                 const newInstitutionsDeliveries =
                   new ResultByInstitutionsByDeliveriesType();
                 newInstitutionsDeliveries.result_by_institution_id =
-                  responseInstitution.id;
+                  isInstitutions.id;
                 newInstitutionsDeliveries.partner_delivery_type_id =
                   delivery[i];
                 newInstitutionsDeliveries.last_updated_by = user.id;
@@ -354,62 +407,10 @@ export class ResultsByInstitutionsService {
                 newInstitutionsDeliveries.created_by = user.id;
                 InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
               }
-              await this._resultByInstitutionsByDeliveriesTypeRepository.save(
-                InstitutionsDeliveriesArray,
-              );
             }
-          } else {
-            if (knowledgeProduct) {
-              const kpInstitution =
-                await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
-                  {
-                    result_kp_mqap_institution_id:
-                      incomingInstitution.institution_mqap_id ?? 0,
-                  },
-                );
-
-              if (kpInstitution) {
-                this._resultsKnowledgeProductInstitutionRepository.update(
-                  {
-                    result_kp_mqap_institution_id:
-                      incomingInstitution.institution_mqap_id,
-                  },
-                  { results_by_institutions_id: isInstitutions.id },
-                );
-              }
-            }
-            const delivery = incomingInstitution.deliveries;
-            await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
-              isInstitutions.id,
-              incomingInstitution.deliveries,
-              user.id,
+            await this._resultByInstitutionsByDeliveriesTypeRepository.save(
+              InstitutionsDeliveriesArray,
             );
-            const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
-              [];
-            if (delivery) {
-              for (let i = 0; i < delivery.length; i++) {
-                const exist =
-                  await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(
-                    isInstitutions.id,
-                    incomingInstitution.deliveries[i],
-                  );
-                if (!exist) {
-                  const newInstitutionsDeliveries =
-                    new ResultByInstitutionsByDeliveriesType();
-                  newInstitutionsDeliveries.result_by_institution_id =
-                    isInstitutions.id;
-                  newInstitutionsDeliveries.partner_delivery_type_id =
-                    delivery[i];
-                  newInstitutionsDeliveries.last_updated_by = user.id;
-                  newInstitutionsDeliveries.versions_id = vrs.id;
-                  newInstitutionsDeliveries.created_by = user.id;
-                  InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-                }
-              }
-              await this._resultByInstitutionsByDeliveriesTypeRepository.save(
-                InstitutionsDeliveriesArray,
-              );
-            }
           }
         }
       }
