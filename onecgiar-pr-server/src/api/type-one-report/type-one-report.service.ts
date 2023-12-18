@@ -14,8 +14,8 @@ export class TypeOneReportService {
       const results = await this._typeOneReportRepository.getFactSheetByInit(
         initId,
       );
-      return {
-        response: results[0],
+
+      return this._returnResponse.format({
         message: 'Successful response',
         response: results[0],
         statusCode: HttpStatus.OK,
@@ -29,9 +29,10 @@ export class TypeOneReportService {
     try {
       const results = await this._typeOneReportRepository.getKeyResultStory(
         initId,
+        phase,
       );
-      return {
-        response: results,
+
+      return this._returnResponse.format({
         message: 'Successful response',
         response: results,
         statusCode: HttpStatus.OK,
