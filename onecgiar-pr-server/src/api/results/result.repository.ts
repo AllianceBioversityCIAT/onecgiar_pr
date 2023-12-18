@@ -678,9 +678,6 @@ WHERE
       rtr.action_area_outcome_id,
       caao.outcomeStatement
     order by r.created_date DESC;`;
-
-    console.log(queryData);
-
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
       return results;
