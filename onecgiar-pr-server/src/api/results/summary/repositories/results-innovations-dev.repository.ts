@@ -226,8 +226,6 @@ export class ResultsInnovationsDevRepository
   }
 
   async getSectionSevenDataForReport(resultCodesArray: number[]) {
-    console.log('Si llega');
-
     const resultCodes = (resultCodesArray ?? []).join(',');
     const queryData = `
     select

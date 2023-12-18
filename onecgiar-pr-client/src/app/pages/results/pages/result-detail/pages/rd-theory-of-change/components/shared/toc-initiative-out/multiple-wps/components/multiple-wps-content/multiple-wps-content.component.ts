@@ -30,9 +30,11 @@ export class MultipleWPsContentComponent implements OnChanges {
   constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
 
   ngOnChanges() {
-    if (this.showMultipleWPsContent && this.outcomeList.length > 0 && this.outputList.length > 0 && this.eoiList.length > 0) {
-      if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
-        this.getIndicator();
+    if (this.showMultipleWPsContent) {
+      if ((this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) || (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)) {
+        if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
+          this.getIndicator();
+        }
       }
       this.pushSelectedOptions();
     }
@@ -50,7 +52,6 @@ export class MultipleWPsContentComponent implements OnChanges {
         this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
         this.activeTab.wpinformation = response?.wpinformation;
         this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
-        console.log(response?.informationIndicator);
 
         setTimeout(() => {
           this.indicatorView = true;
