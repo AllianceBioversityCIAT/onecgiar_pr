@@ -49,7 +49,6 @@ export class InnovationPackageDetailComponent {
   GET_resultIdToCode(callback) {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe(
       ({ response }) => {
-        //(response);
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },

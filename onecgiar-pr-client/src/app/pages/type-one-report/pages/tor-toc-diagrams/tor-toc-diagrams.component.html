@@ -6,9 +6,8 @@
       January 29, 2024. A graphic designer will enhance their visual presentation before inclusion in the report. In the
       folder, you'll discover the Initiative-level TOC diagram intended for insertion under Section #2 of the Type 1
       Report. Additionally, there are individual diagrams for each Work Package for insertion in Section #3 of the Type
-      1 Report. 
-      <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/EuPp7t1onn1JtAAT2q_xjJEB0N5JmBOkIZsWArFxvxQnJw?e=caKuqa"
-        target="_blank" rel="noopener noreferrer">
+      1 Report.
+      <a [href]="this.folderUrl" target="_blank" rel="noopener noreferrer" *ngIf="this.folderUrl">
         <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
       </a>
     </div>

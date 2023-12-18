@@ -28,7 +28,7 @@
         </div>
       </div>
       <div class="router_outlet_container">
-        <router-outlet *ngIf="typeOneReportSE.initiativeSelected"></router-outlet>
+        <router-outlet *ngIf="typeOneReportSE.initiativeSelected && this.typeOneReportSE.phaseSelected"></router-outlet>
       </div>
     </div>
   </div>
