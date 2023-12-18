@@ -678,9 +678,6 @@ WHERE
       rtr.action_area_outcome_id,
       caao.outcomeStatement
     order by r.created_date DESC;`;
-
-    console.log(queryData);
-
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
       return results;
@@ -2045,7 +2042,8 @@ left join clarisa_countries cc3
         DATE(tri.target_date) AS 'Target date',
         tri.unit_messurament AS 'Unit of measure',
         tri.target_value AS 'Target value',
-        IFNULL(rtri.indicator_contributing, 'Not provided') AS 'Target contribution from the result'
+        IFNULL(rtri.indicator_contributing, 'Not provided') AS 'Target contribution from the result',
+        IFNULL(rtr.toc_progressive_narrative, 'Not aplicable') AS 'ToC progressive narrative'
     FROM
         result r
         LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id

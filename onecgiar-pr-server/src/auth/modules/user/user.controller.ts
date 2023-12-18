@@ -53,9 +53,8 @@ export class UserController {
 
   @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
-    const { message, response, status } = await this.userService.findOneByEmail(
-      email,
-    );
+    const { message, response, status } =
+      await this.userService.findOneByEmail(email);
     throw new HttpException({ message, response }, status);
   }
 

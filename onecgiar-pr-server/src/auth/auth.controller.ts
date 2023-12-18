@@ -25,9 +25,8 @@ export class AuthController {
 
   @Post('/singin')
   async singIn(@Body() userLogin: UserLoginDto) {
-    const { message, response, status } = await this.authService.singIn(
-      userLogin,
-    );
+    const { message, response, status } =
+      await this.authService.singIn(userLogin);
     throw new HttpException({ message, response }, status);
   }
 

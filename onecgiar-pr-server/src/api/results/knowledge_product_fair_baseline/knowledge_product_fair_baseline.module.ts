@@ -18,4 +18,3 @@ import {
   exports: [KnowledgeProductFairBaselineRepository],
 })
 export class KnowledgeProductFairBaselineModule {}
-

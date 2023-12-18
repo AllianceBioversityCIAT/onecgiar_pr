@@ -19,7 +19,7 @@
 
   <div style="display: flex; gap: 1rem; align-items: flex-end;">
     <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
-      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name">
+      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name" >
     </app-pr-input>
 
     <div *ngIf="!this.api.rolesSE.readOnly && isPhaseOpen">
@@ -44,7 +44,7 @@
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Gender tag" [(ngModel)]="this.generalInfoBody.gender_tag_id"> </app-pr-radio-button>
+        label="Gender equality tag" [(ngModel)]="this.generalInfoBody.gender_tag_id"> </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
   </div>
@@ -63,7 +63,7 @@
     </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Nutrition tag" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
+        label="Nutrition, health and food security tag" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
   </div>
@@ -72,7 +72,7 @@
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Environment tag" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
+        label="Environmental health and biodiversity tag" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3">
       </div>
@@ -83,7 +83,7 @@
     <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Poverty tag" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
+        label="Poverty reduction, livelihoods and jobs tag" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
   </div>
