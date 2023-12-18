@@ -18,7 +18,6 @@ import { environment } from '../../../../../../environments/environment';
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
-  platformInQA = environment.platformInQA;
   constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, public api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
 
   hideKP(navOption) {

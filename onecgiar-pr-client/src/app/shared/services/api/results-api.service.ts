@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { environment } from 'src/environments/environment';
-import { map, Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { map, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
-import { PartnersBody } from 'src/app/pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
+import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 import { GeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/geographicLocationBody';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { PartnersRequestBody } from '../../../pages/results/pages/result-detail/components/partners-request/models/partnersRequestBody.model';
-import { EvidencesBody } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { EvidencesBody, EvidencesCreateInterface } from '../../../pages/results/pages/result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { TheoryOfChangeBody } from '../../../pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
@@ -268,16 +268,33 @@ export class ResultsApiService {
   }
 
   GET_evidences() {
-    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`);
+    return this.http.get<any>(`${this.apiBaseUrl}evidences/get/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_evidences(body: EvidencesBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    console.log(body.evidences);
+    body.evidences.forEach((evidence: EvidencesCreateInterface) => {
+      formData.append('files', evidence.file);
+    });
+    return this.http.post<any>(`${this.apiBaseUrl}evidences/create/${this.currentResultId}`, formData).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PUT_loadFileInUploadSession(file: File, link) {
+    const options = { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream', 'Content-Range': `bytes 0-${file.size - 1}/${file.size}`, eampleee: 'asasas' }) };
+    return firstValueFrom(this.http.put<any>(link, file, options));
+  }
+
+  GET_loadFileInUploadSession(link) {
+    return firstValueFrom(this.http.get<any>(link));
+  }
+
+  POST_createUploadSession(body: { fileName: string; resultId: string | number }) {
+    return firstValueFrom(this.http.post<any>(`${this.apiBaseUrl}evidences/createUploadSession`, body));
   }
 
   POST_toc(body: TheoryOfChangeBody) {
-    //(body);
-
     return this.http.post<any>(`${this.apiBaseUrl}toc/create/toc/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -835,5 +852,9 @@ export class ResultsApiService {
 
   GET_subNationalByIsoAlpha2(isoAlpha2: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/subnational-scope/get/by-country-iso2/${isoAlpha2}`);
+  }
+
+  GET_platformGlobalVariables() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
   }
 }

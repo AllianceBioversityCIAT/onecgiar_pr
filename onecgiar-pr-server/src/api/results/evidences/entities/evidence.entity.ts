@@ -5,11 +5,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { EvidenceType } from '../../evidence_types/entities/evidence_type.entity';
+import { EvidenceSharepoint } from './evidence-sharepoint.entity';
 
 @Entity('evidence')
 export class Evidence {
@@ -101,6 +103,14 @@ export class Evidence {
   knowledge_product_related!: number;
 
   @Column({
+    name: 'is_sharepoint',
+    type: 'tinyint',
+    nullable: false,
+    default: 0,
+  })
+  is_sharepoint: number;
+
+  @Column({
     name: 'is_active',
     type: 'tinyint',
     nullable: false,
@@ -144,4 +154,10 @@ export class Evidence {
     name: 'evidence_type_id',
   })
   evidence_type: EvidenceType;
+
+  @OneToMany(
+    () => EvidenceSharepoint,
+    (evidenceSharepoint) => evidenceSharepoint.evidence_object,
+  )
+  evidenceSharepointArray: EvidenceSharepoint[];
 }

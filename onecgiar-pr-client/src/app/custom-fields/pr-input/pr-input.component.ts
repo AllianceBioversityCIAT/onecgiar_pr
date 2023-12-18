@@ -30,9 +30,11 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() hint: string = null;
   @Input() editable: boolean = false;
   @Input() noDataText: string = '';
+  @Input() autogenerate: boolean = false;
 
   @Input() variant?: 'xs' | 'sm';
   @Input() numberMode?: 'decimal';
+  @Input() maxDecimals?: number = 2;
   @Input() showDescription?: boolean = true;
   @Input() InlineStyles?: string = '';
   @Input() descInlineStyles?: string = '';

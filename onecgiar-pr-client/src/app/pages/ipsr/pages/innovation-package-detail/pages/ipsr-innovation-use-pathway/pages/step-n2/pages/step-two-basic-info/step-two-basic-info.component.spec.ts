@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { StepTwoBasicInfoComponent } from './StepTwoBasicInfoComponent';
+import { StepTwoBasicInfoComponent } from './step-two-basic-info.component';
 
 describe('StepTwoBasicInfoComponent', () => {
   let component: StepTwoBasicInfoComponent;

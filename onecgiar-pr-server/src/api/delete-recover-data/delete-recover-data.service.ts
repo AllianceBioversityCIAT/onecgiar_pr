@@ -71,6 +71,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
@@ -135,6 +136,7 @@ export class DeleteRecoverDataService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
@@ -243,6 +245,7 @@ export class DeleteRecoverDataService {
       );
       await this._resultsTocResultRepository.logicalDelete(resultData.id);
       await this._resultValidationRepository.logicalDelete(resultData.id);
+      await this._evidenceSharepointRepository.logicalDelete(resultData.id);
       await this._resultByEvidencesRepository.logicalDelete(resultData.id);
       await this._resultByInitiativesRepository.logicalDelete(resultData.id);
       await this._resultByIntitutionsTypeRepository.logicalDelete(

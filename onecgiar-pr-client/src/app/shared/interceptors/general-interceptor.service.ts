@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpEvent, HttpHandler, HttpHeaders, HttpInterceptor, HttpRequest } from '@angular/common/http';
+import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, Observable, tap, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
@@ -20,12 +20,10 @@ export class GeneralInterceptorService implements HttpInterceptor {
       return next.handle(req.clone());
     }
 
-    const headers = new HttpHeaders({
-      auth: this.authService?.localStorageToken
-    });
-
     const reqClone = req.clone({
-      headers
+      setHeaders: {
+        auth: this.authService?.localStorageToken
+      }
     });
 
     if (reqClone.method === 'PATCH' || reqClone.method === 'POST') {

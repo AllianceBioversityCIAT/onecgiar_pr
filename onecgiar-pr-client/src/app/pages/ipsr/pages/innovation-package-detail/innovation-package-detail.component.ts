@@ -24,12 +24,11 @@ export class InnovationPackageDetailComponent {
 
   GETInnovationPackageDetail() {
     this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
-      //(response);
       response.initiative_id = response?.inititiative_id;
       response.official_code = response?.initiative_official_code;
       this.api.rolesSE.validateReadOnly(response);
-      //(response);
       this.dataControlSE.currentResult = response;
+      console.log(response);
       const is_phase_open = response?.is_phase_open;
       switch (is_phase_open) {
         case 0:
@@ -41,7 +40,6 @@ export class InnovationPackageDetailComponent {
           break;
       }
 
-      //(response.is_phase_open);
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
 
       this.ipsrDataControlSE.detailData = response;

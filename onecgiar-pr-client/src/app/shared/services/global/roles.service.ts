@@ -115,7 +115,7 @@ export class RolesService {
 
   accessToIPSRSubmit(initiative_id) {
     const initiativeFind = this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
-    if (initiativeFind?.role_id == 6) return false;
+    if (initiativeFind?.role_id == 6 || this.dataControlSE?.currentResult?.status_id == 2) return false;
     return !!initiativeFind;
   }
 

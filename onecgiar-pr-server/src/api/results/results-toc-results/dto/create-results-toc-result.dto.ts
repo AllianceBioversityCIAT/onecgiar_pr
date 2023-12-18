@@ -68,6 +68,7 @@ interface resultToResultInterfaceToc {
   actionAreaOutcome?: any[];
   targetsIndicators?: any[];
   is_sdg_action_impact: boolean;
+  toc_progressive_narrative: string;
 }
 
 interface shareResultRequestInterface {
