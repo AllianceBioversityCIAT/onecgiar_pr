@@ -58,4 +58,3 @@ export class ResultIndicatorTarget extends BaseEntity {
   })
   obj_result_toc_result_indicator_id: ResultsTocResultIndicators;
 }
-

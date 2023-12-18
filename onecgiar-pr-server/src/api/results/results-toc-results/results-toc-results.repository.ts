@@ -336,8 +336,8 @@ export class ResultsTocResultRepository
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId ? initiativeId.toString() : null
-    })
+        initiativeId ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -486,8 +486,8 @@ export class ResultsTocResultRepository
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId.length ? initiativeId.toString() : null
-    })
+        initiativeId.length ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -1536,8 +1536,8 @@ export class ResultsTocResultRepository
         );
       }
 
-      for (let itemIndicator of targetsIndicator) {
-        let targetIndicators = await this._resultsTocResultIndicator.findOne({
+      for (const itemIndicator of targetsIndicator) {
+        const targetIndicators = await this._resultsTocResultIndicator.findOne({
           where: {
             results_toc_results_id: id_result_toc_result,
             toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
@@ -1562,8 +1562,8 @@ export class ResultsTocResultRepository
           );
 
           if (itemIndicator.targets) {
-            for (let target of itemIndicator.targets) {
-              let targetInfo =
+            for (const target of itemIndicator.targets) {
+              const targetInfo =
                 await this._resultTocIndicatorTargetRepository.findOne({
                   where: {
                     result_toc_result_indicator_id:
@@ -1610,14 +1610,14 @@ export class ResultsTocResultRepository
             }
           }
         } else {
-          let resultTocResultIndicator =
+          const resultTocResultIndicator =
             await this._resultsTocResultIndicator.save({
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
             });
           if (itemIndicator.targets) {
-            for (let target of itemIndicator.targets) {
+            for (const target of itemIndicator.targets) {
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   resultTocResultIndicator.result_toc_result_indicator_id,
@@ -2452,4 +2452,3 @@ select *
     }
   }
 }
-

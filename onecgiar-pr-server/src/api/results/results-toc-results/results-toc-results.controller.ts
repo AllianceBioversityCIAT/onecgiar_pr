@@ -3,9 +3,7 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   Headers,
   HttpException,
 } from '@nestjs/common';
@@ -91,4 +89,3 @@ export class ResultsTocResultsController {
     throw new HttpException({ message, response }, status);
   }
 }
-

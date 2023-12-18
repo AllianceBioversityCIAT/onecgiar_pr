@@ -56,7 +56,7 @@ import { ResultsTocResultsModule } from '../../results/results-toc-results/resul
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ReturnResponse,
-    ResultsTocResultRepository
+    ResultsTocResultRepository,
   ],
   exports: [ResultsPackageTocResultService],
 })
