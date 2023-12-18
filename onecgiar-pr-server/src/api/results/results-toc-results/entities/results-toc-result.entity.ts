@@ -3,7 +3,6 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -85,7 +84,7 @@ export class ResultsTocResult {
   })
   initiative_id!: number;
 
-  // TODO - Review 
+  // TODO - Review
   @Column({
     name: 'mapping_sdg',
     type: 'boolean',
@@ -93,7 +92,7 @@ export class ResultsTocResult {
   })
   mapping_sdg: boolean;
 
-  // TODO - Review 
+  // TODO - Review
   @Column({
     name: 'mapping_impact',
     type: 'boolean',

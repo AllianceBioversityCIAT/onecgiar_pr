@@ -123,9 +123,8 @@ export class ElasticService {
 
   async findForElasticSearch(documentName: string, id?: string) {
     try {
-      const queryResult = await this._resultRepository.resultsForElasticSearch(
-        id,
-      );
+      const queryResult =
+        await this._resultRepository.resultsForElasticSearch(id);
 
       if (!queryResult.length) {
         throw {
@@ -188,9 +187,8 @@ export class ElasticService {
         throw this._handlersError.returnErrorRes({ error: elasticCreate });
       }
 
-      const bulkUploadResponse = await this.sendBulkOperationToElastic(
-        elasticJsonString,
-      );
+      const bulkUploadResponse =
+        await this.sendBulkOperationToElastic(elasticJsonString);
       if (bulkUploadResponse.status >= 300) {
         throw this._handlersError.returnErrorRes({ error: bulkUploadResponse });
       }
