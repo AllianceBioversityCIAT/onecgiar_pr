@@ -26,9 +26,8 @@ export class TocResultsService {
         toc_level,
       );
       if (!res.length && toc_level == 4) {
-        res = await this._tocResultsRepository.getAllOutcomeByInitiative(
-          toc_level,
-        );
+        res =
+          await this._tocResultsRepository.getAllOutcomeByInitiative(toc_level);
       }
       return this._returnResponse.format({
         message: 'Successful response',
@@ -49,9 +48,10 @@ export class TocResultsService {
         );
 
       if (!tocResults.length && levelId == 4) {
-        tocResults = await this._tocResultsRepository.getAllOutcomeByInitiative(
-          initiativeId,
-        );
+        tocResults =
+          await this._tocResultsRepository.getAllOutcomeByInitiative(
+            initiativeId,
+          );
       }
       if (!tocResults.length) {
         throw {

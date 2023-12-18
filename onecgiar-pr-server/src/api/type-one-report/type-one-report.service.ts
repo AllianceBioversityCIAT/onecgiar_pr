@@ -11,11 +11,10 @@ export class TypeOneReportService {
   ) {}
   async getFactSheetByInit(initId: number) {
     try {
-      const results = await this._typeOneReportRepository.getFactSheetByInit(
-        initId,
-      );
-
-      return this._returnResponse.format({
+      const results =
+        await this._typeOneReportRepository.getFactSheetByInit(initId);
+      return {
+        response: results[0],
         message: 'Successful response',
         response: results[0],
         statusCode: HttpStatus.OK,
@@ -27,12 +26,10 @@ export class TypeOneReportService {
 
   async getKeyResultStory(initId: number, phase: number) {
     try {
-      const results = await this._typeOneReportRepository.getKeyResultStory(
-        initId,
-        phase,
-      );
-
-      return this._returnResponse.format({
+      const results =
+        await this._typeOneReportRepository.getKeyResultStory(initId);
+      return {
+        response: results,
         message: 'Successful response',
         response: results,
         statusCode: HttpStatus.OK,

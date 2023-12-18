@@ -14,9 +14,8 @@ export class IpsrService {
 
   async findAllInnovations(initiativeId: number[]) {
     try {
-      const innovation = await this._ipsrRespository.getResultsInnovation(
-        initiativeId,
-      );
+      const innovation =
+        await this._ipsrRespository.getResultsInnovation(initiativeId);
       return this._returnResponse.format({
         response: innovation,
         message: 'Successful response',
@@ -29,9 +28,8 @@ export class IpsrService {
 
   async findInnovationDetail(resultId: number) {
     try {
-      const result = await this._ipsrRespository.getResultInnovationDetail(
-        resultId,
-      );
+      const result =
+        await this._ipsrRespository.getResultInnovationDetail(resultId);
       if (!result) {
         throw {
           response: result,
@@ -52,9 +50,8 @@ export class IpsrService {
 
   async findOneInnovation(resultId: number) {
     try {
-      const result = await this._ipsrRespository.getResultInnovationById(
-        resultId,
-      );
+      const result =
+        await this._ipsrRespository.getResultInnovationById(resultId);
       if (!result[0]) {
         throw {
           response: result,

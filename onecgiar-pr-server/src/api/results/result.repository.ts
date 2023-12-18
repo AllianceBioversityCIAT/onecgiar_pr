@@ -947,6 +947,7 @@ WHERE
             (
                 r.result_type_id = 7
                 AND r.status_id = 3
+                OR r.status_id = 2
             )
             OR (
                 r.result_type_id = 11

@@ -12,7 +12,6 @@ import { ShareResultRequestService } from './share-result-request.service';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ShareResultRequest } from './entities/share-result-request.entity';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 
 @Controller()
@@ -72,4 +71,3 @@ export class ShareResultRequestController {
     throw new HttpException({ message, response }, status);
   }
 }
-

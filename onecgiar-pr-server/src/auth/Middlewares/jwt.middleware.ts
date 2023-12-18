@@ -44,9 +44,8 @@ export class JwtMiddleware implements NestMiddleware {
           password: cre.split(':')[1],
         };
 
-        const dataAuth: returnFormatSingin = await this._authService.singIn(
-          userLogin,
-        );
+        const dataAuth: returnFormatSingin =
+          await this._authService.singIn(userLogin);
         // get token
         token_ = dataAuth.response.token;
       } else {
