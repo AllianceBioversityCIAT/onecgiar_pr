@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { disableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
+import { GeoScopeEnum } from '../../enum/geo-scope.enum';
 
 @Component({
   selector: 'app-geoscope-management',
@@ -12,10 +13,10 @@ export class GeoscopeManagementComponent implements OnInit {
   public selectedItems: disableOptionsSubNa[] = [];
   public sub_scope: any[] = [];
   public geoscopeOptions = [
-    { full_name: 'Global', id: 1 },
-    { full_name: 'Regional', id: 2 },
-    { full_name: 'Country', id: 4 },
-    { full_name: 'Sub-national', id: 5 }
+    { full_name: 'Global', id: GeoScopeEnum.GLOBAL },
+    { full_name: 'Regional', id: GeoScopeEnum.REGIONAL },
+    { full_name: 'Country', id: GeoScopeEnum.COUNTRY },
+    { full_name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
   ];
 
   constructor(public regionsCountriesSE: RegionsCountriesService) {}
@@ -27,19 +28,17 @@ export class GeoscopeManagementComponent implements OnInit {
 
   saveFormatData() {
     switch (this.body.geo_scope_id) {
-      case 1:
+      case GeoScopeEnum.GLOBAL:
         this.body.regions = [];
         this.body.countries = [];
         break;
-      case 2:
+      case GeoScopeEnum.REGIONAL:
         this.body.countries = [];
         break;
-      case 4:
+      case GeoScopeEnum.COUNTRY:
+      case GeoScopeEnum.SUB_NATIONAL:
         this.body.regions = [];
-        this.body.countries.map(el => (el.sub_national = []));
-        break;
-      case 5:
-        this.body.regions = [];
+        if (GeoScopeEnum.COUNTRY) this.body.countries.map(el => (el.sub_national = []));
         break;
       default:
         this.body.regions = [];
