@@ -170,7 +170,6 @@ export class PlatformReportService {
 
       const pdf: ReadStream = await createPDF(document, options)
         .then((res: ReadStream) => {
-          //console.log(res);
           return res;
         })
         .catch((_error) => {

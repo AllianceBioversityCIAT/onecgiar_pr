@@ -672,9 +672,8 @@ export class ResultsKnowledgeProductsService {
       newKnowledgeProduct.is_melia = false;
       newKnowledgeProduct.result_object = newResult;
 
-      newKnowledgeProduct = await this._resultsKnowledgeProductRepository.save(
-        newKnowledgeProduct,
-      );
+      newKnowledgeProduct =
+        await this._resultsKnowledgeProductRepository.save(newKnowledgeProduct);
 
       resultsKnowledgeProductDto.id = newResult.id;
 
@@ -1396,7 +1395,7 @@ export class ResultsKnowledgeProductsService {
     phase?: number;
   }) {
     try {
-      let result_object: any = {
+      const result_object: any = {
         is_active: true,
       };
 

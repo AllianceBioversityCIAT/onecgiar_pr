@@ -130,30 +130,15 @@ export class SharePointService {
     }
   }
   async getToken() {
-    if (this.isTokenExpired() || !this.expiresIn) {
+    if (this.isTokenExpired() || !this.expiresIn)
       return await this.consumeToken();
-    } else {
-      const remainingTimeInSeconds =
-        this.creationTime + this.expiresIn - new Date().getTime() / 1000;
-      const remainingTimeString = this.convertSecondsToTime(
-        remainingTimeInSeconds,
-      );
-      return this.token;
-    }
+    return this.token;
   }
 
   private isTokenExpired(): boolean {
     const currentTime = new Date().getTime() / 1000;
     const tokenExpirationTime = this.creationTime + this.expiresIn;
     return currentTime >= tokenExpirationTime;
-  }
-
-  private convertSecondsToTime(seconds: number): string {
-    const totalMinutes = Math.floor(seconds / 60);
-    const totalHours = Math.floor(totalMinutes / 60);
-    const remainingSeconds = seconds % 60;
-    const remainingMinutes = totalMinutes % 60;
-    return `${totalHours} hour(s), ${remainingMinutes} minute(s), and ${remainingSeconds} second(s)`;
   }
 
   async consumeToken() {

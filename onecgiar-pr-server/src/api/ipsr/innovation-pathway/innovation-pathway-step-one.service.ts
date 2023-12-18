@@ -242,13 +242,11 @@ export class InnovationPathwayStepOneService {
 
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${
-          resInitLead?.obj_initiative?.short_name
-        } and partners will work together with${this.arrayToStringAnd(
+        body: `By 2024, the ${resInitLead?.obj_initiative
+          ?.short_name} and partners will work together with${this.arrayToStringAnd(
           institutions?.map((el) => el['institutions_name']),
-        )} to accomplish the use of ${
-          coreData?.obj_result?.title
-        } by${this.innovationUseString(
+        )} to accomplish the use of ${coreData?.obj_result
+          ?.title} by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
           innovatonUse.organization.map((el) => el),
           innovatonUse.measures.map((el) => el),
@@ -310,8 +308,8 @@ export class InnovationPathwayStepOneService {
       el?.obj_actor_type?.actor_type_id == 5
         ? el?.other_actor_type
         : el?.obj_actor_type?.name && el?.sex_and_age_disaggregation
-        ? el?.how_many
-        : el?.men && el?.women,
+          ? el?.how_many
+          : el?.men && el?.women,
     );
     const temp_ri = ri.filter(
       (el) => el?.obj_institution_types?.name && el?.how_many,
@@ -351,9 +349,9 @@ export class InnovationPathwayStepOneService {
         i?.obj_institution_types?.name || `<Institution type not provided>`
       }${arrayData?.length > 1 ? ',' : ''} `;
     }
-    return `${actors.replace(/(,.)$/, '')} ${count > 1 ? 'and ' : ''}${
-      lastElement?.how_many
-    } ${
+    return `${actors.replace(/(,.)$/, '')} ${
+      count > 1 ? 'and ' : ''
+    }${lastElement?.how_many} ${
       lastElement?.obj_institution_types?.name ||
       `<Institution type not provided>`
     }`;

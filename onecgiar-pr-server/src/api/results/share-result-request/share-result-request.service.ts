@@ -8,7 +8,6 @@ import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { VersionsService } from '../versions/versions.service';
-import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -34,9 +33,8 @@ export class ShareResultRequestService {
   ) {
     try {
       const result: { initiative_id: number } = { initiative_id: null };
-      const res = await this._resultByInitiativesRepository.InitiativeByResult(
-        resultId,
-      );
+      const res =
+        await this._resultByInitiativesRepository.InitiativeByResult(resultId);
       result['initiative_id'] = res.length ? res[0].id : null;
 
       let saveData = [];
@@ -178,14 +176,8 @@ export class ShareResultRequestService {
         last_updated_by: user.id,
       });
 
-      const {
-        shared_inititiative_id,
-        result_id,
-        request_status_id,
-        toc_result_id,
-        action_area_outcome_id,
-        planned_result,
-      } = requestData;
+      const { shared_inititiative_id, result_id, request_status_id } =
+        requestData;
 
       if (request_status_id == 2) {
         const exists =
@@ -298,4 +290,3 @@ export class ShareResultRequestService {
     }
   }
 }
-
