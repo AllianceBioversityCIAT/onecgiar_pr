@@ -4,7 +4,7 @@ import { RdPartnersService } from '../../rd-partners.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-normal-selector',

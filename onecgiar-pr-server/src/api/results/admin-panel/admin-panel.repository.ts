@@ -19,7 +19,6 @@ export class AdminPanelRepository {
       ? ` and r.version_id in (${filterIntiatives.phases})`
       : '';
     const complement = filterByInitiatives + filterByPhases;
-    console.log(complement);
     const queryData = `
     SELECT
       v.id,
