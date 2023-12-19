@@ -728,57 +728,55 @@ export class ResultsTocResultsService {
       // * Map multiple WPs to the same initiative
       for (const toc of createResultsTocResultDto.result_toc_result
         .result_toc_results) {
-        if (toc.result_toc_result_id && toc.toc_result_id) {
-          let RtR: ResultsTocResult | null;
-          if (toc?.result_toc_result_id) {
-            RtR =
-              (await this._resultsTocResultRepository.findOne({
-                where: {
-                  result_toc_result_id: toc?.result_toc_result_id,
-                },
-              })) || null;
-          } else {
-            RtR = null;
-          }
-
-          if (RtR) {
-            if (result.result_level_id == 2) {
-              RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
-            } else {
-              RtR.toc_result_id = toc?.toc_result_id || null;
-            }
-            RtR.is_active = true;
-            RtR.last_updated_by = user.id;
-            RtR.planned_result =
-              createResultsTocResultDto.result_toc_result?.planned_result;
-
-            await this._resultsTocResultRepository.update(
-              RtR.result_toc_result_id,
-              {
-                toc_result_id: toc.toc_result_id,
-                action_area_outcome_id: toc.action_area_outcome_id,
-                last_updated_by: user.id,
-                planned_result:
-                  createResultsTocResultDto.result_toc_result?.planned_result,
-                is_active: true,
-                toc_progressive_narrative:
-                  toc.toc_progressive_narrative || null,
+        if (!toc.result_toc_result_id) return;
+        let RtR: ResultsTocResult | null;
+        if (toc?.result_toc_result_id) {
+          RtR =
+            (await this._resultsTocResultRepository.findOne({
+              where: {
+                result_toc_result_id: toc?.result_toc_result_id,
               },
-            );
-          } else if (toc) {
-            await this._resultsTocResultRepository.save({
-              initiative_ids: toc?.initiative_id,
-              toc_result_id: toc?.toc_result_id,
-              created_by: user.id,
+            })) || null;
+        } else {
+          RtR = null;
+        }
+
+        if (RtR) {
+          if (result.result_level_id == 2) {
+            RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
+          } else {
+            RtR.toc_result_id = toc?.toc_result_id || null;
+          }
+          RtR.is_active = true;
+          RtR.last_updated_by = user.id;
+          RtR.planned_result =
+            createResultsTocResultDto.result_toc_result?.planned_result;
+
+          await this._resultsTocResultRepository.update(
+            RtR.result_toc_result_id,
+            {
+              toc_result_id: toc.toc_result_id,
+              action_area_outcome_id: toc.action_area_outcome_id,
               last_updated_by: user.id,
-              result_id: result.id,
               planned_result:
                 createResultsTocResultDto.result_toc_result?.planned_result,
-              action_area_outcome_id: toc?.action_area_outcome_id,
               is_active: true,
               toc_progressive_narrative: toc.toc_progressive_narrative || null,
-            });
-          }
+            },
+          );
+        } else if (toc) {
+          await this._resultsTocResultRepository.save({
+            initiative_ids: toc?.initiative_id,
+            toc_result_id: toc?.toc_result_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id: result.id,
+            planned_result:
+              createResultsTocResultDto.result_toc_result?.planned_result,
+            action_area_outcome_id: toc?.action_area_outcome_id,
+            is_active: true,
+            toc_progressive_narrative: toc.toc_progressive_narrative || null,
+          });
         }
       }
     } catch (error) {
