@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { IpsrContributorsNonCgiarPartnersComponent } from './ipsr-contributors-non-cgiar-partners.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('IpsrContributorsNonCgiarPartnersComponent', () => {
   let component: IpsrContributorsNonCgiarPartnersComponent;
@@ -8,9 +9,9 @@ describe('IpsrContributorsNonCgiarPartnersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ IpsrContributorsNonCgiarPartnersComponent ]
-    })
-    .compileComponents();
+      declarations: [IpsrContributorsNonCgiarPartnersComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrContributorsNonCgiarPartnersComponent);
     component = fixture.componentInstance;

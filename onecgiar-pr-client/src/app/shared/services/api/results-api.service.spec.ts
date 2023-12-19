@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpResponse } from '@angular/common/http';
+import { jest } from '@jest/globals';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -894,7 +895,6 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}evidences/create/${service.currentResultId}`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);

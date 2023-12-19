@@ -15,7 +15,7 @@ async function bootstrap() {
   await dataSource
     .initialize()
     .then(() => {
-      console.log('si');
+      console.log('Initialized server');
     })
     .catch((error) => {
       console.log(error);
