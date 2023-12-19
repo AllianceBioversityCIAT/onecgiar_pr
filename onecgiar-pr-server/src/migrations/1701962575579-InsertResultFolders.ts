@@ -26,6 +26,7 @@ export class InsertResultFolders1701962575579 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`delete from result_folders;`);
+  }
 }
-
