@@ -48,7 +48,7 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
-import { env } from 'process';
+import { isProduction } from '../../../shared/utils/validation.utils';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -1428,15 +1428,19 @@ export class ResultsKnowledgeProductsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     try {
       const data =
         await this._resultsKnowledgeProductRepository.getSectionSevenDataForReport(
           resultCodesArray,
+          phase,
         );
 
       return {

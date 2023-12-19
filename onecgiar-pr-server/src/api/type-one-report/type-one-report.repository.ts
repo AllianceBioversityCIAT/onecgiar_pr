@@ -334,7 +334,7 @@ export class TypeOneReportRepository {
       });
     }
   }
-  async getKeyResultStory(initId: number) {
+  async getKeyResultStory(initId: number, phase?: number) {
     const queryKeyResultStory = `
     SELECT
         r.result_code,
@@ -429,8 +429,12 @@ export class TypeOneReportRepository {
         		GROUP_CONCAT(DISTINCT concat('{"id_impactArea":', cia.id, ',\n"nameImpact":"', cia.name,'"}') separator ',\n')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
-                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-                join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+                join ${
+                  env.DB_OST
+                }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${
+                  env.DB_OST
+                }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
             WHERE
                 triar.toc_result_id in (
                     SELECT
@@ -448,9 +452,15 @@ export class TypeOneReportRepository {
                 GROUP_CONCAT(DISTINCT cgt.target separator '<br>')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
-                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-                join ${env.DB_OST}.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
-                join ${env.DB_OST}.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
+                join ${
+                  env.DB_OST
+                }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${
+                  env.DB_OST
+                }.toc_impact_area_results_global_targets tiargt on tiargt.impact_area_toc_result_id = tiar.toc_result_id
+                join ${
+                  env.DB_OST
+                }.clarisa_global_targets cgt on cgt.id = tiargt.global_target_id
             WHERE
                 triar.toc_result_id in (
                     SELECT
@@ -477,8 +487,12 @@ export class TypeOneReportRepository {
         		GROUP_CONCAT(DISTINCT cia.name separator '<br>')
             from
                 ${env.DB_OST}.toc_results_impact_area_results triar
-                join ${env.DB_OST}.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
-                join ${env.DB_OST}.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
+                join ${
+                  env.DB_OST
+                }.toc_impact_area_results tiar on tiar.toc_result_id = triar.impact_area_toc_result_id
+                join ${
+                  env.DB_OST
+                }.clarisa_impact_areas cia on cia.id = tiar.impact_area_id
             WHERE
                 triar.toc_result_id in (
                     SELECT
@@ -514,7 +528,9 @@ export class TypeOneReportRepository {
         and r.is_active = 1
         and r.status_id = 3
         and rbi.initiative_role_id = 1 
-        and ci.id = ?;
+        and ci.id = ?
+        ${phase ? `and r.version_id = ${phase}` : ''}
+        ;
     `;
     try {
       const generalInformation: any[] = await this.dataSource.query(

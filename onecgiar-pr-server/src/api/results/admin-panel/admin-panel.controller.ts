@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  HttpException,
   Query,
   UseInterceptors,
   Patch,
@@ -18,52 +17,42 @@ import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { BulkKpDto } from './dto/bulk-kp.dto';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class AdminPanelController {
   constructor(private readonly adminPanelService: AdminPanelService) {}
 
   @Post('report/results/completeness')
-  async reportResultCompleteness(
-    @Body() filterIntiatives: FilterInitiativesDto,
-  ) {
-    const { message, response, status } =
-      await this.adminPanelService.reportResultCompleteness(filterIntiatives);
-    throw new HttpException({ message, response }, status);
+  reportResultCompleteness(@Body() filterIntiatives: FilterInitiativesDto) {
+    return this.adminPanelService.reportResultCompleteness(filterIntiatives);
   }
 
   @Post('report/results/excel-full-report')
-  async excelFullReportByResultCodes(@Body() filterResults: FilterResultsDto) {
-    const { message, response, status } =
-      await this.adminPanelService.excelFullReportByResultCodes(filterResults);
-    throw new HttpException({ message, response }, status);
+  excelFullReportByResultCodes(@Body() filterResults: FilterResultsDto) {
+    return this.adminPanelService.excelFullReportByResultCodes(filterResults);
   }
 
   @Get('report/results/excel-full-report/:initiativeId')
-  async excelFullReportByResultByInitiative(
+  excelFullReportByResultByInitiative(
     @Param('initiativeId') initiativeId: number,
+    @Query('phase') phase: string,
   ) {
-    const { message, response, status } =
-      await this.adminPanelService.excelFullReportByResultByInitiative(
-        initiativeId,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.adminPanelService.excelFullReportByResultByInitiative(
+      initiativeId,
+      +phase,
+    );
   }
 
   @Get('report/results/:resultId/submissions')
-  async submissionsByResults(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.adminPanelService.submissionsByResults(resultId);
-    throw new HttpException({ message, response }, status);
+  submissionsByResults(@Param('resultId') resultId: number) {
+    return this.adminPanelService.submissionsByResults(resultId);
   }
 
   @Get('report/users')
-  async userReport() {
-    const { message, response, status } =
-      await this.adminPanelService.userReport();
-    throw new HttpException({ message, response }, status);
+  userReport() {
+    return this.adminPanelService.userReport();
   }
 
   @Patch('bulk/kps')
-  @UseInterceptors(ResponseInterceptor)
   async kpBulkSync(
     @UserToken() token: TokenDto,
     @Query('status') status: string,
