@@ -45,8 +45,9 @@ export class InnovationPackageCreatorComponent {
       case GeoScopeEnum.REGIONAL:
         return !!this.innovationPackageCreatorBody.regions.length;
       case GeoScopeEnum.COUNTRY:
-      case GeoScopeEnum.SUB_NATIONAL:
         return !!this.innovationPackageCreatorBody.countries.length;
+      case GeoScopeEnum.SUB_NATIONAL:
+        return this.innovationPackageCreatorBody.countries?.some((country: any) => country?.sub_national?.length);
       default:
         return false;
     }

@@ -13,6 +13,7 @@ export class SubGeoscopeComponent implements OnInit {
   @Input() obj_country: any = { sub_national: [] };
   @Input() obj_countrySelected: any[] = [];
   @Input() name: string = '01';
+  @Input() readOnly: boolean = false;
   public subNationList: any[] = [];
   public currentCountryId: number;
   public selectedSubNational: any[] = [];

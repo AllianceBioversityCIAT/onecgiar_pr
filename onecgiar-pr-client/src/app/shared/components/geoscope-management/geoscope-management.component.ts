@@ -10,6 +10,7 @@ import { GeoScopeEnum } from '../../enum/geo-scope.enum';
 })
 export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [] };
+  @Input() readOnly: boolean = false;
   public selectedItems: disableOptionsSubNa[] = [];
   public sub_scope: any[] = [];
   public geoscopeOptions = [
@@ -28,17 +29,13 @@ export class GeoscopeManagementComponent implements OnInit {
 
   saveFormatData() {
     switch (this.body.geo_scope_id) {
-      case GeoScopeEnum.GLOBAL:
-        this.body.regions = [];
-        this.body.countries = [];
-        break;
       case GeoScopeEnum.REGIONAL:
         this.body.countries = [];
         break;
       case GeoScopeEnum.COUNTRY:
       case GeoScopeEnum.SUB_NATIONAL:
         this.body.regions = [];
-        if (GeoScopeEnum.COUNTRY) this.body.countries.map(el => (el.sub_national = []));
+        if (GeoScopeEnum.COUNTRY) this.body.countries?.map(el => (el.sub_national = []));
         break;
       default:
         this.body.regions = [];
@@ -48,6 +45,7 @@ export class GeoscopeManagementComponent implements OnInit {
   }
 
   test() {
+    this.readOnly = !this.readOnly;
     console.log(this.body);
   }
 
