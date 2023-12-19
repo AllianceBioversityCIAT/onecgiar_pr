@@ -18,7 +18,7 @@ export class TorFactSheetComponent {
     { category: 'Action Area', value: '' },
     { category: 'Start date', value: '' },
     { category: 'End date', value: '' },
-    { category: 'Geographic location', value: '' },
+    { category: 'Geographic scope', value: '' },
     { category: 'Measurable three-year (End of Initiative) outcomes', value: '' },
     { category: 'OECD DAC Climate marker Adaptation score', value: '' },
     { category: 'OECD DAC Climate marker Mitigation score', value: '' },

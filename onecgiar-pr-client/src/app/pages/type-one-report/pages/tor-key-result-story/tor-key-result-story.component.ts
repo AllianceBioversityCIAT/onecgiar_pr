@@ -47,7 +47,7 @@ export class TorKeyResultStoryComponent {
       { category: 'Contributing Initiatives', value: '' },
       { category: 'Contributing centers', value: '' },
       { category: 'Contributing external partner(s)', value: '' },
-      { category: 'Geographic location', value: '' },
+      { category: 'Geographic scope', value: '' },
       { category: 'Primary Impact Area', value: '' },
       { category: 'Other relevant Impact Area(s)', value: '' },
       { category: 'Which collective global targets for the relevant Impact Area(s) from the CGIAR 2030 Research and Innovation Strategy does the key result contribute to?', value: '' },
