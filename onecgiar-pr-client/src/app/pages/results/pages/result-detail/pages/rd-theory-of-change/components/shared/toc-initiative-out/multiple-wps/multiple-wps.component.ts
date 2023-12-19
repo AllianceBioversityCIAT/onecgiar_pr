@@ -162,6 +162,8 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   onAddTab() {
+    const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
       initiative_id: this.initiative.initiative_id,
@@ -169,7 +171,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
       planned_result: this.initiative.planned_result,
       results_id: null,
       short_name: this.initiative.short_name,
-      toc_level_id: this.resultLevelId === 1 ? 1 : 2,
+      toc_level_id: tocLevelId,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
