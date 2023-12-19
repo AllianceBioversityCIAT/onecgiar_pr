@@ -728,7 +728,6 @@ export class ResultsTocResultsService {
       // * Map multiple WPs to the same initiative
       for (const toc of createResultsTocResultDto.result_toc_result
         .result_toc_results) {
-        if (!toc.result_toc_result_id) return;
         let RtR: ResultsTocResult | null;
         if (toc?.result_toc_result_id) {
           RtR =
