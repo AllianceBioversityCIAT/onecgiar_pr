@@ -2,6 +2,8 @@ import { Component, Input, OnInit } from '@angular/core';
 import { disableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../enum/geo-scope.enum';
+import { ModuleTypeEnum } from '../../enum/api.enum';
+import { AppModuleEnum } from '../../enum/app-module.enum';
 
 @Component({
   selector: 'app-geoscope-management',
@@ -11,6 +13,7 @@ import { GeoScopeEnum } from '../../enum/geo-scope.enum';
 export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [] };
   @Input() readOnly: boolean = false;
+  @Input() module: string;
   public selectedItems: disableOptionsSubNa[] = [];
   public sub_scope: any[] = [];
   public geoscopeOptions = [
@@ -49,5 +52,9 @@ export class GeoscopeManagementComponent implements OnInit {
     console.log(this.body);
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    if (AppModuleEnum.getFromName(this.module)?.name === ModuleTypeEnum.REPORTING) {
+      this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
+    }
+  }
 }
