@@ -22,7 +22,7 @@ import { ShareResultRequestRepository } from '../share-result-request/share-resu
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { In, Not } from 'typeorm';
+import { Not } from 'typeorm';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -56,13 +56,10 @@ export class ResultsTocResultsService {
         result_id,
         contributing_center,
         contributing_initiatives,
-        result_toc_result,
         pending_contributing_initiatives,
-        bodyNewTheoryOfChanges,
         impactsTarge,
         sdgTargets,
         bodyActionArea,
-        contributors_result_toc_result,
       } = createResultsTocResultDto;
 
       const initSubmitter = await this._resultByInitiativesRepository.findOne({
@@ -177,9 +174,8 @@ export class ResultsTocResultsService {
           }
         }
 
-        const npps = await this._nonPooledProjectRepository.save(
-          resultTocResultArray,
-        );
+        const npps =
+          await this._nonPooledProjectRepository.save(resultTocResultArray);
         for (const npp of npps) {
           const initBudget =
             await this._resultBilateralBudgetRepository.findOne({
@@ -370,12 +366,11 @@ export class ResultsTocResultsService {
       const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
       let resTocRes: any[] = [];
-      let conResTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
       let result_toc_results: any[] = [];
       let resTocResConResponse: any[] = [];
-      let individualResponses = [];
+      const individualResponses = [];
       if (result.result_level_id != 2 && result.result_level_id != 1) {
         resTocRes = await this._resultsTocResultRepository.getRTRPrimary(
           resultId,
@@ -409,7 +404,7 @@ export class ResultsTocResultsService {
               false,
               [init.id],
             );
-          result_toc_results.forEach(el => {
+          result_toc_results.forEach((el) => {
             if (el['planned_result'] === false) {
               el['toc_level_id'] = 3;
             }
@@ -459,13 +454,13 @@ export class ResultsTocResultsService {
             },
           ];
         }
-        conResTocRes =
-          await this._resultsTocResultRepository.getRTRPrimaryActionArea(
-            resultId,
-            [resultInit.id],
-            false,
-            conInit.map((el) => el.id),
-          );
+
+        await this._resultsTocResultRepository.getRTRPrimaryActionArea(
+          resultId,
+          [resultInit.id],
+          false,
+          conInit.map((el) => el.id),
+        );
       } else if (result.result_level_id == 1) {
         const resultsImpactAreaIndicator =
           await this._resultsImpactAreaIndicatorRepository.ResultsImpactAreaIndicatorByResultId(
@@ -583,6 +578,15 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+      const extra_info = await this._resultsTocResultRepository.getWpExtraInfo(
+        resultIdToc,
+        toc_result_id,
+        init,
+      );
+      const wp_info = await this._resultsTocResultRepository.getWpInformation(
+        resultIdToc,
+        toc_result_id,
+      );
 
       return {
         response: {
@@ -595,6 +599,10 @@ export class ResultsTocResultsService {
           isSdg: isSdg,
           isImpactArea: isImpactArea,
           is_sdg_action_impact: is_sdg_action_impact,
+          wpinformation: {
+            extraInformation: extra_info[0],
+            wp_info,
+          },
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
@@ -689,7 +697,7 @@ export class ResultsTocResultsService {
   ) {
     try {
       // * Remove WPs that are not in the incoming DTO
-      let incomingResultTocResultIds = [];
+      const incomingResultTocResultIds = [];
       createResultsTocResultDto.result_toc_result.result_toc_results.forEach(
         (toc) => {
           if (toc?.result_toc_result_id) {
@@ -751,6 +759,7 @@ export class ResultsTocResultsService {
               planned_result:
                 createResultsTocResultDto.result_toc_result?.planned_result,
               is_active: true,
+              toc_progressive_narrative: toc.toc_progressive_narrative || null,
             },
           );
         } else if (toc) {
@@ -761,9 +770,10 @@ export class ResultsTocResultsService {
             last_updated_by: user.id,
             result_id: result.id,
             planned_result:
-              createResultsTocResultDto?.result_toc_result?.planned_result,
+              createResultsTocResultDto.result_toc_result?.planned_result,
             action_area_outcome_id: toc?.action_area_outcome_id,
             is_active: true,
+            toc_progressive_narrative: toc.toc_progressive_narrative || null,
           });
         }
       }
@@ -822,6 +832,8 @@ export class ResultsTocResultsService {
                 newRtR.toc_result_id = rtrc?.toc_result_id || null;
               }
               newRtR.planned_result = contributor?.planned_result || null;
+              newRtR.toc_progressive_narrative =
+                rtrc?.toc_progressive_narrative || null;
               RtRArray.push(newRtR);
 
               await this._resultsTocResultRepository.save({
@@ -832,6 +844,7 @@ export class ResultsTocResultsService {
                 result_id: newRtR.results_id,
                 planned_result: newRtR.planned_result,
                 action_area_outcome_id: newRtR.action_area_outcome_id,
+                toc_progressive_narrative: newRtR.toc_progressive_narrative,
                 is_active: true,
               });
             }
@@ -839,7 +852,7 @@ export class ResultsTocResultsService {
         }
 
         // * Logic to delete a WP from Contributors
-        let incomingRtRIds = [];
+        const incomingRtRIds = [];
         contributors_result_toc_result.forEach((contributor) => {
           contributor.result_toc_results.forEach((rtrc) => {
             incomingRtRIds.push(rtrc?.result_toc_result_id);
@@ -867,4 +880,3 @@ export class ResultsTocResultsService {
     }
   }
 }
-

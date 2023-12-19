@@ -312,7 +312,6 @@ export class ResultsImpactAreaTargetRepository
             resultId,
             impact.targetId,
           ]);
-          console.log(targetIndicators);
 
           if (targetIndicators != null && targetIndicators.length > 0) {
             await this.update(

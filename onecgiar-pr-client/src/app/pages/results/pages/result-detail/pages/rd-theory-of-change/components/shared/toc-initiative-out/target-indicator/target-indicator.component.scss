@@ -21,124 +21,78 @@
   }
 }
 
-.bigger-line {
-  background-color: #d9d9d9;
-  width: 100%;
-  height: 10px;
-  border-radius: 0 0 10px 10px;
-  display: flex;
-  align-items: center;
-}
-
 input:disabled {
   background: #d9d9d9;
 }
 
-.line {
-  background-color: #d9d9d9;
-  width: 100%;
-  height: 2px;
-  margin-left: 2.5px;
-  margin-bottom: 20px;
-  margin-top: -10px;
-}
-
-.indicator-info {
+.indicator_info {
   display: flex;
   flex-direction: column;
   margin-top: 15px;
 
-  .title {
+  .indicator_title {
     display: flex;
     align-items: center;
     gap: 5px;
-
-    .square {
-      width: 10px;
-      height: 10px;
-      background-color: #808080;
-    }
   }
 
-  .indicator {
+  .indicator_content {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 10px 20px 20px 12px;
+    padding: 10px 20px 0px 12px;
 
-    .indicator-item {
+    .indicator_content_source {
       display: flex;
-      align-items: center;
-      gap: 5px;
+      justify-content: flex-start;
+      gap: 30px;
     }
 
-    .one-description {
+    .indicator_item {
       display: flex;
-      gap: 30px;
+      justify-content: flex-start;
+      gap: 5px;
     }
   }
 }
 
-.messurement {
+.square {
+  width: 7px;
+  height: 7px;
+  background-color: #2a2e45;
+}
+
+.targets_container {
   display: flex;
   flex-direction: column;
 
-  .title-mesuren {
+  .target_id {
     display: flex;
-    flex-direction: row;
-    margin-left: 10px;
-    width: 100%;
-    margin-top: -10px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    margin-top: 20px;
+    margin-bottom: 10px;
 
-    .square-messerunet {
-      width: 10px;
-      height: 10px;
-      background-color: #808080;
-      margin-right: 5px;
-      margin-top: 5px;
+    .target_title {
+      font-size: 12px;
+      font-weight: 700;
     }
   }
 }
 
-.content-not-number,
-.content-number {
-  padding: 10px;
-  border: 1px solid #9999999a;
-  box-shadow: 0px 0px 10px 0px #f999001a;
-  margin-bottom: 20px;
-  margin-left: 20px;
-  width: 93%;
+.target_content {
+  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
 
-  table {
-    border-collapse: collapse;
-    width: 100%;
-
-    .header {
-      background-color: #e8ebff;
-
-      .row-one {
-        width: 70%;
-      }
-    }
-
-    .footer {
-      background-color: #436280;
-      color: white;
-    }
-  }
-
-  .in-progress {
-    width: 30px;
-  }
-
-  .section-one {
+  .target_header {
     display: flex;
     background-color: #e8ebff;
     width: 100%;
     height: auto;
     padding: 15px 10px;
 
-    .info-messurent {
+    .target_header_info {
       display: flex;
       flex-wrap: wrap !important;
       gap: 10px;
@@ -148,44 +102,51 @@ input:disabled {
         margin-right: 5px;
       }
 
-      .info-messurent-item {
+      .target_header_info-item {
         word-wrap: break-word;
       }
     }
+  }
 
-    .section-two {
+  .indicator_content_information {
+    padding: 1rem 1.2rem;
+
+    .indicator_content_information_item {
       display: flex;
-      flex-direction: row;
-      padding-left: 10px;
-      margin-top: -25px;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
 
-      .overall-target {
-        display: flex;
-        flex-direction: row;
+      @media screen and (max-width: 1140px) {
+        flex-wrap: wrap-reverse;
       }
     }
   }
+}
 
-  td,
-  th {
-    border: 1px solid #dddddd;
-    text-align: center;
-    padding: 8px;
-  }
+.tiny_line {
+  background-color: #d9d9d9;
+  width: 100%;
+  height: 2px;
+  margin-top: 20px;
+  margin-bottom: 0px;
+  border-radius: 5px;
+}
 
-  .input-not-calculable {
-    width: 100%;
-    height: 70px;
-    border-radius: 5px;
-    border: 1px solid #9999999a;
-    margin-bottom: 10px;
-    margin-top: 10px;
-    font-size: 14px;
-    color: #808080;
-    font-weight: 500;
+.line {
+  background-color: #d9d9d9;
+  width: 100%;
+  height: 5px;
+  margin-top: 20px;
+  margin-bottom: 0px;
+  border-radius: 5px;
+}
 
-    &:focus {
-      outline: none;
-    }
-  }
+.bigger-line {
+  background-color: #d9d9d9;
+  width: 100%;
+  height: 10px;
+  border-radius: 0 0 10px 10px;
+  display: flex;
+  align-items: center;
 }

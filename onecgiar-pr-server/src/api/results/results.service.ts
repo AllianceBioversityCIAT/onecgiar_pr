@@ -558,8 +558,8 @@ export class ResultsService {
             ? resultGeneralInformation?.is_discontinued
               ? 4
               : result.status_id == 4
-              ? 1
-              : result.status_id
+                ? 1
+                : result.status_id
             : result.status_id,
       });
 
@@ -624,9 +624,8 @@ export class ResultsService {
           saveInstitutions.push(institutionsNew);
         }
       }
-      const updateInstitutions = await this._resultByIntitutionsRepository.save(
-        saveInstitutions,
-      );
+      const updateInstitutions =
+        await this._resultByIntitutionsRepository.save(saveInstitutions);
 
       const institutionsType =
         await this._resultByIntitutionsTypeRepository.updateIstitutionsType(
@@ -850,9 +849,8 @@ export class ResultsService {
     id: number,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
-      const result: Result = await this._customResultRepository.getResultById(
-        id,
-      );
+      const result: Result =
+        await this._customResultRepository.getResultById(id);
 
       if (!result) {
         throw {
@@ -1059,9 +1057,8 @@ export class ResultsService {
           saveInstitutions.push(institutionsNew);
         }
       }
-      const newInstitutions = await this._resultByIntitutionsRepository.save(
-        saveInstitutions,
-      );
+      const newInstitutions =
+        await this._resultByIntitutionsRepository.save(saveInstitutions);
 
       const toRemoveFromElastic = await this.findAllSimplified(
         legacyResult.legacy_id,
@@ -1115,9 +1112,8 @@ export class ResultsService {
 
   async getGeneralInformation(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultAndLevelTypeById(
-        resultId,
-      );
+      const result =
+        await this._resultRepository.getResultAndLevelTypeById(resultId);
       if (!result?.id) {
         throw {
           response: {},

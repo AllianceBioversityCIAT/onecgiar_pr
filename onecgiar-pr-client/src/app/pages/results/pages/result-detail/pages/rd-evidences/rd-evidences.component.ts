@@ -35,10 +35,6 @@ export class RdEvidencesComponent implements OnInit {
     });
   }
 
-  underConstructionText() {
-    return 'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
-  }
-
   async getAndCalculateFilePercentage(response, evidenceIterator) {
     let nextRange = response?.nextExpectedRanges[0];
     let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);

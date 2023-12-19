@@ -1,7 +1,7 @@
 import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
-import { CustomizedAlertsFeService } from 'src/app/shared/services/customized-alerts-fe.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -75,99 +75,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     this.activeTab = this.initiative?.result_toc_results[0];
   }
 
-  dynamicTabTitle(tabNumber) {
-    return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
-  }
-
-  getGridTemplateColumns() {
-    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
-  }
-
-  completnessStatusValidation(tab) {
-    if (this.resultLevelId === 1) {
-      return tab.toc_result_id !== null;
-    }
-
-    return tab.toc_level_id !== null && tab.toc_result_id !== null;
-  }
-
-  onAddTab() {
-    this.initiative.result_toc_results.push({
-      action_area_outcome_id: null,
-      initiative_id: this.initiative.initiative_id,
-      official_code: this.initiative.official_code,
-      planned_result: this.initiative.planned_result,
-      results_id: null,
-      short_name: this.initiative.short_name,
-      toc_level_id: this.resultLevelId === 1 ? 1 : 2,
-      toc_result_id: null,
-      uniqueId: Math.random().toString(36).substring(7)
-    });
-
-    this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
-  }
-
-  onActiveTab(tab: any) {
-    this.activeTab = tab;
-    this.showMultipleWPsContent = false;
-
-    setTimeout(() => {
-      this.showMultipleWPsContent = true;
-    }, 50);
-  }
-
-  onDeleteTab(tab: Tab, tabNumber = 0) {
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
-
-    this.customizedAlertsFeSE.show(
-      {
-        id: 'delete-tab',
-        title: 'Delete confirmation',
-        description: confirmationMessage,
-        status: 'warning',
-        confirmText: 'Yes, delete'
-      },
-      () => {
-        this.deleteTabLogic(tab);
-      }
-    );
-  }
-
-  deleteTabLogic(tab) {
-    const isLastTab = this.initiative.result_toc_results.length === 1;
-    const isOutputTab = tab.toc_level_id === 1 || tab.toc_result_id !== null;
-    const isOutcomeTab = tab.toc_level_id === 2;
-    const isEOITab = tab.toc_level_id === 3;
-
-    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
-
-    this.activeTab = this.initiative?.result_toc_results[0];
-
-    if (this.isNotifications) return;
-
-    if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
-    } else {
-      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
-    }
-
-    if (isLastTab) {
-      return;
-    }
-
-    if (isOutputTab) {
-      this.deleteSelectedOptionOutPut(tab);
-    }
-
-    if (isOutcomeTab) {
-      this.deleteSelectedOptionOutCome(tab);
-    }
-
-    if (isEOITab) {
-      this.deleteSelectedOptionEOI(tab);
-    }
-  }
-
   GET_outputList() {
     this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
       next: ({ response }) => {
@@ -207,22 +114,119 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     });
   }
 
-  getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string) {
-    let uniqueWorkPackageIds = new Set();
+  dynamicTabTitle(tabNumber) {
+    return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
+  }
 
-    if (resultLevelId === 1 && plannedResult) {
-      uniqueWorkPackageIds = new Set(this?.outputList.map(item => item.work_package_id));
-    } else {
-      const uniqueWorkPackageIdsOutcome = new Set(this?.outcomeList.map(item => item.work_package_id));
-      const uniqueWorkPackageIdsEOI = new Set(this?.eoiList.map(item => item.toc_result_id));
-      uniqueWorkPackageIds = new Set([...Array.from(uniqueWorkPackageIdsOutcome), ...Array.from(uniqueWorkPackageIdsEOI)]);
+  getGridTemplateColumns() {
+    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
+  }
+
+  completnessStatusValidation(tab) {
+    if (this.resultLevelId === 1) {
+      return tab.toc_result_id !== null;
     }
 
-    if (!plannedResult) {
-      uniqueWorkPackageIds = new Set(this?.eoiList.map(item => item.uniqueId));
+    return tab.toc_level_id !== null && tab.toc_result_id !== null;
+  }
+
+  getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string): number {
+    let uniqueWorkPackageIds = new Set<number | string>();
+
+    if (resultLevelId === 1) {
+      if (plannedResult) {
+        uniqueWorkPackageIds = new Set(this.outputList.map(item => item.work_package_id));
+      } else {
+        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
+      }
+    } else if (resultLevelId === 2) {
+      if (plannedResult) {
+        const uniqueWorkPackageIdsOutcome = new Set(this.outcomeList.map(item => item.work_package_id));
+        const uniqueWorkPackageIdsEOI = new Set(this.eoiList.map(item => item.toc_result_id));
+        uniqueWorkPackageIds = new Set([...uniqueWorkPackageIdsOutcome, ...uniqueWorkPackageIdsEOI]);
+      } else {
+        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
+      }
     }
 
     return uniqueWorkPackageIds.size;
+  }
+
+  onActiveTab(tab: any) {
+    this.activeTab = tab;
+    this.showMultipleWPsContent = false;
+
+    setTimeout(() => {
+      this.showMultipleWPsContent = true;
+    }, 50);
+  }
+
+  onAddTab() {
+    this.initiative.result_toc_results.push({
+      action_area_outcome_id: null,
+      initiative_id: this.initiative.initiative_id,
+      official_code: this.initiative.official_code,
+      planned_result: this.initiative.planned_result,
+      results_id: null,
+      short_name: this.initiative.short_name,
+      toc_level_id: this.resultLevelId === 1 ? 1 : 2,
+      toc_result_id: null,
+      uniqueId: Math.random().toString(36).substring(7)
+    });
+
+    this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
+  }
+
+  onDeleteTab(tab: Tab, tabNumber = 0) {
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Delete confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.deleteTabLogic(tab);
+      }
+    );
+  }
+
+  deleteTabLogic(tab) {
+    const isLastTab = this.initiative.result_toc_results.length === 1;
+    const isOutputTab = tab.toc_level_id === 1;
+    const isOutcomeTab = tab.toc_level_id === 2;
+    const isEOITab = tab.toc_level_id === 3;
+
+    if (isLastTab) {
+      return;
+    }
+
+    if (this.isNotifications) return;
+
+    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+
+    this.activeTab = this.initiative?.result_toc_results[0];
+
+    if (this.isContributor) {
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
+    } else {
+      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+    }
+
+    if (isOutputTab) {
+      this.deleteSelectedOptionOutPut(tab);
+    }
+
+    if (isOutcomeTab) {
+      this.deleteSelectedOptionOutCome(tab);
+    }
+
+    if (isEOITab) {
+      this.deleteSelectedOptionEOI(tab);
+    }
   }
 
   deleteSelectedOptionOutPut(tab: any) {
