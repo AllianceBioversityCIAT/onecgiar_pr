@@ -32,7 +32,7 @@ export class MultipleWPsContentComponent implements OnChanges {
   ngOnChanges() {
     if (this.showMultipleWPsContent) {
       if ((this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) || (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)) {
-        if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
+        if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
           this.getIndicator();
         }
       }
