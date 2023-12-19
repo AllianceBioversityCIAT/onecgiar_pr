@@ -109,6 +109,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
 
+    this.theoryOfChangeBody.result_toc_result.result_toc_results = this.theoryOfChangeBody.result_toc_result.result_toc_results.length === 1 ? this.theoryOfChangeBody.result_toc_result.result_toc_results : this.theoryOfChangeBody?.result_toc_result?.result_toc_results.filter(result => result.toc_result_id !== null);
+
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;
