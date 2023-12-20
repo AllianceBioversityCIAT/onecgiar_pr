@@ -13,6 +13,9 @@ export class InsertResultFoldersType1701879395364
     );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    queryRunner.query(
+      `DELETE FROM result_folders_type WHERE name = 'Type one report'`,
+    );
+  }
 }
-
