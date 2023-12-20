@@ -4,6 +4,7 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
 import { Router } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { PhasesService } from '../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-type-one-report',
@@ -19,14 +20,33 @@ export class TypeOneReportComponent {
     // { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
     { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
   ];
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router) {}
+
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router, public phasesSE: PhasesService) {}
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Type one report');
     this.GET_AllInitiatives();
-    // if (!this.rolesSE.isAdmin) this.router.navigate(['/result/results-outlet/results-list']);
+    this.getThePhases();
   }
-  onRemoveinit(option) {}
+
+  getThePhases() {
+    const autoSelectOpenPhases = (phases: any[]) => {
+      this.typeOneReportSE.phaseSelected = phases.find((phase: any) => phase.status)?.id;
+    };
+    const useLoadedPhases = () => {
+      autoSelectOpenPhases(this.phasesSE.phases.reporting);
+      this.typeOneReportSE.reportingPhases = this.phasesSE.phases.reporting;
+    };
+
+    const listenWhenPhasesAreLoaded = () => {
+      this.phasesSE.getPhasesObservable().subscribe((phases: any[]) => {
+        this.typeOneReportSE.reportingPhases = phases;
+        autoSelectOpenPhases(this.typeOneReportSE.reportingPhases);
+      });
+    };
+
+    this.phasesSE.phases.reporting.length ? useLoadedPhases() : listenWhenPhasesAreLoaded();
+  }
 
   GET_AllInitiatives() {
     if (!this.api.rolesSE.isAdmin) return this.selectFirstInitiative();

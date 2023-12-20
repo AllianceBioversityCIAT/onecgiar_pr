@@ -174,8 +174,9 @@ export class ResultsTocResultsService {
           }
         }
 
-        const npps =
-          await this._nonPooledProjectRepository.save(resultTocResultArray);
+        const npps = await this._nonPooledProjectRepository.save(
+          resultTocResultArray,
+        );
         for (const npp of npps) {
           const initBudget =
             await this._resultBilateralBudgetRepository.findOne({
@@ -880,3 +881,4 @@ export class ResultsTocResultsService {
     }
   }
 }
+

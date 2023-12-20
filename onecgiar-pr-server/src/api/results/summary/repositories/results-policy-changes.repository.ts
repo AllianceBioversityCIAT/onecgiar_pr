@@ -190,7 +190,10 @@ export class ResultsPolicyChangesRepository
     }
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     const resultCodes = (resultCodesArray ?? []).join(',');
     const queryData = `
     select 
@@ -245,6 +248,7 @@ export class ResultsPolicyChangesRepository
     where 
       rpc.is_active = 1 
       and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      ${phase ? `and r.version_id = ${phase}` : ''}
     group by 1,2,3,4,5,6
     ;
     `;
