@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, forwardRef } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-range-level',
