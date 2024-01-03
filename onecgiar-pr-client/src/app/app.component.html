@@ -1,5 +1,5 @@
-<div class="global_information" *ngIf="false">Please be aware that the PRMS technical team will not be available during
-  the coming Christmas season from December 22nd, 2022 to January 3rd, 2023.</div>
+<div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
+  {{this.api.globalVariablesSE.get?.global_info_message}}</div>
 <app-header-panel *ngIf="!this.AuthService.inLogin"></app-header-panel>
 <app-navigation-bar *ngIf="!this.AuthService.inLogin"></app-navigation-bar>
 <router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>

@@ -336,8 +336,8 @@ export class ResultsTocResultRepository
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId ? initiativeId.toString() : null
-      })
+      initiativeId ? initiativeId.toString() : null
+    })
       ${
         isPrimary
           ? ''
@@ -486,8 +486,8 @@ export class ResultsTocResultRepository
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId.length ? initiativeId.toString() : null
-      })
+      initiativeId.length ? initiativeId.toString() : null
+    })
       ${
         isPrimary
           ? ''
@@ -1563,6 +1563,7 @@ export class ResultsTocResultRepository
 
           if (itemIndicator.targets) {
             for (const target of itemIndicator.targets) {
+              console.log("🚀 ~ file: results-toc-results.repository.ts:1566 ~ target:", target)
               const targetInfo =
                 await this._resultTocIndicatorTargetRepository.findOne({
                   where: {
@@ -1870,8 +1871,14 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveImpact(id_result_toc_result, impactAreaTargets, result_id, init) {
+  async saveImpact(
+    id_result_toc_result: number,
+    impactAreaTargets: any[],
+    result_id: number,
+    init: number,
+  ) {
     try {
+      if (!id_result_toc_result) return;
       await this._resultsTocImpactAreaTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
@@ -1964,8 +1971,13 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveSdg(id_result_toc_result, sdgTargets, result_id) {
+  async saveSdg(
+    id_result_toc_result: number,
+    sdgTargets: any[],
+    result_id: number,
+  ) {
     try {
+      if (!id_result_toc_result) return;
       await this._resultsTocSdgTargetRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
@@ -2060,8 +2072,13 @@ select *
     }
   }
 
-  async saveActionAreaToc(id_result_toc_result, actionarea, result_id) {
+  async saveActionAreaToc(
+    id_result_toc_result: number,
+    actionarea: any[],
+    result_id: number,
+  ) {
     try {
+      if (!id_result_toc_result) return;
       await this._resultActionAreaRepository.update(
         { result_toc_result_id: id_result_toc_result },
         { is_active: false },
@@ -2452,3 +2469,4 @@ select *
     }
   }
 }
+

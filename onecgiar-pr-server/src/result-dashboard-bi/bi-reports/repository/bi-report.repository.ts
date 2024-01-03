@@ -11,10 +11,10 @@ import {
   ReportInformation,
 } from '../dto/embed-credentials.dto';
 import { CreateBiReportDto } from '../dto/create-bi-report.dto';
-import { InjectRepository } from '@nestjs/typeorm';
 import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
+import { TokenBiReportRepository } from './token-bi-reports.repository';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
@@ -23,8 +23,7 @@ export class BiReportRepository extends Repository<BiReport> {
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
     private _servicesClarisaCredentials: ClarisaCredentialsBiService,
-    @InjectRepository(TokenBiReport)
-    private tokenBireports: Repository<TokenBiReport>,
+    private tokenBireports: TokenBiReportRepository,
   ) {
     super(BiReport, dataSource.createEntityManager());
   }

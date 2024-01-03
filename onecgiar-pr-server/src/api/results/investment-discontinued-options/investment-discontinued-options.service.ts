@@ -1,7 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { ReturnResponse } from '../../../shared/handlers/error.utils';
 import { InvestmentDiscontinuedOptionRepository } from './investment-discontinued-options.repository';
-import { env } from 'process';
+import { isProduction } from '../../../shared/utils/validation.utils';
 
 @Injectable()
 export class InvestmentDiscontinuedOptionsService {
@@ -19,7 +19,7 @@ export class InvestmentDiscontinuedOptionsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }
