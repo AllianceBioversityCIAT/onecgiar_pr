@@ -1,6 +1,6 @@
 <app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
     label="Select country/ geoscope for which packaging and scaling readiness assessment will be conducted"
-    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="body.geo_scope_id" (ngModelChange)="cleanSubNationals()">
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="body.geo_scope_id" (ngModelChange)="this.resetHasScope()">
 </app-pr-radio-button>
 <div class="geographic_focus_description" *ngIf="this.internalModule.name === 'reporting'">
     <app-pr-field-header
@@ -22,7 +22,7 @@
     [(ngModel)]="this.body.regions">
 </app-pr-multi-select>
 
-<ng-container *ngIf="this.internalModule.name === 'reporting' && !!this.body.geo_scope_id && !this.includesScope([4,5,50])">
+<ng-container *ngIf="this.internalModule.name === 'reporting' && !!this.body.geo_scope_id && !this.includesScope([3,5,50])">
     <app-pr-yes-or-not
             [label]="this.body.geo_scope_id != 3?'Are there any countries that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?' : 'Select countries'"
             [description]="this.body.has_countries  !== false || this.body.geo_scope_id == 3  ? this.thereAnyText(false)  : null"
@@ -31,8 +31,8 @@
             [hideOptions]="this.body.geo_scope_id != 1 && this.body.geo_scope_id != 2">
         </app-pr-yes-or-not>
 </ng-container>
-<app-pr-multi-select *ngIf="body.geo_scope_id == 4 || body.geo_scope_id == 5 || this.body.has_countries" [options]="this.regionsCountriesSE.countriesList"
-    [label]="this.readOnly?'Countries selected' :'Select countries'" selectedLabel="Countries selected" [selectedOptionLabel]="body.geo_scope_id == 4? 'name':''" optionLabel="full_name"
+<app-pr-multi-select *ngIf="body.geo_scope_id == 3 || body.geo_scope_id == 5 || (this.body.has_countries && this.internalModule.name === 'reporting')" [options]="this.regionsCountriesSE.countriesList"
+    [label]="this.readOnly?'Countries selected' :'Select countries'" selectedLabel="Countries selected" [selectedOptionLabel]="!this.includesScope([5,50])? 'name':''" optionLabel="full_name"
     optionValue="id" placeholder="Select countries" [(ngModel)]="this.body.countries" [readOnly]="this.readOnly">
 </app-pr-multi-select>
 

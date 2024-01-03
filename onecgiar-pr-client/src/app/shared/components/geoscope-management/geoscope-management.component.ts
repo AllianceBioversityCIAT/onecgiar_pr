@@ -30,9 +30,23 @@ export class GeoscopeManagementComponent implements OnInit {
 
   constructor(public regionsCountriesSE: RegionsCountriesService, public api: ApiService, public resultLevelSE: ResultLevelService) {}
 
-  cleanSubNationals() {
-    this.sub_scope = [];
-    this.saveFormatData();
+  resetHasScope() {
+    switch (this.body.geo_scope_id) {
+      case GeoScopeEnum.DETERMINED:
+      case GeoScopeEnum.GLOBAL:
+        this.body.has_countries = false;
+        this.body.has_regions = false;
+        break;
+      case GeoScopeEnum.REGIONAL:
+        this.body.has_regions = true;
+        this.body.has_countries = false;
+        break;
+      case GeoScopeEnum.COUNTRY:
+      case GeoScopeEnum.SUB_NATIONAL:
+        this.body.has_countries = true;
+        this.body.has_regions = false;
+        break;
+    }
   }
 
   geographic_focus_description(id) {
@@ -64,11 +78,6 @@ export class GeoscopeManagementComponent implements OnInit {
         this.body.countries = [];
         break;
     }
-  }
-
-  test() {
-    this.readOnly = !this.readOnly;
-    console.log(this.body);
   }
 
   includesScope(ids: number[]): boolean {

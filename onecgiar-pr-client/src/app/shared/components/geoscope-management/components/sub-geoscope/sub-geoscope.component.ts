@@ -20,10 +20,13 @@ export class SubGeoscopeComponent implements OnInit {
 
   constructor(private readonly _api: ResultsApiService) {}
 
-  private getSubNational(isoAlpha2: string) {
+  private getSubNational(isoAlpha2: string, f?: Function) {
     this._api.GET_subNationalByIsoAlpha2(isoAlpha2).subscribe({
       next: ({ response }) => {
         this.subNationList = this.subNationalMapper(response);
+      },
+      complete: () => {
+        f?.();
       }
     });
   }
@@ -42,7 +45,13 @@ export class SubGeoscopeComponent implements OnInit {
 
   ngOnInit(): void {
     this.obj_country['sub_national'] = this.obj_country.sub_national || [];
-    this.getSubNational(this.obj_country.iso_alpha_2);
+    this.getSubNational(this.obj_country.iso_alpha_2, () => {
+      this.obj_country.sub_national = this.obj_country.sub_national.map(el => {
+        const formatedName: string = this.subNationList.find(sn => sn.code === el.code)?.formatedName;
+        el = { ...el, formatedName };
+        return el;
+      });
+    });
   }
 
   ngOnDestroy() {}
