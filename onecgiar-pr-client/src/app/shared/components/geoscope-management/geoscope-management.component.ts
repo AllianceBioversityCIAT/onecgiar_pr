@@ -28,6 +28,14 @@ export class GeoscopeManagementComponent implements OnInit {
     { full_name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
   ];
 
+  get labelRadioButtons(): string {
+    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}?` : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
+  }
+
+  get descriptionRadioButtons(): string {
+    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}</strong> has taken place/contributed to benefit.` : undefined;
+  }
+
   constructor(public regionsCountriesSE: RegionsCountriesService, public api: ApiService, public resultLevelSE: ResultLevelService) {}
 
   resetHasScope() {
