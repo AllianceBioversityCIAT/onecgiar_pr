@@ -18,7 +18,7 @@ export class ResultCountriesService {
 
   async create(createResultCountryDto: CreateResultCountryDto) {
     try {
-      if (!createResultCountryDto?.scope_id) {
+      if (!createResultCountryDto?.geo_scope_id) {
         throw {
           response: {},
           message: 'Missing data in the request',
@@ -44,13 +44,13 @@ export class ResultCountriesService {
       const countries = createResultCountryDto.countries;
       if (
         (!createResultCountryDto.has_countries &&
-          createResultCountryDto.scope_id != 3) ||
-        createResultCountryDto.scope_id == 4
+          createResultCountryDto.geo_scope_id != 3) ||
+        createResultCountryDto.geo_scope_id == 4
       ) {
         await this._resultCountryRepository.updateCountries(result.id, []);
         result.has_countries = false;
       } else if (
-        createResultCountryDto.scope_id == 3 ||
+        createResultCountryDto.geo_scope_id == 3 ||
         createResultCountryDto.has_countries
       ) {
         if (countries) {
@@ -77,23 +77,23 @@ export class ResultCountriesService {
             }
           }
         }
-        if (createResultCountryDto.scope_id == 3) {
+        if (createResultCountryDto.geo_scope_id == 3) {
           result.has_countries = true;
         } else {
           result.has_countries = createResultCountryDto.has_countries;
         }
       }
 
-      if (countries && createResultCountryDto.scope_id == 3) {
+      if (countries && createResultCountryDto.geo_scope_id == 3) {
         result.geographic_scope_id =
           createResultCountryDto.countries?.length > 1 ? 3 : 4;
       } else if (
-        createResultCountryDto.scope_id == 4 ||
-        createResultCountryDto.scope_id == 50
+        createResultCountryDto.geo_scope_id == 4 ||
+        createResultCountryDto.geo_scope_id == 50
       ) {
         result.geographic_scope_id = 50;
       } else {
-        result.geographic_scope_id = createResultCountryDto.scope_id;
+        result.geographic_scope_id = createResultCountryDto.geo_scope_id;
       }
       await this._resultRepository.save(result);
 

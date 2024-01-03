@@ -1263,7 +1263,7 @@ export class ResultsService {
         response: {
           regions: regions,
           countries: contries,
-          scope_id: scope,
+          geo_scope_id: scope,
           has_countries: result?.has_countries ? true : false ?? null,
           has_regions: result?.has_regions ? true : false ?? null,
         },
