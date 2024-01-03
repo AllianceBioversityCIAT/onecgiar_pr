@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { KnowledgeProductFairBaseline } from './entities/knowledge_product_fair_baseline.entity';
-import {
-  LogicalDelete,
-  onlyFisicalDelete,
-} from '../../../shared/globalInterfaces/delete.interface';
+import { OnlyFisicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 
 @Injectable()
 export class KnowledgeProductFairBaselineRepository
   extends Repository<KnowledgeProductFairBaseline>
-  implements onlyFisicalDelete
+  implements OnlyFisicalDelete
 {
   constructor(
     private dataSource: DataSource,
