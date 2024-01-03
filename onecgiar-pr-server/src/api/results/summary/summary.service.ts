@@ -151,7 +151,6 @@ export class SummaryService {
         female_using,
         male_using,
         has_unkown_using,
-        unkown_using,
         non_binary_using,
         capdev_delivery_method_id,
         capdev_term_id,

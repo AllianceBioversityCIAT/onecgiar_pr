@@ -9,19 +9,20 @@ import { IpsrGeneralInformationBody } from './model/ipsr-general-information.mod
   templateUrl: './ipsr-general-information.component.html',
   styleUrls: ['./ipsr-general-information.component.scss']
 })
-export class IpsrGeneralInformationComponent {
+export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
+
   constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
   }
+
   getSectionInformation() {
-    this.ipsrDataControlSE.resultInnovationId;
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-      //(response);
     });
   }
 
@@ -29,18 +30,18 @@ export class IpsrGeneralInformationComponent {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
   onSaveSection() {
-    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe(
-      resp => {
-        // (resp);
+    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
+      next: resp => {
         this.getSectionInformation();
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       },
-      err => {
+      error: err => {
         console.error(err);
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
       }
-    );
+    });
   }
+
   climateInformation() {
     return `<strong>Climate change tag guidance</strong>
     <br>
@@ -62,7 +63,7 @@ export class IpsrGeneralInformationComponent {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong> 
     <br>
     
     There are two food security and nutrition targets for at systems level:
@@ -82,7 +83,7 @@ export class IpsrGeneralInformationComponent {
   }
 
   environmentInformation() {
-    return `<strong>Environment tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong> 
     <br>
     
     There are three environmental targets and one biodiversity target at systems level:
@@ -103,7 +104,7 @@ export class IpsrGeneralInformationComponent {
   }
 
   povertyInformation() {
-    return `<strong> Poverty tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
@@ -123,7 +124,7 @@ export class IpsrGeneralInformationComponent {
   }
 
   genderInformation() {
-    return `<strong>Gender tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong> 
     <br/>
 
     There are two gender-related targets at systems level.

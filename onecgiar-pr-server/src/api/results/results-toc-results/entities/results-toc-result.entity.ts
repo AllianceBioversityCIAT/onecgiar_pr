@@ -116,6 +116,13 @@ export class ResultsTocResult {
   })
   is_active: boolean;
 
+  @Column({
+    type: 'text',
+    name: 'toc_progressive_narrative',
+    nullable: true,
+  })
+  toc_progressive_narrative: string;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'created_by',

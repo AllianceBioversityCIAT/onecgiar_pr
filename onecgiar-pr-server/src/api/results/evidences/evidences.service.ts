@@ -130,9 +130,8 @@ export class EvidencesService {
           }
           const currentEvidence = eExists ? eExists : newEvidence;
 
-          const evidenceSaved = await this._evidencesRepository.save(
-            currentEvidence,
-          );
+          const evidenceSaved =
+            await this._evidencesRepository.save(currentEvidence);
           if (evidenceSaved?.id)
             await this.saveSPData(evidence, evidenceSaved?.id);
         }
@@ -273,9 +272,8 @@ export class EvidencesService {
 
   async replicateSPFiles(config: any) {
     const resultReplicatedId = config?.new_result_id;
-    const { filePath } = await this._sharePointService.generateFilePath(
-      resultReplicatedId,
-    );
+    const { filePath } =
+      await this._sharePointService.generateFilePath(resultReplicatedId);
 
     const evidevenceList =
       await this._evidencesRepository.getEvidencesByResultId(

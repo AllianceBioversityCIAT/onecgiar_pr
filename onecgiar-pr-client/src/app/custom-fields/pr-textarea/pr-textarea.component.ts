@@ -25,6 +25,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() required: boolean = true;
   @Input() hint: string = null;
   @Input() rows: number = 5;
+  @Input() autogenerate?: boolean = false;
 
   private _value: string;
   private beforeValue: string;

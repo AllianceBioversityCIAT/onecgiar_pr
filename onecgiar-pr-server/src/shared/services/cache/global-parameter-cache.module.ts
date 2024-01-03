@@ -8,4 +8,3 @@ import { GlobalParameterModule } from '../../../api/global-parameter/global-para
   imports: [GlobalParameterModule],
 })
 export class GlobalParameterCacheModule {}
-

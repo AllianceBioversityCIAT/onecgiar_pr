@@ -454,6 +454,7 @@ export class ResultsTocResultsService {
             },
           ];
         }
+
         await this._resultsTocResultRepository.getRTRPrimaryActionArea(
           resultId,
           [resultInit.id],
@@ -577,6 +578,15 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
+      const extra_info = await this._resultsTocResultRepository.getWpExtraInfo(
+        resultIdToc,
+        toc_result_id,
+        init,
+      );
+      const wp_info = await this._resultsTocResultRepository.getWpInformation(
+        resultIdToc,
+        toc_result_id,
+      );
 
       return {
         response: {
@@ -589,6 +599,10 @@ export class ResultsTocResultsService {
           isSdg: isSdg,
           isImpactArea: isImpactArea,
           is_sdg_action_impact: is_sdg_action_impact,
+          wpinformation: {
+            extraInformation: extra_info[0],
+            wp_info,
+          },
         },
         message: 'The toc data indicator is successfully',
         status: HttpStatus.OK,
@@ -745,6 +759,7 @@ export class ResultsTocResultsService {
               planned_result:
                 createResultsTocResultDto.result_toc_result?.planned_result,
               is_active: true,
+              toc_progressive_narrative: toc.toc_progressive_narrative || null,
             },
           );
         } else if (toc) {
@@ -755,9 +770,10 @@ export class ResultsTocResultsService {
             last_updated_by: user.id,
             result_id: result.id,
             planned_result:
-              createResultsTocResultDto?.result_toc_result?.planned_result,
+              createResultsTocResultDto.result_toc_result?.planned_result,
             action_area_outcome_id: toc?.action_area_outcome_id,
             is_active: true,
+            toc_progressive_narrative: toc.toc_progressive_narrative || null,
           });
         }
       }
@@ -816,6 +832,8 @@ export class ResultsTocResultsService {
                 newRtR.toc_result_id = rtrc?.toc_result_id || null;
               }
               newRtR.planned_result = contributor?.planned_result || null;
+              newRtR.toc_progressive_narrative =
+                rtrc?.toc_progressive_narrative || null;
               RtRArray.push(newRtR);
 
               await this._resultsTocResultRepository.save({
@@ -826,6 +844,7 @@ export class ResultsTocResultsService {
                 result_id: newRtR.results_id,
                 planned_result: newRtR.planned_result,
                 action_area_outcome_id: newRtR.action_area_outcome_id,
+                toc_progressive_narrative: newRtR.toc_progressive_narrative,
                 is_active: true,
               });
             }
