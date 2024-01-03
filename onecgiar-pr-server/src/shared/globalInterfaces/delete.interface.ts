@@ -3,3 +3,7 @@ export interface LogicalDelete<T> {
 
   fisicalDelete(resultId: number): Promise<any>;
 }
+
+export interface OnlyFisicalDelete {
+  fisicalDelete(resultId: number): Promise<any>;
+}

@@ -407,7 +407,6 @@ export class DeleteRecoverDataService {
         resultAfterbefore,
         new_result_level_id,
         new_result_type_id,
-        user,
       );
 
       //updating elastic search
@@ -466,7 +465,6 @@ export class DeleteRecoverDataService {
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
-    user: TokenDto,
   ): Promise<ReturnResponseDto<any>> {
     try {
       const returnDelete = await this.deleteDataByNewResultType(
