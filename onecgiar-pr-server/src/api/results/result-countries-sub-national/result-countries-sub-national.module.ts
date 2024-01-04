@@ -17,5 +17,6 @@ import { ResultCountrySubnationalRepository } from './repositories/result-countr
     ReturnResponse,
     HandlersError,
   ],
+  exports: [ResultCountrySubnationalRepository],
 })
 export class ResultCountriesSubNationalModule {}

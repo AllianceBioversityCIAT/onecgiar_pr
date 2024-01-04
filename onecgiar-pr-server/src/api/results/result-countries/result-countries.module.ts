@@ -9,6 +9,7 @@ import {
 import { ResultRepository } from '../result.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { VersionsService } from '../versions/versions.service';
+import { ResultCountrySubnationalRepository } from '../result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [ResultCountriesController],
@@ -20,6 +21,7 @@ import { VersionsService } from '../versions/versions.service';
     VersionsService,
     VersionRepository,
     ReturnResponse,
+    ResultCountrySubnationalRepository,
   ],
   exports: [ResultCountryRepository, ResultCountriesService],
 })

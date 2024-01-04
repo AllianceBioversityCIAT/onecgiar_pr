@@ -165,10 +165,11 @@ export class ResultsController {
   async saveGeographic(
     @Body() createResultGeoDto: CreateResultGeoDto,
     @Param('resiltId') resiltId: number,
+    @UserToken() user: TokenDto,
   ) {
     createResultGeoDto.result_id = resiltId;
     const { message, response, status } =
-      await this.resultsService.saveGeoScope(createResultGeoDto);
+      await this.resultsService.saveGeoScope(createResultGeoDto, user);
     throw new HttpException({ message, response }, status);
   }
 

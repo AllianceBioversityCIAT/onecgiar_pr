@@ -90,6 +90,7 @@ import { ResultInstitutionsBudgetRepository } from '../results/result_budget/rep
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
+import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -179,6 +180,7 @@ import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_pro
     NonPooledProjectBudgetRepository,
     ResultCountriesSubNationalRepository,
     KnowledgeProductFairBaselineRepository,
+    ResultCountrySubnationalRepository,
   ],
   imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [

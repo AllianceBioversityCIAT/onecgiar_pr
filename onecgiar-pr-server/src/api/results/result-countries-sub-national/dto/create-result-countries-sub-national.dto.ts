@@ -1,1 +1,3 @@
-export class CreateResultCountriesSubNationalDto {}
+export class CreateResultCountriesSubNationalDto {
+  code: string;
+}
