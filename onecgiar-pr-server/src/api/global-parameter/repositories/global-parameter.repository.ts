@@ -60,4 +60,17 @@ export class GlobalParameterRepository extends Repository<GlobalParameter> {
       });
     }
   }
+
+  async getCurrentDateText() {
+    const queryData = `SELECT DATE_FORMAT(CONVERT_TZ(now(), '+00:00', '+02:00'), '%Y%m%d%H%i') as dateText`;
+    try {
+      return await this.query(queryData);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: GlobalParameterRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

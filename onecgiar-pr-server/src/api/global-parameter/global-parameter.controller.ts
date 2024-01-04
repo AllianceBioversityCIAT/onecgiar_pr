@@ -19,6 +19,11 @@ export class GlobalParameterController {
     return this.globalParameterService.findByCategoryId(Number(categoryId));
   }
 
+  @Get('current/date/text')
+  getCurrentDateText() {
+    return this.globalParameterService.getCurrentDateText();
+  }
+
   @Get('platform/global/variables')
   getPlatformGlobalVariables() {
     return this.globalParameterService.getPlatformGlobalVariables();
