@@ -83,18 +83,4 @@ export class GlobalParameterService {
       return this._returnResponse.format(error, !isProduction());
     }
   }
-
-  async getCurrentDateText() {
-    try {
-      const [dateText] =
-        await this._globalParameterRepository.getCurrentDateText();
-      return this._returnResponse.format({
-        message: 'Current date text found',
-        response: dateText,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
-  }
 }
