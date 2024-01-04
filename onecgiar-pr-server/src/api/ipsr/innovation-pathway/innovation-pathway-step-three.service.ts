@@ -106,7 +106,7 @@ export class InnovationPathwayStepThreeService {
         result_ip.assessed_during_expert_workshop_id,
       );
 
-      await this.saveInnovationUse(user, version, saveData);
+      await this.saveInnovationUse(user, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
@@ -478,9 +478,15 @@ export class InnovationPathwayStepThreeService {
 
   private async saveInnovationUse(
     user: TokenDto,
-    version: Version,
     { innovatonUse: crtr, result_ip_result_core: riprc }: SaveStepTwoThree,
   ) {
+    const useLevel = await this._innovationByResultRepository.findOne({
+      where: {
+        result_by_innovation_package_id: riprc.result_by_innovation_package_id,
+      },
+      relations: ['obj_use_level_evidence_based'],
+    });
+
     if (crtr?.actors?.length) {
       const { actors } = crtr;
       actors.map(async (el: ResultsIpActor) => {
@@ -557,6 +563,24 @@ export class InnovationPathwayStepThreeService {
               how_many: el?.how_many,
             },
           );
+          if (useLevel?.obj_use_level_evidence_based.level === 0) {
+            await this._resultsIpActorRepository.update(
+              actorExists.result_ip_actors_id,
+              {
+                actor_type_id: null,
+                is_active: false,
+                men: null,
+                men_youth: null,
+                women: null,
+                women_youth: null,
+                evidence_link: null,
+                other_actor_type: null,
+                last_updated_by: user.id,
+                sex_and_age_disaggregation: null,
+                how_many: null,
+              },
+            );
+          }
         } else {
           if (!el?.actor_type_id) {
             return {
@@ -626,6 +650,17 @@ export class InnovationPathwayStepThreeService {
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: el?.evidence_link,
           });
+          if (useLevel?.obj_use_level_evidence_based.level === 0) {
+            await this._resultsIpInstitutionTypeRepository.update(ite.id, {
+              last_updated_by: user.id,
+              institution_types_id: null,
+              how_many: null,
+              other_institution: null,
+              graduate_students: null,
+              is_active: true,
+              evidence_link: null,
+            });
+          }
         } else {
           if (!el?.institution_types_id) {
             return {
@@ -689,6 +724,18 @@ export class InnovationPathwayStepThreeService {
               is_active: el.is_active == undefined ? true : el.is_active,
             },
           );
+          if (useLevel?.obj_use_level_evidence_based.level === 0) {
+            await this._resultsByIpInnovationUseMeasureRepository.update(
+              ripm.result_ip_result_measures_id,
+              {
+                unit_of_measure: null,
+                quantity: null,
+                last_updated_by: user.id,
+                evidence_link: null,
+                is_active: true,
+              },
+            );
+          }
         } else {
           if (!el?.unit_of_measure) {
             return {

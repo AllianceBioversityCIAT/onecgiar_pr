@@ -672,6 +672,14 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             WHEN (
                 (
                     SELECT
+                        ciul.level
+                    FROM
+                        clarisa_innovation_use_levels ciul
+                    WHERE
+                        ciul.id = rbip.use_level_evidence_based
+                ) != 0
+                AND (
+                    SELECT
                         COUNT(*)
                     FROM
                         result_ip_result_actors rira
@@ -697,7 +705,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                         )
                                     )
                                 )
-                        )
+                            )
                             OR (
                                 rira.sex_and_age_disaggregation = 1
                                 AND (
