@@ -162,7 +162,7 @@ export class ResultCountryRepository
       select rc.result_country_id, rcs.result_country_subnational_id, css.*
       from result r
       left join result_country rc on rc.result_id = r.id and rc.is_active > 0
-      left join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id and rcs.is_active > 0
+      right join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id and rcs.is_active > 0
       left join clarisa_subnational_scopes css on css.code = rcs.clarisa_subnational_scope_code and css.is_active > 0
       where r.id = ?;
     `;
