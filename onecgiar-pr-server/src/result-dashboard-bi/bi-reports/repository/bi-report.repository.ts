@@ -200,10 +200,18 @@ export class BiReportRepository extends Repository<BiReport> {
     this.credentialsBi =
       await this._servicesClarisaCredentials.getCredentialsBi();
     const tokensReports: TokenBiReport[] = await this.tokenBireports.query(
-      `select * from token_report_bi trb order by id desc limit 1;`,
+      `select 
+        id,
+        token_bi,
+        expiration_toke_id,
+        is_active,DATE_FORMAT(CONVERT_TZ(now(), '+00:00', '+02:00'), '%Y%m%d%H%i') as dateText 
+      from token_report_bi trb 
+      order by id desc limit 1;`,
     );
     const today = new Date();
     const reportsExist = await this.getReportByName(report_name);
+
+    console.log(tokensReports);
 
     if (reportsExist != null && reportsExist.length != 0) {
       if (
@@ -221,6 +229,7 @@ export class BiReportRepository extends Repository<BiReport> {
         };
       } else {
         const reportsInfo: ReportInformation = new ReportInformation();
+        reportsInfo['dateText'] = tokensReports[0]['dateText'];
         reportsInfo.id = reportsExist[0].id;
         reportsInfo.resport_id = reportsExist[0].report_id;
         reportsInfo.name = reportsExist[0].report_name;
