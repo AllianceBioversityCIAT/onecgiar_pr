@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { IpsrGreenCheckComponent } from './ipsr-green-check.component';
 
 describe('IpsrGreenCheckComponent', () => {
@@ -8,9 +8,9 @@ describe('IpsrGreenCheckComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ IpsrGreenCheckComponent ]
-    })
-    .compileComponents();
+      declarations: [IpsrGreenCheckComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrGreenCheckComponent);
     component = fixture.componentInstance;

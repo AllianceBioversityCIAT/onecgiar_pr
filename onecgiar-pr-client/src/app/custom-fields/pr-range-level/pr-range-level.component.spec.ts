@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrRangeLevelComponent } from './pr-range-level.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('PrRangeLevelComponent', () => {
   let component: PrRangeLevelComponent;
@@ -8,9 +9,9 @@ describe('PrRangeLevelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrRangeLevelComponent ]
-    })
-    .compileComponents();
+      declarations: [PrRangeLevelComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrRangeLevelComponent);
     component = fixture.componentInstance;

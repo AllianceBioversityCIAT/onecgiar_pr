@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 
 @Component({
@@ -8,5 +8,6 @@ import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-
 })
 export class IpsrGreenCheckComponent {
   @Input() objectReference: string;
+
   constructor(public ipsrCompletenessStatusSE: IpsrCompletenessStatusService) {}
 }

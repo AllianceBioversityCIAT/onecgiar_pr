@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { Component } from '@angular/core';
+import { ApiService } from '../../shared/services/api/api.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
 
 @Component({

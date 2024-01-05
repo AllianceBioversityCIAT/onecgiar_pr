@@ -1,13 +1,14 @@
+/* eslint-disable arrow-parens */
 import { Component, OnInit, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n1-impact-areas',
   templateUrl: './step-n1-impact-areas.component.html',
   styleUrls: ['./step-n1-impact-areas.component.scss']
 })
-export class StepN1ImpactAreasComponent {
+export class StepN1ImpactAreasComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   allImpactAreaIndicators = [];
   currentImpactAreaID = null;
@@ -18,16 +19,17 @@ export class StepN1ImpactAreasComponent {
     { id: 4, imageRoute: '4', selected: false, color: '#377431', name: 'Climate Adaptation and Mitigation' },
     { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e', name: 'Environmental Health and Biodiversity' }
   ];
+
   constructor(public api: ApiService) {}
+
   ngOnInit(): void {
     this.GET_AllClarisaImpactAreaIndicators();
   }
 
   GET_AllClarisaImpactAreaIndicators() {
     this.api.resultsSE.GET_AllglobalTarget().subscribe(({ response }) => {
-      //(response);
       this.allImpactAreaIndicators = response;
-      this.allImpactAreaIndicators.map(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+      this.allImpactAreaIndicators.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
     });
   }
 
@@ -42,7 +44,7 @@ export class StepN1ImpactAreasComponent {
 
   selectImpactArea(impactAreaItem) {
     if (this.api.rolesSE.readOnly) return;
-    this.impactAreasData.map((iaitem: any) => (iaitem.selected = false));
+    this.impactAreasData.forEach((iaitem: any) => (iaitem.selected = false));
     impactAreaItem.selected = true;
     this.currentImpactAreaID = impactAreaItem.id;
   }

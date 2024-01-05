@@ -1,13 +1,15 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+/* eslint-disable arrow-parens */
+/* eslint-disable camelcase */
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-sub-geoscope',
   templateUrl: './sub-geoscope.component.html',
   styleUrls: ['./sub-geoscope.component.scss']
 })
-export class SubGeoscopeComponent implements OnInit {
-  @Input() body: any;
+export class SubGeoscopeComponent {
+  @Input() body: any = {};
   @Input() index: any;
   countrySelected: any;
   subNationalOne: any = [];
@@ -21,11 +23,8 @@ export class SubGeoscopeComponent implements OnInit {
   exitsSubLevelTwo: boolean = true;
   nameCountry: string;
   nameCountryTwo: string;
-  constructor(public api: ApiService) {}
 
-  ngOnInit(): void {
-    //(this.body);
-  }
+  constructor(public api: ApiService) {}
 
   getSubNationalLevelOne(index) {
     this.subNationalOne = [];
@@ -43,7 +42,7 @@ export class SubGeoscopeComponent implements OnInit {
         this.nameCountryTwo = this.body.countries.filter(resp => this.countrySelected == resp.id)[0]['name'];
       }
     });
-    if (this.body.geoScopeSubNatinals.length == 0) {
+    if (this.body.geoScopeSubNatinals.length == 0 || this.body.geoScopeSubNatinals.length < index + 1) {
       const subCountriesSave = {
         idCountry: isoAlpha.id,
         isRegister: 0
@@ -55,12 +54,6 @@ export class SubGeoscopeComponent implements OnInit {
         isRegister: 0
       };
       this.body.geoScopeSubNatinals[index] = subCountriesSave;
-    } else if (this.body.geoScopeSubNatinals.length < index + 1) {
-      const subCountriesSave = {
-        idCountry: isoAlpha.id,
-        isRegister: 0
-      };
-      this.body.geoScopeSubNatinals.push(subCountriesSave);
     }
 
     this.subNationalOneSelected = null;
@@ -96,7 +89,6 @@ export class SubGeoscopeComponent implements OnInit {
       this.body.geoScopeSubNatinals[index] = subCountriesSave;
     }
 
-    //(this.body.geoScopeSubNatinals);
     this.subNationalTwoSelected = null;
     this.showNationalLevelTwoSelect = false;
     setTimeout(() => {

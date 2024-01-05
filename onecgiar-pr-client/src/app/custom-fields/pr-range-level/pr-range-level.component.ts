@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, forwardRef } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-range-level',
@@ -18,7 +18,7 @@ export class PrRangeLevelComponent {
   @Input() size: number = 9;
   @Input() optionLabel: string;
   @Input() optionValue: string;
-  @Input() options: any;
+  @Input() options: any = [];
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
   @Output() selectOptionEvent = new EventEmitter<any>();
