@@ -314,7 +314,7 @@ export class ResultsKnowledgeProductMapper {
   }
 
   private extractOnlyYearFromDateString(dateString: string): number {
-    const isComposed: boolean = dateString.indexOf('-') > 0;
+    const isComposed: boolean = (dateString ?? '').indexOf('-') > 0;
     let year = 0;
 
     if (isComposed) {
