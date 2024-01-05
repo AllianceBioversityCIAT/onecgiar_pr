@@ -1,59 +1,62 @@
 .local_container {
-    display: grid;
-    grid-template-columns: 320px 1fr;
+  display: grid;
+  grid-template-columns: 320px 1fr;
 
-    .initiatives_selector {
-        padding: 10px;
-        background-color: white;
-    }
+  .initiatives_selector {
+    padding: 10px;
+    background-color: white;
+  }
 
-    .router {
-        padding: 20px 45px;
+  .router {
+    padding: 20px 45px;
 
-        .tor_section_container {
-            // box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.116);
+    .tor_section_container {
+      // box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.116);
 
-            .initiative {
-                display: grid;
-                grid-template-columns: 1fr;
-                border-bottom: 5px solid var(--pr-color-primary);
+      .initiative {
+        display: grid;
+        grid-template-columns: 1fr;
+        border-bottom: 5px solid var(--pr-color-primary);
 
-                .dropdown {
-                    display: flex;
-                    align-items: center;
-                    width: 100%;
+        .dropdown {
+          display: flex;
+          align-items: center;
+          width: 100%;
 
-                    .select {
-                        width: 100%;
-                    }
+          .select {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 10px;
+          }
 
-                    .label {
-                        width: max-content;
-                        white-space: nowrap;
-                        font-weight: 500;
-                        color: var(--pr-color-primary);
-                        padding: 0px 10px;
-                        font-size: 1.1em;
-                    }
-                }
-
-                .title {
-                    background-color: var(--pr-color-primary);
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    // padding: 10px;
-                }
-            }
-
-            .router_outlet_container {
-                max-height: calc(100vh - 210px);
-                min-height: calc(100vh - 210px);
-                overflow-y: auto;
-            }
-
+          .label {
+            width: max-content;
+            white-space: nowrap;
+            font-weight: 500;
+            color: var(--pr-color-primary);
+            padding: 0px 10px;
+            font-size: 1.1em;
+          }
         }
 
+        .title {
+          background-color: var(--pr-color-primary);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          // padding: 10px;
+        }
+      }
+
+      .router_outlet_container {
+        max-height: calc(100vh - 210px);
+        min-height: calc(100vh - 210px);
+        overflow-y: auto;
+      }
+
     }
+
+  }
 }

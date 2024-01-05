@@ -26,7 +26,10 @@ export class insertGlobalParametersAndCategories1700836504238
         ('sp_microsoft_graph_api_url','Microsoft graph api url','',1),
         ('pgv_in_qa',NULL,'',2),
         ('pgv_ipsr_is_closed',NULL,'',2),
-        ('pgv_result_is_closed',NULL,'',2);`,
+        ('pgv_result_is_closed',NULL,'',2);
+        ('pgv_show_global_info',NULL,'',2);
+        ('pgv_global_info_message',NULL,'',2);
+        `,
     );
   }
 
