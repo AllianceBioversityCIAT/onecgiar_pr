@@ -3,7 +3,7 @@ import { GlobalParameterRepository } from './repositories/global-parameter.repos
 import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { env } from 'process';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class GlobalParameterService {
@@ -28,7 +28,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -44,7 +44,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -53,7 +53,11 @@ export class GlobalParameterService {
       const globalVariableList =
         await this._globalParameterRepository.getPlatformGlobalVariables();
       const response = globalVariableList.reduce((obj, item) => {
-        obj[item.name] = item.value === '1';
+        if (item.value === '1' || item.value === '0') {
+          obj[item.name] = item.value === '1';
+        } else {
+          obj[item.name] = item.value;
+        }
         return obj;
       }, {});
       return this._returnResponse.format({
@@ -62,7 +66,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -76,7 +80,7 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

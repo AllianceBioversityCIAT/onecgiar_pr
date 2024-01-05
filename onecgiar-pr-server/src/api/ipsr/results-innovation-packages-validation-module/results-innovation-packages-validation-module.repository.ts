@@ -99,6 +99,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     rtr1.results_id = r.id
                     AND rtr1.initiative_id = rbi.inititiative_id
                     AND rbi.initiative_role_id = 1
+                    AND rtr1.is_active = 1
                     AND (
                         rtr1.planned_result IS NULL
                         OR rtr1.toc_result_id IS NULL

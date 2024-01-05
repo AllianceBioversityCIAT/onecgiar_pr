@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { KnowledgeProductInfoComponent } from './knowledge-product-info.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('KnowledgeProductInfoComponent', () => {
   let component: KnowledgeProductInfoComponent;
@@ -8,9 +9,9 @@ describe('KnowledgeProductInfoComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ KnowledgeProductInfoComponent ]
-    })
-    .compileComponents();
+      declarations: [KnowledgeProductInfoComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(KnowledgeProductInfoComponent);
     component = fixture.componentInstance;

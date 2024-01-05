@@ -33,6 +33,7 @@ import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment
 import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-options/investment-discontinued-options.module';
 import { ResultStatusModule } from './result-status/result-status.module';
 import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
+import { ResultFoldersModule } from './result-folders/result-folders.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -170,5 +171,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'subnational',
     module: ResultCountriesSubNationalModule,
+  },
+  {
+    path: 'result-folders',
+    module: ResultFoldersModule,
   },
 ];

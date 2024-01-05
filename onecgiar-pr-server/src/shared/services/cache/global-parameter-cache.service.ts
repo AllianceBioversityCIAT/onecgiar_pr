@@ -34,8 +34,6 @@ export class GlobalParameterCacheService {
         Number(globalParameterItem?.categoryId),
       );
       const globalParameterList: any = response;
-      console.log(globalParameterList);
-
       globalParameterList.forEach((globalParameter: GlobalParameter) => {
         this.dataCache[globalParameter.name] = globalParameter.value;
       });

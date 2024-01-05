@@ -12,14 +12,13 @@ export class TorKeyResultStoryComponent {
   tablesList = [];
 
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.GET_keyResultStoryInitiativeId();
   }
 
   GET_keyResultStoryInitiativeId() {
-    this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
+    this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id, this.typeOneReportSE.phaseSelected).subscribe(({ response }) => {
       this.typeOneReportSE.keyResultStoryData = response;
+      console.log(response);
       //(response);
       this.tablesList = [];
       response.forEach(table => {
@@ -29,10 +28,8 @@ export class TorKeyResultStoryComponent {
   }
 
   onSaveSection() {
-    //(this.typeOneReportSE.keyResultStoryData);
     this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe(
       resp => {
-        //(resp);
         this.GET_keyResultStoryInitiativeId();
         this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
       },
@@ -41,15 +38,6 @@ export class TorKeyResultStoryComponent {
       }
     );
   }
-
-  // onSave() {
-  //   //(this.typeOneReportSE.keyResultStoryData);
-
-  //   this.isSaving = true;
-  //   setTimeout(() => {
-  //     this.isSaving = false;
-  //   }, 3000);
-  // }
 
   formatTable(tableData) {
     const header = [{ attr: 'category' }, { attr: 'value' }];
@@ -67,11 +55,7 @@ export class TorKeyResultStoryComponent {
     ];
 
     const table = tableData;
-    //(table);
     if (!table) return (data = null);
-
-    const is_impact = Boolean(Number(table.is_impact));
-
     const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>';
 
     data[0].value = table.result_title || '<div class="no-data-text-format">There are not result title data</div>';
@@ -87,12 +71,6 @@ export class TorKeyResultStoryComponent {
     data[7].value = table.other_impact_areas || noDataText;
     data[8].value = table.global_targets || noDataText;
     data[9].value = table.web_legacy || '<div class="no-data-text-format">There are not web legacy data</div>';
-
-    if (!is_impact) {
-      // data.splice(8, 1);
-      // data.splice(7, 1);
-      // data.splice(6, 1);
-    }
 
     this.tablesList.push({ data, header });
   }
