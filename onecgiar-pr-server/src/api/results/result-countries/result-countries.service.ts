@@ -86,10 +86,13 @@ export class ResultCountriesService {
 
             await Promise.all(
               resultCountryArray.map(async (rc) => {
-                const subnationalStringCodes = (
-                  countries.find((c) => c.id == rc.country_id)?.sub_national ??
-                  []
-                ).map((sn) => sn.code);
+                const subnationalStringCodes =
+                  createResultCountryDto.geo_scope_id == 5
+                    ? (
+                        countries.find((c) => c.id == rc.country_id)
+                          ?.sub_national ?? []
+                      ).map((sn) => sn.code)
+                    : [];
 
                 await this._resultCountrySubnationalRepository.bulkUpdateSubnational(
                   rc.result_country_id,
