@@ -657,7 +657,7 @@ export class InnovationPathwayStepThreeService {
               how_many: null,
               other_institution: null,
               graduate_students: null,
-              is_active: true,
+              is_active: false,
               evidence_link: null,
             });
           }
@@ -732,7 +732,7 @@ export class InnovationPathwayStepThreeService {
                 quantity: null,
                 last_updated_by: user.id,
                 evidence_link: null,
-                is_active: true,
+                is_active: false,
               },
             );
           }
