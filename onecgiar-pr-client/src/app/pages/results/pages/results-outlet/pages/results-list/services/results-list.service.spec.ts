@@ -10,7 +10,27 @@ describe('ResultsListService', () => {
     service = TestBed.inject(ResultsListService);
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
+  it('should have initial properties set', () => {
+    expect(service.text_to_search).toEqual('');
+    expect(service.showDeletingResultSpinner).toBeFalsy();
+    expect(service.showLoadingResultSpinner).toBeFalsy();
+  });
+
+  it('should update text_to_search property', () => {
+    const text = 'New search text';
+    service.text_to_search = text;
+    expect(service.text_to_search).toEqual(text);
+  });
+
+  it('should update showDeletingResultSpinner property', () => {
+    const value = true;
+    service.showDeletingResultSpinner = value;
+    expect(service.showDeletingResultSpinner).toBeTruthy();
+  });
+
+  it('should update showLoadingResultSpinner property', () => {
+    const value = true;
+    service.showLoadingResultSpinner = value;
+    expect(service.showLoadingResultSpinner).toBeTruthy();
   });
 });
