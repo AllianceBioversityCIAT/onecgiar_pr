@@ -551,14 +551,11 @@ export class ResultsKnowledgeProductsService {
         ) {
           throw {
             response: { title: mqapResponse?.Title },
-            message:
-              `Only journal articles published online in ${versionCgspaceYear} are eligible for this reporting cycle.<br>` +
-              'The knowledge product you are attempting to report either lacks the online publication date in CGSpace ' +
-              `or has an online publication date other than ${versionCgspaceYear}.<br><br>` +
-              'If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>' +
-              '<b>About this error:</b><br>Please be aware that for journal articles, the reporting system automatically verifies ' +
-              `the “Date Online” field in CGSpace, specifically checking for the year ${versionCgspaceYear}. If this field is empty or contains a year ` +
-              `other than ${versionCgspaceYear}, the submission will not be accepted. This prevents double counting of publications across consecutive years.`,
+            message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
+              Kindly review the rules provided at the beginning of the submission.<br><br>
+              If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
+              <b>About this error:</b><br>
+              Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
             status: HttpStatus.UNPROCESSABLE_ENTITY,
           };
         }
