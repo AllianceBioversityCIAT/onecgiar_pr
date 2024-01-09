@@ -655,14 +655,28 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             )
             OR (
                 (
-                    rbip.readiness_level_evidence_based != 11
+                    (
+                        SELECT
+                            cirl.level
+                        FROM
+                            clarisa_innovation_readiness_level cirl
+                        WHERE
+                            cirl.id = rbip.readiness_level_evidence_based
+                    ) != 0
                     AND (
                         rbip.readinees_evidence_link IS NULL
                         OR rbip.readinees_evidence_link = ''
                     )
                 )
                 OR (
-                    rbip.use_level_evidence_based != 1
+                    (
+                        SELECT
+                            ciul.level
+                        FROM
+                            clarisa_innovation_use_levels ciul
+                        WHERE
+                            ciul.id = rbip.use_level_evidence_based
+                    ) != 0
                     AND (
                         rbip.use_evidence_link IS NULL
                         OR rbip.use_evidence_link = ''
@@ -671,6 +685,14 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             ) THEN FALSE
             WHEN (
                 (
+                    SELECT
+                        ciul.level
+                    FROM
+                        clarisa_innovation_use_levels ciul
+                    WHERE
+                        ciul.id = rbip.use_level_evidence_based
+                ) != 0
+                AND (
                     SELECT
                         COUNT(*)
                     FROM
@@ -697,7 +719,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                                         )
                                     )
                                 )
-                        )
+                            )
                             OR (
                                 rira.sex_and_age_disaggregation = 1
                                 AND (
@@ -848,22 +870,28 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     COUNT(*)
                 FROM
                     result_by_innovation_package rbip2
+                    LEFT JOIN clarisa_innovation_readiness_level cirl2 ON cirl2.id = rbip2.readiness_level_evidence_based
+                    LEFT JOIN clarisa_innovation_use_levels ciul2 ON ciul2.id = rbip2.use_level_evidence_based
                 WHERE
                     rbip2.is_active = TRUE
                     AND rbip2.ipsr_role_id = 2
                     AND rbip2.result_innovation_package_id = r.id
                     AND (
                         (
-                            rbip2.readiness_level_evidence_based IS NULL
-                            OR rbip2.readiness_level_evidence_based <> 11
+                            (
+                                cirl2.level != 0
+                                OR cirl2.level IS NULL
+                            )
                             AND (
                                 rbip2.readinees_evidence_link IS NULL
                                 OR rbip2.readinees_evidence_link = ''
                             )
                         )
                         OR (
-                            rbip2.use_level_evidence_based IS NULL
-                            OR rbip2.use_level_evidence_based <> 1
+                            (
+                                ciul2.level != 0
+                                OR ciul2.level IS NULL
+                            )
                             AND(
                                 rbip2.use_evidence_link IS NULL
                                 OR rbip2.use_evidence_link = ''
