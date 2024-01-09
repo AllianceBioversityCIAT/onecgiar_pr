@@ -43,7 +43,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process, { env } from 'process';
+import process from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -59,6 +59,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class ResultsService {
@@ -1314,7 +1315,7 @@ export class ResultsService {
         response: result,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -1348,7 +1349,7 @@ export class ResultsService {
         response: centers,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

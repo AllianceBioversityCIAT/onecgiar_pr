@@ -29,7 +29,6 @@ describe('ResultsToUpdateModalComponent', () => {
 
     fixture = TestBed.createComponent(ResultsToUpdateModalComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   describe('onPressAction()', () => {

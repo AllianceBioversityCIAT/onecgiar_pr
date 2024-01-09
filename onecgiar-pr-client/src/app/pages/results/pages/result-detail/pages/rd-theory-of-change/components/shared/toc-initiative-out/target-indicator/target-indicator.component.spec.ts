@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
 import { TargetIndicatorComponent } from './target-indicator.component';
 import { environment } from '../../../../../../../../../../../environments/environment';
 import { AlertStatusComponent } from '../../../../../../../../../../custom-fields/alert-status/alert-status.component';

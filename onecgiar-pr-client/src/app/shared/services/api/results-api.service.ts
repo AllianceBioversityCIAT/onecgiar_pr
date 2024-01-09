@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';;
+import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
@@ -561,12 +561,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/fact-sheet/initiative/${initiativeId}`);
   }
 
-  GET_keyResultStoryInitiativeId(initiativeId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}`);
+  GET_keyResultStoryInitiativeId(initiativeId, phase) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}?phase=${phase}`);
   }
 
-  GET_excelFullReportByInitiativeId(initiativeId) {
-    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}`);
+  GET_excelFullReportByInitiativeId(initiativeId, phase) {
+    return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}?phase=${phase}`);
   }
 
   PATCH_primaryImpactAreaKrs(body) {
