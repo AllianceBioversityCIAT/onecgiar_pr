@@ -964,7 +964,7 @@ export class resultValidationRepository
 										)
 										AND (
 											ra.has_men_youth IS NOT NULL
-											OR ra.has_men_youth !=
+											OR ra.has_men_youth != 0
 										)
 									)
 									OR (
