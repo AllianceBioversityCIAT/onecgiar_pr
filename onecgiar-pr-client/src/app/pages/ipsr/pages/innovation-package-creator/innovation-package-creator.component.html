@@ -57,9 +57,11 @@
 
         </div>
     </div>
-
-    <app-ipsr-geoscope-creator *ngIf="this.innovationPackageCreatorBody.result_id"
-        [body]="this.innovationPackageCreatorBody"></app-ipsr-geoscope-creator>
+    <app-geoscope-management 
+        [body]="this.innovationPackageCreatorBody" 
+        module="ipsr"
+        *ngIf="this.innovationPackageCreatorBody.result_id">
+    </app-geoscope-management>
 
     <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue"
         [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id || !this.areLists">

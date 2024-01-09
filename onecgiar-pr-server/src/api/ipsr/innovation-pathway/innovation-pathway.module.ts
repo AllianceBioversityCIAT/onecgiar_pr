@@ -42,9 +42,9 @@ import { NonPooledProjectRepository } from '../../../api/results/non-pooled-proj
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -90,7 +90,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
     ResultIpExpertisesRepository,
-    ResultCountriesSubNationalRepository,
+    ResultCountrySubnationalRepository,
     ResultIpExpertWorkshopOrganizedRepostory,
   ],
 })

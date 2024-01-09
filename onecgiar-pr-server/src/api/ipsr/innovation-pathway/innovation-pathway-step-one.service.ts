@@ -44,10 +44,10 @@ import { ResultByInitiativesRepository } from '../../results/results_by_inititia
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/repositories/result-ip-expertises.repository';
 import { ResultIpExpertises } from '../innovation-packaging-experts/entities/result_ip_expertises.entity';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
-import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -74,9 +74,9 @@ export class InnovationPathwayStepOneService {
     protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository,
-    protected readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
+    protected readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
   ) {}
 
   async getStepOne(resultId: number) {
@@ -154,23 +154,24 @@ export class InnovationPathwayStepOneService {
         },
       });
 
-      const sub_national_counties: ResultCountriesSubNational[] =
-        await this._resultCountriesSubNationalRepository.find({
+      const sub_national_counties: ResultCountrySubnational[] =
+        await this._resultCountrySubnationalRepository.find({
           where: {
-            result_countries_id: In(
-              countries.map((el) => el.result_country_id),
-            ),
+            result_country_id: In(countries.map((el) => el.result_country_id)),
             is_active: true,
+          },
+          relations: {
+            clarisa_subnational_scope_object: true,
           },
         });
 
       countries.map((el) => {
-        el['result_countries_sub_national'] = sub_national_counties.filter(
-          (seb) => seb.result_countries_id == el.result_country_id,
-        );
+        el['sub_national'] = sub_national_counties
+          .filter((seb) => seb.result_country_id == el.result_country_id)
+          .map((el) => el.clarisa_subnational_scope_object);
       });
 
-      await experts.map(async (el) => {
+      experts.map(async (el) => {
         el.expertises = await this._resultIpExpertisesRepository.find({
           where: {
             result_ip_expert_id: el.result_ip_expert_id,

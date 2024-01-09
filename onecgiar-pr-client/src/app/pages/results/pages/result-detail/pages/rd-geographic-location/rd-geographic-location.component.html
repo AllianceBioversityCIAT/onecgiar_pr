@@ -12,48 +12,10 @@
     </app-alert-status>
 
     <!-- <h1>{{this.geographicLocationBody.scope_id}}</h1> -->
-    <app-pr-radio-button
-        [label]="'What is the main geographic focus of the ' + this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?'"
-        [description]="'This should reflect where the <strong>'+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'</strong> has taken place/contributed to benefit.'"
-        [options]="this.geographic_focus" optionLabel="name" optionValue='id'
-        [readOnly]="this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.geographicLocationBody.scope_id"
-        [required]="false">
-    </app-pr-radio-button>
-    <div class="geographic_focus_description">
-        <app-pr-field-header
-            [description]="geographic_focus_description(this.geographicLocationBody.scope_id)"></app-pr-field-header>
-    </div>
-    <div *ngIf="this.geographicLocationBody.scope_id != 4 && !!this.geographicLocationBody.scope_id">
-        <app-pr-yes-or-not *ngIf="this.geographicLocationBody.scope_id != 3"
-            [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
-            [label]="this.geographicLocationBody.scope_id != 2 ? 'Are there any regions that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?':'Select regions'"
-            [description]="this.geographicLocationBody.has_regions  !== false || this.geographicLocationBody.scope_id == 2 ? thereAnyRegionText() : null"
-            [hideOptions]="this.geographicLocationBody.scope_id != 1"
-            [(ngModel)]="this.geographicLocationBody.has_regions"
-            [required]="!(this.geographicLocationBody.scope_id != 2)">
-        </app-pr-yes-or-not>
-        <app-pr-multi-select
-            *ngIf="this.geographicLocationBody.has_regions  !== false && this.geographicLocationBody.scope_id != 3 && !!this.geographicLocationBody.has_regions || this.geographicLocationBody.scope_id == 2"
-            [options]="this.regionsCountriesSE.regionsList" selectedLabel="Regions(s) selected"
-            [readOnly]="this.api.dataControlSE.isKnowledgeProduct" selectedOptionLabel="name" optionLabel="name"
-            optionValue="id" placeholder="Select regions" [(ngModel)]="this.geographicLocationBody.regions">
-        </app-pr-multi-select>
-        <app-pr-yes-or-not
-            [label]="this.geographicLocationBody.scope_id != 3?'Are there any countries that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?' : 'Select countries'"
-            [description]="this.geographicLocationBody.has_countries  !== false || this.geographicLocationBody.scope_id == 3  ? thereAnycountriesText() : null"
-            [(ngModel)]="this.geographicLocationBody.has_countries" [required]="false"
-            [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
-            [hideOptions]="this.geographicLocationBody.scope_id != 1 && this.geographicLocationBody.scope_id != 2">
-        </app-pr-yes-or-not>
-        <app-pr-multi-select
-            *ngIf="this.geographicLocationBody.has_countries !== false && !!this.geographicLocationBody.has_countries  || this.geographicLocationBody.scope_id == 3"
-            [options]="this.regionsCountriesSE.countriesList" selectedLabel="Countries selected"
-            [readOnly]="this.api.dataControlSE.isKnowledgeProduct" selectedOptionLabel="name" optionLabel="full_name"
-            optionValue="id" placeholder="Select countries" [(ngModel)]="this.geographicLocationBody.countries">
-        </app-pr-multi-select>
-        <!-- flagsCode="iso_alpha_2" -->
-    </div>
-</div>
+    <app-geoscope-management 
+        [body]="this.geographicLocationBody" 
+        module="reporting">
+    </app-geoscope-management>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
     *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
