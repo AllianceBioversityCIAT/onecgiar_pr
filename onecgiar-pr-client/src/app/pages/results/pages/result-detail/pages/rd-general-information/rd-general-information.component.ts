@@ -1,3 +1,5 @@
+/* eslint-disable camelcase */
+/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
@@ -203,9 +205,22 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSyncSection() {
-    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      this.getSectionInformation();
-    });
+    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> This will delete not saved information.`;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Sync confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'yes, sync information'
+      },
+      () => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+          this.getSectionInformation();
+        });
+      }
+    );
   }
 
   showAlerts() {
