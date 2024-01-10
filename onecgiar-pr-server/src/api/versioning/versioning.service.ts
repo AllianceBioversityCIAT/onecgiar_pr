@@ -699,9 +699,8 @@ export class VersioningService {
 
   async getVersionOfAResult(resul_id: number) {
     try {
-      const versions_id = await this._versionRepository.$_getVersionOfAResult(
-        resul_id,
-      );
+      const versions_id =
+        await this._versionRepository.$_getVersionOfAResult(resul_id);
       const res = await this._versionRepository.find({
         where: {
           id: In(versions_id),

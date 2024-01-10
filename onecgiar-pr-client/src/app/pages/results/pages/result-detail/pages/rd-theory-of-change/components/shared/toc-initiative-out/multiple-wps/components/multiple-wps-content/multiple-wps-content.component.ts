@@ -1,7 +1,8 @@
 import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
+import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 
 @Component({
   selector: 'app-multiple-wps-content',
@@ -26,12 +27,14 @@ export class MultipleWPsContentComponent implements OnChanges {
 
   indicatorView = false;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
 
   ngOnChanges() {
-    if (this.showMultipleWPsContent && this.outcomeList.length > 0 && this.outputList.length > 0 && this.eoiList.length > 0) {
-      if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id) {
-        this.getIndicator();
+    if (this.showMultipleWPsContent) {
+      if ((this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) || (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)) {
+        if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
+          this.getIndicator();
+        }
       }
       this.pushSelectedOptions();
     }
@@ -47,6 +50,8 @@ export class MultipleWPsContentComponent implements OnChanges {
         this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
         this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
         this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
+        this.activeTab.wpinformation = response?.wpinformation;
+        this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
 
         setTimeout(() => {
           this.indicatorView = true;
@@ -59,21 +64,17 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   narrativeTypeResult() {
-    let narrative = '';
-    if (this.resultLevelId === 1) {
-      narrative = 'output';
-    }
-    if (this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id != 3) {
-      narrative = 'outcome';
-    }
-    if ((this.resultLevelId === 1 ? this.theoryOfChangesServices?.planned_result === false : true) && this.activeTab.toc_level_id === 3) {
-      narrative = 'outcome';
+    if (this.activeTab?.planned_result && this.resultLevelId === 1) {
+      return 'Indicator(s) of the output selected';
     }
 
-    return `Indicator(s) of the ${narrative} selected`;
+    return `Indicator(s) of the outcome selected`;
+  }
+
+  dynamicProgressLabel() {
+    if (this.activeTab?.planned_result && this.resultLevelId === 1) return `Progress narrative of the Output`;
+
+    return `Progress narrative of the Outcome`;
   }
 
   pushSelectedOptions() {
@@ -138,6 +139,33 @@ export class MultipleWPsContentComponent implements OnChanges {
       const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
       item.disabledd = !!finded;
       return item;
+    });
+  }
+
+  dynamicMappedResultButtonText() {
+    return `See all results contributing to this TOC ${this.activeTab?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'}`;
+  }
+
+  openMappedResultsModal() {
+    this.mappedResultService.mappedResultsModal = true;
+    this.mappedResultService.columnsOrder = [
+      { title: 'Result code', attr: 'result_code' },
+      { title: 'Title', attr: 'title', link: true },
+      { title: 'Indicator category', attr: 'result_type_name' },
+      { title: 'Phase', attr: 'phase_name' },
+      { title: 'Progress narrative against the target', attr: 'toc_progressive_narrative' }
+    ];
+  }
+
+  showNarrative(): boolean {
+    if (this.resultLevelId === 2 || (this.resultLevelId === 1 && !this.activeTab?.planned_result)) return true;
+
+    if (!this.activeTab?.indicators) {
+      return false;
+    }
+
+    return this.activeTab.indicators.some(indicator => {
+      return indicator.targets?.some(target => target.indicator_question === false);
     });
   }
 }

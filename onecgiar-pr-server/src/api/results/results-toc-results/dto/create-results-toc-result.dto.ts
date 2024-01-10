@@ -12,7 +12,7 @@ export class CreateResultsTocResultDto {
       planned_result: boolean;
       initiative_id: number;
       result_toc_results: resultToResultInterfaceToc[];
-    }
+    },
   ];
   impacts?: ResultTocImpactsInterface[];
   pending_contributing_initiatives?: shareResultRequestInterface[];
@@ -68,6 +68,7 @@ interface resultToResultInterfaceToc {
   actionAreaOutcome?: any[];
   targetsIndicators?: any[];
   is_sdg_action_impact: boolean;
+  toc_progressive_narrative: string;
 }
 
 interface shareResultRequestInterface {
@@ -75,4 +76,3 @@ interface shareResultRequestInterface {
   share_result_request_id: number;
   is_active: boolean;
 }
-

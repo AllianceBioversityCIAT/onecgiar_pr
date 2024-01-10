@@ -1,6 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-rd-annual-updating',

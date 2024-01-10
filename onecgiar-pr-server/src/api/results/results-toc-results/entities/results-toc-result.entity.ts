@@ -3,7 +3,6 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -85,7 +84,7 @@ export class ResultsTocResult {
   })
   initiative_id!: number;
 
-  // TODO - Review 
+  // TODO - Review
   @Column({
     name: 'mapping_sdg',
     type: 'boolean',
@@ -93,7 +92,7 @@ export class ResultsTocResult {
   })
   mapping_sdg: boolean;
 
-  // TODO - Review 
+  // TODO - Review
   @Column({
     name: 'mapping_impact',
     type: 'boolean',
@@ -116,6 +115,13 @@ export class ResultsTocResult {
     default: true,
   })
   is_active: boolean;
+
+  @Column({
+    type: 'text',
+    name: 'toc_progressive_narrative',
+    nullable: true,
+  })
+  toc_progressive_narrative: string;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Column } from 'typeorm';
 import { BaseEntity } from './base-entity';
 
 export abstract class BaseEntityControlList extends BaseEntity {
