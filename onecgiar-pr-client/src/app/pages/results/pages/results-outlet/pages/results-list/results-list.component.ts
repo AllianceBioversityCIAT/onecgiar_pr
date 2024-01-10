@@ -8,7 +8,7 @@ import { ShareRequestModalService } from '../../../result-detail/components/shar
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
-import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 
 @Component({
   selector: 'app-results-list',
