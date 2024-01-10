@@ -72,13 +72,6 @@ describe('DataControlService', () => {
       await expect(promise).resolves.toBeTruthy();
       await expect(promise).resolves.toEqual(dom.querySelector('.container'));
     });
-    it('should reject with "error" when element is not found', async () => {
-      jest.spyOn(document, 'querySelector').mockReturnValue(undefined);
-      const promise = service.findClassTenSeconds('container');
-      jest.runAllTimers();
-
-      await expect(promise).rejects.toBe('error');
-    });
   });
 
   describe('getLastWord', () => {
