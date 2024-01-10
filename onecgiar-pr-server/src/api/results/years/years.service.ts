@@ -4,11 +4,11 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { YearRepository } from './year.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { IsNull } from 'typeorm';
-import { env } from 'process';
 import {
   HandlersError,
   ReturnResponse,
 } from '../../../shared/handlers/error.utils';
+import { isProduction } from '../../../shared/utils/validation.utils';
 
 @Injectable()
 export class YearsService {
@@ -143,7 +143,7 @@ export class YearsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

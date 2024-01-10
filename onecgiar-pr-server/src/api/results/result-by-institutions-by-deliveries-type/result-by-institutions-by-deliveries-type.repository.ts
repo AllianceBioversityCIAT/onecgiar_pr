@@ -223,9 +223,8 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
     `;
 
     try {
-      const result: ResultByInstitutionsByDeliveriesType[] = await this.query(
-        query,
-      );
+      const result: ResultByInstitutionsByDeliveriesType[] =
+        await this.query(query);
       return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

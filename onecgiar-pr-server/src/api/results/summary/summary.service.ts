@@ -151,7 +151,6 @@ export class SummaryService {
         female_using,
         male_using,
         has_unkown_using,
-        unkown_using,
         non_binary_using,
         capdev_delivery_method_id,
         capdev_term_id,
@@ -168,41 +167,31 @@ export class SummaryService {
         throw this._handlersError.returnErrorRes({ error: version });
       }
       if (capDevExists) {
-        capDevExists.female_using = unkown_using ? 0 : female_using || 0;
-        capDevExists.male_using = unkown_using ? 0 : male_using || 0;
-        capDevExists.has_unkown_using = !unkown_using
-          ? null
-          : has_unkown_using || null;
-        capDevExists.non_binary_using = unkown_using
-          ? 0
-          : non_binary_using || 0;
-        capDevExists.unkown_using = unkown_using;
+        capDevExists.female_using = female_using || 0;
+        capDevExists.male_using = male_using || 0;
+        capDevExists.has_unkown_using = has_unkown_using || 0;
+        capDevExists.non_binary_using = non_binary_using || 0;
         capDevExists.last_updated_by = user.id;
         capDevExists.capdev_delivery_method_id = capdev_delivery_method_id;
         capDevExists.capdev_term_id = capdev_term_id;
         capDevExists.is_attending_for_organization =
           is_attending_for_organization;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
-          capDevExists,
-        );
+        CapDevData =
+          await this._resultsCapacityDevelopmentsRepository.save(capDevExists);
       } else {
         const newCapDev = new ResultsCapacityDevelopments();
         newCapDev.created_by = user.id;
         newCapDev.last_updated_by = user.id;
-        newCapDev.female_using = unkown_using ? 0 : female_using || 0;
-        newCapDev.male_using = unkown_using ? 0 : male_using || 0;
-        newCapDev.has_unkown_using = !unkown_using
-          ? null
-          : has_unkown_using || null;
-        newCapDev.non_binary_using = unkown_using ? 0 : non_binary_using || 0;
-        newCapDev.unkown_using = unkown_using;
+        newCapDev.female_using = female_using || 0;
+        newCapDev.male_using = male_using || 0;
+        newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.non_binary_using = non_binary_using || 0;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
         newCapDev.capdev_term_id = capdev_term_id;
         newCapDev.is_attending_for_organization = is_attending_for_organization;
-        CapDevData = await this._resultsCapacityDevelopmentsRepository.save(
-          newCapDev,
-        );
+        CapDevData =
+          await this._resultsCapacityDevelopmentsRepository.save(newCapDev);
       }
 
       if (institutions?.length) {
@@ -348,9 +337,8 @@ export class SummaryService {
         innDevExists.innovation_pdf = innovation_pdf;
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
-        InnDevRes = await this._resultsInnovationsDevRepository.save(
-          innDevExists,
-        );
+        InnDevRes =
+          await this._resultsInnovationsDevRepository.save(innDevExists);
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
@@ -627,9 +615,8 @@ export class SummaryService {
         resultsPolicyChanges.result_related_engagement =
           result_related_engagement;
         resultsPolicyChanges.status_amount = status_amount;
-        policyChangesData = await this._resultsPolicyChangesRepository.save(
-          resultsPolicyChanges,
-        );
+        policyChangesData =
+          await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
       } else {
         const newResultsPolicyChanges = new ResultsPolicyChanges();
         newResultsPolicyChanges.amount = amount || null;

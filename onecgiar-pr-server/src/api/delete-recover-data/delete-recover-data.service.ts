@@ -54,7 +54,6 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
-import { env } from 'process';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { ResultsKnowledgeProductFairScoreRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
@@ -71,10 +70,12 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { Result } from '../results/entities/result.entity';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -135,6 +136,7 @@ export class DeleteRecoverDataService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
@@ -243,6 +245,7 @@ export class DeleteRecoverDataService {
       );
       await this._resultsTocResultRepository.logicalDelete(resultData.id);
       await this._resultValidationRepository.logicalDelete(resultData.id);
+      await this._evidenceSharepointRepository.logicalDelete(resultData.id);
       await this._resultByEvidencesRepository.logicalDelete(resultData.id);
       await this._resultByInitiativesRepository.logicalDelete(resultData.id);
       await this._resultByIntitutionsTypeRepository.logicalDelete(
@@ -314,7 +317,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -404,7 +407,6 @@ export class DeleteRecoverDataService {
         resultAfterbefore,
         new_result_level_id,
         new_result_type_id,
-        user,
       );
 
       //updating elastic search
@@ -455,7 +457,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -463,7 +465,6 @@ export class DeleteRecoverDataService {
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
-    user: TokenDto,
   ): Promise<ReturnResponseDto<any>> {
     try {
       const returnDelete = await this.deleteDataByNewResultType(
@@ -504,7 +505,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -552,7 +553,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -642,7 +643,7 @@ export class DeleteRecoverDataService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 

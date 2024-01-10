@@ -4,7 +4,7 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './toc-results.repository';
-import { env } from 'process';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class TocResultsService {
@@ -26,9 +26,8 @@ export class TocResultsService {
         toc_level,
       );
       if (!res.length && toc_level == 4) {
-        res = await this._tocResultsRepository.getAllOutcomeByInitiative(
-          toc_level,
-        );
+        res =
+          await this._tocResultsRepository.getAllOutcomeByInitiative(toc_level);
       }
       return this._returnResponse.format({
         message: 'Successful response',
@@ -36,7 +35,7 @@ export class TocResultsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -49,9 +48,10 @@ export class TocResultsService {
         );
 
       if (!tocResults.length && levelId == 4) {
-        tocResults = await this._tocResultsRepository.getAllOutcomeByInitiative(
-          initiativeId,
-        );
+        tocResults =
+          await this._tocResultsRepository.getAllOutcomeByInitiative(
+            initiativeId,
+          );
       }
       if (!tocResults.length) {
         throw {

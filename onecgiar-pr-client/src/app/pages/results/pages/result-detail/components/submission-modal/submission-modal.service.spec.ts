@@ -10,7 +10,7 @@ describe('SubmissionModalService', () => {
     service = TestBed.inject(SubmissionModalService);
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
+  it('should initially have showModal set to false', () => {
+    expect(service.showModal).toBeFalsy();
   });
 });

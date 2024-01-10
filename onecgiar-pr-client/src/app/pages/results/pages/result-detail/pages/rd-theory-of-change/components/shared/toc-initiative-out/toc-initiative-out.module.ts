@@ -13,10 +13,12 @@ import { RouterModule } from '@angular/router';
 import { MultipleWPsComponent } from './multiple-wps/multiple-wps.component';
 import { MultipleWPsContentComponent } from './multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { DialogModule } from 'primeng/dialog';
+import { MappedResultsModalComponent } from './multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 
 @NgModule({
-  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, MultipleWPsComponent, MultipleWPsContentComponent],
+  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, MultipleWPsComponent, MultipleWPsContentComponent, MappedResultsModalComponent],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
-  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, TooltipModule]
+  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, TooltipModule, DialogModule]
 })
 export class TocInitiativeOutModule {}

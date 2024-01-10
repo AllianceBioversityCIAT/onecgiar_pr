@@ -163,7 +163,6 @@ export class ResultsCapacityDevelopmentsRepository
     	rcd.female_using,
     	rcd.non_binary_using,
       rcd.has_unkown_using,
-      rcd.unkown_using,
     	rcd.capdev_delivery_method_id,
     	rcd.capdev_term_id,
       rcd.is_attending_for_organization,
@@ -192,7 +191,10 @@ export class ResultsCapacityDevelopmentsRepository
     }
   }
 
-  async getSectionSevenDataForReport(resultCodesArray: number[]) {
+  async getSectionSevenDataForReport(
+    resultCodesArray: number[],
+    phase?: number,
+  ) {
     const resultCodes = (resultCodesArray ?? []).join(',');
     const queryData = `
     select 
@@ -237,6 +239,7 @@ export class ResultsCapacityDevelopmentsRepository
     where 
       rcd.is_active = 1
       and r.result_code ${resultCodes.length ? `in (${resultCodes})` : '= 0'}
+      ${phase ? `and r.version_id = ${phase}` : ''}
     group by 1,2,3,4,5,6
     ;
     `;

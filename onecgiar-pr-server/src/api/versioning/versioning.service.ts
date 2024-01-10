@@ -11,7 +11,6 @@ import {
   ReturnResponse,
   ReturnResponseDto,
 } from '../../shared/handlers/error.utils';
-import { env } from 'process';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
@@ -45,6 +44,9 @@ import {
 import { In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
+import { EvidencesService } from '../results/evidences/evidences.service';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class VersioningService {
@@ -79,6 +81,8 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
+    private readonly _evidencesService: EvidencesService,
   ) {}
 
   /**
@@ -128,7 +132,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -143,7 +147,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -249,6 +253,8 @@ export class VersioningService {
       await this._resultRegionRepository.replicable(config);
       await this._linkedResultRepository.replicable(config);
       await this._evidencesRepository.replicable(config);
+      await this._evidenceSharepointRepository.replicable(config);
+      await this._evidencesService.replicateSPFiles(config);
       //await this._resultsImpactAreaIndicatorRepository.replicable(config);
 
       this._logger.log(
@@ -374,7 +380,7 @@ export class VersioningService {
         });
       }
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -412,7 +418,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -452,7 +458,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -469,7 +475,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -513,7 +519,7 @@ export class VersioningService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -559,7 +565,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -629,7 +635,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -669,7 +675,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -687,15 +693,14 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
   async getVersionOfAResult(resul_id: number) {
     try {
-      const versions_id = await this._versionRepository.$_getVersionOfAResult(
-        resul_id,
-      );
+      const versions_id =
+        await this._versionRepository.$_getVersionOfAResult(resul_id);
       const res = await this._versionRepository.find({
         where: {
           id: In(versions_id),
@@ -708,7 +713,7 @@ export class VersioningService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

@@ -11,6 +11,7 @@ import { PlatformReportModule } from './platform-report/platform-report.module';
 import { VersioningModule } from './versioning/versioning.module';
 import { GlobalNarrativesModule } from './global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './delete-recover-data/delete-recover-data.module';
+import { GlobalParameterModule } from './global-parameter/global-parameter.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -47,6 +48,10 @@ export const ModulesRoutes: Routes = [
   {
     path: 'global-narratives',
     module: GlobalNarrativesModule,
+  },
+  {
+    path: 'global-parameters',
+    module: GlobalParameterModule,
   },
   {
     path: 'manage-data',

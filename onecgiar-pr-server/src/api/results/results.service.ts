@@ -43,7 +43,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process, { env } from 'process';
+import process from 'process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -59,6 +59,7 @@ import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class ResultsService {
@@ -557,8 +558,8 @@ export class ResultsService {
             ? resultGeneralInformation?.is_discontinued
               ? 4
               : result.status_id == 4
-              ? 1
-              : result.status_id
+                ? 1
+                : result.status_id
             : result.status_id,
       });
 
@@ -623,9 +624,8 @@ export class ResultsService {
           saveInstitutions.push(institutionsNew);
         }
       }
-      const updateInstitutions = await this._resultByIntitutionsRepository.save(
-        saveInstitutions,
-      );
+      const updateInstitutions =
+        await this._resultByIntitutionsRepository.save(saveInstitutions);
 
       const institutionsType =
         await this._resultByIntitutionsTypeRepository.updateIstitutionsType(
@@ -849,9 +849,8 @@ export class ResultsService {
     id: number,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
-      const result: Result = await this._customResultRepository.getResultById(
-        id,
-      );
+      const result: Result =
+        await this._customResultRepository.getResultById(id);
 
       if (!result) {
         throw {
@@ -1058,9 +1057,8 @@ export class ResultsService {
           saveInstitutions.push(institutionsNew);
         }
       }
-      const newInstitutions = await this._resultByIntitutionsRepository.save(
-        saveInstitutions,
-      );
+      const newInstitutions =
+        await this._resultByIntitutionsRepository.save(saveInstitutions);
 
       const toRemoveFromElastic = await this.findAllSimplified(
         legacyResult.legacy_id,
@@ -1114,9 +1112,8 @@ export class ResultsService {
 
   async getGeneralInformation(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultAndLevelTypeById(
-        resultId,
-      );
+      const result =
+        await this._resultRepository.getResultAndLevelTypeById(resultId);
       if (!result?.id) {
         throw {
           response: {},
@@ -1318,7 +1315,7 @@ export class ResultsService {
         response: result,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
@@ -1352,7 +1349,7 @@ export class ResultsService {
         response: centers,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 }

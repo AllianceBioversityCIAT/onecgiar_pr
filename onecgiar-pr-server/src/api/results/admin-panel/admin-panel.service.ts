@@ -40,9 +40,10 @@ export class AdminPanelService implements OnModuleInit {
 
   async reportResultCompleteness(filterIntiatives: FilterInitiativesDto) {
     try {
-      const results = await this._adminPanelRepository.reportResultCompleteness(
-        filterIntiatives,
-      );
+      const results =
+        await this._adminPanelRepository.reportResultCompleteness(
+          filterIntiatives,
+        );
       return {
         response: results,
         message: 'Successful response',
@@ -213,9 +214,8 @@ export class AdminPanelService implements OnModuleInit {
       }
 
       //adding TOC related data (SDG and targets, Impact Area and targets)
-      const tocData = await this._resultRepository.getTocDataForReport(
-        resultIds,
-      );
+      const tocData =
+        await this._resultRepository.getTocDataForReport(resultIds);
 
       fullReport = fullReport.map((fr) => {
         const td = tocData.find((td) => td['Result Code'] == fr['Result Code']);
@@ -242,9 +242,8 @@ export class AdminPanelService implements OnModuleInit {
         resultLevels[0].result_level_id == 3 ||
         resultLevels[0].result_level_id == 4
       ) {
-        resultsAgaintsToc = await this._resultRepository.getResultAgainstToc(
-          resultIds,
-        );
+        resultsAgaintsToc =
+          await this._resultRepository.getResultAgainstToc(resultIds);
       }
 
       return {
@@ -257,7 +256,10 @@ export class AdminPanelService implements OnModuleInit {
     }
   }
 
-  async excelFullReportByResultByInitiative(initiativeId: number) {
+  async excelFullReportByResultByInitiative(
+    initiativeId: number,
+    phase: number,
+  ) {
     try {
       let fullReport: any[];
 
@@ -265,11 +267,15 @@ export class AdminPanelService implements OnModuleInit {
       const baseReport =
         await this._resultRepository.getBasicResultDataForReportByInitiative(
           initiativeId,
+          phase,
         );
       fullReport = [...baseReport];
 
       const resultTypes: ResultTypeDto[] =
-        await this._resultRepository.getTypesOfResultByInitiative(initiativeId);
+        await this._resultRepository.getTypesOfResultByInitiative(
+          initiativeId,
+          phase,
+        );
 
       const resultsByTypes = new Map<number, ResultTypeDto[]>();
       resultTypes.forEach((rt) => {
@@ -292,6 +298,7 @@ export class AdminPanelService implements OnModuleInit {
         policyChanges =
           await this._resultsPolicyChangesRepository.getSectionSevenDataForReport(
             resultsByTypes.get(1).map((r) => r.resultCode),
+            phase,
           );
 
         fullReport = fullReport.map((fr) => {
@@ -316,6 +323,7 @@ export class AdminPanelService implements OnModuleInit {
         innovationUses =
           await this._resultsInnovationsUseRepository.getSectionSevenDataForReport(
             resultsByTypes.get(2).map((r) => r.resultCode),
+            phase,
           );
 
         fullReport = fullReport.map((fr) => {
@@ -340,6 +348,7 @@ export class AdminPanelService implements OnModuleInit {
         capdev =
           await this._resultsCapacityDevelopmentsRepository.getSectionSevenDataForReport(
             resultsByTypes.get(5).map((r) => r.resultCode),
+            phase,
           );
 
         fullReport = fullReport.map((fr) => {
@@ -364,6 +373,7 @@ export class AdminPanelService implements OnModuleInit {
         const kpsResponse =
           await this._resultsKnowledgeProductsService.getSectionSevenDataForReport(
             resultsByTypes.get(6).map((r) => r.resultCode),
+            phase,
           );
 
         if (kpsResponse.status < 300) {
@@ -390,6 +400,7 @@ export class AdminPanelService implements OnModuleInit {
         innovationDevelopments =
           await this._resultsInnovationsDevRepository.getSectionSevenDataForReport(
             resultsByTypes.get(7).map((r) => r.resultCode),
+            phase,
           );
 
         fullReport = fullReport.map((fr) => {
@@ -413,6 +424,7 @@ export class AdminPanelService implements OnModuleInit {
       const tocData =
         await this._resultRepository.getTocDataForReportByInitiative(
           initiativeId,
+          phase,
         );
 
       fullReport = fullReport.map((fr) => {
@@ -441,9 +453,8 @@ export class AdminPanelService implements OnModuleInit {
 
   async submissionsByResults(resultId: number) {
     try {
-      const submissions = await this._adminPanelRepository.submissionsByResults(
-        resultId,
-      );
+      const submissions =
+        await this._adminPanelRepository.submissionsByResults(resultId);
       return {
         response: submissions,
         message: 'Successful response',

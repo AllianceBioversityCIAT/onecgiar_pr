@@ -13,9 +13,9 @@ import { FooterService } from './shared/components/footer/footer.service';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService, public rolesSE: RolesService, private api: ApiService, public footerSE: FooterService) {}
+  constructor(public AuthService: AuthService, public rolesSE: RolesService, public api: ApiService, public footerSE: FooterService) {}
   ngOnInit(): void {
-    // this.AuthService.inLogin = false;
+    this.getGlobalParametersByCategory();
     setTimeout(() => {
       if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
     }, 500);
@@ -33,7 +33,7 @@ export class AppComponent implements OnInit {
   copyTokenToClipboard() {
     if (environment.production) return;
     document.onkeyup = function () {
-      var e = e || window.event; // for IE to cover IEs window event-object
+      var e = e || window.event;
       if (e.altKey && e.which == 84) {
         console.log('event');
         navigator.clipboard.writeText(localStorage.getItem('token'));
@@ -42,5 +42,11 @@ export class AppComponent implements OnInit {
       }
       return false;
     };
+  }
+
+  private getGlobalParametersByCategory() {
+    this.api.resultsSE.GET_platformGlobalVariables().subscribe(({ response }) => {
+      this.api.globalVariablesSE.get = response;
+    });
   }
 }

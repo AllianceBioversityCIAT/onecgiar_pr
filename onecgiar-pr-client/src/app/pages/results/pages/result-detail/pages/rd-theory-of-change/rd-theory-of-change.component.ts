@@ -6,7 +6,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
-import { DataControlService } from 'src/app/shared/services/data-control.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -20,7 +20,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   contributingInitiativeNew = [];
-  cgspaceDisabledList = [];
+  cgspaceDisabledList: any = [];
   contributingCenterOptions = [];
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public centersSE: CentersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public dataControlSE: DataControlService) {}
@@ -47,9 +47,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   async getContributingCenterOptions() {
-    const list = await this.centersSE.getCentersList();
-    this.contributingCenterOptions = [...list];
-    this.contributingCenterOptions.forEach(center => (center.selected = false));
+    this.contributingCenterOptions = await this.centersSE.getData();
   }
 
   async getSectionInformation() {
@@ -110,6 +108,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangeBody?.result_toc_result?.initiative_id);
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
+
+    this.theoryOfChangeBody.result_toc_result.result_toc_results = this.theoryOfChangeBody.result_toc_result.result_toc_results.length === 1 ? this.theoryOfChangeBody.result_toc_result.result_toc_results : this.theoryOfChangeBody?.result_toc_result?.result_toc_results.filter(result => result.toc_result_id !== null);
 
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {

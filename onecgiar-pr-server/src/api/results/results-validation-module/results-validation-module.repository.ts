@@ -932,7 +932,7 @@ export class resultValidationRepository
 			AND (
 				rid.innovation_readiness_level_id is null
 				and rid.innovation_readiness_level_id <> ''
-			) 
+			)
 			AND (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
 			WHEN rid.innovation_user_to_be_determined != 1
 			AND (
@@ -950,10 +950,22 @@ export class resultValidationRepository
 								AND (
 									(
 										ra.actor_type_id != 5
-										AND ra.has_women IS NOT NULL
-										AND ra.has_women_youth IS NOT NULL
-										AND ra.has_men IS NOT NULL
-										AND ra.has_men_youth IS NOT NULL
+										AND (
+											ra.has_women IS NOT NULL
+											OR ra.has_women != 0
+										)
+										AND (
+											ra.has_women_youth IS NOT NULL
+											OR ra.has_women_youth != 0
+										)
+										AND (
+											ra.has_men IS NOT NULL
+											OR ra.has_men != 0
+										)
+										AND (
+											ra.has_men_youth IS NOT NULL
+											OR ra.has_men_youth != 0
+										)
 									)
 									OR (
 										ra.actor_type_id = 5
@@ -1027,11 +1039,26 @@ export class resultValidationRepository
 						(
 							ra.sex_and_age_disaggregation = 0
 							AND (
-								ra.women IS NULL
-								AND ra.has_women IS NULL
-								AND ra.has_women_youth IS NULL
-								AND ra.has_men IS NULL
-								AND ra.has_men_youth IS NULL
+								(
+									ra.women IS NULL
+									OR ra.women = 0
+								)
+								AND (
+									ra.has_women IS NULL
+									OR ra.has_women = 0
+								)
+								AND (
+									ra.has_women_youth IS NULL
+									OR ra.has_women_youth = 0
+								)
+								AND (
+									ra.has_men IS NULL
+									OR ra.has_men = 0
+								)
+								AND (
+									ra.has_men_youth IS NULL
+									OR ra.has_men_youth = 0
+								)
 								OR (
 									ra.actor_type_id = 5
 									AND (
@@ -1287,28 +1314,36 @@ export class resultValidationRepository
 			WHEN (
 				rid.innovation_pdf = 1
 				AND (
-					SELECT 
+					SELECT
 						COUNT(*)
-					FROM 
-						evidence e 
+					FROM
+						evidence e
 					WHERE
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			WHEN (
 				rid.innovation_pdf = 1
 				AND (
-					SELECT 
+					SELECT
 						COUNT(*)
-					FROM 
-						evidence e 
+					FROM
+						evidence e
 					WHERE
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-				) < 3
+						AND (
+							e.link IS NOT NULL
+							AND e.link != ''
+						)
+				) < 1
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
@@ -1382,18 +1417,10 @@ export class resultValidationRepository
 		'cap-dev-info' as section_name,
 		CASE
 			WHEN (
-				rcd.unkown_using = 0
-				AND (
-					rcd.female_using IS NULL
-					OR rcd.male_using IS NULL
-					OR non_binary_using IS NULL
-				)
-			) THEN FALSE
-			WHEN (
-				rcd.unkown_using = 1
-				AND (
-					rcd.has_unkown_using IS NULL
-				)
+				rcd.female_using IS NULL
+				OR rcd.male_using IS NULL
+				OR non_binary_using IS NULL
+				OR rcd.has_unkown_using IS NULL
 			) THEN FALSE
 			WHEN (
 				rcd.capdev_term_id IS NULL
@@ -1541,7 +1568,7 @@ export class resultValidationRepository
   async resultIsValid(resultId: number) {
     const queryData = `
 	SELECT
-		IFNULL(v.section_seven, 1) *
+		IF(r.result_type_id in (4,8,9),1, v.section_seven) *
   		v.general_information *
   		v.theory_of_change *
   		v.partners *
@@ -1549,6 +1576,8 @@ export class resultValidationRepository
   		v.links_to_results *
   		v.evidence as validation
   	from validation v 
+	  inner join \`result\` r on r.id = v.results_id 
+	  and r.is_active > 0
   		WHERE v.results_id = ?
 		  and v.is_active > 0;
     `;

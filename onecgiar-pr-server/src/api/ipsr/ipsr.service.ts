@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { env } from 'process';
+import { isProduction } from '../../shared/utils/validation.utils';
 
 @Injectable()
 export class IpsrService {
@@ -14,24 +14,22 @@ export class IpsrService {
 
   async findAllInnovations(initiativeId: number[]) {
     try {
-      const innovation = await this._ipsrRespository.getResultsInnovation(
-        initiativeId,
-      );
+      const innovation =
+        await this._ipsrRespository.getResultsInnovation(initiativeId);
       return this._returnResponse.format({
         response: innovation,
         message: 'Successful response',
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(error, !isProduction());
     }
   }
 
   async findInnovationDetail(resultId: number) {
     try {
-      const result = await this._ipsrRespository.getResultInnovationDetail(
-        resultId,
-      );
+      const result =
+        await this._ipsrRespository.getResultInnovationDetail(resultId);
       if (!result) {
         throw {
           response: result,
@@ -52,9 +50,8 @@ export class IpsrService {
 
   async findOneInnovation(resultId: number) {
     try {
-      const result = await this._ipsrRespository.getResultInnovationById(
-        resultId,
-      );
+      const result =
+        await this._ipsrRespository.getResultInnovationById(resultId);
       if (!result[0]) {
         throw {
           response: result,

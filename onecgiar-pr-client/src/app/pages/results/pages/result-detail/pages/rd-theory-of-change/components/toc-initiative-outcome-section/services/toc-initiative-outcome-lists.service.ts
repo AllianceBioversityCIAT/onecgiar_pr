@@ -7,14 +7,13 @@ import { ApiService } from '../../../../../../../../../shared/services/api/api.s
 export class TocInitiativeOutcomeListsService {
   outcomeLevelList = [];
   constructor(private api: ApiService) {
-    this.api.tocApiSE.GET_AllTocLevels().subscribe(
-      ({ response }) => {
-        //(response);
-        this.outcomeLevelList = response;
+    this.api.tocApiSE.GET_AllTocLevels().subscribe({
+      next: ({ response }) => {
+        this.outcomeLevelList = response.filter(item => item.toc_level_id === 2 || item.toc_level_id === 3);
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 }
