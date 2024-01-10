@@ -205,7 +205,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSyncSection() {
-    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> This will delete not saved information.`;
+    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> Please note that unsaved changes in the section will be lost.`;
 
     this.customizedAlertsFeSE.show(
       {
