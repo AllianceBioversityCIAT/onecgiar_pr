@@ -2107,12 +2107,13 @@ describe('ResultsApiService', () => {
   describe('GET_keyResultStoryInitiativeId', () => {
     it('should call GET_keyResultStoryInitiativeId and return expected data', (done) => {
       const initiativeId = 1;
-      service.GET_keyResultStoryInitiativeId(initiativeId).subscribe(response => {
+      const phase = 'phase'
+      service.GET_keyResultStoryInitiativeId(initiativeId, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/type-one-report/key-result-story/initiative/${initiativeId}?phase=${phase}`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -2122,12 +2123,14 @@ describe('ResultsApiService', () => {
   describe('GET_excelFullReportByInitiativeId', () => {
     it('should call GET_excelFullReportByInitiativeId and return expected data', (done) => {
       const initiativeId = 1;
-      service.GET_excelFullReportByInitiativeId(initiativeId).subscribe(response => {
+      const phase = 'phase';
+
+      service.GET_excelFullReportByInitiativeId(initiativeId,phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/results/excel-full-report/${initiativeId}?phase=${phase}`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
