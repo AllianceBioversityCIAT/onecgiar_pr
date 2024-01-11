@@ -288,9 +288,11 @@ export class ResultsTocResultsService {
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
             createResultsTocResultDto,
+            result_id,
           );
           await this._resultsTocResultRepository.saveIndicatorsContributors(
             createResultsTocResultDto,
+            result_id
           );
         }
 
@@ -794,6 +796,31 @@ export class ResultsTocResultsService {
     try {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
       if (contributors_result_toc_result?.length) {
+        // * Logic to delete a WP from Contributors
+        const incomingRtRIds = [];
+        contributors_result_toc_result.forEach((contributor) => {
+          contributor.result_toc_results.forEach((rtrc) => {
+            incomingRtRIds.push(rtrc?.result_toc_result_id);
+          });
+        });
+
+        const allRtRsContributors =
+          await this._resultsTocResultRepository.findBy({
+            result_id,
+            initiative_id: Not(initSubmitter),
+            is_active: true,
+          });
+
+        allRtRsContributors.forEach(async (storedRtR) => {
+          if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
+            await this._resultsTocResultRepository.update(
+              storedRtR.result_toc_result_id,
+              { is_active: false },
+            );
+          }
+        });
+
+        // * Map multiple WPs to the same initiative
         const RtRArray: ResultsTocResult[] = [];
         for (const contributor of contributors_result_toc_result) {
           for (const rtrc of contributor.result_toc_results) {
@@ -851,34 +878,9 @@ export class ResultsTocResultsService {
             }
           }
         }
-
-        // * Logic to delete a WP from Contributors
-        const incomingRtRIds = [];
-        contributors_result_toc_result.forEach((contributor) => {
-          contributor.result_toc_results.forEach((rtrc) => {
-            incomingRtRIds.push(rtrc?.result_toc_result_id);
-          });
-        });
-
-        const allRtRsContributors =
-          await this._resultsTocResultRepository.findBy({
-            result_id,
-            initiative_id: Not(initSubmitter),
-            is_active: true,
-          });
-
-        allRtRsContributors.forEach(async (storedRtR) => {
-          if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
-            await this._resultsTocResultRepository.update(
-              storedRtR.result_toc_result_id,
-              { is_active: false },
-            );
-          }
-        });
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
   }
 }
-
