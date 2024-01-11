@@ -34,6 +34,14 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     }
   }
 
+  checkGenderAlert(actor) {
+    if (actor.sex_and_age_disaggregation) return true;
+
+    if (actor.has_men || actor.has_men_youth || actor.has_women || actor.has_women_youth) return true;
+
+    return false;
+  }
+
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
       this.actorsTypeList = response;
