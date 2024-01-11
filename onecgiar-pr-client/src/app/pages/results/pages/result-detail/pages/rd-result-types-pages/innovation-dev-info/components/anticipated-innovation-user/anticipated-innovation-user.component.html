@@ -49,6 +49,9 @@
                         </app-pr-input>
                     </div>
                 </div>
+
+                <div appFeedbackValidation labelText="Gender disaggregation" [isComplete]="checkGenderAlert(actorItem)"></div>
+
                 <div style="margin: 25px 0;">
                     <div *ngIf="!this.actorItem.sex_and_age_disaggregation">
                         <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
