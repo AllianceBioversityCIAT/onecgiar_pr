@@ -417,23 +417,23 @@ export class ResultsTocResultsService {
             {
               planned_result: null,
               initiative_id: resTocRes
-                ? result_toc_results[0].initiative_id
+                ? result_toc_results[0]?.initiative_id
                 : null,
               official_code: resTocRes
-                ? result_toc_results[0].official_code
+                ? result_toc_results[0]?.official_code
                 : null,
-              short_name: resTocRes ? result_toc_results[0].short_name : null,
+              short_name: resTocRes ? result_toc_results[0]?.short_name : null,
               result_toc_results,
             },
           ];
 
           resTocResConResponse.forEach((response) => {
             individualResponses.push({
-              planned_result: response.planned_result,
-              initiative_id: response.initiative_id,
-              official_code: response.official_code,
-              short_name: response.short_name,
-              result_toc_results: response.result_toc_results,
+              planned_result: response?.planned_result,
+              initiative_id: response?.initiative_id,
+              official_code: response?.official_code,
+              short_name: response?.short_name,
+              result_toc_results: response?.result_toc_results,
             });
           });
         }
@@ -512,9 +512,9 @@ export class ResultsTocResultsService {
           contributing_center: resCenters,
           result_toc_result: {
             planned_result: null,
-            initiative_id: resTocRes ? resTocRes[0].initiative_id : null,
-            official_code: resTocRes ? resTocRes[0].official_code : null,
-            short_name: resTocRes ? resTocRes[0].short_name : null,
+            initiative_id: resTocRes ? resTocRes[0]?.initiative_id : null,
+            official_code: resTocRes ? resTocRes[0]?.official_code : null,
+            short_name: resTocRes ? resTocRes[0]?.short_name : null,
             result_toc_results: resTocRes,
           },
           contributors_result_toc_result: individualResponses,
