@@ -1,5 +1,6 @@
+/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { Router } from '@angular/router';
@@ -18,6 +19,8 @@ export class StepN3Component implements OnInit {
     { id: false, name: 'No expert workshop was organized' }
   ];
   result_core_innovation: any;
+  innoUseLevel: number;
+
   constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
   ngOnInit(): void {
@@ -54,13 +57,9 @@ export class StepN3Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      //('%cGET', 'font-size: 20px; color: #2BBE28;');
-      //(response);
-      //(response);
       this.ipsrStep3Body = this.openClosed(response);
 
       this.convertOrganizations(response?.innovatonUse?.organization);
-      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
       this.result_core_innovation = response.result_core_innovation;
 
       if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
@@ -74,16 +73,16 @@ export class StepN3Component implements OnInit {
       }
     });
   }
+
+  isOptionalUseLevel() {
+    this.innoUseLevel = this.innovationUseList.findIndex(item => item.id === this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based);
+    return Boolean(this.innoUseLevel === 0);
+  }
+
   onSaveSection() {
-    //('%cPATCH', 'font-size: 20px; color: #f68541;');
-    //(this.ipsrStep3Body);
-    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByRiId(this.ipsrStep3Body).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
       this.getSectionInformation();
-      // }, 3000);
     });
   }
 
@@ -101,13 +100,10 @@ export class StepN3Component implements OnInit {
       this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
     }
     this.convertOrganizationsTosave();
-    // result_ip_result_complementary
 
     this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
       this.getSectionInformation();
-      // }, 3000);
+
       setTimeout(() => {
         if (descrip == 'next') {
           this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
@@ -120,20 +116,12 @@ export class StepN3Component implements OnInit {
 
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      //(response);
       this.rangesOptions = response;
     });
   }
-  // GETAllClarisaInnovationReadinessLevels() {
-  //   this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-  //     //(response);
-  //     this.rangesOptions = response;
-  //   });
-  // }
 
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
-      //(response);
       this.innovationUseList = response;
     });
   }
@@ -164,7 +152,7 @@ export class StepN3Component implements OnInit {
   }
 
   convertOrganizationsTosave() {
-    this.ipsrStep3Body.innovatonUse.organization.map((item: any) => {
+    this.ipsrStep3Body.innovatonUse.organization.forEach((item: any) => {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }

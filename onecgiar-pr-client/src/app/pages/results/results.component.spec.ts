@@ -19,6 +19,11 @@ describe('ResultsComponent', () => {
       },
       rolesSE:{
         platformIsClosed:true
+      },
+      globalVariablesSE: {
+        get: {
+          result_is_closed:true
+        }
       }
     }
     mockIpsrDataControlService = {
@@ -52,8 +57,8 @@ describe('ResultsComponent', () => {
       component.ngOnInit();
       const spy = jest.spyOn(mockApiService.dataControlSE, 'detailSectionTitle');
       expect(spy).toHaveBeenCalledWith('Results');
-      expect(mockIpsrDataControlService.inIpsr).toBe(false);
-      expect(mockApiService.rolesSE.platformIsClosed).toBe(environment.resultModuleIsClosed);
+      expect(mockIpsrDataControlService.inIpsr).toBeFalsy();
+      expect(mockApiService.rolesSE.platformIsClosed).toBe(mockApiService.globalVariablesSE.get.result_is_closed);
     });
   });
 });

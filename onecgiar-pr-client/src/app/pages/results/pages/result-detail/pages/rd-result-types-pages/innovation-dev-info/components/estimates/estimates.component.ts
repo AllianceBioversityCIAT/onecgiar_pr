@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-estimates',
