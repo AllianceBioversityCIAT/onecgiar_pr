@@ -115,12 +115,12 @@
             [(ngModel)]="this.sectionData.ostSubmitted">
         </app-pr-yes-or-not>
         <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
-            placeholder="Select MELIA type" [required]="false" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
+            placeholder="Select MELIA type" [required]="true" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
             *ngIf="this.sectionData.ostSubmitted === false">
         </app-pr-select>
         <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from those included in OST Section 6.3"
             optionLabel="melia_study_title" optionValue="melia_id"
-            placeholder="Select MELIA from those included in OST Section 6.3" [required]="false"
+            placeholder="Select MELIA from those included in OST Section 6.3" [required]="true"
             [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
         </app-pr-select>
     </div>
