@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TorPartnershipsComponent } from './tor-partnerships.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('TorPartnershipsComponent', () => {
   let component: TorPartnershipsComponent;
@@ -8,9 +9,9 @@ describe('TorPartnershipsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TorPartnershipsComponent ]
-    })
-    .compileComponents();
+      declarations: [TorPartnershipsComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TorPartnershipsComponent);
     component = fixture.componentInstance;

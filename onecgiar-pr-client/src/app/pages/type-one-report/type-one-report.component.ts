@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { Title } from '@angular/platform-browser';
+/* eslint-disable camelcase */
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
 import { Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { TypePneReportRouting } from '../../shared/routing/routing-data';
   templateUrl: './type-one-report.component.html',
   styleUrls: ['./type-one-report.component.scss']
 })
-export class TypeOneReportComponent {
+export class TypeOneReportComponent implements OnInit {
   sections: any = [
     // { path: 'fact-sheet', icon: '', name: 'Fact sheet', underConstruction: true },
     // { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results', underConstruction: true },
@@ -22,7 +22,8 @@ export class TypeOneReportComponent {
     // { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
   ];
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router, public phasesSE: PhasesService) {}
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService) {}
+
   ngOnInit(): void {
     TypePneReportRouting.forEach((section: any) => (section.prName ? this.sections.push({ ...section, name: section.prName }) : null));
 
@@ -34,8 +35,10 @@ export class TypeOneReportComponent {
 
   getThePhases() {
     const autoSelectOpenPhases = (phases: any[]) => {
-      this.typeOneReportSE.phaseSelected = phases.find((phase: any) => phase.status)?.id;
+      const openPhase = phases.find((phase: any) => phase.status);
+      this.typeOneReportSE.phaseSelected = openPhase?.id;
     };
+
     const useLoadedPhases = () => {
       autoSelectOpenPhases(this.phasesSE.phases.reporting);
       this.typeOneReportSE.reportingPhases = this.phasesSE.phases.reporting;
@@ -48,7 +51,11 @@ export class TypeOneReportComponent {
       });
     };
 
-    this.phasesSE.phases.reporting.length ? useLoadedPhases() : listenWhenPhasesAreLoaded();
+    if (this.phasesSE.phases.reporting.length) {
+      useLoadedPhases();
+    } else {
+      listenWhenPhasesAreLoaded();
+    }
   }
 
   GET_AllInitiatives() {
@@ -59,10 +66,12 @@ export class TypeOneReportComponent {
       this.typeOneReportSE.sanitizeUrl();
     });
   }
+
   selectFirstInitiative() {
     this.typeOneReportSE.initiativeSelected = this.api.dataControlSE.myInitiativesList[0]?.official_code;
     this.typeOneReportSE.sanitizeUrl();
   }
+
   selectInitiativeEvent() {
     const currentUrl = this.router.url;
     this.router.navigateByUrl(`/type-one-report/ipi-cgiar-portfolio-linkages`).then(() => {
