@@ -106,12 +106,19 @@
             </div>
         </div>
     </div>
+    
+    <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null">
+    </div>
 
     <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
     </app-pr-yes-or-not>
-
+    
     <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
-        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?"
+        
+        <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null">
+        </div>
+        
+        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true"
             [(ngModel)]="this.sectionData.ostSubmitted">
         </app-pr-yes-or-not>
         <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
