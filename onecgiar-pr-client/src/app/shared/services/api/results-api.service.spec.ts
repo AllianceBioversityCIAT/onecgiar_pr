@@ -916,7 +916,8 @@ describe('ResultsApiService', () => {
         bodyNewTheoryOfChanges: [],
         impactsTarge: [],
         sdgTargets: [],
-        bodyActionArea: []
+        bodyActionArea: [],
+        planned_result: true
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 

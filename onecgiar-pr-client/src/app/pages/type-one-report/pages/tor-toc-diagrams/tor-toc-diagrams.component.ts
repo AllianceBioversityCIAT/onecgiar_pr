@@ -16,10 +16,12 @@ export class TorTocDiagramsComponent implements OnInit {
   }
 
   getResultFolders() {
-    console.log(this.typeOneReportSE.phaseSelected);
     this.folderUrl = '';
     this.api.endpointsSE.resultFolders(this.typeOneReportSE.phaseSelected).subscribe({
-      next: resp => (this.folderUrl = resp?.response?.shift()?.folder_path),
+      next: resp => {
+        const firstFolderPath = resp?.response?.[0]?.folder_path;
+        this.folderUrl = firstFolderPath || '';
+      },
       error: err => {
         console.log(err);
       }

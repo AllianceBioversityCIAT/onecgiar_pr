@@ -1,3 +1,6 @@
+/* eslint-disable camelcase */
+/* eslint-disable no-console */
+/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
@@ -7,8 +10,8 @@ import { TypeOneReportService } from '../../type-one-report.service';
   templateUrl: './tor-key-result-story.component.html',
   styleUrls: ['./tor-key-result-story.component.scss']
 })
-export class TorKeyResultStoryComponent {
-  constructor(private api: ApiService, private typeOneReportSE: TypeOneReportService) {}
+export class TorKeyResultStoryComponent implements OnInit {
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService) {}
   tablesList = [];
 
   ngOnInit(): void {
@@ -18,8 +21,6 @@ export class TorKeyResultStoryComponent {
   GET_keyResultStoryInitiativeId() {
     this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id, this.typeOneReportSE.phaseSelected).subscribe(({ response }) => {
       this.typeOneReportSE.keyResultStoryData = response;
-      console.log(response);
-      //(response);
       this.tablesList = [];
       response.forEach(table => {
         this.formatTable(table);
@@ -28,15 +29,15 @@ export class TorKeyResultStoryComponent {
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe(
-      resp => {
+    this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe({
+      next: resp => {
         this.GET_keyResultStoryInitiativeId();
         this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
   }
 
   formatTable(tableData) {
@@ -55,22 +56,27 @@ export class TorKeyResultStoryComponent {
     ];
 
     const table = tableData;
-    if (!table) return (data = null);
-    const noDataText = '<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>';
 
-    data[0].value = table.result_title || '<div class="no-data-text-format">There are not result title data</div>';
+    if (!table) {
+      data = null;
+      return;
+    }
+
+    const noDataText = '<div class="no-data-text-format">This result is not an impact reported in the PRMS Reporting Tool</div>';
+
+    data[0].value = table.result_title || '<div class="no-data-text-format">There is no result title data</div>';
     data[0].id = table.result_code;
-    data[1].value = table.primary_submitter || '<div class="no-data-text-format">There are not primary submitter data</div>';
-    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are not contributing Initiatives data</div>';
-    data[3].value = table.contributing_center || '<div class="no-data-text-format">There are not contributing centers data</div>';
-    data[4].value = table.contribution_external_partner || '<div class="no-data-text-format">There are not contributing external partner(s) data</div>';
-    const countriesText = `<strong>Countries:</strong><br> ${table.countries} <br>`;
-    const regionsText = `<br><strong>Regions:</strong><br>${table.regions}<br> `;
-    data[5].value = (table.countries ? countriesText : '') + (table.regions ? regionsText : '') || '<div class="no-data-text-format">There are not Geographic location data</div>';
+    data[1].value = table.primary_submitter || '<div class="no-data-text-format">There is no primary submitter data</div>';
+    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
+    data[3].value = table.contributing_center || '<div class="no-data-text-format">There are no contributing centers data</div>';
+    data[4].value = table.contribution_external_partner || '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
+    const countriesText = table.countries ? `<strong>Countries:</strong><br> ${table.countries} <br>` : '';
+    const regionsText = table.regions ? `<br><strong>Regions:</strong><br>${table.regions}<br> ` : '';
+    data[5].value = table.countries || table.regions ? countriesText + regionsText : '<div class="no-data-text-format">There is no Geographic location data</div>';
     data[6].value = JSON.parse(table?.impact_areas) || noDataText;
     data[7].value = table.other_impact_areas || noDataText;
     data[8].value = table.global_targets || noDataText;
-    data[9].value = table.web_legacy || '<div class="no-data-text-format">There are not web legacy data</div>';
+    data[9].value = table.web_legacy || '<div class="no-data-text-format">There is no web legacy data</div>';
 
     this.tablesList.push({ data, header });
   }
