@@ -25,11 +25,6 @@
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
-
-            <div appFeedbackValidation
-                labelText="Estimation of total USD-value of pooled investment by CGIAR initiatives"
-                [isComplete]="item.kind_cash || item.is_determined">
-            </div>
         </tr>
     </table>
     <div style="margin-bottom: 45px;" *ngIf="!body.initiative_expected_investment.length">
@@ -69,11 +64,6 @@
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
-
-            <div appFeedbackValidation
-                labelText="Estimated total USD-value of investment by CGIAR W3 or bilateral projects"
-                [isComplete]="item.kind_cash || item.is_determined">
-            </div>
         </tr>
     </table>
     <app-no-data-text *ngIf="!body.bilateral_expected_investment.length"
@@ -118,10 +108,7 @@
                     [options]="[{name:'This is yet to be determined',id:true}]">
                 </app-pr-radio-button>
             </td>
-
-            <div appFeedbackValidation labelText="Estimated total USD-value of (co-)investment by partners"
-                [isComplete]="item.kind_cash || item.is_determined">
-            </div>
+            
         </tr>
     </table>
 
