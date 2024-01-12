@@ -1,3 +1,5 @@
+/* eslint-disable arrow-parens */
+/* eslint-disable camelcase */
 import chroma from 'chroma-js';
 
 import { Component, OnInit } from '@angular/core';
@@ -6,6 +8,7 @@ import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/kn
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
+import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -21,7 +24,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   fair_data: Array<{ key: string; value: FairSpecificData }>;
   fairGuideline = 'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
 
-  constructor(public api: ApiService, public rolesSE: RolesService) {}
+  constructor(public api: ApiService, public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -38,18 +41,29 @@ export class KnowledgeProductInfoComponent implements OnInit {
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
-      ////(this.meliaTypes);
     });
     this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
       this.ostMeliaStudies = response;
-      ////(this.meliaTypes);
     });
   }
 
   onSyncSection() {
-    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      this.getSectionInformation();
-    });
+    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> Please note that unsaved changes in the section will be lost.`;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Sync confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'yes, sync information'
+      },
+      () => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+          this.getSectionInformation();
+        });
+      }
+    );
   }
 
   private _mapFields(response: KnowledgeProductBody): KnowledgeProductBodyMapped {
@@ -69,10 +83,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
     mapped.onlineYearCG = response.metadataCG?.online_year;
-    //mapped.findable = response.findable;
-    //mapped.accessible = response.accessible;
-    //mapped.interoperable = response.interoperable;
-    //mapped.reusable = response.reusable;
     this.fair_data = this.filterOutObject(response.fair_data);
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
@@ -87,10 +97,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
       } else {
         this.getMetadataFromCGSpace(mapped, response);
       }
-    } else {
-      if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
-        this.getMetadataFromCGSpace(mapped, response);
-      }
+    } else if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
+      this.getMetadataFromCGSpace(mapped, response);
     }
 
     return mapped;
@@ -133,7 +141,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    ////(this.sectionData);
     this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).subscribe(({ response }) => {
       this.getSectionInformation();
     });

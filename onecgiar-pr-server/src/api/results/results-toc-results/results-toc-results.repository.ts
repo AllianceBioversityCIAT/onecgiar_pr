@@ -2254,7 +2254,7 @@ select *
     try {
       for (const contributor of contributors_result_toc_result) {
         for (const toc of contributor.result_toc_results) {
-          if (toc?.toc_result_id) {
+          if (toc?.toc_result_id && toc?.indicators) {
             for (const indicators of toc.indicators) {
               const rtrExist = await this.findOne({
                 where: {
