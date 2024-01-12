@@ -555,7 +555,7 @@ export class ResultsKnowledgeProductsService {
               Kindly review the rules provided at the beginning of the submission.<br><br>
               If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
               <b>About this error:</b><br>
-              Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+              Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
             status: HttpStatus.UNPROCESSABLE_ENTITY,
           };
         }
