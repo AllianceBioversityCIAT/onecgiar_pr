@@ -1,16 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { PartnersBody } from './models/partnersBody';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { RdPartnersService } from './rd-partners.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-rd-partners',
   templateUrl: './rd-partners.component.html',
   styleUrls: ['./rd-partners.component.scss']
 })
-export class RdPartnersComponent {
+export class RdPartnersComponent implements OnInit {
   primaryText = ' - <strong>Primary</strong> ';
 
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
@@ -18,7 +19,8 @@ export class RdPartnersComponent {
 
   alertStatusMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService) {}
+  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
@@ -35,16 +37,27 @@ export class RdPartnersComponent {
   }
 
   onSyncSection() {
-    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      this.rdPartnersSE.getSectionInformation();
-    });
+    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> Please note that unsaved changes in the section will be lost.`;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Sync confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'yes, sync information'
+      },
+      () => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+          this.rdPartnersSE.getSectionInformation();
+        });
+      }
+    );
   }
 
   onSaveSection() {
-    //(this.rdPartnersSE.partnersBody);
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) this.rdPartnersSE.partnersBody.institutions = [];
     this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(resp => {
-      //(resp);
       this.rdPartnersSE.getSectionInformation();
     });
   }
