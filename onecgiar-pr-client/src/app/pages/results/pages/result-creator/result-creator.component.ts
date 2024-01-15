@@ -17,10 +17,11 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool.<br>
-  The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. This metadata cannot be edited in the PRMS.<br><br>
-  The handle will be verified, and only knowledge products from ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year - 1} but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} (“Date Issued”) will not be accepted to prevent double counting across consecutive years. Handles already reported in the ${this.phasesService?.currentlyActivePhaseOnReporting?.phase_year} reporting cycle will also not be accepted. <br><br>
-  If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.`;
+  kpAlertDescription = `Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool.<br><br>
+  The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
+  The handle will be verified, and only knowledge products from ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). If the online publication date is missing, the issued date (“Date Issued”) will be considered. Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year + 1} will be accepted for the ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} reporting phase.<br><br>
+  Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year - 1} but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous year. Handles already reported will also not be accepted.<br><br>
+  If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.<br><br>`;
   allInitiatives = [];
   allPhases = [];
 
