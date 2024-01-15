@@ -202,26 +202,10 @@ export class ResultsCapacityDevelopmentsRepository
       r.id 'Result ID', 
       r.result_code 'Result Code',
       -- Initiative Output - Capacity sharing for development specific fields
-      IF(
-          rcd.unkown_using = 1,
-          'Not applicable',
-          format(rcd.female_using, 0, 'es_ES')
-      ) 'Number of females (CapDev)',
-      IF(
-          rcd.unkown_using = 1,
-          'Not applicable',
-          format(rcd.male_using, 0, 'es_ES')
-      ) 'Number of males (CapDev)',
-      IF(
-          rcd.unkown_using = 1,
-          'Not applicable',
-          format(rcd.non_binary_using, 0, 'es_ES')
-      ) 'Number of non-binary (CapDev)',
-      IF(
-        rcd.unkown_using = 0,
-        'Not applicable',
-        rcd.has_unkown_using
-      ) 'Has unknown using (CapDev)',
+      format(rcd.female_using, 0, 'es_ES') AS 'Number of females (CapDev)',
+      format(rcd.male_using, 0, 'es_ES') AS 'Number of males (CapDev)',
+      format(rcd.non_binary_using, 0, 'es_ES') AS 'Number of non-binary (CapDev)',
+      format(rcd.has_unkown_using, 0, 'es_ES') AS 'Has unknown using (CapDev)',
       if(ct.capdev_term_id in (3,4), ct.name, concat(ct.term, ' - ', ct.name)) as 'Lenght of training',
       cdm.name 'Delivery method',
       (case
