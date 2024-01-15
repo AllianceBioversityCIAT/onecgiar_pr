@@ -40,7 +40,7 @@ describe('TorFactSheetComponent', () => {
         name: 'Country A'
       }
     ],
-    web_page: 'http://link.com',
+    web_page: 'https://link.com',
     budgetProposal: [
       {
         year: 2023,
@@ -115,7 +115,7 @@ describe('TorFactSheetComponent', () => {
       expect(component.data[9].value).toContain('<strong>100</strong><br>adaptation desc');
       expect(component.data[10].value).toContain('<strong>200</strong><br>mitigation desc');
       expect(component.data[11].value).toContain('<strong class=\"tor-fact-desc\">This score is derived from assessing the Initiative Proposal against adapted OECD gender equity scoring criteria.</strong><br><strong>Score 300</strong><br>gender desc');
-      expect(component.data[12].value).toContain('<a href="http://link.com" target="_blank">http://link.com</a>');
+      expect(component.data[12].value).toContain('<a href="https://link.com" target="_blank">https://link.com</a>');
       expect(component.loadingData).toBeFalsy();
     });
 
