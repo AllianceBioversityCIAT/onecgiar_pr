@@ -545,8 +545,9 @@ export class ResultsKnowledgeProductsService {
 
       if ((mqapResponse?.Type ?? '') == 'Journal Article') {
         if (
-          (cgYear.field_name == 'online_publication_date' ||
-            cgYear.field_name == 'issued_date') &&
+          ['online_publication_date', 'issued_date'].includes(
+            cgYear.field_name,
+          ) &&
           (cgYear.year ?? 0) != versionCgspaceYear
         ) {
           throw {
