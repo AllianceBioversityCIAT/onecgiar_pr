@@ -212,11 +212,12 @@ export class resultValidationRepository
 			(
 				IFNULL(
 					(
-						SELECT IF(COUNT(rtr.toc_result_id IS NULL) > 0, 1, 0)
+						SELECT COUNT(DISTINCT rtr.initiative_id)
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
 						AND rtr.is_active > 0
+						AND rtr.toc_result_id IS NOT NULL
 					),
 					0
 				)
