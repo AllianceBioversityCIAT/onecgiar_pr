@@ -37,7 +37,7 @@ export class RdPartnersComponent implements OnInit {
   }
 
   onSyncSection() {
-    const confirmationMessage = `Are you sure you want to sync the information of this result? <br/> Please note that unsaved changes in the section will be lost.`;
+    const confirmationMessage = `Sync result with CGSpace? <br/> Unsaved changes in the section will be lost. `;
 
     this.customizedAlertsFeSE.show(
       {
@@ -45,7 +45,7 @@ export class RdPartnersComponent implements OnInit {
         title: 'Sync confirmation',
         description: confirmationMessage,
         status: 'warning',
-        confirmText: 'yes, sync information'
+        confirmText: 'Yes, sync information'
       },
       () => {
         this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
