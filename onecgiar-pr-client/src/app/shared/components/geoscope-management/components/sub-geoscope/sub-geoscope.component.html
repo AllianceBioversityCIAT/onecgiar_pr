@@ -24,8 +24,8 @@
                 *ngFor="let sub of this.obj_country.sub_national; let i=index">
                 <div class="name" [innerHtml]="sub?.formatedName"></div><i
                     *ngIf="!this.readOnly"
-                    class="material-icons-round" 
-                    (click)="deleteSubNational(i)">cancel</i>
+                    class="material-icons-round delete" 
+                    (click)="deleteSubNational(i)">remove_circle </i>
                 </div>
             </div>
             <div class="dhs" *ngIf="!this.obj_country?.sub_national?.length">
