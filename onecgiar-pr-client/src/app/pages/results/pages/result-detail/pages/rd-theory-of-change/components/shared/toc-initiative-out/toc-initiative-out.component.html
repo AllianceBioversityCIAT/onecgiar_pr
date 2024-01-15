@@ -1,3 +1,7 @@
+<div appFeedbackValidation labelText="Does this result match a planned result in your Theory of Change?"
+        [isComplete]="this.initiative.planned_result !== null">
+    </div>
+
 <div class="editable_field" [ngClass]="{'global-editable': this.editable}">
     <app-pr-yes-or-not [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
         [(ngModel)]="this.initiative.planned_result" (selectOptionEvent)="clearTocResultId()"

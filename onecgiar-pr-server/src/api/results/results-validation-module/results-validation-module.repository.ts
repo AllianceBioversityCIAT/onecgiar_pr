@@ -212,11 +212,12 @@ export class resultValidationRepository
 			(
 				IFNULL(
 					(
-						SELECT SUM(IF(rtr.toc_result_id IS NOT NULL, 1, 0))
+						SELECT COUNT(DISTINCT rtr.initiative_id)
 						FROM results_toc_result rtr
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
 						AND rtr.is_active > 0
+						AND rtr.toc_result_id IS NOT NULL
 					),
 					0
 				)
@@ -932,7 +933,7 @@ export class resultValidationRepository
 			AND (
 				rid.innovation_readiness_level_id is null
 				and rid.innovation_readiness_level_id <> ''
-			) 
+			)
 			AND (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
 			WHEN rid.innovation_user_to_be_determined != 1
 			AND (
@@ -950,10 +951,22 @@ export class resultValidationRepository
 								AND (
 									(
 										ra.actor_type_id != 5
-										AND ra.has_women IS NOT NULL
-										AND ra.has_women_youth IS NOT NULL
-										AND ra.has_men IS NOT NULL
-										AND ra.has_men_youth IS NOT NULL
+										AND (
+											ra.has_women IS NOT NULL
+											OR ra.has_women != 0
+										)
+										AND (
+											ra.has_women_youth IS NOT NULL
+											OR ra.has_women_youth != 0
+										)
+										AND (
+											ra.has_men IS NOT NULL
+											OR ra.has_men != 0
+										)
+										AND (
+											ra.has_men_youth IS NOT NULL
+											OR ra.has_men_youth != 0
+										)
 									)
 									OR (
 										ra.actor_type_id = 5
@@ -1027,11 +1040,26 @@ export class resultValidationRepository
 						(
 							ra.sex_and_age_disaggregation = 0
 							AND (
-								ra.women IS NULL
-								AND ra.has_women IS NULL
-								AND ra.has_women_youth IS NULL
-								AND ra.has_men IS NULL
-								AND ra.has_men_youth IS NULL
+								(
+									ra.women IS NULL
+									OR ra.women = 0
+								)
+								AND (
+									ra.has_women IS NULL
+									OR ra.has_women = 0
+								)
+								AND (
+									ra.has_women_youth IS NULL
+									OR ra.has_women_youth = 0
+								)
+								AND (
+									ra.has_men IS NULL
+									OR ra.has_men = 0
+								)
+								AND (
+									ra.has_men_youth IS NULL
+									OR ra.has_men_youth = 0
+								)
 								OR (
 									ra.actor_type_id = 5
 									AND (
@@ -1287,10 +1315,10 @@ export class resultValidationRepository
 			WHEN (
 				rid.innovation_pdf = 1
 				AND (
-					SELECT 
+					SELECT
 						COUNT(*)
-					FROM 
-						evidence e 
+					FROM
+						evidence e
 					WHERE
 						e.result_id = r.id
 						AND e.evidence_type_id = 3
@@ -1304,10 +1332,10 @@ export class resultValidationRepository
 			WHEN (
 				rid.innovation_pdf = 1
 				AND (
-					SELECT 
+					SELECT
 						COUNT(*)
-					FROM 
-						evidence e 
+					FROM
+						evidence e
 					WHERE
 						e.result_id = r.id
 						AND e.evidence_type_id = 4

@@ -1,17 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { environment } from '../../../../../../../environments/environment.prod';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-rd-geographic-location',
   templateUrl: './rd-geographic-location.component.html',
   styleUrls: ['./rd-geographic-location.component.scss']
 })
-export class RdGeographicLocationComponent {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public regionsCountriesSE: RegionsCountriesService) {}
+export class RdGeographicLocationComponent implements OnInit {
   geographicLocationBody = new GeographicLocationBody();
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
@@ -33,9 +32,13 @@ export class RdGeographicLocationComponent {
       id: 4
     }
   ];
+
+  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public regionsCountriesSE: RegionsCountriesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+
   ngOnInit(): void {
     this.getSectionInformation();
   }
+
   geographic_focus_description(id) {
     let tags = '';
     switch (id) {
@@ -49,26 +52,41 @@ export class RdGeographicLocationComponent {
     tags += '';
     return tags;
   }
+
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
-      //(response);
     });
   }
   onSaveSection() {
-    //(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
       this.getSectionInformation();
     });
   }
+
   onSyncSection() {
-    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      this.getSectionInformation();
-    });
+    const confirmationMessage = `Sync result with CGSpace? <br/> Unsaved changes in the section will be lost. `;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Sync confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'Yes, sync information'
+      },
+      () => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+          this.getSectionInformation();
+        });
+      }
+    );
   }
+
   thereAnyRegionText() {
     return `The list of regions below follows the <a href='${this.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;
   }
+
   thereAnycountriesText() {
     return `The list of countries below follows the <a href='${this.ISO3166}' class="open_route" target='_blank'>ISO 3166<a> standard`;
   }

@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentLinks } from '../../model/InnovationDevelopmentLinks.model';
 

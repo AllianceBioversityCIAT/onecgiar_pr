@@ -352,7 +352,24 @@ describe('RdGeneralInformationComponent', () => {
 
       component.sendIntitutionsTypes();
       expect(spySendIntitutionsTypes).toHaveBeenCalled();
-      expect(component.generalInfoBody.institutions_type).toEqual([mockInstitutions_typeNoId]);
+      expect(component.generalInfoBody.institutions_type).toEqual([
+        {
+          name: "name"
+        },
+        {
+          institutions_id:1,
+          name: "name"
+        }
+      ]);
+    });
+
+    it('should handle correctly if institutions_type and institutions are undefined', () => {
+      component.generalInfoBody.institutions_type = undefined;
+      component.generalInfoBody.institutions = undefined;
+
+      component.sendIntitutionsTypes();
+  
+      expect(component.generalInfoBody.institutions_type).toEqual([]);
     });
   });
 

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResultsListFiltersComponent } from './results-list-filters.component';
+import { FormsModule } from '@angular/forms';
 
 describe('ResultsListFiltersComponent', () => {
   let component: ResultsListFiltersComponent;
@@ -8,7 +9,10 @@ describe('ResultsListFiltersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ResultsListFiltersComponent]
+      declarations: [ResultsListFiltersComponent],
+      imports: [
+        FormsModule
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultsListFiltersComponent);

@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { ApiService } from 'src/app/shared/services/api/api.service';
-import { CentersService } from 'src/app/shared/services/global/centers.service';
-import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
+import { ApiService } from '../../../../../../../../../../../shared/services/api/api.service';
+import { CentersService } from '../../../../../../../../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
   selector: 'app-non-pooled-info',

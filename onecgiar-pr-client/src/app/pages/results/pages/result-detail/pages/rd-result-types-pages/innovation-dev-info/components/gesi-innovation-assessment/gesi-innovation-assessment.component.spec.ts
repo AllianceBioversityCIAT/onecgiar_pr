@@ -1,6 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { GesiInnovationAssessmentComponent } from './gesi-innovation-assessment.component';
+import { PrRadioButtonComponent } from '../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { FormsModule } from '@angular/forms';
 
 describe('GesiInnovationAssessmentComponent', () => {
   let component: GesiInnovationAssessmentComponent;
@@ -8,7 +11,15 @@ describe('GesiInnovationAssessmentComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ GesiInnovationAssessmentComponent ]
+      declarations: [ 
+        GesiInnovationAssessmentComponent,
+        PrRadioButtonComponent,
+        PrFieldHeaderComponent
+      ],
+      imports: [
+        HttpClientTestingModule,
+        FormsModule
+      ],
     })
     .compileComponents();
 
@@ -17,7 +28,8 @@ describe('GesiInnovationAssessmentComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('should have initial properties set', () => {
+    expect(component.body).toBeDefined();
+    expect(component.example1).toBeNull();
   });
 });

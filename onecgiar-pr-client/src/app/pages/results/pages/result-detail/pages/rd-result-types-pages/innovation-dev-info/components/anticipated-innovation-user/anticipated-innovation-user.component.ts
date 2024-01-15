@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model/innovationDevInfoBody';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-anticipated-innovation-user',
@@ -32,6 +32,14 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     } else {
       return true;
     }
+  }
+
+  checkGenderAlert(actor) {
+    if (actor.sex_and_age_disaggregation) return true;
+
+    if (actor.has_men || actor.has_men_youth || actor.has_women || actor.has_women_youth) return true;
+
+    return false;
   }
 
   GETAllActorsTypes() {
