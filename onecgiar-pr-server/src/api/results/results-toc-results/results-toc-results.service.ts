@@ -292,7 +292,7 @@ export class ResultsTocResultsService {
           );
           await this._resultsTocResultRepository.saveIndicatorsContributors(
             createResultsTocResultDto,
-            result_id
+            result_id,
           );
         }
 
@@ -831,19 +831,17 @@ export class ResultsTocResultsService {
               rtrc?.result_toc_result_id,
             );
 
-            const commonFields = {
-              planned_result: contributor?.planned_result,
-              last_updated_by: user.id,
-              is_active: true,
-            };
-
             if (RtR) {
               await this._resultsTocResultRepository.update(
                 RtR.result_toc_result_id,
                 {
                   toc_result_id: rtrc?.toc_result_id,
                   action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-                  ...commonFields,
+                  toc_progressive_narrative:
+                    rtrc?.toc_progressive_narrative || null,
+                  planned_result: contributor?.planned_result,
+                  last_updated_by: user.id,
+                  is_active: true,
                 },
               );
             } else {
