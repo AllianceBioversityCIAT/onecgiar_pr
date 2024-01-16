@@ -1260,9 +1260,7 @@ export class ResultsService {
       ) {
         scope = 3;
       } else if (result.geographic_scope_id == 50) {
-        scope = 4;
-      } else {
-        scope = null;
+        scope = 50;
       }
       return {
         response: {
