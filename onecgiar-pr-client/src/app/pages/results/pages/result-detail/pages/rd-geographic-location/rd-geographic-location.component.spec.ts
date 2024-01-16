@@ -11,11 +11,13 @@ import { FormsModule } from '@angular/forms';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('RdGeographicLocationComponent', () => {
   let component: RdGeographicLocationComponent;
   let fixture: ComponentFixture<RdGeographicLocationComponent>;
   let mockApiService: any;
+  let mockCustomizedAlertsFeService:any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -32,6 +34,13 @@ describe('RdGeographicLocationComponent', () => {
         getLastWord: jest.fn()
       }
     }
+
+    mockCustomizedAlertsFeService = {
+      show: jest.fn().mockImplementationOnce((config, callback) => {
+        callback();
+      })
+    }
+
     await TestBed.configureTestingModule({
       declarations: [
         RdGeographicLocationComponent,
@@ -52,6 +61,10 @@ describe('RdGeographicLocationComponent', () => {
           provide: ApiService,
           useValue: mockApiService
         },
+        {
+          provide: CustomizedAlertsFeService,
+          useValue: mockCustomizedAlertsFeService
+        }
       ]
     }).compileComponents();
 
