@@ -1,48 +1,68 @@
 import { TestBed } from '@angular/core/testing';
-import { DomSanitizer } from '@angular/platform-browser';
-import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { environment } from '../../../environments/environment';
+import { ApiService } from '../../shared/services/api/api.service';
+import { DomSanitizer } from '@angular/platform-browser';
 
 describe('TypeOneReportService', () => {
   let service: TypeOneReportService;
-  let sanitizer: DomSanitizer;
-  let api: ApiService;
+  let mockDomSanitizer: any;
+  let mockApiService: any;
 
   beforeEach(() => {
+    mockApiService = {
+      rolesSE: {
+        isAdmin: true
+      },
+      dataControlSE: {
+        myInitiativesList: [{ official_code: 1 }, { official_code: 2 }]
+      }
+    };
+
+    mockDomSanitizer = {
+      bypassSecurityTrustResourceUrl: jest.fn()
+    };
+
     TestBed.configureTestingModule({
-      // imports
+      imports: [HttpClientTestingModule],
       providers: [
-        { provide: DomSanitizer, useValue: { bypassSecurityTrustResourceUrl: jest.fn() } },
-        { provide: ApiService, useValue: { rolesSE: { isAdmin: true }, dataControlSE: { myInitiativesList: [] } } }
+        { provide: ApiService, useValue: mockApiService },
+        { provide: DomSanitizer, useValue: mockDomSanitizer }
       ]
     });
     service = TestBed.inject(TypeOneReportService);
-    sanitizer = TestBed.inject(DomSanitizer);
-    api = TestBed.inject(ApiService);
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
+  describe('sanitizeUrl', () => {
+    it('should call bypassSecurityTrustResourceUrl with the correct URL', () => {
+      const spy = jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
+      service.initiativeSelected = 1;
+
+      service.sanitizeUrl();
+
+      const expectedUrl = `${environment.t1rBiUrl}?official_code=1`;
+      expect(spy).toHaveBeenCalledWith(expectedUrl);
+    });
   });
 
-  it('should sanitize the URL', () => {
-    const bypassSecurityTrustResourceUrlSpy = jest.spyOn(sanitizer, 'bypassSecurityTrustResourceUrl');
-    service.initiativeSelected = 'official_code';
-    service.sanitizeUrl();
-    expect(bypassSecurityTrustResourceUrlSpy).toHaveBeenCalledWith(`${service.t1rBiUrl}?official_code=${service.initiativeSelected}`);
-  });
+  describe('getInitiativeID', () => {
+    it('should return the correct initiative for admin user', () => {
+      service.allInitiatives = [
+        {
+          official_code: 1
+        }
+      ];
+      const result = service.getInitiativeID(1);
 
-  it('should get the initiative ID for non-admin users', () => {
-    api.rolesSE.isAdmin = false;
-    api.dataControlSE.myInitiativesList = [{ official_code: 'official_code' }];
-    const initiativeID = service.getInitiativeID('official_code');
-    expect(initiativeID).toEqual(api.dataControlSE.myInitiativesList[0]);
-  });
+      expect(result).toEqual({ official_code: 1 });
+    });
+    it('should return the correct initiative for non-admin user', () => {
+      mockApiService.rolesSE.isAdmin = false;
 
-  it('should get the initiative ID for admin users', () => {
-    api.rolesSE.isAdmin = true;
-    service.allInitiatives = [{ official_code: 'official_code' }];
-    const initiativeID = service.getInitiativeID('official_code');
-    expect(initiativeID).toEqual(service.allInitiatives[0]);
+      const result = service.getInitiativeID(2);
+
+      expect(result).toEqual({ official_code: 2 });
+    });
   });
 });

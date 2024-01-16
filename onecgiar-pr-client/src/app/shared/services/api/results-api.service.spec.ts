@@ -742,7 +742,7 @@ describe('ResultsApiService', () => {
   describe('PATCH_geographicSection', () => {
     it('should call PATCH_geographicSection and return expected data', done => {
       const mockBody = {
-        scope_id: 1,
+        geo_scope_id: 1,
         has_countries: false,
         has_regions: false,
         regions: [],
@@ -2089,7 +2089,7 @@ describe('ResultsApiService', () => {
   describe('GET_keyResultStoryInitiativeId', () => {
     it('should call GET_keyResultStoryInitiativeId and return expected data', done => {
       const initiativeId = 1;
-      const phase = 1;
+      const phase = 'phase';
       service.GET_keyResultStoryInitiativeId(initiativeId, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2105,7 +2105,8 @@ describe('ResultsApiService', () => {
   describe('GET_excelFullReportByInitiativeId', () => {
     it('should call GET_excelFullReportByInitiativeId and return expected data', done => {
       const initiativeId = 1;
-      const phase = 1;
+      const phase = 'phase';
+
       service.GET_excelFullReportByInitiativeId(initiativeId, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
