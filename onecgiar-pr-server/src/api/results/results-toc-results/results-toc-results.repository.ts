@@ -1052,8 +1052,7 @@ export class ResultsTocResultRepository
                   join version v on v.id = r.version_id
                   join result_type rt ON rt.id = r.result_type_id
                 where
-                  rtri.results_toc_results_id = ?
-                  and rtri.toc_results_indicator_id = ?
+                  rtri.toc_results_indicator_id = ?
                   and rit.number_target = ?
                   and rtr.is_active = 1
                   and r.is_active = 1
@@ -1063,7 +1062,6 @@ export class ResultsTocResultRepository
               const queryTargetothercontributing = await this.query(
                 queryTargetContributing,
                 [
-                  IndicatorTargetId,
                   itemIndicator.toc_results_indicator_id,
                   element.number_target,
                 ],
