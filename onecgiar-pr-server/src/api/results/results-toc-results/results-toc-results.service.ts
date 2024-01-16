@@ -591,12 +591,6 @@ export class ResultsTocResultsService {
         toc_result_id,
       );
 
-      for (const i of informationIndicator) {
-        for (const t of i.targets) {
-          console.log("🚀 ~ ResultsTocResultsService ~ t:", t)
-        }
-      }
-
       return {
         response: {
           initiative: init,
