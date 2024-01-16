@@ -39,11 +39,6 @@ export class LinkedResultsService {
         };
       }
 
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
-      }
-
       const isExistsNew: number[] = [];
       const isExistsNewLegacy: string[] = [];
       createLinkedResultDto.links = createLinkedResultDto.links ?? [];

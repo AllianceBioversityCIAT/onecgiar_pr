@@ -36,10 +36,6 @@ export class ResultCountriesService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
-      }
 
       const countries = createResultCountryDto.countries;
       if (
