@@ -77,7 +77,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         null as last_updated_date,
         rbibdt.partner_delivery_type_id,
         rbi2.id as result_by_institution_id,
-        ? as versions_id,
         ? as created_by,
         ? as last_updated_by 
         from result_by_institutions_by_deliveries_type rbibdt 
@@ -89,7 +88,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
         const response = await (<
           Promise<ResultByInstitutionsByDeliveriesType[]>
         >this.query(queryData, [
-          config.phase,
           config.user.id,
           config.user.id,
           config.old_result_id,
@@ -108,7 +106,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           last_updated_date,
           partner_delivery_type_id,
           result_by_institution_id,
-          versions_id,
           created_by,
           last_updated_by 
           )
@@ -120,7 +117,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           now() as last_updated_date,
           rbibdt.partner_delivery_type_id,
           rbi2.id as result_by_institution_id,
-          ? as versions_id,
           ? as created_by,
           ? as last_updated_by 
           from result_by_institutions_by_deliveries_type rbibdt 
@@ -132,7 +128,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           where rbibdt.is_active > 0;
         `;
         await this.query(queryData, [
-          config.phase,
           config.user.id,
           config.user.id,
           config.old_result_id,
@@ -146,7 +141,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
           rbibdt.last_updated_date,
           rbibdt.partner_delivery_type_id,
           rbibdt.result_by_institution_id,
-          rbibdt.versions_id,
           rbibdt.created_by,
           rbibdt.last_updated_by 
           from result_by_institutions_by_deliveries_type rbibdt
@@ -179,7 +173,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
     rbibdt.last_updated_date,
     rbibdt.partner_delivery_type_id,
     rbibdt.result_by_institution_id,
-    rbibdt.versions_id,
     rbibdt.created_by,
     rbibdt.last_updated_by
     from result_by_institutions_by_deliveries_type rbibdt 
@@ -212,7 +205,6 @@ export class ResultByInstitutionsByDeliveriesTypeRepository
     rbibdt.last_updated_date,
     rbibdt.partner_delivery_type_id,
     rbibdt.result_by_institution_id,
-    rbibdt.versions_id,
     rbibdt.created_by,
     rbibdt.last_updated_by
     from result_by_institutions_by_deliveries_type rbibdt 
