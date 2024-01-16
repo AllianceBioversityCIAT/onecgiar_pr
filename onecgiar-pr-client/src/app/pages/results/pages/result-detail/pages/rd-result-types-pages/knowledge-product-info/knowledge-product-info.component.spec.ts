@@ -13,11 +13,13 @@ import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
+import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('KnowledgeProductInfoComponent', () => {
   let component: KnowledgeProductInfoComponent;
   let fixture: ComponentFixture<KnowledgeProductInfoComponent>;
   let mockApiService: any;
+  let mockCustomizedAlertsFeService:any;
   let mockGET_resultknowledgeProductsResponse = {
     melia_type_id: 1,
     is_melia: false,
@@ -80,6 +82,13 @@ describe('KnowledgeProductInfoComponent', () => {
         isKnowledgeProduct: true,
       },
     };
+
+    mockCustomizedAlertsFeService = {
+      show: jest.fn().mockImplementationOnce((config, callback) => {
+        callback();
+      })
+    };
+
     await TestBed.configureTestingModule({
       declarations: [
         KnowledgeProductInfoComponent,
@@ -101,6 +110,10 @@ describe('KnowledgeProductInfoComponent', () => {
         {
           provide: ApiService,
           useValue: mockApiService
+        },
+        {
+          provide: CustomizedAlertsFeService,
+          useValue: mockCustomizedAlertsFeService
         }
       ]
     })
