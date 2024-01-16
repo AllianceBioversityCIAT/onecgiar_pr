@@ -68,7 +68,7 @@ export class NotificationItemInnovationComponent {
 
   acceptOrReject(response) {
     if (this.api.rolesSE.platformIsClosed) return;
-    const body = { ...this.notification, request_status_id: response ? 2 : 3 };
+    const body = { result_request: this.notification, request_status_id: response ? 2 : 3 };
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
       next: resp => {
