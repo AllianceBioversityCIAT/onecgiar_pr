@@ -52,19 +52,6 @@ export class ResultByInstitutionsByDeliveriesType {
   is_active: boolean;
 
   @Column({
-    name: 'versions_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  versions_id: number;
-
-  @ManyToOne(() => Version, (v) => v.id, { nullable: false })
-  @JoinColumn({
-    name: 'versions_id',
-  })
-  obj_versions: Version;
-
-  @Column({
     name: 'created_by',
     type: 'int',
     nullable: false,
