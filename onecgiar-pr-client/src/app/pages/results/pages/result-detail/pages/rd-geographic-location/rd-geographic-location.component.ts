@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
+import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
@@ -56,10 +57,13 @@ export class RdGeographicLocationComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
+      const legacyCountries = 4;
+      this.geographicLocationBody.geo_scope_id = this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
     });
   }
   onSaveSection() {
-    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(({ response }) => {
+    //(this.geographicLocationBody);
+    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
       this.getSectionInformation();
     });
   }
