@@ -134,16 +134,6 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
-  describe('underConstructionText', () => {
-    it('should return the expected construction text', () => {
-      const result = component.underConstructionText();
-      const expectedText =
-        'This current section is undergoing improvement, and you will notice new options that are still on internal testing. Despite this ongoing process, please continue reporting evidence as usual by selecting <strong>"Link"</strong> as the evidence type.';
-
-      expect(result).toBe(expectedText);
-    });
-  });
-
   describe('getAndCalculateFilePercentage', () => {
     it('should calculate file percentage and update evidenceIterator', () => {
       const response = {

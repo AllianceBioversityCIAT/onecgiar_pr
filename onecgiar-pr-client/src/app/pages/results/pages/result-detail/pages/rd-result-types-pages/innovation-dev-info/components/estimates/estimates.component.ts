@@ -1,21 +1,19 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-estimates',
   templateUrl: './estimates.component.html',
   styleUrls: ['./estimates.component.scss']
 })
-export class EstimatesComponent implements OnInit {
+export class EstimatesComponent {
   @Input() body = new InnovationDevInfoBody();
 
   constructor(public api: ApiService) {}
 
   resultCode = this.api.dataControlSE?.currentResult?.result_code;
   versionId = this.api.dataControlSE?.currentResult?.version_id;
-
-  ngOnInit(): void {}
 
   headerDescriptions() {
     const n1 = `<ul>
@@ -33,5 +31,17 @@ export class EstimatesComponent implements OnInit {
     </ul>`;
 
     return { n1, n2, n3 };
+  }
+
+  checkValueAlert(item) {
+    if (item.is_determined) {
+      return true;
+    }
+
+    if (item.kind_cash) {
+      return true;
+    }
+
+    return false;
   }
 }

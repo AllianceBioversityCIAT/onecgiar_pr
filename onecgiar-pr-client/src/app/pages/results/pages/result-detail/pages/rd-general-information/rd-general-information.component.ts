@@ -1,3 +1,5 @@
+/* eslint-disable camelcase */
+/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
@@ -203,9 +205,22 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSyncSection() {
-    this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
-      this.getSectionInformation();
-    });
+    const confirmationMessage = `Sync result with CGSpace? <br/> Unsaved changes in the section will be lost. `;
+
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'delete-tab',
+        title: 'Sync confirmation',
+        description: confirmationMessage,
+        status: 'warning',
+        confirmText: 'Yes, sync information'
+      },
+      () => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+          this.getSectionInformation();
+        });
+      }
+    );
   }
 
   showAlerts() {

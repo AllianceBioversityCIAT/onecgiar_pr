@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../../../../../../../environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
 import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';

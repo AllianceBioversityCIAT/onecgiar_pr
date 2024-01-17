@@ -38,10 +38,6 @@ export class ResultRegionsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const vTemp = await this._versionsService.findBaseVersion();
-      if (vTemp.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: vTemp });
-      }
 
       const regions = createResultRegionDto.regions;
       if (
