@@ -51,8 +51,7 @@ export class TorKeyResultStoryComponent implements OnInit {
       { category: 'Geographic scope', value: '' },
       { category: 'Primary Impact Area', value: '' },
       { category: 'Other relevant Impact Area(s)', value: '' },
-      { category: 'Which collective global targets for the relevant Impact Area(s) from the CGIAR 2030 Research and Innovation Strategy does the key result contribute to?', value: '' },
-      { category: 'Does this key result build on work or previous results from one or more CRPs?', value: '' }
+      { category: 'Which collective global targets for the relevant Impact Area(s) from the CGIAR 2030 Research and Innovation Strategy does the key result contribute to?', value: '' }
     ];
 
     const table = tableData;
@@ -76,7 +75,6 @@ export class TorKeyResultStoryComponent implements OnInit {
     data[6].value = JSON.parse(table?.impact_areas) || noDataText;
     data[7].value = table.other_impact_areas || noDataText;
     data[8].value = table.global_targets || noDataText;
-    data[9].value = table.web_legacy || '<div class="no-data-text-format">There is no web legacy data</div>';
 
     this.tablesList.push({ data, header });
   }
