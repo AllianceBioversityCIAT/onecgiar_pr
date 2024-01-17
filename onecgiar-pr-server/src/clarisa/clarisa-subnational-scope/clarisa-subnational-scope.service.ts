@@ -45,9 +45,14 @@ export class ClarisaSubnationalScopeService {
 
   async findByCountryIso2(country_iso2: string) {
     try {
-      const response = await this._clarisaSubnationalScopeRepository.findBy({
-        country_iso_alpha_2: country_iso2,
-        is_active: true,
+      const response = await this._clarisaSubnationalScopeRepository.find({
+        where: {
+          country_iso_alpha_2: country_iso2,
+          is_active: true,
+        },
+        order: {
+          name: 'ASC',
+        },
       });
 
       return this._returnResponse.format({
