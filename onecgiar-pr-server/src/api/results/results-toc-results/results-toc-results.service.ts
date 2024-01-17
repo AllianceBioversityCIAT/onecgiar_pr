@@ -591,7 +591,6 @@ export class ResultsTocResultsService {
         init,
       );
       const wp_info = await this._resultsTocResultRepository.getWpInformation(
-        resultIdToc,
         toc_result_id,
       );
 
