@@ -1304,8 +1304,11 @@ left join clarisa_regions cr
        on cr.um49Code = rr.region_id 
     WHERE rr.result_id  =  r.id
       and rr.is_active = 1) as "Regions",
-     (select if(rt.id<>6, if(r.geographic_scope_id = 5, GROUP_CONCAT(csn.res separator ' - '), GROUP_CONCAT(csn.countries separator ', ')), rkp.cgspace_countries) 
-     from (select CONCAT_WS('',cc3.name,': ', IFNULL(GROUP_CONCAT(css.name separator ', '), 'Not provider')) as res, cc3.name  as countries
+     (select if(rt.id<>6, if(r.geographic_scope_id = 5, GROUP_CONCAT(csn.res separator '\n'), GROUP_CONCAT(csn.countries separator ', ')), rkp.cgspace_countries) 
+     from (select CONCAT_WS('',cc3.name,': ', IFNULL(GROUP_CONCAT(css.name separator ', '), IF((select count(css2.id) 
+     from clarisa_subnational_scopes css2
+     where css2.country_iso_alpha_2 = cc3.iso_alpha_2) > 0, 'Not provided', 'No sub-national levels available'))) as res, 
+     cc3.name  as countries
          FROM
            result_country rc2
          left join clarisa_countries cc3 
@@ -1320,7 +1323,7 @@ left join clarisa_regions cr
          WHERE
            rc2.result_id = r.id
            and rc2.is_active = 1
-     GROUP BY cc3.name) csn) as "Countries",
+     GROUP BY cc3.name, prdb.cc3.iso_alpha_2) csn) as "Countries",
     -- section 5
     GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
  /* GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio", */
