@@ -19,6 +19,7 @@ import { TokenBiReportRepository } from './token-bi-reports.repository';
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
   private credentialsBi: CredentialsClarisaBi;
+  private barerTokenAzure: any;
   constructor(
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
@@ -60,7 +61,6 @@ export class BiReportRepository extends Repository<BiReport> {
     } catch (error) {
       return error;
     }
-
     return dataCredentials;
   }
 
@@ -72,7 +72,7 @@ export class BiReportRepository extends Repository<BiReport> {
       const reportsId: BodyPowerBiDTO[] = [];
 
       const barerTokenAzure = await this.getBarerTokenAzure();
-      reportsBi.map((resp) => {
+      reportsBi.forEach((resp) => {
         const auxIdReportBi: BodyPowerBiDTO = new BodyPowerBiDTO();
         const auxIdDataSetsBi: BodyPowerBiDTO = new BodyPowerBiDTO();
         auxIdReportBi.id = resp.report_id;
@@ -88,7 +88,7 @@ export class BiReportRepository extends Repository<BiReport> {
       let tokenPowerBi;
       try {
         tokenPowerBi = await lastValueFrom(
-          await this._httpService
+          this._httpService
             .post(`${this.credentialsBi.api_token_url}`, bodyRequestPowerBi, {
               headers: {
                 Authorization: `Bearer ${barerTokenAzure.access_token}`,
@@ -109,7 +109,7 @@ export class BiReportRepository extends Repository<BiReport> {
       const informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO();
       informationEmbedBi.embed_token = tokenPowerBi.token;
       const auxReportsInfo: ReportInformation[] = [];
-      reportsBi.map((resp) => {
+      reportsBi.forEach((resp) => {
         const reportsInfo: ReportInformation = new ReportInformation();
         reportsInfo.id = resp.id;
         reportsInfo.resport_id = resp.report_id;
@@ -225,6 +225,7 @@ export class BiReportRepository extends Repository<BiReport> {
         ].filter((report) => report.name == report_name);
         return {
           token: registerInToken['embed_token'],
+          azureValidation: registerInToken ? 1 : 0,
           report: responseToken[0],
         };
       } else {
@@ -245,6 +246,7 @@ export class BiReportRepository extends Repository<BiReport> {
 
         return {
           token: tokensReports[0].token_bi,
+          azureValidation: 2,
           report: reportsInfo,
         };
       }
