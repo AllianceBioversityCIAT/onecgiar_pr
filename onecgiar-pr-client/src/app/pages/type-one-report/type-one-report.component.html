@@ -19,10 +19,10 @@
               placeholder="Select Initiative" (selectOptionEvent)="selectInitiativeEvent()"
               [(ngModel)]="typeOneReportSE.initiativeSelected">
             </app-pr-select>
-            <app-pr-select (selectOptionEvent)="selectInitiativeEvent()"
-              [options]="this.typeOneReportSE.reportingPhases" [isStatic]="true" [required]="false"
-              optionLabel="phase_name_status" optionValue="id" placeholder="Select phase"
-              [(ngModel)]="this.typeOneReportSE.phaseSelected">
+            <app-pr-select *ngIf="this.api.dataControlSE.showT1RSelectPhase"
+              (selectOptionEvent)="selectInitiativeEvent()" [options]="this.typeOneReportSE.reportingPhases"
+              [isStatic]="true" [required]="false" optionLabel="phase_name_status" optionValue="id"
+              placeholder="Select phase" [(ngModel)]="this.typeOneReportSE.phaseSelected">
             </app-pr-select>
           </div>
         </div>

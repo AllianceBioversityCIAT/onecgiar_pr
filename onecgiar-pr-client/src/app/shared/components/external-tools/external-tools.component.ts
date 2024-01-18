@@ -16,8 +16,7 @@ export class ExternalToolsComponent implements OnInit {
   ngOnInit(): void {
     this.router.events.subscribe((event: NavigationEvent) => {
       if (event instanceof NavigationStart) {
-        //(this.api.resultsSE.currentResultId);
-        //(event.url);
+        this.validateShowT1RSelectPhase(event.url);
         this.api.dataControlSE.inNotifications = event.url.indexOf('results-notifications') > 0;
         window.scrollTo(0, 0);
         this.pusherSE.start(event.url, event.url.split('/')[3]);
@@ -32,5 +31,14 @@ export class ExternalToolsComponent implements OnInit {
         } catch (error) {}
       }
     });
+  }
+
+  validateShowT1RSelectPhase(url: string): void {
+    const lastPath = url.split('/').pop();
+    if (lastPath === 'fact-sheet' || lastPath === 'toc-diagrams') {
+      this.api.dataControlSE.showT1RSelectPhase = true;
+    } else {
+      this.api.dataControlSE.showT1RSelectPhase = false;
+    }
   }
 }
