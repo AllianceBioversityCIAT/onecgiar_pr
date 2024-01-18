@@ -35,10 +35,6 @@ export class ExternalToolsComponent implements OnInit {
 
   validateShowT1RSelectPhase(url: string): void {
     const lastPath = url.split('/').pop();
-    if (lastPath === 'fact-sheet' || lastPath === 'toc-diagrams') {
-      this.api.dataControlSE.showT1RSelectPhase = true;
-    } else {
-      this.api.dataControlSE.showT1RSelectPhase = false;
-    }
+    this.api.dataControlSE.showT1RSelectPhase = lastPath === 'fact-sheet' || lastPath === 'toc-diagrams';
   }
 }
