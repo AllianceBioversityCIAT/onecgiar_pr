@@ -9,7 +9,11 @@
         target="_blank">open_in_new</a>
 </div>
 
-<app-step-n1-geoscope [body]="this.ipsrStep1Body"></app-step-n1-geoscope>
+<app-geoscope-management 
+        [readOnly]="true"
+        module="ipsr"
+        [body]="this.ipsrStep1Body">
+</app-geoscope-management>
 <div class="step_sub_section">
 
 

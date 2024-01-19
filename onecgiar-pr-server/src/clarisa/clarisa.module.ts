@@ -38,6 +38,7 @@ import { ClarisaSecondOrderAdministrativeDivisionModule } from './clarisa-second
 import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-order-administrative-division/clarisa-first-order-administrative-division.module';
 import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
 import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
+import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clarisa-subnational-scope.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.
     ClarisaFirstOrderAdministrativeDivisionModule,
     ClarisaInnovationUseLevelsModule,
     ClarisaTocPhasesModule,
+    ClarisaSubnationalScopeModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
