@@ -10,6 +10,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  color: var(--pr-color-danger-2) !important;
+  cursor: pointer;
 }
 
 .mb-20 {
@@ -41,11 +43,6 @@
   .b-ct {
     padding: 0px 30px;
   }
-}
-
-.delete {
-  color: var(--pr-color-danger-2) !important;
-  cursor: pointer;
 }
 
 .title-ct {
@@ -89,7 +86,6 @@
       align-items: center;
 
       .medal {
-        // font-size: 2em;
         transition: all ease-in-out 0.4s;
         color: rgb(167, 167, 167);
       }

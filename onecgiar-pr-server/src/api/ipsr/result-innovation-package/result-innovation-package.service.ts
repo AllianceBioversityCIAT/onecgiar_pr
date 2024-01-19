@@ -275,29 +275,9 @@ export class ResultInnovationPackageService {
           regionsList.length > 1 ? ' and ' : ''
         }${regionsList[regionsList.length - 1]}`;
       } else if (
-        createResultInnovationPackageDto.geo_scope_id === 3 ||
-        createResultInnovationPackageDto.geo_scope_id === 4
+        [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
       ) {
-        const countriesList = countries.map((c) => c.name);
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
-          .slice(0, -1)
-          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-          countriesList[countriesList.length - 1]
-        }`;
-      } else if (createResultInnovationPackageDto.geo_scope_id === 5) {
-        const countriesList = countries.map((c) => c.name);
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
-          .slice(0, -1)
-          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-          countriesList[countriesList.length - 1]
-        }`;
+        innovationTitle = this.createInnovationTitle(result, countries);
       } else {
         if (result.title.endsWith('.')) {
           result.title = result.title.replace(/\.$/, '');
@@ -409,9 +389,7 @@ export class ResultInnovationPackageService {
           }
         }
       } else if (
-        createResultInnovationPackageDto.geo_scope_id === 3 ||
-        createResultInnovationPackageDto.geo_scope_id === 4 ||
-        createResultInnovationPackageDto.geo_scope_id === 5
+        [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
       ) {
         if (countries) {
           for (const ct of countries) {
@@ -1029,5 +1007,17 @@ export class ResultInnovationPackageService {
       message: 'The result was deleted successfully',
       status: HttpStatus.ACCEPTED,
     };
+  }
+
+  createInnovationTitle(result, countries) {
+    let countriesList = countries.map((c) => c.name);
+    if (result.title.endsWith('.')) {
+      result.title = result.title.replace(/\.$/, '');
+    }
+    return `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+      .slice(0, -1)
+      .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+      countriesList[countriesList.length - 1]
+    }`;
   }
 }

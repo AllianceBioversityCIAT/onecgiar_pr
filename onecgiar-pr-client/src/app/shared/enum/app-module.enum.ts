@@ -4,7 +4,7 @@ export class AppModuleEnum {
   static readonly REPORTING = new AppModuleEnum(ModuleTypeEnum.REPORTING, 1);
   static readonly IPSR = new AppModuleEnum(ModuleTypeEnum.IPSR, 2);
 
-  private constructor(public readonly name: string, public readonly value: Number) {}
+  private constructor(public readonly name: string, public readonly value: number) {}
 
   public static getFromName(name: string): AppModuleEnum | undefined {
     return (Object.values(this) as AppModuleEnum[]).find(n => n.name === name);

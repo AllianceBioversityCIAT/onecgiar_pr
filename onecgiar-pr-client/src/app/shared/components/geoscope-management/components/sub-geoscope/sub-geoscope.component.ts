@@ -54,8 +54,6 @@ export class SubGeoscopeComponent implements OnInit {
     });
   }
 
-  ngOnDestroy() {}
-
   private subNationalMapper(item: SubNationalInterface[]): SubNationalInterface[] {
     const findAvalibleName = sn => {
       return sn?.name || sn?.local_name || sn?.romanization_system_name || `No name available`;
@@ -65,11 +63,16 @@ export class SubGeoscopeComponent implements OnInit {
       const avalibleName = findAvalibleName(sn);
       const reduceName = sn.other_names?.reduce((acc, curr) => {
         const otherAvalibleName = findAvalibleName(curr);
-        return `${acc} ${acc ? `, ` : ``} ${otherAvalibleName}`;
+        return acc ? `${acc}, ${otherAvalibleName}` : `${otherAvalibleName}`;
       }, '');
+
+      let formatedName = `<strong>${avalibleName}</strong>`;
+      if (reduceName) {
+        formatedName += ` - <span class="select_item_description">${reduceName}</span>`;
+      }
       return {
         ...sn,
-        formatedName: `<strong>${avalibleName}</strong>${reduceName ? ` - <span class="select_item_description">${reduceName}</span>` : ''}`,
+        formatedName,
         avalibleName
       };
     });
