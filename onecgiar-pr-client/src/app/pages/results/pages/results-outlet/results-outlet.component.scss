@@ -2,7 +2,6 @@
   margin-top: 30px;
   padding-bottom: 10px;
   margin-bottom: 50px;
-  // overflow: hidden;
 
   .tabs {
     display: flex;
@@ -35,8 +34,6 @@
         font-size: 2.5rem;
         color: var(--pr-color-primary) !important;
 
-
-
         .counter_value {
           position: absolute;
           right: 15px;
@@ -50,7 +47,7 @@
           border-radius: 5px;
           min-width: 20px;
           padding: 4px;
-          font-size: .9rem;
+          font-size: 0.9rem;
           font-family: 'Poppins', sans-serif !important;
           transform: translateX(100%);
         }
@@ -65,13 +62,12 @@
 }
 
 .animate_bell {
-  -webkit-animation: ring 4s .7s ease-in-out infinite;
+  -webkit-animation: ring 4s 0.7s ease-in-out infinite;
   -webkit-transform-origin: 50% 4px;
-  -moz-animation: ring 4s .7s ease-in-out infinite;
+  -moz-animation: ring 4s 0.7s ease-in-out infinite;
   -moz-transform-origin: 50% 4px;
-  animation: ring 4s .7s ease-in-out infinite;
+  animation: ring 4s 0.7s ease-in-out infinite;
 }
-
 
 @-webkit-keyframes ring {
   0% {
