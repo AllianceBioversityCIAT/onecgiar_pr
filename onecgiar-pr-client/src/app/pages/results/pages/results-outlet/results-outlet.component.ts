@@ -7,5 +7,10 @@ import { ResultsNotificationsService } from './pages/results-notifications/resul
   styleUrls: ['./results-outlet.component.scss']
 })
 export class ResultsOutletComponent {
-  constructor(public resultsNotificationsSE: ResultsNotificationsService) {}
+  animateBell = true;
+  constructor(public resultsNotificationsSE: ResultsNotificationsService) {
+    setTimeout(() => {
+      this.animateBell = false;
+    }, 10000);
+  }
 }
