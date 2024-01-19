@@ -1,0 +1,38 @@
+<div class="content">
+
+    <div class="h-ct" [ngClass]="{'mb-20':this.readOnly}"><strong class="title-ct">{{obj_country.name}}</strong> 
+        <i *ngIf="!this.readOnly"
+        class="material-icons-round delete"
+        (click)="deleteCountry(index)">delete</i>
+    </div>
+
+    <div class="b-ct" >
+        <div class="dhs mt" *ngIf="!subNationList?.length">
+            <i>This country does not have any sub-national level avaliable.</i>
+        </div>
+        <div style=" width: 40%;" *ngIf="subNationList?.length && !this.readOnly">
+            <app-pr-multi-select label="Sub-national levels"
+                [readOnly]="this.readOnly"
+                [options]="this.subNationList" optionLabel="formatedName" selectedLabel="Sub-national selected" optionValue="code"
+                placeholder="Select Sub-national level" [(ngModel)]="this.obj_country.sub_national">
+            </app-pr-multi-select>
+        </div>
+
+    <div class="medal_selector selected_container" *ngIf="subNationList?.length">
+        <div class="centers chips_container">
+            <div class="center pr_chip_selected"
+                *ngFor="let sub of this.obj_country.sub_national; let i=index">
+                <div class="name" [innerHtml]="sub?.formatedName"></div><i
+                    *ngIf="!this.readOnly"
+                    class="material-icons-round delete" 
+                    (click)="deleteSubNational(i)">remove_circle </i>
+                </div>
+            </div>
+            <div class="dhs" *ngIf="!this.obj_country?.sub_national?.length">
+                <i>There are no sub-national levels specified.</i>
+            </div>
+        </div>
+    </div>
+</div>
+
+

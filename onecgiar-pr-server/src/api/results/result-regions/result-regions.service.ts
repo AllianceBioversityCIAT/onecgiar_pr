@@ -20,7 +20,7 @@ export class ResultRegionsService {
 
   async create(createResultRegionDto: CreateResultRegionDto) {
     try {
-      if (!createResultRegionDto?.scope_id) {
+      if (!createResultRegionDto?.geo_scope_id) {
         throw {
           response: {},
           message: 'Missing data in the request',
@@ -42,15 +42,15 @@ export class ResultRegionsService {
       const regions = createResultRegionDto.regions;
       if (
         (!createResultRegionDto.has_regions &&
-          createResultRegionDto.scope_id != 2) ||
-        createResultRegionDto.scope_id == 4 ||
-        createResultRegionDto.scope_id == 3
+          createResultRegionDto.geo_scope_id != 2) ||
+        createResultRegionDto.geo_scope_id == 4 ||
+        createResultRegionDto.geo_scope_id == 3
       ) {
         await this._resultRegionRepository.updateRegions(result.id, []);
         result.has_regions = false;
       } else if (
-        createResultRegionDto.scope_id == 2 ||
-        createResultRegionDto.scope_id == 1 ||
+        createResultRegionDto.geo_scope_id == 2 ||
+        createResultRegionDto.geo_scope_id == 1 ||
         createResultRegionDto.has_regions
       ) {
         if (regions) {
@@ -76,7 +76,7 @@ export class ResultRegionsService {
             }
           }
         }
-        if (createResultRegionDto.scope_id == 2) {
+        if (createResultRegionDto.geo_scope_id == 2) {
           result.has_regions = true;
         } else {
           result.has_regions = createResultRegionDto.has_regions;
@@ -84,12 +84,12 @@ export class ResultRegionsService {
       }
 
       if (
-        createResultRegionDto.scope_id == 4 ||
-        createResultRegionDto.scope_id == 50
+        createResultRegionDto.geo_scope_id == 4 ||
+        createResultRegionDto.geo_scope_id == 50
       ) {
         result.geographic_scope_id = 50;
       } else {
-        result.geographic_scope_id = createResultRegionDto.scope_id;
+        result.geographic_scope_id = createResultRegionDto.geo_scope_id;
       }
       await this._resultRepository.save(result);
 

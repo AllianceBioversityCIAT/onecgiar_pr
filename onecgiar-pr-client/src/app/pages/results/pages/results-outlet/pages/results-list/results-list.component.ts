@@ -9,6 +9,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
+import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 
 @Component({
   selector: 'app-results-list',
@@ -64,7 +65,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   @ViewChild('table') table: Table;
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
+  constructor(public resultsNotificationsSE: ResultsNotificationsService, public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
   validateOrder(columnAttr) {
     setTimeout(() => {

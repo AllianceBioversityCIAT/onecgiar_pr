@@ -32,6 +32,7 @@ export class ClarisaCountriesRepository extends Repository<ClarisaCountry> {
     cc.iso_alpha_2,
     cc.iso_alpha_3
     from clarisa_countries cc 
+    order by cc.name asc;
     `;
     try {
       const countries = await this.query(queryData);
