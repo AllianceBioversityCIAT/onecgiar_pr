@@ -31,10 +31,6 @@ export class SubGeoscopeComponent implements OnInit {
     });
   }
 
-  subNationalLabelName() {
-    return this.obj_country?.name ? `${this.obj_country.name}: Sub-Nationals` : `no existe`;
-  }
-
   deleteSubNational(index) {
     this.obj_country.sub_national.splice(index, 1);
   }

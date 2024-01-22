@@ -463,7 +463,7 @@ export class ResultInnovationPackageService {
     user: TokenDto,
   ) {
     if (subNationals?.length) {
-      subNationals.forEach(async (sn) => {
+      for (const sn of subNationals) {
         let whereClause: FindOptionsWhere<ResultCountrySubnational> = null;
 
         if (incomingResultCountryId && sn?.code) {
@@ -499,7 +499,7 @@ export class ResultInnovationPackageService {
             result_country_id: incomingResultCountryId,
           });
         }
-      });
+      }
     }
   }
 
@@ -1010,7 +1010,7 @@ export class ResultInnovationPackageService {
   }
 
   createInnovationTitle(result, countries) {
-    let countriesList = countries.map((c) => c.name);
+    const countriesList = countries.map((c) => c.name);
     if (result.title.endsWith('.')) {
       result.title = result.title.replace(/\.$/, '');
     }

@@ -44,7 +44,6 @@ export class ResultsNotificationsService {
     });
 
     this.api.resultsSE.GET_requestStatus().subscribe();
-    console.log(this.data);
   }
 
   get_section_innovation_packages() {
