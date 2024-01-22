@@ -8,19 +8,12 @@
         </a>
       </div>
       <div class="segment">
-        <!-- <div class="name">Sections</div> -->
         <br>
         <div class="sections">
-          <a *ngFor="let option of options; let i=index" [routerLink]="option.path"
-            routerLinkActive="section_active">{{i+1}}.
-            {{option.name }}
+          <a *ngFor="let option of options; let i=index" [routerLink]="option.path" routerLinkActive="section_active">
+            <span *ngIf="!this.hideIndex">{{i+1}}.</span> {{option.name }}
             <img *ngIf="option.underConstruction" class="under_construction" src="assets/work-in-progress.png" alt=""
               srcset="">
-            <!-- <div class="check">
-                            <i class="material-icons-round {{option.validation?'valid':'invalid'}}">
-                                check_circle
-                            </i>
-                        </div> -->
           </a>
         </div>
       </div>
