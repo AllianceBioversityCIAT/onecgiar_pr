@@ -425,7 +425,9 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     rie.is_active = TRUE
                     AND rie.result_id = r.id
                     AND rie.first_name IS NOT NULL
+                    AND rie.first_name <> ''
                     AND rie.last_name IS NOT NULL
+                    AND rie.last_name <> ''
                     AND rie.result_ip_expert_id IN (
                         SELECT
                             rie2.result_ip_expert_id
@@ -447,6 +449,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     AND (
                         rie3.first_name IS NULL
                         OR rie3.last_name IS NULL
+                        OR rie3.first_name = ''
+                        OR rie3.last_name = ''
                         OR NOT EXISTS (
                             SELECT
                                 rie4.result_ip_expert_id
