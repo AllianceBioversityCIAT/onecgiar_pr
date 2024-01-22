@@ -229,11 +229,6 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      await this.separateCentersFromCgspacePartners(
-        updatedKnowledgeProduct,
-        true,
-      );
-
       //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -241,15 +236,21 @@ export class ResultsKnowledgeProductsService {
       await this._resultsKnowledgeProductAuthorRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
-      await this._resultsKnowledgeProductInstitutionRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-          {},
-      );
+      updatedKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+            [],
+        );
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      await this.separateCentersFromCgspacePartners(
+        updatedKnowledgeProduct,
+        true,
       );
 
       //geolocation

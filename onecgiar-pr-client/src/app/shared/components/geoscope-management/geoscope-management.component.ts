@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { disableOptionsSubNa } from './interfaces/subnational.interface';
+import { DisableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../enum/geo-scope.enum';
 import { ModuleTypeEnum } from '../../enum/api.enum';
@@ -17,7 +17,7 @@ export class GeoscopeManagementComponent implements OnInit {
   @Input() readOnly: boolean = false;
   @Input() module: string;
   public internalModule: AppModuleEnum;
-  public selectedItems: disableOptionsSubNa[] = [];
+  public selectedItems: DisableOptionsSubNa[] = [];
   public sub_scope: any[] = [];
   private readonly UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   private readonly ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';

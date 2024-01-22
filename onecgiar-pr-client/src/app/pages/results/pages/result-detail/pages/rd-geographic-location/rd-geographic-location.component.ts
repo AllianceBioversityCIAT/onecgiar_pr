@@ -62,7 +62,6 @@ export class RdGeographicLocationComponent implements OnInit {
     });
   }
   onSaveSection() {
-    //(this.geographicLocationBody);
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
       this.getSectionInformation();
     });
