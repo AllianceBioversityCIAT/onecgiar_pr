@@ -548,10 +548,9 @@ export class ResultByInitiativesRepository
       let updateIniciative;
       if (resultId != null) {
         await this.update(
-          { result_id: resultId },
+          { result_id: resultId, is_active: true },
           {
             initiative_role_id: 2,
-            is_active: true,
           },
         );
 
