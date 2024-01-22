@@ -135,7 +135,6 @@ export class ResultsTocResultsService {
           user.id,
           1,
         );
-        const resultTocResultArray: NonPooledProject[] = [];
         await this._nonPooledProjectRepository.update(
           { results_id: result_id },
           {
@@ -178,9 +177,12 @@ export class ResultsTocResultsService {
           }
         }
 
-        const npps = await this._nonPooledProjectRepository.save(
-          resultTocResultArray,
-        );
+        const npps = await this._nonPooledProjectRepository.find({
+          where: {
+            results_id: result_id,
+            is_active: true,
+          },
+        });
         for (const npp of npps) {
           const initBudget =
             await this._resultBilateralBudgetRepository.findOne({
