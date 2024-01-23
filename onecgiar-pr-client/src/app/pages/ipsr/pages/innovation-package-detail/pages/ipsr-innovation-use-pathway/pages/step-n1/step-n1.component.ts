@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
+import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
 
 @Component({
   selector: 'app-step-n1',
@@ -24,10 +25,8 @@ export class StepN1Component implements OnInit {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
-      //(response);
-      // (response);
-
-      this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == 3 ? 4 : response.geo_scope_id;
+      const legacyCountries = 4;
+      this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : response.geo_scope_id;
       this.coreResult = response?.coreResult;
 
       if (this.ipsrStep1Body.innovatonUse.measures.length == 0) {

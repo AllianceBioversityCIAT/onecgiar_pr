@@ -135,48 +135,54 @@ export class ResultsTocResultsService {
           user.id,
           1,
         );
-        const resultTocResultArray: NonPooledProject[] = [];
+        await this._nonPooledProjectRepository.update(
+          { results_id: result_id },
+          {
+            is_active: false,
+          },
+        );
         for (let index = 0; index < contributing_np_projects.length; index++) {
           if (contributing_np_projects[index]?.grant_title?.length) {
-            const resultData =
-              await this._nonPooledProjectRepository.getAllNPProjectById(
-                result_id,
-                contributing_np_projects[index].grant_title,
-                1,
-              );
+            const resultData = await this._nonPooledProjectRepository.findOne({
+              where: {
+                results_id: result_id,
+                grant_title: contributing_np_projects[index].grant_title,
+                funder_institution_id: contributing_np_projects[index].funder,
+                non_pooled_project_type_id: 1,
+              },
+            });
 
             if (resultData) {
-              resultData.center_grant_id =
-                contributing_np_projects[index].center_grant_id;
-              resultData.funder_institution_id =
-                contributing_np_projects[index].funder;
-              resultData.lead_center_id =
-                contributing_np_projects[index].lead_center;
-              resultData.is_active = true;
-              resultData.last_updated_by = user.id;
-              resultTocResultArray.push(resultData);
+              await this._nonPooledProjectRepository.update(resultData.id, {
+                center_grant_id:
+                  contributing_np_projects[index].center_grant_id,
+                funder_institution_id: contributing_np_projects[index].funder,
+                lead_center_id: contributing_np_projects[index].lead_center,
+                is_active: true,
+                last_updated_by: user.id,
+              });
             } else {
-              const newNpProject = new NonPooledProject();
-              newNpProject.results_id = result_id;
-              newNpProject.center_grant_id =
-                contributing_np_projects[index].center_grant_id;
-              newNpProject.funder_institution_id =
-                contributing_np_projects[index].funder;
-              newNpProject.lead_center_id =
-                contributing_np_projects[index].lead_center;
-              newNpProject.grant_title =
-                contributing_np_projects[index].grant_title || null;
-              newNpProject.created_by = user.id;
-              newNpProject.last_updated_by = user.id;
-              newNpProject.non_pooled_project_type_id = 1;
-              resultTocResultArray.push(newNpProject);
+              await this._nonPooledProjectRepository.save({
+                results_id: result_id,
+                center_grant_id:
+                  contributing_np_projects[index].center_grant_id,
+                funder_institution_id: contributing_np_projects[index].funder,
+                lead_center_id: contributing_np_projects[index].lead_center,
+                grant_title: contributing_np_projects[index].grant_title,
+                created_by: user.id,
+                last_updated_by: user.id,
+                non_pooled_project_type_id: 1,
+              });
             }
           }
         }
 
-        const npps = await this._nonPooledProjectRepository.save(
-          resultTocResultArray,
-        );
+        const npps = await this._nonPooledProjectRepository.find({
+          where: {
+            results_id: result_id,
+            is_active: true,
+          },
+        });
         for (const npp of npps) {
           const initBudget =
             await this._resultBilateralBudgetRepository.findOne({
@@ -288,9 +294,11 @@ export class ResultsTocResultsService {
         if (result.result_level_id > 2) {
           await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
             createResultsTocResultDto,
+            result_id,
           );
           await this._resultsTocResultRepository.saveIndicatorsContributors(
             createResultsTocResultDto,
+            result_id,
           );
         }
 
@@ -415,23 +423,23 @@ export class ResultsTocResultsService {
             {
               planned_result: null,
               initiative_id: resTocRes
-                ? result_toc_results[0].initiative_id
+                ? result_toc_results[0]?.initiative_id
                 : null,
               official_code: resTocRes
-                ? result_toc_results[0].official_code
+                ? result_toc_results[0]?.official_code
                 : null,
-              short_name: resTocRes ? result_toc_results[0].short_name : null,
+              short_name: resTocRes ? result_toc_results[0]?.short_name : null,
               result_toc_results,
             },
           ];
 
           resTocResConResponse.forEach((response) => {
             individualResponses.push({
-              planned_result: response.planned_result,
-              initiative_id: response.initiative_id,
-              official_code: response.official_code,
-              short_name: response.short_name,
-              result_toc_results: response.result_toc_results,
+              planned_result: response?.planned_result,
+              initiative_id: response?.initiative_id,
+              official_code: response?.official_code,
+              short_name: response?.short_name,
+              result_toc_results: response?.result_toc_results,
             });
           });
         }
@@ -510,9 +518,9 @@ export class ResultsTocResultsService {
           contributing_center: resCenters,
           result_toc_result: {
             planned_result: null,
-            initiative_id: resTocRes ? resTocRes[0].initiative_id : null,
-            official_code: resTocRes ? resTocRes[0].official_code : null,
-            short_name: resTocRes ? resTocRes[0].short_name : null,
+            initiative_id: resTocRes ? resTocRes[0]?.initiative_id : null,
+            official_code: resTocRes ? resTocRes[0]?.official_code : null,
+            short_name: resTocRes ? resTocRes[0]?.short_name : null,
             result_toc_results: resTocRes,
           },
           contributors_result_toc_result: individualResponses,
@@ -585,7 +593,6 @@ export class ResultsTocResultsService {
         init,
       );
       const wp_info = await this._resultsTocResultRepository.getWpInformation(
-        resultIdToc,
         toc_result_id,
       );
 
@@ -654,7 +661,7 @@ export class ResultsTocResultsService {
       if (resultinit.toc_id) {
         const vesion_id = await this._resultsTocResultRepository.query(
           `SELECT
-            DISTINCT tr.version_id
+            DISTINCT tr.phase
           FROM
             Integration_information.toc_results tr
           WHERE
@@ -672,8 +679,8 @@ export class ResultsTocResultsService {
           `,
           [resultinit.toc_id, result_id],
         );
-        if (!vesion_id.length || vesion_id[0].version_id == null) {
-          version_id = vesion_id[0].version_id;
+        if (!vesion_id.length || vesion_id[0].phase == null) {
+          version_id = vesion_id[0].phase;
         } else {
           version_id = resultinit.toc_id;
         }
@@ -794,6 +801,31 @@ export class ResultsTocResultsService {
     try {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
       if (contributors_result_toc_result?.length) {
+        // * Logic to delete a WP from Contributors
+        const incomingRtRIds = [];
+        contributors_result_toc_result.forEach((contributor) => {
+          contributor.result_toc_results.forEach((rtrc) => {
+            incomingRtRIds.push(rtrc?.result_toc_result_id);
+          });
+        });
+
+        const allRtRsContributors =
+          await this._resultsTocResultRepository.findBy({
+            result_id,
+            initiative_id: Not(initSubmitter),
+            is_active: true,
+          });
+
+        allRtRsContributors.forEach(async (storedRtR) => {
+          if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
+            await this._resultsTocResultRepository.update(
+              storedRtR.result_toc_result_id,
+              { is_active: false },
+            );
+          }
+        });
+
+        // * Map multiple WPs to the same initiative
         const RtRArray: ResultsTocResult[] = [];
         for (const contributor of contributors_result_toc_result) {
           for (const rtrc of contributor.result_toc_results) {
@@ -804,19 +836,17 @@ export class ResultsTocResultsService {
               rtrc?.result_toc_result_id,
             );
 
-            const commonFields = {
-              planned_result: contributor?.planned_result,
-              last_updated_by: user.id,
-              is_active: true,
-            };
-
             if (RtR) {
               await this._resultsTocResultRepository.update(
                 RtR.result_toc_result_id,
                 {
                   toc_result_id: rtrc?.toc_result_id,
                   action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-                  ...commonFields,
+                  toc_progressive_narrative:
+                    rtrc?.toc_progressive_narrative || null,
+                  planned_result: contributor?.planned_result,
+                  last_updated_by: user.id,
+                  is_active: true,
                 },
               );
             } else {
@@ -851,34 +881,9 @@ export class ResultsTocResultsService {
             }
           }
         }
-
-        // * Logic to delete a WP from Contributors
-        const incomingRtRIds = [];
-        contributors_result_toc_result.forEach((contributor) => {
-          contributor.result_toc_results.forEach((rtrc) => {
-            incomingRtRIds.push(rtrc?.result_toc_result_id);
-          });
-        });
-
-        const allRtRsContributors =
-          await this._resultsTocResultRepository.findBy({
-            result_id,
-            initiative_id: Not(initSubmitter),
-            is_active: true,
-          });
-
-        allRtRsContributors.forEach(async (storedRtR) => {
-          if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
-            await this._resultsTocResultRepository.update(
-              storedRtR.result_toc_result_id,
-              { is_active: false },
-            );
-          }
-        });
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
   }
 }
-

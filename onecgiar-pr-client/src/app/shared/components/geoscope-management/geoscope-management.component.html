@@ -1,0 +1,45 @@
+<app-pr-radio-button [options]="this.geoscopeOptions" optionLabel="full_name" optionValue="id"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct" [(ngModel)]="body.geo_scope_id" (ngModelChange)="this.resetHasScope()"
+    [label]="this.labelRadioButtons"
+    [description]="this.descriptionRadioButtons">
+</app-pr-radio-button>
+<div class="geographic_focus_description" *ngIf="this.internalModule.name === 'reporting'">
+    <app-pr-field-header
+        [description]="geographic_focus_description(this.body.geo_scope_id)"></app-pr-field-header>
+</div>
+<ng-container *ngIf="this.internalModule.name === 'reporting' && this.body?.geo_scope_id && (!!this.body.geo_scope_id && !this.includesScope([4,5,50]))">
+    <app-pr-yes-or-not *ngIf="this.body.geo_scope_id != 3"
+        [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+        [label]="this.body.geo_scope_id != 2 ? 'Are there any regions that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?':'Select regions'"
+        [hideOptions]="this.body.geo_scope_id != 1"
+        [(ngModel)]="this.body.has_regions"
+        [required]="!(this.body.geo_scope_id != 2)">
+    </app-pr-yes-or-not>
+</ng-container>
+<app-pr-multi-select *ngIf="this.body?.geo_scope_id && (this.body.geo_scope_id == 2 || this.body.has_regions)" [options]="this.regionsCountriesSE.regionsList"
+    [description]="this.body.has_regions  !== false || this.body.geo_scope_id == 2 ? this.thereAnyText(false) : null"
+    [label]="this.internalModule.name === 'reporting'? null : this.readOnly?'Regions(s) selected':'Select regions'" selectedLabel="Regions(s) selected" [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
+    selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
+    [(ngModel)]="this.body.regions">
+</app-pr-multi-select>
+<ng-container *ngIf="this.internalModule.name === 'reporting' && this.body?.geo_scope_id && !this.includesScope([3,5,50])">
+    <app-pr-yes-or-not
+            [label]="this.body.geo_scope_id != 3?'Are there any countries that you wish to specify for this '+this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)+'?' : 'Select countries'"
+            [(ngModel)]="this.body.has_countries" [required]="false"
+            [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+            [hideOptions]="this.body.geo_scope_id != 1 && this.body.geo_scope_id != 2">
+        </app-pr-yes-or-not>
+</ng-container>
+<app-pr-multi-select *ngIf="this.body?.geo_scope_id && (this.includesScope([5,3]) || (this.body.has_countries && this.internalModule.name === 'reporting'))" [options]="this.regionsCountriesSE.countriesList"
+    [description]="this.body.has_countries  !== false || this.body.geo_scope_id == 3  ? this.thereAnyText(true)  : null"    
+    [label]="this.readOnly?'Countries selected' :'Select countries'" selectedLabel="Countries selected" [selectedOptionLabel]="!this.includesScope([5,50])? 'name':''" optionLabel="full_name"
+    optionValue="id" placeholder="Select countries" [(ngModel)]="this.body.countries" [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct">
+</app-pr-multi-select>
+
+<div *ngIf="body.geo_scope_id == 5">
+    <div *ngFor="let el of body.countries; let i=index">
+        <app-sub-geoscope [obj_country]="el" [index]="i" [obj_countrySelected]="body.countries" 
+        [name]="el.name" [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"></app-sub-geoscope>
+    </div>
+</div>
+<br *ngIf="this.internalModule.name === 'ipsr'">

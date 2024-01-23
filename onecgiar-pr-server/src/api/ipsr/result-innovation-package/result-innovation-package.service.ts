@@ -16,7 +16,7 @@ import { IpsrRepository } from '../ipsr.repository';
 import { ResultInnovationPackageRepository } from './repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../innovation-pathway/repository/result-ip-action-area-outcome.repository';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
-import { In, IsNull } from 'typeorm';
+import { FindOptionsWhere, In } from 'typeorm';
 import { ResultIpAAOutcome } from '../innovation-pathway/entities/result-ip-action-area-outcome.entity';
 import { ResultsImpactAreaIndicatorRepository } from 'src/api/results/results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ResultIpImpactArea } from '../innovation-pathway/entities/result-ip-impact-area.entity';
@@ -34,8 +34,6 @@ import { ResultIpSdgTargetRepository } from '../innovation-pathway/repository/re
 import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { UnitTimeRepository } from './repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
-import { ResultCountriesSubNationalRepository } from '../../results/result-countries-sub-national/result-countries-sub-national.repository';
-import { ResultCountriesSubNational } from '../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { Year } from '../../results/years/entities/year.entity';
 import { YearRepository } from '../../results/years/year.repository';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
@@ -44,6 +42,9 @@ import { IpsrService } from '../ipsr.service';
 import { ResultIpSdgTargets } from '../innovation-pathway/entities/result-ip-sdg-targets.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
+import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ClarisaSubnationalScope } from '../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -73,12 +74,12 @@ export class ResultInnovationPackageService {
     private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _unitTimeRepository: UnitTimeRepository,
     private readonly _tocResult: TocResultsRepository,
-    private readonly _resultCountriesSubNationalRepository: ResultCountriesSubNationalRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _linkedResultRepository: LinkedResultRepository,
     private readonly _evidenceRepository: EvidencesRepository,
     private readonly _ipsrService: IpsrService,
     private readonly _versioningService: VersioningService,
+    private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
   ) {}
 
   async findUnitTime() {
@@ -161,7 +162,7 @@ export class ResultInnovationPackageService {
   }
 
   async createHeader(
-    CreateResultInnovationPackageDto: CreateResultInnovationPackageDto,
+    createResultInnovationPackageDto: CreateResultInnovationPackageDto,
     user: TokenDto,
   ) {
     try {
@@ -169,7 +170,7 @@ export class ResultInnovationPackageService {
       let innovationGeoScope: number;
 
       const coreInnovationResult = await this._resultRepository.getResultById(
-        CreateResultInnovationPackageDto.result_id,
+        createResultInnovationPackageDto.result_id,
       );
 
       if (!coreInnovationResult) {
@@ -183,7 +184,7 @@ export class ResultInnovationPackageService {
       const coreInnovationInitiative =
         await this._resultByInitiativeRepository.findOne({
           where: {
-            result_id: CreateResultInnovationPackageDto.result_id,
+            result_id: createResultInnovationPackageDto.result_id,
             initiative_role_id: 1,
             is_active: true,
           },
@@ -203,7 +204,7 @@ export class ResultInnovationPackageService {
         );
       const mapInits = initiativeRole.find(
         (i) =>
-          i.inititiative_id === CreateResultInnovationPackageDto.initiative_id,
+          i.inititiative_id === createResultInnovationPackageDto.initiative_id,
       );
 
       if (!mapInits) {
@@ -215,18 +216,18 @@ export class ResultInnovationPackageService {
         };
       }
 
-      if (!CreateResultInnovationPackageDto.initiative_id) {
+      if (!createResultInnovationPackageDto.initiative_id) {
         throw {
-          response: `Initiative id: ${CreateResultInnovationPackageDto.initiative_id}`,
+          response: `Initiative id: ${createResultInnovationPackageDto.initiative_id}`,
           message:
             'Please enter a Initiative Official Code to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
         };
       }
 
-      if (!CreateResultInnovationPackageDto.geo_scope_id) {
+      if (!createResultInnovationPackageDto.geo_scope_id) {
         throw {
-          response: `Geo Scope id: ${CreateResultInnovationPackageDto.geo_scope_id}`,
+          response: `Geo Scope id: ${createResultInnovationPackageDto.geo_scope_id}`,
           message:
             'Please enter a Geo Scope to create a new Innovation Package',
           status: HttpStatus.BAD_REQUEST,
@@ -254,16 +255,16 @@ export class ResultInnovationPackageService {
       }
 
       const last_code = await this._resultRepository.getLastResultCode();
-      const regions = CreateResultInnovationPackageDto.regions;
-      const countries = CreateResultInnovationPackageDto.countries;
+      const regions = createResultInnovationPackageDto.regions;
+      const countries = createResultInnovationPackageDto.countries;
 
-      if ([1, 2, 5].includes(CreateResultInnovationPackageDto.geo_scope_id)) {
-        innovationGeoScope = CreateResultInnovationPackageDto.geo_scope_id;
+      if ([1, 2, 5].includes(createResultInnovationPackageDto.geo_scope_id)) {
+        innovationGeoScope = createResultInnovationPackageDto.geo_scope_id;
       } else {
         innovationGeoScope = countries?.length > 1 ? 3 : 4;
       }
 
-      if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+      if (createResultInnovationPackageDto.geo_scope_id === 2) {
         const regionsList = regions.map((r) => r.name);
         if (result.title.endsWith('.')) {
           result.title = result.title.replace(/\.$/, '');
@@ -274,28 +275,9 @@ export class ResultInnovationPackageService {
           regionsList.length > 1 ? ' and ' : ''
         }${regionsList[regionsList.length - 1]}`;
       } else if (
-        CreateResultInnovationPackageDto.geo_scope_id === 3 ||
-        CreateResultInnovationPackageDto.geo_scope_id === 4
+        [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
       ) {
-        const countriesList = countries.map((c) => c.name);
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
-          .slice(0, -1)
-          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-          countriesList[countriesList.length - 1]
-        }`;
-      } else if (CreateResultInnovationPackageDto.geo_scope_id === 5) {
-        const countriesList = countries.map((c) => c.name);
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
-          .slice(0, -1)
-          .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-          countriesList[countriesList.length - 1]
-        }`;
+        innovationTitle = this.createInnovationTitle(result, countries);
       } else {
         if (result.title.endsWith('.')) {
           result.title = result.title.replace(/\.$/, '');
@@ -344,7 +326,7 @@ export class ResultInnovationPackageService {
         has_regions: regions ? true : false,
         has_countries: countries ? true : false,
         geographic_scope_id: innovationGeoScope,
-        initiative_id: CreateResultInnovationPackageDto.initiative_id,
+        initiative_id: createResultInnovationPackageDto.initiative_id,
         version_id: version.id,
         created_by: user.id,
         last_updated_by: user.id,
@@ -354,7 +336,7 @@ export class ResultInnovationPackageService {
       const newInnovationByInitiative =
         await this._resultByInitiativeRepository.save({
           result_id: newResult,
-          initiative_id: CreateResultInnovationPackageDto.initiative_id,
+          initiative_id: createResultInnovationPackageDto.initiative_id,
           initiative_role_id: 1,
           created_by: user.id,
           last_updated_by: user.id,
@@ -396,7 +378,7 @@ export class ResultInnovationPackageService {
       const resultRegions: ResultRegion[] = [];
       const newInnovationCountries: ResultCountry[] = [];
 
-      if (CreateResultInnovationPackageDto.geo_scope_id === 2) {
+      if (createResultInnovationPackageDto.geo_scope_id === 2) {
         if (regions) {
           for (let i = 0; i < regions.length; i++) {
             const newRegions = new ResultRegion();
@@ -407,9 +389,7 @@ export class ResultInnovationPackageService {
           }
         }
       } else if (
-        CreateResultInnovationPackageDto.geo_scope_id === 3 ||
-        CreateResultInnovationPackageDto.geo_scope_id === 4 ||
-        CreateResultInnovationPackageDto.geo_scope_id === 5
+        [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
       ) {
         if (countries) {
           for (const ct of countries) {
@@ -419,12 +399,12 @@ export class ResultInnovationPackageService {
             });
             newInnovationCountries.push(newRc);
             if (
-              CreateResultInnovationPackageDto.geo_scope_id === 5 &&
-              ct?.result_countries_sub_national?.length
+              createResultInnovationPackageDto.geo_scope_id === 5 &&
+              ct?.sub_national?.length
             ) {
               await this.saveSubNational(
                 newRc.result_country_id,
-                ct.result_countries_sub_national,
+                ct.sub_national,
                 user,
               );
             }
@@ -478,68 +458,48 @@ export class ResultInnovationPackageService {
   }
 
   async saveSubNational(
-    reCoId: number,
-    subNationals: ResultCountriesSubNational[],
+    incomingResultCountryId: number,
+    subNationals: ClarisaSubnationalScope[],
     user: TokenDto,
   ) {
     if (subNationals?.length) {
-      subNationals.forEach(async (el) => {
-        let reCoSub: ResultCountriesSubNational = null;
-        const whereConditions = el?.result_countries_sub_national_id
-          ? {
-              result_countries_sub_national_id:
-                el.result_countries_sub_national_id,
-            }
-          : el?.sub_level_one_id && el?.sub_level_two_id
-            ? {
-                sub_level_one_id: el.sub_level_one_id,
-                sub_level_two_id: el.sub_level_two_id,
-                result_countries_id: reCoId,
-              }
-            : !reCoId && el?.sub_level_one_id && !el?.sub_level_two_id
-              ? {
-                  sub_level_one_id: el.sub_level_one_id,
-                  sub_level_two_id: IsNull(),
-                  result_countries_id: reCoId,
-                }
-              : !reCoId && !el?.sub_level_one_id && !el?.sub_level_two_id
-                ? {
-                    sub_level_one_id: IsNull(),
-                    sub_level_two_id: IsNull(),
-                    result_countries_id: reCoId,
-                  }
-                : null;
+      for (const sn of subNationals) {
+        let whereClause: FindOptionsWhere<ResultCountrySubnational> = null;
 
-        if (whereConditions) {
-          reCoSub = await this._resultCountriesSubNationalRepository.findOne({
-            where: whereConditions,
-          });
+        if (incomingResultCountryId && sn?.code) {
+          whereClause = {
+            result_country_id: incomingResultCountryId,
+            clarisa_subnational_scope_code: sn.code,
+          };
         }
 
-        if (reCoSub) {
-          await this._resultCountriesSubNationalRepository.update(
-            reCoSub.result_countries_sub_national_id,
+        let resultCountrySubnational: ResultCountrySubnational = null;
+
+        if (whereClause) {
+          resultCountrySubnational =
+            await this._resultCountrySubnationalRepository.findOne({
+              where: whereClause,
+            });
+        }
+
+        //this should not happen, as the geoscope can only be saved when the ipsr is created
+        if (resultCountrySubnational) {
+          await this._resultCountrySubnationalRepository.update(
+            resultCountrySubnational.result_country_subnational_id,
             {
-              is_active: el?.is_active == undefined ? true : el.is_active,
-              sub_level_one_id: el?.sub_level_one_id,
-              sub_level_one_name: el?.sub_level_one_name,
-              sub_level_two_id: el?.sub_level_two_id,
-              sub_level_two_name: el?.sub_level_two_name,
+              is_active: true,
               last_updated_by: user.id,
             },
           );
         } else {
-          await this._resultCountriesSubNationalRepository.save({
+          await this._resultCountrySubnationalRepository.save({
             created_by: user.id,
             last_updated_by: user.id,
-            sub_level_one_id: el?.sub_level_one_id,
-            sub_level_two_id: el?.sub_level_two_id,
-            sub_level_one_name: el?.sub_level_one_name,
-            sub_level_two_name: el?.sub_level_two_name,
-            result_countries_id: reCoId,
+            clarisa_subnational_scope_code: sn.code,
+            result_country_id: incomingResultCountryId,
           });
         }
-      });
+      }
     }
   }
 
@@ -1047,5 +1007,17 @@ export class ResultInnovationPackageService {
       message: 'The result was deleted successfully',
       status: HttpStatus.ACCEPTED,
     };
+  }
+
+  createInnovationTitle(result, countries) {
+    const countriesList = countries.map((c) => c.name);
+    if (result.title.endsWith('.')) {
+      result.title = result.title.replace(/\.$/, '');
+    }
+    return `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
+      .slice(0, -1)
+      .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+      countriesList[countriesList.length - 1]
+    }`;
   }
 }

@@ -229,11 +229,6 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      await this.separateCentersFromCgspacePartners(
-        updatedKnowledgeProduct,
-        true,
-      );
-
       //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -241,15 +236,21 @@ export class ResultsKnowledgeProductsService {
       await this._resultsKnowledgeProductAuthorRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
-      await this._resultsKnowledgeProductInstitutionRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-          {},
-      );
+      updatedKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+            [],
+        );
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      await this.separateCentersFromCgspacePartners(
+        updatedKnowledgeProduct,
+        true,
       );
 
       //geolocation
@@ -543,32 +544,30 @@ export class ResultsKnowledgeProductsService {
           mqapResponse,
         );
 
-      if ((cgYear.year ?? 0) != versionCgspaceYear) {
+      if ((mqapResponse?.Type ?? '') == 'Journal Article') {
+        if (
+          ['online_publication_date', 'issued_date'].includes(
+            cgYear.field_name,
+          ) &&
+          (cgYear.year ?? 0) != versionCgspaceYear
+        ) {
+          throw {
+            response: { title: mqapResponse?.Title },
+            message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
+              Kindly review the rules provided at the beginning of the submission.<br><br>
+              If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
+              <b>About this error:</b><br>
+              Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          };
+        }
+      } else if ((cgYear.year ?? 0) != versionCgspaceYear) {
         throw {
           response: { title: mqapResponse?.Title },
           message:
             `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
             'Should you require assistance in modifying the publication year for this knowledge product, ' +
             'please contact your Center’s knowledge management team to review this information in CGSpace.',
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-        };
-      } else if (
-        (cgYear.field_name != 'online_publication_date' &&
-          (mqapResponse?.Type ?? '') == 'Journal Article') ||
-        (cgYear.field_name == 'online_publication_date' &&
-          (mqapResponse?.Type ?? '') == 'Journal Article' &&
-          (cgYear.year ?? 0) != versionCgspaceYear)
-      ) {
-        throw {
-          response: { title: mqapResponse?.Title },
-          message:
-            `Only journal articles published online in ${versionCgspaceYear} are eligible for this reporting cycle.<br>` +
-            'The knowledge product you are attempting to report either lacks the online publication date in CGSpace ' +
-            `or has an online publication date other than ${versionCgspaceYear}.<br><br>` +
-            'If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>' +
-            '<b>About this error:</b><br>Please be aware that for journal articles, the reporting system automatically verifies ' +
-            `the “Date Online” field in CGSpace, specifically checking for the year ${versionCgspaceYear}. If this field is empty or contains a year ` +
-            `other than ${versionCgspaceYear}, the submission will not be accepted. This prevents double counting of publications across consecutive years.`,
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
@@ -1085,8 +1084,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const knowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOneBy({
-          result_knowledge_product_id: id,
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: { result_knowledge_product_id: id },
+          relations: { result_object: { obj_version: true } },
         });
 
       if (!knowledgeProduct) {
@@ -1101,7 +1101,10 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
 
       // validations
-      response.warnings = this.getWarnings(response);
+      response.warnings = this.getWarnings(
+        response,
+        knowledgeProduct.result_object.obj_version.cgspace_year,
+      );
 
       return {
         response,
@@ -1123,8 +1126,9 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const result = await this._resultRepository.findOneBy({
-        id,
+      const result = await this._resultRepository.findOne({
+        where: { id },
+        relations: { obj_version: true },
       });
 
       if (!result) {
@@ -1216,7 +1220,10 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
 
       // validations
-      response.warnings = this.getWarnings(response);
+      response.warnings = this.getWarnings(
+        response,
+        result.obj_version.cgspace_year,
+      );
 
       return {
         response,
@@ -1228,7 +1235,10 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  getWarnings(response: ResultsKnowledgeProductDto): string[] {
+  getWarnings(
+    response: ResultsKnowledgeProductDto,
+    cgspaceYear: number,
+  ): string[] {
     const warnings: string[] = [];
 
     if (response.doi?.length < 1) {
@@ -1260,7 +1270,7 @@ export class ResultsKnowledgeProductsService {
           'The year of publication is automatically retrieved from an external service (Web ' +
             'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
             'team will manually validate the record. We remind you that only knowledge products ' +
-            'published in 2022 can be reported.',
+            `published in ${cgspaceYear} can be reported.`,
         );
       }
 

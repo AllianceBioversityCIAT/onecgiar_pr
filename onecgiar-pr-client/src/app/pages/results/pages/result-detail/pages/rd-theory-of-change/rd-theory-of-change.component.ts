@@ -72,7 +72,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         if (this.theoryOfChangeBody?.contributors_result_toc_result !== null) {
           this.theoryOfChangesServices.contributors_result_toc_result = this.theoryOfChangeBody?.contributors_result_toc_result;
           this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
-            tab.planned_result = tab.result_toc_results[0].planned_result ?? null;
+            tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
             tab.index = index;
             tab.showMultipleWPsContent = true;
           });

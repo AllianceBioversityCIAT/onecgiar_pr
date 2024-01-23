@@ -186,7 +186,7 @@ export class AuthService {
                   code: err.code,
                 },
                 message: 'Error with communication with third party servers',
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                status: HttpStatus.UNAUTHORIZED,
               };
             } else {
               const error: string = err.lde_message.split(/:|,/)[2].trim();
@@ -220,7 +220,7 @@ export class AuthService {
                 error: err,
               },
               message: 'Unknown error',
-              status: HttpStatus.INTERNAL_SERVER_ERROR,
+              status: HttpStatus.UNAUTHORIZED,
             };
           }
         } catch (error) {

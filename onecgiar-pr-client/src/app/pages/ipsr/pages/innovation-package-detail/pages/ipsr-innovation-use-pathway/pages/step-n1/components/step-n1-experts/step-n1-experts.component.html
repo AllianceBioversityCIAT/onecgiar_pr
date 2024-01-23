@@ -24,7 +24,7 @@
                     </div>
                     <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization"
                         optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization"
-                        [(ngModel)]="this.expert.organization_id">
+                        [(ngModel)]="this.expert.organization_id" [required]="false">
                     </app-pr-select>
                 </div>
                 <div>

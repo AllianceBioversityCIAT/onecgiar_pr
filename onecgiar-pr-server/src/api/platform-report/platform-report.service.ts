@@ -156,6 +156,11 @@ export class PlatformReportService {
             //last: 'Last Page',
           },
         },
+        childProcessOptions: {
+          env: {
+            OPENSSL_CONF: '/dev/null',
+          },
+        },
       };
 
       const document = {
