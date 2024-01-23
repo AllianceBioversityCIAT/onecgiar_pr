@@ -89,27 +89,29 @@ export class LinksToResultsGlobalComponent implements OnInit {
     const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
     const firstResultByDate = this.getFirstByDate(result.results);
 
+    const { results, ...rest } = firstResultByDate;
+
     if (currentResultTypeId === 1) {
-      switch (firstResultByDate.result_type_id) {
+      switch (rest.result_type_id) {
         case 2:
           this.linksToResultsBody.linkedInnovation.linked_innovation_use = true;
-          this.innoUseLinks.push(firstResultByDate);
-          this.linksToResultsBody.links.push(firstResultByDate);
+          this.innoUseLinks.push(rest);
+          this.linksToResultsBody.links.push(rest);
           this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
           break;
         case 7:
           this.linksToResultsBody.linkedInnovation.linked_innovation_dev = true;
-          this.innoDevLinks.push(firstResultByDate);
-          this.linksToResultsBody.links.push(firstResultByDate);
+          this.innoDevLinks.push(rest);
+          this.linksToResultsBody.links.push(rest);
           this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
           break;
         default:
-          this.linksToResultsBody.links.push(firstResultByDate);
+          this.linksToResultsBody.links.push(rest);
           this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
           break;
       }
     } else {
-      this.linksToResultsBody.links.push(firstResultByDate);
+      this.linksToResultsBody.links.push(rest);
       this.filteredResults = this.linksToResultsBody.links;
     }
 
