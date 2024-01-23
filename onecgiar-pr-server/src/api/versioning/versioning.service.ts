@@ -246,7 +246,6 @@ export class VersioningService {
 
       await this._nonPooledProjectRepository.replicable(config);
       await this._resultsCenterRepository.replicable(config);
-      await this._resultsTocResultRepository.replicable(config);
       await this._resultByIntitutionsRepository.replicable(config);
       await this._resultByInstitutionsByDeliveriesTypeRepository.replicable(
         config,
