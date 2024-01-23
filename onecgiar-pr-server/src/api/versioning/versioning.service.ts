@@ -47,6 +47,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { isProduction } from '../../shared/utils/validation.utils';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 
 @Injectable()
 export class VersioningService {
@@ -83,6 +84,7 @@ export class VersioningService {
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _evidencesService: EvidencesService,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository,
   ) {}
 
   /**
@@ -203,6 +205,7 @@ export class VersioningService {
       };
 
       await this._resultByInitiativesRepository.replicable(config);
+      await this._shareResultRequestRepository.replicable(config);
 
       switch (parseInt(`${result.result_type_id}`)) {
         case 1:
