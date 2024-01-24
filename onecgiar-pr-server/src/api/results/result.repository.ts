@@ -620,7 +620,7 @@ WHERE
     	caao.outcomeStatement as \`Action area outcome name\`,
     	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
       GROUP_CONCAT(DISTINCT cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\`,
-      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`
+      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=',r.version_id) as \`PDF Link\`
     from
     	\`result\` r
     inner join result_type rt on

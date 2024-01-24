@@ -1,20 +1,113 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ShareResultRequest } from './entities/share-result-request.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import {
+  ReplicableConfigInterface,
+  ReplicableInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ShareResultRequestRepository
   extends Repository<ShareResultRequest>
-  implements LogicalDelete<ShareResultRequest>
+  implements
+    LogicalDelete<ShareResultRequest>,
+    ReplicableInterface<ShareResultRequest>
 {
+  private readonly _logger: Logger = new Logger(
+    ShareResultRequestRepository.name,
+  );
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
   ) {
     super(ShareResultRequest, dataSource.createEntityManager());
+  }
+
+  async replicable(
+    config: ReplicableConfigInterface<ShareResultRequest>,
+  ): Promise<ShareResultRequest | ShareResultRequest[]> {
+    let final_data: ShareResultRequest[] = null;
+    try {
+      if (config.f?.custonFunction) {
+        const queryData = `
+        SELECT ? as result_id,  
+			rbi2.inititiative_id as owner_initiative_id, 
+			rbi.inititiative_id as  shared_inititiative_id,
+			rbi.inititiative_id as  approving_inititiative_id,
+			rbi2.inititiative_id as requester_initiative_id,
+			1 as request_status_id,
+			? as requested_by
+			from \`result\` r 
+			inner join results_by_inititiative rbi on rbi.result_id = r.id 
+													and rbi.is_active > 0
+													and rbi.initiative_role_id = 2
+			inner join results_by_inititiative rbi2 on rbi2.result_id = r.id 
+													and rbi2.is_active > 0
+													and rbi2.initiative_role_id = 1
+			where r.is_active > 0
+				and r.id  = ?;
+        `;
+        const response = await (<Promise<ShareResultRequest[]>>(
+          this.query(queryData, [
+            config.new_result_id,
+            config.user.id,
+            config.old_result_id,
+          ])
+        ));
+        const response_edit = <ShareResultRequest[]>(
+          config.f.custonFunction(response)
+        );
+        final_data = await this.save(response_edit);
+      } else {
+        const queryData = `
+        insert into share_result_request 
+			(result_id,
+			owner_initiative_id,
+			shared_inititiative_id,
+			approving_inititiative_id,
+			requester_initiative_id,
+			request_status_id,
+			requested_by
+			)
+			SELECT ? as result_id,  
+			rbi2.inititiative_id as owner_initiative_id, 
+			rbi.inititiative_id as  shared_inititiative_id,
+			rbi.inititiative_id as  approving_inititiative_id,
+			rbi2.inititiative_id as requester_initiative_id,
+			1 as request_status_id,
+			? as requested_by
+			from \`result\` r 
+			inner join results_by_inititiative rbi on rbi.result_id = r.id 
+													and rbi.is_active > 0
+													and rbi.initiative_role_id = 2
+			inner join results_by_inititiative rbi2 on rbi2.result_id = r.id 
+													and rbi2.is_active > 0
+													and rbi2.initiative_role_id = 1
+			where r.is_active > 0
+				and r.id  = ?;`;
+        await this.query(queryData, [
+          config.new_result_id,
+          config.user.id,
+          config.old_result_id,
+        ]);
+
+        const queryFind = `
+        select * from share_result_request srr WHERE srr.is_active > 0 and srr.result_id = ?;`;
+        final_data = await this.query(queryFind, [config.new_result_id]);
+      }
+    } catch (error) {
+      config.f?.errorFunction
+        ? config.f.errorFunction(error)
+        : this._logger.error(error);
+      final_data = null;
+    }
+
+    config.f?.completeFunction?.({ ...final_data });
+    return final_data;
   }
 
   fisicalDelete(resultId: number): Promise<any> {

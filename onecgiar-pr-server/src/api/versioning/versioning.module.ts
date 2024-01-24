@@ -44,6 +44,7 @@ import { ResultInitiativeBudgetRepository } from '../results/result_budget/repos
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -89,6 +90,7 @@ import { SharePointModule } from '../../shared/services/share-point/share-point.
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
     EvidencesService,
+    ShareResultRequestRepository,
   ],
   exports: [
     EvidencesService,
@@ -125,6 +127,7 @@ import { SharePointModule } from '../../shared/services/share-point/share-point.
     RoleByUserRepository,
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
+    ShareResultRequestRepository,
   ],
   imports: [SharePointModule],
 })
