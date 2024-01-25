@@ -8,7 +8,6 @@ import { SubmissionModalService } from '../components/submission-modal/submissio
 import { DataControlService } from '../../../../../shared/services/data-control.service';
 import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-modal.service';
 import { RolesService } from '../../../../../shared/services/global/roles.service';
-import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-panel-menu',
@@ -23,6 +22,9 @@ export class PanelMenuComponent {
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;
     const hideInKP = [];
+
+    if (hideInKP.length === 0) return false;
+
     return Boolean(hideInKP.find(option => option == navOption.path));
   }
 
@@ -32,6 +34,9 @@ export class PanelMenuComponent {
 
   validateMember(myInitiativesList) {
     const initFinded = myInitiativesList.find(init => init?.initiative_id == this.dataControlSE?.currentResult?.initiative_id);
+
+    if (!initFinded) return 6;
+
     return initFinded?.role === 'Member' ? 6 : 1;
   }
 }
