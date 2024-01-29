@@ -856,4 +856,9 @@ export class ResultsApiService {
   GET_platformGlobalVariables() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
   }
+
+  GET_platformGlobalVariablesByCategoryId(categoryId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/category/${categoryId}`);
+  }
+
 }
