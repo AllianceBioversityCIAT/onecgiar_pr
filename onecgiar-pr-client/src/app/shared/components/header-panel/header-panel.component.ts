@@ -24,10 +24,6 @@ export class HeaderPanelComponent implements OnInit {
 
     const top = window.screenY + (window.outerHeight - h) / 2.5;
     const left = window.screenX + (window.outerWidth - w) / 2;
-
-    console.log(this.globalLinksSE.links)
-    console.log(this.globalLinksSE.links.url_platform_information)
-
     const url = this.globalLinksSE.links.url_platform_information;
 
     window.open(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
