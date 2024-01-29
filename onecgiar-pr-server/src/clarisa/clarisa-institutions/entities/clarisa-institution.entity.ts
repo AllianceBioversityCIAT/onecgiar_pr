@@ -15,7 +15,11 @@ import { ClarisaCenter } from '../../clarisa-centers/entities/clarisa-center.ent
 
 @Entity('clarisa_institutions')
 export class ClarisaInstitution {
-  @PrimaryGeneratedColumn()
+  @Column({
+    name: 'id',
+    type: 'int',
+    primary: true,
+  })
   id: number;
 
   @Column({
