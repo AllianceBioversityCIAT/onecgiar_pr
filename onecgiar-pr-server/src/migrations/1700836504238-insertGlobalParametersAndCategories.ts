@@ -7,7 +7,7 @@ export class insertGlobalParametersAndCategories1700836504238
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `INSERT INTO \`global_parameter_categories\` (name,description) VALUES ('sharepoint',''), ('platform_global_variables','');`,
+      `INSERT INTO \`global_parameter_categories\` (name,description) VALUES ('sharepoint',''), ('platform_global_variables',''), ('urls','');`,
     );
 
     await queryRunner.query(

@@ -3,6 +3,7 @@ import { internationalizationData } from '../../data/internationalizationData';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
+import { GlobalLinksService } from '../../services/variables/global-links.service';
 
 @Component({
   selector: 'app-header-panel',
@@ -12,7 +13,7 @@ import { environment } from '../../../../environments/environment';
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
-  constructor(public api: ApiService, public dataControlSE: DataControlService) {}
+  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE:GlobalLinksService) {}
   ngOnInit(): void {
     this.api.updateUserData(() => {});
   }
@@ -24,7 +25,10 @@ export class HeaderPanelComponent implements OnInit {
     const top = window.screenY + (window.outerHeight - h) / 2.5;
     const left = window.screenX + (window.outerWidth - w) / 2;
 
-    const url = `https://cgiar-prms.notion.site/User-Roles-for-PRMS-Reporting-Tool-a105042c2a564147b08f8c734adc106c`;
+    console.log(this.globalLinksSE.links)
+    console.log(this.globalLinksSE.links.url_platform_information)
+
+    const url = this.globalLinksSE.links.url_platform_information;
 
     window.open(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
   }
