@@ -157,42 +157,18 @@ describe('InnovationPackageCreatorComponent', () => {
 
       expect(result).toBeTruthy();
     });
-    it('should return true for geo_scope_id 4 when countries length is greater than 0', () => {
-      component.innovationPackageCreatorBody.geo_scope_id = 4;
+    it('should return true for geo_scope_id 3 when countries length is greater than 0', () => {
+      component.innovationPackageCreatorBody.geo_scope_id = 3;
       component.innovationPackageCreatorBody.countries = [{ id: '1' }];
 
       const result = component.areLists;
 
       expect(result).toBeTruthy();
     });
-    it('should return true for geo_scope_id 5 when allFields do not contain select_placeholder', () => {
+    it('should return false for geo_scope_id 5 when sub_national length is not in the countries array', () => {
       component.innovationPackageCreatorBody.geo_scope_id = 5;
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(`
-        <div class="geo_scope_elements">
-          <div class="geo-scope">
-            <div class="text">
-              <div class="select_placeholder"></div>
-            </div>
-          </div>
-        </div>`,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-
-      const result = component.areLists;
-
-      expect(result).toBeTruthy();
-    });
-    it('should return false for geo_scope_id 5 when when someNull is true', () => {
-      component.innovationPackageCreatorBody.geo_scope_id = 5;
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(`
-        <div class="geo_scope_elements"></div>`,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-
+      component.innovationPackageCreatorBody.countries = [{ id: '1'}];
+      
       const result = component.areLists;
 
       expect(result).toBeFalsy();
