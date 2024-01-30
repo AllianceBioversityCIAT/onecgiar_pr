@@ -228,11 +228,6 @@ export class ResultsByInstitutionsService {
           results_id: incomingResult.id,
         });
 
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
-
       if (knowledgeProduct) {
         if (data.mqap_institutions?.length) {
           //here we filter out from the additional contributors the mqap manual mappings
@@ -289,7 +284,7 @@ export class ResultsByInstitutionsService {
           data?.no_applicable_partner,
           [InstitutionRoleEnum.PARTNER],
         );
-      const vrs: Version = <Version>version.response;
+
       incomingResult.no_applicable_partner = data.no_applicable_partner;
       await this._resultRepository.save(incomingResult);
       for (let index = 0; index < data.institutions.length; index++) {
@@ -352,7 +347,6 @@ export class ResultsByInstitutionsService {
                 responseInstitution.id;
               newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
               newInstitutionsDeliveries.last_updated_by = user.id;
-              newInstitutionsDeliveries.versions_id = vrs.id;
               newInstitutionsDeliveries.created_by = user.id;
               InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
             }
@@ -403,7 +397,6 @@ export class ResultsByInstitutionsService {
                 newInstitutionsDeliveries.partner_delivery_type_id =
                   delivery[i];
                 newInstitutionsDeliveries.last_updated_by = user.id;
-                newInstitutionsDeliveries.versions_id = vrs.id;
                 newInstitutionsDeliveries.created_by = user.id;
                 InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
               }

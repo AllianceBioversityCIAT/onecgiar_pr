@@ -9,8 +9,11 @@ export class ResultsNotificationsService {
   staticNotisList = [];
   data = [];
   dataIPSR = [];
+  notificationLength = null;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) {
+    this.get_section_information();
+  }
 
   get_section_information() {
     this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
@@ -37,6 +40,7 @@ export class ResultsNotificationsService {
       });
 
       this.data = [...requestData, ...updateRequestPendingData];
+      this.notificationLength = this.data.length;
     });
 
     this.api.resultsSE.GET_requestStatus().subscribe();

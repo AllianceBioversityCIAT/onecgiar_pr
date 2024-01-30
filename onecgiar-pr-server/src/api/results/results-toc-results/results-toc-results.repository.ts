@@ -392,7 +392,7 @@ export class ResultsTocResultRepository
     }
   }
 
-  async getWpInformation(resultId: number, toc_result_id: number) {
+  async getWpInformation(toc_result_id: number) {
     const queryData = `
       select
         r.description,
@@ -408,9 +408,9 @@ export class ResultsTocResultRepository
         join version v on v.id = r.version_id
         join result_type rt ON rt.id = r.result_type_id
       where
-        rtr.results_id = ${resultId}
-        AND rtr.toc_result_id = ${toc_result_id}
+        rtr.toc_result_id = ${toc_result_id}
         AND rtr.is_active = 1
+        AND r.is_active = 1;
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
@@ -1052,8 +1052,7 @@ export class ResultsTocResultRepository
                   join version v on v.id = r.version_id
                   join result_type rt ON rt.id = r.result_type_id
                 where
-                  rtri.results_toc_results_id = ?
-                  and rtri.toc_results_indicator_id = ?
+                  rtri.toc_results_indicator_id = ?
                   and rit.number_target = ?
                   and rtr.is_active = 1
                   and r.is_active = 1
@@ -1063,7 +1062,6 @@ export class ResultsTocResultRepository
               const queryTargetothercontributing = await this.query(
                 queryTargetContributing,
                 [
-                  IndicatorTargetId,
                   itemIndicator.toc_results_indicator_id,
                   element.number_target,
                 ],

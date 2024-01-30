@@ -3,6 +3,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
 import { ManageInnovationsListService } from '../../services/manage-innovations-list.service';
+import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 
 @Component({
   selector: 'app-innovation-package-creator',
@@ -39,27 +40,14 @@ export class InnovationPackageCreatorComponent {
 
   get areLists(): boolean {
     switch (this.innovationPackageCreatorBody?.geo_scope_id) {
-      case 1:
+      case GeoScopeEnum.GLOBAL:
         return true;
-      case 2:
+      case GeoScopeEnum.REGIONAL:
         return !!this.innovationPackageCreatorBody.regions.length;
-      case 4:
+      case GeoScopeEnum.COUNTRY:
         return !!this.innovationPackageCreatorBody.countries.length;
-      case 5:
-        const allFields = [];
-        document
-          ?.querySelector('.geo_scope_elements')
-          ?.querySelectorAll('.geo-scope')
-          ?.forEach(item => {
-            const fields = item?.querySelectorAll('.text');
-            const countryField = fields[0]?.classList?.contains('select_placeholder');
-            const SubNationalLevelOneField = fields[1]?.classList?.contains('select_placeholder');
-            allFields.push(countryField || SubNationalLevelOneField);
-          });
-        const someNull = allFields.length ? allFields.some(item => item === true) : true;
-        //(someNull);
-        //(this.innovationPackageCreatorBody.countries.length);
-        return !someNull;
+      case GeoScopeEnum.SUB_NATIONAL:
+        return this.innovationPackageCreatorBody.countries?.some((country: any) => country?.sub_national?.length);
       default:
         return false;
     }

@@ -1175,10 +1175,10 @@ export class ResultsService {
     }
   }
 
-  async saveGeoScope(createResultGeo: CreateResultGeoDto) {
+  async saveGeoScope(createResultGeo: CreateResultGeoDto, user: TokenDto) {
     try {
       await this._resultRegionsService.create(createResultGeo);
-      await this._resultCountriesService.create(createResultGeo);
+      await this._resultCountriesService.create(createResultGeo, user);
 
       const toUpdateFromElastic = await this.findAllSimplified(
         createResultGeo.result_id.toString(),
@@ -1232,7 +1232,7 @@ export class ResultsService {
 
       const regions: (ResultRegion | string)[] =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      const contries: (ResultCountry | string)[] =
+      const countries: (ResultCountry | string)[] =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
@@ -1248,7 +1248,11 @@ export class ResultsService {
       }
 
       let scope = 0;
-      if (result.geographic_scope_id == 1 || result.geographic_scope_id == 2) {
+      if (
+        result.geographic_scope_id == 1 ||
+        result.geographic_scope_id == 2 ||
+        result.geographic_scope_id == 5
+      ) {
         scope = result.geographic_scope_id;
       } else if (
         result.geographic_scope_id == 3 ||
@@ -1256,15 +1260,13 @@ export class ResultsService {
       ) {
         scope = 3;
       } else if (result.geographic_scope_id == 50) {
-        scope = 4;
-      } else {
-        scope = null;
+        scope = 50;
       }
       return {
         response: {
           regions: regions,
-          countries: contries,
-          scope_id: scope,
+          countries,
+          geo_scope_id: scope,
           has_countries: result?.has_countries ? true : false ?? null,
           has_regions: result?.has_regions ? true : false ?? null,
         },

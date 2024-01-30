@@ -89,7 +89,8 @@ export class ResultInitiativeBudgetRepository
           										and rbi2.is_active > 0
           										and rbi2.result_id = r2.id 
         WHERE r2.id = ?
-        	 and r.id = ?;
+        	 and r.id = ?
+           and rbi.initiative_role_id = 1;
         `;
         const response = await (<Promise<ResultInitiativeBudget[]>>(
           this.query(queryData, [
@@ -141,7 +142,8 @@ export class ResultInitiativeBudgetRepository
                                 and rbi2.is_active > 0
                                 and rbi2.result_id = r2.id 
           WHERE r2.id = ?
-             and r.id = ?;`;
+             and r.id = ?
+             and rbi.initiative_role_id = 1;`;
         await this.query(queryData, [
           config.user.id,
           config.user.id,

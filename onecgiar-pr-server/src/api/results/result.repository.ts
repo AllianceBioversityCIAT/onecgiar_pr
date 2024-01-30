@@ -620,7 +620,7 @@ WHERE
     	caao.outcomeStatement as \`Action area outcome name\`,
     	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
       GROUP_CONCAT(DISTINCT cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\`,
-      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=1') as \`PDF Link\`
+      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=',r.version_id) as \`PDF Link\`
     from
     	\`result\` r
     inner join result_type rt on
@@ -1304,12 +1304,26 @@ left join clarisa_regions cr
        on cr.um49Code = rr.region_id 
     WHERE rr.result_id  =  r.id
       and rr.is_active = 1) as "Regions",
-     (SELECT if(rt.id<>6, GROUP_CONCAT(DISTINCT cc3.name separator ', '), rkp.cgspace_countries) 
-     FROM result_country rc2
-left join clarisa_countries cc3 
-       on cc3.id = rc2.country_id 
-    WHERE rc2.result_id  = r.id
-      and rc2.is_active = 1) as "Countries",
+     (select if(rt.id<>6, if(r.geographic_scope_id = 5, GROUP_CONCAT(csn.res separator '\n'), GROUP_CONCAT(csn.countries separator ', ')), rkp.cgspace_countries) 
+     from (select CONCAT_WS('',cc3.name,': ', IFNULL(GROUP_CONCAT(css.name separator ', '), IF((select count(css2.id) 
+     from clarisa_subnational_scopes css2
+     where css2.country_iso_alpha_2 = cc3.iso_alpha_2) > 0, 'Not provided', 'No sub-national levels available'))) as res, 
+     cc3.name  as countries
+         FROM
+           result_country rc2
+         left join clarisa_countries cc3 
+            on
+           cc3.id = rc2.country_id
+         left join result_country_subnational rcs 
+         on 
+             rcs.result_country_id = rc2.result_country_id 
+           and 
+             rcs.is_active > 0
+           left join clarisa_subnational_scopes css on css.code = rcs.clarisa_subnational_scope_code
+         WHERE
+           rc2.result_id = r.id
+           and rc2.is_active = 1
+     GROUP BY cc3.name, prdb.cc3.iso_alpha_2) csn) as "Countries",
     -- section 5
     GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
  /* GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio", */

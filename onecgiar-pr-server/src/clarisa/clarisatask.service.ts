@@ -33,6 +33,8 @@ import { ClarisaSdg } from './clarisa-sdgs/entities/clarisa-sdg.entity';
 import { ClarisaSdgsTargetsRepository } from './clarisa-sdgs-targets/clarisa-sdgs-targets.repository';
 import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-target.entity';
 import { ClarisaTocPhaseRepository } from './clarisa-toc-phases/clarisa-toc-phases.repository';
+import { ClarisaSubnationalScopeRepository } from './clarisa-subnational-scope/clarisa-subnational-scope.repository';
+import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -69,6 +71,7 @@ export class ClarisaTaskService {
     private readonly _clarisaSdgsRepository: ClarisaSdgsRepository,
     private readonly _clarisaSdgsTargetsRepository: ClarisaSdgsTargetsRepository,
     private readonly _clarisaTocPhaseRepository: ClarisaTocPhaseRepository,
+    private readonly _clarisaSubnationalScopeRepository: ClarisaSubnationalScopeRepository,
     private readonly _httpService: HttpService,
   ) {}
 
@@ -103,18 +106,50 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaInnovationCharacteristicRepository(count);
     count = await this.cloneClarisaActionAreaOutcomeRepository(count);
     count = await this.cloneClarisaGeographicScope(count);
-    count = await this.cloneResultTocRepository(count);
     count = await this.cloneClarisaCenterRepository(count);
     count = await this.cloneClarisaPolicyTypeRepository(count);
     count = await this.cloneClarisaSdgs(count);
     count = await this.cloneClarisaSdgsTargets(count);
-    await this.cloneClarisaTocPhases(count);
+    count = await this.cloneClarisaTocPhases(count);
+    count = await this.cloneClarisaSubnationalScope(count);
+    await this.cloneResultTocRepository(count);
   }
 
   public async clarisaBootstrapImportantData() {
     this._logger.debug(`Cloning of CLARISA important control lists`);
     const count = 1;
     await this.cloneClarisaInstitutions(count);
+  }
+
+  private async cloneClarisaSubnationalScope(
+    position: number,
+    deleteItem = false,
+  ) {
+    try {
+      if (deleteItem) {
+        await this._clarisaSubnationalScopeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Subnational Scope control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}subnational-scope`,
+          this.configAuth,
+        );
+        const subnationals: ClarisaSubnationalScope[] = data;
+        await this._clarisaSubnationalScopeRepository.save(subnationals);
+        this._logger.verbose(
+          `[${position}]: All CLARISA Subnational Scope control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Subnational Scope`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
   }
 
   private async cloneClarisaCountries(position: number, deleteItem = false) {
