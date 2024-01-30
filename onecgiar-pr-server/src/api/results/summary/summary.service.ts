@@ -162,10 +162,6 @@ export class SummaryService {
           resultId,
         );
       let CapDevData: ResultsCapacityDevelopments = undefined;
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
       if (capDevExists) {
         capDevExists.female_using = female_using || 0;
         capDevExists.male_using = male_using || 0;
@@ -292,10 +288,6 @@ export class SummaryService {
     user: TokenDto,
   ) {
     try {
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
       const innDevExists =
         await this._resultsInnovationsDevRepository.InnovationDevExists(
           resultId,
@@ -588,10 +580,6 @@ export class SummaryService {
     user: TokenDto,
   ) {
     try {
-      const version = await this._versionsService.findBaseVersion();
-      if (version.status >= 300) {
-        throw this._handlersError.returnErrorRes({ error: version });
-      }
       const resultsPolicyChanges =
         await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
           resultId,

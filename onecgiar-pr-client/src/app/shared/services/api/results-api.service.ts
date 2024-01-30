@@ -850,7 +850,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/result-status/all`);
   }
 
+  GET_subNationalByIsoAlpha2(isoAlpha2: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/subnational-scope/get/by-country-iso2/${isoAlpha2}`);
+  }
+
   GET_platformGlobalVariables() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
   }
+
+  GET_platformGlobalVariablesByCategoryId(categoryId) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/category/${categoryId}`);
+  }
+
 }

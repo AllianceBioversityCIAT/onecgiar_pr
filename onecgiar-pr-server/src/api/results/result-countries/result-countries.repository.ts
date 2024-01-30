@@ -142,25 +142,42 @@ export class ResultCountryRepository
   }
 
   async getResultCountriesByResultId(resultId: number) {
-    const query = `
-    select 
-    rc.result_country_id,
-    rc.is_active,
-    rc.result_id,
-    rc.country_id as id,
-    rc.created_date,
-    rc.last_updated_date,
-    cc.name,
-    cc.iso_alpha_2
-    from result_country rc 
-    inner join clarisa_countries cc on cc.id = rc.country_id 
-    where rc.is_active > 0
-      and rc.result_id = ?;
+    const queryCountries = `
+      select 
+      rc.result_country_id,
+      rc.is_active,
+      rc.result_id,
+      rc.country_id as id,
+      rc.created_date,
+      rc.last_updated_date,
+      cc.name,
+      cc.iso_alpha_2
+      from result_country rc 
+      inner join clarisa_countries cc on cc.id = rc.country_id 
+      where rc.is_active > 0
+        and rc.result_id = ?;
+    `;
+
+    const querySubnational = `
+      select rc.result_country_id, rcs.result_country_subnational_id, css.*
+      from result r
+      left join result_country rc on rc.result_id = r.id and rc.is_active > 0
+      right join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id and rcs.is_active > 0
+      left join clarisa_subnational_scopes css on css.code = rcs.clarisa_subnational_scope_code and css.is_active > 0
+      where r.id = ?;
     `;
 
     try {
-      const result: ResultCountry[] = await this.query(query, [resultId]);
-      return result;
+      const countries: ResultCountry[] = await this.query(queryCountries, [
+        resultId,
+      ]);
+      const subnational: any[] = await this.query(querySubnational, [resultId]);
+      countries.forEach((country) => {
+        country['sub_national'] = subnational.filter(
+          (s) => s.result_country_id == country.result_country_id,
+        );
+      });
+      return countries;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultCountryRepository.name,
@@ -204,14 +221,14 @@ export class ResultCountryRepository
   }
 
   async updateCountries(resultId: number, countriesArray: number[]) {
-    const Countries = countriesArray ?? [];
+    const countries = countriesArray ?? [];
     const upDateInactive = `
     update result_country  
     set is_active = 0, 
     	 last_updated_date = NOW()
     where is_active > 0 
     	and result_id  = ?
-    	and country_id  not in (${Countries.toString()});
+    	and country_id  not in (${countries.toString()});
     `;
 
     const upDateActive = `
@@ -219,7 +236,7 @@ export class ResultCountryRepository
     set is_active = 1, 
     	 last_updated_date = NOW()
     where result_id  = ?
-    	and country_id in (${Countries.toString()});
+    	and country_id in (${countries.toString()});
     `;
 
     const upDateAllInactive = `
@@ -230,7 +247,7 @@ export class ResultCountryRepository
     `;
 
     try {
-      if (Countries?.length) {
+      if (countries?.length) {
         await this.query(upDateInactive, [resultId]);
 
         return await this.query(upDateActive, [resultId]);

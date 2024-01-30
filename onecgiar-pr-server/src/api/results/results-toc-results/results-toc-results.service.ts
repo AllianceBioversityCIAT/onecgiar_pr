@@ -135,48 +135,54 @@ export class ResultsTocResultsService {
           user.id,
           1,
         );
-        const resultTocResultArray: NonPooledProject[] = [];
+        await this._nonPooledProjectRepository.update(
+          { results_id: result_id },
+          {
+            is_active: false,
+          },
+        );
         for (let index = 0; index < contributing_np_projects.length; index++) {
           if (contributing_np_projects[index]?.grant_title?.length) {
-            const resultData =
-              await this._nonPooledProjectRepository.getAllNPProjectById(
-                result_id,
-                contributing_np_projects[index].grant_title,
-                1,
-              );
+            const resultData = await this._nonPooledProjectRepository.findOne({
+              where: {
+                results_id: result_id,
+                grant_title: contributing_np_projects[index].grant_title,
+                funder_institution_id: contributing_np_projects[index].funder,
+                non_pooled_project_type_id: 1,
+              },
+            });
 
             if (resultData) {
-              resultData.center_grant_id =
-                contributing_np_projects[index].center_grant_id;
-              resultData.funder_institution_id =
-                contributing_np_projects[index].funder;
-              resultData.lead_center_id =
-                contributing_np_projects[index].lead_center;
-              resultData.is_active = true;
-              resultData.last_updated_by = user.id;
-              resultTocResultArray.push(resultData);
+              await this._nonPooledProjectRepository.update(resultData.id, {
+                center_grant_id:
+                  contributing_np_projects[index].center_grant_id,
+                funder_institution_id: contributing_np_projects[index].funder,
+                lead_center_id: contributing_np_projects[index].lead_center,
+                is_active: true,
+                last_updated_by: user.id,
+              });
             } else {
-              const newNpProject = new NonPooledProject();
-              newNpProject.results_id = result_id;
-              newNpProject.center_grant_id =
-                contributing_np_projects[index].center_grant_id;
-              newNpProject.funder_institution_id =
-                contributing_np_projects[index].funder;
-              newNpProject.lead_center_id =
-                contributing_np_projects[index].lead_center;
-              newNpProject.grant_title =
-                contributing_np_projects[index].grant_title || null;
-              newNpProject.created_by = user.id;
-              newNpProject.last_updated_by = user.id;
-              newNpProject.non_pooled_project_type_id = 1;
-              resultTocResultArray.push(newNpProject);
+              await this._nonPooledProjectRepository.save({
+                results_id: result_id,
+                center_grant_id:
+                  contributing_np_projects[index].center_grant_id,
+                funder_institution_id: contributing_np_projects[index].funder,
+                lead_center_id: contributing_np_projects[index].lead_center,
+                grant_title: contributing_np_projects[index].grant_title,
+                created_by: user.id,
+                last_updated_by: user.id,
+                non_pooled_project_type_id: 1,
+              });
             }
           }
         }
 
-        const npps = await this._nonPooledProjectRepository.save(
-          resultTocResultArray,
-        );
+        const npps = await this._nonPooledProjectRepository.find({
+          where: {
+            results_id: result_id,
+            is_active: true,
+          },
+        });
         for (const npp of npps) {
           const initBudget =
             await this._resultBilateralBudgetRepository.findOne({
@@ -587,7 +593,6 @@ export class ResultsTocResultsService {
         init,
       );
       const wp_info = await this._resultsTocResultRepository.getWpInformation(
-        resultIdToc,
         toc_result_id,
       );
 
@@ -656,7 +661,7 @@ export class ResultsTocResultsService {
       if (resultinit.toc_id) {
         const vesion_id = await this._resultsTocResultRepository.query(
           `SELECT
-            DISTINCT tr.version_id
+            DISTINCT tr.phase
           FROM
             Integration_information.toc_results tr
           WHERE
@@ -674,8 +679,8 @@ export class ResultsTocResultsService {
           `,
           [resultinit.toc_id, result_id],
         );
-        if (!vesion_id.length || vesion_id[0].version_id == null) {
-          version_id = vesion_id[0].version_id;
+        if (!vesion_id.length || vesion_id[0].phase == null) {
+          version_id = vesion_id[0].phase;
         } else {
           version_id = resultinit.toc_id;
         }

@@ -229,11 +229,6 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      await this.separateCentersFromCgspacePartners(
-        updatedKnowledgeProduct,
-        true,
-      );
-
       //updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -241,15 +236,21 @@ export class ResultsKnowledgeProductsService {
       await this._resultsKnowledgeProductAuthorRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
-      await this._resultsKnowledgeProductInstitutionRepository.save(
-        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-          {},
-      );
+      updatedKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+            [],
+        );
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
       );
       await this._resultsKnowledgeProductMetadataRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      await this.separateCentersFromCgspacePartners(
+        updatedKnowledgeProduct,
+        true,
       );
 
       //geolocation
@@ -1083,8 +1084,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const knowledgeProduct =
-        await this._resultsKnowledgeProductRepository.findOneBy({
-          result_knowledge_product_id: id,
+        await this._resultsKnowledgeProductRepository.findOne({
+          where: { result_knowledge_product_id: id },
+          relations: { result_object: { obj_version: true } },
         });
 
       if (!knowledgeProduct) {
@@ -1099,7 +1101,10 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
 
       // validations
-      response.warnings = this.getWarnings(response);
+      response.warnings = this.getWarnings(
+        response,
+        knowledgeProduct.result_object.obj_version.cgspace_year,
+      );
 
       return {
         response,
@@ -1121,8 +1126,9 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const result = await this._resultRepository.findOneBy({
-        id,
+      const result = await this._resultRepository.findOne({
+        where: { id },
+        relations: { obj_version: true },
       });
 
       if (!result) {
@@ -1214,7 +1220,10 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.entityToDto(knowledgeProduct);
 
       // validations
-      response.warnings = this.getWarnings(response);
+      response.warnings = this.getWarnings(
+        response,
+        result.obj_version.cgspace_year,
+      );
 
       return {
         response,
@@ -1226,7 +1235,10 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  getWarnings(response: ResultsKnowledgeProductDto): string[] {
+  getWarnings(
+    response: ResultsKnowledgeProductDto,
+    cgspaceYear: number,
+  ): string[] {
     const warnings: string[] = [];
 
     if (response.doi?.length < 1) {
@@ -1258,7 +1270,7 @@ export class ResultsKnowledgeProductsService {
           'The year of publication is automatically retrieved from an external service (Web ' +
             'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
             'team will manually validate the record. We remind you that only knowledge products ' +
-            'published in 2022 can be reported.',
+            `published in ${cgspaceYear} can be reported.`,
         );
       }
 

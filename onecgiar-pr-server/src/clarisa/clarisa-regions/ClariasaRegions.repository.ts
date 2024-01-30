@@ -126,7 +126,8 @@ export class ClarisaRegionsRepository extends Repository<ClarisaRegion> {
    	cr.name,
    	cr.parent_regions_code 
    	from clarisa_regions cr
-   	where  cr.parent_regions_code is not null;
+   	where  cr.parent_regions_code is not null
+    order by cr.name asc;
     `;
     try {
       const regions = await this.query(queryData);

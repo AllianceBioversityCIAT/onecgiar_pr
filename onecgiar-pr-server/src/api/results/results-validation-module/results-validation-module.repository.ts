@@ -378,11 +378,11 @@ export class resultValidationRepository
     const queryData = `
 	select
 		'geographic-location' as section_name,
-		CASE
-			when (
+		case 
+			when r.geographic_scope_id in (1, 2) then (
 				(
 					if(
-						r.has_regions = 1,
+						r.has_regions = 1 or r.geographic_scope_id = 2,
 						(
 							(
 								select
@@ -414,9 +414,33 @@ export class resultValidationRepository
 						if(r.has_countries is null, false, true)
 					)
 				)
-			) then true
-			else false
-		END as validation
+			)
+			when r.geographic_scope_id in (3,4) then (
+							(
+								select
+									count(rc.result_country_id)
+								from
+									result_country rc
+								WHERE
+									rc.result_id = r.id
+									and rc.is_active > 0
+							) > 0
+						)
+			when r.geographic_scope_id = 5 then (select if(count(*) - sum(temp.sub_counter) = 0, true, false) 
+													from (select if((select count(css.code) 
+										from clarisa_subnational_scopes css 
+										where css.country_iso_alpha_2 = cc.iso_alpha_2) > 0, count(rcs.result_country_subnational_id) > 0, true) as sub_counter  
+									from
+									result_country rc
+									left join clarisa_countries cc on cc.id = rc.country_id 
+									left join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id 
+																				and rcs.is_active > 0
+								WHERE
+									rc.result_id = r.id
+									and rc.is_active > 0
+								GROUP by  rc.country_id, cc.name) temp)
+			when r.geographic_scope_id = 50 then true
+		end as validation
 	from
 		result r
 	WHERE

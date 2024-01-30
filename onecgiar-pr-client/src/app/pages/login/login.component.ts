@@ -47,14 +47,13 @@ export class LoginComponent implements OnDestroy, OnInit {
       },
       err => {
         const statusCode = err?.error?.statusCode;
-        const alertText = this.internationalizationData.login.alerts[statusCode];
         if (statusCode == 404)
-          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: alertText, status: 'warning', confirmText: 'Contact us' }, () => {
+          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: this.internationalizationData.login.alerts[statusCode], status: 'warning', confirmText: 'Contact us' }, () => {
             document.getElementById('question').click();
             this.customAlertService.closeAction('loginAlert');
           });
-
-        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: alertText, status: 'warning' });
+        console.log(err);
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
       }
     );
   }
