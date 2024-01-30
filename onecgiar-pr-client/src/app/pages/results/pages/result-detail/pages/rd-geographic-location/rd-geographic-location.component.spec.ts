@@ -11,11 +11,14 @@ import { FormsModule } from '@angular/forms';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 
 describe('RdGeographicLocationComponent', () => {
   let component: RdGeographicLocationComponent;
   let fixture: ComponentFixture<RdGeographicLocationComponent>;
   let mockApiService: any;
+  let mockCustomizedAlertsFeService:any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -32,6 +35,13 @@ describe('RdGeographicLocationComponent', () => {
         getLastWord: jest.fn()
       }
     }
+
+    mockCustomizedAlertsFeService = {
+      show: jest.fn().mockImplementationOnce((config, callback) => {
+        callback();
+      })
+    }
+
     await TestBed.configureTestingModule({
       declarations: [
         RdGeographicLocationComponent,
@@ -52,6 +62,10 @@ describe('RdGeographicLocationComponent', () => {
           provide: ApiService,
           useValue: mockApiService
         },
+        {
+          provide: CustomizedAlertsFeService,
+          useValue: mockCustomizedAlertsFeService
+        }
       ]
     }).compileComponents();
 
@@ -64,7 +78,7 @@ describe('RdGeographicLocationComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       component.geographicLocationBody = {
-        scope_id: 1,
+        geo_scope_id: 1,
         has_countries: false,
         has_regions: false,
         regions: [],
@@ -85,6 +99,17 @@ describe('RdGeographicLocationComponent', () => {
     it('should return description for region when id = 3', () => {
       const result = component.geographic_focus_description(3);
       expect(result).toBe('For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.');
+    });
+  });
+
+  describe('getSectionInformation()', () => {
+    it('should set geo_scope_id to GeoScopeEnum.COUNTRY if it is legacyCountries', () => {
+      const mockResponse = { response: { geo_scope_id: 4 } };
+      jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(of(mockResponse));
+  
+      component.getSectionInformation();
+  
+      expect(component.geographicLocationBody.geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
     });
   });
 

@@ -13,12 +13,14 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of } from 'rxjs';
 import { RdPartnersService } from './rd-partners.service';
+import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('RdPartnersComponent', () => {
   let component: RdPartnersComponent;
   let fixture: ComponentFixture<RdPartnersComponent>;
   let mockApiService: any;
   let mockRdPartnersService: any;
+  let mockCustomizedAlertsFeService:any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -45,6 +47,12 @@ describe('RdPartnersComponent', () => {
       }
     }
 
+    mockCustomizedAlertsFeService = {
+      show: jest.fn().mockImplementationOnce((config, callback) => {
+        callback();
+      })
+    }
+
     await TestBed.configureTestingModule({
       declarations: [
         RdPartnersComponent,
@@ -69,6 +77,10 @@ describe('RdPartnersComponent', () => {
         {
           provide: RdPartnersService,
           useValue: mockRdPartnersService
+        },
+        {
+          provide: CustomizedAlertsFeService,
+          useValue: mockCustomizedAlertsFeService
         }
       ]
 

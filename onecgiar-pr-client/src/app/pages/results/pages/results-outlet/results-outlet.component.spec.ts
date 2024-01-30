@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultsOutletComponent } from './results-outlet.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+
+jest.useFakeTimers();
 
 describe('ResultsOutletComponent', () => {
   let component: ResultsOutletComponent;
@@ -12,7 +15,8 @@ describe('ResultsOutletComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [ResultsOutletComponent],
       imports: [
-        RouterTestingModule
+        RouterTestingModule,
+        HttpClientTestingModule
       ],
     }).compileComponents();
 
@@ -23,5 +27,7 @@ describe('ResultsOutletComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    jest.runAllTimers();
+    expect(component.animateBell).toBeFalsy();
   });
 });

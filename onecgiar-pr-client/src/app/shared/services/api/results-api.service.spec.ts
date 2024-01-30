@@ -757,6 +757,7 @@ describe('ResultsApiService', () => {
         has_regions: false,
         regions: [],
         countries: [],
+        geo_scope_id: 2
       }
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_geographicSection(mockBody).subscribe(response => {

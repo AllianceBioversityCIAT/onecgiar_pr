@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RdGeneralInformationComponent } from './rd-general-information.component';
-import { of, throwError } from 'rxjs'; // Import of from 'rxjs' to create observables for testing.
+import { of, throwError } from 'rxjs'; 
 import { ApiService } from './../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFsService } from './../../../../../../shared/services/customized-alerts-fs.service';
 import { ScoreService } from './../../../../../../shared/services/global/score.service';
@@ -20,6 +20,7 @@ import { DetailSectionTitleComponent } from './../../../../../../custom-fields/d
 import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { DialogModule } from 'primeng/dialog';
+import { CustomizedAlertsFeService } from './../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -27,6 +28,7 @@ describe('RdGeneralInformationComponent', () => {
   let mockApiService: any;
   let mockScoreService: any;
   let mockCurrentResultService: any;
+  let mockCustomizedAlertsFeService:any;
   const mockInstitutions_typeNoId = {
     name: 'name'
   };
@@ -117,6 +119,12 @@ describe('RdGeneralInformationComponent', () => {
       }
     };
 
+    mockCustomizedAlertsFeService = {
+      show: jest.fn().mockImplementationOnce((config, callback) => {
+        callback();
+      })
+    }
+
     await TestBed.configureTestingModule({
       declarations: [RdGeneralInformationComponent, AlertStatusComponent, PrRadioButtonComponent, PrYesOrNotComponent, SaveButtonComponent, SyncButtonComponent, PrFieldHeaderComponent, PrInputComponent, PrTextareaComponent, PrFieldValidationsComponent, DetailSectionTitleComponent, YesOrNotByBooleanPipe, ChangeResultTypeModalComponent],
       providers: [
@@ -134,6 +142,10 @@ describe('RdGeneralInformationComponent', () => {
         {
           provide: CurrentResultService,
           useValue: mockCurrentResultService
+        },
+        {
+          provide: CustomizedAlertsFeService,
+          useValue: mockCustomizedAlertsFeService
         }
       ],
       imports: [HttpClientModule, FormsModule, DialogModule]

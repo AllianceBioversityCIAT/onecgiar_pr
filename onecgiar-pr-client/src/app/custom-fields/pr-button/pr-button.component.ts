@@ -22,8 +22,6 @@ export class PrButtonComponent {
   @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
   @Output() clickEvent = new EventEmitter<any>();
 
-  constructor() {}
-
   onClick() {
     if (!this.disabled) this.clickEvent.emit();
   }
