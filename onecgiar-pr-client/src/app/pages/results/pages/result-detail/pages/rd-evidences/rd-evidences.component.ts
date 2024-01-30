@@ -50,10 +50,12 @@ export class RdEvidencesComponent implements OnInit {
 
   async loadAllFiles() {
     const { evidences } = this.evidencesBody;
+    let count = 0;
     for (const evidenceIterator of evidences) {
+      if (!evidenceIterator?.sp_evidence_id) count++;
       if (!evidenceIterator?.file) continue;
       try {
-        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name });
+        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name, count });
         const intervalId = setInterval(async () => {
           try {
             const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
