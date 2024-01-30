@@ -241,7 +241,7 @@ export class EvidencesService {
         evidenceSharepoint = new EvidenceSharepoint();
       }
 
-      if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
+      // if (evidenceSharepoint.is_public_file != evidence.is_public_file) {
         const data: any = await this._sharePointService.addFileAccess(
           sp_document_id ?? evidenceSharepoint.document_id,
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
@@ -251,7 +251,7 @@ export class EvidencesService {
             link: data.link.webUrl,
           });
         }
-      }
+      // }
 
       evidenceSharepoint.folder_path =
         sp_folder_path ?? evidenceSharepoint.folder_path;
