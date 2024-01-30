@@ -35,4 +35,24 @@ describe('EstimatesComponent', () => {
       expect(headerDescriptions.n3).toBeDefined();
     });
   });
+
+  describe('checkValueAlert', () => {
+    it('should return true if item is determined', () => {
+      const item = { is_determined: true, kind_cash: false };
+      const result = component.checkValueAlert(item);
+      expect(result).toBeTruthy();
+    });
+  
+    it('should return true if item has kind_cash', () => {
+      const item = { is_determined: false, kind_cash: true };
+      const result = component.checkValueAlert(item);
+      expect(result).toBeTruthy();
+    });
+  
+    it('should return false if neither is_determined nor kind_cash is true', () => {
+      const item = { is_determined: false, kind_cash: false };
+      const result = component.checkValueAlert(item);
+      expect(result).toBeFalsy();
+    });
+  });
 });

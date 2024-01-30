@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { internationalizationData } from 'src/app/shared/data/internationalizationData';
+import { internationalizationData } from '../../shared/data/internationalizationData';
 import { ApiService } from '../../shared/services/api/api.service';
 
 @Component({
@@ -11,6 +11,6 @@ export class HomeComponent implements OnInit {
   internationalizationData = internationalizationData;
   constructor(public api: ApiService) {}
   ngOnInit(): void {
-    this.api.updateUserData();
+    this.api.updateUserData(() => {});
   }
 }

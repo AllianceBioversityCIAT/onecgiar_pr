@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-
 import { QualityAssuranceService } from './quality-assurance.service';
 
 describe('QualityAssuranceService', () => {
@@ -12,5 +11,8 @@ describe('QualityAssuranceService', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+  it('should have $qaFirstInitObserver property initialized as null', () => {
+    expect(service.$qaFirstInitObserver).toBeNull();
   });
 });
