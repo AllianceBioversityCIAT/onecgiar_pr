@@ -60,11 +60,13 @@ export class ResultsTocResultsService {
         impactsTarge,
         sdgTargets,
         bodyActionArea,
+        changePrimaryInit,
       } = createResultsTocResultDto;
 
-      const initSubmitter = await this._resultByInitiativesRepository.findOne({
-        where: { result_id: result_id, initiative_role_id: 1 },
-      });
+      let initSubmitter: any =
+        await this._resultByInitiativesRepository.findOne({
+          where: { result_id: result_id, initiative_role_id: 1 },
+        });
 
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
@@ -73,27 +75,43 @@ export class ResultsTocResultsService {
 
       const titleArray = contributing_np_projects.map((el) => el.grant_title);
 
-      await this._resultByInitiativesRepository.updateIniciativeSubmitter(
-        result_id,
-        initSubmitter.initiative_id,
-      );
+      if (initSubmitter.initiative_id !== changePrimaryInit) {
+        const newInit =
+          await this._resultByInitiativesRepository.updateIniciativeSubmitter(
+            result_id,
+            initSubmitter.initiative_id,
+            changePrimaryInit,
+          );
+        initSubmitter = newInit;
+        return {
+          response: {},
+          message: 'The Primary Submitter was changed successfully',
+          status: HttpStatus.CREATED,
+        };
+      }
 
       if (contributing_center.filter((el) => el.primary == true).length > 1) {
         contributing_center.map((el) => {
           el.primary = false;
         });
       }
+
       if (
         contributing_initiatives?.length ||
         pending_contributing_initiatives?.length
       ) {
         initiativeArray = contributing_initiatives.map((el) => el.id);
+        if (initSubmitter.initiative_id) {
+          initiativeArray = initiativeArray.filter(
+            (init) => init !== initSubmitter.initiative_id,
+          );
+        }
         initiativeArrayPnd = pending_contributing_initiatives.map(
           (pend) => pend.id,
         );
         await this._resultByInitiativesRepository.updateResultByInitiative(
           result_id,
-          [...initiativeArray, initSubmitter.initiative_id],
+          [...initiativeArray],
           user.id,
           false,
           initiativeArrayPnd,
@@ -795,7 +813,7 @@ export class ResultsTocResultsService {
     user: TokenDto,
     result: any,
     result_id: number,
-    initSubmitter: any,
+    initSubmitter: number,
   ) {
     const { contributors_result_toc_result } = createResultsTocResultDto;
     try {

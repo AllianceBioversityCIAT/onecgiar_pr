@@ -20,6 +20,7 @@ export class CreateResultsTocResultDto {
   impactsTarge?: any[];
   sdgTargets?: any[];
   bodyActionArea?: any[];
+  changePrimaryInit: number;
 }
 
 interface ResultTocImpactsInterface {
