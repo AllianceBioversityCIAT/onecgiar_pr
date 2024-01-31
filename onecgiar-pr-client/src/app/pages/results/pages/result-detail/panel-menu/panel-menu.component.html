@@ -26,10 +26,9 @@
   <div style="padding: 0px 35px">
     <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
-  <!-- && !this.api.dataControlSE.currentResult?.is_discontinued -->
   <div>
     <div class="submit_button"
-      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6 || this.dataControlSE?.currentResult?.inQA">
+      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) != 6 || this.dataControlSE?.currentResult?.inQA || this.api.rolesSE.isAdmin">
       <app-pr-button
         [ngClass]="{ globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)  }"
         (click)="this.submissionModalSE.showModal = true" text="Submit"
