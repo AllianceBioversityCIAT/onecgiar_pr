@@ -116,12 +116,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;
-        this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+        this.theoryOfChangeBody?.result_toc_result?.initiative_id !== this.theoryOfChangeBody.changePrimaryInit ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
       });
     };
 
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.result_toc_result?.initiative_id);
+    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.changePrimaryInit);
     const newInitOfficialCode = newInit?.official_code;
 
     if (this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode)
