@@ -17,6 +17,7 @@ export class CreateResultsPackageTocResultDto {
   pending_contributing_initiatives: shareResultRequestInterface[];
   institutions: institutionsInterface[];
   impacts?: any[];
+  changePrimaryInit: number;
 }
 
 interface institutionsInterface {

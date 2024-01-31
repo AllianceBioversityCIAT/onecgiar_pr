@@ -7,6 +7,7 @@ export class CreateShareResultRequestDto {
     planned_result: boolean;
     result_toc_results: resultToResultInterfaceToc[];
   };
+  changePrimaryInit: number;
 }
 
 interface resultToResultInterfaceToc {
