@@ -78,6 +78,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
           });
         }
 
+        this.theoryOfChangeBody.changePrimaryInit = this.theoryOfChangeBody?.result_toc_result.initiative_id;
+
         this.disabledCenters();
 
         setTimeout(() => {
