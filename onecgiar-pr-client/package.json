@@ -65,7 +65,9 @@
     "collectCoverageFrom": [
       "./src/app/**/*.ts","./src/app/**/*.html",
       "!./src/app/**/*routing.ts", 
-      "!./src/app/**/*module.ts"
+      "!./src/app/**/*module.ts",
+      "!./src/app/**/model/*.ts",
+      "!./src/app/**/models/*.ts"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",

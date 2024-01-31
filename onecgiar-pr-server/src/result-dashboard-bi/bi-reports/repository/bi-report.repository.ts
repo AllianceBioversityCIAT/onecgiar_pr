@@ -211,8 +211,6 @@ export class BiReportRepository extends Repository<BiReport> {
     const today = new Date();
     const reportsExist = await this.getReportByName(report_name);
 
-    console.log(tokensReports);
-
     if (reportsExist != null && reportsExist.length != 0) {
       if (
         tokensReports.length <= 0 ||

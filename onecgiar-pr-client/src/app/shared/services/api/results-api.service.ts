@@ -289,7 +289,7 @@ export class ResultsApiService {
     return firstValueFrom(this.http.get<any>(link));
   }
 
-  POST_createUploadSession(body: { fileName: string; resultId: string | number }) {
+  POST_createUploadSession(body: { fileName: string; resultId: string | number, count:number }) {
     return firstValueFrom(this.http.post<any>(`${this.apiBaseUrl}evidences/createUploadSession`, body));
   }
 

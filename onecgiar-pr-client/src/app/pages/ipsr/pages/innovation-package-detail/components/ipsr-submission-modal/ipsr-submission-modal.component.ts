@@ -1,6 +1,7 @@
+/* eslint-disable arrow-parens */
 import { Component } from '@angular/core';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-ipsr-submission-modal',

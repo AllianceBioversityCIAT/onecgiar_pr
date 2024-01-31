@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { RetrieveModalService } from 'src/app/pages/results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MenuItem } from 'primeng/api';
+import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
@@ -22,20 +22,16 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Phase name', attr: 'phase_name' },
     { title: 'Created by', attr: 'created_by' }
   ];
+
   constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        //(this.api.resultsSE.currentResultId);
-        // event
       }
     }
-    // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
-    // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
 
   itemsWithDelete: MenuItem[] = [
@@ -43,13 +39,9 @@ export class InnovationPackageCustomTableComponent {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
-        //('showShareRequest');
         this.api.dataControlSE.showShareRequest = true;
-        //(this.api.resultsSE.currentResultId);
-        // event
       }
     },
-    // { label: 'Edit', icon: 'pi pi-fw pi-pencil' },
     {
       label: 'Delete',
       icon: 'pi pi-fw pi-trash',
@@ -57,23 +49,18 @@ export class InnovationPackageCustomTableComponent {
         this.onDelete();
       }
     }
-    // { label: 'Submit', icon: 'pi pi-fw pi-reply' }
   ];
   onDelete() {
-    //(this.api.dataControlSE.currentResult);
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      //('delete');
-      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe(
-        resp => {
-          //(resp);
+      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe({
+        next: resp => {
           this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
           this.deleteEvent.emit();
         },
-        err => {
-          console.error(err);
+        error: err => {
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
         }
-      );
+      });
     });
   }
   onPressAction(result) {

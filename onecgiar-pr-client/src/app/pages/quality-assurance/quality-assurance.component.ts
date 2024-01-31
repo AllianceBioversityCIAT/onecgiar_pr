@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../../environments/environment';
 import { Observable } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
 
