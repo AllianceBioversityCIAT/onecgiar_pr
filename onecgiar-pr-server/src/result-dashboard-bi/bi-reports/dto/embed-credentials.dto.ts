@@ -15,4 +15,5 @@ export class ReportInformation {
   description: string;
   embed_url: string;
   order: number;
+  hasFullScreen: boolean;
 }
