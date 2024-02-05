@@ -64,9 +64,9 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi() {
-    const reportsBi: BiReport[] = await this.getReportsBi();
-
+  async getTokenPowerBi(report_name?:string | number) {
+    let reportsBi: BiReport[] = await this.getReportsBi();
+    reportsBi = reportsBi.filter((report) => typeof report_name === 'number' ? report.id == report_name : report.report_name == report_name); 
     if (reportsBi.length > 0) {
       const datasets: BodyPowerBiDTO[] = [];
       const reportsId: BodyPowerBiDTO[] = [];
@@ -161,7 +161,7 @@ export class BiReportRepository extends Repository<BiReport> {
         Date.parse(tokensReports[0].expiration_toke_id.toString()) <
           Date.parse(today.toString())
       ) {
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken = await this.getTokenPowerBi(Number(id));
         const responseToken = await registerInToken[
           'reportsInformation'
         ].filter((report) => report.id == id);
@@ -217,14 +217,16 @@ export class BiReportRepository extends Repository<BiReport> {
         Date.parse(tokensReports[0].expiration_toke_id.toString()) <
           Date.parse(today.toString())
       ) {
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken = await this.getTokenPowerBi(report_name);
         const responseToken = await registerInToken[
           'reportsInformation'
         ].filter((report) => report.name == report_name);
+
         return {
           token: registerInToken['embed_token'],
           report: responseToken[0],
         };
+
       } else {
         const reportsInfo: ReportInformation = new ReportInformation();
         reportsInfo['dateText'] = tokensReports[0]['dateText'];
