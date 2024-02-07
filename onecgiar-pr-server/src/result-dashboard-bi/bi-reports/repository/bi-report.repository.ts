@@ -117,6 +117,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.description = resp.report_description;
         reportsInfo.title = resp.report_title;
         reportsInfo.order = resp.report_order;
+        reportsInfo.hasFullScreen = resp.has_full_screen;
         reportsInfo.embed_url =
           this.credentialsBi.embed_url_base +
           resp.report_id +
