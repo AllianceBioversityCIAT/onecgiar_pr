@@ -64,9 +64,9 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi() {
-    const reportsBi: BiReport[] = await this.getReportsBi();
-
+  async getTokenPowerBi(report_name?:string | number) {
+    let reportsBi: BiReport[] = await this.getReportsBi();
+    reportsBi = reportsBi.filter((report) => typeof report_name === 'number' ? report.id == report_name : report.report_name == report_name); 
     if (reportsBi.length > 0) {
       const datasets: BodyPowerBiDTO[] = [];
       const reportsId: BodyPowerBiDTO[] = [];
@@ -117,6 +117,7 @@ export class BiReportRepository extends Repository<BiReport> {
         reportsInfo.description = resp.report_description;
         reportsInfo.title = resp.report_title;
         reportsInfo.order = resp.report_order;
+        reportsInfo.hasFullScreen = resp.has_full_screen;
         reportsInfo.embed_url =
           this.credentialsBi.embed_url_base +
           resp.report_id +
@@ -161,7 +162,7 @@ export class BiReportRepository extends Repository<BiReport> {
         Date.parse(tokensReports[0].expiration_toke_id.toString()) <
           Date.parse(today.toString())
       ) {
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken = await this.getTokenPowerBi(Number(id));
         const responseToken = await registerInToken[
           'reportsInformation'
         ].filter((report) => report.id == id);
@@ -199,53 +200,19 @@ export class BiReportRepository extends Repository<BiReport> {
   async getTokenAndReportByName(report_name: string) {
     this.credentialsBi =
       await this._servicesClarisaCredentials.getCredentialsBi();
-    const tokensReports: TokenBiReport[] = await this.tokenBireports.query(
-      `select 
-        id,
-        token_bi,
-        expiration_toke_id,
-        is_active,DATE_FORMAT(CONVERT_TZ(now(), '+00:00', '+02:00'), '%Y%m%d%H%i') as dateText 
-      from token_report_bi trb 
-      order by id desc limit 1;`,
-    );
-    const today = new Date();
     const reportsExist = await this.getReportByName(report_name);
 
     if (reportsExist != null && reportsExist.length != 0) {
-      if (
-        tokensReports.length <= 0 ||
-        Date.parse(tokensReports[0].expiration_toke_id.toString()) <
-          Date.parse(today.toString())
-      ) {
-        const registerInToken = await this.getTokenPowerBi();
+        const registerInToken = await this.getTokenPowerBi(report_name);
         const responseToken = await registerInToken[
           'reportsInformation'
         ].filter((report) => report.name == report_name);
+
         return {
           token: registerInToken['embed_token'],
           report: responseToken[0],
         };
-      } else {
-        const reportsInfo: ReportInformation = new ReportInformation();
-        reportsInfo['dateText'] = tokensReports[0]['dateText'];
-        reportsInfo.id = reportsExist[0].id;
-        reportsInfo.resport_id = reportsExist[0].report_id;
-        reportsInfo.name = reportsExist[0].report_name;
-        reportsInfo.description = reportsExist[0].report_description;
-        reportsInfo.order = reportsExist[0].report_order;
-        reportsInfo.embed_url =
-          this.credentialsBi.embed_url_base +
-          reportsExist[0].report_id +
-          '&groupId=' +
-          reportsExist[0].group_id +
-          '&config=' +
-          this.credentialsBi.config_id;
 
-        return {
-          token: tokensReports[0].token_bi,
-          report: reportsInfo,
-        };
-      }
     } else {
       throw new NotFoundException({ message: 'This report does not exist' });
     }
