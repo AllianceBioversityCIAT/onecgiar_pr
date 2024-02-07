@@ -40,6 +40,13 @@ export class ResultsNotificationsService {
       });
 
       this.data = [...requestData, ...updateRequestPendingData];
+
+      this.data = this.data.filter(data => {
+        const isInitiativeOwner = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.owner_initiative_id);
+        const isInitiativeApprover = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.approving_inititiative_id);
+        return isInitiativeOwner || isInitiativeApprover;
+      });
+
       this.notificationLength = this.data.length;
     });
 
