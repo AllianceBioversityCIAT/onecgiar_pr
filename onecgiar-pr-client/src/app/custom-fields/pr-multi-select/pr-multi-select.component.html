@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
 </app-pr-field-header>
 <div class="custom_select">
-    <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)">
+    <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="!hideSelect && !(readOnly || this.rolesSE.readOnly) || (isStatic)">
         <div class="text select_placeholder">{{placeholder}}</div>
         <div class="icon_container">
         </div>
@@ -46,8 +46,8 @@
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index"
                 [ngClass]="{'is_active_false': logicalDeletion && option.is_active == false}">
                 <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
-                    *ngIf="!(readOnly || this.rolesSE.readOnly) || (isStatic)" class="material-icons-round"
-                    (click)="confirmDeletion && option.new?confirmDeletionEvent(option):removeOption(option)">remove_circle
+                    *ngIf="(!(readOnly || this.rolesSE.readOnly) || (isStatic)) && selectedPrimary !== option.id" class="material-icons-round"
+                    (click)="confirmDeletion && option.new ? confirmDeletionEvent(option) : removeOption(option)">remove_circle
                 </i>
             </div>
         </div>
