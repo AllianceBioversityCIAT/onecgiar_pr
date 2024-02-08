@@ -1219,7 +1219,7 @@ export class resultValidationRepository
 			WHEN (
 				(
 					SELECT
-						COUNT(*)
+						COUNT(DISTINCT ra2.result_id)
 					FROM
 						result_answers ra2
 					WHERE
@@ -1232,7 +1232,7 @@ export class resultValidationRepository
 						)
 				) != (
 					SELECT
-						COUNT(*)
+						COUNT(DISTINCT ra5.result_id)
 					FROM
 						result_answers ra5
 						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
@@ -1246,7 +1246,7 @@ export class resultValidationRepository
 			WHEN (
 				(
 					SELECT
-						COUNT(*)
+						COUNT(DISTINCT ra2.result_id)
 					FROM
 						result_answers ra2
 					WHERE
@@ -1259,7 +1259,7 @@ export class resultValidationRepository
 						)
 				) != (
 					SELECT
-						COUNT(*)
+						COUNT(DISTINCT ra5.result_id)
 					FROM
 						result_answers ra5
 						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
