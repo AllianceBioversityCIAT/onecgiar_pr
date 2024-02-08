@@ -36,11 +36,11 @@
 
     <app-pr-multi-select [options]="this.contributingInitiativesList"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" [readOnly]="true"
+        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" [hideSelect]="true"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)
-        ">
+        [selectedPrimary]="this.theoryOfChangeBody.changePrimaryInit"
+        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)">
     </app-pr-multi-select>
 
     <div class="selected_container custom_scroll">
