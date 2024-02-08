@@ -106,6 +106,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
+    this.theoryOfChangeBody.contributing_initiatives = [...this.theoryOfChangeBody.contributing_initiatives, ...this.contributingInitiativeNew];
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
 
