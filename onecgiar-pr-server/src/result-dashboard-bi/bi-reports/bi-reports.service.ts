@@ -3,6 +3,7 @@ import { CreateBiReportDto } from './dto/create-bi-report.dto';
 import { BiReportRepository } from './repository/bi-report.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { env } from 'process';
+import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
 
 @Injectable()
 export class BiReportsService {
@@ -38,8 +39,8 @@ export class BiReportsService {
     return this.biReportRepository.getReportsBi();
   }
 
-  findOneReportName(report_name: string) {
-    return this.biReportRepository.getTokenAndReportByName(report_name);
+  findOneReportName(getBiSubpagesDto: GetBiSubpagesDto) {
+    return this.biReportRepository.getTokenAndReportByName(getBiSubpagesDto);
   }
 
   azureToken() {

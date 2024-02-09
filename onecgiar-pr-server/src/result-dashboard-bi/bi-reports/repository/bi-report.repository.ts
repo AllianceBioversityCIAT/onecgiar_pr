@@ -15,6 +15,8 @@ import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
 import { TokenBiReportRepository } from './token-bi-reports.repository';
+import { GetBiSubpagesDto } from '../dto/get-bi-subpages.dto';
+import { BiSubpagesRepository } from './bi-subpages.repository';
 
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
@@ -24,6 +26,7 @@ export class BiReportRepository extends Repository<BiReport> {
     private readonly _httpService: HttpService,
     private _servicesClarisaCredentials: ClarisaCredentialsBiService,
     private tokenBireports: TokenBiReportRepository,
+    private biSubpagesRepository: BiSubpagesRepository,
   ) {
     super(BiReport, dataSource.createEntityManager());
   }
@@ -64,9 +67,16 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi(report_name?:string | number) {
-    let reportsBi: BiReport[] = await this.getReportsBi();
-    reportsBi = reportsBi.filter((report) => typeof report_name === 'number' ? report.id == report_name : report.report_name == report_name); 
+  async getTokenPowerBi(
+    report_name?: string | number,
+    subpageId?: string | number,
+  ) {
+    let reportsBi: BiReport[] = await this.getReportsBi(subpageId);
+    reportsBi = reportsBi.filter((report) =>
+      typeof report_name === 'number'
+        ? report.id == report_name
+        : report.report_name == report_name,
+    );
     if (reportsBi.length > 0) {
       const datasets: BodyPowerBiDTO[] = [];
       const reportsId: BodyPowerBiDTO[] = [];
@@ -138,7 +148,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi() {
+  async getReportsBi(subpageId?: number | string) {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -197,22 +207,31 @@ export class BiReportRepository extends Repository<BiReport> {
     }
   }
 
-  async getTokenAndReportByName(report_name: string) {
+  async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
+    const mainPage = await this.biSubpagesRepository.getReportSubPage(
+      getBiSubpagesDto,
+    );
+
+    const { report_name, subpage_id } = getBiSubpagesDto;
+
     this.credentialsBi =
       await this._servicesClarisaCredentials.getCredentialsBi();
     const reportsExist = await this.getReportByName(report_name);
 
     if (reportsExist != null && reportsExist.length != 0) {
-        const registerInToken = await this.getTokenPowerBi(report_name);
-        const responseToken = await registerInToken[
-          'reportsInformation'
-        ].filter((report) => report.name == report_name);
+      const registerInToken = await this.getTokenPowerBi(
+        report_name,
+        subpage_id,
+      );
+      const responseToken = await registerInToken['reportsInformation'].filter(
+        (report) => report.name == report_name,
+      );
 
-        return {
-          token: registerInToken['embed_token'],
-          report: responseToken[0],
-        };
-
+      return {
+        token: registerInToken['embed_token'],
+        azureValidation: registerInToken ? 1 : 0,
+        report: { ...responseToken[0], mainPage },
+      };
     } else {
       throw new NotFoundException({ message: 'This report does not exist' });
     }

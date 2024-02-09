@@ -9,6 +9,7 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
+import { BiSubpagesRepository } from './repository/bi-subpages.repository';
 
 @Module({
   imports: [HttpModule],
@@ -18,6 +19,7 @@ import {
     ClarisaCredentialsBiService,
     BiReportRepository,
     TokenBiReportRepository,
+    BiSubpagesRepository,
     HandlersError,
     ReturnResponse,
   ],
