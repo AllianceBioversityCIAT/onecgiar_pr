@@ -27,6 +27,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
+  @Input() hideSelect?: boolean = false;
   @Input() isStatic: boolean = false;
   @Input() showSelectAll: boolean = false;
   @Input() required: boolean = true;
@@ -34,6 +35,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() flagsCode: string;
   @Input() confirmDeletion: boolean = false;
   @Input() logicalDeletion: boolean = false;
+  @Input() selectedPrimary?: any;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
   selectAll = null;
@@ -179,15 +181,5 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     }
 
     this.removeOptionEvent.emit({ remove: option });
-  }
-
-  selectBySavedList(savedList: any[]) {
-    //(this.options);
-    //(savedList);
-    // savedList?.map(savedListItem => {
-    //   let itemFinded = listBr.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
-    //   if (itemFinded) itemFinded.selected = true;
-    // });
-    // return listBr;
   }
 }

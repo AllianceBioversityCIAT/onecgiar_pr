@@ -610,9 +610,8 @@ export class ResultsTocResultsService {
         toc_result_id,
         init,
       );
-      const wp_info = await this._resultsTocResultRepository.getWpInformation(
-        toc_result_id,
-      );
+      const wp_info =
+        await this._resultsTocResultRepository.getWpInformation(toc_result_id);
 
       return {
         response: {
@@ -822,7 +821,7 @@ export class ResultsTocResultsService {
         // * Logic to delete a WP from Contributors
         const incomingRtRIds = [];
         contributors_result_toc_result.forEach((contributor) => {
-          contributor.result_toc_results.forEach((rtrc) => {
+          contributor?.result_toc_results?.forEach((rtrc) => {
             incomingRtRIds.push(rtrc?.result_toc_result_id);
           });
         });
@@ -846,6 +845,9 @@ export class ResultsTocResultsService {
         // * Map multiple WPs to the same initiative
         const RtRArray: ResultsTocResult[] = [];
         for (const contributor of contributors_result_toc_result) {
+          if (!contributor.result_toc_results?.length) {
+            contributor.result_toc_results = [];
+          }
           for (const rtrc of contributor.result_toc_results) {
             if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
               continue;
