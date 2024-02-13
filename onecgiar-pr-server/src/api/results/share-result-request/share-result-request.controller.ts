@@ -7,12 +7,15 @@ import {
   Param,
   Headers,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller()
 export class ShareResultRequestController {
@@ -39,13 +42,9 @@ export class ShareResultRequestController {
   }
 
   @Get('get/all')
-  async findAll(@Headers() auth: HeadersDto) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-    const { message, response, status } =
-      await this.shareResultRequestService.getResultRequestByUser(token);
-    throw new HttpException({ message, response }, status);
+  @UseInterceptors(ResponseInterceptor)
+  findAll(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.getResultRequestByUser(user);
   }
 
   @Patch('update')
