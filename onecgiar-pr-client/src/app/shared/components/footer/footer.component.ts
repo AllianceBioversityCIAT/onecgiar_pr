@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { FooterService } from './footer.service';
+import { GlobalLinksService } from '../../services/variables/global-links.service';
 
 @Component({
   selector: 'app-footer',
@@ -15,8 +16,7 @@ export class FooterComponent {
   isFloatingFix = false;
   isHover = false;
   license = environment.footerUrls.license;
-  termsAndCondition = environment.footerUrls.termsAndCondition;
-  constructor(private router: Router, public footerSE: FooterService) {}
+  constructor(private router: Router, public footerSE: FooterService, public globalLinksSE:GlobalLinksService) {}
   showIfRouteIsInList() {
     // //(this.router.url);
     this.isFloating = false;

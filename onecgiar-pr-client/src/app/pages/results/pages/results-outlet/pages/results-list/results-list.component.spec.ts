@@ -39,6 +39,8 @@ describe('ResultsListComponent', () => {
         PATCH_DeleteResult: () => of({}),
         GET_TypeByResultLevel: () => of({}),
         GET_versioning: () => of({ response: [{ phase_year: 2023 }] }),
+        GET_allRequest: () => of({}),
+        GET_requestStatus: () => of({}),
         currentResultId: 1
       },
       dataControlSE: {

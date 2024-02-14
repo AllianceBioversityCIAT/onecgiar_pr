@@ -133,6 +133,26 @@ describe('AnticipatedInnovationUserComponent', () => {
     });
   });
 
+  describe('checkGenderAlert', () => {
+    it('should return true if actor has sex_and_age_disaggregation', () => {
+      const actor = { sex_and_age_disaggregation: true, has_men: false, has_men_youth: false, has_women: false, has_women_youth: false };
+      const result = component.checkGenderAlert(actor);
+      expect(result).toBeTruthy();
+    });
+  
+    it('should return true if actor has any of the gender-related flags', () => {
+      const actor = { sex_and_age_disaggregation: false, has_men: true, has_men_youth: false, has_women: false, has_women_youth: false };
+      const result = component.checkGenderAlert(actor);
+      expect(result).toBeTruthy();
+    });
+  
+    it('should return false if neither sex_and_age_disaggregation nor gender-related flags are true', () => {
+      const actor = { sex_and_age_disaggregation: false, has_men: false, has_men_youth: false, has_women: false, has_women_youth: false };
+      const result = component.checkGenderAlert(actor);
+      expect(result).toBeFalsy();
+    });
+  });
+
   describe('GETAllActorsTypes()', () => {
     it('should get actors types and set actorsTypeList', () => {
       const getActorsTypesSpy = jest.spyOn(mockApiService.resultsSE, 'GETAllActorsTypes');

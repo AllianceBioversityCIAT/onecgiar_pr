@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+/* eslint-disable arrow-parens */
+import { Component } from '@angular/core';
+import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-ipsr-unsubmit-modal',

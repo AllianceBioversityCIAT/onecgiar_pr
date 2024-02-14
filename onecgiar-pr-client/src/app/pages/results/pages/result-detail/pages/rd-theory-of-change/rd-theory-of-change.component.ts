@@ -78,6 +78,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
           });
         }
 
+        this.theoryOfChangeBody.changePrimaryInit = this.theoryOfChangeBody?.result_toc_result.initiative_id;
+
         this.disabledCenters();
 
         setTimeout(() => {
@@ -104,8 +106,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
-    const initiativesAux = this.theoryOfChangeBody.contributing_and_primary_initiative.concat(this.contributingInitiativeNew);
-    this.theoryOfChangeBody.contributing_initiatives = initiativesAux.filter(init => init.id !== this.theoryOfChangeBody?.result_toc_result?.initiative_id);
+    this.theoryOfChangeBody.contributing_initiatives = [...this.theoryOfChangeBody.contributing_initiatives, ...this.contributingInitiativeNew];
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
 
@@ -114,12 +115,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
     const saveSection = () => {
       this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
         this.getConsumed = false;
-        this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode ? location.reload() : this.getSectionInformation();
+        this.theoryOfChangeBody?.result_toc_result?.initiative_id !== this.theoryOfChangeBody.changePrimaryInit ? location.reload() : this.getSectionInformation();
         this.contributingInitiativeNew = [];
       });
     };
 
-    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.result_toc_result?.initiative_id);
+    const newInit = this.theoryOfChangeBody.contributing_and_primary_initiative.find(init => init.id === this.theoryOfChangeBody?.changePrimaryInit);
     const newInitOfficialCode = newInit?.official_code;
 
     if (this.theoryOfChangeBody?.result_toc_result?.official_code !== newInitOfficialCode)
@@ -152,6 +153,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onRemoveContributingInitiative(e) {
     const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.findIndex((result: any) => result?.initiative_id === e.remove.id);
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
+    this.theoryOfChangeBody.contributing_and_primary_initiative = this.theoryOfChangeBody.contributing_and_primary_initiative.filter(init => init.id !== e.remove.id);
   }
 
   onRemoveContribuiting(index) {

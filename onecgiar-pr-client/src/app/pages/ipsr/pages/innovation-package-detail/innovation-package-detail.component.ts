@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+/* eslint-disable camelcase */
+import { Component, DoCheck, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IpsrDataControlService } from '../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -11,7 +12,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
   templateUrl: './innovation-package-detail.component.html',
   styleUrls: ['./innovation-package-detail.component.scss']
 })
-export class InnovationPackageDetailComponent {
+export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   constructor(private activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService) {}
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
@@ -28,7 +29,6 @@ export class InnovationPackageDetailComponent {
       response.official_code = response?.initiative_official_code;
       this.api.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
-      console.log(response);
       const is_phase_open = response?.is_phase_open;
       switch (is_phase_open) {
         case 0:
@@ -47,14 +47,16 @@ export class InnovationPackageDetailComponent {
   }
 
   GET_resultIdToCode(callback) {
-    this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe({
+      next: ({ response }) => {
+        //(response);
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },
-      err => {}
-    );
+      error: () => {}
+    });
   }
+
   ngDoCheck(): void {
     this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
   }

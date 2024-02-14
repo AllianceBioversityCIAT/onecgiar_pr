@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { internationalizationData } from '../../shared/data/internationalizationData';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { RolesService } from '../../shared/services/global/roles.service';
 import { FooterService } from '../../shared/components/footer/footer.service';
 
 @Component({

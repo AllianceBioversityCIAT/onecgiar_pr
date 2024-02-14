@@ -18,7 +18,7 @@ export class PrRangeLevelComponent {
   @Input() size: number = 9;
   @Input() optionLabel: string;
   @Input() optionValue: string;
-  @Input() options: any;
+  @Input() options: any = [];
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
   @Output() selectOptionEvent = new EventEmitter<any>();

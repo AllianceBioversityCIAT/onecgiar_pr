@@ -42,7 +42,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     const queryData = `
 	select min(rbu.role) max_role
 		from role_by_user rbu 
-		where rbu.\`user\` = 2 
+		where rbu.\`user\` = ?
 		and rbu.active > 0 
 		and rbu.initiative_id is null 
 		and rbu.action_area_id is null 

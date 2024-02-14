@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
-import { RdTheoryOfChangesServicesService } from 'src/app/pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-changes-services.service';
+import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
