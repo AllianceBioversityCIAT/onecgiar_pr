@@ -56,6 +56,7 @@ export class TypeOneReportComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.typeOneReportSE.allInitiatives = response;
       this.typeOneReportSE.initiativeSelected = this.typeOneReportSE.allInitiatives[0]?.official_code;
+      this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
       this.typeOneReportSE.sanitizeUrl();
     });
   }
@@ -65,7 +66,13 @@ export class TypeOneReportComponent implements OnInit {
     this.typeOneReportSE.sanitizeUrl();
   }
 
+  getInitiativeShortName(official_code){
+    const list = this.api.rolesSE.isAdmin ? this.typeOneReportSE.allInitiatives : this.api.dataControlSE.myInitiativesList;
+    return list.find(init => init.official_code == official_code)?.short_name;
+  }
+
   selectInitiativeEvent() {
+    this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
     const currentUrl = this.router.url;
     this.router.navigateByUrl(`/type-one-report/ipi-cgiar-portfolio-linkages`).then(() => {
       setTimeout(() => {
