@@ -16,10 +16,12 @@ export class TypeOneReportService {
   reportingPhases: any[] = [];
   phaseSelected = null;
   currentInitiativeShortName = null;
+  currentBiPage = null
 
   constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
+  // official_code=${this.initiativeSelected}&
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}?official_code=${this.initiativeSelected}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}?sectionNumber=${this.currentBiPage}`);
   }
 
   getInitiativeID(official_code) {
