@@ -172,13 +172,7 @@ export class UserService {
     try {
       const initiativeByUser =
         await this._customUserRespository.InitiativeByUser(userId);
-      if (!initiativeByUser.length) {
-        throw {
-          response: {},
-          message: 'User Initiative Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+
       return {
         response: initiativeByUser,
         message: 'Successful response',
