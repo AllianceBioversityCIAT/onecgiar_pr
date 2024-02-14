@@ -6,6 +6,7 @@ import {
   Param,
   UseFilters,
   Headers,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,6 +15,7 @@ import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { HttpException } from '@nestjs/common';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
 @UseFilters(new HttpExceptionFilter())
@@ -59,10 +61,9 @@ export class UserController {
   }
 
   @Get('get/initiative/:userId')
-  async findInitiativeByUserId(@Param('userId') userId: number) {
-    const { message, response, status } =
-      await this.userService.findInitiativeByUserId(userId);
-    throw new HttpException({ message, response }, status);
+  @UseInterceptors(ResponseInterceptor)
+  findInitiativeByUserId(@Param('userId') userId: number) {
+    return this.userService.findInitiativeByUserId(userId);
   }
 
   @Get(':id')

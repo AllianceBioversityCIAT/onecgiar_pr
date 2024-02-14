@@ -702,6 +702,14 @@ export class ResultsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      if (result.status_id == 2)
+        throw this._returnResponse.format({
+          message: 'Is already Quality Assessed',
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: result,
+        });
+
       result.is_active = false;
 
       await this._resultRepository.save(result);
