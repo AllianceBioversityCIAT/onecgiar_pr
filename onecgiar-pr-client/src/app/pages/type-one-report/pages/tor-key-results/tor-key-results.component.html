@@ -2,11 +2,25 @@
   <div class="tor_sub_title">
     Key results
   </div>
-  <app-alert-status [description]="this.keyResultsDesc">
+  <app-alert-status [description]="this.keyResultsDesc(this.typeOneReportSE.currentInitiativeShortName)">
   </app-alert-status>
 
   <div class="text_and_button_alignment">
     The following information can be extracted in Excel by clicking on the PRMS download button.
     <app-pr-button text="Download excel file" icon="excel_white" [reverse]="true"></app-pr-button>
   </div>
+
+
+  <!-- <div [ngClass]="{'expand': full_screen}" class="iframe_container"
+  *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">
+  <div class="expand_icon" (click)="full_screen = !full_screen">
+      <i class="material-icons-round">
+          {{full_screen?'close_fullscreen':'open_in_full'}}
+      </i>
+      {{full_screen?'Minimize ':'Open in full screen'}}
+  </div> -->
+
+  <iframe *ngIf="this.typeOneReportSE.currentBiPage" [src]="this.typeOneReportSE.sanitizedUrl" frameborder="0"></iframe>
+
+
 </div>

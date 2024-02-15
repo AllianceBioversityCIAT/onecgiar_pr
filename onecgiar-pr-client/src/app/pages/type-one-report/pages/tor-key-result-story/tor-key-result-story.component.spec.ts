@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TorKeyResultStoryComponent } from './tor-key-result-story.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -22,7 +23,7 @@ describe('TorKeyResultStoryComponent', () => {
   let component: TorKeyResultStoryComponent;
   let fixture: ComponentFixture<TorKeyResultStoryComponent>;
   let mockApiService: any;
-  let mockGET_keyResultStoryInitiativeIdResponse = [
+  const mockGET_keyResultStoryInitiativeIdResponse = [
     {
       result_title: 'title',
       result_code: 1,

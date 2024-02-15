@@ -27,7 +27,7 @@ describe('TorKeyResultsComponent', () => {
 
   it('should have correct keyResultsDesc value', () => {
     const expectedValue = `This section provides an overview of results reported by the CGIAR Initiative on [Initiative short name]. These results align with the CGIAR Results Framework and [Initiative short name’s] theory of change. Further information on these results is available through the CGIAR Results Dashboard.
-  The following diagrams have been produced using quality assessed results entered into the CGIAR reporting system and are based on data extracted on [DATE].`;
+  The following diagrams have been produced using quality assessed results entered into the CGIAR reporting system and are based on data extracted on February 20, 2024.`;
 
     expect(component.keyResultsDesc).toEqual(expectedValue);
   });

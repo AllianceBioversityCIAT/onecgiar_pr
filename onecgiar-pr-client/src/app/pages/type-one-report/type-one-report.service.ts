@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ApiService } from '../../shared/services/api/api.service';
-import { environment } from '../../../environments/environment';
+import { GlobalLinksService } from '../../shared/services/variables/global-links.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,12 +12,15 @@ export class TypeOneReportService {
   initiativeSelected = null;
   sanitizedUrl: any = null;
   allInitiatives = [];
-  t1rBiUrl = environment.t1rBiUrl;
   reportingPhases: any[] = [];
   phaseSelected = null;
-  constructor(public sanitizer: DomSanitizer, private api: ApiService) {}
+  currentInitiativeShortName = null;
+  currentBiPage = null
+
+  constructor(public sanitizer: DomSanitizer, private api: ApiService, private globalLinksSE:GlobalLinksService) {}
+  // official_code=${this.initiativeSelected}&
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.t1rBiUrl}?official_code=${this.initiativeSelected}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.globalLinksSE.links?.url_t1r_bi_report}?sectionNumber=${this.currentBiPage}`);
   }
 
   getInitiativeID(official_code) {
