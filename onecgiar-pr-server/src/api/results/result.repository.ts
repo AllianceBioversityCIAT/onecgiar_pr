@@ -11,6 +11,7 @@ import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/l
 import { env } from 'process';
 import { ResultTypeDto } from './dto/result-types.dto';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
@@ -18,12 +19,119 @@ import {
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { isProduction } from '../../shared/utils/validation.utils';
+import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultRepository
-  extends Repository<Result>
+  extends BaseRepository<Result>
   implements ReplicableInterface<Result>, LogicalDelete<Result>
 {
+  createQueries(
+    config: ReplicableConfigInterface<Result>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select
+        null as id,
+        r2.description,
+        r2.is_active,
+        null as last_updated_date,
+        r2.gender_tag_level_id,
+        ${config.phase} as version_id,
+        r2.result_type_id,
+        0 as status,
+        1 as status_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        (select v.phase_year  from \`version\` v where v.id = ${
+          config.phase
+        }) as reported_year_id,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        r2.result_level_id,
+        r2.title,
+        r2.legacy_id,
+        r2.krs_url,
+        r2.is_krs,
+        r2.climate_change_tag_level_id,
+        r2.no_applicable_partner,
+        r2.has_regions,
+        r2.has_countries,
+        r2.geographic_scope_id,
+        r2.lead_contact_person,
+        r2.result_code,
+        true as is_replicated
+        from \`result\` r2 WHERE r2.id = ${
+          config.old_result_id
+        } and r2.is_active > 0`,
+      insertQuery: `
+      insert into \`result\` (
+        description
+        ,is_active
+        ,last_updated_date
+        ,gender_tag_level_id
+        ,version_id
+        ,result_type_id
+        ,status
+        ,status_id
+        ,created_by
+        ,last_updated_by
+        ,reported_year_id
+        ,created_date
+        ,result_level_id
+        ,title
+        ,legacy_id
+        ,krs_url
+        ,is_krs
+        ,climate_change_tag_level_id
+        ,no_applicable_partner
+        ,has_regions
+        ,has_countries
+        ,geographic_scope_id
+        ,lead_contact_person
+        ,result_code
+        ,is_replicated
+        ) select
+        r2.description,
+        r2.is_active,
+        null as last_updated_date,
+        r2.gender_tag_level_id,
+        ${config.phase} as version_id,
+        r2.result_type_id,
+        0 as status,
+        1 as status_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        (select v.phase_year  from \`version\` v where v.id = ${
+          config.phase
+        }) as reported_year_id,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        r2.result_level_id,
+        r2.title,
+        r2.legacy_id,
+        r2.krs_url,
+        r2.is_krs,
+        r2.climate_change_tag_level_id,
+        r2.no_applicable_partner,
+        r2.has_regions,
+        r2.has_countries,
+        r2.geographic_scope_id,
+        r2.lead_contact_person,
+        r2.result_code,
+        true as is_replicated
+        from \`result\` r2 WHERE r2.id = ${
+          config.old_result_id
+        } and r2.is_active > 0`,
+      returnQuery: `
+      select
+        r2.*
+        from \`result\` r2 WHERE r2.id = ?
+      `,
+    };
+  }
   private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
     private dataSource: DataSource,

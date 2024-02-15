@@ -32,7 +32,8 @@ export abstract class ReplicableRepository<T>
   async replicate(
     manager: EntityManager,
     config: ReplicableConfigInterface<T>,
-  ): Promise<T | T[]> {
+    lastInsertId: boolean = false,
+  ): Promise<T[]> {
     const configQuery = this.createQueries(config);
     const validQuery = this.validateConfigQuery(configQuery);
     const entityTarget: ObjectType<T> = this.target as ObjectType<T>;
@@ -54,12 +55,13 @@ export abstract class ReplicableRepository<T>
       const response_edit = <T[]>config.f.custonFunction(response);
       final_data = await this.save(response_edit);
     } else {
-      await manager
+      const response = await manager
         .getRepository<T>(this.target)
         .query(configQuery.insertQuery);
+      const tempParams = lastInsertId ? [response?.insertId] : [];
       final_data = await await manager
         .getRepository<T>(this.target)
-        .query(configQuery.returnQuery);
+        .query(configQuery.returnQuery, tempParams);
     }
 
     config.f?.completeFunction?.({ ...final_data });
