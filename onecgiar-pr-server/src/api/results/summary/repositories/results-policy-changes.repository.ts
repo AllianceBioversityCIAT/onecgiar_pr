@@ -3,19 +3,78 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsPolicyChanges } from '../entities/results-policy-changes.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsPolicyChangesRepository
-  extends Repository<ResultsPolicyChanges>
+  extends BaseRepository<ResultsPolicyChanges>
   implements
     ReplicableInterface<ResultsPolicyChanges>,
     LogicalDelete<ResultsPolicyChanges>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsPolicyChanges>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_policy_change_id,
+      rpc.amount,
+      rpc.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as result_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rpc.policy_stage_id,
+      rpc.policy_type_id,
+      rpc.status_amount
+      from results_policy_changes rpc 
+      WHERE rpc.result_id = ${config.old_result_id} and rpc.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_policy_changes 
+      (
+      amount,
+      is_active,
+      created_date,
+      last_updated_date,
+      result_id,
+      created_by,
+      last_updated_by,
+      policy_stage_id,
+      policy_type_id,
+      status_amount
+      )
+      select 
+      rpc.amount,
+      rpc.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as result_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rpc.policy_stage_id,
+      rpc.policy_type_id,
+      rpc.status_amount
+      from results_policy_changes rpc 
+      WHERE rpc.result_id = ${config.old_result_id} and rpc.is_active > 0`,
+      returnQuery: `
+      select *
+      from results_policy_changes rpc 
+      WHERE rpc.result_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsPolicyChangesRepository.name,
   );

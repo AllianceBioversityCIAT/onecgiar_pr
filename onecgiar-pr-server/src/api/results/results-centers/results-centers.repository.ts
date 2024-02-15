@@ -3,17 +3,71 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsCenter } from './entities/results-center.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsCenterRepository
-  extends Repository<ResultsCenter>
+  extends BaseRepository<ResultsCenter>
   implements ReplicableInterface<ResultsCenter>, LogicalDelete<ResultsCenter>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsCenter>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as id,
+      rc.is_primary,
+      rc.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as result_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rc.center_id
+      from results_center rc WHERE rc.result_id = ${
+        config.old_result_id
+      } and rc.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_center (
+      is_primary,
+      is_active,
+      created_date,
+      last_updated_date,
+      result_id,
+      created_by,
+      last_updated_by,
+      center_id
+      )
+      select 
+      rc.is_primary,
+      rc.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as result_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rc.center_id
+      from results_center rc WHERE rc.result_id = ${
+        config.old_result_id
+      } and rc.is_active > 0`,
+      returnQuery: `
+      select 
+      rc.*
+      from results_center rc WHERE rc.result_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(ResultsCenterRepository.name);
 
   constructor(

@@ -5,18 +5,71 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ShareResultRequestRepository
-  extends Repository<ShareResultRequest>
+  extends BaseRepository<ShareResultRequest>
   implements
     LogicalDelete<ShareResultRequest>,
     ReplicableInterface<ShareResultRequest>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ShareResultRequest>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+        SELECT ${config.new_result_id} as result_id,  
+			rbi2.inititiative_id as owner_initiative_id, 
+			rbi.inititiative_id as  shared_inititiative_id,
+			rbi.inititiative_id as  approving_inititiative_id,
+			rbi2.inititiative_id as requester_initiative_id,
+			1 as request_status_id,
+			${config.user.id} as requested_by
+			from \`result\` r 
+			inner join results_by_inititiative rbi on rbi.result_id = r.id 
+													and rbi.is_active > 0
+													and rbi.initiative_role_id = 2
+			inner join results_by_inititiative rbi2 on rbi2.result_id = r.id 
+													and rbi2.is_active > 0
+													and rbi2.initiative_role_id = 1
+			where r.is_active > 0
+				and r.id  = ${config.old_result_id};
+        `,
+      insertQuery: `
+        insert into share_result_request 
+			(result_id,
+			owner_initiative_id,
+			shared_inititiative_id,
+			approving_inititiative_id,
+			requester_initiative_id,
+			request_status_id,
+			requested_by
+			)
+			SELECT ${config.new_result_id} as result_id,  
+			rbi2.inititiative_id as owner_initiative_id, 
+			rbi.inititiative_id as  shared_inititiative_id,
+			rbi.inititiative_id as  approving_inititiative_id,
+			rbi2.inititiative_id as requester_initiative_id,
+			1 as request_status_id,
+			${config.user.id} as requested_by
+			from \`result\` r 
+			inner join results_by_inititiative rbi on rbi.result_id = r.id 
+													and rbi.is_active > 0
+													and rbi.initiative_role_id = 2
+			inner join results_by_inititiative rbi2 on rbi2.result_id = r.id 
+													and rbi2.is_active > 0
+													and rbi2.initiative_role_id = 1
+			where r.is_active > 0
+				and r.id  = ${config.old_result_id};`,
+      returnQuery: `select * from share_result_request srr WHERE srr.is_active > 0 and srr.result_id = ${config.new_result_id};`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ShareResultRequestRepository.name,
   );

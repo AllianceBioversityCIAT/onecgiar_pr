@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Evidence } from './entities/evidence.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
@@ -13,12 +14,96 @@ import {
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { EvidenceWithEvidenceSharepoint } from './interfaces/evidence-with-evidence-sharepoint.interface';
 import { EvidenceTypeEnum } from '../../../shared/constants/evidence-type.enum';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class EvidencesRepository
-  extends Repository<Evidence>
+  extends BaseRepository<Evidence>
   implements ReplicableInterface<Evidence>, LogicalDelete<Evidence>
 {
+  createQueries(
+    config: ReplicableConfigInterface<Evidence>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select
+        null as id,
+        e.description,
+        e.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as creation_date,
+        e.last_updated_date,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        e.gender_related,
+        e.link,
+        e.youth_related,
+        e.nutrition_related,
+        e.environmental_biodiversity_related,
+        e.poverty_related,
+        e.is_supplementary,
+        e.is_sharepoint,
+        ${config.new_result_id} as result_id,
+        ${VERSIONING.QUERY.Get_result_phases(
+          `e.knowledge_product_related`,
+          config.phase,
+        )} as knowledge_product_related,
+        e.evidence_type_id
+        from evidence e where e.result_id = ${
+          config.old_result_id
+        } and is_active > 0
+      `,
+      insertQuery: `
+      insert into evidence (
+        description,
+        is_active,
+        creation_date,
+        last_updated_date,
+        created_by,
+        last_updated_by,
+        gender_related,
+        nutrition_related,
+        environmental_biodiversity_related,
+        poverty_related,
+        link,
+        youth_related,
+        is_supplementary,
+        is_sharepoint,
+        result_id,
+        knowledge_product_related,
+        evidence_type_id
+        ) select
+        e.description,
+        e.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as creation_date,
+        e.last_updated_date,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        e.gender_related,
+        e.nutrition_related,
+        e.environmental_biodiversity_related,
+        e.poverty_related,
+        e.link,
+        e.youth_related,
+        e.is_supplementary,
+        e.is_sharepoint,
+        ${config.new_result_id} as result_id,
+        ${VERSIONING.QUERY.Get_result_phases(
+          `e.knowledge_product_related`,
+          config.phase,
+        )} as knowledge_product_related,
+        e.evidence_type_id
+        from evidence e where e.result_id = ${
+          config.old_result_id
+        } and is_active > 0`,
+      returnQuery: `
+        select e.* from evidence e where e.result_id = ${config.new_result_id}
+        `,
+    };
+  }
   private readonly _logger: Logger = new Logger(EvidencesRepository.name);
 
   constructor(
@@ -374,7 +459,6 @@ export class EvidencesRepository
       await this.query(justActivateList);
     } catch (error) {}
   }
-
 
   async getLastSharepointId() {
     const query = `

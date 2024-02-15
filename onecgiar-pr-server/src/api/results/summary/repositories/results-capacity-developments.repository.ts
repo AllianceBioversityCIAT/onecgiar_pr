@@ -3,19 +3,78 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsCapacityDevelopments } from '../entities/results-capacity-developments.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsCapacityDevelopmentsRepository
-  extends Repository<ResultsCapacityDevelopments>
+  extends BaseRepository<ResultsCapacityDevelopments>
   implements
     ReplicableInterface<ResultsCapacityDevelopments>,
     LogicalDelete<ResultsCapacityDevelopments>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsCapacityDevelopments>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_capacity_development_id,
+      rcd.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as result_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rcd.male_using,
+      rcd.female_using,
+      rcd.capdev_delivery_method_id,
+      rcd.capdev_term_id
+      from results_capacity_developments rcd where rcd.result_id = ${
+        config.old_result_id
+      } and rcd.is_active > 0;
+      `,
+      insertQuery: `
+      insert into results_capacity_developments (
+        is_active,
+        created_date,
+        last_updated_date,
+        result_id,
+        created_by,
+        last_updated_by,
+        male_using,
+        female_using,
+        capdev_delivery_method_id,
+        capdev_term_id
+        )
+        select
+        rcd.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as result_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        rcd.male_using,
+        rcd.female_using,
+        rcd.capdev_delivery_method_id,
+        rcd.capdev_term_id
+        from results_capacity_developments rcd where rcd.result_id = ${
+          config.old_result_id
+        } and rcd.is_active > 0`,
+      returnQuery: `
+        select *
+        from results_capacity_developments rcd where rcd.result_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsCapacityDevelopmentsRepository.name,
   );

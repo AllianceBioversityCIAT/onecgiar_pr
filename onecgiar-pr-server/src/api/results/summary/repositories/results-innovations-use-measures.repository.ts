@@ -3,19 +3,86 @@ import { DataSource, Repository } from 'typeorm';
 import { ResultsInnovationsUseMeasures } from '../entities/results-innovations-use-measures.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsInnovationsUseMeasuresRepository
-  extends Repository<ResultsInnovationsUseMeasures>
+  extends BaseRepository<ResultsInnovationsUseMeasures>
   implements
     ReplicableInterface<ResultsInnovationsUseMeasures>,
     LogicalDelete<ResultsInnovationsUseMeasures>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsInnovationsUseMeasures>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+     select 
+     null as result_innovations_use_measure_id,
+     rium.unit_of_measure,
+     rium.quantity,
+     rium.is_active,
+     ${predeterminedDateValidation(config?.predetermined_date)} as created_date,
+     null as last_updated_date,
+     riu2.result_innovation_use_id as result_innovation_use_id,
+     rium.unit_of_measure_id,
+     ${config.user.id} as created_by,
+     null as last_updated_by
+     from results_innovations_use_measures rium 
+       inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
+                           and riu.results_id = ${config.old_result_id}
+       inner join results_innovations_use riu2 on riu2.results_id = ${
+         config.new_result_id
+       }
+     where rium.is_active > 0
+     `,
+      insertQuery: `
+     insert into results_innovations_use_measures 
+       (
+       unit_of_measure,
+       quantity,
+       is_active,
+       created_date,
+       last_updated_date,
+       result_innovation_use_id,
+       unit_of_measure_id,
+       created_by,
+       last_updated_by
+       )
+       select
+       rium.unit_of_measure,
+       rium.quantity,
+       rium.is_active,
+       ${predeterminedDateValidation(
+         config?.predetermined_date,
+       )} as created_date,
+       null as last_updated_date,
+       riu2.result_innovation_use_id as result_innovation_use_id,
+       rium.unit_of_measure_id,
+       ${config.user.id} as created_by,
+       null as last_updated_by
+       from results_innovations_use_measures rium 
+         inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
+                             and riu.results_id = ${config.old_result_id}
+         inner join results_innovations_use riu2 on riu2.results_id = ${
+           config.new_result_id
+         }
+       where rium.is_active > 0;`,
+      returnQuery: `
+      select 
+      rium.*
+      from results_innovations_use_measures rium 
+        inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
+      where riu.results_id = ${config.new_result_id} 
+      `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsInnovationsUseMeasuresRepository.name,
   );

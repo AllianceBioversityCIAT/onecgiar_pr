@@ -4,16 +4,60 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultCountry } from './entities/result-country.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultCountryRepository
-  extends Repository<ResultCountry>
+  extends BaseRepository<ResultCountry>
   implements ReplicableInterface<ResultCountry>, LogicalDelete<ResultCountry>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultCountry>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_country_id,
+      rc.is_active,
+      ${config.new_result_id} as result_id,
+      rc.country_id,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      now() as last_updated_date
+      from result_country rc WHERE rc.result_id = ${
+        config.old_result_id
+      } and is_active > 0`,
+      insertQuery: `
+      insert into result_country (
+        is_active,
+        result_id,
+        country_id,
+        created_date,
+        last_updated_date
+        )
+        select
+        rc.is_active,
+        ${config.new_result_id} as result_id,
+        rc.country_id,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        now() as last_updated_date
+        from result_country rc WHERE rc.result_id = ${
+          config.old_result_id
+        } and is_active > 0;`,
+      returnQuery: `
+      select 
+      rc.*
+      from result_country rc WHERE rc.result_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(ResultCountryRepository.name);
   constructor(
     private dataSource: DataSource,

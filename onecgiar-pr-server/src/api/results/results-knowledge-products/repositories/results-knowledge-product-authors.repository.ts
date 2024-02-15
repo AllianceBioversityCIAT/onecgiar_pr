@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ResultsKnowledgeProductAuthor } from '../entities/results-knowledge-product-authors.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
@@ -11,14 +12,65 @@ import {
   VERSIONING,
   predeterminedDateValidation,
 } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsKnowledgeProductAuthorRepository
-  extends Repository<ResultsKnowledgeProductAuthor>
+  extends BaseRepository<ResultsKnowledgeProductAuthor>
   implements
     ReplicableInterface<ResultsKnowledgeProductAuthor>,
     LogicalDelete<ResultsKnowledgeProductAuthor>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsKnowledgeProductAuthor>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_kp_author_id,
+      rkpa.author_name,
+      rkpa.orcid,
+      rkpa.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )} as result_knowledge_product_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by
+      from results_kp_authors rkpa where rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.old_result_id,
+      )} and rkpa.is_active > 0
+      `,
+      insertQuery: `
+      select 
+      null as result_kp_author_id,
+      rkpa.author_name,
+      rkpa.orcid,
+      rkpa.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )} as result_knowledge_product_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by
+      from results_kp_authors rkpa where rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.old_result_id,
+      )} and rkpa.is_active > 0
+      `,
+      returnQuery: `
+      select 
+      rkpa.*
+      from results_kp_authors rkpa where rkpa.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductAuthorRepository.name,
   );

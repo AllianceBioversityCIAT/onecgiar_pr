@@ -3,19 +3,79 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInstitutionsByDeliveriesType } from './entities/result-by-institutions-by-deliveries-type.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultByInstitutionsByDeliveriesTypeRepository
-  extends Repository<ResultByInstitutionsByDeliveriesType>
+  extends BaseRepository<ResultByInstitutionsByDeliveriesType>
   implements
     ReplicableInterface<ResultByInstitutionsByDeliveriesType>,
     LogicalDelete<ResultByInstitutionsByDeliveriesType>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultByInstitutionsByDeliveriesType>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select null as id,
+      rbibdt.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      rbibdt.partner_delivery_type_id,
+      rbi2.id as result_by_institution_id,
+      ${config.user.id} as created_by,
+      ${config.user.id} as last_updated_by 
+      from result_by_institutions_by_deliveries_type rbibdt 
+            inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
+                              and rbi.result_id = ${config.old_result_id}
+            inner join results_by_institution rbi2 on rbi2.institutions_id = rbi.institutions_id 
+                              and rbi.institution_roles_id = rbi2.institution_roles_id
+                              and rbi2.result_id = ${config.new_result_id}`,
+      insertQuery: `
+          insert into result_by_institutions_by_deliveries_type 
+            (
+            is_active,
+            created_date,
+            last_updated_date,
+            partner_delivery_type_id,
+            result_by_institution_id,
+            created_by,
+            last_updated_by 
+            )
+            select
+            rbibdt.is_active,
+            ${predeterminedDateValidation(
+              config?.predetermined_date,
+            )} as created_date,
+            now() as last_updated_date,
+            rbibdt.partner_delivery_type_id,
+            rbi2.id as result_by_institution_id,
+            ${config.user.id} as created_by,
+            ${config.user.id} as last_updated_by 
+            from result_by_institutions_by_deliveries_type rbibdt 
+                  inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id
+                                    and rbi.result_id = ${config.old_result_id}
+                  inner join results_by_institution rbi2 on rbi2.institutions_id = rbi.institutions_id 
+                                    and rbi.institution_roles_id = rbi2.institution_roles_id
+                                    and rbi2.result_id = ${config.new_result_id}
+            where rbibdt.is_active > 0;`,
+      returnQuery: `
+            select
+              rbibdt.*
+              from result_by_institutions_by_deliveries_type rbibdt
+                    inner join results_by_institution rbi on rbi.id = rbibdt.result_by_institution_id 
+              where rbibdt.is_active > 0 and rbi.result_id = ${config.new_result_id};
+            `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultByInstitutionsByDeliveriesTypeRepository.name,
   );

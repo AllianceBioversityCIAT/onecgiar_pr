@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ResultsKnowledgeProductMetadata } from '../entities/results-knowledge-product-metadata.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
@@ -11,14 +12,87 @@ import {
   predeterminedDateValidation,
 } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsKnowledgeProductMetadataRepository
-  extends Repository<ResultsKnowledgeProductMetadata>
+  extends BaseRepository<ResultsKnowledgeProductMetadata>
   implements
     ReplicableInterface<ResultsKnowledgeProductMetadata>,
     LogicalDelete<ResultsKnowledgeProductMetadata>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsKnowledgeProductMetadata>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT 
+      null as result_kp_metadata_id,
+      rkm.source,
+      rkm.is_isi,
+      rkm.accesibility,
+      rkm.year,
+      rkm.doi,
+      rkm.is_peer_reviewed,
+      rkm.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )} as result_knowledge_product_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by
+      from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.old_result_id,
+      )}
+      and rkm.is_active > 0`,
+      insertQuery: `
+      insert into results_kp_metadata 
+      (
+      source,
+      is_isi,
+      accesibility,
+      \`year\`,
+      doi,
+      is_peer_reviewed,
+      is_active,
+      created_date,
+      last_updated_date,
+      result_knowledge_product_id,
+      created_by,
+      last_updated_by
+      )
+      SELECT
+      rkm.source,
+      rkm.is_isi,
+      rkm.accesibility,
+      rkm.year,
+      rkm.doi,
+      rkm.is_peer_reviewed,
+      rkm.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )} as result_knowledge_product_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by
+      from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.old_result_id,
+      )}
+      and rkm.is_active > 0`,
+      returnQuery: `
+      SELECT 
+      rkm.*
+      from results_kp_metadata rkm WHERE rkm.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
+        config.new_result_id,
+      )}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductMetadataRepository.name,
   );
