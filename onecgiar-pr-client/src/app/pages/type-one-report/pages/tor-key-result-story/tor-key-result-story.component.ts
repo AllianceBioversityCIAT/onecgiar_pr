@@ -23,6 +23,7 @@ export class TorKeyResultStoryComponent implements OnInit {
       this.typeOneReportSE.keyResultStoryData = response;
       this.tablesList = [];
       response.forEach(table => {
+        console.log(table)
         this.formatTable(table);
       });
     });
@@ -44,14 +45,10 @@ export class TorKeyResultStoryComponent implements OnInit {
     const header = [{ attr: 'category' }, { attr: 'value' }];
     let data = [
       { category: 'Result title', value: '', id: null },
-      { category: 'Primary submitter', value: '' },
-      { category: 'Contributing Initiatives', value: '' },
+      { category: `Contributing initiatives/SGP's/platforms`, value: '' },
       { category: 'Contributing centers', value: '' },
       { category: 'Contributing external partner(s)', value: '' },
       { category: 'Geographic scope', value: '' },
-      { category: 'Primary Impact Area', value: '' },
-      { category: 'Other relevant Impact Area(s)', value: '' },
-      { category: 'Which collective global targets for the relevant Impact Area(s) from the CGIAR 2030 Research and Innovation Strategy does the key result contribute to?', value: '' }
     ];
 
     const table = tableData;
@@ -61,20 +58,14 @@ export class TorKeyResultStoryComponent implements OnInit {
       return;
     }
 
-    const noDataText = '<div class="no-data-text-format">This result is not an impact reported in the PRMS Reporting Tool</div>';
-
     data[0].value = table.result_title || '<div class="no-data-text-format">There is no result title data</div>';
     data[0].id = table.result_code;
-    data[1].value = table.primary_submitter || '<div class="no-data-text-format">There is no primary submitter data</div>';
-    data[2].value = table.contributing_initiative || '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
-    data[3].value = table.contributing_center || '<div class="no-data-text-format">There are no contributing centers data</div>';
-    data[4].value = table.contribution_external_partner || '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
+    data[1].value = table.contributing_initiative || '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
+    data[2].value = table.contributing_center || '<div class="no-data-text-format">There are no contributing centers data</div>';
+    data[3].value = table.contribution_external_partner || '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
     const countriesText = table.countries ? `<strong>Countries:</strong><br> ${table.countries} <br>` : '';
     const regionsText = table.regions ? `<br><strong>Regions:</strong><br>${table.regions}<br> ` : '';
-    data[5].value = table.countries || table.regions ? countriesText + regionsText : '<div class="no-data-text-format">There is no Geographic location data</div>';
-    data[6].value = JSON.parse(table?.impact_areas) || noDataText;
-    data[7].value = table.other_impact_areas || noDataText;
-    data[8].value = table.global_targets || noDataText;
+    data[4].value = table.countries || table.regions ? countriesText + regionsText : '<div class="no-data-text-format">There is no Geographic location data</div>';
 
     this.tablesList.push({ data, header });
   }
