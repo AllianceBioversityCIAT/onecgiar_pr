@@ -48,6 +48,7 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { isProduction } from '../../shared/utils/validation.utils';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
 @Injectable()
 export class VersioningService {
@@ -188,121 +189,125 @@ export class VersioningService {
   }
 
   async $_phaseChangeReporting(result: Result, phase: Version, user: TokenDto) {
-    try {
-      this._logger.log(
-        `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
+    this._logger.log(
+      `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
+    );
+
+    const data = await this.dataSource.transaction(async (manager) => {
+      const tempData = await this._resultRepository.replicate(
+        manager,
+        {
+          old_result_id: result.id,
+          phase: phase.id,
+          user: user,
+        },
+        true,
       );
-      const data = await this._resultRepository.replicable({
-        old_result_id: result.id,
-        phase: phase.id,
-        user: user,
-      });
+
+      let dataResult: Result = null;
+      if (tempData?.length) {
+        dataResult = tempData[0];
+      } else {
+        throw ReturnResponseUtil.format({
+          message: `The result ${result.id} could not be replicated`,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          response: null,
+        });
+      }
 
       const config = {
         old_result_id: result.id,
-        new_result_id: data.id,
+        new_result_id: dataResult.id,
         phase: phase.id,
         user: user,
       };
+      await this._resultByInitiativesRepository.replicate(manager, config);
+      await this._shareResultRequestRepository.replicate(manager, config);
 
-      await this.dataSource.transaction(async (manager) => {
-        await this._resultByInitiativesRepository.replicate(manager, config);
-        await this._shareResultRequestRepository.replicate(manager, config);
-
-        switch (parseInt(`${result.result_type_id}`)) {
-          case 1:
-            await this._resultsPolicyChangesRepository.replicate(
-              manager,
-              config,
-            );
-            break;
-          case 2:
-            await this._resultsInnovationsUseRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsInnovationsUseMeasuresRepository.replicate(
-              manager,
-              config,
-            );
-            break;
-          case 5:
-            await this._resultsCapacityDevelopmentsRepository.replicate(
-              manager,
-              config,
-            );
-            break;
-          case 6:
-            await this._resultsKnowledgeProductsRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsKnowledgeProductAltmetricRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsKnowledgeProductAuthorRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsKnowledgeProductKeywordRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsKnowledgeProductMetadataRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultsKnowledgeProductInstitutionRepository.replicate(
-              manager,
-              config,
-            );
-            break;
-          case 7:
-            await this._resultsInnovationsDevRepository.replicate(
-              manager,
-              config,
-            );
-            await this._resultInitiativeBudgetRepository.replicate(
-              manager,
-              config,
-            );
-            break;
-        }
-        await this._nonPooledProjectRepository.replicate(manager, config);
-        await this._resultsCenterRepository.replicate(manager, config);
-        await this._resultByIntitutionsRepository.replicate(manager, config);
-        await this._resultByInstitutionsByDeliveriesTypeRepository.replicate(
-          manager,
-          config,
-        );
-        await this._resultByIntitutionsTypeRepository.replicate(
-          manager,
-          config,
-        );
-        await this._resultCountryRepository.replicate(manager, config);
-        await this._resultRegionRepository.replicate(manager, config);
-        await this._linkedResultRepository.replicate(manager, config);
-        await this._evidencesRepository.replicate(manager, config);
-        await this._evidenceSharepointRepository.replicate(manager, config);
-        await this._evidencesService.replicateSPFiles(config);
-      });
-
-      //await this._resultsImpactAreaIndicatorRepository.replicable(config);
-
-      this._logger.log(
-        `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
+      switch (parseInt(`${result.result_type_id}`)) {
+        case 1:
+          await this._resultsPolicyChangesRepository.replicate(manager, config);
+          break;
+        case 2:
+          await this._resultsInnovationsUseRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsInnovationsUseMeasuresRepository.replicate(
+            manager,
+            config,
+          );
+          break;
+        case 5:
+          await this._resultsCapacityDevelopmentsRepository.replicate(
+            manager,
+            config,
+          );
+          break;
+        case 6:
+          await this._resultsKnowledgeProductsRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsKnowledgeProductAltmetricRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsKnowledgeProductAuthorRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsKnowledgeProductKeywordRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsKnowledgeProductMetadataRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultsKnowledgeProductInstitutionRepository.replicate(
+            manager,
+            config,
+          );
+          break;
+        case 7:
+          await this._resultsInnovationsDevRepository.replicate(
+            manager,
+            config,
+          );
+          await this._resultInitiativeBudgetRepository.replicate(
+            manager,
+            config,
+          );
+          break;
+      }
+      await this._nonPooledProjectRepository.replicate(manager, config);
+      await this._resultsCenterRepository.replicate(manager, config);
+      await this._resultByIntitutionsRepository.replicate(manager, config);
+      await this._resultByInstitutionsByDeliveriesTypeRepository.replicate(
+        manager,
+        config,
       );
-      this._logger.log(
-        `REPORTING: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
-      );
-      return data;
-    } catch (error) {
-      return {
-        result: result,
-        error: error,
-      };
-    }
+      await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+      await this._resultCountryRepository.replicate(manager, config);
+      await this._resultRegionRepository.replicate(manager, config);
+      await this._linkedResultRepository.replicate(manager, config);
+      await this._evidencesRepository.replicate(manager, config);
+      await this._evidenceSharepointRepository.replicate(manager, config);
+      await this._evidencesService.replicateSPFiles(config);
+
+      return dataResult;
+    });
+
+    //await this._resultsImpactAreaIndicatorRepository.replicable(config);
+
+    this._logger.log(
+      `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
+    );
+    this._logger.log(
+      `REPORTING: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
+    );
+    return data;
   }
 
   async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {
