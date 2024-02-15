@@ -16,3 +16,15 @@ export interface ReplicableConfigInterface<T> {
     completeFunction?: (res: T | T[]) => void;
   };
 }
+
+export interface ConfigCustomQueryInterface {
+  findQuery: string;
+  insertQuery: string;
+  returnQuery: string;
+}
+
+export interface GetQueryConfigurationsInterface<T> {
+  createQueries(
+    config: ReplicableConfigInterface<T>,
+  ): ConfigCustomQueryInterface;
+}

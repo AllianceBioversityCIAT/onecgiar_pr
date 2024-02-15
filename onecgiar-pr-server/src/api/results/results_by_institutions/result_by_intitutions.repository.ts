@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
@@ -10,14 +11,65 @@ import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultByIntitutionsRepository
-  extends Repository<ResultsByInstitution>
+  extends BaseRepository<ResultsByInstitution>
   implements
     ReplicableInterface<ResultsByInstitution>,
     LogicalDelete<ResultsByInstitution>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsByInstitution>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT 
+        null as id,
+        rbi.institutions_id,
+        rbi.institution_roles_id,
+        rbi.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        ${config.new_result_id} as result_id
+        from results_by_institution rbi WHERE rbi.result_id = ${
+          config.old_result_id
+        } and rbi.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_by_institution (
+        institutions_id,
+        institution_roles_id,
+        is_active,
+        created_date,
+        last_updated_date,
+        created_by,
+        last_updated_by,
+        result_id
+        )SELECT 
+        rbi.institutions_id,
+        rbi.institution_roles_id,
+        rbi.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        ${config.new_result_id} as result_id
+        from results_by_institution rbi WHERE rbi.result_id = ${
+          config.old_result_id
+        } and rbi.is_active > 0`,
+      returnQuery: `
+        SELECT rbi.* from results_by_institution rbi WHERE rbi.result_id = ${config.new_result_id}
+        `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultByIntitutionsRepository.name,
   );

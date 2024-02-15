@@ -3,19 +3,83 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInstitutionType } from './entities/results_by_institution_type.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultByIntitutionsTypeRepository
-  extends Repository<ResultsByInstitutionType>
+  extends BaseRepository<ResultsByInstitutionType>
   implements
     ReplicableInterface<ResultsByInstitutionType>,
     LogicalDelete<ResultsByInstitutionType>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsByInstitutionType>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+        null as id,
+        rbit.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as creation_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        rbit.institution_roles_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        rbit.institution_types_id,
+        rbit.how_many,
+        rbit.other_institution,
+        rbit.graduate_students
+        from results_by_institution_type rbit WHERE  rbit.results_id = ${
+          config.old_result_id
+        } and rbit.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_by_institution_type 
+        (
+        is_active,
+        creation_date,
+        last_updated_date,
+        results_id,
+        institution_roles_id,
+        created_by,
+        last_updated_by,
+        institution_types_id,
+        how_many,
+        other_institution,
+        graduate_students
+        )
+        select
+        rbit.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as creation_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        rbit.institution_roles_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        rbit.institution_types_id,
+        rbit.how_many,
+        rbit.other_institution,
+        rbit.graduate_students
+        from results_by_institution_type rbit WHERE  rbit.results_id = ${
+          config.old_result_id
+        } and rbit.is_active > 0`,
+      returnQuery: `
+      select 
+        rbit.*
+        from results_by_institution_type rbit WHERE  rbit.results_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultByIntitutionsTypeRepository.name,
   );

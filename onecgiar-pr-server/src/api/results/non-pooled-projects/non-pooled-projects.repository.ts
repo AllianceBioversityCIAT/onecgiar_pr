@@ -3,19 +3,82 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { NonPooledProject } from './entities/non-pooled-project.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class NonPooledProjectRepository
-  extends Repository<NonPooledProject>
+  extends BaseRepository<NonPooledProject>
   implements
     ReplicableInterface<NonPooledProject>,
     LogicalDelete<NonPooledProject>
 {
+  createQueries(
+    config: ReplicableConfigInterface<NonPooledProject>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+        null as id,
+        npp.grant_title,
+        npp.center_grant_id,
+        npp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        npp.funder_institution_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        npp.lead_center_id,
+        npp.non_pooled_project_type_id
+        from non_pooled_project npp where npp.results_id = ${
+          config.old_result_id
+        } and is_active > 0
+      `,
+      insertQuery: `
+      insert into non_pooled_project (
+        grant_title,
+        center_grant_id,
+        is_active,
+        created_date,
+        last_updated_date,
+        results_id,
+        funder_institution_id,
+        created_by,
+        last_updated_by,
+        lead_center_id,
+        non_pooled_project_type_id
+        ) select 
+        npp.grant_title,
+        npp.center_grant_id,
+        npp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        npp.funder_institution_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        npp.lead_center_id,
+        npp.non_pooled_project_type_id
+        from non_pooled_project npp where npp.results_id = ${
+          config.old_result_id
+        } and is_active > 0`,
+      returnQuery: `
+        select 
+          npp.*
+          from non_pooled_project npp where npp.results_id = ${config.new_result_id}
+        `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     NonPooledProjectRepository.name,
   );

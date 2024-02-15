@@ -4,19 +4,69 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInititiative } from './entities/results_by_inititiative.entity';
 import { InitiativeByResultDTO } from './dto/InitiativeByResult.dto';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultByInitiativesRepository
-  extends Repository<ResultsByInititiative>
+  extends BaseRepository<ResultsByInititiative>
   implements
     ReplicableInterface<ResultsByInititiative>,
     LogicalDelete<ResultsByInititiative>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsByInititiative>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+        null as id,
+        rbi.is_active,
+        null as last_updated_date,
+        ${config.new_result_id} as result_id,
+        rbi.inititiative_id,
+        rbi.initiative_role_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
+        from results_by_inititiative rbi where rbi.result_id = ${
+          config.old_result_id
+        } and rbi.is_active > 0
+      `,
+      insertQuery: `insert into results_by_inititiative (
+        is_active,
+        last_updated_date,
+        result_id,
+        inititiative_id,
+        initiative_role_id,
+        created_by,
+        last_updated_by,
+        created_date
+        )
+        select 
+        rbi.is_active,
+        null as last_updated_date,
+        ${config.new_result_id} as result_id,
+        rbi.inititiative_id,
+        rbi.initiative_role_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date
+        from results_by_inititiative rbi where rbi.result_id = ${
+          config.old_result_id
+        }  and rbi.is_active > 0 and rbi.initiative_role_id = 1`,
+      returnQuery: `select * from results_by_inititiative rbi where rbi.result_id = ${config.new_result_id} `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultByInitiativesRepository.name,
   );

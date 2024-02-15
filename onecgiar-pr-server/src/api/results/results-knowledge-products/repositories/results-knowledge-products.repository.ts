@@ -3,19 +3,119 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsKnowledgeProduct } from '../entities/results-knowledge-product.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsKnowledgeProductsRepository
-  extends Repository<ResultsKnowledgeProduct>
+  extends BaseRepository<ResultsKnowledgeProduct>
   implements
     ReplicableInterface<ResultsKnowledgeProduct>,
     LogicalDelete<ResultsKnowledgeProduct>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsKnowledgeProduct>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+        null as result_knowledge_product_id,
+        rkp.handle,
+        rkp.name,
+        rkp.description,
+        rkp.knowledge_product_type,
+        rkp.licence,
+        rkp.comodity,
+        rkp.sponsors,
+        rkp.findable,
+        rkp.accesible,
+        rkp.interoperable,
+        rkp.reusable,
+        rkp.is_melia,
+        rkp.melia_previous_submitted,
+        rkp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        rkp.melia_type_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        rkp.doi,
+        rkp.cgspace_regions,
+        rkp.cgspace_countries,
+        rkp.ost_melia_study_id
+        from results_knowledge_product rkp WHERE rkp.results_id = ${
+          config.old_result_id
+        } and rkp.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_knowledge_product (
+        handle,
+        name,
+        description,
+        knowledge_product_type,
+        licence,
+        comodity,
+        sponsors,
+        findable,
+        accesible,
+        interoperable,
+        reusable,
+        is_melia,
+        melia_previous_submitted,
+        is_active,
+        created_date,
+        last_updated_date,
+        results_id,
+        melia_type_id,
+        created_by,
+        last_updated_by,
+        doi,
+        cgspace_regions,
+        cgspace_countries,
+        ost_melia_study_id
+        )
+        select 
+        rkp.handle,
+        rkp.name,
+        rkp.description,
+        rkp.knowledge_product_type,
+        rkp.licence,
+        rkp.comodity,
+        rkp.sponsors,
+        rkp.findable,
+        rkp.accesible,
+        rkp.interoperable,
+        rkp.reusable,
+        rkp.is_melia,
+        rkp.melia_previous_submitted,
+        rkp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        rkp.melia_type_id,
+        ${config.user.id} as created_by,
+        null as last_updated_by,
+        rkp.doi,
+        rkp.cgspace_regions,
+        rkp.cgspace_countries,
+        rkp.ost_melia_study_id
+        from results_knowledge_product rkp WHERE rkp.results_id = ${
+          config.old_result_id
+        } and rkp.is_active > 0`,
+      returnQuery: `
+        select * from results_knowledge_product rkp WHERE rkp.results_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsKnowledgeProductsRepository.name,
   );

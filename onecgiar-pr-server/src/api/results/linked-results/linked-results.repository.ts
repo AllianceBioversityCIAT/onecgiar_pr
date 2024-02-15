@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { LinkedResult } from './entities/linked-result.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
@@ -11,12 +12,65 @@ import {
   predeterminedDateValidation,
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class LinkedResultRepository
-  extends Repository<LinkedResult>
+  extends BaseRepository<LinkedResult>
   implements ReplicableInterface<LinkedResult>, LogicalDelete<LinkedResult>
 {
+  createQueries(
+    config: ReplicableConfigInterface<LinkedResult>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `select
+      lr.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_link_result_qa(
+        `lr.linked_results_id`,
+      )} as linked_results_id,
+      ${config.new_result_id} as origin_result_id,
+      ${config.user.id} as created_by,
+      ${config.user.id} as last_updated_by,
+      lr.legacy_link
+      from linked_result lr WHERE lr.origin_result_id = ${
+        config.old_result_id
+      } and is_active > 0`,
+      insertQuery: `
+      insert into linked_result (
+        is_active,
+        created_date,
+        last_updated_date,
+        linked_results_id,
+        origin_result_id,
+        created_by,
+        last_updated_by,
+        legacy_link
+        )
+        select
+        lr.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${VERSIONING.QUERY.Get_link_result_qa(
+          `lr.linked_results_id`,
+        )} as linked_results_id,
+        ${config.new_result_id} as origin_result_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        lr.legacy_link
+        from linked_result lr WHERE lr.origin_result_id = ${
+          config.old_result_id
+        } and is_active > 0`,
+      returnQuery: `
+      select lr.*
+      from linked_result lr WHERE lr.origin_result_id = ${config.new_result_id} and is_active > 0`,
+    };
+  }
   private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
 
   constructor(
