@@ -8,7 +8,7 @@
       <div class="initiative">
         <div class="dropdown">
           <div class="label">Select Initiative:</div>
-          <div class="select">
+          <div class="select {{this.api.dataControlSE.showT1RSelectPhase?'two':'one'}}" >
             <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
               [isStatic]="true" optionLabel="full_name" optionValue="official_code"
               (selectOptionEvent)="selectInitiativeEvent()" placeholder="Select Initiative"
