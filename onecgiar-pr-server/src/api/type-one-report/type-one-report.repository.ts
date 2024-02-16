@@ -394,17 +394,6 @@ export class TypeOneReportRepository {
         ) as "contribution_external_partner",
         (
             SELECT
-                GROUP_CONCAT(DISTINCT crc.cgiar_name separator '; ')
-            FROM
-                result_region rr
-                left join clarisa_regions cr on cr.um49Code = rr.region_id
-                LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
-            WHERE
-                rr.result_id = r.id
-                and rr.is_active = 1
-        ) as "regions",
-        (
-            SELECT
                 GROUP_CONCAT(DISTINCT cc3.name separator '; ')
             FROM
                 result_country rc2
