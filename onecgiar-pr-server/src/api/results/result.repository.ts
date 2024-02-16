@@ -1073,6 +1073,7 @@ WHERE
     resultCode: number,
     version: number = null,
   ): Promise<number> {
+    if (!version) return null;
     const queryData = `
     SELECT 
     r.id
