@@ -6,6 +6,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
   selector: 'app-innovation-package-detail',
@@ -21,6 +22,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     this.GET_resultIdToCode(() => {
       this.GETInnovationPackageDetail();
       this.ipsrCompletenessStatusSE.updateGreenChecks();
+      this.getIPSRPhases();
     });
   }
 
@@ -50,8 +52,6 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   GET_resultIdToCode(callback) {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode, this.ipsrDataControlSE.resultInnovationPhase).subscribe({
       next: ({ response }) => {
-        console.log(this.ipsrDataControlSE.resultInnovationCode, this.ipsrDataControlSE.resultInnovationPhase);
-        console.log('response', response);
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },
@@ -59,6 +59,12 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
         if (err.error.statusCode == 404) this.router.navigate([`/ipsr/list/innovation-list`]);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
+    });
+  }
+
+  getIPSRPhases() {
+    this.api.resultsSE.GET_versioningResult().subscribe(({ response }) => {
+      this.ipsrDataControlSE.ipsrPhaseList = response;
     });
   }
 

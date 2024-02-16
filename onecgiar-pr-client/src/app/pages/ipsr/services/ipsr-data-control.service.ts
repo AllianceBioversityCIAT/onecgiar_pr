@@ -7,6 +7,7 @@ export class IpsrDataControlService {
   resultInnovationCode = null;
   resultInnovationId = null;
   resultInnovationPhase = null;
+  ipsrPhaseList = [];
   initiative_id = null;
   inIpsr = null;
   inContributos = null;
