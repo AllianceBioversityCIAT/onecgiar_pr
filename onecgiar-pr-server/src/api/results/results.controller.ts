@@ -21,27 +21,21 @@ import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}
 
   @Post('create/header')
-  async create(
+  create(
     @Body() createResultDto: CreateResultDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-    const { message, response, status } =
-      await this.resultsService.createOwnerResult(createResultDto, token);
-    throw new HttpException({ message, response }, status);
+    return this.resultsService.createOwnerResult(createResultDto, user);
   }
 
   @Get('get/:id')
-  async findResultById(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsService.findResultById(id);
-    throw new HttpException({ message, response }, status);
+  findResultById(@Param('id') id: number) {
+    return this.resultsService.findResultById(id);
   }
 
   @Get('get/name/:name')
@@ -50,23 +44,18 @@ export class ResultsController {
   }
 
   @Get('get/all/data')
-  async findAllResults() {
-    const { message, response, status } = await this.resultsService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAllResults() {
+    return this.resultsService.findAll();
   }
 
   @Get('get/all/simplified')
-  async findAllResultsForElasticSearch() {
-    const { message, response, status } =
-      await this.resultsService.findAllSimplified();
-    throw new HttpException({ message, response }, status);
+  findAllResultsForElasticSearch() {
+    return this.resultsService.findAllSimplified();
   }
 
   @Get('get/all/elastic')
-  async findAllResultsSimplified(@Query('collection') collection: string) {
-    const { message, response, status } =
-      await this.resultsService.findForElasticSearch(collection);
-    throw new HttpException({ message, response }, status);
+  findAllResultsSimplified(@Query('collection') collection: string) {
+    return this.resultsService.findForElasticSearch(collection);
   }
 
   @Get('get/initiatives/:userId')
@@ -75,143 +64,110 @@ export class ResultsController {
   }
 
   @Get('get/all/roles/:userId')
-  async findAllResultRoles(@Param('userId') userId: number) {
-    const { message, response, status } =
-      await this.resultsService.findAllByRole(userId);
-    throw new HttpException({ message, response }, status);
+  findAllResultRoles(@Param('userId') userId: number) {
+    return this.resultsService.findAllByRole(userId);
   }
 
   @Get('get/depth-search/:title')
-  async depthSearch(@Param('title') title: string) {
-    const { message, response, status } =
-      await this.resultsService.findAllResultsLegacyNew(title);
-    throw new HttpException({ message, response }, status);
+  depthSearch(@Param('title') title: string) {
+    return this.resultsService.findAllResultsLegacyNew(title);
   }
 
   @Get('get/institutions/all')
-  async getInstitutions() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutions();
-    throw new HttpException({ message, response }, status);
+  getInstitutions() {
+    return this.resultsService.getAllInstitutions();
   }
 
   @Get('get/institutions-type/new')
-  async getNewInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType(false);
-    throw new HttpException({ message, response }, status);
+  getNewInstitutionsType() {
+    return this.resultsService.getAllInstitutionsType(false);
   }
 
   @Get('get/institutions-type/childless')
-  async getChildlessInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getChildlessInstitutionTypes();
-    throw new HttpException({ message, response }, status);
+  getChildlessInstitutionsType() {
+    return this.resultsService.getChildlessInstitutionTypes();
   }
 
   @Get('get/institutions-type/legacy')
-  async getLegacyInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType(true);
-    throw new HttpException({ message, response }, status);
+  getLegacyInstitutionsType() {
+    return this.resultsService.getAllInstitutionsType(true);
   }
 
   @Get('get/institutions-type/all')
-  async getAllInstitutionsType() {
-    const { message, response, status } =
-      await this.resultsService.getAllInstitutionsType();
-    throw new HttpException({ message, response }, status);
+  getAllInstitutionsType() {
+    return this.resultsService.getAllInstitutionsType();
   }
 
   @Post('map/legacy')
-  async mapResultLegacy(
-    @Body() mapLegacy: MapLegacy,
-    @UserToken() user: TokenDto,
-  ) {
-    const { message, response, status } =
-      await this.resultsService.mapResultLegacy(mapLegacy, user);
-    throw new HttpException({ message, response }, status);
+  mapResultLegacy(@Body() mapLegacy: MapLegacy, @UserToken() user: TokenDto) {
+    return this.resultsService.mapResultLegacy(mapLegacy, user);
   }
 
   @Patch('create/general-information')
-  async createGeneralInformation(
+  createGeneralInformation(
     @Body()
     createGeneralInformationResultDto: CreateGeneralInformationResultDto,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this.resultsService.createResultGeneralInformation(
-        createGeneralInformationResultDto,
-        user,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.resultsService.createResultGeneralInformation(
+      createGeneralInformationResultDto,
+      user,
+    );
   }
 
   @Get('get/general-information/result/:id')
-  async getGeneralInformationByResult(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsService.getGeneralInformation(id);
-    throw new HttpException({ message, response }, status);
+  getGeneralInformationByResult(@Param('id') id: number) {
+    return this.resultsService.getGeneralInformation(id);
   }
 
   @Patch('delete/:id')
-  async update(@Param('id') id: number, @UserToken() user: TokenDto) {
-    const { message, response, status } =
-      await this.resultsService.deleteResult(id, user);
-    throw new HttpException({ message, response }, status);
+  update(@Param('id') id: number, @UserToken() user: TokenDto) {
+    return this.resultsService.deleteResult(id, user);
   }
 
   @Patch('update/geographic/:resiltId')
-  async saveGeographic(
+  saveGeographic(
     @Body() createResultGeoDto: CreateResultGeoDto,
     @Param('resiltId') resiltId: number,
     @UserToken() user: TokenDto,
   ) {
     createResultGeoDto.result_id = resiltId;
-    const { message, response, status } =
-      await this.resultsService.saveGeoScope(createResultGeoDto, user);
-    throw new HttpException({ message, response }, status);
+    return this.resultsService.saveGeoScope(createResultGeoDto, user);
   }
 
   @Get('get/geographic/:resiltId')
-  async getGeographic(@Param('resiltId') resiltId: number) {
-    const { message, response, status } =
-      await this.resultsService.getGeoScope(resiltId);
-    throw new HttpException({ message, response }, status);
+  getGeographic(@Param('resiltId') resiltId: number) {
+    return this.resultsService.getGeoScope(resiltId);
   }
 
   @Get('get/transform/:resultCode')
   @UseInterceptors(ResponseInterceptor)
-  async transformResultCode(
+  transformResultCode(
     @Param('resultCode') resultCode: number,
     @Query('phase') phase: string,
   ) {
-    return await this.resultsService.transformResultCode(resultCode, +phase);
+    return this.resultsService.transformResultCode(resultCode, +phase);
   }
 
   @Get('get/reporting/list/date/:initDate/:lastDate')
-  async getReportingList(
+  getReportingList(
     @Param('initDate') initDate: Date,
     @Param('lastDate') lastDate: Date,
   ) {
-    const { message, response, status } =
-      await this.resultsService.reportingList(initDate, lastDate);
-    throw new HttpException({ message, response }, status);
+    return this.resultsService.reportingList(initDate, lastDate);
   }
 
   @Post('create/version/:resultId')
-  async createVersion(
+  createVersion(
     @Param('resultId') resultId: number,
     @UserToken() user: TokenDto,
   ) {
-    await this.resultsService.versioningResultsById(resultId, user);
+    this.resultsService.versioningResultsById(resultId, user);
     return 'ok';
   }
 
   @Get('get/centers/:resultId')
-  async getCentersByResultId(@Param('resultId') resultId: number) {
-    const { message, response, statusCode } =
-      await this.resultsService.getCenters(resultId);
-    throw new HttpException({ message, response }, statusCode);
+  getCentersByResultId(@Param('resultId') resultId: number) {
+    return this.resultsService.getCenters(resultId);
   }
 }

@@ -7,10 +7,7 @@ import { Result } from '../results/entities/result.entity';
 import { ResultRepository } from '../results/result.repository';
 import { ApplicationModules } from './entities/application-modules.entity';
 import { ApplicationModulesRepository } from './repositories/application-modules.repository';
-import {
-  ReturnResponse,
-  ReturnResponseDto,
-} from '../../shared/handlers/error.utils';
+import { ReturnResponseDto } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
@@ -58,10 +55,8 @@ export class VersioningService {
     private readonly _versionRepository: VersionRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _applicationModulesRepository: ApplicationModulesRepository,
-    private readonly _returnResponse: ReturnResponse,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
-    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
@@ -102,72 +97,54 @@ export class VersioningService {
    *  and return null.
    */
   async $_findActivePhase(module_id: AppModuleIdEnum): Promise<Version> {
-    try {
-      const version = await this._versionRepository.findOne({
-        where: {
-          status: true,
-          is_active: true,
-          app_module_id: module_id,
-        },
-      });
+    const version = await this._versionRepository.findOne({
+      where: {
+        status: true,
+        is_active: true,
+        app_module_id: module_id,
+      },
+    });
 
-      return version;
-    } catch (error) {
-      return null;
-    }
+    return version;
   }
 
   async setQaStatus(data: UpdateQaResults) {
-    try {
-      if (!data?.results_id || !data?.results_id?.length) {
-        throw this._returnResponse.format({
-          message: `The results_id field is required`,
-          response: null,
-          statusCode: HttpStatus.BAD_REQUEST,
-        });
-      }
-      const res = this._versionRepository.$_setQaStatusToResult(
-        data.results_id,
-      );
-
-      return this._returnResponse.format({
-        message: `The results were updated successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
+    if (!data?.results_id || !data?.results_id?.length) {
+      throw ReturnResponseUtil.format({
+        message: `The results_id field is required`,
+        response: null,
+        statusCode: HttpStatus.BAD_REQUEST,
       });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
     }
+    const res = this._versionRepository.$_setQaStatusToResult(data.results_id);
+
+    return ReturnResponseUtil.format({
+      message: `The results were updated successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async updateLinkResultQa() {
-    try {
-      const version = await this.$_findActivePhase(AppModuleIdEnum.REPORTING);
-      const res = this._versionRepository.$_updateLinkResultByPhase(version.id);
+    const version = await this.$_findActivePhase(AppModuleIdEnum.REPORTING);
+    const res = this._versionRepository.$_updateLinkResultByPhase(version.id);
 
-      return this._returnResponse.format({
-        message: `The results were updated successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
+    return ReturnResponseUtil.format({
+      message: `The results were updated successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async $_findPhase(phase_id: number): Promise<Version> {
-    try {
-      const version = await this._versionRepository.findOne({
-        where: {
-          id: phase_id,
-          is_active: true,
-        },
-      });
+    const version = await this._versionRepository.findOne({
+      where: {
+        id: phase_id,
+        is_active: true,
+      },
+    });
 
-      return version;
-    } catch (error) {
-      return null;
-    }
+    return version;
   }
 
   async $_genericValidation(
@@ -347,264 +324,240 @@ export class VersioningService {
   }
 
   async versionProcess(result_id: number, user: TokenDto) {
-    try {
-      const legacy_result = await this._resultRepository.findOne({
-        where: {
-          id: result_id,
-          is_active: true,
-        },
+    const legacy_result = await this._resultRepository.findOne({
+      where: {
+        id: result_id,
+        is_active: true,
+      },
+    });
+
+    if (!legacy_result) {
+      throw ReturnResponseUtil.format({
+        message: `Result ID: ${result_id} not found`,
+        response: result_id,
+        statusCode: HttpStatus.NOT_FOUND,
       });
+    }
 
-      if (!legacy_result) {
-        throw this._returnResponse.format({
-          message: `Result ID: ${result_id} not found`,
-          response: result_id,
-          statusCode: HttpStatus.NOT_FOUND,
-        });
-      }
-
-      if (legacy_result.result_type_id == 6) {
-        throw this._returnResponse.format({
-          message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
-          response: result_id,
-          statusCode: HttpStatus.CONFLICT,
-        });
-      }
-
-      const module_id = this.$_validationModule(legacy_result.result_type_id);
-
-      const phase = await this._versionRepository.findOne({
-        where: {
-          app_module_id: module_id,
-          is_active: true,
-          status: true,
-        },
+    if (legacy_result.result_type_id == 6) {
+      throw ReturnResponseUtil.format({
+        message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
+        response: result_id,
+        statusCode: HttpStatus.CONFLICT,
       });
+    }
 
-      if (!phase) {
-        throw this._returnResponse.format({
-          message: `No active phases`,
-          response: null,
-          statusCode: HttpStatus.CONFLICT,
+    const module_id = this.$_validationModule(legacy_result.result_type_id);
+
+    const phase = await this._versionRepository.findOne({
+      where: {
+        app_module_id: module_id,
+        is_active: true,
+        status: true,
+      },
+    });
+
+    if (!phase) {
+      throw ReturnResponseUtil.format({
+        message: `No active phases`,
+        response: null,
+        statusCode: HttpStatus.CONFLICT,
+      });
+    }
+
+    let res: any = null;
+    if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
+      res = await this.$_versionManagement(
+        legacy_result,
+        phase,
+        user,
+        module_id,
+      );
+      if (res?.error) {
+        throw ReturnResponseUtil.format({
+          message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
+          response: res.error,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         });
       }
 
-      let res: any = null;
-      if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
-        res = await this.$_versionManagement(
-          legacy_result,
-          phase,
-          user,
-          module_id,
-        );
-        if (res?.error) {
-          throw this._returnResponse.format({
-            message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
-            response: res.error,
-            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          });
-        }
-
-        return this._returnResponse.format({
-          message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
-          response: res,
-          statusCode: HttpStatus.OK,
-        });
-      } else {
-        throw this._returnResponse.format({
-          message: `The result ${legacy_result.result_code} is already in the ${phase.phase_name} phase`,
-          response: result_id,
-          statusCode: HttpStatus.CONFLICT,
-        });
-      }
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return ReturnResponseUtil.format({
+        message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } else {
+      throw ReturnResponseUtil.format({
+        message: `The result ${legacy_result.result_code} is already in the ${phase.phase_name} phase`,
+        response: result_id,
+        statusCode: HttpStatus.CONFLICT,
+      });
     }
   }
 
   async getNumberRresultsReplicated(status: number, result_type_id: number) {
-    try {
-      const phase = await this._versionRepository.findOne({
-        where: {
-          is_active: true,
-          status: true,
-          app_module_id: AppModuleIdEnum.REPORTING,
-        },
-        relations: {
-          obj_previous_phase: true,
-        },
-      });
+    const phase = await this._versionRepository.findOne({
+      where: {
+        is_active: true,
+        status: true,
+        app_module_id: AppModuleIdEnum.REPORTING,
+      },
+      relations: {
+        obj_previous_phase: true,
+      },
+    });
 
-      const countResults =
-        await this._versionRepository.$_getAllInovationDevToReplicate(
-          phase,
-          result_type_id,
-        );
-
-      const names = await this._versionRepository.getDataStatusAndTypeResult(
-        status,
+    const countResults =
+      await this._versionRepository.$_getAllInovationDevToReplicate(
+        phase,
         result_type_id,
       );
 
-      return this._returnResponse.format({
-        message: `The number of results replicated is ${countResults?.length}`,
-        response: {
-          count: countResults.length,
-          status_name: names.status,
-          result_type_name: names.type,
-        },
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
+    const names = await this._versionRepository.getDataStatusAndTypeResult(
+      status,
+      result_type_id,
+    );
+
+    return ReturnResponseUtil.format({
+      message: `The number of results replicated is ${countResults?.length}`,
+      response: {
+        count: countResults.length,
+        status_name: names.status,
+        result_type_name: names.type,
+      },
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async annualReplicationProcessInnovationDev(user: TokenDto) {
-    try {
-      const phase = await this._versionRepository.findOne({
-        where: {
-          is_active: true,
-          status: true,
-          app_module_id: AppModuleIdEnum.REPORTING,
-        },
-        relations: {
-          obj_previous_phase: true,
-        },
+    const phase = await this._versionRepository.findOne({
+      where: {
+        is_active: true,
+        status: true,
+        app_module_id: AppModuleIdEnum.REPORTING,
+      },
+      relations: {
+        obj_previous_phase: true,
+      },
+    });
+
+    if (!phase) {
+      throw ReturnResponseUtil.format({
+        message: `There is no active phase`,
+        response: null,
+        statusCode: HttpStatus.NOT_FOUND,
       });
-
-      if (!phase) {
-        throw this._returnResponse.format({
-          message: `There is no active phase`,
-          response: null,
-          statusCode: HttpStatus.NOT_FOUND,
-        });
-      }
-
-      const results =
-        await this._versionRepository.$_getAllInovationDevToReplicate(phase);
-
-      for (const r of results) {
-        if (this.$_genericValidation(r.result_code, phase.id)) {
-          await this.$_phaseChangeReporting(r, phase, user);
-        }
-      }
-
-      return this._returnResponse.format({
-        message: `The results were replicated successfully`,
-        response: results?.length,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
     }
+
+    const results =
+      await this._versionRepository.$_getAllInovationDevToReplicate(phase);
+
+    for (const r of results) {
+      if (this.$_genericValidation(r.result_code, phase.id)) {
+        await this.$_phaseChangeReporting(r, phase, user);
+      }
+    }
+
+    return ReturnResponseUtil.format({
+      message: `The results were replicated successfully`,
+      response: results?.length,
+      statusCode: HttpStatus.OK,
+    });
   }
 
-  async findAppModules(): Promise<ReturnResponseDto<ApplicationModules>> {
-    try {
-      const res = await this._applicationModulesRepository.find({
-        where: {
-          is_active: true,
-        },
-      });
-      return this._returnResponse.format({
-        message: `Application Modules Retrieved Successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
+  async findAppModules(): Promise<ReturnResponseDto<ApplicationModules[]>> {
+    const res = await this._applicationModulesRepository.find({
+      where: {
+        is_active: true,
+      },
+    });
+    return ReturnResponseUtil.format({
+      message: `Application Modules Retrieved Successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async create(
     user: TokenDto,
     createVersioningDto: CreateVersioningDto,
   ): Promise<ReturnResponseDto<Version>> {
-    try {
-      const res = await this._versionRepository.findOne({
-        where: {
-          phase_year: createVersioningDto?.phase_year,
-          app_module_id: createVersioningDto.app_module_id,
-          is_active: true,
-        },
-      });
-
-      if (res) {
-        throw this._returnResponse.format({
-          message: `A phase has already been created for the module ${createVersioningDto?.app_module_id} in the selected year ${createVersioningDto?.phase_year}.`,
-          response: createVersioningDto,
-          statusCode: HttpStatus.CONFLICT,
-        });
-      }
-
-      const newPhase = await this._versionRepository.save({
-        phase_name: createVersioningDto?.phase_name,
-        start_date: createVersioningDto?.start_date,
-        end_date: createVersioningDto?.end_date,
+    const res = await this._versionRepository.findOne({
+      where: {
         phase_year: createVersioningDto?.phase_year,
-        cgspace_year: createVersioningDto?.phase_year,
-        toc_pahse_id: createVersioningDto?.toc_pahse_id,
-        previous_phase: createVersioningDto?.previous_phase,
         app_module_id: createVersioningDto.app_module_id,
-        created_by: user.id,
-        reporting_phase: createVersioningDto?.reporting_phase,
-      });
+        is_active: true,
+      },
+    });
 
-      return this._returnResponse.format({
-        message: `Phase ${newPhase.phase_name} created successfully`,
-        response: newPhase,
-        statusCode: HttpStatus.CREATED,
+    if (res) {
+      throw ReturnResponseUtil.format({
+        message: `A phase has already been created for the module ${createVersioningDto?.app_module_id} in the selected year ${createVersioningDto?.phase_year}.`,
+        response: createVersioningDto,
+        statusCode: HttpStatus.CONFLICT,
       });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
     }
+
+    const newPhase = await this._versionRepository.save({
+      phase_name: createVersioningDto?.phase_name,
+      start_date: createVersioningDto?.start_date,
+      end_date: createVersioningDto?.end_date,
+      phase_year: createVersioningDto?.phase_year,
+      cgspace_year: createVersioningDto?.phase_year,
+      toc_pahse_id: createVersioningDto?.toc_pahse_id,
+      previous_phase: createVersioningDto?.previous_phase,
+      app_module_id: createVersioningDto.app_module_id,
+      created_by: user.id,
+      reporting_phase: createVersioningDto?.reporting_phase,
+    });
+
+    return ReturnResponseUtil.format({
+      message: `Phase ${newPhase.phase_name} created successfully`,
+      response: newPhase,
+      statusCode: HttpStatus.CREATED,
+    });
   }
 
   async update(
     id: number,
     updateVersioningDto: UpdateVersioningDto,
   ): Promise<ReturnResponseDto<Version>> {
-    try {
-      const res = await this._versionRepository.findOne({
-        where: {
-          id: id,
-          is_active: true,
-        },
-      });
+    const res = await this._versionRepository.findOne({
+      where: {
+        id: id,
+        is_active: true,
+      },
+    });
 
-      if (!res) {
-        throw this._returnResponse.format({
-          message: `Phase ID: ${id} not found`,
-          response: id,
-          statusCode: HttpStatus.NOT_FOUND,
+    if (!res) {
+      throw ReturnResponseUtil.format({
+        message: `Phase ID: ${id} not found`,
+        response: id,
+        statusCode: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (updateVersioningDto?.status) {
+      if (!res?.app_module_id) {
+        throw ReturnResponseUtil.format({
+          message: `The phase ${res.phase_name} does not have a module associated to it. Contact with support`,
+          response: res,
+          statusCode: HttpStatus.CONFLICT,
         });
       }
-
-      if (updateVersioningDto?.status) {
-        if (!res?.app_module_id) {
-          throw this._returnResponse.format({
-            message: `The phase ${res.phase_name} does not have a module associated to it. Contact with support`,
-            response: res,
-            statusCode: HttpStatus.CONFLICT,
-          });
-        }
-        await this._versionRepository.$_closeAllPhases(res.app_module_id);
-      }
-      await this._versionRepository.update(id, {
-        status: updateVersioningDto.status,
-        previous_phase: updateVersioningDto.previous_phase,
-        phase_name: updateVersioningDto.phase_name,
-      });
-
-      return this._returnResponse.format({
-        message: `Phase ${res.phase_name} updated successfully`,
-        response: { ...res, ...updateVersioningDto },
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      await this._versionRepository.$_closeAllPhases(res.app_module_id);
     }
+    await this._versionRepository.update(id, {
+      status: updateVersioningDto.status,
+      previous_phase: updateVersioningDto.previous_phase,
+      phase_name: updateVersioningDto.phase_name,
+    });
+
+    return ReturnResponseUtil.format({
+      message: `Phase ${res.phase_name} updated successfully`,
+      response: { ...res, ...updateVersioningDto },
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async find(
@@ -612,146 +565,130 @@ export class VersioningService {
     status: StatusPhaseEnum,
     active: ActiveEnum = ActiveEnum.ACTIVE,
   ) {
-    try {
-      let where: any = {};
+    let where: any = {};
 
-      switch (module_type) {
-        case ModuleTypeEnum.REPORTING:
-          where = { ...where, app_module_id: 1 };
-          break;
-        case ModuleTypeEnum.IPSR:
-          where = { ...where, app_module_id: 2 };
-          break;
-      }
+    switch (module_type) {
+      case ModuleTypeEnum.REPORTING:
+        where = { ...where, app_module_id: 1 };
+        break;
+      case ModuleTypeEnum.IPSR:
+        where = { ...where, app_module_id: 2 };
+        break;
+    }
 
-      switch (active) {
-        case ActiveEnum.ACTIVE:
-          where = { ...where, is_active: true };
-          break;
-        case ActiveEnum.INACTIVE:
-          where = { ...where, is_active: false };
-          break;
-      }
+    switch (active) {
+      case ActiveEnum.ACTIVE:
+        where = { ...where, is_active: true };
+        break;
+      case ActiveEnum.INACTIVE:
+        where = { ...where, is_active: false };
+        break;
+    }
 
-      switch (status) {
-        case StatusPhaseEnum.OPEN:
-          where = { ...where, status: true };
-          break;
-        case StatusPhaseEnum.CLOSE:
-          where = { ...where, status: false };
-          break;
-      }
+    switch (status) {
+      case StatusPhaseEnum.OPEN:
+        where = { ...where, status: true };
+        break;
+      case StatusPhaseEnum.CLOSE:
+        where = { ...where, status: false };
+        break;
+    }
 
-      const res = await this._versionRepository.find({
-        where: where,
-        relations: {
-          obj_previous_phase: true,
-          obj_reporting_phase: true,
+    const res = await this._versionRepository.find({
+      where: where,
+      relations: {
+        obj_previous_phase: true,
+        obj_reporting_phase: true,
+      },
+    });
+
+    for (const key in res) {
+      const otherPhase = await this._resultRepository.findOne({
+        where: {
+          version_id: res[key].id,
+          is_active: true,
         },
       });
 
-      for (const key in res) {
-        const otherPhase = await this._resultRepository.findOne({
-          where: {
-            version_id: res[key].id,
-            is_active: true,
-          },
-        });
-
-        const otherPreviousPhase = await this._versionRepository.findOne({
-          where: {
-            previous_phase: res[key].id,
-            is_active: true,
-          },
-        });
-        res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
-      }
-
-      return this._returnResponse.format({
-        message: `Phase Retrieved Successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
+      const otherPreviousPhase = await this._versionRepository.findOne({
+        where: {
+          previous_phase: res[key].id,
+          is_active: true,
+        },
       });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
     }
+
+    return ReturnResponseUtil.format({
+      message: `Phase Retrieved Successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async delete(id: number) {
-    try {
-      const res = await this._versionRepository.findOne({
-        where: {
-          id: id,
-          is_active: true,
-        },
+    const res = await this._versionRepository.findOne({
+      where: {
+        id: id,
+        is_active: true,
+      },
+    });
+    if (!res) {
+      throw ReturnResponseUtil.format({
+        message: `Phase ID: ${id} not found`,
+        response: id,
+        statusCode: HttpStatus.NOT_FOUND,
       });
-      if (!res) {
-        throw this._returnResponse.format({
-          message: `Phase ID: ${id} not found`,
-          response: id,
-          statusCode: HttpStatus.NOT_FOUND,
-        });
-      }
-
-      const results = await this._resultRepository.find({
-        where: {
-          version_id: id,
-          is_active: true,
-        },
-      });
-      if (results?.length) {
-        throw this._returnResponse.format({
-          message: `The phase has active results therefore cannot be eliminated`,
-          response: results.length,
-          statusCode: HttpStatus.CONFLICT,
-        });
-      }
-      await this._versionRepository.update(res.id, { is_active: false });
-      return this._returnResponse.format({
-        message: `Phase ${res.phase_name} deleted successfully`,
-        response: { ...res, is_active: false },
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
     }
+
+    const results = await this._resultRepository.find({
+      where: {
+        version_id: id,
+        is_active: true,
+      },
+    });
+    if (results?.length) {
+      throw ReturnResponseUtil.format({
+        message: `The phase has active results therefore cannot be eliminated`,
+        response: results.length,
+        statusCode: HttpStatus.CONFLICT,
+      });
+    }
+    await this._versionRepository.update(res.id, { is_active: false });
+    return ReturnResponseUtil.format({
+      message: `Phase ${res.phase_name} deleted successfully`,
+      response: { ...res, is_active: false },
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async getAllPhases() {
-    try {
-      const res = await this._versionRepository.find({
-        relations: {
-          obj_app_module: true,
-        },
-      });
+    const res = await this._versionRepository.find({
+      relations: {
+        obj_app_module: true,
+      },
+    });
 
-      return this._returnResponse.format({
-        message: `Phase Retrieved Successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
+    return ReturnResponseUtil.format({
+      message: `Phase Retrieved Successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 
   async getVersionOfAResult(resul_id: number) {
-    try {
-      const versions_id =
-        await this._versionRepository.$_getVersionOfAResult(resul_id);
-      const res = await this._versionRepository.find({
-        where: {
-          id: In(versions_id),
-        },
-      });
+    const versions_id =
+      await this._versionRepository.$_getVersionOfAResult(resul_id);
+    const res = await this._versionRepository.find({
+      where: {
+        id: In(versions_id),
+      },
+    });
 
-      return this._returnResponse.format({
-        message: `Phase Retrieved Successfully`,
-        response: res,
-        statusCode: HttpStatus.OK,
-      });
-    } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
-    }
+    return ReturnResponseUtil.format({
+      message: `Phase Retrieved Successfully`,
+      response: res,
+      statusCode: HttpStatus.OK,
+    });
   }
 }
