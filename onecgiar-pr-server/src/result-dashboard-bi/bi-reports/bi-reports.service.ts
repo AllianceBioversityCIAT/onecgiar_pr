@@ -19,9 +19,11 @@ export class BiReportsService {
     try {
       const response = await this.biReportRepository.find({
         order: { report_order: 'ASC' },
+        where: { is_active: true },
       });
+
       return this._returnResponse.format({
-        message: 'Global parameters found',
+        message: 'Reports found',
         response,
         statusCode: HttpStatus.OK,
       });

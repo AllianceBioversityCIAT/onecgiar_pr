@@ -4,7 +4,7 @@ import { ResultsApiService } from './results-api.service';
 import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
-import { HttpResponse } from '@angular/common/http';
+import { HttpHeaders, HttpResponse } from '@angular/common/http';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -757,6 +757,7 @@ describe('ResultsApiService', () => {
         has_regions: false,
         regions: [],
         countries: [],
+        geo_scope_id: 2
       }
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_geographicSection(mockBody).subscribe(response => {
@@ -911,6 +912,50 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('PUT_loadFileInUploadSession', () => {
+
+    it('should call PUT_loadFileInUploadSession with correct arguments', () => {
+      const mockFile = new File([''], 'filename', { type: 'text/html' });
+      const mockLink = 'http://example.com';
+
+      service.PUT_loadFileInUploadSession(mockFile, mockLink);
+
+      const req = httpMock.expectOne(mockLink);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toBe(mockFile);
+
+      const expectedHeaders = new HttpHeaders({
+        'Content-Type': 'application/octet-stream',
+        'Content-Range': `bytes 0-${mockFile.size - 1}/${mockFile.size}`,
+        eampleee: 'asasas'
+      });
+      expect(req.request.headers.keys()).toEqual(expectedHeaders.keys());
+    });
+  });
+
+  describe('GET_loadFileInUploadSession', () => {
+    it('should call GET_loadFileInUploadSession with correct arguments', () => {
+      const mockLink = 'http://example.com';
+
+      service.GET_loadFileInUploadSession(mockLink);
+
+      const req = httpMock.expectOne(mockLink);
+      expect(req.request.method).toBe('GET');
+    });
+  })
+
+  describe('POST_createUploadSession', () => {
+    it('should call POST_createUploadSession with correct arguments', () => {
+      const mockBody = { fileName: 'testFile', resultId: '123' };
+
+      service.POST_createUploadSession(mockBody);
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}evidences/createUploadSession`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+    });  
+  });
+    
   describe('POST_toc', () => {
     it('should call POST_toc and return expected data', (done) => {
       const mockBody = {
@@ -3334,6 +3379,37 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_subNationalByIsoAlpha2', () => {
+    it('should call GET_subNationalByIsoAlpha2 with correct arguments', () => {
+      const mockIsoAlpha2 = 'US';
+
+      service.GET_subNationalByIsoAlpha2(mockIsoAlpha2).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/subnational-scope/get/by-country-iso2/${mockIsoAlpha2}`);
+      expect(req.request.method).toBe('GET');
+    });
+  });
+
+  describe('GET_platformGlobalVariables', () => {
+    it('should call GET_platformGlobalVariables with correct arguments', () => {
+      service.GET_platformGlobalVariables().subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/global-parameters/platform/global/variables`);
+      expect(req.request.method).toBe('GET');
+    });
+  });
+
+  describe('GET_platformGlobalVariablesByCategoryId', () => {
+    it('should call GET_platformGlobalVariablesByCategoryId with correct arguments', () => {
+      const mockCategoryId = '123';
+
+      service.GET_platformGlobalVariablesByCategoryId(mockCategoryId).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/global-parameters/category/${mockCategoryId}`);
+      expect(req.request.method).toBe('GET');
     });
   });
 

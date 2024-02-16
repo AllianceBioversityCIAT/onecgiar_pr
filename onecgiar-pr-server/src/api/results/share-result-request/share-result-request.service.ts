@@ -33,10 +33,11 @@ export class ShareResultRequestService {
   ) {
     try {
       const result: { initiative_id: number } = { initiative_id: null };
-      const res =
-        await this._resultByInitiativesRepository.InitiativeByResult(resultId);
-      result['initiative_id'] = res.length ? res[0].id : null;
+      const res = await this._resultByInitiativesRepository.find({
+        where: { result_id: resultId, initiative_role_id: 1, is_active: true },
+      });
 
+      result['initiative_id'] = res.length ? res[0]?.['initiative_id'] : null;
       let saveData = [];
       if (createTocShareResult?.initiativeShareId?.length) {
         const { initiativeShareId } = createTocShareResult;

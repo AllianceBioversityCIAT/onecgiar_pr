@@ -162,6 +162,13 @@ export class DeleteRecoverDataService {
         });
       }
 
+      if (resultData.status_id == 2)
+        throw this._returnResponse.format({
+          message: 'Is already Quality Assessed',
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: resultData,
+        });
+
       await this._ipsrRepository.logicalDelete(resultData.id);
       await this._innovationPackagingExpertRepository.logicalDelete(
         resultData.id,

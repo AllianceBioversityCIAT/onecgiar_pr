@@ -66,6 +66,15 @@ export class BiReport {
   })
   has_rls_security: boolean;
 
+  
+  @Column({
+    name: 'has_full_screen',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  has_full_screen: boolean;
+
   @Column({
     name: 'report_order',
     type: 'integer',

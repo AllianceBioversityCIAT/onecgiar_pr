@@ -604,6 +604,7 @@ WHERE
     	r.reported_year_id as \`Reporting year\`,
     	r.title as \`Result title\`,
     	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
+      if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as \`Is Key Result Story\`,
       (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
       (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
       (Select gtl2.description from gender_tag_level gtl2 where id = r.nutrition_tag_level_id) as \`Nutrition Tag Level\`, 

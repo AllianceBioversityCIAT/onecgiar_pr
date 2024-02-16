@@ -375,6 +375,25 @@ export class EvidencesRepository
     } catch (error) {}
   }
 
+
+  async getLastSharepointId() {
+    const query = `
+    SELECT MAX(id) as id
+    FROM evidence_sharepoint es
+    `;
+
+    try {
+      const evidenceSharepointId: any = await this.query(query);
+      return evidenceSharepointId[0].id;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultInformation(resultId) {
     const query = `
     SELECT

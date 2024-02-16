@@ -134,7 +134,7 @@ export class ResultByInitiativesRepository
           ${predeterminedDateValidation(
             config?.predetermined_date,
           )} as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0`;
+          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1`;
         await this.query(queryData, [
           config.new_result_id,
           config.user.id,
@@ -503,6 +503,7 @@ export class ResultByInitiativesRepository
     const initiative = initiativeArray ?? [];
     const initiativepnd = initiativeArrayPnd ?? [];
     const initiativeparameter = initiative.concat(initiativepnd);
+
     const upDateInactive = `
         update results_by_inititiative  
         set is_active  = 0,
@@ -528,10 +529,6 @@ export class ResultByInitiativesRepository
     try {
       if (initiative?.length) {
         return await this.query(upDateInactive, [userId, resultId, 2]);
-
-        /*return await this.query(upDateActive, [
-          userId, resultId, isOwner?1:2
-        ]);*/
       } else {
         return await this.query(upDateAllInactive, [userId, resultId, 2]);
       }
@@ -543,19 +540,27 @@ export class ResultByInitiativesRepository
       });
     }
   }
-  async updateIniciativeSubmitter(resultId: number, initiative_id: number) {
+  async updateIniciativeSubmitter(
+    resultId: number,
+    old_primary_submitter: number,
+    new_primary_submitter: number,
+  ) {
     try {
-      let updateIniciative;
+      let updateIniciative: any;
       if (resultId != null) {
         await this.update(
-          { result_id: resultId, is_active: true },
+          {
+            result_id: resultId,
+            is_active: true,
+            initiative_id: old_primary_submitter,
+          },
           {
             initiative_role_id: 2,
           },
         );
 
         updateIniciative = await this.update(
-          { result_id: resultId, initiative_id: initiative_id },
+          { result_id: resultId, initiative_id: new_primary_submitter },
           {
             initiative_role_id: 1,
             is_active: true,
@@ -565,11 +570,12 @@ export class ResultByInitiativesRepository
 
       await this.findOneBy({
         result_id: resultId,
-        initiative_id: initiative_id,
+        initiative_id: new_primary_submitter,
       });
 
       return {
-        initiative_id: initiative_id,
+        initiative_id: new_primary_submitter,
+        old_initiative: old_primary_submitter,
         response: updateIniciative,
       };
     } catch (error) {

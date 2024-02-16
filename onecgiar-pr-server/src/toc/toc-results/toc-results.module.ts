@@ -45,6 +45,7 @@ import { ResultInitiativeBudgetRepository } from '../../api/results/result_budge
 import { EvidenceSharepointRepository } from '../../api/results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../../api/results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
+import { ShareResultRequestRepository } from '../../api/results/share-result-request/share-result-request.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -91,6 +92,7 @@ import { SharePointModule } from '../../shared/services/share-point/share-point.
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
     EvidencesService,
+    ShareResultRequestRepository,
   ],
   imports: [SharePointModule],
   exports: [TocResultsRepository],

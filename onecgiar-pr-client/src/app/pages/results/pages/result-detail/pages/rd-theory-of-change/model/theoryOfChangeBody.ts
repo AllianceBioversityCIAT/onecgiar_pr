@@ -14,6 +14,7 @@ export class TheoryOfChangeBody {
   sdgTargets: any[];
   bodyActionArea: any[];
   planned_result: boolean;
+  changePrimaryInit: number;
 }
 interface ResultTocImpactsInterface {
   id: number;
