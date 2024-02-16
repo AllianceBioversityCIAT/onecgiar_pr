@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import { Component, DoCheck, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { IpsrDataControlService } from '../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -13,7 +13,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
   styleUrls: ['./innovation-package-detail.component.scss']
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
-  constructor(private activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService) {}
+  constructor(private activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService, private router: Router) {}
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
@@ -55,7 +55,10 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },
-      error: err => {}
+      error: err => {
+        if (err.error.statusCode == 404) this.router.navigate([`/ipsr/list/innovation-list`]);
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
+      }
     });
   }
 
