@@ -66,7 +66,7 @@ export class TypeOneReportComponent implements OnInit {
     this.typeOneReportSE.sanitizeUrl();
   }
 
-  getInitiativeShortName(official_code){
+  getInitiativeShortName(official_code) {
     const list = this.api.rolesSE.isAdmin ? this.typeOneReportSE.allInitiatives : this.api.dataControlSE.myInitiativesList;
     return list.find(init => init.official_code == official_code)?.short_name;
   }
@@ -74,7 +74,8 @@ export class TypeOneReportComponent implements OnInit {
   selectInitiativeEvent() {
     this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
     const currentUrl = this.router.url;
-    this.router.navigateByUrl(`/type-one-report/ipi-cgiar-portfolio-linkages`).then(() => {
+    this.router.navigateByUrl(`/type-one-report/white`).then(() => {
+      console.log('navigate');
       setTimeout(() => {
         this.router.navigateByUrl(currentUrl);
       }, 100);

@@ -75,6 +75,7 @@ export const TypePneReportRouting: PrRoute[] = [
   { prName: 'Partnerships', underConstruction: true, path: 'partnerships', loadChildren: () => import('../../pages/type-one-report/pages/tor-partnerships/tor-partnerships.module').then(m => m.TorPartnershipsModule) },
   { prName: 'Portfolio linkages', underConstruction: true, path: 'portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-portfolio-linkages/tor-portfolio-linkages.module').then(m => m.TorPortfolioLinkagesModule) },
   { prName: 'Key result story', underConstruction: true, path: 'key-result-story', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule) },
+  { prName: '', underConstruction: true, path: 'white', loadChildren: () => import('../../pages/type-one-report/pages/white-page/white-page.module').then(m => m.WhitePageModule) },
   { prName: '', path: '**', underConstruction: true, pathMatch: 'full', redirectTo: 'fact-sheet' }
 ];
 
