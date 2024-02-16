@@ -7,18 +7,10 @@
 
   <div class="text_and_button_alignment">
     The following information can be extracted in Excel by clicking on the PRMS download button.
-    <app-pr-button text="Download excel file" icon="excel_white" [reverse]="true"></app-pr-button>
+    <app-pr-button [text]="this.requesting?'Downloading excel file':'Download excel file'"
+    [ngClass]="{'globalDisabled': this.requesting}" [icon]="this.requesting?'loop':'excel_white'" [rotating]="this.requesting"
+    (click)="exportExcel(typeOneReportSE.initiativeSelected)"></app-pr-button>
   </div>
-
-
-  <!-- <div [ngClass]="{'expand': full_screen}" class="iframe_container"
-  *ngIf="typeOneReportSE.initiativeSelected && typeOneReportSE.showTorIframe">
-  <div class="expand_icon" (click)="full_screen = !full_screen">
-      <i class="material-icons-round">
-          {{full_screen?'close_fullscreen':'open_in_full'}}
-      </i>
-      {{full_screen?'Minimize ':'Open in full screen'}}
-  </div> -->
 
   <iframe allowfullscreen *ngIf="this.typeOneReportSE.currentBiPage" [src]="this.typeOneReportSE.sanitizedUrl" frameborder="0"></iframe>
 
