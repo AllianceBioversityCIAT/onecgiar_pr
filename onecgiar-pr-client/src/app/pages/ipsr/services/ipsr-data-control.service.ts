@@ -6,6 +6,7 @@ export class IpsrDataControlService {
   detailData: DetailData = null;
   resultInnovationCode = null;
   resultInnovationId = null;
+  resultInnovationPhase = null;
   initiative_id = null;
   inIpsr = null;
   inContributos = null;
@@ -13,7 +14,6 @@ export class IpsrDataControlService {
     submission: false,
     unsubmit: false
   };
-  constructor() {}
 }
 
 interface DetailData {

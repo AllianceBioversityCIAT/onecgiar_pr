@@ -17,6 +17,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
+    this.ipsrDataControlSE.resultInnovationPhase = this.activatedRoute.snapshot.queryParams['phase'];
     this.GET_resultIdToCode(() => {
       this.GETInnovationPackageDetail();
       this.ipsrCompletenessStatusSE.updateGreenChecks();
@@ -41,19 +42,20 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
       }
 
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
-
+      this.ipsrDataControlSE.resultInnovationPhase = response?.version_id;
       this.ipsrDataControlSE.detailData = response;
     });
   }
 
   GET_resultIdToCode(callback) {
-    this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode).subscribe({
+    this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode, this.ipsrDataControlSE.resultInnovationPhase).subscribe({
       next: ({ response }) => {
-        //(response);
+        console.log(this.ipsrDataControlSE.resultInnovationCode, this.ipsrDataControlSE.resultInnovationPhase);
+        console.log('response', response);
         this.ipsrDataControlSE.resultInnovationId = response;
         callback();
       },
-      error: () => {}
+      error: err => {}
     });
   }
 
