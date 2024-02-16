@@ -28,23 +28,28 @@
   </div>
   <div>
     <div class="submit_button"
-      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 || (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA)  || this.api.rolesSE.isAdmin">
+      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 || (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) || this.api.rolesSE.isAdmin">
       <app-pr-button
         [ngClass]="{ globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)  }"
         (click)="this.submissionModalSE.showModal = true" text="Submit"
-        *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
-      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
-        [ngClass]="{ globalDisabled:this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa  }"
+        *ngIf="this.dataControlSE?.currentResult?.status_id === 1"></app-pr-button>
+
+      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status_id === 3"
+        [ngClass]="{ globalDisabled:this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa}"
         (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">This button will
-        become available once all sections are completed.</div>
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">Quality Assessed
-        results cannot be un-submited.</div>
+
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id === 1">
+        This button will become available once all sections are completed.
+      </div>
+
+      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id === 2">
+        Quality Assessed results cannot be un-submited.
+      </div>
+
       <div class="button_access_information"
-        *ngIf="this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa">This result is part of
-        a QA
-        process and cannot be un-submitted
-        for editing.</div>
+        *ngIf="this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa">
+        This result is part of a QA process and cannot be un-submitted for editing.
+      </div>
     </div>
   </div>
 </div>
