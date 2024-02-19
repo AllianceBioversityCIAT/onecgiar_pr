@@ -1,15 +1,14 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('bi_reports')
 export class BiReport {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
+  @PrimaryColumn({
     name: 'report_name',
     type: 'varchar',
     length: 30,
-    nullable: true,
   })
   report_name: string;
 
@@ -66,7 +65,6 @@ export class BiReport {
   })
   has_rls_security: boolean;
 
-  
   @Column({
     name: 'has_full_screen',
     type: 'boolean',

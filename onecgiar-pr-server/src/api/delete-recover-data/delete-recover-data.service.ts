@@ -611,6 +611,7 @@ export class DeleteRecoverDataService {
         await this._resultsTocResultRepository.fisicalDelete(result_id);
       }
 
+      // delete every data not related to the new result type
       switch (new_result_type) {
         case ResultTypeEnum.IMPACT_CONTRIBUTION:
           this.DELETE_impact_contribution(result_id);
@@ -644,6 +645,7 @@ export class DeleteRecoverDataService {
           this.DELETE_other_output(result_id);
           break;
       }
+
       return this._returnResponse.format({
         message: `The data of the result with code ${result_id} has been deleted`,
         response: result_id,
@@ -685,10 +687,6 @@ export class DeleteRecoverDataService {
   }
 
   private async DELETE_impact_contribution(result_id: number) {
-    await this._knowledgeProductFairBaselineRepository.fisicalDelete(result_id);
-    await this._knowledgeProductFairBaselineRepository.fisicalDeleteLegacy(
-      result_id,
-    );
     await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
     await this._resultActorRepository.fisicalDelete(result_id);
     await this._resultAnswerRepository.fisicalDelete(result_id);
@@ -701,25 +699,7 @@ export class DeleteRecoverDataService {
       result_id,
     );
     await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
-    await this._resultsKnowledgeProductAltmetricRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductAuthorRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductKeywordRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductMetadataRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductInstitutionRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductFairScoreRepository.fisicalDelete(
-      result_id,
-    );
-    await this._resultsKnowledgeProductsRepository.fisicalDelete(result_id);
+    await this.DELETE_common_kp_data(result_id);
     await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
     await this._evidencesRepository.fisicalDeleteByEvidenceIdAndResultId(
       result_id,
@@ -840,6 +820,7 @@ export class DeleteRecoverDataService {
   }
 
   private async DELETE_capacity_sharing_for_development(result_id: number) {
+    await this.DELETE_common_kp_data(result_id);
     await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
     await this._resultActorRepository.fisicalDelete(result_id);
     await this._resultAnswerRepository.fisicalDelete(result_id);
@@ -869,6 +850,7 @@ export class DeleteRecoverDataService {
   }
 
   private async DELETE_other_output(result_id: number) {
+    await this.DELETE_common_kp_data(result_id);
     await this._nonPooledProjectBudgetRepository.fisicalDelete(result_id);
     await this._resultActorRepository.fisicalDelete(result_id);
     await this._resultAnswerRepository.fisicalDelete(result_id);

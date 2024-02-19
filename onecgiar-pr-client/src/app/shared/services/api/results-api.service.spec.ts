@@ -16,21 +16,18 @@ describe('ResultsApiService', () => {
     isGettingSectionPipe: jest.fn().mockReturnValue(observable => observable),
     isSavingPipe: jest.fn().mockReturnValue(observable => observable),
     showSaveSpinner: jest.fn(),
-    isSavingPipeNextStep: jest.fn().mockReturnValue(observable => observable),
+    isSavingPipeNextStep: jest.fn().mockReturnValue(observable => observable)
   };
   beforeEach(() => {
     mockResponse = {
       response: [
         {
-          id: '1',
-        },
+          id: '1'
+        }
       ]
     };
     TestBed.configureTestingModule({
-      providers: [
-        { provide: SaveButtonService, useValue: mockSaveButtonService },
-        ResultsApiService,
-      ],
+      providers: [{ provide: SaveButtonService, useValue: mockSaveButtonService }, ResultsApiService],
       imports: [HttpClientTestingModule]
     });
 
@@ -38,13 +35,12 @@ describe('ResultsApiService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-
   afterEach(() => {
     httpMock.verify();
   });
 
   describe('GET_AllResultLevel', () => {
-    it('should call GET_AllResultLevel and return expected data', (done) => {
+    it('should call GET_AllResultLevel and return expected data', done => {
       service.GET_AllResultLevel().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -58,7 +54,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_TypeByResultLevel', () => {
-    it('should call GET_TypeByResultLevel and return expected data', (done) => {
+    it('should call GET_TypeByResultLevel and return expected data', done => {
       service.GET_TypeByResultLevel().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -72,7 +68,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllResults', () => {
-    it('should call GET_AllResults and return expected data', (done) => {
+    it('should call GET_AllResults and return expected data', done => {
       service.GET_AllResults().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -86,7 +82,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllResultsWithUseRole', () => {
-    it('should call GET_AllResultsWithUseRole and map response correctly', (done) => {
+    it('should call GET_AllResultsWithUseRole and map response correctly', done => {
       const userId = 'userId';
       mockResponse = {
         response: [
@@ -95,7 +91,7 @@ describe('ResultsApiService', () => {
             result_code: '1001',
             create_last_name: 'Doe',
             create_first_name: 'John'
-          },
+          }
         ]
       };
 
@@ -106,9 +102,9 @@ describe('ResultsApiService', () => {
               id: 1,
               result_code: 1001,
               full_name: 'Doe John',
-              create_first_name: "John",
-              create_last_name: "Doe",
-            },
+              create_first_name: 'John',
+              create_last_name: 'Doe'
+            }
           ]
         });
         done();
@@ -122,12 +118,12 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_DeleteResult', () => {
-    it('should call PATCH_DeleteResult and send a DELETE request', (done) => {
+    it('should call PATCH_DeleteResult and send a DELETE request', done => {
       mockResponse = {
         response: {
           status: 200
         }
-      }
+      };
       const resultIdToDelete = '123';
 
       service.PATCH_DeleteResult(resultIdToDelete).subscribe(result => {
@@ -142,7 +138,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_FindResultsElastic', () => {
-    it('should call GET_FindResultsElastic, send a POST request and map response correctly when search and type exists', (done) => {
+    it('should call GET_FindResultsElastic, send a POST request and map response correctly when search and type exists', done => {
       const search = 'search';
       const type = 'type';
       mockResponse = {
@@ -188,8 +184,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GET_FindResultsElastic, send a POST request, search and types are not received as parameters, and response hits.hits should not be in the response', (done) => {
-
+    it('should call GET_FindResultsElastic, send a POST request, search and types are not received as parameters, and response hits.hits should not be in the response', done => {
       service.GET_FindResultsElastic().subscribe(results => {
         expect(results).toBeTruthy();
         expect(results).toEqual([]);
@@ -201,12 +196,10 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
-
-    
   });
 
   describe('POST_resultCreateHeader', () => {
-    it('should call POST_resultCreateHeader, send a POST request and should call isCreatingPipe', (done) => {
+    it('should call POST_resultCreateHeader, send a POST request and should call isCreatingPipe', done => {
       const mockBody = {
         initiative_id: 0,
         result_type_id: 0,
@@ -227,12 +220,11 @@ describe('ResultsApiService', () => {
       expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
-
     });
   });
 
   describe('GET_allGenderTag', () => {
-    it('should call GET_allGenderTag and map response correctly', (done) => {
+    it('should call GET_allGenderTag and map response correctly', done => {
       mockResponse = {
         response: [{ id: 2, title: 'title' }]
       };
@@ -241,7 +233,7 @@ describe('ResultsApiService', () => {
         expect(result).toEqual({
           response: [{ id: 2, full_name: '(1) title', title: 'title' }]
         });
-        done()
+        done();
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}gender-tag-levels/all`);
@@ -252,7 +244,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_newInstitutionTypes', () => {
-    it('should call GET_newInstitutionTypes and return expected data', (done) => {
+    it('should call GET_newInstitutionTypes and return expected data', done => {
       service.GET_newInstitutionTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -266,7 +258,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_legacyInstitutionTypes', () => {
-    it('should call GET_legacyInstitutionTypes and return expected data', (done) => {
+    it('should call GET_legacyInstitutionTypes and return expected data', done => {
       service.GET_legacyInstitutionTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -280,7 +272,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allInstitutionTypes', () => {
-    it('should call GET_allInstitutionTypes and return expected data', (done) => {
+    it('should call GET_allInstitutionTypes and return expected data', done => {
       service.GET_allInstitutionTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -294,7 +286,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allChildlessInstitutionTypes', () => {
-    it('should call GET_allChildlessInstitutionTypes and return expected data', (done) => {
+    it('should call GET_allChildlessInstitutionTypes and return expected data', done => {
       service.GET_allChildlessInstitutionTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -308,7 +300,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allInstitutions', () => {
-    it('should call GET_allInstitutions and map response correctly', (done) => {
+    it('should call GET_allInstitutions and map response correctly', done => {
       mockResponse = {
         response: [
           {
@@ -325,9 +317,9 @@ describe('ResultsApiService', () => {
             {
               institutions_id: 1,
               institutions_acronym: 'ABC',
-              institutions_name: "institutions_name",
+              institutions_name: 'institutions_name',
               headquarter_name: 'HQ',
-              full_name: "(Id:1) <strong>ABC</strong>  -  institutions_name - HQ",
+              full_name: '(Id:1) <strong>ABC</strong>  -  institutions_name - HQ'
             }
           ]
         });
@@ -340,7 +332,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GET_allInstitutions and map response correctly when institutions_acronym is not in the response', (done) => {
+    it('should call GET_allInstitutions and map response correctly when institutions_acronym is not in the response', done => {
       mockResponse = {
         response: [
           {
@@ -355,9 +347,9 @@ describe('ResultsApiService', () => {
           response: [
             {
               institutions_id: 1,
-              institutions_name: "institutions_name",
+              institutions_name: 'institutions_name',
               headquarter_name: 'HQ',
-              full_name: "(Id:1) <strong></strong>  institutions_name - HQ",
+              full_name: '(Id:1) <strong></strong>  institutions_name - HQ'
             }
           ]
         });
@@ -372,7 +364,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_generalInformationByResultId', () => {
-    it('should call GET_generalInformationByResultId, return expected data and should call isGettingSectionPipe', (done) => {
+    it('should call GET_generalInformationByResultId, return expected data and should call isGettingSectionPipe', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GET_generalInformationByResultId().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -388,7 +380,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_generalInformation', () => {
-    it('should call PATCH_generalInformation, return expected data and should call isGettingSectionPipe and isSavingPipe', (done) => {
+    it('should call PATCH_generalInformation, return expected data and should call isGettingSectionPipe and isSavingPipe', done => {
       const mockBody = {
         result_type_name: 'result_type_name',
         result_level_name: 'result_level_name',
@@ -413,7 +405,7 @@ describe('ResultsApiService', () => {
         discontinued_options: [],
         is_replicated: false,
         result_code: 200
-      }
+      };
       const spyShowSaveSpinner = jest.spyOn(mockSaveButtonService, 'showSaveSpinner');
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
@@ -432,7 +424,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_resultById', () => {
-    it('should call GET_resultById and return expected data', (done) => {
+    it('should call GET_resultById and return expected data', done => {
       service.GET_resultById().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -446,8 +438,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_depthSearch', () => {
-    it('should call GET_depthSearch and return expected data', (done) => {
-      const title = 'title'
+    it('should call GET_depthSearch and return expected data', done => {
+      const title = 'title';
       service.GET_depthSearch(title).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -461,7 +453,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_ostMeliaStudiesByResultId', () => {
-    it('should call GET_ostMeliaStudiesByResultId and return expected data', (done) => {
+    it('should call GET_ostMeliaStudiesByResultId and return expected data', done => {
       service.GET_ostMeliaStudiesByResultId().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -475,12 +467,12 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_partnersSection', () => {
-    it('should call PATCH_partnersSection, return expected data and should call isSavingPipe', (done) => {
+    it('should call PATCH_partnersSection, return expected data and should call isSavingPipe', done => {
       const mockBody = {
         no_applicable_partner: false,
         mqap_institutions: [],
-        institutions: [],
-      }
+        institutions: []
+      };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
       service.PATCH_partnersSection(mockBody).subscribe(response => {
@@ -498,13 +490,13 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_knowledgeProductSection', () => {
-    it('should call PATCH_knowledgeProductSection, return expected data should call isSavingPipe', (done) => {
+    it('should call PATCH_knowledgeProductSection, return expected data should call isSavingPipe', done => {
       const mockBody = {
         isMeliaProduct: false,
         ostSubmitted: false,
         ostMeliaId: 1,
-        clarisaMeliaTypeId: 1,
-      }
+        clarisaMeliaTypeId: 1
+      };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
       service.PATCH_knowledgeProductSection(mockBody).subscribe(response => {
@@ -522,13 +514,12 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_partnersSection', () => {
-    it('should call GET_partnersSection, map response correctly and should call isGettingSectionPipe', (done) => {
+    it('should call GET_partnersSection, map response correctly and should call isGettingSectionPipe', done => {
       mockResponse = {
         response: {
           mqap_institutions: [
             {
-              user_matched_institution:
-              {
+              user_matched_institution: {
                 deliveries: null
               }
             }
@@ -543,8 +534,7 @@ describe('ResultsApiService', () => {
           response: {
             mqap_institutions: [
               {
-                user_matched_institution:
-                {
+                user_matched_institution: {
                   deliveries: [3]
                 }
               }
@@ -563,7 +553,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllPrmsGeographicScope', () => {
-    it('should call GET_AllPrmsGeographicScope and return expected data', (done) => {
+    it('should call GET_AllPrmsGeographicScope and return expected data', done => {
       service.GET_AllPrmsGeographicScope().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -577,7 +567,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_ClarisaQaToken', () => {
-    it('should call GET_ClarisaQaToken and return expected data', (done) => {
+    it('should call GET_ClarisaQaToken and return expected data', done => {
       const offcial_code = 1;
       service.GET_ClarisaQaToken(offcial_code).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -592,7 +582,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllCLARISARegions', () => {
-    it('should call GET_AllCLARISARegions and return expected data', (done) => {
+    it('should call GET_AllCLARISARegions and return expected data', done => {
       service.GET_AllCLARISARegions().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -606,7 +596,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_partnerRequest', () => {
-    it('should call POST_partnerRequest and return expected data', (done) => {
+    it('should call POST_partnerRequest and return expected data', done => {
       const mockBody = {
         name: 'name',
         acronym: 'ABC',
@@ -615,8 +605,8 @@ describe('ResultsApiService', () => {
         websiteLink: 'link',
         externalUserMail: 'mail@mail.com',
         externalUserName: 'name',
-        externalUserComments: 'comments',
-      }
+        externalUserComments: 'comments'
+      };
       service.POST_partnerRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -631,7 +621,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call POST_partnerRequest,return expected data when ipsrDataControlSE.inIpsr exists', (done) => {
+    it('should call POST_partnerRequest,return expected data when ipsrDataControlSE.inIpsr exists', done => {
       const mockBody = {
         name: 'name',
         acronym: 'ABC',
@@ -640,9 +630,9 @@ describe('ResultsApiService', () => {
         websiteLink: 'link',
         externalUserMail: 'mail@mail.com',
         externalUserName: 'name',
-        externalUserComments: 'comments',
-      }
-      service.ipsrDataControlSE.inIpsr = {}
+        externalUserComments: 'comments'
+      };
+      service.ipsrDataControlSE.inIpsr = {};
       service.POST_partnerRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -658,20 +648,19 @@ describe('ResultsApiService', () => {
     });
   });
 
-
   describe('GET_AllCLARISACountries', () => {
-    it('should call GET_AllCLARISACountries and map response correctly', (done) => {
+    it('should call GET_AllCLARISACountries and map response correctly', done => {
       mockResponse = {
         response: [
           { iso_alpha_2: 'US', name: 'United States' },
-          { iso_alpha_2: 'CA', name: 'Canada' },
+          { iso_alpha_2: 'CA', name: 'Canada' }
         ]
       };
       service.GET_AllCLARISACountries().subscribe(response => {
         expect(response).toEqual({
           response: [
             { iso_alpha_2: 'US', name: 'United States', full_name: 'US - United States' },
-            { iso_alpha_2: 'CA', name: 'Canada', full_name: 'CA - Canada' },
+            { iso_alpha_2: 'CA', name: 'Canada', full_name: 'CA - Canada' }
           ]
         });
         done();
@@ -685,14 +674,14 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllCLARISACenters', () => {
-    it('should call GET_AllCLARISACenters and map response correctly', (done) => {
+    it('should call GET_AllCLARISACenters and map response correctly', done => {
       mockResponse = {
         response: [
           {
             code: 'C1',
             acronym: 'ACR1',
             name: 'Center 1'
-          },
+          }
         ]
       };
       service.GET_AllCLARISACenters().subscribe(response => {
@@ -704,7 +693,7 @@ describe('ResultsApiService', () => {
               name: 'Center 1',
               lead_center: 'C1',
               full_name: '<strong>ACR1 - </strong> Center 1'
-            },
+            }
           ]
         });
         done();
@@ -718,14 +707,14 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllWithoutResults', () => {
-    it('should call GET_AllWithoutResults and map response correctly', (done) => {
+    it('should call GET_AllWithoutResults and map response correctly', done => {
       mockResponse = {
         response: [
           {
             official_code: 'IC1',
             short_name: 'Init1',
             name: 'Initiative 1'
-          },
+          }
         ]
       };
       service.GET_AllWithoutResults().subscribe(response => {
@@ -736,7 +725,7 @@ describe('ResultsApiService', () => {
               short_name: 'Init1',
               name: 'Initiative 1',
               full_name: 'IC1 - <strong>Init1</strong> - Initiative 1'
-            },
+            }
           ]
         });
         done();
@@ -750,7 +739,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_geographicSection', () => {
-    it('should call PATCH_geographicSection and return expected data', (done) => {
+    it('should call PATCH_geographicSection and return expected data', done => {
       const mockBody = {
         scope_id: 1,
         has_countries: false,
@@ -775,7 +764,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_geographicSection', () => {
-    it('should call GET_geographicSection and return expected data', (done) => {
+    it('should call GET_geographicSection and return expected data', done => {
       service.GET_geographicSection().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -789,7 +778,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_resultsLinked', () => {
-    it('should call GET_resultsLinked and return expected data when isIpsr is true', (done) => {
+    it('should call GET_resultsLinked and return expected data when isIpsr is true', done => {
       const isIpsr = true;
       service.GET_resultsLinked(isIpsr).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -803,7 +792,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GET_resultsLinked and return expected data when isIpsr is false', (done) => {
+    it('should call GET_resultsLinked and return expected data when isIpsr is false', done => {
       const isIpsr = false;
       service.GET_resultsLinked(isIpsr).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -819,7 +808,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_resultsLinked', () => {
-    it('should call POST_resultsLinked and return expected data when isIpsr is true', (done) => {
+    it('should call POST_resultsLinked and return expected data when isIpsr is true', done => {
       const mockBody = {
         links: [],
         legacy_link: [],
@@ -827,7 +816,7 @@ describe('ResultsApiService', () => {
           linked_innovation_dev: false,
           linked_innovation_use: false
         }
-      }
+      };
       const isIpsr = true;
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
@@ -838,14 +827,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}linked/create/${service.ipsrDataControlSE.resultInnovationId}`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(mockBody)
+      expect(req.request.body).toEqual(mockBody);
       expect(isIpsr).toBeTruthy();
       expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
 
-    it('should call POST_resultsLinked and return expected data when isIpsr is false', (done) => {
+    it('should call POST_resultsLinked and return expected data when isIpsr is false', done => {
       const mockBody = {
         links: [],
         legacy_link: [],
@@ -853,7 +842,7 @@ describe('ResultsApiService', () => {
           linked_innovation_dev: false,
           linked_innovation_use: false
         }
-      }
+      };
       const isIpsr = false;
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
@@ -864,7 +853,7 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}linked/create/${service.currentResultId}`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(mockBody)
+      expect(req.request.body).toEqual(mockBody);
       expect(isIpsr).toBeFalsy();
       expect(spy).toHaveBeenCalled();
 
@@ -873,7 +862,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_evidences', () => {
-    it('should call GET_evidences and return expected data', (done) => {
+    it('should call GET_evidences and return expected data', done => {
       service.GET_evidences().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -887,7 +876,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_evidences', () => {
-    it('should call POST_evidences and return expected data', (done) => {
+    it('should call POST_evidences and return expected data', done => {
       const mockBody = {
         result_id: 1,
         evidences: [],
@@ -895,8 +884,8 @@ describe('ResultsApiService', () => {
         climate_change_tag_level: 'Climate Change Tag',
         nutrition_tag_level: 'Nutrition ',
         environmental_biodiversity_tag_level: 'Tag',
-        poverty_tag_level: 'Poverty Tag',
-      }
+        poverty_tag_level: 'Poverty Tag'
+      };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
       service.POST_evidences(mockBody).subscribe(response => {
@@ -953,11 +942,11 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${service.apiBaseUrl}evidences/createUploadSession`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockBody);
-    });  
+    });
   });
-    
+
   describe('POST_toc', () => {
-    it('should call POST_toc and return expected data', (done) => {
+    it('should call POST_toc and return expected data', done => {
       const mockBody = {
         result_id: 1,
         contributing_initiatives: [],
@@ -973,10 +962,10 @@ describe('ResultsApiService', () => {
         sdgTargets: [],
         bodyActionArea: [],
         planned_result: true
-      }
+      };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
-      service.POST_toc(mockBody).subscribe(response => {
+      service.POST_toc(mockBody as any).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -991,7 +980,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_mqapValidation', () => {
-    it('should call GET_mqapValidation and return expected data', (done) => {
+    it('should call GET_mqapValidation and return expected data', done => {
       const handle = 'handle';
       service.GET_mqapValidation(handle).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1006,8 +995,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_resultknowledgeProducts', () => {
-    it('should call GET_resultknowledgeProducts and return expected data', (done) => {
-      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe')
+    it('should call GET_resultknowledgeProducts and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GET_resultknowledgeProducts().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1015,15 +1004,15 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}results-knowledge-products/get/result/${service.currentResultId}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('PATCH_resyncKnowledgeProducts', () => {
-    it('should call PATCH_resyncKnowledgeProducts and return expected data', (done) => {
-      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe')
+    it('should call PATCH_resyncKnowledgeProducts and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.PATCH_resyncKnowledgeProducts().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1031,16 +1020,16 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}results-knowledge-products/resync/${service.currentResultId}`);
       expect(req.request.method).toBe('PATCH');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('POST_createWithHandle', () => {
-    it('should call POST_createWithHandle and return expected data', (done) => {
+    it('should call POST_createWithHandle and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
-      const mockBody = {}
+      const mockBody = {};
       service.POST_createWithHandle(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1049,18 +1038,18 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${service.apiBaseUrl}results-knowledge-products/create`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockBody);
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('PATCH_createWithHandleChangeType', () => {
-    it('should call PATCH_createWithHandleChangeType and return expected data', (done) => {
+    it('should call PATCH_createWithHandleChangeType and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
       const mockBody = {};
       const init_id = 1;
-      service.PATCH_createWithHandleChangeType(mockBody,init_id).subscribe(response => {
+      service.PATCH_createWithHandleChangeType(mockBody, init_id).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -1068,14 +1057,14 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/manage-data/change/result/${init_id}`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('GET_toc', () => {
-    it('should call GET_toc and map response correctly when initiative.short_name exists', (done) => {
+    it('should call GET_toc and map response correctly when initiative.short_name exists', done => {
       mockResponse = {
         response: {
           contributing_initiatives: [
@@ -1083,7 +1072,7 @@ describe('ResultsApiService', () => {
               official_code: 'IC1',
               short_name: 'Init1',
               initiative_name: 'Initiative 1'
-            },
+            }
           ]
         }
       };
@@ -1098,7 +1087,7 @@ describe('ResultsApiService', () => {
                 short_name: 'Init1',
                 initiative_name: 'Initiative 1',
                 full_name: 'IC1 - <strong>Init1</strong> - Initiative 1'
-              },
+              }
             ]
           }
         });
@@ -1107,19 +1096,19 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}toc/get/result/${service.currentResultId}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
 
-    it('should call GET_toc and map response correctly when initiative.short_name does not exist', (done) => {
+    it('should call GET_toc and map response correctly when initiative.short_name does not exist', done => {
       mockResponse = {
         response: {
           contributing_initiatives: [
             {
               official_code: 'IC1',
               initiative_name: 'Initiative 1'
-            },
+            }
           ]
         }
       };
@@ -1133,7 +1122,7 @@ describe('ResultsApiService', () => {
                 official_code: 'IC1',
                 initiative_name: 'Initiative 1',
                 full_name: 'IC1 - <strong></strong> - Initiative 1'
-              },
+              }
             ]
           }
         });
@@ -1142,14 +1131,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}toc/get/result/${service.currentResultId}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('GET_centers', () => {
-    it('should call GET_centers and return expected data', (done) => {
+    it('should call GET_centers and return expected data', done => {
       service.GET_centers().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1163,7 +1152,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('Get_indicator', () => {
-    it('should call Get_indicator and return expected data when currentResultId is null', (done) => {
+    it('should call Get_indicator and return expected data when currentResultId is null', done => {
       const id_toc = 'id_toc';
       const init = 'init';
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -1178,10 +1167,9 @@ describe('ResultsApiService', () => {
       expect(service.currentResultId).toBeNull();
       expect(spy).toHaveBeenCalled();
 
-
       req.flush(mockResponse);
     });
-    it('should call Get_indicator and return expected data when currentResultId is not null', (done) => {
+    it('should call Get_indicator and return expected data when currentResultId is not null', done => {
       const id_toc = 'id_toc';
       const init = 'init';
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -1202,10 +1190,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('get_vesrsionDashboard', () => {
-    it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr exists', (done) => {
+    it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr exists', done => {
       const id_toc = 'id_toc';
       const init = 'init';
-      service.ipsrDataControlSE.inIpsr  = 1
+      service.ipsrDataControlSE.inIpsr = 1;
       service.get_vesrsionDashboard(id_toc, init).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1217,7 +1205,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr does not exist', (done) => {
+    it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr does not exist', done => {
       const id_toc = 'id_toc';
       const init = 'init';
       service.get_vesrsionDashboard(id_toc, init).subscribe(response => {
@@ -1233,7 +1221,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_resultActionArea', () => {
-    it('should call GET_resultActionArea and return expected data', (done) => {
+    it('should call GET_resultActionArea and return expected data', done => {
       const resultId = 'resultId';
       const initiative = 'initiative';
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -1252,8 +1240,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_innovationUse', () => {
-    it('should call PATCH_innovationUse and return expected data', (done) => {
-      const mockBody = {}
+    it('should call PATCH_innovationUse and return expected data', done => {
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
       service.PATCH_innovationUse(mockBody).subscribe(response => {
@@ -1266,13 +1254,12 @@ describe('ResultsApiService', () => {
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
 
-
       req.flush(mockResponse);
     });
   });
 
   describe('GET_innovationUse', () => {
-    it('should call GET_innovationUse and return expected data', (done) => {
+    it('should call GET_innovationUse and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
 
       service.GET_innovationUse().subscribe(response => {
@@ -1289,8 +1276,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_capacityDevelopent', () => {
-    it('should call PATCH_capacityDevelopent and return expected data', (done) => {
-      const mockBody = {}
+    it('should call PATCH_capacityDevelopent and return expected data', done => {
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
       service.PATCH_capacityDevelopent(mockBody).subscribe(response => {
@@ -1308,14 +1295,14 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_capacityDevelopent', () => {
-    it('should call GET_capacityDevelopent and map response correctly when institution.institutions_acronym exists', (done) => {
+    it('should call GET_capacityDevelopent and map response correctly when institution.institutions_acronym exists', done => {
       mockResponse = {
         response: {
           institutions: [
-            { 
-              institutions_id: 1, 
-              institutions_acronym: 'ABC', 
-              institutions_name: 'Institution 1' 
+            {
+              institutions_id: 1,
+              institutions_acronym: 'ABC',
+              institutions_name: 'Institution 1'
             }
           ]
         }
@@ -1323,20 +1310,18 @@ describe('ResultsApiService', () => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
 
       service.GET_capacityDevelopent().subscribe(response => {
-        expect(response).toEqual(
-          {
-            response: {
-              institutions: [
-                {
-                  full_name: "(Id:1) <strong>ABC</strong>  -  Institution 1",
-                  institutions_acronym: "ABC",
-                  institutions_id: 1,
-                  institutions_name: "Institution 1",
-                },
-              ]
-            }
+        expect(response).toEqual({
+          response: {
+            institutions: [
+              {
+                full_name: '(Id:1) <strong>ABC</strong>  -  Institution 1',
+                institutions_acronym: 'ABC',
+                institutions_id: 1,
+                institutions_name: 'Institution 1'
+              }
+            ]
           }
-        );
+        });
         done();
       });
 
@@ -1346,13 +1331,13 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
-    it('should call GET_capacityDevelopent and map response correctly when institution.institutions_acronym does not exist', (done) => {
+    it('should call GET_capacityDevelopent and map response correctly when institution.institutions_acronym does not exist', done => {
       mockResponse = {
         response: {
           institutions: [
-            { 
-              institutions_id: 1, 
-              institutions_name: 'Institution 1' 
+            {
+              institutions_id: 1,
+              institutions_name: 'Institution 1'
             }
           ]
         }
@@ -1360,19 +1345,17 @@ describe('ResultsApiService', () => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
 
       service.GET_capacityDevelopent().subscribe(response => {
-        expect(response).toEqual(
-          {
-            response: {
-              institutions: [
-                {
-                  full_name: "(Id:1) <strong></strong>  Institution 1",
-                  institutions_id: 1,
-                  institutions_name: "Institution 1",
-                },
-              ]
-            }
+        expect(response).toEqual({
+          response: {
+            institutions: [
+              {
+                full_name: '(Id:1) <strong></strong>  Institution 1',
+                institutions_id: 1,
+                institutions_name: 'Institution 1'
+              }
+            ]
           }
-        );
+        });
         done();
       });
 
@@ -1385,7 +1368,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_capdevsTerms', () => {
-    it('should call GET_capdevsTerms and return expected data', (done) => {
+    it('should call GET_capdevsTerms and return expected data', done => {
       service.GET_capdevsTerms().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1399,7 +1382,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_capdevsDeliveryMethod', () => {
-    it('should call GET_capdevsDeliveryMethod and return expected data', (done) => {
+    it('should call GET_capdevsDeliveryMethod and return expected data', done => {
       service.GET_capdevsDeliveryMethod().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1413,29 +1396,29 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllInitiatives', () => {
-    it('should call GET_AllInitiatives and map response correctly', (done) => {
+    it('should call GET_AllInitiatives and map response correctly', done => {
       mockResponse = {
         response: [
-          { 
-            id: 1, 
-            official_code: 'ABC', 
-            short_name: 'Init1', 
-            name: 'Initiative 1' 
-          },
+          {
+            id: 1,
+            official_code: 'ABC',
+            short_name: 'Init1',
+            name: 'Initiative 1'
+          }
         ]
       };
       service.GET_AllInitiatives().subscribe(response => {
         expect(response).toEqual({
           response: [
-              {
-                id: 1,
-                initiative_id: 1,
-                full_name: 'ABC - <strong>Init1</strong> - Initiative 1',
-                official_code: 'ABC',
-                short_name: 'Init1',
-                name: 'Initiative 1'
-              }
-            ]
+            {
+              id: 1,
+              initiative_id: 1,
+              full_name: 'ABC - <strong>Init1</strong> - Initiative 1',
+              official_code: 'ABC',
+              short_name: 'Init1',
+              name: 'Initiative 1'
+            }
+          ]
         });
         done();
       });
@@ -1448,7 +1431,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_clarisaInnovationType', () => {
-    it('should call GET_clarisaInnovationType and map response correctly', (done) => {
+    it('should call GET_clarisaInnovationType and map response correctly', done => {
       mockResponse = {
         response: [
           {
@@ -1480,7 +1463,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_clarisaInnovationCharacteristics', () => {
-    it('should call GET_clarisaInnovationCharacteristics and map response correctly', (done) => {
+    it('should call GET_clarisaInnovationCharacteristics and map response correctly', done => {
       mockResponse = {
         response: [
           {
@@ -1489,7 +1472,7 @@ describe('ResultsApiService', () => {
             definition: 'Definition 1'
           }
         ]
-      };  
+      };
       service.GET_clarisaInnovationCharacteristics().subscribe(response => {
         expect(response).toEqual({
           response: [
@@ -1512,7 +1495,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_clarisaInnovationReadinessLevels', () => {
-    it('should call GET_clarisaInnovationReadinessLevels and return expected data', (done) => {
+    it('should call GET_clarisaInnovationReadinessLevels and return expected data', done => {
       service.GET_clarisaInnovationReadinessLevels().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1526,8 +1509,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_innovationDev', () => {
-    it('should call PATCH_innovationDev and return expected data', (done) => {
-      const mockBody = {}
+    it('should call PATCH_innovationDev and return expected data', done => {
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_innovationDev(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1544,7 +1527,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_innovationDev', () => {
-    it('should call GET_innovationDev and return expected data', (done) => {
+    it('should call GET_innovationDev and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GET_innovationDev().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1560,8 +1543,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_policyChanges', () => {
-    it('should call PATCH_policyChanges and return expected data', (done) => {
-      const mockBody = {}
+    it('should call PATCH_policyChanges and return expected data', done => {
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_policyChanges(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1578,7 +1561,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_policyChangesQuestions', () => {
-    it('should call GET_policyChangesQuestions and return expected data', (done) => {
+    it('should call GET_policyChangesQuestions and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GET_policyChangesQuestions().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1594,7 +1577,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_policyChanges', () => {
-    it('should call GET_policyChanges and map response correctly when institution.institutions_acronym exists', (done) => {
+    it('should call GET_policyChanges and map response correctly when institution.institutions_acronym exists', done => {
       mockResponse = {
         response: {
           institutions: [
@@ -1631,7 +1614,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GET_policyChanges and map response correctly when institution.institutions_acronym does not exist', (done) => {
+    it('should call GET_policyChanges and map response correctly when institution.institutions_acronym does not exist', done => {
       mockResponse = {
         response: {
           institutions: [
@@ -1668,7 +1651,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_clarisaPolicyTypes', () => {
-    it('should call GET_clarisaPolicyTypes and return expected data', (done) => {
+    it('should call GET_clarisaPolicyTypes and return expected data', done => {
       service.GET_clarisaPolicyTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1682,7 +1665,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_clarisaPolicyStages', () => {
-    it('should call GET_clarisaPolicyStages and map response correctly', (done) => {
+    it('should call GET_clarisaPolicyStages and map response correctly', done => {
       mockResponse = {
         response: [
           {
@@ -1712,7 +1695,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllClarisaImpactAreaIndicators', () => {
-    it('should call GET_AllClarisaImpactAreaIndicators and return expected data', (done) => {
+    it('should call GET_AllClarisaImpactAreaIndicators and return expected data', done => {
       service.GET_AllClarisaImpactAreaIndicators().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1726,7 +1709,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllLarisaImpactArea', () => {
-    it('should call GET_AllLarisaImpactArea and return expected data', (done) => {
+    it('should call GET_AllLarisaImpactArea and return expected data', done => {
       service.GET_AllLarisaImpactArea().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1740,7 +1723,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_AllglobalTarget', () => {
-    it('should call GET_AllglobalTarget and return expected data', (done) => {
+    it('should call GET_AllglobalTarget and return expected data', done => {
       service.GET_AllglobalTarget().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1754,7 +1737,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allClarisaMeliaStudyTypes', () => {
-    it('should call GET_allClarisaMeliaStudyTypes and return expected data', (done) => {
+    it('should call GET_allClarisaMeliaStudyTypes and return expected data', done => {
       service.GET_allClarisaMeliaStudyTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1768,7 +1751,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_createRequest', () => {
-    it('should call POST_createRequest and return expected data', (done) => {
+    it('should call POST_createRequest and return expected data', done => {
       const mockBody = {};
       service.POST_createRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1783,7 +1766,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allRequest', () => {
-    it('should call GET_allRequest and return expected data', (done) => {
+    it('should call GET_allRequest and return expected data', done => {
       service.GET_allRequest().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1797,7 +1780,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_reportingList', () => {
-    it('should call GET_reportingList and return expected data ', (done) => {
+    it('should call GET_reportingList and return expected data ', done => {
       const initDate = '2022-12-01';
       const init = new Date(initDate);
       const today = new Date();
@@ -1814,7 +1797,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_updateRequest', () => {
-    it('should call PATCH_updateRequest and return expected data ', (done) => {
+    it('should call PATCH_updateRequest and return expected data ', done => {
       const mockBody = {};
       service.PATCH_updateRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1829,7 +1812,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_requestStatus', () => {
-    it('should call GET_requestStatus and return expected data ', (done) => {
+    it('should call GET_requestStatus and return expected data ', done => {
       service.GET_requestStatus().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1843,7 +1826,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_updateRequest', () => {
-    it('should call POST_updateRequest and return expected data ', (done) => {
+    it('should call POST_updateRequest and return expected data ', done => {
       const mockBody = {};
       service.POST_updateRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1858,7 +1841,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_greenChecksByResultId', () => {
-    it('should call GET_greenChecksByResultId and return expected data ', (done) => {
+    it('should call GET_greenChecksByResultId and return expected data ', done => {
       service.GET_greenChecksByResultId().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1872,7 +1855,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_greenChecksByResultId', () => {
-    it('should call PATCH_greenChecksByResultId and return expected data ', (done) => {
+    it('should call PATCH_greenChecksByResultId and return expected data ', done => {
       service.PATCH_greenChecksByResultId().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -1887,7 +1870,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_submit', () => {
-    it('should call PATCH_submit and return expected data ', (done) => {
+    it('should call PATCH_submit and return expected data ', done => {
       const comment = 'Test comment';
       service.PATCH_submit(comment).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1903,7 +1886,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_unsubmit', () => {
-    it('should call PATCH_unsubmit and return expected data ', (done) => {
+    it('should call PATCH_unsubmit and return expected data ', done => {
       const comment = 'Test comment';
       service.PATCH_unsubmit(comment).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -1919,7 +1902,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_reportSesultsCompleteness', () => {
-    it('should call POST_reportSesultsCompleteness and map response correctly', (done) => {
+    it('should call POST_reportSesultsCompleteness and map response correctly', done => {
       mockResponse = {
         response: [
           {
@@ -1928,26 +1911,26 @@ describe('ResultsApiService', () => {
             official_code: 'OC123',
             result_type_name: 'Result Type',
             completeness: '80',
-            general_information: { 
-              value: '60' 
+            general_information: {
+              value: '60'
             },
-            theory_of_change: { 
-              value: '70' 
+            theory_of_change: {
+              value: '70'
             },
-            partners: { 
-              value: '50' 
+            partners: {
+              value: '50'
             },
-            geographic_location: { 
-              value: '90' 
+            geographic_location: {
+              value: '90'
             },
-            links_to_results: { 
-              value: '80' 
+            links_to_results: {
+              value: '80'
             },
-            evidence: { 
-              value: '75' 
+            evidence: {
+              value: '75'
             },
-            section_seven: { 
-              value: '85' 
+            section_seven: {
+              value: '85'
             }
           }
         ]
@@ -1958,44 +1941,44 @@ describe('ResultsApiService', () => {
       service.POST_reportSesultsCompleteness(initiatives, phases, rol_user).subscribe(response => {
         const map = {
           response: [
-             {
+            {
               completeness: 80,
-              evidence:  {
-                value: "75",
+              evidence: {
+                value: '75'
               },
               evidence_value: 75,
-              full_name: "Result Title 123 OC123 Result Type",
-              general_information:  {
-                value: "60",
+              full_name: 'Result Title 123 OC123 Result Type',
+              general_information: {
+                value: '60'
               },
               general_information_value: 60,
-              geographic_location:  {
-                value: "90",
+              geographic_location: {
+                value: '90'
               },
               geographic_location_value: 90,
-              links_to_results:  {
-                value: "80",
+              links_to_results: {
+                value: '80'
               },
               links_to_results_value: 80,
-              official_code: "OC123",
-              partners:  {
-                value: "50",
+              official_code: 'OC123',
+              partners: {
+                value: '50'
               },
               partners_value: 50,
               result_code: 123,
-              result_title: "Result Title",
-              result_type_name: "Result Type",
-              section_seven:  {
-                value: "85",
+              result_title: 'Result Title',
+              result_type_name: 'Result Type',
+              section_seven: {
+                value: '85'
               },
               section_seven_value: 85,
-              theory_of_change:  {
-                value: "70",
+              theory_of_change: {
+                value: '70'
               },
-              theory_of_change_value: 70,
-            },
-          ],
-        }
+              theory_of_change_value: 70
+            }
+          ]
+        };
         expect(response).toEqual(map);
         done();
       });
@@ -2009,7 +1992,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_historicalByResultId', () => {
-    it('should call GET_historicalByResultId and return expected data ', (done) => {
+    it('should call GET_historicalByResultId and return expected data ', done => {
       const resultId = 1;
       service.GET_historicalByResultId(resultId).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2024,7 +2007,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_reportUsers', () => {
-    it('should call GET_reportUsers and map response correctly when user.official_code exists', (done) => {
+    it('should call GET_reportUsers and map response correctly when user.official_code exists', done => {
       mockResponse = {
         response: [
           {
@@ -2039,22 +2022,21 @@ describe('ResultsApiService', () => {
         ]
       };
       service.GET_reportUsers().subscribe(response => {
-        expect(response).toEqual(
-          {
-           response:[
-              {
-               full_name: "1 John Doe john.doe@example.com Initiative Name OC123 Role Name",
-               init_name_official_code: "(OC123) Initiative Name",
-               initiative_name: "Initiative Name",
-               initiative_role_name: "Role Name",
-               official_code: "OC123",
-               user_email: "john.doe@example.com",
-               user_first_name: "John",
-               user_id: 1,
-               user_last_name: "Doe",
-             },
-           ],
-         })
+        expect(response).toEqual({
+          response: [
+            {
+              full_name: '1 John Doe john.doe@example.com Initiative Name OC123 Role Name',
+              init_name_official_code: '(OC123) Initiative Name',
+              initiative_name: 'Initiative Name',
+              initiative_role_name: 'Role Name',
+              official_code: 'OC123',
+              user_email: 'john.doe@example.com',
+              user_first_name: 'John',
+              user_id: 1,
+              user_last_name: 'Doe'
+            }
+          ]
+        });
         done();
       });
 
@@ -2064,7 +2046,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GET_reportUsers and map response correctly when user.official_code does not exist', (done) => {
+    it('should call GET_reportUsers and map response correctly when user.official_code does not exist', done => {
       mockResponse = {
         response: [
           {
@@ -2078,33 +2060,32 @@ describe('ResultsApiService', () => {
         ]
       };
       service.GET_reportUsers().subscribe(response => {
-        expect(response).toEqual(
-          {
-           response:[
-              {
-               full_name: "1 John Doe john.doe@example.com Initiative Name undefined Role Name",
-               init_name_official_code: "Initiative Name",
-               initiative_name: "Initiative Name",
-               initiative_role_name: "Role Name",
-               user_email: "john.doe@example.com",
-               user_first_name: "John",
-               user_id: 1,
-               user_last_name: "Doe",
-             },
-           ],
-         })
+        expect(response).toEqual({
+          response: [
+            {
+              full_name: '1 John Doe john.doe@example.com Initiative Name undefined Role Name',
+              init_name_official_code: 'Initiative Name',
+              initiative_name: 'Initiative Name',
+              initiative_role_name: 'Role Name',
+              user_email: 'john.doe@example.com',
+              user_first_name: 'John',
+              user_id: 1,
+              user_last_name: 'Doe'
+            }
+          ]
+        });
         done();
       });
-  
+
       const req = httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/users`);
       expect(req.request.method).toBe('GET');
-  
+
       req.flush(mockResponse);
     });
   });
 
   describe('GET_resultIdToCode', () => {
-    it('should call GET_resultIdToCode and return expected data', (done) => {
+    it('should call GET_resultIdToCode and return expected data', done => {
       const resultCode = 1;
       service.GET_resultIdToCode(resultCode).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2119,7 +2100,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_excelFullReport', () => {
-    it('should call POST_excelFullReport and return expected data', (done) => {
+    it('should call POST_excelFullReport and return expected data', done => {
       const resultIds = [];
       service.POST_excelFullReport(resultIds).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2128,14 +2109,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}admin-panel/report/results/excel-full-report`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({resultIds: []})
+      expect(req.request.body).toEqual({ resultIds: [] });
 
       req.flush(mockResponse);
     });
   });
 
   describe('GET_factSheetByInitiativeId', () => {
-    it('should call GET_factSheetByInitiativeId and return expected data', (done) => {
+    it('should call GET_factSheetByInitiativeId and return expected data', done => {
       const initiativeId = 1;
       service.GET_factSheetByInitiativeId(initiativeId).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2150,9 +2131,9 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_keyResultStoryInitiativeId', () => {
-    it('should call GET_keyResultStoryInitiativeId and return expected data', (done) => {
+    it('should call GET_keyResultStoryInitiativeId and return expected data', done => {
       const initiativeId = 1;
-      const phase = 'phase'
+      const phase = 'phase';
       service.GET_keyResultStoryInitiativeId(initiativeId, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2166,11 +2147,11 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_excelFullReportByInitiativeId', () => {
-    it('should call GET_excelFullReportByInitiativeId and return expected data', (done) => {
+    it('should call GET_excelFullReportByInitiativeId and return expected data', done => {
       const initiativeId = 1;
       const phase = 'phase';
 
-      service.GET_excelFullReportByInitiativeId(initiativeId,phase).subscribe(response => {
+      service.GET_excelFullReportByInitiativeId(initiativeId, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -2183,7 +2164,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_primaryImpactAreaKrs', () => {
-    it('should call PATCH_primaryImpactAreaKrs and return expected data', (done) => {
+    it('should call PATCH_primaryImpactAreaKrs and return expected data', done => {
       const mockBody = {};
       service.PATCH_primaryImpactAreaKrs(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2199,7 +2180,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETallInnovations', () => {
-    it('should call GETallInnovations and return expected data', (done) => {
+    it('should call GETallInnovations and return expected data', done => {
       const initiativesList = [];
       service.GETallInnovations(initiativesList).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2215,10 +2196,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationByResultId', () => {
-    it('should call GETInnovationByResultId and return expected data', (done) => {
+    it('should call GETInnovationByResultId and return expected data', done => {
       const resultId = 1;
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
-      
+
       service.GETInnovationByResultId(resultId).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2233,11 +2214,11 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_downloadPDF', () => {
-    it('should call GET_downloadPDF and return expected data', (done) => {
+    it('should call GET_downloadPDF and return expected data', done => {
       const resultCode = 1;
       const resultPhase = 'resultPhase';
       mockResponse = new Blob();
-      service.GET_downloadPDF(resultCode,resultPhase).subscribe((response: HttpResponse<Blob>) => {
+      service.GET_downloadPDF(resultCode, resultPhase).subscribe((response: HttpResponse<Blob>) => {
         expect(response.body).toEqual(mockResponse);
         done();
       });
@@ -2250,10 +2231,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('POSTResultInnovationPackage', () => {
-    it('should call POSTResultInnovationPackage and return expected data', (done) => {
-      const mockBody = {}
+    it('should call POSTResultInnovationPackage and return expected data', done => {
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
-      
+
       service.POSTResultInnovationPackage(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2268,7 +2249,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllInnovationPackages', () => {
-    it('should call GETAllInnovationPackages and return expected data', (done) => {      
+    it('should call GETAllInnovationPackages and return expected data', done => {
       service.GETAllInnovationPackages().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2282,12 +2263,12 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHIpsrGeneralInfo', () => {
-    it('should call PATCHIpsrGeneralInfo and return expected data', (done) => { 
+    it('should call PATCHIpsrGeneralInfo and return expected data', done => {
       const resulId = 1;
-      const mockBody = {}    
+      const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
 
-      service.PATCHIpsrGeneralInfo(mockBody,resulId).subscribe(response => {
+      service.PATCHIpsrGeneralInfo(mockBody, resulId).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -2301,7 +2282,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETContributorsByIpsrResultId', () => {
-    it('should call GETContributorsByIpsrResultId and map response correctly when short_name exists', (done) => { 
+    it('should call GETContributorsByIpsrResultId and map response correctly when short_name exists', done => {
       mockResponse = {
         response: {
           contributing_initiatives: [
@@ -2338,7 +2319,7 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should call GETContributorsByIpsrResultId and map response correctly when short_name does not exist', (done) => { 
+    it('should call GETContributorsByIpsrResultId and map response correctly when short_name does not exist', done => {
       mockResponse = {
         response: {
           contributing_initiatives: [
@@ -2375,7 +2356,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHContributorsByIpsrResultId', () => {
-    it('should call PATCHContributorsByIpsrResultId and return expected data', (done) => {
+    it('should call PATCHContributorsByIpsrResultId and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
@@ -2394,7 +2375,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationPackageDetail', () => {
-    it('should call GETInnovationPackageDetail and return expected data', (done) => {      
+    it('should call GETInnovationPackageDetail and return expected data', done => {
       service.GETInnovationPackageDetail().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2408,7 +2389,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationPathwayByStepOneResultId', () => {
-    it('should call GETInnovationPathwayByStepOneResultId and return expected data', (done) => {  
+    it('should call GETInnovationPathwayByStepOneResultId and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GETInnovationPathwayByStepOneResultId().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2424,9 +2405,9 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayByStepOneResultId', () => {
-    it('should call PATCHInnovationPathwayByStepOneResultId and return expected data', (done) => { 
-      const mockBody = {} 
-      service.ipsrDataControlSE.resultInnovationId = 1
+    it('should call PATCHInnovationPathwayByStepOneResultId and return expected data', done => {
+      const mockBody = {};
+      service.ipsrDataControlSE.resultInnovationId = 1;
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCHInnovationPathwayByStepOneResultId(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2443,11 +2424,11 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayByStepOneResultIdNextStep', () => {
-    it('should call PATCHInnovationPathwayByStepOneResultIdNextStep and return expected data', (done) => { 
-      const mockBody = {} 
-      const descrip = 'descrip'
+    it('should call PATCHInnovationPathwayByStepOneResultIdNextStep and return expected data', done => {
+      const mockBody = {};
+      const descrip = 'descrip';
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
-      service.PATCHInnovationPathwayByStepOneResultIdNextStep(mockBody,descrip).subscribe(response => {
+      service.PATCHInnovationPathwayByStepOneResultIdNextStep(mockBody, descrip).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -2462,7 +2443,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllClarisaActionAreasOutcomes', () => {
-    it('should call GETAllClarisaActionAreasOutcomes and return expected data', (done) => { 
+    it('should call GETAllClarisaActionAreasOutcomes and return expected data', done => {
       service.GETAllClarisaActionAreasOutcomes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2476,7 +2457,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllClarisaSdgsTargets', () => {
-    it('should call GETAllClarisaSdgsTargets and return expected data', (done) => { 
+    it('should call GETAllClarisaSdgsTargets and return expected data', done => {
       service.GETAllClarisaSdgsTargets().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2490,7 +2471,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllActorsTypes', () => {
-    it('should call GETAllActorsTypes and return expected data', (done) => { 
+    it('should call GETAllActorsTypes and return expected data', done => {
       service.GETAllActorsTypes().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2504,7 +2485,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInstitutionsTypeTree', () => {
-    it('should call GETInstitutionsTypeTree and return expected data', (done) => { 
+    it('should call GETInstitutionsTypeTree and return expected data', done => {
       service.GETInstitutionsTypeTree().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2518,8 +2499,8 @@ describe('ResultsApiService', () => {
   });
 
   describe('DELETEInnovationPackage', () => {
-    it('should call DELETEInnovationPackage and delete the innovation package via DELETE request', (done) => { 
-      const resultId = 1
+    it('should call DELETEInnovationPackage and delete the innovation package via DELETE request', done => {
+      const resultId = 1;
       service.DELETEInnovationPackage(resultId).subscribe(response => {
         expect(response).toBeTruthy();
         done();
@@ -2533,7 +2514,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETinnovationpathwayStepTwo', () => {
-    it('should call GETinnovationpathwayStepTwo and return expected data', (done) => { 
+    it('should call GETinnovationpathwayStepTwo and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
 
       service.GETinnovationpathwayStepTwo().subscribe(response => {
@@ -2550,7 +2531,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationPathwayStepTwoInnovationSelect', () => {
-    it('should call GETInnovationPathwayStepTwoInnovationSelect and return expected data', (done) => { 
+    it('should call GETInnovationPathwayStepTwoInnovationSelect and return expected data', done => {
       service.GETInnovationPathwayStepTwoInnovationSelect().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2564,7 +2545,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllInnovationPackagingExpertsExpertises', () => {
-    it('should call GETAllInnovationPackagingExpertsExpertises and return expected data', (done) => { 
+    it('should call GETAllInnovationPackagingExpertsExpertises and return expected data', done => {
       service.GETAllInnovationPackagingExpertsExpertises().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2578,7 +2559,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getAllInnoPaActiveBackstopping', () => {
-    it('should call getAllInnoPaActiveBackstopping and return expected data', (done) => { 
+    it('should call getAllInnoPaActiveBackstopping and return expected data', done => {
       service.getAllInnoPaActiveBackstopping().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2592,7 +2573,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getAllInnoPaConsensusInitiativeWorkPackage', () => {
-    it('should call getAllInnoPaConsensusInitiativeWorkPackage and return expected data', (done) => { 
+    it('should call getAllInnoPaConsensusInitiativeWorkPackage and return expected data', done => {
       service.getAllInnoPaConsensusInitiativeWorkPackage().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2606,7 +2587,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getAllInnoPaRegionalIntegrated', () => {
-    it('should call getAllInnoPaRegionalIntegrated and return expected data', (done) => { 
+    it('should call getAllInnoPaRegionalIntegrated and return expected data', done => {
       service.getAllInnoPaRegionalIntegrated().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2620,7 +2601,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getAllInnoPaRegionalLeadership', () => {
-    it('should call getAllInnoPaRegionalLeadership and return expected data', (done) => { 
+    it('should call getAllInnoPaRegionalLeadership and return expected data', done => {
       service.getAllInnoPaRegionalLeadership().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2634,7 +2615,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getAllInnoPaRelevantCountry', () => {
-    it('should call getAllInnoPaRelevantCountry and return expected data', (done) => { 
+    it('should call getAllInnoPaRelevantCountry and return expected data', done => {
       service.getAllInnoPaRelevantCountry().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2648,7 +2629,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHComplementaryInnovation', () => {
-    it('should call PATCHComplementaryInnovation and return expected data', (done) => { 
+    it('should call PATCHComplementaryInnovation and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCHComplementaryInnovation(mockBody).subscribe(response => {
@@ -2666,9 +2647,9 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHComplementaryInnovationPrevious', () => {
-    it('should call PATCHComplementaryInnovationPrevious and return expected data', (done) => { 
+    it('should call PATCHComplementaryInnovationPrevious and return expected data', done => {
       const mockBody = {};
-      const descrip = 'descrip'
+      const descrip = 'descrip';
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
       service.PATCHComplementaryInnovationPrevious(mockBody, descrip).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2685,7 +2666,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETComplementaryById', () => {
-    it('should call GETComplementaryById and return expected data', (done) => { 
+    it('should call GETComplementaryById and return expected data', done => {
       const idInnovationPackages = 1;
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
 
@@ -2703,7 +2684,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETComplementataryInnovationFunctions', () => {
-    it('should call GETComplementataryInnovationFunctions and return expected data', (done) => { 
+    it('should call GETComplementataryInnovationFunctions and return expected data', done => {
       service.GETComplementataryInnovationFunctions().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2717,7 +2698,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POSTNewCompletaryInnovation', () => {
-    it('should call POSTNewCompletaryInnovation and return expected data', (done) => { 
+    it('should call POSTNewCompletaryInnovation and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
       service.POSTNewCompletaryInnovation(mockBody).subscribe(response => {
@@ -2735,7 +2716,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationPathwayByRiId', () => {
-    it('should call GETInnovationPathwayByRiId and return expected data', (done) => { 
+    it('should call GETInnovationPathwayByRiId and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GETInnovationPathwayByRiId().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2751,7 +2732,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayByRiId', () => {
-    it('should call PATCHInnovationPathwayByRiId and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayByRiId and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCHInnovationPathwayByRiId(mockBody).subscribe(response => {
@@ -2769,11 +2750,11 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayByRiIdNextPrevius', () => {
-    it('should call PATCHInnovationPathwayByRiIdNextPrevius and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayByRiIdNextPrevius and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
-      const descrip = 'descrip'
-      service.PATCHInnovationPathwayByRiIdNextPrevius(mockBody,descrip).subscribe(response => {
+      const descrip = 'descrip';
+      service.PATCHInnovationPathwayByRiIdNextPrevius(mockBody, descrip).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -2788,7 +2769,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllClarisaInnovationReadinessLevels', () => {
-    it('should call GETAllClarisaInnovationReadinessLevels and return expected data', (done) => { 
+    it('should call GETAllClarisaInnovationReadinessLevels and return expected data', done => {
       service.GETAllClarisaInnovationReadinessLevels().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2802,7 +2783,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllClarisaInnovationUseLevels', () => {
-    it('should call GETAllClarisaInnovationUseLevels and return expected data', (done) => { 
+    it('should call GETAllClarisaInnovationUseLevels and return expected data', done => {
       service.GETAllClarisaInnovationUseLevels().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2816,7 +2797,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETInnovationPathwayStepFourByRiId', () => {
-    it('should call GETInnovationPathwayStepFourByRiId and return expected data', (done) => { 
+    it('should call GETInnovationPathwayStepFourByRiId and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.GETInnovationPathwayStepFourByRiId().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2832,7 +2813,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayStepFourByRiId', () => {
-    it('should call PATCHInnovationPathwayStepFourByRiId and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayStepFourByRiId and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCHInnovationPathwayStepFourByRiId(mockBody).subscribe(response => {
@@ -2850,7 +2831,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayStepFourByRiIdPrevious', () => {
-    it('should call PATCHInnovationPathwayStepFourByRiIdPrevious and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayStepFourByRiIdPrevious and return expected data', done => {
       const mockBody = {};
       const descrip = 'descrip';
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
@@ -2869,7 +2850,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GETAllResultsInnovationPackageUnitTime', () => {
-    it('should call GETAllResultsInnovationPackageUnitTime and return expected data', (done) => { 
+    it('should call GETAllResultsInnovationPackageUnitTime and return expected data', done => {
       service.GETAllResultsInnovationPackageUnitTime().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2883,7 +2864,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayStep4Partners', () => {
-    it('should call PATCHInnovationPathwayStep4Partners and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayStep4Partners and return expected data', done => {
       const mockBody = {};
       service.PATCHInnovationPathwayStep4Partners(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2899,7 +2880,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayStep4BilateralsnonPooledProjects', () => {
-    it('should call PATCHInnovationPathwayStep4BilateralsnonPooledProjects and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayStep4BilateralsnonPooledProjects and return expected data', done => {
       const idNonPoolen = 1;
       const mockBody = {};
       service.PATCHInnovationPathwayStep4BilateralsnonPooledProjects(idNonPoolen, mockBody).subscribe(response => {
@@ -2916,7 +2897,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHInnovationPathwayStep4Bilaterals', () => {
-    it('should call PATCHInnovationPathwayStep4Bilaterals and return expected data', (done) => { 
+    it('should call PATCHInnovationPathwayStep4Bilaterals and return expected data', done => {
       const mockBody = {};
       service.PATCHInnovationPathwayStep4Bilaterals(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2932,7 +2913,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getCompletenessStatus', () => {
-    it('should call getCompletenessStatus and return expected data', (done) => { 
+    it('should call getCompletenessStatus and return expected data', done => {
       service.getCompletenessStatus().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -2946,7 +2927,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getSubNationalLevelOne', () => {
-    it('should call getSubNationalLevelOne and return expected data', (done) => { 
+    it('should call getSubNationalLevelOne and return expected data', done => {
       const isoAlpha = 'isoAlpha';
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.getSubNationalLevelOne(isoAlpha).subscribe(response => {
@@ -2956,14 +2937,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('getSubNationalLevelTwo', () => {
-    it('should call getSubNationalLevelTwo and return expected data', (done) => { 
+    it('should call getSubNationalLevelTwo and return expected data', done => {
       const isoAlpha = 'isoAlpha';
       const adminCode = 'adminCode';
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -2974,14 +2955,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('PATCHsubmissionsSubmitIpsr', () => {
-    it('should call PATCHsubmissionsSubmitIpsr and return expected data', (done) => { 
+    it('should call PATCHsubmissionsSubmitIpsr and return expected data', done => {
       const comment = 'comment';
       service.PATCHsubmissionsSubmitIpsr(comment).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -2990,14 +2971,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/submissions/submit-ipsr/${service.ipsrDataControlSE.resultInnovationId}`);
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({comment});
+      expect(req.request.body).toEqual({ comment });
 
       req.flush(mockResponse);
     });
   });
 
   describe('PATCHSubmissionsUnsubmitIpsr', () => {
-    it('should call PATCHSubmissionsUnsubmitIpsr and return expected data', (done) => { 
+    it('should call PATCHSubmissionsUnsubmitIpsr and return expected data', done => {
       const comment = 'comment';
       service.PATCHSubmissionsUnsubmitIpsr(comment).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3006,14 +2987,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${service.ipsrDataControlSE.resultInnovationId}`);
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({comment});
+      expect(req.request.body).toEqual({ comment });
 
       req.flush(mockResponse);
     });
   });
 
   describe('getStepTwoComentariesInnovation', () => {
-    it('should call getStepTwoComentariesInnovation and return expected data', (done) => { 
+    it('should call getStepTwoComentariesInnovation and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.getStepTwoComentariesInnovation().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3022,14 +3003,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('PostStepTwoComentariesInnovation', () => {
-    it('should call PostStepTwoComentariesInnovation and return expected data', (done) => { 
+    it('should call PostStepTwoComentariesInnovation and return expected data', done => {
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PostStepTwoComentariesInnovation(mockBody).subscribe(response => {
@@ -3047,7 +3028,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PostStepTwoComentariesInnovationPrevius', () => {
-    it('should call PostStepTwoComentariesInnovationPrevius and return expected data', (done) => { 
+    it('should call PostStepTwoComentariesInnovationPrevius and return expected data', done => {
       const mockBody = {};
       const descrip = 'descrip';
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipeNextStep');
@@ -3066,7 +3047,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('getStepTwoComentariesInnovationId', () => {
-    it('should call getStepTwoComentariesInnovationId and return expected data', (done) => { 
+    it('should call getStepTwoComentariesInnovationId and return expected data', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
       service.getStepTwoComentariesInnovationId().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3075,14 +3056,14 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${service.ipsrDataControlSE.resultInnovationId}`);
       expect(req.request.method).toBe('GET');
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
 
       req.flush(mockResponse);
     });
   });
 
   describe('getAssessedDuringExpertWorkshop', () => {
-    it('should call getAssessedDuringExpertWorkshop and return expected data', (done) => { 
+    it('should call getAssessedDuringExpertWorkshop and return expected data', done => {
       service.getAssessedDuringExpertWorkshop().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3096,7 +3077,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCHcomplementaryinnovation', () => {
-    it('should call PATCHcomplementaryinnovation and return expected data', (done) => { 
+    it('should call PATCHcomplementaryinnovation and return expected data', done => {
       const idResult = 1;
       const mockBody = {};
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
@@ -3116,7 +3097,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('DELETEcomplementaryinnovation', () => {
-    it('should call DELETEcomplementaryinnovation and delete the complementary innovation via DELETE request', (done) => { 
+    it('should call DELETEcomplementaryinnovation and delete the complementary innovation via DELETE request', done => {
       const idResult = 1;
       service.DELETEcomplementaryinnovation(idResult).subscribe(response => {
         expect(response).toBeTruthy();
@@ -3131,10 +3112,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_versioning', () => {
-    it('should call GET_versioning and return expected data when status exists', (done) => { 
+    it('should call GET_versioning and return expected data when status exists', done => {
       const status = 1;
       const modules = 'modules';
-      const mockResponse =  {
+      const mockResponse = {
         response: [
           {
             phase_name: 'phase name',
@@ -3142,7 +3123,7 @@ describe('ResultsApiService', () => {
           }
         ]
       };
-      service.GET_versioning(status,modules).subscribe(response => {
+      service.GET_versioning(status, modules).subscribe(response => {
         expect(response).toEqual({
           response: [
             {
@@ -3160,17 +3141,17 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
-    it('should call GET_versioning and return expected data when status does not exist', (done) => { 
+    it('should call GET_versioning and return expected data when status does not exist', done => {
       const status = 1;
       const modules = 'modules';
-      const mockResponse =  {
+      const mockResponse = {
         response: [
           {
-            phase_name: 'phase name',
+            phase_name: 'phase name'
           }
         ]
       };
-      service.GET_versioning(status,modules).subscribe(response => {
+      service.GET_versioning(status, modules).subscribe(response => {
         expect(response).toEqual({
           response: [
             {
@@ -3190,7 +3171,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_versioningProcess', () => {
-    it('should call PATCH_versioningProcess and return expected data', (done) => { 
+    it('should call PATCH_versioningProcess and return expected data', done => {
       const id = 1;
       service.PATCH_versioningProcess(id).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3206,10 +3187,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_updatePhase', () => {
-    it('should call PATCH_updatePhase and return expected data', (done) => { 
+    it('should call PATCH_updatePhase and return expected data', done => {
       const id = 1;
       const phase = 'phase';
-      service.PATCH_updatePhase(id,phase).subscribe(response => {
+      service.PATCH_updatePhase(id, phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
@@ -3223,7 +3204,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('DELETE_updatePhase', () => {
-    it('should call DELETE_updatePhase via DELETE request', (done) => { 
+    it('should call DELETE_updatePhase via DELETE request', done => {
       const id = 1;
       service.DELETE_updatePhase(id).subscribe(response => {
         expect(response).toBeTruthy();
@@ -3238,7 +3219,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('POST_createPhase', () => {
-    it('should call POST_createPhase and return expected data', (done) => { 
+    it('should call POST_createPhase and return expected data', done => {
       const phase = 'phase';
       service.POST_createPhase(phase).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3254,7 +3235,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_tocPhases', () => {
-    it('should call GET_tocPhases and return expected data', (done) => { 
+    it('should call GET_tocPhases and return expected data', done => {
       service.GET_tocPhases().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3268,7 +3249,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_resultYears', () => {
-    it('should call GET_resultYears and return expected data', (done) => { 
+    it('should call GET_resultYears and return expected data', done => {
       service.GET_resultYears().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3282,7 +3263,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_questionsInnovationDevelopment', () => {
-    it('should call GET_questionsInnovationDevelopment and return expected data', (done) => { 
+    it('should call GET_questionsInnovationDevelopment and return expected data', done => {
       service.GET_questionsInnovationDevelopment().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3296,7 +3277,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_investmentDiscontinuedOptions', () => {
-    it('should call GET_investmentDiscontinuedOptions and return expected data', (done) => { 
+    it('should call GET_investmentDiscontinuedOptions and return expected data', done => {
       service.GET_investmentDiscontinuedOptions().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3310,7 +3291,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_versioningResult', () => {
-    it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr exists', (done) => { 
+    it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr exists', done => {
       service.ipsrDataControlSE.inIpsr = 'test';
       service.ipsrDataControlSE.resultInnovationId = 1;
       service.GET_versioningResult().subscribe(response => {
@@ -3323,7 +3304,7 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
-    it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr does not exist', (done) => { 
+    it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr does not exist', done => {
       service.currentResultId = 1;
       service.GET_versioningResult().subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -3338,7 +3319,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('PATCH_versioningAnnually', () => {
-    it('should call PATCH_versioningAnnually and return expected data', (done) => { 
+    it('should call PATCH_versioningAnnually and return expected data', done => {
       service.PATCH_versioningAnnually().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3353,9 +3334,9 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_numberOfResultsByResultType', () => {
-    it('should call GET_numberOfResultsByResultType and return expected data', (done) => { 
+    it('should call GET_numberOfResultsByResultType and return expected data', done => {
       const statusId = 1;
-      const resultTypeId = 1
+      const resultTypeId = 1;
       service.GET_numberOfResultsByResultType(statusId, resultTypeId).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
@@ -3369,7 +3350,7 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_allResultStatuses', () => {
-    it('should call GET_allResultStatuses and return expected data', (done) => { 
+    it('should call GET_allResultStatuses and return expected data', done => {
       service.GET_allResultStatuses().subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();

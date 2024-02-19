@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TorKeyResultStoryComponent } from './tor-key-result-story.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -22,7 +23,7 @@ describe('TorKeyResultStoryComponent', () => {
   let component: TorKeyResultStoryComponent;
   let fixture: ComponentFixture<TorKeyResultStoryComponent>;
   let mockApiService: any;
-  let mockGET_keyResultStoryInitiativeIdResponse = [
+  const mockGET_keyResultStoryInitiativeIdResponse = [
     {
       result_title: 'title',
       result_code: 1,
@@ -55,28 +56,11 @@ describe('TorKeyResultStoryComponent', () => {
       keyResultStoryData: {},
       getInitiativeID: jest.fn(),
       phaseSelected: 'phase'
-    }
+    };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        TorKeyResultStoryComponent,
-        NoDataTextComponent,
-        SaveButtonComponent,
-        SimpleTableWithClipboardComponent,
-        PrButtonComponent,
-        TorKrsPrimaryImpactAreaSelectorComponent,
-        PrSelectComponent,
-        LabelNamePipe,
-        ListFilterByTextAndAttrPipe,
-        PrFieldHeaderComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        TooltipModule,
-        ScrollingModule,
-        FormsModule,
-        ToastModule
-      ],
+      declarations: [TorKeyResultStoryComponent, NoDataTextComponent, SaveButtonComponent, SimpleTableWithClipboardComponent, PrButtonComponent, TorKrsPrimaryImpactAreaSelectorComponent, PrSelectComponent, LabelNamePipe, ListFilterByTextAndAttrPipe, PrFieldHeaderComponent],
+      imports: [HttpClientTestingModule, TooltipModule, ScrollingModule, FormsModule, ToastModule],
       providers: [
         {
           provide: ApiService,
@@ -130,13 +114,12 @@ describe('TorKeyResultStoryComponent', () => {
         title: 'Key result story informaion saved correctly',
         description: '',
         status: 'success',
-        closeIn: 500,
+        closeIn: 500
       });
     });
     it('should log error on PATCH_primaryImpactAreaKrs error', () => {
       const errorResponse = { status: 500, message: 'Internal Server Error' };
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_primaryImpactAreaKrs')
-        .mockReturnValue(throwError(errorResponse));
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_primaryImpactAreaKrs').mockReturnValue(throwError(errorResponse));
       const spyGET_keyResultStoryInitiativeId = jest.spyOn(component, 'GET_keyResultStoryInitiativeId');
       const spyError = jest.spyOn(console, 'error');
 
@@ -151,10 +134,10 @@ describe('TorKeyResultStoryComponent', () => {
   describe('formatTable()', () => {
     it('should set data and header correctly when tableData is provided', () => {
       component.formatTable(mockGET_keyResultStoryInitiativeIdResponse[0]);
-  
+
       const header = component.tablesList[0].header;
       const data = component.tablesList[0].data;
-  
+
       expect(header).toEqual([{ attr: 'category' }, { attr: 'value' }]);
       expect(data[0].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].result_title);
       expect(data[0].id).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].result_code);
@@ -170,7 +153,7 @@ describe('TorKeyResultStoryComponent', () => {
       expect(data[9].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].web_legacy);
     });
     it('should set default values when tableData properties are not provided', () => {
-      const tableData =  {
+      const tableData = {
         result_title: '',
         result_code: '',
         primary_submitter: '',
@@ -183,12 +166,12 @@ describe('TorKeyResultStoryComponent', () => {
         other_impact_areas: '',
         global_targets: '',
         web_legacy: ''
-      }
+      };
       component.tablesList = [];
       component.formatTable(tableData);
-    
+
       const data = component.tablesList[0].data;
-    
+
       expect(data[0].value).toBe('<div class="no-data-text-format">There are not result title data</div>');
       expect(data[0].id).toBe('');
       expect(data[1].value).toBe('<div class="no-data-text-format">There are not primary submitter data</div>');
@@ -203,10 +186,10 @@ describe('TorKeyResultStoryComponent', () => {
     });
     it('should set data to null when tableData is not provided', () => {
       component.tablesList = [];
-      
+
       component.formatTable(null);
-  
-      expect(component.tablesList).toEqual([])
+
+      expect(component.tablesList).toEqual([]);
     });
   });
 });

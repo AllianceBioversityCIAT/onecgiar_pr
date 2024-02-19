@@ -12,6 +12,7 @@ export class GlobalLinksService {
 
   getInfo(){
     this.api.resultsSE.GET_platformGlobalVariablesByCategoryId(3).subscribe(({ response }) => {
+      console.log(response)
        this.links = response.reduce((acc, item) => {
         acc[item.name] = item.value;
         return acc;
@@ -25,4 +26,5 @@ export class GlobalLinksService {
 interface Links {
   url_terms_and_conditions?: string;
   url_platform_information?: string;
+  url_t1r_bi_report?: string;
 }
