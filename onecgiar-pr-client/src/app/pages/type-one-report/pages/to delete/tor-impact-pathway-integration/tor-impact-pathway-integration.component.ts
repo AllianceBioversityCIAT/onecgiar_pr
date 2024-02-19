@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './tor-impact-pathway-integration.component.html',
   styleUrls: ['./tor-impact-pathway-integration.component.scss']
 })
-export class TorImpactPathwayIntegrationComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class TorImpactPathwayIntegrationComponent {}

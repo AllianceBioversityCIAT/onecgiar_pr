@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './tor-ipi-cgiar-portfolio-linkages.component.html',
   styleUrls: ['./tor-ipi-cgiar-portfolio-linkages.component.scss']
 })
-export class TorIpiCgiarPortfolioLinkagesComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class TorIpiCgiarPortfolioLinkagesComponent {}

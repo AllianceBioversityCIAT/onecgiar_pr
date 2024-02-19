@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './tor-ipi-external-partners.component.html',
   styleUrls: ['./tor-ipi-external-partners.component.scss']
 })
-export class TorIpiExternalPartnersComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class TorIpiExternalPartnersComponent {}
