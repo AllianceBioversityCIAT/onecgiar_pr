@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-/* eslint-disable no-console */
 /* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -23,7 +21,6 @@ export class TorKeyResultStoryComponent implements OnInit {
       this.typeOneReportSE.keyResultStoryData = response;
       this.tablesList = [];
       response.forEach(table => {
-        console.log(table)
         this.formatTable(table);
       });
     });
@@ -48,7 +45,7 @@ export class TorKeyResultStoryComponent implements OnInit {
       { category: `Contributing initiatives/SGP's/platforms`, value: '' },
       { category: 'Contributing centers', value: '' },
       { category: 'Contributing external partner(s)', value: '' },
-      { category: 'Geographic scope', value: '' },
+      { category: 'Geographic scope', value: '' }
     ];
 
     const table = tableData;

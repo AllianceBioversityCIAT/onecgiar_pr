@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './custom-validation-tooltip.component.html',
   styleUrls: ['./custom-validation-tooltip.component.scss']
 })
-export class CustomValidationTooltipComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class CustomValidationTooltipComponent {}
