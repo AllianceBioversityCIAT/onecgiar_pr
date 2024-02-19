@@ -208,7 +208,7 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
-    const mainPage = await this.biSubpagesRepository.getReportSubPage(
+    let mainPage = await this.biSubpagesRepository.getReportSubPage(
       getBiSubpagesDto,
     );
 
