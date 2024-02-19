@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './under-construction-point.component.html',
   styleUrls: ['./under-construction-point.component.scss']
 })
-export class UnderConstructionPointComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class UnderConstructionPointComponent {}

@@ -1,4 +1,5 @@
-<iframe [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl" title="report"></iframe>
+<!-- (sandbox)="handleError($event)" -->
+<iframe [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl"></iframe>
 
 <div class="iframe_spinner" *ngIf="this.iframeLoaded">
     <div class="spinner">

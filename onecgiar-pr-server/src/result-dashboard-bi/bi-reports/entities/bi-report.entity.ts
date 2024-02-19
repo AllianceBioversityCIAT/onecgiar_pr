@@ -1,5 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
-import { BiSubpages } from './bi-subpages.entity';
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('bi_reports')
 export class BiReport {
@@ -66,7 +65,6 @@ export class BiReport {
   })
   has_rls_security: boolean;
 
-  
   @Column({
     name: 'has_full_screen',
     type: 'boolean',
@@ -82,6 +80,4 @@ export class BiReport {
     default: null,
   })
   report_order: number;
-
-
 }

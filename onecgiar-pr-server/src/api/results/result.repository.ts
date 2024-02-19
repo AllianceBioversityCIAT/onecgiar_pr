@@ -772,6 +772,8 @@ WHERE
     WHERE
     	r.created_date >= ?
     	and r.created_date <= ?
+      and r.is_active > 0
+      and r.result_type_id not in (10,11)
     GROUP by
       r.id,
       r.reported_year_id,
