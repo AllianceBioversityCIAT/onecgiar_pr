@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { BiReportsService } from './bi-reports.service';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
+import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
 
 @Controller()
 export class BiReportsController {
@@ -26,9 +27,9 @@ export class BiReportsController {
     return this.biReportsService.findOne(+id);
   }
 
-  @Get('/reportName/:report_name')
-  findOnefindOneReportName(@Param('report_name') report_name: string) {
-    return this.biReportsService.findOneReportName(report_name);
+  @Post('/reportName')
+  findOnefindOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
+    return this.biReportsService.findOneReportName(getBiSubpagesDto);
   }
 
   @Get('/azure')

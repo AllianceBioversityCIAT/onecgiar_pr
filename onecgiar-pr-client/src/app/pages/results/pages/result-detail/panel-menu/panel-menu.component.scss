@@ -1,109 +1,105 @@
 .panel_menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 10px 25px;
+  height: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  overflow-y: auto;
+
+  .back_button {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    border-radius: 10px;
-    padding: 10px 25px;
-    height: 100%;
-    box-sizing: border-box;
-    background-color: white;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .segment {
+    .name {
+      color: var(--pr-color-medium);
+      margin-bottom: 10px;
+      margin-top: 10px;
+    }
+
+    .sections {
+      display: flex;
+      flex-direction: column;
+      padding-left: 5px;
+      gap: 10px;
+
+      .section_active {
+        background-color: var(--pr-color-primary-2);
+        color: var(--pr-color-tertiary);
+        font-weight: 600;
+      }
+
+      a {
+        text-decoration: none;
+        color: var(--pr-color-secondary);
+        font-weight: 500;
+        padding: 5px 10px 5px 20px;
+        border-radius: 10px;
+        transition: background-color ease-in-out 0.3s;
+        position: relative;
+        overflow: hidden;
+
+        .check {
+          position: absolute;
+          width: 25px;
+          right: 0;
+          top: 0;
+          // background-color: red;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          padding: 0px 15px;
+
+          .valid {
+            color: #34b734;
+          }
+
+          .invalid {
+            color: #c0c0c0;
+          }
+        }
+
+        .under_construction {
+          position: absolute;
+          width: 25px;
+          right: 0;
+          margin-right: 30px;
+        }
+
+        &:hover {
+          background-color: #f3f3f3;
+        }
+      }
+    }
+  }
+
+  .submit_button {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
     flex-direction: column;
-    overflow-y: auto;
+    scale: 1.2;
+    margin-bottom: 20px;
+    padding: 15px;
 
-    .back_button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .button_access_information {
+      font-size: 0.8em;
+      text-align: center;
+      color: var(--pr-color-primary);
+      background-color: #556add17;
+      box-shadow: 0px 0px 5px 1px #e0e4f7;
+      padding: 10px;
+      border-radius: 3px;
+      margin-top: 10px;
     }
-
-    .segment {
-        .name {
-            color: var(--pr-color-medium);
-            margin-bottom: 10px;
-            margin-top: 10px;
-        }
-
-        .sections {
-            display: flex;
-            flex-direction: column;
-            padding-left: 5px;
-            gap: 10px;
-
-
-            .section_active {
-                background-color: var(--pr-color-primary-2);
-                color: var(--pr-color-tertiary);
-                font-weight: 600;
-            }
-
-            a {
-                text-decoration: none;
-                color: var(--pr-color-secondary);
-                font-weight: 500;
-                padding: 5px 10px 5px 20px;
-                border-radius: 10px;
-                transition: background-color ease-in-out .3s;
-                position: relative;
-                overflow: hidden;
-
-                .check {
-                    position: absolute;
-                    width: 25px;
-                    right: 0;
-                    top: 0;
-                    // background-color: red;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    height: 100%;
-                    padding: 0px 15px;
-
-                    .valid {
-                        color: #34b734;
-                    }
-
-                    .invalid {
-                        color: #c0c0c0;
-                    }
-
-                    i {}
-                }
-
-                .under_construction {
-                    position: absolute;
-                    width: 25px;
-                    right: 0;
-                    margin-right: 30px;
-                }
-
-                &:hover {
-                    background-color: #f3f3f3;
-                }
-            }
-        }
-    }
-
-    .submit_button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        scale: 1.2;
-        margin-bottom: 20px;
-        padding: 15px;
-
-        .button_access_information {
-            font-size: .8em;
-            text-align: center;
-            color: var(--pr-color-primary);
-            background-color: #556add17;
-            box-shadow: 0px 0px 5px 1px #e0e4f7;
-            padding: 10px;
-            border-radius: 3px;
-            margin-top: 10px;
-
-        }
-    }
+  }
 }

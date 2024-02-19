@@ -16,10 +16,7 @@ describe('TypeOneReportService', () => {
         isAdmin: true
       },
       dataControlSE: {
-        myInitiativesList: [
-          { official_code: 1 },
-          { official_code: 2 }
-        ]
+        myInitiativesList: [{ official_code: 1 }, { official_code: 2 }]
       }
     };
 
@@ -28,17 +25,14 @@ describe('TypeOneReportService', () => {
     };
 
     TestBed.configureTestingModule({
-      imports: [
-        HttpClientTestingModule
-      ],
+      imports: [HttpClientTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
-        { provide: DomSanitizer, useValue: mockDomSanitizer },
+        { provide: DomSanitizer, useValue: mockDomSanitizer }
       ]
     });
     service = TestBed.inject(TypeOneReportService);
   });
-
 
   describe('sanitizeUrl', () => {
     it('should call bypassSecurityTrustResourceUrl with the correct URL', () => {
@@ -58,7 +52,7 @@ describe('TypeOneReportService', () => {
         {
           official_code: 1
         }
-      ]
+      ];
       const result = service.getInitiativeID(1);
 
       expect(result).toEqual({ official_code: 1 });
