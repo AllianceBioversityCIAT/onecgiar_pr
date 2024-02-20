@@ -935,30 +935,33 @@ export class resultValidationRepository
 	SELECT
 		'innovation-dev-info' as section_name,
 		CASE
-			when (
-				rid.short_title is null
-				or rid.short_title = ''
+			WHEN (
+				rid.short_title IS NULL
+				OR rid.short_title = ''
 			)
-			AND (
-				rid.innovation_characterization_id is null
-				or rid.innovation_characterization_id = ''
+			OR (
+				rid.innovation_characterization_id IS NULL
+				OR rid.innovation_characterization_id = ''
 			)
-			AND (
-				rid.innovation_nature_id is null
-				or rid.innovation_nature_id = ''
+			OR (
+				rid.innovation_nature_id IS NULL
+				OR rid.innovation_nature_id = ''
 			)
-			AND (
-				if(
+			OR (
+				IF(
 					rid.innovation_nature_id != 12,
 					rid.is_new_variety not in (1, 0),
-					false
+					FALSE
 				)
 			)
-			AND (
-				rid.innovation_readiness_level_id is null
-				and rid.innovation_readiness_level_id <> ''
+			OR (
+				rid.innovation_readiness_level_id IS NULL
+				OR (
+					rid.evidences_justification IS NULL
+					OR rid.evidences_justification = ''
+				)
 			)
-			AND (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
+			OR (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
 			WHEN rid.innovation_user_to_be_determined != 1
 			AND (
 				(
@@ -1372,7 +1375,7 @@ export class resultValidationRepository
 			) THEN FALSE
 			ELSE TRUE
 		END AS validation
-	from
+	FROM
 		result r
 		LEFT JOIN results_innovations_dev rid on rid.results_id = r.id
 		AND rid.is_active > 0
