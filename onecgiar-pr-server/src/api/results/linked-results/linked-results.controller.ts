@@ -6,35 +6,32 @@ import {
   Param,
   Headers,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { LinkedResultsService } from './linked-results.service';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class LinkedResultsController {
   constructor(private readonly linkedResultsService: LinkedResultsService) {}
 
   @Post('create/:resultId')
-  async create(
+  create(
     @Body() createLinkedResultDto: CreateLinkedResultDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     createLinkedResultDto.result_id = resultId;
-    const { message, response, status } =
-      await this.linkedResultsService.create(createLinkedResultDto, token);
-    throw new HttpException({ message, response }, status);
+    return this.linkedResultsService.create(createLinkedResultDto, user);
   }
 
   @Get('get/:resultId')
-  async findAllByResult(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.linkedResultsService.findAllLinksByResult(resultId);
-    throw new HttpException({ message, response }, status);
+  findAllByResult(@Param('resultId') resultId: number) {
+    return this.linkedResultsService.findAllLinksByResult(resultId);
   }
 }

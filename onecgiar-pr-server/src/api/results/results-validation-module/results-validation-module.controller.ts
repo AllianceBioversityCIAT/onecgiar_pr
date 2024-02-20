@@ -1,32 +1,33 @@
-import { Controller, Get, Patch, Param, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  HttpException,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ResultsValidationModuleService } from './results-validation-module.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsValidationModuleController {
   constructor(
     private readonly resultsValidationModuleService: ResultsValidationModuleService,
   ) {}
 
   @Get('get/green-checks/:resultId')
-  async findAll(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.resultsValidationModuleService.getGreenchecksByResult(
-        resultId,
-      );
-    throw new HttpException({ message, response }, status);
+  findAll(@Param('resultId') resultId: number) {
+    return this.resultsValidationModuleService.getGreenchecksByResult(resultId);
   }
 
   @Patch('save/green-checks/:resultId')
-  async saveGreenChecks(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.resultsValidationModuleService.saveGreenCheck(resultId);
-    throw new HttpException({ message, response }, status);
+  saveGreenChecks(@Param('resultId') resultId: number) {
+    return this.resultsValidationModuleService.saveGreenCheck(resultId);
   }
 
   @Get('bulk')
-  async bulk() {
-    const { message, response, status } =
-      await this.resultsValidationModuleService.saveAllGreenCheck();
-    throw new HttpException({ message, response }, status);
+  bulk() {
+    return this.resultsValidationModuleService.saveAllGreenCheck();
   }
 }

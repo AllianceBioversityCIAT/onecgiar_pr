@@ -20,8 +20,10 @@ import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.in
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { CreateUploadSessionDto } from './dto/create-upload-session.dto';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class EvidencesController {
   constructor(
     private readonly evidencesService: EvidencesService,
@@ -29,10 +31,9 @@ export class EvidencesController {
   ) {}
 
   @Post('create/:resultId')
-  @UseInterceptors(FilesInterceptor('files'))
-  async create(
+  @UseInterceptors(ResponseInterceptor, FilesInterceptor('files'))
+  create(
     @Body() formDataJson: FormDataJson,
-    @Headers() auth: HeadersDto,
     @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
@@ -41,15 +42,15 @@ export class EvidencesController {
     );
     createEvidenceDto.result_id = resultId;
 
-    const { message, response, status } = await this.evidencesService.create(
-      createEvidenceDto,
-      user,
-    );
-
-    throw new HttpException({ message, response }, status);
+    return this.evidencesService.create(createEvidenceDto, user);
   }
 
+  /**
+   * TODO: This controller is not returning the information with the response
+   * format more information @yecksin
+   */
   @Post('createUploadSession')
+  @UseInterceptors() //prevents response formatting
   async createUploadSession(
     @Body() createUploadSessionDto: CreateUploadSessionDto,
   ) {

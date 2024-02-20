@@ -4,36 +4,33 @@ import {
   Post,
   Body,
   Param,
-  Headers,
-  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsTocResultsController {
   constructor(
     private readonly resultsTocResultsService: ResultsTocResultsService,
   ) {}
 
   @Post('create/toc/result/:resultId')
-  async create(
+  create(
     @Body() createResultsTocResultDto: CreateResultsTocResultDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     createResultsTocResultDto.result_id = resultId;
-    const { message, response, status } =
-      await this.resultsTocResultsService.create(
-        createResultsTocResultDto,
-        token,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.resultsTocResultsService.create(
+      createResultsTocResultDto,
+      user,
+    );
   }
 
   @Get()
@@ -42,50 +39,42 @@ export class ResultsTocResultsController {
   }
 
   @Get('get/result/:resultId')
-  async finTocByResult(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.resultsTocResultsService.getTocByResult(resultId);
-    throw new HttpException({ message, response }, status);
+  finTocByResult(@Param('resultId') resultId: number) {
+    return this.resultsTocResultsService.getTocByResult(resultId);
   }
 
   @Get('get/indicator/:id/result/:resultId/initiative/:initiativeId')
-  async findIndicatorByToc(
+  findIndicatorByToc(
     @Param('id') id: number,
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
   ) {
-    const { message, response, status } =
-      await this.resultsTocResultsService.getTocResultIndicatorByResultTocId(
-        resultId,
-        id,
-        initiativeId,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.resultsTocResultsService.getTocResultIndicatorByResultTocId(
+      resultId,
+      id,
+      initiativeId,
+    );
   }
 
   @Get('get/result/:resultId/initiative/:initiativeId')
-  async findActionResutl(
+  findActionResutl(
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
   ) {
-    const { message, response, status } =
-      await this.resultsTocResultsService.getActionAreaOutcomeByResultTocId(
-        resultId,
-        initiativeId,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.resultsTocResultsService.getActionAreaOutcomeByResultTocId(
+      resultId,
+      initiativeId,
+    );
   }
 
   @Get('get/version/:resultId/initiative/:initiativeId/resultToc/:resultTocId')
-  async findVersionDashBoard(
+  findVersionDashBoard(
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
     @Param('resultTocId') _resultTocId: number,
   ) {
     //TODO: I cannot delete that value but I can accommodate it as an internal value,
     //since the url would have to be modified and that would have to be modified from the front as well
-    const { message, response, status } =
-      await this.resultsTocResultsService.getVersionId(resultId, initiativeId);
-    throw new HttpException({ message, response }, status);
+    return this.resultsTocResultsService.getVersionId(resultId, initiativeId);
   }
 }

@@ -7,12 +7,15 @@ import {
   Param,
   Delete,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultLevelsService } from './result_levels.service';
 import { CreateResultLevelDto } from './dto/create-result_level.dto';
 import { UpdateResultLevelDto } from './dto/update-result_level.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultLevelsController {
   constructor(private readonly resultLevelsService: ResultLevelsService) {}
 
@@ -22,10 +25,8 @@ export class ResultLevelsController {
   }
 
   @Get('all')
-  async findAll() {
-    const { message, response, status } =
-      await this.resultLevelsService.getResultsLevels();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.resultLevelsService.getResultsLevels();
   }
 
   @Get(':id')

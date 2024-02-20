@@ -7,12 +7,15 @@ import {
   Param,
   Delete,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultTypesService } from './result_types.service';
 import { CreateResultTypeDto } from './dto/create-result_type.dto';
 import { UpdateResultTypeDto } from './dto/update-result_type.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('')
+@UseInterceptors(ResponseInterceptor)
 export class ResultTypesController {
   constructor(private readonly resultTypesService: ResultTypesService) {}
 
@@ -22,10 +25,8 @@ export class ResultTypesController {
   }
 
   @Get('all')
-  async findAll() {
-    const { message, response, status } =
-      await this.resultTypesService.getAllResultType();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.resultTypesService.getAllResultType();
   }
 
   @Get(':id')

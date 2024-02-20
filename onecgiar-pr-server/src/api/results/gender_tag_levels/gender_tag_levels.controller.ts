@@ -7,12 +7,15 @@ import {
   Param,
   Delete,
   HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { GenderTagLevelsService } from './gender_tag_levels.service';
 import { CreateGenderTagLevelDto } from './dto/create-gender_tag_level.dto';
 import { UpdateGenderTagLevelDto } from './dto/update-gender_tag_level.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('/')
+@UseInterceptors(ResponseInterceptor)
 export class GenderTagLevelsController {
   constructor(
     private readonly genderTagLevelsService: GenderTagLevelsService,
@@ -24,10 +27,8 @@ export class GenderTagLevelsController {
   }
 
   @Get('all')
-  async findAll() {
-    const { message, response, status } =
-      await this.genderTagLevelsService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.genderTagLevelsService.findAll();
   }
 
   @Get(':id')
