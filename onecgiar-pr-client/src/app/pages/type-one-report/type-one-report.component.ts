@@ -1,28 +1,25 @@
-import { Component } from '@angular/core';
-import { Title } from '@angular/platform-browser';
+/* eslint-disable camelcase */
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
 import { Router } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
+import { TypePneReportRouting } from '../../shared/routing/routing-data';
 
 @Component({
   selector: 'app-type-one-report',
   templateUrl: './type-one-report.component.html',
   styleUrls: ['./type-one-report.component.scss']
 })
-export class TypeOneReportComponent {
-  sections = [
-    { path: 'fact-sheet', icon: '', name: 'Fact sheet', underConstruction: true },
-    { path: 'initiative-progress-and-key-results', icon: '', name: 'Initiative progress & Key results', underConstruction: true },
-    { path: 'impact-pathway-integration', icon: '', name: 'Impact pathway integration' },
-    // { path: 'ipi-external-partners', icon: '', name: 'Impact pathway integration - External partners' },
-    // { path: 'ipi-cgiar-portfolio-linkages', icon: '', name: 'Impact pathway integration - CGIAR portfolio linkages' },
-    { path: 'key-result-story', icon: '', name: 'Key result story', underConstruction: true }
-  ];
+export class TypeOneReportComponent implements OnInit {
+  sections: any = [];
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, private router: Router, public phasesSE: PhasesService) {}
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService) {}
+
   ngOnInit(): void {
+    TypePneReportRouting.forEach((section: any, index) => (section.prName ? this.sections.push({ ...section, name: `Section ${index + 1}: ${section.prName}` }) : null));
+
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Type one report');
     this.GET_AllInitiatives();
@@ -31,8 +28,10 @@ export class TypeOneReportComponent {
 
   getThePhases() {
     const autoSelectOpenPhases = (phases: any[]) => {
-      this.typeOneReportSE.phaseSelected = phases.find((phase: any) => phase.status)?.id;
+      const openPhase = phases.find((phase: any) => phase.status);
+      this.typeOneReportSE.phaseSelected = openPhase?.id;
     };
+
     const useLoadedPhases = () => {
       autoSelectOpenPhases(this.phasesSE.phases.reporting);
       this.typeOneReportSE.reportingPhases = this.phasesSE.phases.reporting;
@@ -45,7 +44,11 @@ export class TypeOneReportComponent {
       });
     };
 
-    this.phasesSE.phases.reporting.length ? useLoadedPhases() : listenWhenPhasesAreLoaded();
+    if (this.phasesSE.phases.reporting.length) {
+      useLoadedPhases();
+    } else {
+      listenWhenPhasesAreLoaded();
+    }
   }
 
   GET_AllInitiatives() {
@@ -53,16 +56,26 @@ export class TypeOneReportComponent {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.typeOneReportSE.allInitiatives = response;
       this.typeOneReportSE.initiativeSelected = this.typeOneReportSE.allInitiatives[0]?.official_code;
+      this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
       this.typeOneReportSE.sanitizeUrl();
     });
   }
+
   selectFirstInitiative() {
     this.typeOneReportSE.initiativeSelected = this.api.dataControlSE.myInitiativesList[0]?.official_code;
     this.typeOneReportSE.sanitizeUrl();
   }
+
+  getInitiativeShortName(official_code) {
+    const list = this.api.rolesSE.isAdmin ? this.typeOneReportSE.allInitiatives : this.api.dataControlSE.myInitiativesList;
+    return list.find(init => init.official_code == official_code)?.short_name;
+  }
+
   selectInitiativeEvent() {
+    this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
     const currentUrl = this.router.url;
-    this.router.navigateByUrl(`/type-one-report/ipi-cgiar-portfolio-linkages`).then(() => {
+    this.router.navigateByUrl(`/type-one-report/white`).then(() => {
+      console.log('navigate');
       setTimeout(() => {
         this.router.navigateByUrl(currentUrl);
       }, 100);

@@ -4,7 +4,12 @@
   [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
   <div class="text">{{ this.text }}</div>
   <i class="material-icons-round" [ngClass]="{'rotating': this.rotating, 'rotate-right': this.rotateRight}"
-    *ngIf="this.icon">{{ this.icon }}</i>
+    *ngIf="this.icon && !this.use_png_icon; else pngicon">{{ this.icon }}</i>
+  <ng-template #pngicon>
+    <ng-container *ngIf="this.use_png_icon">
+      <img src="assets/icons/excel_white.png" alt="" srcset="">
+    </ng-container>
+  </ng-template>
   <img *ngIf="underConstruction" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="">
   <div class="filter"
     [ngStyle]="this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + 'var(--pr-color-' + this.colorType + ')' + ' 85%)' } : {}">

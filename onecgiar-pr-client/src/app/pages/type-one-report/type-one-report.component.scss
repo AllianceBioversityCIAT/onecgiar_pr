@@ -26,8 +26,14 @@
           .select {
             width: 100%;
             display: grid;
-            grid-template-columns: 1fr 250px;
             gap: 10px;
+            &.two {
+              grid-template-columns: 1fr 250px;
+            }
+
+            &.one {
+              grid-template-columns: 1fr;
+            }
           }
 
           .label {
@@ -46,17 +52,12 @@
           display: flex;
           align-items: center;
           justify-content: center;
-          // padding: 10px;
         }
       }
 
       .router_outlet_container {
-        max-height: calc(100vh - 210px);
-        min-height: calc(100vh - 210px);
-        overflow-y: auto;
+        min-height: calc(100vh - 300px);
       }
-
     }
-
   }
 }

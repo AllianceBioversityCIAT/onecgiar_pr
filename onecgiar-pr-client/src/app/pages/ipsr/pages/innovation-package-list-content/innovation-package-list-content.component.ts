@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './innovation-package-list-content.component.html',
   styleUrls: ['./innovation-package-list-content.component.scss']
 })
-export class InnovationPackageListContentComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class InnovationPackageListContentComponent {}

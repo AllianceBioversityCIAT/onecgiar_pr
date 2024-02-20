@@ -30,6 +30,7 @@ export class DataControlService {
   showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
+  showT1RSelectPhase?: boolean;
 
   constructor(private titleService: Title) {}
 

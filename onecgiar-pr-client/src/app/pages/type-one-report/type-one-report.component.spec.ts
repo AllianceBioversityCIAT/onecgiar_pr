@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TypeOneReportComponent } from './type-one-report.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -24,7 +25,7 @@ describe('TypeOneReportComponent', () => {
   let mockApiService: any;
   let mockTypeOneReportService: any;
   let mockPhasesService: any;
-  let mockGET_AllInitiativesResponse = [
+  const mockGET_AllInitiativesResponse = [
     {
       official_code: 1
     }
@@ -46,7 +47,7 @@ describe('TypeOneReportComponent', () => {
         ]
       },
       resultsSE: {
-        GET_AllInitiatives: () => of({ response: mockGET_AllInitiativesResponse }),
+        GET_AllInitiatives: () => of({ response: mockGET_AllInitiativesResponse })
       }
     };
 
@@ -67,34 +68,17 @@ describe('TypeOneReportComponent', () => {
       phases: {
         reporting: []
       },
-      getPhasesObservable: () => of(
-        [
-          { id: 1, status: 'open' }
-        ]
-      ),
+      getPhasesObservable: () => of([{ id: 1, status: 'open' }])
     };
 
     mockRouter = {
       url: '/url',
-      navigateByUrl: jest.fn(),
+      navigateByUrl: jest.fn()
     };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        TypeOneReportComponent,
-        PrSelectComponent,
-        TorPanelMenuComponent,
-        LabelNamePipe,
-        ListFilterByTextAndAttrPipe,
-        PrFieldHeaderComponent,
-        PrButtonComponent,
-        AlertStatusComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        ScrollingModule,
-        FormsModule,
-      ],
+      declarations: [TypeOneReportComponent, PrSelectComponent, TorPanelMenuComponent, LabelNamePipe, ListFilterByTextAndAttrPipe, PrFieldHeaderComponent, PrButtonComponent, AlertStatusComponent],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -108,10 +92,10 @@ describe('TypeOneReportComponent', () => {
           provide: PhasesService,
           useValue: mockPhasesService
         },
-        { 
-          provide: Router, 
-          useValue: mockRouter 
-        },
+        {
+          provide: Router,
+          useValue: mockRouter
+        }
       ]
     }).compileComponents();
 
@@ -144,9 +128,7 @@ describe('TypeOneReportComponent', () => {
     });
 
     it('should call autoSelectOpenPhases when phasesSE.phases.reporting.length is true', () => {
-      mockPhasesService.phases.reporting = [
-        { id: 1, status: 'open' }
-      ];
+      mockPhasesService.phases.reporting = [{ id: 1, status: 'open' }];
       component.ngOnInit();
       component.getThePhases();
 
@@ -158,17 +140,17 @@ describe('TypeOneReportComponent', () => {
     it('should call selectFirstInitiative if isAdmin is false', () => {
       const spy = jest.spyOn(component, 'selectFirstInitiative');
       mockApiService.rolesSE.isAdmin = false;
-  
+
       component.GET_AllInitiatives();
-  
+
       expect(spy).toHaveBeenCalled();
     });
     it('should fetch initiatives and set selected initiative if isAdmin is true', () => {
       mockApiService.rolesSE.isAdmin = true;
       const spy = jest.spyOn(mockTypeOneReportService, 'sanitizeUrl');
-     
+
       component.GET_AllInitiatives();
-  
+
       expect(component.typeOneReportSE.allInitiatives).toEqual(mockGET_AllInitiativesResponse);
       expect(component.typeOneReportSE.initiativeSelected).toBe(1);
       expect(spy).toHaveBeenCalled();
@@ -180,7 +162,7 @@ describe('TypeOneReportComponent', () => {
       const spy = jest.spyOn(mockTypeOneReportService, 'sanitizeUrl');
 
       component.selectFirstInitiative();
-  
+
       expect(component.typeOneReportSE.initiativeSelected).toBe(1);
       expect(spy).toHaveBeenCalled();
     });
@@ -193,7 +175,7 @@ describe('TypeOneReportComponent', () => {
 
       component.selectInitiativeEvent();
       jest.runAllTimers();
-  
+
       expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/type-one-report/ipi-cgiar-portfolio-linkages');
       expect(component.typeOneReportSE.showTorIframe).toBeTruthy();
       expect(spy).toHaveBeenCalled();
