@@ -28,7 +28,7 @@ export class BiReportsController {
   }
 
   @Post('/reportName')
-  findOnefindOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
+  findOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
     return this.biReportsService.findOneReportName(getBiSubpagesDto);
   }
 
