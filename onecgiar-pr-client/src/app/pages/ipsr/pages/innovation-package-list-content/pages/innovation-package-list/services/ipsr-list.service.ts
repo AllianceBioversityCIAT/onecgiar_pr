@@ -5,5 +5,4 @@ import { Injectable } from '@angular/core';
 })
 export class IpsrListService {
   text_to_search: string = '';
-  constructor() {}
 }

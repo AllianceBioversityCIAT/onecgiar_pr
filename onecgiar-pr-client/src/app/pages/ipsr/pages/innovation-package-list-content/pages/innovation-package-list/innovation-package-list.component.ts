@@ -35,11 +35,11 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   get initsSelectedJoinText() {
     const myInitiativesList = this.api.dataControlSE?.myInitiativesList;
     const options = this.ipsrListFilterSE.filters.general[1]?.options;
-    return JSON.stringify([...(myInitiativesList || []), ...(options || [])]);
+    return JSON.stringify([...myInitiativesList, ...options]);
   }
 
   get everyDeselected() {
-    return this.api.dataControlSE.myInitiativesList.every(item => item.selected != true);
+    return this.api.dataControlSE.myInitiativesList.every(item => !item.selected);
   }
 
   deselectInits() {
