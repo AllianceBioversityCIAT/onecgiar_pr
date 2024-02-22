@@ -100,7 +100,7 @@ export class ElasticService {
       if (
         currentBatchElasticOperationSize + currentEncodedOperation.length + 1 >
           this.ELASTIC_MAX_UPLOAD_SIZE ||
-        index === operations.length - 1
+        (index === operations.length - 1 && currentBatchElasticOperations)
       ) {
         currentBatchElasticOperations =
           currentBatchElasticOperations.concat('\n');
