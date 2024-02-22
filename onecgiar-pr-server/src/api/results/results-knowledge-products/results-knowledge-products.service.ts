@@ -572,6 +572,15 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const errors = this._getErrorsFromMqapResponse(mqapResponse);
+      if (errors.length > 0) {
+        throw {
+          response: errors,
+          message: `The Result Knowledge Product cannot be created`,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        };
+      }
+
       response =
         this._resultsKnowledgeProductMapper.mqapResponseToKnowledgeProductDto(
           mqapResponse,
@@ -587,6 +596,108 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private _getErrorsFromMqapResponse(mqapResponse: MQAPResultDto): string[] {
+    const errors: string[] = [];
+
+    if (
+      mqapResponse.Citation &&
+      Array.isArray(mqapResponse.Citation) &&
+      mqapResponse.Citation.length > 1
+    ) {
+      errors.push(
+        `Citation is not valid. values: [${mqapResponse.Citation.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.DOI &&
+      Array.isArray(mqapResponse.DOI) &&
+      mqapResponse.DOI.length > 1
+    ) {
+      errors.push(`DOI is not valid. values: [${mqapResponse.DOI.join(', ')}]`);
+    }
+
+    if (
+      mqapResponse.Description &&
+      Array.isArray(mqapResponse.Description) &&
+      mqapResponse.Description.length > 1
+    ) {
+      errors.push(
+        `Description is not valid. values: [${mqapResponse.Description.join(
+          ', ',
+        )}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Issued date'] &&
+      Array.isArray(mqapResponse['Issued date']) &&
+      mqapResponse['Issued date'].length > 1
+    ) {
+      errors.push(
+        `Issued date is not valid. values: [${mqapResponse['Issued date'].join(
+          ', ',
+        )}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Online publication date'] &&
+      Array.isArray(mqapResponse['Online publication date']) &&
+      mqapResponse['Online publication date'].length > 1
+    ) {
+      errors.push(
+        `Online publication date is not valid. values: [${mqapResponse[
+          'Online publication date'
+        ].join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Publication Date'] &&
+      Array.isArray(mqapResponse['Publication Date']) &&
+      mqapResponse['Publication Date'].length > 1
+    ) {
+      errors.push(
+        `Publication Date is not valid. values: [${mqapResponse[
+          'Publication Date'
+        ].join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Rights &&
+      Array.isArray(mqapResponse.Rights) &&
+      mqapResponse.Rights.length > 1
+    ) {
+      errors.push(
+        `Rights is not valid. values: [${mqapResponse.Rights.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Title &&
+      Array.isArray(mqapResponse.Title) &&
+      mqapResponse.Title.length > 1
+    ) {
+      errors.push(
+        `Title is not valid. values: [${mqapResponse.Title.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Type &&
+      Array.isArray(mqapResponse.Type) &&
+      mqapResponse.Type.length > 1
+    ) {
+      errors.push(
+        `Type is not valid. values: [${mqapResponse.Type.join(', ')}]`,
+      );
+    }
+
+    return errors;
   }
 
   async create(
