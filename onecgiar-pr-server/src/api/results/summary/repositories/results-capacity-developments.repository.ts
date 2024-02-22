@@ -14,9 +14,7 @@ import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-reposit
 @Injectable()
 export class ResultsCapacityDevelopmentsRepository
   extends BaseRepository<ResultsCapacityDevelopments>
-  implements
-    ReplicableInterface<ResultsCapacityDevelopments>,
-    LogicalDelete<ResultsCapacityDevelopments>
+  implements LogicalDelete<ResultsCapacityDevelopments>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsCapacityDevelopments>,
@@ -110,102 +108,6 @@ export class ResultsCapacityDevelopmentsRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsCapacityDevelopments>,
-  ): Promise<ResultsCapacityDevelopments> {
-    let final_data: ResultsCapacityDevelopments = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-        null as result_capacity_development_id,
-        rcd.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ? as result_id,
-        ? as created_by,
-        null as last_updated_by,
-        rcd.male_using,
-        rcd.female_using,
-        rcd.capdev_delivery_method_id,
-        rcd.capdev_term_id
-        from results_capacity_developments rcd where rcd.result_id = ? and rcd.is_active > 0;
-        `;
-        const response = await (<Promise<ResultsCapacityDevelopments[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.user.id,
-            config.old_result_id,
-          ])
-        ));
-        const response_edit = <ResultsCapacityDevelopments>(
-          config.f.custonFunction(response?.length ? response[0] : null)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_capacity_developments (
-          is_active,
-          created_date,
-          last_updated_date,
-          result_id,
-          created_by,
-          last_updated_by,
-          male_using,
-          female_using,
-          capdev_delivery_method_id,
-          capdev_term_id
-          )
-          select
-          rcd.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          ? as result_id,
-          ? as created_by,
-          null as last_updated_by,
-          rcd.male_using,
-          rcd.female_using,
-          rcd.capdev_delivery_method_id,
-          rcd.capdev_term_id
-          from results_capacity_developments rcd where rcd.result_id = ? and rcd.is_active > 0`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-        rcd.result_capacity_development_id,
-        rcd.is_active,
-        rcd.created_date,
-        rcd.last_updated_date,
-        rcd.result_id,
-        rcd.created_by,
-        rcd.last_updated_by,
-        rcd.male_using,
-        rcd.female_using,
-        rcd.capdev_delivery_method_id,
-        rcd.capdev_term_id
-        from results_capacity_developments rcd where rcd.result_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async capDevExists(resultId: number) {

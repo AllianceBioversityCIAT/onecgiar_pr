@@ -17,9 +17,7 @@ import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-reposit
 @Injectable()
 export class ResultsKnowledgeProductKeywordRepository
   extends BaseRepository<ResultsKnowledgeProductKeyword>
-  implements
-    ReplicableInterface<ResultsKnowledgeProductKeyword>,
-    LogicalDelete<ResultsKnowledgeProductKeyword>
+  implements LogicalDelete<ResultsKnowledgeProductKeyword>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsKnowledgeProductKeyword>,
@@ -121,100 +119,6 @@ export class ResultsKnowledgeProductKeywordRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsKnowledgeProductKeyword>,
-  ): Promise<ResultsKnowledgeProductKeyword> {
-    let final_data: ResultsKnowledgeProductKeyword = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        SELECT
-        null as result_kp_keyword_id,
-        rkpk.keyword,
-        rkpk.is_agrovoc,
-        rkpk.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ${VERSIONING.QUERY.Get_kp_phases(
-          config.new_result_id,
-        )} as result_knowledge_product_id,
-        ? as created_by,
-        null as last_updated_by
-        from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
-          config.old_result_id,
-        )} and rkpk.is_active > 0
-        `;
-        const response = await (<Promise<ResultsKnowledgeProductKeyword[]>>(
-          this.query(queryData, [config.user.id])
-        ));
-        const response_edit = <ResultsKnowledgeProductKeyword>(
-          config.f.custonFunction(response?.length ? response[0] : null)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_kp_keywords 
-        (
-        keyword,
-        is_agrovoc,
-        is_active,
-        created_date,
-        last_updated_date,
-        result_knowledge_product_id,
-        created_by,
-        last_updated_by
-        )
-        SELECT
-        rkpk.keyword,
-        rkpk.is_agrovoc,
-        rkpk.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ${VERSIONING.QUERY.Get_kp_phases(
-          config.new_result_id,
-        )} as result_knowledge_product_id,
-        ? as created_by,
-        null as last_updated_by
-        from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
-          config.old_result_id,
-        )} and rkpk.is_active > 0`;
-        await this.query(queryData, [config.user.id]);
-
-        const queryFind = `
-        SELECT 
-        rkpk.result_kp_keyword_id,
-        rkpk.keyword,
-        rkpk.is_agrovoc,
-        rkpk.is_active,
-        rkpk.created_date,
-        rkpk.last_updated_date,
-        rkpk.result_knowledge_product_id,
-        rkpk.created_by,
-        rkpk.last_updated_by
-        from results_kp_keywords rkpk where rkpk.result_knowledge_product_id = ${VERSIONING.QUERY.Get_kp_phases(
-          config.new_result_id,
-        )}`;
-        const temp = await (<Promise<ResultsKnowledgeProductKeyword[]>>(
-          this.query(queryFind)
-        ));
-        final_data = temp?.length ? temp[0] : null;
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async statusElement(kpId: number, status: boolean) {

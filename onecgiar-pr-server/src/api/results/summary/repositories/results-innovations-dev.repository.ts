@@ -14,9 +14,7 @@ import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-reposit
 @Injectable()
 export class ResultsInnovationsDevRepository
   extends BaseRepository<ResultsInnovationsDev>
-  implements
-    ReplicableInterface<ResultsInnovationsDev>,
-    LogicalDelete<ResultsInnovationsDev>
+  implements LogicalDelete<ResultsInnovationsDev>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsInnovationsDev>,
