@@ -19,8 +19,9 @@ export class TorKeyResultsComponent {
   }
 
   keyResultsDesc = name => `This section provides an overview of results reported by the CGIAR Initiative on <strong>${name}</strong>. These results align with the CGIAR Results Framework and <strong>${name}</strong> theory of change. Further information on these results is available through the CGIAR Results Dashboard.
-
-  The following diagrams have been produced using quality assessed results entered into the CGIAR reporting system and are based on data extracted on February 20, 2024.`;
+  The following diagrams have been produced using quality assessed reported results.<br>
+  Further information on these results is available through the <a class="open_route" href="https://www.cgiar.org/food-security-impact/new-results-dashboard/" target="_blank">CGIAR Results Dashboard</a>.
+  `;
 
   exportExcel(initiativeSelected) {
     this.requesting = true;
