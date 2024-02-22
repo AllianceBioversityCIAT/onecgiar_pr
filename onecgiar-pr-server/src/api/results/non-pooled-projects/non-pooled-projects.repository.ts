@@ -3,19 +3,80 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { NonPooledProject } from './entities/non-pooled-project.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class NonPooledProjectRepository
-  extends Repository<NonPooledProject>
-  implements
-    ReplicableInterface<NonPooledProject>,
-    LogicalDelete<NonPooledProject>
+  extends BaseRepository<NonPooledProject>
+  implements LogicalDelete<NonPooledProject>
 {
+  createQueries(
+    config: ReplicableConfigInterface<NonPooledProject>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+        null as id,
+        npp.grant_title,
+        npp.center_grant_id,
+        npp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        npp.funder_institution_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        npp.lead_center_id,
+        npp.non_pooled_project_type_id
+        from non_pooled_project npp where npp.results_id = ${
+          config.old_result_id
+        } and is_active > 0
+      `,
+      insertQuery: `
+      insert into non_pooled_project (
+        grant_title,
+        center_grant_id,
+        is_active,
+        created_date,
+        last_updated_date,
+        results_id,
+        funder_institution_id,
+        created_by,
+        last_updated_by,
+        lead_center_id,
+        non_pooled_project_type_id
+        ) select 
+        npp.grant_title,
+        npp.center_grant_id,
+        npp.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${config.new_result_id} as results_id,
+        npp.funder_institution_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        npp.lead_center_id,
+        npp.non_pooled_project_type_id
+        from non_pooled_project npp where npp.results_id = ${
+          config.old_result_id
+        } and is_active > 0`,
+      returnQuery: `
+        select 
+          npp.*
+          from non_pooled_project npp where npp.results_id = ${config.new_result_id}
+        `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     NonPooledProjectRepository.name,
   );
@@ -50,109 +111,6 @@ export class NonPooledProjectRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<NonPooledProject>,
-  ): Promise<NonPooledProject[]> {
-    let final_data: NonPooledProject[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-          null as id,
-          npp.grant_title,
-          npp.center_grant_id,
-          npp.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          ? as results_id,
-          npp.funder_institution_id,
-          ? as created_by,
-          ? as last_updated_by,
-          npp.lead_center_id,
-          npp.non_pooled_project_type_id
-          from non_pooled_project npp where npp.results_id = ? and is_active > 0
-        `;
-        const response = await (<Promise<NonPooledProject[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.user.id,
-            config.user.id,
-            config.old_result_id,
-          ])
-        ));
-        const response_edit = <NonPooledProject[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into non_pooled_project (
-          grant_title,
-          center_grant_id,
-          is_active,
-          created_date,
-          last_updated_date,
-          results_id,
-          funder_institution_id,
-          created_by,
-          last_updated_by,
-          lead_center_id,
-          non_pooled_project_type_id
-          ) select 
-          npp.grant_title,
-          npp.center_grant_id,
-          npp.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          ? as results_id,
-          npp.funder_institution_id,
-          ? as created_by,
-          ? as last_updated_by,
-          npp.lead_center_id,
-          npp.non_pooled_project_type_id
-          from non_pooled_project npp where npp.results_id = ? and is_active > 0`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-          npp.id,
-          npp.grant_title,
-          npp.center_grant_id,
-          npp.is_active,
-          npp.created_date,
-          npp.last_updated_date,
-          npp.results_id,
-          npp.funder_institution_id,
-          npp.created_by,
-          npp.last_updated_by,
-          npp.lead_center_id,
-          npp.non_pooled_project_type_id
-          from non_pooled_project npp where npp.results_id = ?
-        `;
-        final_data = await (<Promise<NonPooledProject[]>>(
-          this.query(queryFind, [config.new_result_id])
-        ));
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-    return final_data;
   }
 
   async getAllNPProject() {
