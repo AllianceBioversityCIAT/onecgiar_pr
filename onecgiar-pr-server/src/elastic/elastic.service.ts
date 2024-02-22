@@ -20,6 +20,8 @@ export class ElasticService {
     },
   };
 
+  private readonly ELASTIC_MAX_UPLOAD_SIZE = 1024 * 1024; // 1MB
+
   constructor(
     private readonly _http: HttpService,
     private readonly _handlersError: HandlersError,
@@ -66,19 +68,53 @@ export class ElasticService {
 
   public getBulkElasticOperationResults(
     documentName: string,
-    operation: ElasticOperationDto<ResultSimpleDto>[],
-  ): string {
-    let bulkElasticOperations = '';
+    operations: ElasticOperationDto<ResultSimpleDto>[],
+  ): string[] {
+    const bulkElasticOperations = [];
+    let currentBatchElasticOperations = '';
+    let currentBatchElasticOperationSize = 0;
+    const encoder = new TextEncoder();
 
-    operation.forEach(
-      (o) =>
-        (bulkElasticOperations += this.getSingleElasticOperationResult(
-          documentName,
-          o,
-          true,
-        )),
-    );
-    bulkElasticOperations = bulkElasticOperations.concat('\n');
+    for (const [index, currentOperation] of operations.entries()) {
+      const elasticOperation = this.getSingleElasticOperationResult(
+        documentName,
+        currentOperation,
+        true,
+      );
+
+      /*
+        we need to encode the operation string to get the accurrate
+        byte size, as a simple string length will not work for
+        multi-byte characters like emojis or special characters
+        in other languages
+      */
+      const currentEncodedOperation = encoder.encode(elasticOperation);
+
+      /*
+        we will cut off the batch if we are at the last operation,
+        or if the current operation is going to make the current batch
+        larger than the max upload size
+        (the +1 is an additional byte for the newline character,
+        required by elastic search when bulk uploading)
+       */
+      if (
+        currentBatchElasticOperationSize + currentEncodedOperation.length + 1 >
+          this.ELASTIC_MAX_UPLOAD_SIZE ||
+        index === operations.length - 1
+      ) {
+        currentBatchElasticOperations =
+          currentBatchElasticOperations.concat('\n');
+        bulkElasticOperations.push(currentBatchElasticOperations);
+        currentBatchElasticOperations = '';
+        currentBatchElasticOperationSize = 0;
+      }
+
+      currentBatchElasticOperations += elasticOperation;
+      currentBatchElasticOperationSize += currentEncodedOperation.length;
+    }
+
+    currentBatchElasticOperations = currentBatchElasticOperations.concat('\n');
+    bulkElasticOperations.push(currentBatchElasticOperations);
 
     return bulkElasticOperations;
   }
@@ -102,14 +138,16 @@ export class ElasticService {
     return bulkElasticOperations;
   }
 
-  public async sendBulkOperationToElastic(elasticJson: string) {
+  public async sendBulkOperationToElastic(bulkOperationsJson: string[]) {
     try {
-      const { data } = await lastValueFrom(
-        this._http.post(this._bulkElasticUrl, elasticJson, this._headers),
-      );
+      for (const operation of bulkOperationsJson) {
+        await lastValueFrom(
+          this._http.post(this._bulkElasticUrl, operation, this._headers),
+        );
+      }
 
       return {
-        response: data,
+        response: bulkOperationsJson.length,
         message: 'Successfully updated the elastic',
         status: HttpStatus.OK,
       };
@@ -137,7 +175,7 @@ export class ElasticService {
       const operations: ElasticOperationDto<ResultSimpleDto>[] =
         queryResult.map((r) => new ElasticOperationDto('PATCH', r));
 
-      const elasticJson: string = this.getBulkElasticOperationResults(
+      const elasticJson: string[] = this.getBulkElasticOperationResults(
         documentName,
         operations,
       );
@@ -164,7 +202,8 @@ export class ElasticService {
         });
       }
 
-      const elasticJsonString: string = elasticJsonResponse.response as string;
+      const elasticJsonString: string[] =
+        elasticJsonResponse.response as string[];
 
       const elasticDelete = await lastValueFrom(
         this._http.delete(
