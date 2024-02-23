@@ -15,9 +15,7 @@ import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository
 @Injectable()
 export class ResultByInitiativesRepository
   extends BaseRepository<ResultsByInititiative>
-  implements
-    ReplicableInterface<ResultsByInititiative>,
-    LogicalDelete<ResultsByInititiative>
+  implements LogicalDelete<ResultsByInititiative>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsByInititiative>,
@@ -127,93 +125,6 @@ export class ResultByInitiativesRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsByInititiative>,
-  ): Promise<ResultsByInititiative[]> {
-    let final_data: ResultsByInititiative[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-          null as id,
-          rbi.is_active,
-          null as last_updated_date,
-          ? as result_id,
-          rbi.inititiative_id,
-          rbi.initiative_role_id,
-          ? as created_by,
-          null as last_updated_by,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0
-        `;
-        const response = await (<Promise<ResultsByInititiative[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.user.id,
-            config.old_result_id,
-          ])
-        ));
-        const response_edit = <ResultsByInititiative[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_by_inititiative (
-          is_active,
-          last_updated_date,
-          result_id,
-          inititiative_id,
-          initiative_role_id,
-          created_by,
-          last_updated_by,
-          created_date
-          )
-          select 
-          rbi.is_active,
-          null as last_updated_date,
-          ? as result_id,
-          rbi.inititiative_id,
-          rbi.initiative_role_id,
-          ? as created_by,
-          null as last_updated_by,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date
-          from results_by_inititiative rbi where rbi.result_id = ? and rbi.is_active > 0 and rbi.initiative_role_id = 1`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-          rbi.id,
-          rbi.is_active,
-          rbi.last_updated_date,
-          rbi.result_id,
-          rbi.inititiative_id,
-          rbi.initiative_role_id,
-          rbi.created_by,
-          rbi.last_updated_by,
-          rbi.created_date
-          from results_by_inititiative rbi where rbi.result_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-    return final_data;
   }
 
   async deleteAllData() {

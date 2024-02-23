@@ -6,12 +6,4 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   templateUrl: './basic-info.component.html',
   styleUrls: ['./basic-info.component.scss']
 })
-export class BasicInfoComponent implements OnInit {
-
-  innovationPackagesCompletary:any = [];
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class BasicInfoComponent {}

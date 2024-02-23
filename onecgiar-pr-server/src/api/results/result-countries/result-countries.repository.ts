@@ -14,7 +14,7 @@ import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository
 @Injectable()
 export class ResultCountryRepository
   extends BaseRepository<ResultCountry>
-  implements ReplicableInterface<ResultCountry>, LogicalDelete<ResultCountry>
+  implements LogicalDelete<ResultCountry>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultCountry>,
@@ -90,74 +90,6 @@ export class ResultCountryRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultCountry>,
-  ): Promise<ResultCountry[]> {
-    let final_data: ResultCountry[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-        null as result_country_id,
-        rc.is_active,
-        ? as result_id,
-        rc.country_id,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        now() as last_updated_date
-        from result_country rc WHERE rc.result_id = ? and is_active > 0`;
-        const response = await (<Promise<ResultCountry[]>>(
-          this.query(queryData, [config.new_result_id, config.old_result_id])
-        ));
-        const response_edit = <ResultCountry[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into result_country (
-          is_active,
-          result_id,
-          country_id,
-          created_date,
-          last_updated_date
-          )
-          select
-          rc.is_active,
-          ? as result_id,
-          rc.country_id,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          now() as last_updated_date
-          from result_country rc WHERE rc.result_id = ? and is_active > 0;`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.old_result_id,
-        ]);
-        const queryFind = `
-        select 
-        rc.result_country_id,
-        rc.is_active,
-        rc.result_id,
-        rc.country_id,
-        rc.created_date,
-        rc.last_updated_date
-        from result_country rc WHERE rc.result_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-    return final_data;
   }
 
   async getAllResultCountries() {

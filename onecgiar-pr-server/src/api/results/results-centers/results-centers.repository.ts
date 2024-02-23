@@ -14,7 +14,7 @@ import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository
 @Injectable()
 export class ResultsCenterRepository
   extends BaseRepository<ResultsCenter>
-  implements ReplicableInterface<ResultsCenter>, LogicalDelete<ResultsCenter>
+  implements LogicalDelete<ResultsCenter>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsCenter>,
@@ -101,94 +101,6 @@ export class ResultsCenterRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsCenter>,
-  ): Promise<ResultsCenter[]> {
-    let final_data: ResultsCenter[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-        null as id,
-        rc.is_primary,
-        rc.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ? as result_id,
-        ? as created_by,
-        null as last_updated_by,
-        rc.center_id
-        from results_center rc WHERE rc.result_id = ? and rc.is_active > 0
-        `;
-        const response = await (<Promise<ResultsCenter[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.user.id,
-            config.old_result_id,
-          ])
-        ));
-        const response_edit = <ResultsCenter[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_center (
-        is_primary,
-        is_active,
-        created_date,
-        last_updated_date,
-        result_id,
-        created_by,
-        last_updated_by,
-        center_id
-        )
-        select 
-        rc.is_primary,
-        rc.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ? as result_id,
-        ? as created_by,
-        null as last_updated_by,
-        rc.center_id
-        from results_center rc WHERE rc.result_id = ? and rc.is_active > 0`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-        rc.id,
-        rc.is_primary,
-        rc.is_active,
-        rc.created_date,
-        rc.last_updated_date,
-        rc.result_id,
-        rc.created_by,
-        rc.last_updated_by,
-        rc.center_id
-        from results_center rc WHERE rc.result_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async getAllResultsCenter() {

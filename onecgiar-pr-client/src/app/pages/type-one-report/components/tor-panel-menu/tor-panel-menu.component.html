@@ -1,31 +1,24 @@
 <div class="local_container">
-    <div class="panel_menu shadow-1">
-        <div>
-            <div class="back_button">
-                <a routerLink="/result/results-list" class="open_link_in_new_page">
-                    <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
-                    </app-pr-button>
-                </a>
-            </div>
-            <div class="segment">
-                <!-- <div class="name">Sections</div> -->
-                <br>
-                <div class="sections">
-                    <a *ngFor="let option of options; let i=index" [routerLink]="option.path"
-                        routerLinkActive="section_active">{{i+1}}.
-                        {{option.name }}
-                        <!-- <img *ngIf="option.underConstruction === true" class="under_construction"
-                            src="assets/work-in-progress.png" alt="" srcset=""> -->
-                        <!-- <div class="check">
-                            <i class="material-icons-round {{option.validation?'valid':'invalid'}}">
-                                check_circle
-                            </i>
-                        </div> -->
-                    </a>
-                </div>
-            </div>
+  <div class="panel_menu shadow-1">
+    <div>
+      <div class="back_button">
+        <a routerLink="/result/results-list" class="open_link_in_new_page">
+          <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
+          </app-pr-button>
+        </a>
+      </div>
+      <div class="segment">
+        <br>
+        <div class="sections">
+          <a *ngFor="let option of options; let i=index" [routerLink]="option.path" routerLinkActive="section_active">
+            <span *ngIf="!this.hideIndex">{{i+1}}.</span> {{option.name }}
+            <img *ngIf="option.underConstruction" class="under_construction" src="assets/work-in-progress.png" alt=""
+              srcset="">
+          </a>
         </div>
-
-
+      </div>
     </div>
+
+
+  </div>
 </div>
