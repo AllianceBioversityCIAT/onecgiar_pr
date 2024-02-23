@@ -49,6 +49,7 @@ import { ResultsCenter } from '../results-centers/entities/results-center.entity
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 import { isProduction } from '../../../shared/utils/validation.utils';
+import { StringUtils } from '../../../shared/utils/string.utils';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -573,10 +574,10 @@ export class ResultsKnowledgeProductsService {
       }
 
       const errors = this._getErrorsFromMqapResponse(mqapResponse);
-      if (errors.length > 0) {
+      if (errors.details.length > 0) {
         throw {
-          response: errors,
-          message: `The Result Knowledge Product cannot be created`,
+          response: errors.details,
+          message: errors.error,
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         };
       }
@@ -598,15 +599,20 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
-  private _getErrorsFromMqapResponse(mqapResponse: MQAPResultDto): string[] {
-    const errors: string[] = [];
+  private _getErrorsFromMqapResponse(mqapResponse: MQAPResultDto): {
+    error: string;
+    details: string[];
+  } {
+    const details: string[] = [];
+    let error =
+      'The creation of the Knowledge Product failed due to duplicated fields: ';
 
     if (
       mqapResponse.Citation &&
       Array.isArray(mqapResponse.Citation) &&
       mqapResponse.Citation.length > 1
     ) {
-      errors.push(
+      details.push(
         `Citation is not valid. values: [${mqapResponse.Citation.join(', ')}]`,
       );
     }
@@ -616,7 +622,9 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse.DOI) &&
       mqapResponse.DOI.length > 1
     ) {
-      errors.push(`DOI is not valid. values: [${mqapResponse.DOI.join(', ')}]`);
+      details.push(
+        `DOI is not valid. values: [${mqapResponse.DOI.join(', ')}]`,
+      );
     }
 
     if (
@@ -624,7 +632,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse.Description) &&
       mqapResponse.Description.length > 1
     ) {
-      errors.push(
+      details.push(
         `Description is not valid. values: [${mqapResponse.Description.join(
           ', ',
         )}]`,
@@ -636,7 +644,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse['Issued date']) &&
       mqapResponse['Issued date'].length > 1
     ) {
-      errors.push(
+      details.push(
         `Issued date is not valid. values: [${mqapResponse['Issued date'].join(
           ', ',
         )}]`,
@@ -648,7 +656,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse['Online publication date']) &&
       mqapResponse['Online publication date'].length > 1
     ) {
-      errors.push(
+      details.push(
         `Online publication date is not valid. values: [${mqapResponse[
           'Online publication date'
         ].join(', ')}]`,
@@ -660,7 +668,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse['Publication Date']) &&
       mqapResponse['Publication Date'].length > 1
     ) {
-      errors.push(
+      details.push(
         `Publication Date is not valid. values: [${mqapResponse[
           'Publication Date'
         ].join(', ')}]`,
@@ -672,7 +680,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse.Rights) &&
       mqapResponse.Rights.length > 1
     ) {
-      errors.push(
+      details.push(
         `Rights is not valid. values: [${mqapResponse.Rights.join(', ')}]`,
       );
     }
@@ -682,7 +690,7 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse.Title) &&
       mqapResponse.Title.length > 1
     ) {
-      errors.push(
+      details.push(
         `Title is not valid. values: [${mqapResponse.Title.join(', ')}]`,
       );
     }
@@ -692,12 +700,19 @@ export class ResultsKnowledgeProductsService {
       Array.isArray(mqapResponse.Type) &&
       mqapResponse.Type.length > 1
     ) {
-      errors.push(
+      details.push(
         `Type is not valid. values: [${mqapResponse.Type.join(', ')}]`,
       );
     }
 
-    return errors;
+    const individualItems = details.map(
+      (e) => e.split('is not valid')?.[0]?.trim(),
+    );
+    const itemString = StringUtils.join(individualItems, ', ', ', and ');
+
+    error += `${itemString}. Kindly reach out to the librarian to address this duplication issue.`;
+
+    return { error, details };
   }
 
   async create(
