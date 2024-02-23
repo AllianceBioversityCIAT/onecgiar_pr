@@ -78,7 +78,9 @@ export class TocResultsRepository extends Repository<TocResult> {
     							AND r.is_active > 0
     						LIMIT 1)
     		AND tr.result_type = ?
-    ORDER by wp.acronym asc;
+    ORDER by 
+      wp.acronym,
+      tr.result_title ASC;
     `;
 
     const queryOst = `
