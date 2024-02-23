@@ -3,17 +3,63 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegion } from './entities/result-region.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultRegionRepository
-  extends Repository<ResultRegion>
-  implements ReplicableInterface<ResultRegion>, LogicalDelete<ResultRegion>
+  extends BaseRepository<ResultRegion>
+  implements LogicalDelete<ResultRegion>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultRegion>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_region_id,
+      rr.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      rr.region_id,
+      ${config.new_result_id} as result_id
+      from result_region rr WHERE  rr.result_id = ${
+        config.old_result_id
+      } and rr.is_active > 0
+      `,
+      insertQuery: `
+      insert into result_region (
+        is_active,
+        created_date,
+        last_updated_date,
+        region_id,
+        result_id
+        )
+        select
+        rr.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        rr.region_id,
+        ${config.new_result_id} as result_id
+        from result_region rr WHERE  rr.result_id = ${
+          config.old_result_id
+        } and rr.is_active > 0
+      `,
+      returnQuery: `
+      select 
+      rr.*
+      from result_region rr WHERE  rr.result_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(ResultRegionRepository.name);
 
   constructor(
@@ -47,76 +93,6 @@ export class ResultRegionRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultRegion>,
-  ): Promise<ResultRegion[]> {
-    let final_data: ResultRegion[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-        null as result_region_id,
-        rr.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        rr.region_id,
-        ? as result_id
-        from result_region rr WHERE  rr.result_id = ? and rr.is_active > 0
-        `;
-        const response = await (<Promise<ResultRegion[]>>(
-          this.query(queryData, [config.new_result_id, config.old_result_id])
-        ));
-        const response_edit = <ResultRegion[]>config.f.custonFunction(response);
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into result_region (
-          is_active,
-          created_date,
-          last_updated_date,
-          region_id,
-          result_id
-          )
-          select
-          rr.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          rr.region_id,
-          ? as result_id
-          from result_region rr WHERE  rr.result_id = ? and rr.is_active > 0
-        `;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-        rr.result_region_id,
-        rr.is_active,
-        rr.created_date,
-        rr.last_updated_date,
-        rr.region_id,
-        rr.result_id
-        from result_region rr WHERE  rr.result_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async getAllResultRegion() {

@@ -3,19 +3,84 @@ import { DataSource, Repository } from 'typeorm';
 import { ResultsInnovationsUseMeasures } from '../entities/results-innovations-use-measures.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsInnovationsUseMeasuresRepository
-  extends Repository<ResultsInnovationsUseMeasures>
-  implements
-    ReplicableInterface<ResultsInnovationsUseMeasures>,
-    LogicalDelete<ResultsInnovationsUseMeasures>
+  extends BaseRepository<ResultsInnovationsUseMeasures>
+  implements LogicalDelete<ResultsInnovationsUseMeasures>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsInnovationsUseMeasures>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+     select 
+     null as result_innovations_use_measure_id,
+     rium.unit_of_measure,
+     rium.quantity,
+     rium.is_active,
+     ${predeterminedDateValidation(config?.predetermined_date)} as created_date,
+     null as last_updated_date,
+     riu2.result_innovation_use_id as result_innovation_use_id,
+     rium.unit_of_measure_id,
+     ${config.user.id} as created_by,
+     null as last_updated_by
+     from results_innovations_use_measures rium 
+       inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
+                           and riu.results_id = ${config.old_result_id}
+       inner join results_innovations_use riu2 on riu2.results_id = ${
+         config.new_result_id
+       }
+     where rium.is_active > 0
+     `,
+      insertQuery: `
+     insert into results_innovations_use_measures 
+       (
+       unit_of_measure,
+       quantity,
+       is_active,
+       created_date,
+       last_updated_date,
+       result_innovation_use_id,
+       unit_of_measure_id,
+       created_by,
+       last_updated_by
+       )
+       select
+       rium.unit_of_measure,
+       rium.quantity,
+       rium.is_active,
+       ${predeterminedDateValidation(
+         config?.predetermined_date,
+       )} as created_date,
+       null as last_updated_date,
+       riu2.result_innovation_use_id as result_innovation_use_id,
+       rium.unit_of_measure_id,
+       ${config.user.id} as created_by,
+       null as last_updated_by
+       from results_innovations_use_measures rium 
+         inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
+                             and riu.results_id = ${config.old_result_id}
+         inner join results_innovations_use riu2 on riu2.results_id = ${
+           config.new_result_id
+         }
+       where rium.is_active > 0;`,
+      returnQuery: `
+      select 
+      rium.*
+      from results_innovations_use_measures rium 
+        inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
+      where riu.results_id = ${config.new_result_id} 
+      `,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsInnovationsUseMeasuresRepository.name,
   );
@@ -56,110 +121,6 @@ where riu.results_id = ?;`;
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsInnovationsUseMeasures>,
-  ): Promise<ResultsInnovationsUseMeasures[]> {
-    let final_data: ResultsInnovationsUseMeasures[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-        null as result_innovations_use_measure_id,
-        rium.unit_of_measure,
-        rium.quantity,
-        rium.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        riu2.result_innovation_use_id as result_innovation_use_id,
-        rium.unit_of_measure_id,
-        ? as created_by,
-        null as last_updated_by
-        from results_innovations_use_measures rium 
-        	inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
-        											and riu.results_id = ?
-        	inner join results_innovations_use riu2 on riu2.results_id = ?
-        where rium.is_active > 0
-        `;
-        const response = await (<Promise<ResultsInnovationsUseMeasures[]>>(
-          this.query(queryData, [
-            config.user.id,
-            config.old_result_id,
-            config.new_result_id,
-          ])
-        ));
-        const response_edit = <ResultsInnovationsUseMeasures[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_innovations_use_measures 
-          (
-          unit_of_measure,
-          quantity,
-          is_active,
-          created_date,
-          last_updated_date,
-          result_innovation_use_id,
-          unit_of_measure_id,
-          created_by,
-          last_updated_by
-          )
-          select
-          rium.unit_of_measure,
-          rium.quantity,
-          rium.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          riu2.result_innovation_use_id as result_innovation_use_id,
-          rium.unit_of_measure_id,
-          ? as created_by,
-          null as last_updated_by
-          from results_innovations_use_measures rium 
-          	inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id 
-          											and riu.results_id = ?
-          	inner join results_innovations_use riu2 on riu2.results_id = ?
-          where rium.is_active > 0;`;
-        await this.query(queryData, [
-          config.user.id,
-          config.old_result_id,
-          config.new_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-        rium.result_innovations_use_measure_id,
-        rium.unit_of_measure,
-        rium.quantity,
-        rium.is_active,
-        rium.created_date,
-        rium.last_updated_date,
-        rium.result_innovation_use_id,
-        rium.unit_of_measure_id,
-        rium.created_by,
-        rium.last_updated_by
-        from results_innovations_use_measures rium 
-        	inner join results_innovations_use riu on riu.result_innovation_use_id = rium.result_innovation_use_id
-        where riu.results_id = ? 
-        `;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async innovatonUseMeasuresExists(innovationsUseMeasureId: number) {
