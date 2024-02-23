@@ -1,22 +1,22 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { ClarisaInitiativesService } from './clarisa-initiatives.service';
 import { HttpException } from '@nestjs/common';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaInitiativesController {
   constructor(
     private readonly clarisaInitiativesService: ClarisaInitiativesService,
   ) {}
 
   @Get('get/all/without/result/:resultId')
-  async getAllInitiativesWithoutCurrentInitiative(
+  getAllInitiativesWithoutCurrentInitiative(
     @Param('resultId') resultId: number,
   ) {
-    const { message, response, status } =
-      await this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(
-        resultId,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(
+      resultId,
+    );
   }
 
   @Get()

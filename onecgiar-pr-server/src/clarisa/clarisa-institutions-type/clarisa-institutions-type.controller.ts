@@ -1,17 +1,16 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaInstitutionsTypeService } from './clarisa-institutions-type.service';
-import { HttpException } from '@nestjs/common';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaInstitutionsTypeController {
   constructor(
     private readonly clarisaInstitutionsTypeService: ClarisaInstitutionsTypeService,
   ) {}
 
   @Get('tree')
-  async findAll() {
-    const { message, response, status } =
-      await this.clarisaInstitutionsTypeService.findAllNotLegacy();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.clarisaInstitutionsTypeService.findAllNotLegacy();
   }
 }

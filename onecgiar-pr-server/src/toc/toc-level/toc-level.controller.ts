@@ -1,13 +1,19 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  UseInterceptors,
+} from '@nestjs/common';
 import { TocLevelService } from './toc-level.service';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class TocLevelController {
   constructor(private readonly tocLevelService: TocLevelService) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } = await this.tocLevelService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.tocLevelService.findAll();
   }
 }

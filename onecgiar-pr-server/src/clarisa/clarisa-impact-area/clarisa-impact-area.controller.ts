@@ -1,17 +1,17 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaImpactAreaService } from './clarisa-impact-area.service';
 import { HttpException } from '@nestjs/common';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaImpactAreaController {
   constructor(
     private readonly clarisaImpactAreaService: ClarisaImpactAreaService,
   ) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.clarisaImpactAreaService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.clarisaImpactAreaService.findAll();
   }
 }
