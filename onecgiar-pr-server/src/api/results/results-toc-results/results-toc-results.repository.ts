@@ -336,8 +336,8 @@ export class ResultsTocResultRepository
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId ? initiativeId.toString() : null
-    })
+        initiativeId ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -486,8 +486,8 @@ export class ResultsTocResultRepository
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-      initiativeId.length ? initiativeId.toString() : null
-    })
+        initiativeId.length ? initiativeId.toString() : null
+      })
       ${
         isPrimary
           ? ''
@@ -871,7 +871,7 @@ export class ResultsTocResultRepository
 
       // * Validate if the result has a target
       if (IndicatorTarget.length) {
-        const IndicatorTargetId = IndicatorTarget[0].result_toc_result_id;
+        const IndicatorTargetId = IndicatorTarget[0]?.result_toc_result_id;
         IndicatorTargetData = await this.query(queryDataIndicators, [
           toc_result_id,
           resultId,
@@ -1019,18 +1019,19 @@ export class ResultsTocResultRepository
               const queryContributingPrimaryData = await this.query(
                 queryContributingPrimary,
                 [
-                  queryTargetContributingData[0].result_toc_result_indicator_id,
+                  queryTargetContributingData[0]
+                    ?.result_toc_result_indicator_id,
                   element.number_target,
                 ],
               );
 
               if (queryContributingPrimaryData.length) {
                 element.contributing =
-                  queryContributingPrimaryData[0].contributing_indicator;
+                  queryContributingPrimaryData[0]?.contributing_indicator;
                 element.target_progress_narrative =
-                  queryContributingPrimaryData[0].target_progress_narrative;
+                  queryContributingPrimaryData[0]?.target_progress_narrative;
                 element.indicator_question =
-                  queryContributingPrimaryData[0].indicator_question;
+                  queryContributingPrimaryData[0]?.indicator_question;
               }
               const queryTargetContributing = `
                 select
@@ -1061,10 +1062,7 @@ export class ResultsTocResultRepository
 
               const queryTargetothercontributing = await this.query(
                 queryTargetContributing,
-                [
-                  itemIndicator.toc_results_indicator_id,
-                  element.number_target,
-                ],
+                [itemIndicator.toc_results_indicator_id, element.number_target],
               );
 
               element.results_contributing = queryTargetothercontributing;
@@ -1082,11 +1080,11 @@ export class ResultsTocResultRepository
               } else {
                 itemIndicator.targets.forEach(async (element) => {
                   element.contributing =
-                    queryContributingPrimaryData[0].contributing_indicator;
+                    queryContributingPrimaryData[0]?.contributing_indicator;
                   element.target_progress_narrative =
-                    queryContributingPrimaryData[0].target_progress_narrative;
+                    queryContributingPrimaryData[0]?.target_progress_narrative;
                   element.indicator_question =
-                    queryContributingPrimaryData[0].indicator_question;
+                    queryContributingPrimaryData[0]?.indicator_question;
                   const queryTargetContributing = `
                 select
                   r.description,
