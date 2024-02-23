@@ -14,9 +14,7 @@ import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository
 @Injectable()
 export class ResultByIntitutionsTypeRepository
   extends BaseRepository<ResultsByInstitutionType>
-  implements
-    ReplicableInterface<ResultsByInstitutionType>,
-    LogicalDelete<ResultsByInstitutionType>
+  implements LogicalDelete<ResultsByInstitutionType>
 {
   createQueries(
     config: ReplicableConfigInterface<ResultsByInstitutionType>,
@@ -115,107 +113,6 @@ export class ResultByIntitutionsTypeRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<ResultsByInstitutionType>,
-  ): Promise<ResultsByInstitutionType[]> {
-    let final_data: ResultsByInstitutionType[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select 
-          null as id,
-          rbit.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as creation_date,
-          null as last_updated_date,
-          ? as results_id,
-          rbit.institution_roles_id,
-          ? as created_by,
-          null as last_updated_by,
-          rbit.institution_types_id,
-          rbit.how_many,
-          rbit.other_institution,
-          rbit.graduate_students
-          from results_by_institution_type rbit WHERE  rbit.results_id = ? and rbit.is_active > 0
-        `;
-        const response = await (<Promise<ResultsByInstitutionType[]>>(
-          this.query(queryData, [
-            config.new_result_id,
-            config.user.id,
-            config.old_result_id,
-          ])
-        ));
-        const response_edit = <ResultsByInstitutionType[]>(
-          config.f.custonFunction(response)
-        );
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into results_by_institution_type 
-          (
-          is_active,
-          creation_date,
-          last_updated_date,
-          results_id,
-          institution_roles_id,
-          created_by,
-          last_updated_by,
-          institution_types_id,
-          how_many,
-          other_institution,
-          graduate_students
-          )
-          select
-          rbit.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as creation_date,
-          null as last_updated_date,
-          ? as results_id,
-          rbit.institution_roles_id,
-          ? as created_by,
-          null as last_updated_by,
-          rbit.institution_types_id,
-          rbit.how_many,
-          rbit.other_institution,
-          rbit.graduate_students
-          from results_by_institution_type rbit WHERE  rbit.results_id = ? and rbit.is_active > 0`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-
-        const queryFind = `
-        select 
-          rbit.id,
-          rbit.is_active,
-          rbit.creation_date,
-          rbit.last_updated_date,
-          rbit.results_id,
-          rbit.institution_roles_id,
-          rbit.created_by,
-          rbit.last_updated_by,
-          rbit.institution_types_id,
-          rbit.how_many,
-          rbit.other_institution,
-          rbit.graduate_students
-          from results_by_institution_type rbit WHERE  rbit.results_id = ?`;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async getResultByInstitutionTypeFull(resultId: number) {

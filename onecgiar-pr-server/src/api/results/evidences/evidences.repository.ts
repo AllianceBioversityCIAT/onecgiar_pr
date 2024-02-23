@@ -19,7 +19,7 @@ import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository
 @Injectable()
 export class EvidencesRepository
   extends BaseRepository<Evidence>
-  implements ReplicableInterface<Evidence>, LogicalDelete<Evidence>
+  implements LogicalDelete<Evidence>
 {
   createQueries(
     config: ReplicableConfigInterface<Evidence>,
@@ -153,134 +153,6 @@ export class EvidencesRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<Evidence>,
-  ): Promise<Evidence[]> {
-    let final_data: Evidence[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `
-        select
-          null as id,
-          e.description,
-          e.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as creation_date,
-          e.last_updated_date,
-          ? as created_by,
-          ? as last_updated_by,
-          e.gender_related,
-          e.link,
-          e.youth_related,
-          e.nutrition_related,
-          e.environmental_biodiversity_related,
-          e.poverty_related,
-          e.is_supplementary,
-          e.is_sharepoint,
-          ? as result_id,
-          ${VERSIONING.QUERY.Get_result_phases(
-            `e.knowledge_product_related`,
-            config.phase,
-          )} as knowledge_product_related,
-          e.evidence_type_id
-          from evidence e where e.result_id = ? and is_active > 0
-        `;
-        const response = await (<Promise<Evidence[]>>(
-          this.query(queryData, [
-            config.user.id,
-            config.user.id,
-            config.new_result_id,
-            config.old_result_id,
-          ])
-        ));
-
-        const response_edit = <Evidence[]>config.f.custonFunction(response);
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into evidence (
-          description,
-          is_active,
-          creation_date,
-          last_updated_date,
-          created_by,
-          last_updated_by,
-          gender_related,
-          nutrition_related,
-          environmental_biodiversity_related,
-          poverty_related,
-          link,
-          youth_related,
-          is_supplementary,
-          is_sharepoint,
-          result_id,
-          knowledge_product_related,
-          evidence_type_id
-          ) select
-          e.description,
-          e.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as creation_date,
-          e.last_updated_date,
-          ? as created_by,
-          ? as last_updated_by,
-          e.gender_related,
-          e.nutrition_related,
-          e.environmental_biodiversity_related,
-          e.poverty_related,
-          e.link,
-          e.youth_related,
-          e.is_supplementary,
-          e.is_sharepoint,
-          ? as result_id,
-          ${VERSIONING.QUERY.Get_result_phases(
-            `e.knowledge_product_related`,
-            config.phase,
-          )} as knowledge_product_related,
-          e.evidence_type_id
-          from evidence e where e.result_id = ? and is_active > 0`;
-        await this.query(queryData, [
-          config.user.id,
-          config.user.id,
-          config.new_result_id,
-          config.old_result_id,
-        ]);
-        const queryFind = `
-        select
-          e.id,
-          e.description,
-          e.is_active,
-          e.creation_date,
-          e.last_updated_date,
-          e.created_by,
-          e.last_updated_by,
-          e.gender_related,
-          e.link,
-          e.youth_related,
-          e.nutrition_related,
-          e.environmental_biodiversity_related,
-          e.poverty_related,
-          e.is_supplementary,
-          e.result_id,
-          e.knowledge_product_related,
-          e.evidence_type_id
-          from evidence e where e.result_id = ?
-        `;
-        final_data = await this.query(queryFind, [config.new_result_id]);
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-    return final_data;
   }
 
   async getPictures(resultId: number) {
