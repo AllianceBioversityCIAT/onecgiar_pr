@@ -5,14 +5,11 @@ import {
   Body,
   Patch,
   Param,
-  Headers,
-  HttpException,
   Query,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
-import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';

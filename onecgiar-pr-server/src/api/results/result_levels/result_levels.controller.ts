@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultLevelsService } from './result_levels.service';

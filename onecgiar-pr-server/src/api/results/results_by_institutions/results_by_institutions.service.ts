@@ -7,7 +7,6 @@ import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
-import { Version } from '../../versioning/entities/version.entity';
 import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';

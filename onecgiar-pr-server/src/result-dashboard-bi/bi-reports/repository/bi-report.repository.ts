@@ -21,7 +21,6 @@ import { BiSubpagesRepository } from './bi-subpages.repository';
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
   private credentialsBi: CredentialsClarisaBi;
-  private barerTokenAzure: any;
   constructor(
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
@@ -67,11 +66,8 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi(
-    report_name?: string | number,
-    subpageId?: string | number,
-  ) {
-    let reportsBi: BiReport[] = await this.getReportsBi(subpageId);
+  async getTokenPowerBi(report_name?: string | number) {
+    let reportsBi: BiReport[] = await this.getReportsBi();
     reportsBi = reportsBi.filter((report) =>
       typeof report_name === 'number'
         ? report.id == report_name
@@ -148,7 +144,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi(subpageId?: number | string) {
+  async getReportsBi() {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -208,11 +204,10 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
-    const mainPage = await this.biSubpagesRepository.getReportSubPage(
-      getBiSubpagesDto,
-    );
+    const mainPage =
+      await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
 
-    const { report_name, subpage_id } = getBiSubpagesDto;
+    const { report_name } = getBiSubpagesDto;
     let reportsExist = null;
     try {
       this.credentialsBi =
@@ -223,10 +218,7 @@ export class BiReportRepository extends Repository<BiReport> {
     }
 
     if (reportsExist != null && reportsExist.length != 0) {
-      const registerInToken = await this.getTokenPowerBi(
-        report_name,
-        subpage_id,
-      );
+      const registerInToken = await this.getTokenPowerBi(report_name);
       const responseToken = await registerInToken['reportsInformation'].filter(
         (report) => report.name == report_name,
       );

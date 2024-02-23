@@ -1,4 +1,4 @@
-import { HttpStatus, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ReturnResponseDto } from '../handlers/error.utils';
 import { ObjectType } from 'typeorm';
 

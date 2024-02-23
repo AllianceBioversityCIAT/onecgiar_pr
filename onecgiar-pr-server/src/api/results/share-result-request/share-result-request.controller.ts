@@ -5,12 +5,9 @@ import {
   Body,
   Patch,
   Param,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';

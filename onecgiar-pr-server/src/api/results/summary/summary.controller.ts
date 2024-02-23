@@ -4,14 +4,11 @@ import {
   Body,
   Patch,
   Param,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { SummaryService } from './summary.service';
 import { InnovationUseDto } from './dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { CapdevDto } from './dto/create-capacity-developents.dto';
 import { CreateInnovationDevDto } from './dto/create-innovation-dev.dto';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';

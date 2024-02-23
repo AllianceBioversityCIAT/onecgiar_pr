@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Param,
-  HttpException,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Param, UseInterceptors } from '@nestjs/common';
 import { ResultsValidationModuleService } from './results-validation-module.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 

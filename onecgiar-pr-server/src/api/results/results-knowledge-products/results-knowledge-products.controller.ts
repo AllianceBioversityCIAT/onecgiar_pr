@@ -6,12 +6,9 @@ import {
   Patch,
   Param,
   Query,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';

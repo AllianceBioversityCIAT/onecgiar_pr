@@ -4,7 +4,6 @@ import {
   Body,
   Patch,
   Param,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultsPackageTocResultService } from './results-package-toc-result.service';

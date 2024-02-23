@@ -4,13 +4,10 @@ import {
   Post,
   Body,
   Param,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { LinkedResultsService } from './linked-results.service';
 import { CreateLinkedResultDto } from './dto/create-linked-result.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';

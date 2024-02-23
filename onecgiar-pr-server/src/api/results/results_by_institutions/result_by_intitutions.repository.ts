@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { institutionsInterface } from './dto/save_results_by_institution.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';

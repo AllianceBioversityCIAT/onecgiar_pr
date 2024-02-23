@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultTypesService } from './result_types.service';

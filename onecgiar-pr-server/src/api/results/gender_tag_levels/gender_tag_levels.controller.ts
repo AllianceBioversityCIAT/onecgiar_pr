@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { GenderTagLevelsService } from './gender_tag_levels.service';

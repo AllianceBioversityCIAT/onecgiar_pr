@@ -9,7 +9,6 @@ import {
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 

@@ -4,7 +4,6 @@ import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
-import { NonPooledProject } from '../non-pooled-projects/entities/non-pooled-project.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';

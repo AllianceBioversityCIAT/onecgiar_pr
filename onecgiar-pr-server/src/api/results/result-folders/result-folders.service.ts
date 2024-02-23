@@ -67,7 +67,7 @@ export class ResultFoldersService {
     phase: number,
   ) {
     try {
-      let where: any = {};
+      const where: any = {};
 
       if (id) {
         where.result_folders_id = id;
@@ -102,7 +102,7 @@ export class ResultFoldersService {
 
   async findResultFoldersType(status: string, id: number) {
     try {
-      let where: any = {};
+      const where: any = {};
 
       if (id) {
         where.result_folders_type_id = id;
@@ -126,4 +126,3 @@ export class ResultFoldersService {
     }
   }
 }
-

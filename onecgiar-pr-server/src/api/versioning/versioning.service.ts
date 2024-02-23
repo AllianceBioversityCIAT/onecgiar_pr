@@ -11,7 +11,6 @@ import { ReturnResponseDto } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
-import { ResultsTocResultRepository } from '../results/results-toc-results/results-toc-results.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultByIntitutionsRepository } from '../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
@@ -43,7 +42,6 @@ import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
-import { isProduction } from '../../shared/utils/validation.utils';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
 

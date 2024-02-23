@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { VersioningService } from './versioning.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Version } from './entities/version.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Result } from '../results/entities/result.entity';
 import { ResultsKnowledgeProductAltmetricRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-altmetrics.repository';

@@ -6,14 +6,11 @@ import {
   Patch,
   Param,
   Delete,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { EvidencesService } from './evidences.service';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';

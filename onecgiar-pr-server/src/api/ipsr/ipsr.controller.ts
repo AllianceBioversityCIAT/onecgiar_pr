@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
