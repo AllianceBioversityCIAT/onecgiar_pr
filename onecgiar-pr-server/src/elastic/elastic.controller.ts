@@ -31,7 +31,7 @@ export class ElasticController {
       bodyString = json;
     }
 
-    return this._elasticService.sendBulkOperationToElastic(bodyString);
+    return this._elasticService.sendBulkOperationToElastic([bodyString]);
   }
 
   @Post('reset')

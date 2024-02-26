@@ -49,6 +49,7 @@ import { ResultsCenter } from '../results-centers/entities/results-center.entity
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 import { isProduction } from '../../../shared/utils/validation.utils';
+import { StringUtils } from '../../../shared/utils/string.utils';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -572,6 +573,15 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const errors = this._getErrorsFromMqapResponse(mqapResponse);
+      if (errors.details.length > 0) {
+        throw {
+          response: errors.details,
+          message: errors.error,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        };
+      }
+
       response =
         this._resultsKnowledgeProductMapper.mqapResponseToKnowledgeProductDto(
           mqapResponse,
@@ -587,6 +597,122 @@ export class ResultsKnowledgeProductsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private _getErrorsFromMqapResponse(mqapResponse: MQAPResultDto): {
+    error: string;
+    details: string[];
+  } {
+    const details: string[] = [];
+    let error =
+      'The creation of the Knowledge Product failed due to duplicated fields: ';
+
+    if (
+      mqapResponse.Citation &&
+      Array.isArray(mqapResponse.Citation) &&
+      mqapResponse.Citation.length > 1
+    ) {
+      details.push(
+        `Citation is not valid. values: [${mqapResponse.Citation.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.DOI &&
+      Array.isArray(mqapResponse.DOI) &&
+      mqapResponse.DOI.length > 1
+    ) {
+      details.push(
+        `DOI is not valid. values: [${mqapResponse.DOI.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Description &&
+      Array.isArray(mqapResponse.Description) &&
+      mqapResponse.Description.length > 1
+    ) {
+      details.push(
+        `Description is not valid. values: [${mqapResponse.Description.join(
+          ', ',
+        )}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Issued date'] &&
+      Array.isArray(mqapResponse['Issued date']) &&
+      mqapResponse['Issued date'].length > 1
+    ) {
+      details.push(
+        `Issued date is not valid. values: [${mqapResponse['Issued date'].join(
+          ', ',
+        )}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Online publication date'] &&
+      Array.isArray(mqapResponse['Online publication date']) &&
+      mqapResponse['Online publication date'].length > 1
+    ) {
+      details.push(
+        `Online publication date is not valid. values: [${mqapResponse[
+          'Online publication date'
+        ].join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse['Publication Date'] &&
+      Array.isArray(mqapResponse['Publication Date']) &&
+      mqapResponse['Publication Date'].length > 1
+    ) {
+      details.push(
+        `Publication Date is not valid. values: [${mqapResponse[
+          'Publication Date'
+        ].join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Rights &&
+      Array.isArray(mqapResponse.Rights) &&
+      mqapResponse.Rights.length > 1
+    ) {
+      details.push(
+        `Rights is not valid. values: [${mqapResponse.Rights.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Title &&
+      Array.isArray(mqapResponse.Title) &&
+      mqapResponse.Title.length > 1
+    ) {
+      details.push(
+        `Title is not valid. values: [${mqapResponse.Title.join(', ')}]`,
+      );
+    }
+
+    if (
+      mqapResponse.Type &&
+      Array.isArray(mqapResponse.Type) &&
+      mqapResponse.Type.length > 1
+    ) {
+      details.push(
+        `Type is not valid. values: [${mqapResponse.Type.join(', ')}]`,
+      );
+    }
+
+    const individualItems = details.map(
+      (e) => e.split('is not valid')?.[0]?.trim(),
+    );
+    const itemString = StringUtils.join(individualItems, ', ', ', and ');
+
+    error += `${itemString}. Kindly reach out to the librarian to address this duplication issue.`;
+
+    return { error, details };
   }
 
   async create(
