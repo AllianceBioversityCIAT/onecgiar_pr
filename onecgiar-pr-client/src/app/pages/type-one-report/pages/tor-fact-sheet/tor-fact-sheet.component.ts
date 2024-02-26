@@ -23,7 +23,7 @@ export class TorFactSheetComponent implements OnInit {
     // { category: 'Measurable three-year (End of Initiative) outcomes', value: '' },
     { category: 'OECD DAC Climate marker Adaptation score*', value: '' },
     { category: 'OECD DAC Climate marker Mitigation score*', value: '' },
-    { category: 'OECD DAC Gender equity marker score', value: '' },
+    { category: 'OECD DAC Gender equity marker score*', value: '' },
     { category: 'Links to webpage', value: '' }
   ];
 
