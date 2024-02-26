@@ -4,16 +4,25 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
 import { ApiService } from '../../shared/services/api/api.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { of } from 'rxjs';
 
 describe('TypeOneReportService', () => {
   let service: TypeOneReportService;
   let mockDomSanitizer: any;
   let mockApiService: any;
+  const mockInitiatives = [
+    {
+      official_code: 1
+    }
+  ];
 
   beforeEach(() => {
     mockApiService = {
       rolesSE: {
         isAdmin: true
+      },
+      resultsSE: {
+        GET_platformGlobalVariablesByCategoryId: () => of({ response: mockInitiatives })
       },
       dataControlSE: {
         myInitiativesList: [{ official_code: 1 }, { official_code: 2 }]
@@ -38,10 +47,11 @@ describe('TypeOneReportService', () => {
     it('should call bypassSecurityTrustResourceUrl with the correct URL', () => {
       const spy = jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
       service.initiativeSelected = 1;
+      service.currentBiPage = 2;
 
       service.sanitizeUrl();
 
-      const expectedUrl = `${environment.t1rBiUrl}?official_code=1`;
+      const expectedUrl = `${environment.t1rBiUrl}?official_code=1&sectionNumber=2`;
       expect(spy).toHaveBeenCalledWith(expectedUrl);
     });
   });
