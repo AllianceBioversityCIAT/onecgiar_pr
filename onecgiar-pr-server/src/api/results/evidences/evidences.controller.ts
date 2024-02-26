@@ -42,12 +42,7 @@ export class EvidencesController {
     return this.evidencesService.create(createEvidenceDto, user);
   }
 
-  /**
-   * TODO: This controller is not returning the information with the response
-   * format more information @yecksin
-   */
   @Post('createUploadSession')
-  @UseInterceptors() //prevents response formatting
   async createUploadSession(
     @Body() createUploadSessionDto: CreateUploadSessionDto,
   ) {

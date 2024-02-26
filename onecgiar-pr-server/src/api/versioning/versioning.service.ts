@@ -135,6 +135,7 @@ export class VersioningService {
   }
 
   async $_findPhase(phase_id: number): Promise<Version> {
+    if (!phase_id) return null;
     const version = await this._versionRepository.findOne({
       where: {
         id: phase_id,

@@ -1,8 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';
+import { ReturnResponseUtil } from '../../utils/response.util';
 
 @Injectable()
 export class SharePointService {
@@ -52,10 +53,13 @@ export class SharePointService {
           },
         )
         .toPromise();
-      return { uploadUrl: response?.data?.uploadUrl };
+      return ReturnResponseUtil.format({
+        message: 'Upload session created',
+        response: response?.data?.uploadUrl,
+        statusCode: 200,
+      });
     } catch (error) {
-      console.log(error);
-      return error;
+      throw error;
     }
   }
 
