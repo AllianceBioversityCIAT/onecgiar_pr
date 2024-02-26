@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { LinkedResult } from './entities/linked-result.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
@@ -11,12 +12,65 @@ import {
   predeterminedDateValidation,
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class LinkedResultRepository
-  extends Repository<LinkedResult>
-  implements ReplicableInterface<LinkedResult>, LogicalDelete<LinkedResult>
+  extends BaseRepository<LinkedResult>
+  implements LogicalDelete<LinkedResult>
 {
+  createQueries(
+    config: ReplicableConfigInterface<LinkedResult>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `select
+      lr.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${VERSIONING.QUERY.Get_link_result_qa(
+        `lr.linked_results_id`,
+      )} as linked_results_id,
+      ${config.new_result_id} as origin_result_id,
+      ${config.user.id} as created_by,
+      ${config.user.id} as last_updated_by,
+      lr.legacy_link
+      from linked_result lr WHERE lr.origin_result_id = ${
+        config.old_result_id
+      } and is_active > 0`,
+      insertQuery: `
+      insert into linked_result (
+        is_active,
+        created_date,
+        last_updated_date,
+        linked_results_id,
+        origin_result_id,
+        created_by,
+        last_updated_by,
+        legacy_link
+        )
+        select
+        lr.is_active,
+        ${predeterminedDateValidation(
+          config?.predetermined_date,
+        )} as created_date,
+        null as last_updated_date,
+        ${VERSIONING.QUERY.Get_link_result_qa(
+          `lr.linked_results_id`,
+        )} as linked_results_id,
+        ${config.new_result_id} as origin_result_id,
+        ${config.user.id} as created_by,
+        ${config.user.id} as last_updated_by,
+        lr.legacy_link
+        from linked_result lr WHERE lr.origin_result_id = ${
+          config.old_result_id
+        } and is_active > 0`,
+      returnQuery: `
+      select lr.*
+      from linked_result lr WHERE lr.origin_result_id = ${config.new_result_id} and is_active > 0`,
+    };
+  }
   private readonly _logger: Logger = new Logger(LinkedResultRepository.name);
 
   constructor(
@@ -50,84 +104,6 @@ export class LinkedResultRepository
           debug: true,
         }),
       );
-  }
-
-  async replicable(
-    config: ReplicableConfigInterface<LinkedResult>,
-  ): Promise<LinkedResult[]> {
-    let final_data: LinkedResult[] = null;
-    try {
-      if (config.f?.custonFunction) {
-        const queryData = `select
-        lr.is_active,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date,
-        null as last_updated_date,
-        ${VERSIONING.QUERY.Get_link_result_qa(
-          `lr.linked_results_id`,
-        )} as linked_results_id,
-        ? as origin_result_id,
-        ? as created_by,
-        ? as last_updated_by,
-        lr.legacy_link
-        from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
-        const response = await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-        const response_edit = <LinkedResult[]>config.f.custonFunction(response);
-        final_data = await this.save(response_edit);
-      } else {
-        const queryData = `
-        insert into linked_result (
-          is_active,
-          created_date,
-          last_updated_date,
-          linked_results_id,
-          origin_result_id,
-          created_by,
-          last_updated_by,
-          legacy_link
-          )
-          select
-          lr.is_active,
-          ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
-          null as last_updated_date,
-          ${VERSIONING.QUERY.Get_link_result_qa(
-            `lr.linked_results_id`,
-          )} as linked_results_id,
-          ? as origin_result_id,
-          ? as created_by,
-          ? as last_updated_by,
-          lr.legacy_link
-          from linked_result lr WHERE lr.origin_result_id = ? and is_active > 0`;
-        await this.query(queryData, [
-          config.new_result_id,
-          config.user.id,
-          config.user.id,
-          config.old_result_id,
-        ]);
-        final_data = await this.find({
-          where: {
-            origin_result_id: config.new_result_id,
-          },
-        });
-      }
-    } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
-      final_data = null;
-    }
-
-    config.f?.completeFunction?.({ ...final_data });
-
-    return final_data;
   }
 
   async deleteAllData() {

@@ -213,10 +213,14 @@ export class BiReportRepository extends Repository<BiReport> {
     );
 
     const { report_name, subpage_id } = getBiSubpagesDto;
-
-    this.credentialsBi =
-      await this._servicesClarisaCredentials.getCredentialsBi();
-    const reportsExist = await this.getReportByName(report_name);
+    let reportsExist = null;
+    try {
+      this.credentialsBi =
+        await this._servicesClarisaCredentials.getCredentialsBi();
+      reportsExist = await this.getReportByName(report_name);
+    } catch (error) {
+      console.error(error);
+    }
 
     if (reportsExist != null && reportsExist.length != 0) {
       const registerInToken = await this.getTokenPowerBi(
