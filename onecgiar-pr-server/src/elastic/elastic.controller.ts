@@ -30,7 +30,7 @@ export class ElasticController {
     }
 
     const { message, response, status } =
-      await this._elasticService.sendBulkOperationToElastic(bodyString);
+      await this._elasticService.sendBulkOperationToElastic([bodyString]);
     throw new HttpException({ message, response }, status);
   }
 

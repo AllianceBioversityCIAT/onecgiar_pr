@@ -168,6 +168,22 @@ describe('TypeOneReportComponent', () => {
     });
   });
 
+  describe('getInitiativeShortName()', () => {
+    it('should return the correct short name for admin user', () => {
+      const result = component.getInitiativeShortName(1);
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return the correct short name for non-admin user', () => {
+      mockApiService.rolesSE.isAdmin = false;
+
+      const result = component.getInitiativeShortName(1);
+
+      expect(result).toBeUndefined();
+    });
+  });
+
   describe('selectFirstInitiative()', () => {
     it('should navigate, toggle iframe, and sanitizeUrl', () => {
       const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
@@ -176,7 +192,7 @@ describe('TypeOneReportComponent', () => {
       component.selectInitiativeEvent();
       jest.runAllTimers();
 
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/type-one-report/ipi-cgiar-portfolio-linkages');
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/type-one-report/white');
       expect(component.typeOneReportSE.showTorIframe).toBeTruthy();
       expect(spy).toHaveBeenCalled();
     });

@@ -18,9 +18,9 @@ export class TypeOneReportService {
   currentBiPage = null;
 
   constructor(public sanitizer: DomSanitizer, private api: ApiService, private globalLinksSE: GlobalLinksService) {}
-  // official_code=${this.initiativeSelected}&
+
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.globalLinksSE.links?.url_t1r_bi_report}?official_code=${this.initiativeSelected}&sectionNumber=${this.currentBiPage}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.globalLinksSE?.links?.url_t1r_bi_report}?official_code=${this.initiativeSelected}&sectionNumber=${this.currentBiPage}`);
   }
 
   getInitiativeID(official_code) {
