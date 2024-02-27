@@ -28,7 +28,10 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
 
   async getAllInitiatives() {
     try {
-      return this.find({ where: { active: true } });
+      return this.find({
+        where: { active: true },
+        relations: { obj_cgiar_entity_type: true },
+      });
     } catch (error) {
       throw {
         message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,
