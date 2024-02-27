@@ -59,10 +59,43 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.allPhases = [...reportingPhases, ...ipsrPhases];
   }
 
+  GET_cgiarEntityTypes(callback) {
+    this.api.resultsSE.GET_cgiarEntityTypes().subscribe(
+      ({ response }) => {
+        response.forEach(element => {
+          element.isLabel = true;
+        });
+        callback(response);
+      },
+      err => {
+        callback();
+      }
+    );
+  }
+
   GET_AllInitiatives() {
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      this.allInitiatives = response;
+      this.GET_cgiarEntityTypes(entityTypesResponse => {
+        console.log(entityTypesResponse);
+
+        this.allInitiatives = response;
+
+        this.allInitiatives.forEach(initiative => {
+          const { code, name } = initiative?.obj_cgiar_entity_type || {};
+          initiative.typeCode = code;
+          initiative.typeName = name;
+        });
+
+        const groupList = entityTypesResponse;
+        let resultList = [];
+        groupList?.forEach(groupItem => {
+          // console.log(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
+          resultList.push(groupItem, ...this.allInitiatives.filter(item => item.typeCode == groupItem.code));
+        });
+        // console.log(resultList);
+        this.allInitiatives = resultList;
+      });
     });
   }
 
