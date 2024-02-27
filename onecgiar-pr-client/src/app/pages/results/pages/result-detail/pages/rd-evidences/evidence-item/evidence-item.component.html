@@ -10,11 +10,12 @@
     <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
       <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
         [disabled]="this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
+
+        <div appFeedbackValidation
+              labelText="Invalid URL provided."
+              [isComplete]="this.evidence.link ? isInvalidLink(this.evidence.link) : true">
+        </div>
     </div>
-
-
-
-
 
     <ng-template #upload_file>
 
