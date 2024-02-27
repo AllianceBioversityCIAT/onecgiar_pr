@@ -1,26 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import { CreateClarisaCgiarEntityTypeDto } from './dto/create-clarisa-cgiar-entity-type.dto';
-import { UpdateClarisaCgiarEntityTypeDto } from './dto/update-clarisa-cgiar-entity-type.dto';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { ClarisaCgiarEntityTypeRepository } from './clarisa-cgiar-entity-types.repository';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
 @Injectable()
 export class ClarisaCgiarEntityTypesService {
-  create(createClarisaCgiarEntityTypeDto: CreateClarisaCgiarEntityTypeDto) {
-    return 'This action adds a new clarisaCgiarEntityType';
-  }
+  constructor(
+    private readonly _clarisaCgiarEntityTypeRepository: ClarisaCgiarEntityTypeRepository,
+  ) {}
 
   findAll() {
-    return `This action returns all clarisaCgiarEntityTypes`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} clarisaCgiarEntityType`;
-  }
-
-  update(id: number, updateClarisaCgiarEntityTypeDto: UpdateClarisaCgiarEntityTypeDto) {
-    return `This action updates a #${id} clarisaCgiarEntityType`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} clarisaCgiarEntityType`;
+    return this._clarisaCgiarEntityTypeRepository.find().then((res) =>
+      ReturnResponseUtil.format({
+        response: res,
+        message: 'Successful response',
+        statusCode: HttpStatus.OK,
+      }),
+    );
   }
 }
