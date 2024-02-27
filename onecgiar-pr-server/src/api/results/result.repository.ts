@@ -802,7 +802,9 @@ WHERE
     v.phase_year,
     r.is_discontinued,
     r.is_replicated,
-    r.in_qa as inQA
+    r.in_qa as inQA,
+    ci.cgiar_entity_type_id,
+    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
@@ -813,6 +815,7 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     inner join \`version\` v on v.id = r.version_id 
+    inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id
 WHERE
     r.id = ${id}
     and r.is_active > 0;
