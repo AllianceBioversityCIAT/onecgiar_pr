@@ -24,7 +24,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.<br><br>`;
   allInitiatives = [];
   allPhases = [];
-
+  cgiarEntityTypes = [];
+  currentResultType = '';
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
 
   ngOnInit(): void {
@@ -53,6 +54,16 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     }, 600);
   }
 
+  onSelectInit() {
+    // console.log('onSelectInit');
+
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList) || []).find(init => init.id == this.resultLevelSE.resultBody.initiative_id);
+    const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
+    console.log(init.typeCode);
+    console.log(resultType);
+    this.currentResultType = resultType?.name;
+  }
+
   getAllPhases() {
     const reportingPhases = this.phasesService?.phases?.reporting || [];
     const ipsrPhases = this.phasesService?.phases?.ipsr || [];
@@ -78,7 +89,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.GET_cgiarEntityTypes(entityTypesResponse => {
         console.log(entityTypesResponse);
-
+        this.cgiarEntityTypes = entityTypesResponse;
         this.allInitiatives = response;
 
         this.allInitiatives.forEach(initiative => {
