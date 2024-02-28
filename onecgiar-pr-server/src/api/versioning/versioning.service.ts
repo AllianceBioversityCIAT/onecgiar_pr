@@ -1,4 +1,10 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
@@ -49,6 +55,9 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { isProduction } from '../../shared/utils/validation.utils';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
+import { IpsrRepository } from '../ipsr/ipsr.repository';
+import { ResultInnovationPackageRepository } from '../ipsr/result-innovation-package/repositories/result-innovation-package.repository';
+import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
 
 @Injectable()
 export class VersioningService {
@@ -87,6 +96,9 @@ export class VersioningService {
     private readonly _evidencesService: EvidencesService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly dataSource: DataSource,
+    private readonly _ipsrRespository: IpsrRepository,
+    private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
+    private readonly _resultIpActionAreaOutcome: ResultIpAAOutcomeRepository,
   ) {}
 
   /**
@@ -311,15 +323,77 @@ export class VersioningService {
   }
 
   async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {
-    //TODO to implement once the IPSR replication is defined
+    this._logger.log(
+      `IPSR: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
+    );
 
-    const config = {
-      old_result_id: result.id,
-      phase: phase.id,
-      user: user,
-    };
+    const data = await this.dataSource.transaction(async (manager) => {
+      const tempData = await this._resultRepository.replicate(
+        manager,
+        {
+          old_result_id: result.id,
+          phase: phase.id,
+          user: user,
+        },
+        true,
+      );
 
-    return config ? result : { result: result, error: 'error' };
+      let dataResult: Result = null;
+      if (tempData?.length) {
+        dataResult = tempData[0];
+      } else {
+        throw ReturnResponseUtil.format({
+          message: `The result ${result.id} could not be replicated`,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          response: null,
+        });
+      }
+
+      const config = {
+        old_result_id: result.id,
+        new_result_id: dataResult.id,
+        phase: phase.id,
+        user: user,
+        new_ipsr_id: null,
+        old_ipsr_id: null,
+      };
+      await this._resultInnovationPackageRepository.replicate(manager, config);
+      const tempDataIP = await this._ipsrRespository.replicate(manager, config);
+      config.new_ipsr_id = tempDataIP[0].result_by_innovation_package_id;
+      const rbip = await this._ipsrRespository.find({
+        select: ['result_by_innovation_package_id'],
+        where: {
+          result_innovation_package_id: result.id,
+          ipsr_role_id: 1,
+          is_active: true,
+        },
+      });
+      config.old_ipsr_id = rbip[0].result_by_innovation_package_id;
+
+      await this._resultIpActionAreaOutcome.replicate(manager, config);
+
+      // await this._resultByInitiativesRepository.replicate(manager, config);
+      // await this._shareResultRequestRepository.replicate(manager, config);
+      // await this._nonPooledProjectRepository.replicate(manager, config);
+      // await this._resultsCenterRepository.replicate(manager, config);
+      // await this._resultByIntitutionsRepository.replicate(manager, config);
+      // await this._resultByInstitutionsByDeliveriesTypeRepository.replicate(
+      //   manager,
+      //   config,
+      // );
+      // await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+      // await this._resultCountryRepository.replicate(manager, config);
+      // await this._resultRegionRepository.replicate(manager, config);
+      // await this._linkedResultRepository.replicate(manager, config);
+      // await this._evidencesRepository.replicate(manager, config);
+    });
+    this._logger.log(
+      `IPSR: The change of phase of result ${result.id} is completed correctly.`,
+    );
+    this._logger.log(
+      `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data}`,
+    );
+    return data;
   }
 
   async $_versionManagement(

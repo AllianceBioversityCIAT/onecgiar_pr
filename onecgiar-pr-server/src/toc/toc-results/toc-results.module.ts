@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TocResultsService } from './toc-results.service';
 import { TocResultsController } from './toc-results.controller';
 import { TocResultsRepository } from './toc-results.repository';
@@ -46,6 +46,10 @@ import { EvidenceSharepointRepository } from '../../api/results/evidences/reposi
 import { EvidencesService } from '../../api/results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { ShareResultRequestRepository } from '../../api/results/share-result-request/share-result-request.repository';
+import { VersioningModule } from '../../api/versioning/versioning.module';
+import { ResultInnovationPackageModule } from '../../api/ipsr/result-innovation-package/result-innovation-package.module';
+import { InnovationPathwayModule } from '../../api/ipsr/innovation-pathway/innovation-pathway.module';
+import { ResultIpAAOutcomeRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -93,8 +97,14 @@ import { ShareResultRequestRepository } from '../../api/results/share-result-req
     EvidenceSharepointRepository,
     EvidencesService,
     ShareResultRequestRepository,
+    ResultIpAAOutcomeRepository,
   ],
-  imports: [SharePointModule],
+  imports: [
+    SharePointModule,
+    forwardRef(() => VersioningModule),
+    forwardRef(() => ResultInnovationPackageModule),
+    forwardRef(() => InnovationPathwayModule),
+  ],
   exports: [TocResultsRepository],
 })
 export class TocResultsModule {}

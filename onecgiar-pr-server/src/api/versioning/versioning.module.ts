@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { VersioningService } from './versioning.service';
 import { VersioningController } from './versioning.controller';
 import { VersionRepository } from './versioning.repository';
@@ -45,6 +45,11 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { IpsrRepository } from '../ipsr/ipsr.repository';
+import { IpsrModule } from '../ipsr/ipsr.module';
+import { ResultInnovationPackageModule } from '../ipsr/result-innovation-package/result-innovation-package.module';
+import { InnovationPathwayModule } from '../ipsr/innovation-pathway/innovation-pathway.module';
+import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -91,6 +96,8 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
     EvidenceSharepointRepository,
     EvidencesService,
     ShareResultRequestRepository,
+    IpsrRepository,
+    ResultIpAAOutcomeRepository,
   ],
   exports: [
     EvidencesService,
@@ -128,7 +135,12 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
     ResultInitiativeBudgetRepository,
     EvidenceSharepointRepository,
     ShareResultRequestRepository,
+    IpsrRepository,
   ],
-  imports: [SharePointModule],
+  imports: [
+    SharePointModule,
+    forwardRef(() => ResultInnovationPackageModule),
+    forwardRef(() => InnovationPathwayModule),
+  ],
 })
 export class VersioningModule {}
