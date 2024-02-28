@@ -64,7 +64,9 @@ export class PrInputComponent implements ControlValueAccessor {
     // const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i);
     const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i);
 
-    return !regex.test(this.value);
+    const value = this.value ? this.value.trim() : '';
+
+    return !regex.test(value);
   }
 
   aTag(link) {
