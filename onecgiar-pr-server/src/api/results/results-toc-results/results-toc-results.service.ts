@@ -696,9 +696,9 @@ export class ResultsTocResultsService {
           [resultinit.toc_id, result_id],
         );
         if (!vesion_id.length || vesion_id[0].phase == null) {
-          version_id = vesion_id[0].phase;
-        } else {
           version_id = resultinit.toc_id;
+        } else {
+          version_id = vesion_id[0].phase;
         }
       }
       return {
