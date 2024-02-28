@@ -41,10 +41,10 @@ export class EvidenceItemComponent {
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
   }
 
-  isInvalidLink(value: string) {
+  isInvalidLink(value: string = '') {
     const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i);
 
-    return regex.test(value);
+    return regex.test(value.trim());
   }
 
   deleteItem() {
