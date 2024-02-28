@@ -18,8 +18,8 @@
         </div>
 
         <p-table id="resultListTable" #table sortField="result_code" [sortOrder]="-1" responsiveLayout="scroll"
-            [value]="this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : text_to_search"
-            [paginator]="(this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter :text_to_search )?.length"
+            [value]="this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search"
+            [paginator]="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter :text_to_search )?.length"
             [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10, 50, 100]">
             <ng-template pTemplate="header">
                 <tr>
@@ -70,12 +70,12 @@
         </p-table>
 
         <div class="total"
-            *ngIf="(this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : text_to_search)?.length">
-            Total: {{ (this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : text_to_search)?.length }}/{{ this.ipsrDataControlSE.ipsrResultList?.length }}
+            *ngIf="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search)?.length">
+            Total: {{ (this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search)?.length }}/{{ this.ipsrDataControlSE.ipsrResultList?.length }}
         </div>
 
         <div class="ipsr_modal_noDataText"
-            *ngIf="!(this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : text_to_search)?.length">
+            *ngIf="!(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search)?.length">
             There are no results for the selected filters.
         </div>
     </div>

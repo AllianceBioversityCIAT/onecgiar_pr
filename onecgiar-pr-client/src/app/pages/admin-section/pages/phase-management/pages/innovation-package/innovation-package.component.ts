@@ -4,6 +4,7 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/a
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { Table } from 'primeng/table';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-innovation-package',
@@ -42,7 +43,7 @@ export class InnovationPackageComponent implements OnInit {
     }
   ];
 
-  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     this.getAllPhases();
@@ -130,6 +131,7 @@ export class InnovationPackageComponent implements OnInit {
       () => {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
+        this.phasesService.getNewPhases();
       },
       err => {
         console.error(err);
@@ -147,6 +149,7 @@ export class InnovationPackageComponent implements OnInit {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
         phase.isNew = false;
+        this.phasesService.getNewPhases();
       },
       err => {
         console.error(err);

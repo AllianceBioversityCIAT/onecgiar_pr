@@ -44,6 +44,13 @@ export class InnovationPackageCustomTableComponent {
       }
     },
     {
+      label: 'Update result',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
+    {
       label: 'Delete',
       icon: 'pi pi-fw pi-trash',
       command: () => {
@@ -73,5 +80,7 @@ export class InnovationPackageCustomTableComponent {
     this.retrieveModalSE.requester_initiative_id = onlyNumbers;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
+
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase.phaseYear && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase.phaseYear;
   }
 }

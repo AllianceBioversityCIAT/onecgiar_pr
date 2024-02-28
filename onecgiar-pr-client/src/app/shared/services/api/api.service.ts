@@ -15,12 +15,13 @@ import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-pack
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
 import { GlobalVariablesService } from '../global-variables.service';
 import { EndpointsService } from './endpoints/endpoints.service';
+import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(private titleService: Title, public endpointsSE: EndpointsService, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService, public globalVariablesSE: GlobalVariablesService) {}
+  constructor(private titleService: Title, public endpointsSE: EndpointsService, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService, public globalVariablesSE: GlobalVariablesService, public ipsrDataControlSE: IpsrDataControlService) {}
   isStepTwoTwo: boolean = false;
   isStepTwoOne: boolean = false;
 

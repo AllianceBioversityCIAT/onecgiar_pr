@@ -13,9 +13,11 @@ import { UpdateIpsrResultModalComponent } from './components/update-ipsr-result-
 import { RouterModule } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
+import { IpsrToUpdateFilterPipe } from './components/update-ipsr-result-modal/ipsr-to-update-filter.pipe';
+import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 
 @NgModule({
-  declarations: [InnovationPackageListComponent, InnovationPackageListFilterPipe, IpsrListFiltersComponent, UpdateIpsrResultModalComponent],
-  imports: [CommonModule, InnovationPackageListRoutingModule, CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule, FilterByTextModule, DialogModule, TableModule, RouterModule]
+  declarations: [InnovationPackageListComponent, InnovationPackageListFilterPipe, IpsrListFiltersComponent, UpdateIpsrResultModalComponent, IpsrToUpdateFilterPipe],
+  imports: [CommonModule, InnovationPackageListRoutingModule, CustomFieldsModule, InnovationPackageCustomTableModule, SectionHeaderModule, FilterByTextModule, DialogModule, TableModule, RouterModule, ChangePhaseModalModule]
 })
 export class InnovationPackageListModule {}

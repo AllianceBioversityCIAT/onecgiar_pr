@@ -1,5 +1,5 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.chagePhaseModal"
-  (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+  [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
   [dismissableMask]="true" [style]="{ padding: '0px' }">
   <div id="change-phase">
     <div class="lateral-bar"></div>
@@ -7,7 +7,7 @@
     <div class="content-change-phase">
       <div style="text-align: center;">
         <h2 [style]="{ 'margin-bottom': '0px' }">Would you also like to report this result</h2>
-        <h2 [style]="{ 'margin-top': '0px' }">in this phase "{{ this.ipsrDataControlSE.inIpsr ? IPSRVersion?.phase_name : reportingVersion?.phase_name }}"?</h2>
+        <h2 [style]="{ 'margin-top': '0px' }">in this phase "{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}"?</h2>
       </div>
 
       <div class="phase-info-result">
@@ -27,7 +27,7 @@
         </div>
 
         <div class="phase-data pa-r">
-          <i><b>{{ this.ipsrDataControlSE.inIpsr ? IPSRVersion?.phase_name : reportingVersion?.phase_name }}</b></i>
+          <i><b>{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}</b></i>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </span>
         <br />
         <span>
-          <i>phase <b>'{{ this.ipsrDataControlSE.inIpsr ? IPSRVersion?.phase_name : reportingVersion?.phase_name }}'</b>.</i>
+          <i>phase <b>'{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}'</b>.</i>
         </span>
       </div>
 
