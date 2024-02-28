@@ -12,7 +12,7 @@
     <div *ngIf="getConsumed">
         <app-pr-select class="segment_title_margin"
             [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
-            optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an Initiative"
+            optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an initiative or platform"
             [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
             [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)">
         </app-pr-select>
@@ -31,7 +31,7 @@
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
         optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         selectedOptionLabel="full_name" [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true"
-        placeholder="Select Initiative(s)">
+        placeholder="Select initiative(s) or platform(s)">
     </app-pr-multi-select>
 
     <app-pr-multi-select [options]="this.contributingInitiativesList"
