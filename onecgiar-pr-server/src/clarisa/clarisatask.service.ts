@@ -35,6 +35,7 @@ import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-
 import { ClarisaTocPhaseRepository } from './clarisa-toc-phases/clarisa-toc-phases.repository';
 import { ClarisaSubnationalScopeRepository } from './clarisa-subnational-scope/clarisa-subnational-scope.repository';
 import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ClarisaCgiarEntityTypeRepository } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.repository';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -73,6 +74,7 @@ export class ClarisaTaskService {
     private readonly _clarisaTocPhaseRepository: ClarisaTocPhaseRepository,
     private readonly _clarisaSubnationalScopeRepository: ClarisaSubnationalScopeRepository,
     private readonly _httpService: HttpService,
+    private readonly _clarisaCgiarEntityTypeRepository: ClarisaCgiarEntityTypeRepository,
   ) {}
 
   public async clarisaBootstrap() {
@@ -93,6 +95,7 @@ export class ClarisaTaskService {
     count = await this.cloneClarisaCountries(count);
     count = await this.cloneClarisaMeliaStudyTypes(count);
     count = await this.cloneClarisaActionArea(count);
+    count = await this.cloneCgiarEntityType(count);
     count = await this.cloneClarisaInitiatives(count);
     count = await this.cloneClarisaImpactArea(count);
     count = await this.cloneClarisaGlobalTargetType(count);
@@ -306,6 +309,34 @@ export class ClarisaTaskService {
     } catch (error) {
       this._logger.error(
         `[${position}]: Error in manipulating the data of CLARISA Initiativess`,
+      );
+      this._logger.error(error);
+      return ++position;
+    }
+  }
+
+  private async cloneCgiarEntityType(position: number, deleteItem = false) {
+    try {
+      if (deleteItem) {
+        await this._clarisaCgiarEntityTypeRepository.deleteAllData();
+        this._logger.warn(
+          `[${position}]: All CLARISA Cgiar Entity type control list data has been deleted`,
+        );
+      } else {
+        const { data } = await axios.get(
+          `${this.clarisaHost}cgiar-entity-types`,
+          this.configAuth,
+        );
+        await this._clarisaCgiarEntityTypeRepository.save(data);
+
+        this._logger.verbose(
+          `[${position}]: All CLARISA Cgiar Entity type control list data has been created`,
+        );
+      }
+      return ++position;
+    } catch (error) {
+      this._logger.error(
+        `[${position}]: Error in manipulating the data of CLARISA Cgiar Entity type`,
       );
       this._logger.error(error);
       return ++position;

@@ -16,18 +16,21 @@
     </div>
     <div class="report_container">
 
-      <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
+      <app-pr-select class="segment_title_margin" [group]="true"
+      groupName="name" [options]="this.api.dataControlSE.myInitiativesList"
         *ngIf="!this.api.rolesSE.isAdmin" label="Report for" [isStatic]="true" optionLabel="full_name"
         optionValue="initiative_id" placeholder="Select Initiative"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
-      <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
+      <app-pr-select class="segment_title_margin" [group]="true"
+      groupName="name" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
         *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id">
+        placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
-      <app-result-level-buttons></app-result-level-buttons>
+
+      <app-result-level-buttons [currentResultType]="this.currentResultType"></app-result-level-buttons>
 
       <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
         [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
