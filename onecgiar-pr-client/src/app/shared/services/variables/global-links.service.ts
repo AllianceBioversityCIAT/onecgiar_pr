@@ -5,22 +5,21 @@ import { ApiService } from '../api/api.service';
   providedIn: 'root'
 })
 export class GlobalLinksService {
-  links:Links = {};
-  constructor(private api:ApiService) {
-    this.getInfo();
-   }
+  links: Links = {};
 
-  getInfo(){
-    this.api.resultsSE.GET_platformGlobalVariablesByCategoryId(3).subscribe(({ response }) => {
-      console.log(response)
-       this.links = response.reduce((acc, item) => {
-        acc[item.name] = item.value;
-        return acc;
-      }
-      , {});
-    });
+  constructor(private api: ApiService) {
+    this.getInfo();
   }
 
+  getInfo() {
+    this.api.resultsSE.GET_platformGlobalVariablesByCategoryId(3).subscribe(({ response }) => {
+      console.log(response);
+      this.links = response.reduce((acc, item) => {
+        acc[item.name] = item.value;
+        return acc;
+      }, {});
+    });
+  }
 }
 
 interface Links {
