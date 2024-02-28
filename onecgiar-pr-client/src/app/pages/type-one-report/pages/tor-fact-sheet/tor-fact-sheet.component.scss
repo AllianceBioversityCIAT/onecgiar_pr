@@ -1,42 +1,22 @@
 #tablee {
-    // opacity: 0;
-    top: 0;
-    left: 0;
-    position: absolute;
-    border: 1px solid rgb(17, 0, 255);
+  top: 0;
+  left: 0;
+  position: absolute;
+  border: 1px solid rgb(17, 0, 255);
 
-    th {
-        border: 1px solid rgb(4, 0, 255);
-    }
+  th {
+    border: 1px solid rgb(4, 0, 255);
+  }
 
-    td {
-        border: 1px solid black;
-    }
-}
-
-.box {
-    position: relative;
-    width: 0px;
-    height: 0px;
-    // border: 1px solid red;
-    overflow: hidden;
-
+  td {
+    border: 1px solid black;
+  }
 }
 
 .local_container {
-    padding: 20px;
+  padding: 20px;
 }
 
-.half_size {
-    display: grid;
-    grid-template-columns: minmax(500px, .5fr);
-}
-
-.footnote {
-    margin-top: 10px;
-    text-align: center;
-    font-style: italic;
-    color: rgb(78, 78, 78);
-    font-size: 1em;
-    font-weight: 400;
+.budget_sub_section {
+  padding: 20px 0px 50px 0px;
 }

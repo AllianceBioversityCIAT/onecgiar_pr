@@ -5,11 +5,4 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './edit-or-delete-item-button.component.html',
   styleUrls: ['./edit-or-delete-item-button.component.scss']
 })
-export class EditOrDeleteItemButtonComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit(): void {
-  }
-
-}
+export class EditOrDeleteItemButtonComponent {}

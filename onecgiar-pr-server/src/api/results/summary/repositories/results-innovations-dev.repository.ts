@@ -3,19 +3,102 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultsInnovationsDev } from '../entities/results-innovations-dev.entity';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultsInnovationsDevRepository
-  extends Repository<ResultsInnovationsDev>
-  implements
-    ReplicableInterface<ResultsInnovationsDev>,
-    LogicalDelete<ResultsInnovationsDev>
+  extends BaseRepository<ResultsInnovationsDev>
+  implements LogicalDelete<ResultsInnovationsDev>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultsInnovationsDev>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      select 
+      null as result_innovation_dev_id,
+      rid.short_title,
+      rid.is_new_variety,
+      rid.number_of_varieties,
+      rid.innovation_developers,
+      rid.innovation_collaborators,
+      rid.readiness_level,
+      rid.evidences_justification,
+      rid.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as results_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rid.innovation_characterization_id,
+      rid.innovation_nature_id,
+      rid.innovation_readiness_level_id,
+      rid.innovation_acknowledgement,
+      rid.innovation_pdf
+      from results_innovations_dev rid where rid.results_id = ${
+        config.old_result_id
+      } and rid.is_active > 0
+      `,
+      insertQuery: `
+      insert into results_innovations_dev
+      (
+      short_title,
+      is_new_variety,
+      number_of_varieties,
+      innovation_developers,
+      innovation_collaborators,
+      readiness_level,
+      evidences_justification,
+      is_active,
+      created_date,
+      last_updated_date,
+      results_id,
+      created_by,
+      last_updated_by,
+      innovation_characterization_id,
+      innovation_nature_id,
+      innovation_readiness_level_id,
+      innovation_acknowledgement,
+      innovation_pdf
+      )
+      select 
+      rid.short_title,
+      rid.is_new_variety,
+      rid.number_of_varieties,
+      rid.innovation_developers,
+      rid.innovation_collaborators,
+      rid.readiness_level,
+      rid.evidences_justification,
+      rid.is_active,
+      ${predeterminedDateValidation(
+        config?.predetermined_date,
+      )} as created_date,
+      null as last_updated_date,
+      ${config.new_result_id} as results_id,
+      ${config.user.id} as created_by,
+      null as last_updated_by,
+      rid.innovation_characterization_id,
+      rid.innovation_nature_id,
+      rid.innovation_readiness_level_id,
+      rid.innovation_acknowledgement,
+      rid.innovation_pdf
+      from results_innovations_dev rid where rid.results_id = ${
+        config.old_result_id
+      } and rid.is_active > 0`,
+      returnQuery: `
+      select 
+      rid.*
+      from results_innovations_dev rid where rid.results_id = ${config.new_result_id}`,
+    };
+  }
   private readonly _logger: Logger = new Logger(
     ResultsInnovationsDevRepository.name,
   );

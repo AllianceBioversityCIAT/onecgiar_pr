@@ -364,7 +364,7 @@ export class TypeOneReportRepository {
                         ' - ',
                         ci5.name,
                         ')'
-                    ) SEPARATOR ', '
+                    ) SEPARATOR '<br>'
                 )
             FROM
                 result r2
@@ -378,7 +378,7 @@ export class TypeOneReportRepository {
         ) as "contributing_center",
         (
             SELECT
-                GROUP_CONCAT(DISTINCT '<strong>', ci7.acronym, '</strong>', IF((ci7.acronym IS NULL), NULL, ' - '), ci7.name SEPARATOR '<br>')
+                GROUP_CONCAT(DISTINCT ci7.name, ' ', '(', ci7.acronym, ')' SEPARATOR '<br>')
             FROM
                 results_by_institution rbi
                 left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi.id
@@ -392,17 +392,6 @@ export class TypeOneReportRepository {
             GROUP by
                 rbi.result_id
         ) as "contribution_external_partner",
-        (
-            SELECT
-                GROUP_CONCAT(DISTINCT crc.cgiar_name separator '; ')
-            FROM
-                result_region rr
-                left join clarisa_regions cr on cr.um49Code = rr.region_id
-                LEFT JOIN clarisa_regions_cgiar crc ON crc.un_code = cr.um49Code
-            WHERE
-                rr.result_id = r.id
-                and rr.is_active = 1
-        ) as "regions",
         (
             SELECT
                 GROUP_CONCAT(DISTINCT cc3.name separator '; ')

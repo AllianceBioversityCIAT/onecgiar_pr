@@ -1,12 +1,11 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
-import { PhaseManagementModule } from '../../pages/admin-section/pages/phase-management/phase-management.module';
 import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
   { prName: 'Results', underConstruction: false, canActivate: [CheckLoginGuard], path: 'result', loadChildren: () => import('../../pages/results/results.module').then(m => m.ResultsModule) },
-  { prName: 'Type 1 report elements', prHide: false, underConstruction: true, onlytest: false, canActivate: [CheckAdminGuard], path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
+  { prName: 'Type 1 report elements', prHide: false, underConstruction: true, onlytest: false, path: 'type-one-report', loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule) },
   { prName: 'Innovation Packages', underConstruction: false, onlytest: false, canActivate: [CheckLoginGuard], path: 'ipsr', loadChildren: () => import('../../pages/ipsr/ipsr.module').then(m => m.IpsrModule) },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: 'Quality Assurance', onlytest: false, underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
@@ -70,13 +69,14 @@ export const resultDetailRouting: PrRoute[] = [
 ];
 
 export const TypePneReportRouting: PrRoute[] = [
-  { prName: 'Fact sheet', path: 'fact-sheet', loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule) },
-  { prName: 'Initiative progress & Key results', path: 'initiative-progress-and-key-results', loadChildren: () => import('../../pages/type-one-report/pages/tor-init-progress-and-key-results/tor-init-progress-and-key-results.module').then(m => m.TorInitProgressAndKeyResultsModule) },
-  // { prName: 'Impact pathway integration - External partners', path: 'ipi-external-partners', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
-  { prName: 'Impact pathway integration - CGIAR portfolio linkages', path: 'ipi-cgiar-portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-ipi-cgiar-portfolio-linkages/tor-ipi-cgiar-portfolio-linkages.module').then(m => m.TorIpiCgiarPortfolioLinkagesModule) },
-  { prName: 'Impact pathway integration', path: 'impact-pathway-integration', loadChildren: () => import('../../pages/type-one-report/pages/tor-impact-pathway-integration/tor-impact-pathway-integration.module').then(m => m.TorImpactPathwayIntegrationModule) },
-  { prName: 'Key result story', path: 'key-result-story', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule) },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'fact-sheet' }
+  { prName: 'Fact sheet', underConstruction: false, path: 'fact-sheet', loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule) },
+  { prName: 'TOC Diagrams', underConstruction: false, path: 'toc-diagrams', loadChildren: () => import('../../pages/type-one-report/pages/tor-toc-diagrams/tor-toc-diagrams.module').then(m => m.TorTocDiagramsModule) },
+  { prName: 'Key results', underConstruction: false, path: 'key-results', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-results/tor-key-results.module').then(m => m.TorKeyResultsModule) },
+  { prName: 'Partnerships', underConstruction: false, path: 'partnerships', loadChildren: () => import('../../pages/type-one-report/pages/tor-partnerships/tor-partnerships.module').then(m => m.TorPartnershipsModule) },
+  { prName: 'Portfolio linkages', underConstruction: false, path: 'portfolio-linkages', loadChildren: () => import('../../pages/type-one-report/pages/tor-portfolio-linkages/tor-portfolio-linkages.module').then(m => m.TorPortfolioLinkagesModule) },
+  { prName: 'Key result story', underConstruction: false, path: 'key-result-story', loadChildren: () => import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule) },
+  { prName: '', underConstruction: false, path: 'white', loadChildren: () => import('../../pages/type-one-report/pages/white-page/white-page.module').then(m => m.WhitePageModule) },
+  { prName: '', path: '**', underConstruction: false, pathMatch: 'full', redirectTo: 'fact-sheet' }
 ];
 
 export interface PrRoute extends Route {

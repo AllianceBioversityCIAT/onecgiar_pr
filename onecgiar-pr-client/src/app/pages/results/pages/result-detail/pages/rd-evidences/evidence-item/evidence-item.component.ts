@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, EventEmitter, Output } from '@angular/core';
+import { Component, Input, EventEmitter, Output } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -39,6 +39,12 @@ export class EvidenceItemComponent {
     const extension = '.' + file.name.split('.').pop();
     const fileSizeInGB = file.size / (1024 * 1024 * 1024);
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
+  }
+
+  isInvalidLink(value: string = '') {
+    const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i);
+
+    return regex.test(value.trim());
   }
 
   deleteItem() {
