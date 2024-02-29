@@ -24,6 +24,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() placeholder: string;
   @Input() label: string;
   @Input() selectedLabel: string;
+  @Input() selectedLabel2?: string;
   @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
@@ -107,6 +108,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       this._value = v;
       this.onChange(v);
     }
+  }
+
+  selectedLabelDescription() {
+    if (this.selectedLabel2) return `${this.selectedLabel} (${this.value?.length}) ${this.selectedLabel2} (${this.value?.length})`;
+
+    return `${this.selectedLabel} (${this.value?.length})`;
   }
 
   onChange(_) {}
