@@ -111,7 +111,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   selectedLabelDescription() {
-    if (this.selectedLabel2) return `${this.selectedLabel} (${this.value?.length}) ${this.selectedLabel2} (${this.value?.length})`;
+    if (this.selectedLabel2) return `${this.selectedLabel}(${this.value?.length}) ${this.selectedLabel2}(${this.value?.length})`;
 
     return `${this.selectedLabel} (${this.value?.length})`;
   }

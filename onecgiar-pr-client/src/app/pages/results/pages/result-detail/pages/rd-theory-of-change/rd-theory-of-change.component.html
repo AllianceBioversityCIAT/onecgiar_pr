@@ -27,7 +27,7 @@
     <app-alert-status
         description="<strong>Contribution to a reported result:</strong> Include those partners [OR Initiatives/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support."></app-alert-status>
 
-    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
+    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives or platforms"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
         optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         selectedOptionLabel="full_name" [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true"
