@@ -42,8 +42,16 @@ export class TorFactSheetComponent implements OnInit {
     <br/>
     For climate adaptation and mitigation, scores are: 0 = Not targeted; 1 = Significant; and 2 = Principal.
     <br/>
+    <a class="open_route" href="https://www.oecd.org/dac/environment-development/Revised%20climate%20marker%20handbook_FINAL.pdf" target="_blank">https://www.oecd.org/dac/environment-development/Revised%20climate%20marker%20handbook_FINAL.pdf</a>
     <br/>
-    The CGIAR GENDER Impact Platform has adapted the OECD gender marker, splitting the 1 score into 1A and 1B. For gender equality, scores are: 0 = Not targeted; 1A = Gender accommodative/aware; 1B = Gender responsive; and 2 = Principal. These scores are derived from Initiative proposals, and refer to the score given to the Initiative overall based on their proposal.`;
+    <br/>
+    The CGIAR GENDER Impact Platform has adapted the OECD gender marker, splitting the 1 score into 1A and 1B. For gender equality, scores are: 0 = Not targeted; 1A = Gender accommodative/aware; 1B = Gender responsive; and 2 = Principal.
+    <a class="open_route" href="https://www.oecd.org/dac/gender-development/thedacgenderequalitypolicymarker.htm" target="_blank">https://www.oecd.org/dac/gender-development/thedacgenderequalitypolicymarker.htm</a>
+    <br/>
+    <br/>
+    These scores are derived from Initiative proposals, and refer to the score given to the Initiative overall based on their proposal.
+    <a class="open_route" href="https://www.cgiar.org/how-we-work/governance/system-council/initial-set-of-submissions-for-the-cgiar-2022-2024-investment-prospectus/" target="_blank">https://www.cgiar.org/how-we-work/governance/system-council/initial-set-of-submissions-for-the-cgiar-2022-2024-investment-prospectus/</a>
+    `;
 
   constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService) {}
 
