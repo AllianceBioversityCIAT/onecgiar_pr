@@ -8,7 +8,6 @@ import { ShareRequestModalService } from '../../../result-detail/components/shar
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 
 @Component({
@@ -19,7 +18,6 @@ import { ResultsNotificationsService } from '../results-notifications/results-no
 export class ResultsListComponent implements OnInit, OnDestroy {
   gettingReport = false;
   combine = true;
-  currentPhase;
 
   columnOrder = [
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -79,14 +77,15 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
-    this.getAllPhases();
+    this.api.dataControlSE.getCurrentPhases();
   }
+
   onPressAction(result) {
     this.retrieveModalSE.title = result?.title;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year !== this.currentPhase;
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase;
   }
 
   onDownLoadTableAsExcel() {
@@ -121,12 +120,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
           this.resultsListService.showDeletingResultSpinner = false;
         }
       });
-    });
-  }
-
-  getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
-      this.currentPhase = response[0]?.phase_year;
     });
   }
 
