@@ -70,4 +70,8 @@ export class TorKeyResultStoryComponent implements OnInit {
   validateOneDropDown() {
     return this.typeOneReportSE.keyResultStoryData.some(item => JSON.parse(item?.impact_areas)?.length);
   }
+
+  alertInformation() {
+    return `If no information appears in this section for your initiative, it likely indicates that you haven't enabled any 2023 results to be part of the 2023 Key Results Story (KRS) in the PRMS. Please reach out to  <a class="open_route" href="mailto:prmstechsupport@cgiar.org">prmstechsupport@cgiar.org</a> to enable you to link 2023 results to a Key Results Story in the PRMS.`;
+  }
 }
