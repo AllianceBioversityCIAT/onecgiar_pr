@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivate, RouterStateSnapshot, UrlTree, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { RolesService } from '../services/global/roles.service';
 import { AuthService } from '../services/api/auth.service';
@@ -7,7 +7,7 @@ import { AuthService } from '../services/api/auth.service';
 @Injectable({
   providedIn: 'root'
 })
-export class CheckAdminGuard implements CanActivate {
+export class CheckAdminGuard  {
   constructor(private rolesSE: RolesService, private router: Router, private authSE: AuthService) {}
 
   async canActivate() {
