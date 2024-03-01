@@ -50,6 +50,12 @@ import { VersioningModule } from '../../api/versioning/versioning.module';
 import { ResultInnovationPackageModule } from '../../api/ipsr/result-innovation-package/result-innovation-package.module';
 import { InnovationPathwayModule } from '../../api/ipsr/innovation-pathway/innovation-pathway.module';
 import { ResultIpAAOutcomeRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { InnovationPackagingExpertRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../../api/ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -98,6 +104,12 @@ import { ResultIpAAOutcomeRepository } from '../../api/ipsr/innovation-pathway/r
     EvidencesService,
     ShareResultRequestRepository,
     ResultIpAAOutcomeRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpImpactAreaRepository,
+    ResultIpSdgTargetRepository,
+    InnovationPackagingExpertRepository,
+    ResultIpMeasureRepository,
+    ResultIpExpertisesRepository
   ],
   imports: [
     SharePointModule,

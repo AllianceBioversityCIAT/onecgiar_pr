@@ -58,6 +58,13 @@ import { ReturnResponseUtil } from '../../shared/utils/response.util';
 import { IpsrRepository } from '../ipsr/ipsr.repository';
 import { ResultInnovationPackageRepository } from '../ipsr/result-innovation-package/repositories/result-innovation-package.repository';
 import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
 
 @Injectable()
 export class VersioningService {
@@ -98,7 +105,13 @@ export class VersioningService {
     private readonly dataSource: DataSource,
     private readonly _ipsrRespository: IpsrRepository,
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
-    private readonly _resultIpActionAreaOutcome: ResultIpAAOutcomeRepository,
+    private readonly _resultIpActionAreaOutcomeRepository: ResultIpAAOutcomeRepository,
+    private readonly _resultIpEoiOutcomeRepository: ResultIpEoiOutcomeRepository,
+    private readonly _resultIpIaRepository: ResultIpImpactAreaRepository,
+    private readonly _resultIpSdgTargetsRepository: ResultIpSdgTargetRepository,
+    private readonly _resultIpExpertRepository: InnovationPackagingExpertRepository,
+    private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
+    private readonly _resultIpExpertisesRespository: ResultIpExpertisesRepository
   ) {}
 
   /**
@@ -337,6 +350,7 @@ export class VersioningService {
         },
         true,
       );
+      console.log("🚀 ~ VersioningService ~ data ~ tempData:", tempData)
 
       let dataResult: Result = null;
       if (tempData?.length) {
@@ -370,7 +384,13 @@ export class VersioningService {
       });
       config.old_ipsr_id = rbip[0].result_by_innovation_package_id;
 
-      await this._resultIpActionAreaOutcome.replicate(manager, config);
+      await this._resultIpActionAreaOutcomeRepository.replicate(manager, config);
+      await this._resultIpEoiOutcomeRepository.replicate(manager, config);
+      await this._resultIpIaRepository.replicate(manager, config);
+      await this._resultIpSdgTargetsRepository.replicate(manager, config);
+      await this._resultIpExpertRepository.replicate(manager, config);
+      await this._resultIpMeasureRepository.replicate(manager, config);
+      await this._resultIpExpertisesRespository.replicate(manager, config);
 
       // await this._resultByInitiativesRepository.replicate(manager, config);
       // await this._shareResultRequestRepository.replicate(manager, config);
@@ -421,6 +441,7 @@ export class VersioningService {
   }
 
   async versionProcess(result_id: number, user: TokenDto) {
+    console.log("🚀 ~ VersioningService ~ versionProcess ~ result_id:", result_id)
     try {
       const legacy_result = await this._resultRepository.findOne({
         where: {

@@ -50,6 +50,12 @@ import { IpsrModule } from '../ipsr/ipsr.module';
 import { ResultInnovationPackageModule } from '../ipsr/result-innovation-package/result-innovation-package.module';
 import { InnovationPathwayModule } from '../ipsr/innovation-pathway/innovation-pathway.module';
 import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -98,6 +104,12 @@ import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/reposito
     ShareResultRequestRepository,
     IpsrRepository,
     ResultIpAAOutcomeRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpImpactAreaRepository,
+    ResultIpSdgTargetRepository,
+    InnovationPackagingExpertRepository,
+    ResultIpMeasureRepository,
+    ResultIpExpertisesRepository
   ],
   exports: [
     EvidencesService,

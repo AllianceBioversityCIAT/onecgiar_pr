@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Ipsr } from './entities/ipsr.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
