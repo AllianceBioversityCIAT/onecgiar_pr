@@ -44,7 +44,9 @@
               "src/styles/filters-list.scss",
               "src/styles/ymz-directives.scss"
             ],
-            "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"]
+            "scripts": [
+              "node_modules/pusher-js/dist/web/pusher.min.js"
+            ]
           },
           "configurations": {
             "production": {
@@ -114,5 +116,13 @@
       "@angular-eslint/schematics"
     ],
     "analytics": false
+  },
+  "schematics": {
+    "@angular-eslint/schematics:application": {
+      "setParserOptionsProject": true
+    },
+    "@angular-eslint/schematics:library": {
+      "setParserOptionsProject": true
+    }
   }
 }
