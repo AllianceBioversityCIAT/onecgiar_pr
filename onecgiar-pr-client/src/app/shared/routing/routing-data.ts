@@ -1,82 +1,60 @@
-// import { Route } from '@angular/router';
+import { Route } from '@angular/router';
 // import { CheckLoginGuard } from '../guards/check-login.guard';
 // import { CheckAdminGuard } from '../guards/check-admin.guard';
 
-// export const routingAppe: PrRoute[] = [
-//   // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
-//   {
-//     prName: 'Results',
-//     underConstruction: false,
-//     canActivate: [CheckLoginGuard],
-//     path: 'result',
-//     loadChildren: () =>
-//       import('../../pages/results/results.module').then(m => m.ResultsModule)
-//   },
-//   {
-//     prName: 'Type 1 report elements',
-//     prHide: false,
-//     underConstruction: true,
-//     onlytest: false,
-//     path: 'type-one-report',
-//     loadChildren: () =>
-//       import('../../pages/type-one-report/type-one-report.module').then(
-//         m => m.TypeOneReportModule
-//       )
-//   },
-//   {
-//     prName: 'Innovation Packages',
-//     underConstruction: false,
-//     onlytest: false,
-//     canActivate: [CheckLoginGuard],
-//     path: 'ipsr',
-//     loadChildren: () =>
-//       import('../../pages/ipsr/ipsr.module').then(m => m.IpsrModule)
-//   },
-//   {
-//     prName: 'login',
-//     prHide: true,
-//     path: 'login',
-//     loadChildren: () =>
-//       import('../../pages/login/login.module').then(m => m.LoginModule)
-//   },
-//   {
-//     prName: 'Quality Assurance',
-//     onlytest: false,
-//     underConstruction: false,
-//     canActivate: [CheckLoginGuard],
-//     path: 'quality-assurance',
-//     loadChildren: () =>
-//       import('../../pages/quality-assurance/quality-assurance.module').then(
-//         m => m.QualityAssuranceModule
-//       )
-//   },
-//   {
-//     prName: 'INIT Admin Module',
-//     onlytest: false,
-//     prHide: false,
-//     path: 'init-admin-module',
-//     loadChildren: () =>
-//       import('../../pages/init-admin-section/init-admin-section.module').then(
-//         m => m.InitAdminSectionModule
-//       )
-//   },
-//   {
-//     prName: 'reports',
-//     prHide: true,
-//     path: 'reports/result-details/:id',
-//     loadChildren: () =>
-//       import('../../pages/pdf-reports/pdf-reports.module').then(
-//         m => m.PdfReportsModule
-//       )
-//   },
-//   {
-//     prName: '',
-//     path: '**',
-//     pathMatch: 'full',
-//     redirectTo: 'result',
-//     prHide: true
-//   }
-// ];
+export const routingApp: PrRoute[] = [
+  // { prName: 'Home', canActivate: [CheckLoginGuard], path: 'home', loadChildren: () => import('../../pages/home/home.module').then(m => m.HomeModule) },
+  {
+    prName: 'Results',
+    underConstruction: false,
+    // canActivate: [CheckLoginGuard],
+    path: 'result'
+  },
+  {
+    prName: 'Type 1 report elements',
+    prHide: false,
+    underConstruction: true,
+    onlytest: false,
+    path: 'type-one-report'
+  },
+  {
+    prName: 'Innovation Packages',
+    underConstruction: false,
+    onlytest: false,
+    // canActivate: [CheckLoginGuard],
+    path: 'ipsr'
+  },
+  {
+    prName: 'login',
+    prHide: true,
+    path: 'login'
+  },
+  {
+    prName: 'Quality Assurance',
+    onlytest: false,
+    underConstruction: false,
+    // canActivate: [CheckLoginGuard],
+    path: 'quality-assurance'
+  },
+  {
+    prName: 'INIT Admin Module',
+    onlytest: false,
+    prHide: false,
+    path: 'init-admin-module'
+  },
+  {
+    prName: 'reports',
+    prHide: true,
+    path: 'reports/result-details/:id'
+  },
+  {
+    prName: '',
+    path: '**',
+    pathMatch: 'full',
+    redirectTo: 'result',
+    prHide: true
+  }
+];
 
 // // reporting.cgiar.org/reports/fullResultReport/1234?version=1
 
@@ -219,122 +197,78 @@
 //   },
 //   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 // ];
-// export const rdResultTypesPages: PrRoute[] = [
-//   {
-//     prName: 'CapSharing info',
-//     path: 'cap-dev-info',
-//     prHide: 5,
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module'
-//       ).then(m => m.CapDevInfoModule)
-//   },
-//   {
-//     prName: 'Innovation Dev info',
-//     path: 'innovation-dev-info',
-//     prHide: 7,
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module'
-//       ).then(m => m.InnovationDevInfoModule)
-//   },
-//   {
-//     prName: 'Innovation use info',
-//     path: 'innovation-use-info',
-//     prHide: 2,
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.module'
-//       ).then(m => m.InnovationUseInfoModule)
-//   },
-//   {
-//     prName: 'Knowledge product info',
-//     path: 'knowledge-product-info',
-//     prHide: 6,
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.module'
-//       ).then(m => m.KnowledgeProductInfoModule)
-//   },
-//   {
-//     prName: 'Policy change info',
-//     path: 'policy-change1-info',
-//     prHide: 1,
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-result-types-pages/policy-change-info/policy-change-info.module'
-//       ).then(m => m.PolicyChangeInfoModule)
-//   }
-// ];
+export const rdResultTypesPages: PrRoute[] = [
+  {
+    prName: 'CapSharing info',
+    path: 'cap-dev-info',
+    prHide: 5,
+    underConstruction: false
+  },
+  {
+    prName: 'Innovation Dev info',
+    path: 'innovation-dev-info',
+    prHide: 7,
+    underConstruction: false
+  },
+  {
+    prName: 'Innovation use info',
+    path: 'innovation-use-info',
+    prHide: 2,
+    underConstruction: false
+  },
+  {
+    prName: 'Knowledge product info',
+    path: 'knowledge-product-info',
+    prHide: 6,
+    underConstruction: false
+  },
+  {
+    prName: 'Policy change info',
+    path: 'policy-change1-info',
+    prHide: 1,
+    underConstruction: false
+  }
+];
 
-// export const resultDetailRouting: PrRoute[] = [
-//   {
-//     prName: 'General information',
-//     path: 'general-information',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.module'
-//       ).then(m => m.RdGeneralInformationModule)
-//   },
-//   {
-//     prName: 'Theory of change',
-//     path: 'theory-of-change',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module'
-//       ).then(m => m.RdTheoryOfChangeModule)
-//   },
-//   {
-//     prName: 'Partners',
-//     path: 'partners',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module'
-//       ).then(m => m.RdPartnersModule)
-//   },
-//   {
-//     prName: 'Geographic location',
-//     path: 'geographic-location',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.module'
-//       ).then(m => m.RdGeographicLocationModule)
-//   },
-//   {
-//     prName: 'Links to results',
-//     path: 'links-to-results',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module'
-//       ).then(m => m.RdLinksToResultsModule)
-//   },
-//   {
-//     prName: 'Evidence',
-//     path: 'evidences',
-//     underConstruction: false,
-//     loadChildren: () =>
-//       import(
-//         '../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module'
-//       ).then(m => m.RdEvidencesModule)
-//   },
-//   ...rdResultTypesPages,
-//   {
-//     prName: '',
-//     path: '**',
-//     pathMatch: 'full',
-//     redirectTo: 'general-information'
-//   }
-// ];
+export const resultDetailRouting: PrRoute[] = [
+  {
+    prName: 'General information',
+    path: 'general-information',
+    underConstruction: false
+  },
+  {
+    prName: 'Theory of change',
+    path: 'theory-of-change',
+    underConstruction: false
+  },
+  {
+    prName: 'Partners',
+    path: 'partners',
+    underConstruction: false
+  },
+  {
+    prName: 'Geographic location',
+    path: 'geographic-location',
+    underConstruction: false
+  },
+  {
+    prName: 'Links to results',
+    path: 'links-to-results',
+    underConstruction: false
+  },
+  {
+    prName: 'Evidence',
+    path: 'evidences',
+    underConstruction: false
+  },
+  ...rdResultTypesPages,
+  {
+    prName: '',
+    path: '**',
+    pathMatch: 'full',
+    redirectTo: 'general-information'
+  }
+];
 
 // export const TypePneReportRouting: PrRoute[] = [
 //   {
@@ -409,12 +343,12 @@
 //   }
 // ];
 
-// export interface PrRoute extends Route {
-//   prName: string;
-//   prHide?: boolean | number;
-//   underConstruction?: boolean | number;
-//   onlytest?: boolean;
-// }
+export interface PrRoute extends Route {
+  prName: string;
+  prHide?: boolean | number;
+  underConstruction?: boolean | number;
+  onlytest?: boolean;
+}
 
 // // Impact Contribution, ningun other, Capacity change
 

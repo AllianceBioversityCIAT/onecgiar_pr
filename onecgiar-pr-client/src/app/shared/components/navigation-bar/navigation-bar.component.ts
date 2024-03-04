@@ -7,6 +7,8 @@ import { AuthService } from '../../services/api/auth.service';
 import { ApiService } from '../../services/api/api.service';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { PrRoute } from '../../routing/routing-data';
+import { routingApp } from 'src/app/shared/routing/routing-data';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -16,14 +18,35 @@ import { RouterLink } from '@angular/router';
   imports: [CommonModule, RouterLink]
 })
 export class NavigationBarComponent implements OnInit {
-  navigationOptions: any[] = [];
-  emailAccess = ['h.f.tobon@cgiar.org', 'admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org', 'yecksin@gmail.com'];
+  navigationOptions: PrRoute[] = routingApp;
+  emailAccess = [
+    'h.f.tobon@cgiar.org',
+    'admin@prms.pr',
+    'j.cadavid@cgiar.org',
+    'j.delgado@cgiar.org',
+    'd.casanas@cgiar.org',
+    'S.Galvez@cgiar.org',
+    'y.zuniga@cgiar.org',
+    'yecksin@gmail.com'
+  ];
 
-  constructor(public api: ApiService, public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
+  constructor(
+    public api: ApiService,
+    public _navigationBarService: NavigationBarService,
+    private rolesSE: RolesService,
+    private dataControlSE: DataControlService,
+    private authSE: AuthService
+  ) {}
 
   ngOnInit(): void {
     window.addEventListener('scroll', e => {
-      const scrollTopValue: any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
+      const scrollTopValue: any =
+        window.pageYOffset ||
+        (
+          (document.documentElement ||
+            document.body.parentNode ||
+            document.body) as any
+        ).scrollTop;
       if (scrollTopValue > 70) {
         this._navigationBarService.navbar_fixed = true;
       } else {
@@ -33,7 +56,11 @@ export class NavigationBarComponent implements OnInit {
   }
 
   hasAccess() {
-    return !!this.emailAccess.find(email => email.toUpperCase() == this.authSE?.localStorageUser?.email.toUpperCase());
+    return !!this.emailAccess.find(
+      email =>
+        email.toUpperCase() ==
+        this.authSE?.localStorageUser?.email.toUpperCase()
+    );
   }
 
   validateAdminModuleAndRole(option) {
@@ -52,6 +79,8 @@ export class NavigationBarComponent implements OnInit {
   }
 
   validateCoordAndLead() {
-    return !this.dataControlSE.myInitiativesList.some(init => init?.role == 'Lead' || init?.role == 'Coordinator');
+    return !this.dataControlSE.myInitiativesList.some(
+      init => init?.role == 'Lead' || init?.role == 'Coordinator'
+    );
   }
 }

@@ -12,6 +12,10 @@ import { PrButtonComponent } from '../../../../../custom-fields/pr-button/pr-but
 import { RouterLink } from '@angular/router';
 import { PanelMenuPipe } from './pipes/panel-menu.pipe';
 import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.component';
+import {
+  PrRoute,
+  resultDetailRouting
+} from '../../../../../shared/routing/routing-data';
 
 @Component({
   selector: 'app-panel-menu',
@@ -28,7 +32,7 @@ import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.compo
 })
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
-  navigationOptions: any = [];
+  navigationOptions: PrRoute[] = resultDetailRouting;
   constructor(
     public rolesSE: RolesService,
     public resultLevelSE: ResultLevelService,
