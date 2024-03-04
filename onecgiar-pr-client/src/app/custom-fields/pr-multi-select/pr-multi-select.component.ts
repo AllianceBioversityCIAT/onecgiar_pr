@@ -1,14 +1,41 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  Component,
+  forwardRef,
+  Input,
+  Output,
+  EventEmitter
+} from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR
+} from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
+import { CommonModule } from '@angular/common';
+import { ListFilterByTextAndAttrPipe } from './pipes/list-filter-by-text-and-attr.pipe';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CheckboxModule } from 'primeng/checkbox';
+import { AlertStatusComponent } from '../alert-status/alert-status.component';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-pr-multi-select',
   standalone: true,
   templateUrl: './pr-multi-select.component.html',
   styleUrls: ['./pr-multi-select.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    ListFilterByTextAndAttrPipe,
+    ScrollingModule,
+    CheckboxModule,
+    AlertStatusComponent,
+    InputTextModule
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -47,11 +74,19 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   public searchText: string;
   private currentOptionsLength = 0;
 
-  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get optionsIntance() {
     if (!this.options?.length) return [];
-    if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = [...this.options];
+    if (
+      !this._optionsIntance?.length ||
+      this.currentOptionsLength != this.options?.length
+    )
+      this._optionsIntance = [...this.options];
 
     this.currentOptionsLength = this.options?.length;
 
@@ -61,16 +96,23 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     });
 
     this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      const itemFinded = this._optionsIntance.find(
+        listItem =>
+          listItem[this.optionValue] == disableOption[this.optionValue]
+      );
       if (itemFinded) itemFinded.disabled = true;
     });
 
     this.value?.map(savedListItem => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+      const itemFinded = this._optionsIntance.find(
+        listItem =>
+          listItem[this.optionValue] == savedListItem[this.optionValue]
+      );
 
       if (itemFinded) itemFinded.selected = true;
 
-      if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
+      if (itemFinded && this.logicalDeletion)
+        itemFinded.selected = savedListItem.is_active;
     });
 
     this._beforeValueLength = this._value?.length;
@@ -137,15 +179,27 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   getUniqueId() {
-    const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
+    const id = (this.optionValue + this.optionLabel + this.label).replace(
+      ' ',
+      ''
+    );
 
     return id;
   }
 
   confirmDeletionEvent(option) {
-    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this Initiative from the contributors?`, description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.removeOption(option);
-    });
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'confirm-delete-item',
+        title: `Are you sure you want to remove this Initiative from the contributors?`,
+        description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.removeOption(option);
+      }
+    );
   }
 
   onSelectOption(option) {
@@ -153,11 +207,15 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (option?.disabled) return;
 
-    const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    const indexFind = this.value.findIndex(
+      valueItem => valueItem[this.optionValue] == option[this.optionValue]
+    );
     if (indexFind < 0) {
       this.value.push({ ...option, new: true, is_active: true });
     } else {
-      const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+      const valueItemFind = this.value.find(
+        valueItem => valueItem[this.optionValue] == option[this.optionValue]
+      );
       if (this.logicalDeletion && !valueItemFind.new) {
         if (!option.selected) {
           valueItemFind.is_active = true;
@@ -177,7 +235,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {
-      const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+      const optionFinded = this.value.findIndex(
+        valueItem => valueItem[this.optionValue] == option[this.optionValue]
+      );
       this.value.splice(optionFinded, 1);
     }
 

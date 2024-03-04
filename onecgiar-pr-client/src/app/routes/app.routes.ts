@@ -38,6 +38,30 @@ export const routes: Routes = [
               import(
                 '../pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.component'
               ).then(c => c.RdGeneralInformationComponent)
+          },
+          {
+            path: 'theory-of-change',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.component'
+              ).then(c => c.RdTheoryOfChangeComponent)
+          },
+          // {
+          //   path: 'partners'
+          // },
+          // {
+          //   path: 'geographic-location'
+          // },
+          // {
+          //   path: 'links-to-results'
+          // },
+          // {
+          //   path: 'evidences'
+          // },
+          {
+            path: '**',
+            pathMatch: 'full',
+            redirectTo: 'general-information'
           }
         ]
       },
