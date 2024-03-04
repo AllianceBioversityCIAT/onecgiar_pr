@@ -5,13 +5,12 @@ import { ResultsNotificationsRoutingModule } from './results-notifications-routi
 import { ResultsNotificationsComponent } from './results-notifications.component';
 import { NotificationItemComponent } from './components/notification-item/notification-item.component';
 import { ButtonModule } from 'primeng/button';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { FilterNotificationByPhasePipe } from './pipes/filter-notification-by-phase.pipe';
 import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-by-initiative.pipe';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @NgModule({
   declarations: [ResultsNotificationsComponent, NotificationItemComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe],
-  imports: [CommonModule, ResultsNotificationsRoutingModule, ButtonModule, CustomFieldsModule, ScrollingModule]
+  imports: [CommonModule, ResultsNotificationsRoutingModule, ButtonModule, ScrollingModule]
 })
 export class ResultsNotificationsModule {}

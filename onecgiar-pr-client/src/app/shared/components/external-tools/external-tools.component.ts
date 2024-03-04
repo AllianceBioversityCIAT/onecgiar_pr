@@ -3,12 +3,16 @@ import { NavigationStart, Router, Event as NavigationEvent } from '@angular/rout
 import { environment } from '../../../../environments/environment';
 import { PusherService } from '../../services/pusher.service';
 import { ApiService } from '../../services/api/api.service';
+import { GoogleAnalyticsComponent } from './components/google-analytics/google-analytics.component';
+import { CommonModule } from '@angular/common';
 declare let gtag: (property: string, value: any, configs: any) => {};
 
 @Component({
   selector: 'app-external-tools',
+  standalone: true,
   templateUrl: './external-tools.component.html',
-  styleUrls: ['./external-tools.component.scss']
+  styleUrls: ['./external-tools.component.scss'],
+  imports: [CommonModule, GoogleAnalyticsComponent]
 })
 export class ExternalToolsComponent implements OnInit {
   constructor(private router: Router, private pusherSE: PusherService, private api: ApiService) {}
@@ -35,6 +39,6 @@ export class ExternalToolsComponent implements OnInit {
 
   validateShowT1RSelectPhase(url: string): void {
     const lastPath = url.split('/').pop();
-    this.api.dataControlSE.showT1RSelectPhase =  lastPath === 'toc-diagrams';
+    this.api.dataControlSE.showT1RSelectPhase = lastPath === 'toc-diagrams';
   }
 }

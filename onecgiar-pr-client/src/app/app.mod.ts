@@ -11,7 +11,6 @@ import { ExternalToolsComponent } from './shared/components/external-tools/exter
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { GeneralInterceptorService } from './shared/interceptors/general-interceptor.service';
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
-import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
 import { ShareRequestModalModule } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.module';
@@ -21,9 +20,9 @@ import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
-  declarations: [AppComponent, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
-  imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule, ShareRequestModalModule, YmzListStructureItemModule, ChangePhaseModalModule, FooterModule, DialogModule],
-  providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
-  bootstrap: [AppComponent]
+  declarations: [NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
+  exports: [NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
+  imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, ShareRequestModalModule, YmzListStructureItemModule, ChangePhaseModalModule, FooterModule, DialogModule],
+  providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }]
 })
-export class AppModule {}
+export class AppMod {}

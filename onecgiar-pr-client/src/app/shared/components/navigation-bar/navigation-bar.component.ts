@@ -6,11 +6,14 @@ import { environment } from 'src/environments/environment';
 import { DataControlService } from '../../services/data-control.service';
 import { AuthService } from '../../services/api/auth.service';
 import { ApiService } from '../../services/api/api.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-navigation-bar',
+  standalone: true,
   templateUrl: './navigation-bar.component.html',
-  styleUrls: ['./navigation-bar.component.scss']
+  styleUrls: ['./navigation-bar.component.scss'],
+  imports: [CommonModule]
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;

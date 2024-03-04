@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StepN1GeoscopeComponent } from '../components/step-n1-geoscope/step-n1-geoscope.component';
-import { CustomFieldsModule } from '../../../../../../../../../custom-fields/custom-fields.module';
 import { StepN1EoiOutcomesComponent } from './step-n1-eoi-outcomes/step-n1-eoi-outcomes.component';
 import { StepN1ImpactAreasComponent } from './step-n1-impact-areas/step-n1-impact-areas.component';
 import { StepN1SdgTargetsComponent } from './step-n1-sdg-targets/step-n1-sdg-targets.component';
@@ -20,6 +19,6 @@ const components = [StepN1ScalingAmbitionBlurbComponent, StepN1ActionAreaOutcome
 @NgModule({
   declarations: [...components],
   exports: [...components],
-  imports: [CommonModule, CustomFieldsModule, YmzListStructureItemModule, ClipboardModule, ToastModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, YmzListStructureItemModule, ClipboardModule, ToastModule, FeedbackValidationDirectiveModule]
 })
 export class StepN1ComponentsModule {}

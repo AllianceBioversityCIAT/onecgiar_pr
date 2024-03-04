@@ -4,9 +4,22 @@ import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
+import { RouterOutlet } from '@angular/router';
+import { NavigationBarComponent } from './shared/components/navigation-bar/navigation-bar.component';
+import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
+import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
+import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
+import { TawkComponent } from './shared/components/tawk/tawk.component';
+import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
+import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
+import { FooterComponent } from './shared/components/footer/footer.component';
+import { DialogModule } from 'primeng/dialog';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet, CommonModule, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent, ShareRequestModalComponent, FooterComponent, DialogModule],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })

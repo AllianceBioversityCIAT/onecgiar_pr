@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 import { RdTheoryOfChangeRoutingModule } from './rd-theory-of-change-routing.module';
 import { RdTheoryOfChangeComponent } from './rd-theory-of-change.component';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TocImpactSectionComponent } from './components/toc-impact-section/toc-impact-section.component';
 import { TocActionAreaOutcomeSectionComponent } from './components/toc-action-area-outcome-section/toc-action-area-outcome-section.component';
 import { TocInitiativeOutcomeSectionComponent } from './components/toc-initiative-outcome-section/toc-initiative-outcome-section.component';
@@ -18,6 +17,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [RdTheoryOfChangeComponent, TocImpactSectionComponent, TocActionAreaOutcomeSectionComponent, TocInitiativeOutcomeSectionComponent, TocInitiativeOutputSectionComponent, TocInitiativeAaoComponent, FilterTargetsPipe, FilterIndicatorsPipe],
-  imports: [CommonModule, RdTheoryOfChangeRoutingModule, CustomFieldsModule, RadioButtonModule, TocInitiativeOutModule, FeedbackValidationDirectiveModule, TooltipModule]
+  imports: [CommonModule, RdTheoryOfChangeRoutingModule, RadioButtonModule, TocInitiativeOutModule, FeedbackValidationDirectiveModule, TooltipModule]
 })
 export class RdTheoryOfChangeModule {}

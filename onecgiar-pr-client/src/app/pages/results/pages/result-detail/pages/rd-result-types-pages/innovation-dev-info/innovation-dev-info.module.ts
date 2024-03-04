@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 import { InnovationDevInfoRoutingModule } from './innovation-dev-info-routing.module';
 import { InnovationDevInfoComponent } from './innovation-dev-info.component';
-import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { GesiInnovationAssessmentComponent } from './components/gesi-innovation-assessment/gesi-innovation-assessment.component';
 import { ScaleImpactAnalysisComponent } from './components/scale-impact-analysis/scale-impact-analysis.component';
 import { IntellectualPropertyRightsComponent } from './components/intellectual-property-rights/intellectual-property-rights.component';
@@ -19,6 +18,6 @@ import { SkeletonModule } from 'primeng/skeleton';
 
 @NgModule({
   declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent, NonPooledInfoComponent],
-  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule, DialogModule, FeedbackValidationDirectiveModule, SkeletonModule]
+  imports: [CommonModule, InnovationDevInfoRoutingModule, YmzListStructureItemModule, DialogModule, FeedbackValidationDirectiveModule, SkeletonModule]
 })
 export class InnovationDevInfoModule {}

@@ -1,9 +1,12 @@
+import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-pr-button',
+  standalone: true,
   templateUrl: './pr-button.component.html',
-  styleUrls: ['./pr-button.component.scss']
+  styleUrls: ['./pr-button.component.scss'],
+  imports: [CommonModule]
 })
 export class PrButtonComponent {
   @Input() text: string;

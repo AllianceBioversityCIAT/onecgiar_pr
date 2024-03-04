@@ -3,11 +3,14 @@ import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { FooterService } from './footer.service';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-footer',
+  standalone: true,
   templateUrl: './footer.component.html',
-  styleUrls: ['./footer.component.scss']
+  styleUrls: ['./footer.component.scss'],
+  imports: [CommonModule]
 })
 export class FooterComponent {
   routes = [{ path: '/result/results-outlet/results-list' }, { path: '/result/result-detail/', floating: true }, { path: '/type-one-report', floating: true }, { path: '/ipsr/list/innovation-list' }, { path: '/ipsr/detail' }, { path: '/quality-assurance' }, { path: '/init-admin-module', floating: true }, { path: '/login', floatingFix: true }];
@@ -16,7 +19,7 @@ export class FooterComponent {
   isFloatingFix = false;
   isHover = false;
   license = environment.footerUrls.license;
-  constructor(private router: Router, public footerSE: FooterService, public globalLinksSE:GlobalLinksService) {}
+  constructor(private router: Router, public footerSE: FooterService, public globalLinksSE: GlobalLinksService) {}
   showIfRouteIsInList() {
     // //(this.router.url);
     this.isFloating = false;

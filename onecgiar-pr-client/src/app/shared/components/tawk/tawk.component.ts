@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-tawk',
+  standalone: true,
   templateUrl: './tawk.component.html',
   styleUrls: ['./tawk.component.scss']
 })

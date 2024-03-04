@@ -10,7 +10,6 @@ import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
-import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../../../completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
 import { FilterByTextModule } from 'src/app/shared/pipes/filter-by-text.module';
 import { TooltipModule } from 'primeng/tooltip';
@@ -18,6 +17,6 @@ import { CalendarModule } from 'primeng/calendar';
 
 @NgModule({
   declarations: [InnovationPackageComponent],
-  imports: [CommonModule, InnovationPackageRoutingModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  imports: [CommonModule, InnovationPackageRoutingModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
 export class InnovationPackageModule {}

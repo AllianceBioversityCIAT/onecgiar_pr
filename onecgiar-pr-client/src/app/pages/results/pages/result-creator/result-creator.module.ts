@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 
 import { ResultCreatorRoutingModule } from './result-creator-routing.module';
 import { ResultCreatorComponent } from './result-creator.component';
-import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
 import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
@@ -14,7 +13,7 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
-  imports: [CommonModule, ResultCreatorRoutingModule, CustomFieldsModule, FormsModule, MenuModule, RetrieveModalModule, AlertGlobalInfoModule],
+  imports: [CommonModule, ResultCreatorRoutingModule, FormsModule, MenuModule, RetrieveModalModule, AlertGlobalInfoModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ResultCreatorModule {}

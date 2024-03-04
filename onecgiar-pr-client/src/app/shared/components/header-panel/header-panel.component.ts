@@ -4,16 +4,21 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
+import { TawkComponent } from '../tawk/tawk.component';
+import { CommonModule } from '@angular/common';
+import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
 
 @Component({
   selector: 'app-header-panel',
+  standalone: true,
   templateUrl: './header-panel.component.html',
-  styleUrls: ['./header-panel.component.scss']
+  styleUrls: ['./header-panel.component.scss'],
+  imports: [CommonModule, TawkComponent, PrButtonComponent]
 })
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
-  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE:GlobalLinksService) {}
+  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService) {}
   ngOnInit(): void {
     this.api.updateUserData(() => {});
   }
