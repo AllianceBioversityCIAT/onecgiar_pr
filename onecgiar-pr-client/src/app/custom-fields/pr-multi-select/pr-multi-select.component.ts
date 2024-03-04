@@ -6,6 +6,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-pr-multi-select',
+  standalone: true,
   templateUrl: './pr-multi-select.component.html',
   styleUrls: ['./pr-multi-select.component.scss'],
   providers: [

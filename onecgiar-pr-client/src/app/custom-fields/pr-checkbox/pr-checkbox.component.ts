@@ -5,6 +5,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-checkbox',
+  standalone: true,
   templateUrl: './pr-checkbox.component.html',
   styleUrls: ['./pr-checkbox.component.scss'],
   providers: [

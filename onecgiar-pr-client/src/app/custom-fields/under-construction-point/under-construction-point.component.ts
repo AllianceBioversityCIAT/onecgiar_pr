@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-under-construction-point',
+  standalone: true,
   templateUrl: './under-construction-point.component.html',
   styleUrls: ['./under-construction-point.component.scss']
 })

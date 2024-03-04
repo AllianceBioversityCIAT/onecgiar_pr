@@ -4,6 +4,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-range-level',
+  standalone: true,
   templateUrl: './pr-range-level.component.html',
   styleUrls: ['./pr-range-level.component.scss'],
   providers: [

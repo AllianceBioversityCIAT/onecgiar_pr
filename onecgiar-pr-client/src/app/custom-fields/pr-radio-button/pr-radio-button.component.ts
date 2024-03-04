@@ -5,6 +5,7 @@ import { GreenChecksService } from '../../shared/services/global/green-checks.se
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
   selector: 'app-pr-radio-button',
+  standalone: true,
   templateUrl: './pr-radio-button.component.html',
   styleUrls: ['./pr-radio-button.component.scss'],
   providers: [

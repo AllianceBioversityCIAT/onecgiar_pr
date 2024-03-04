@@ -5,6 +5,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-save-button',
+  standalone: true,
   templateUrl: './save-button.component.html',
   styleUrls: ['./save-button.component.scss']
 })

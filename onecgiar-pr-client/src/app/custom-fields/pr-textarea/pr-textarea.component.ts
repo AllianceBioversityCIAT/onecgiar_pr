@@ -5,6 +5,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
   selector: 'app-pr-textarea',
+  standalone: true,
   templateUrl: './pr-textarea.component.html',
   styleUrls: ['./pr-textarea.component.scss'],
   providers: [

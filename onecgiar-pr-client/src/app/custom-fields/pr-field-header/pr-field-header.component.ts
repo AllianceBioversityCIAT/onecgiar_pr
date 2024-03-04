@@ -3,6 +3,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-pr-field-header',
+  standalone: true,
   templateUrl: './pr-field-header.component.html',
   styleUrls: ['./pr-field-header.component.scss']
 })

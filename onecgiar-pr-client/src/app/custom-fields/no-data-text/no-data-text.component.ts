@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-no-data-text',
+  standalone: true,
   templateUrl: './no-data-text.component.html',
   styleUrls: ['./no-data-text.component.scss']
 })

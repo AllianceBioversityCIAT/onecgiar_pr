@@ -5,6 +5,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-sync-button',
+  standalone: true,
   templateUrl: './sync-button.component.html',
   styleUrls: ['./sync-button.component.scss']
 })

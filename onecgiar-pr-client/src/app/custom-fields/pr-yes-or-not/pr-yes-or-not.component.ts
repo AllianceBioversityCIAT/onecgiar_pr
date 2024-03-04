@@ -6,6 +6,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-pr-yes-or-not',
+  standalone: true,
   templateUrl: './pr-yes-or-not.component.html',
   styleUrls: ['./pr-yes-or-not.component.scss'],
   providers: [

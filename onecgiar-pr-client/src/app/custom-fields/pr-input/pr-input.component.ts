@@ -6,6 +6,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-pr-input',
+  standalone: true,
   templateUrl: './pr-input.component.html',
   styleUrls: ['./pr-input.component.scss'],
   providers: [

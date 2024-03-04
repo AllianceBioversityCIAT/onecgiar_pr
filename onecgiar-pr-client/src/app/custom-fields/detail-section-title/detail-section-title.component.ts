@@ -4,6 +4,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-detail-section-title',
+  standalone: true,
   templateUrl: './detail-section-title.component.html',
   styleUrls: ['./detail-section-title.component.scss']
 })
