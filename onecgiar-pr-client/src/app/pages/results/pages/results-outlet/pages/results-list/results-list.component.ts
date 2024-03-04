@@ -20,6 +20,7 @@ import { PdfIconComponent } from '../../../../../../shared/icon-components/pdf-i
 import { MenuModule } from 'primeng/menu';
 import { CustomSpinnerComponent } from '../../../../../../shared/components/custom-spinner/custom-spinner.component';
 import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
+import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 
 @Component({
   selector: 'app-results-list',
@@ -41,7 +42,8 @@ import { ResultsToUpdateModalComponent } from './components/results-to-update-mo
     PdfIconComponent,
     MenuModule,
     CustomSpinnerComponent,
-    ResultsToUpdateModalComponent
+    ResultsToUpdateModalComponent,
+    ChangePhaseModalComponent
   ]
 })
 export class ResultsListComponent implements OnInit, OnDestroy {
