@@ -1,11 +1,11 @@
-<!-- <div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
+<div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
   {{this.api.globalVariablesSE.get?.global_info_message}}</div>
 <app-header-panel *ngIf="!this.AuthService.inLogin"></app-header-panel>
 <app-navigation-bar *ngIf="!this.AuthService.inLogin"></app-navigation-bar>
 <router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
 <app-external-tools></app-external-tools>
 <app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>
-<app-share-request-modal></app-share-request-modal>
+<!-- <app-share-request-modal></app-share-request-modal> -->
 <app-footer></app-footer>
 <p-dialog class="support_information" header="Title" [(visible)]="this.footerSE.displayContactUs" [draggable]="false"
   [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{ padding: '0px' }">
@@ -20,4 +20,4 @@
     <div class="email">For content questions related on how to fill different sections, please contact <a
         href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit&#64;cgiar.org</a></div>
   </div>
-</p-dialog> -->
+</p-dialog>

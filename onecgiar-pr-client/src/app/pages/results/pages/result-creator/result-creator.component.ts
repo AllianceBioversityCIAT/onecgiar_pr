@@ -5,11 +5,43 @@ import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MenuModule } from 'primeng/menu';
+import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
+import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
+import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
+import { PrRadioButtonComponent } from '../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { AlertGlobalInfoComponent } from '../../../../shared/components/alert-global-info/alert-global-info.component';
+import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
+import { PrInputComponent } from '../../../../custom-fields/pr-input/pr-input.component';
+import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
+import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
+import { RetrieveModalComponent } from '../result-detail/components/retrieve-modal/retrieve-modal.component';
 
 @Component({
   selector: 'app-result-creator',
+  standalone: true,
   templateUrl: './result-creator.component.html',
-  styleUrls: ['./result-creator.component.scss']
+  styleUrls: ['./result-creator.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MenuModule,
+    PrButtonComponent,
+    PrSelectComponent,
+    PrFieldHeaderComponent,
+    PrSelectComponent,
+    ResultLevelButtonsComponent,
+    PrRadioButtonComponent,
+    AlertGlobalInfoComponent,
+    AlertStatusComponent,
+    PrInputComponent,
+    SimilarResultsComponent,
+    SaveButtonComponent,
+    RetrieveModalComponent
+  ]
 })
 export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;
@@ -19,22 +51,43 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   validating = false;
   kpAlertDescription = `Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool.<br><br>
   The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-  The handle will be verified, and only knowledge products from ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). If the online publication date is missing, the issued date (“Date Issued”) will be considered. Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year + 1} will be accepted for the ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} reporting phase.<br><br>
-  Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year - 1} but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year} will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous year. Handles already reported will also not be accepted.<br><br>
+  The handle will be verified, and only knowledge products from ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
+  } will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace (“Date Online”). If the online publication date is missing, the issued date (“Date Issued”) will be considered. Articles published online in ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
+  } but issued in ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year + 1
+  } will be accepted for the ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
+  } reporting phase.<br><br>
+  Articles published online in ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year - 1
+  } but issued in ${
+    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
+  } will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous year. Handles already reported will also not be accepted.<br><br>
   If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.<br><br>`;
   allInitiatives = [];
   allPhases = [];
 
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    private router: Router,
+    private phasesService: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
-    this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
+    this.resultLevelSE.resultLevelList?.forEach(
+      reLevel => (reLevel.selected = false)
+    );
     this.api.updateResultsList();
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
-      if (this.api.dataControlSE.myInitiativesList.length == 1) this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
+      if (this.api.dataControlSE.myInitiativesList.length == 1)
+        this.resultLevelSE.resultBody.initiative_id =
+          this.api.dataControlSE.myInitiativesList[0].id;
     });
     this.api.alertsFs.show({
       id: 'indoasd',
@@ -76,8 +129,15 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   get resultTypeName(): string {
-    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return '';
-    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name;
+    if (
+      !this.resultLevelSE.currentResultTypeList ||
+      !this.resultLevelSE.resultBody.result_type_id
+    )
+      return '';
+    return this.resultLevelSE.currentResultTypeList.find(
+      resultType =>
+        resultType.id == this.resultLevelSE.resultBody.result_type_id
+    )?.name;
   }
 
   get resultLevelName(): string {
@@ -85,13 +145,18 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   clean() {
-    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
+    if (this.resultLevelSE.resultBody.result_type_id == 6)
+      this.resultLevelSE.resultBody.result_name = '';
     else this.depthSearch(this.resultLevelSE.resultBody.result_name);
   }
 
   depthSearch(title: string) {
-    const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
-    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+    const cleanSpaces = (text: string) =>
+      text?.replace(/\s+/g, '')?.toLowerCase();
+    const legacyType = this.getLegacyType(
+      this.resultTypeName,
+      this.resultLevelName
+    );
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
       next: (response: any[]) => {
@@ -100,7 +165,9 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
 
-        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
+        this.exactTitleFound = !!this.depthSearchList.find(
+          result => cleanSpaces(result.title) === cleanSpaces(title)
+        );
       },
       error: () => {
         this.depthSearchList = [];
@@ -128,25 +195,62 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   onSaveSection() {
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe({
-        next: (resp: any) => {
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      this.api.resultsSE
+        .POST_resultCreateHeader(this.resultLevelSE.resultBody)
+        .subscribe({
+          next: (resp: any) => {
+            this.router.navigate(
+              [
+                `/result/result-detail/${resp?.response?.result_code}/general-information`
+              ],
+              { queryParams: { phase: resp?.response?.version_id } }
+            );
+            this.api.alertsFe.show({
+              id: 'reportResultSuccess',
+              title: 'Result created',
+              status: 'success',
+              closeIn: 500
+            });
+          },
+          error: err => {
+            this.api.alertsFe.show({
+              id: 'reportResultError',
+              title: 'Error!',
+              description: err?.error?.message,
+              status: 'error'
+            });
+          }
+        });
     } else {
-      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe({
-        next: (resp: any) => {
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], { queryParams: { phase: resp?.response?.version_id } });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      this.api.resultsSE
+        .POST_createWithHandle({
+          ...this.mqapJson,
+          result_data: this.resultLevelSE.resultBody
+        })
+        .subscribe({
+          next: (resp: any) => {
+            this.router.navigate(
+              [
+                `/result/result-detail/${resp?.response?.result_code}/general-information`
+              ],
+              { queryParams: { phase: resp?.response?.version_id } }
+            );
+            this.api.alertsFe.show({
+              id: 'reportResultSuccess',
+              title: 'Result created',
+              status: 'success',
+              closeIn: 500
+            });
+          },
+          error: err => {
+            this.api.alertsFe.show({
+              id: 'reportResultError',
+              title: 'Error!',
+              description: err?.error?.message,
+              status: 'error'
+            });
+          }
+        });
     }
   }
 
@@ -161,23 +265,37 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   validateKnowledgeProductFields() {}
 
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail(
+      '.local_container'
+    );
   }
 
   GET_mqapValidation() {
     this.validating = true;
-    this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe({
-      next: resp => {
-        this.mqapJson = resp.response;
-        this.resultLevelSE.resultBody.result_name = resp.response.title;
-        this.validating = false;
-        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Metadata successfully retrieved', description: 'Title: ' + this.resultLevelSE.resultBody.result_name, status: 'success' });
-      },
-      error: err => {
-        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        this.validating = false;
-        this.resultLevelSE.resultBody.result_name = '';
-      }
-    });
+    this.api.resultsSE
+      .GET_mqapValidation(this.resultLevelSE.resultBody.handler)
+      .subscribe({
+        next: resp => {
+          this.mqapJson = resp.response;
+          this.resultLevelSE.resultBody.result_name = resp.response.title;
+          this.validating = false;
+          this.api.alertsFe.show({
+            id: 'reportResultSuccess',
+            title: 'Metadata successfully retrieved',
+            description: 'Title: ' + this.resultLevelSE.resultBody.result_name,
+            status: 'success'
+          });
+        },
+        error: err => {
+          this.api.alertsFe.show({
+            id: 'reportResultError',
+            title: 'Error!',
+            description: err?.error?.message,
+            status: 'error'
+          });
+          this.validating = false;
+          this.resultLevelSE.resultBody.result_name = '';
+        }
+      });
   }
 }

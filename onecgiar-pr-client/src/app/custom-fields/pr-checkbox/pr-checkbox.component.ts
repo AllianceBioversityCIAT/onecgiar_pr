@@ -1,13 +1,26 @@
-import { Component, EventEmitter, forwardRef, Input, Output } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  Component,
+  EventEmitter,
+  forwardRef,
+  Input,
+  Output
+} from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR
+} from '@angular/forms';
 import { GreenChecksService } from '../../shared/services/global/green-checks.service';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { CommonModule } from '@angular/common';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @Component({
   selector: 'app-pr-checkbox',
   standalone: true,
   templateUrl: './pr-checkbox.component.html',
   styleUrls: ['./pr-checkbox.component.scss'],
+  imports: [CommonModule, FormsModule, CheckboxModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -17,7 +30,10 @@ import { RolesService } from '../../shared/services/global/roles.service';
   ]
 })
 export class PrCheckboxComponent {
-  constructor(public greenChecksSE: GreenChecksService, public rolesSE: RolesService) {}
+  constructor(
+    public greenChecksSE: GreenChecksService,
+    public rolesSE: RolesService
+  ) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() placeholder: string;

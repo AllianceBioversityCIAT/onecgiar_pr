@@ -1,13 +1,39 @@
-import { Component, forwardRef, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  Component,
+  forwardRef,
+  Input,
+  Output,
+  EventEmitter,
+  SimpleChanges
+} from '@angular/core';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR
+} from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { CommonModule } from '@angular/common';
+import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
+import { AlertStatusComponent } from '../alert-status/alert-status.component';
+import { LabelNamePipe } from './label-name.pipe';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ListFilterByTextAndAttrPipe } from '../pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 
 @Component({
   selector: 'app-pr-select',
   standalone: true,
   templateUrl: './pr-select.component.html',
   styleUrls: ['./pr-select.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    AlertStatusComponent,
+    LabelNamePipe,
+    ScrollingModule,
+    ListFilterByTextAndAttrPipe
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -17,7 +43,10 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ]
 })
 export class PrSelectComponent implements ControlValueAccessor {
-  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -71,7 +100,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   //? Extra
   removeFocus(option?) {
     if (option?.disabled) return;
-    const element: any = document.getElementById(this.optionValue + this.indexReference ?? '');
+    const element: any = document.getElementById(
+      this.optionValue + this.indexReference ?? ''
+    );
     element.blur();
   }
   get optionsIntance() {
@@ -84,14 +115,21 @@ export class PrSelectComponent implements ControlValueAccessor {
     });
 
     this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
-      if (itemFinded && itemFinded[this.optionValue] != this.value) itemFinded.disabled = true;
+      const itemFinded = this._optionsIntance.find(
+        listItem =>
+          listItem[this.optionValue] == disableOption[this.optionValue]
+      );
+      if (itemFinded && itemFinded[this.optionValue] != this.value)
+        itemFinded.disabled = true;
     });
     this.fullValue[this.optionValue] = this.value;
 
     if (!this.value) return this._optionsIntance;
-    const id = typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
-    const itemFinded = this._optionsIntance?.find(listItem => listItem[this.optionValue] == id);
+    const id =
+      typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
+    const itemFinded = this._optionsIntance?.find(
+      listItem => listItem[this.optionValue] == id
+    );
     if (!itemFinded) return this._optionsIntance;
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];

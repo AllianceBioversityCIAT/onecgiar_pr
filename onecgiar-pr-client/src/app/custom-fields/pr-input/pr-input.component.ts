@@ -1,14 +1,37 @@
 import { Component, forwardRef, Input } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR
+} from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { CommonModule } from '@angular/common';
+import { UnderConstructionPointComponent } from '../under-construction-point/under-construction-point.component';
+import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
+import { PrWordCounterComponent } from '../pr-word-counter/pr-word-counter.component';
+import { CustomValidationTooltipComponent } from '../custom-validation-tooltip/custom-validation-tooltip.component';
+import { PrFieldValidationsComponent } from '../pr-field-validations/pr-field-validations.component';
+import { YesOrNotByBooleanPipe } from '../pipes/yes-or-not-by-boolean.pipe';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 @Component({
   selector: 'app-pr-input',
   standalone: true,
   templateUrl: './pr-input.component.html',
   styleUrls: ['./pr-input.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    UnderConstructionPointComponent,
+    PrFieldHeaderComponent,
+    PrWordCounterComponent,
+    CustomValidationTooltipComponent,
+    PrFieldValidationsComponent,
+    YesOrNotByBooleanPipe,
+    InputNumberModule
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -45,10 +68,15 @@ export class PrInputComponent implements ControlValueAccessor {
   public wordCount: number = 0;
   public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
 
-  constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    private wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
-    if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
+    if (this.beforeValue !== this._value && this.maxWords)
+      this.wordCount = this.wordCounterSE.counter(this._value);
     this.beforeValue = this._value;
     return this._value;
   }
@@ -63,7 +91,9 @@ export class PrInputComponent implements ControlValueAccessor {
 
   get badLink() {
     // const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i);
-    const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i);
+    const regex = new RegExp(
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
+    );
 
     const value = this.value ? this.value.trim() : '';
 
