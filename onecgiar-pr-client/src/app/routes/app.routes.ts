@@ -9,6 +9,11 @@ export const routes: Routes = [
       ),
     children: [
       {
+        path: '',
+        redirectTo: 'results-outlet',
+        pathMatch: 'full'
+      },
+      {
         path: 'result-creator',
         loadComponent: () =>
           import(
@@ -22,6 +27,11 @@ export const routes: Routes = [
             '../pages/results/pages/result-detail/result-detail.component'
           ).then(c => c.ResultDetailComponent),
         children: [
+          {
+            path: '',
+            redirectTo: 'general-information',
+            pathMatch: 'full'
+          },
           {
             path: 'general-information',
             loadComponent: () =>
@@ -38,6 +48,11 @@ export const routes: Routes = [
             '../pages/results/pages/results-outlet/results-outlet.component'
           ).then(c => c.ResultsOutletComponent),
         children: [
+          {
+            path: '',
+            redirectTo: 'results-list',
+            pathMatch: 'full'
+          },
           {
             path: 'results-notifications',
             loadComponent: () =>
