@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { PrRoute, routingApp } from '../../routing/routing-data';
 import { NavigationBarService } from '../../services/navigation-bar.service';
 import { RolesService } from '../../services/global/roles.service';
 import { environment } from 'src/environments/environment';
@@ -7,16 +6,17 @@ import { DataControlService } from '../../services/data-control.service';
 import { AuthService } from '../../services/api/auth.service';
 import { ApiService } from '../../services/api/api.service';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-navigation-bar',
   standalone: true,
   templateUrl: './navigation-bar.component.html',
   styleUrls: ['./navigation-bar.component.scss'],
-  imports: [CommonModule]
+  imports: [CommonModule, RouterLink]
 })
 export class NavigationBarComponent implements OnInit {
-  navigationOptions: PrRoute[] = routingApp;
+  navigationOptions: any[] = [];
   emailAccess = ['h.f.tobon@cgiar.org', 'admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org', 'yecksin@gmail.com'];
 
   constructor(public api: ApiService, public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
