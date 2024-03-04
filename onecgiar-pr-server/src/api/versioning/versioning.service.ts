@@ -619,6 +619,46 @@ export class VersioningService {
     }
   }
 
+  async annualReplicationProcessInnovationPackage(user: TokenDto) {
+    try {
+      const phase = await this._versionRepository.findOne({
+        where: {
+          is_active: true,
+          status: true,
+          app_module_id: AppModuleIdEnum.REPORTING,
+        },
+        relations: {
+          obj_previous_phase: true,
+        },
+      });
+
+      if (!phase) {
+        throw this._returnResponse.format({
+          message: `There is no active phase`,
+          response: null,
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      const results =
+        await this._versionRepository.$_getAllInovationPackageToReplicate(phase);
+
+      for (const r of results) {
+        if (this.$_genericValidation(r.result_code, phase.id)) {
+          await this.$_phaseChangeIPSR(r, phase, user);
+        }
+      }
+
+      return this._returnResponse.format({
+        message: `The results were replicated successfully`,
+        response: results?.length,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(error, !isProduction());
+    }
+  }
+
   async findAppModules(): Promise<ReturnResponseDto<ApplicationModules>> {
     try {
       const res = await this._applicationModulesRepository.find({
