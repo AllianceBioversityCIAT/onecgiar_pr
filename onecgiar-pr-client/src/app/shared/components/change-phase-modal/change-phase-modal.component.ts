@@ -1,7 +1,6 @@
 import { Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
-import { ResultsApiService } from '../../services/api/results-api.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
@@ -18,19 +17,10 @@ export class ChangePhaseModalComponent implements OnInit {
   ngOnInit(): void {
     this.api.dataControlSE.getCurrentPhases();
     this.api.dataControlSE.getCurrentIPSRPhase();
-    console.log(this.ipsrDataControlSE.inIpsr);
   }
 
   accept() {
     this.requesting = true;
-
-    if (this.ipsrDataControlSE.inIpsr) {
-      this.requesting = false;
-      this.ipsrDataControlSE.ipsrUpdateResultModal = false;
-      this.api.dataControlSE.chagePhaseModal = false;
-      console.log('Updated IPSR result');
-      return;
-    }
     this.api.resultsSE.PATCH_versioningProcess(this.api.dataControlSE.currentResult.id).subscribe({
       next: ({ response }) => {
         this.api.alertsFe.show({ id: 'noti', title: `Successful replication`, description: `Result ${this.api.dataControlSE.currentResult.result_code} successfully replicated in phase ${this.api.dataControlSE.reportingCurrentPhase.phaseName}.`, status: 'success' });
