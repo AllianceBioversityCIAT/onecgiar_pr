@@ -73,7 +73,7 @@ export class InnovationPackageCustomTableComponent {
     });
   }
   onPressAction(result) {
-    const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, '');
+    const onlyNumbers = result?.official_code.replace(/\D+/g, '');
     this.currentInnovationPackageToAction.id = result?.id;
     this.currentInnovationPackageToAction.title = result.title;
     this.retrieveModalSE.title = result?.title;

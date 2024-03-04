@@ -18,6 +18,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
       this.deselectInits();
     }
     this.GETAllInnovationPackages();
+    this.api.dataControlSE.getCurrentIPSRPhase();
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
   }
 
