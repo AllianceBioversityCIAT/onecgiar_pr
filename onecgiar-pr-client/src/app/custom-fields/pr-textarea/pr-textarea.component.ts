@@ -1,13 +1,30 @@
 import { Component, forwardRef, Input } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  ControlValueAccessor,
+  FormsModule,
+  NG_VALUE_ACCESSOR
+} from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { CommonModule } from '@angular/common';
+import { InputTextareaModule } from 'primeng/inputtextarea';
+import { PrWordCounterComponent } from '../pr-word-counter/pr-word-counter.component';
+import { PrFieldValidationsComponent } from '../pr-field-validations/pr-field-validations.component';
+import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
 @Component({
   selector: 'app-pr-textarea',
   standalone: true,
   templateUrl: './pr-textarea.component.html',
   styleUrls: ['./pr-textarea.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    InputTextareaModule,
+    PrWordCounterComponent,
+    PrFieldValidationsComponent,
+    PrFieldHeaderComponent
+  ],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -32,10 +49,15 @@ export class PrTextareaComponent implements ControlValueAccessor {
   private beforeValue: string;
   public wordCount: number = 0;
   public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
-  constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    private wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
-    if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
+    if (this.beforeValue !== this._value && this.maxWords)
+      this.wordCount = this.wordCounterSE.counter(this._value);
     this.beforeValue = this._value;
     return this._value;
   }

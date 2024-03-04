@@ -2,13 +2,14 @@ import { Component, Input } from '@angular/core';
 import { MappedResultsModalServiceService } from './mapped-results-modal-service.service';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-mapped-results-modal',
   standalone: true,
   templateUrl: './mapped-results-modal.component.html',
   styleUrls: ['./mapped-results-modal.component.scss'],
-  imports: [CommonModule, TableModule]
+  imports: [CommonModule, TableModule, DialogModule]
 })
 export class MappedResultsModalComponent {
   @Input() activeTab?: any = {};

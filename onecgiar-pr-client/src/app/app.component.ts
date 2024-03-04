@@ -11,7 +11,7 @@ import { ExternalToolsComponent } from './shared/components/external-tools/exter
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
-// import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
+import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { DialogModule } from 'primeng/dialog';
 import { CommonModule } from '@angular/common';
@@ -28,7 +28,7 @@ import { CommonModule } from '@angular/common';
     TestEnvironmentLabelComponent,
     TawkComponent,
     GoogleAnalyticsComponent,
-    // ShareRequestModalComponent,
+    ShareRequestModalComponent,
     FooterComponent,
     DialogModule
   ],
