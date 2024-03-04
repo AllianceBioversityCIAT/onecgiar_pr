@@ -14,8 +14,6 @@ import { TagModule } from 'primeng/tag';
 import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
-import { OtherFunctionalitiesComponent } from './other-functionalities/other-functionalities.component';
-import { MassivePhaseShiftComponent } from './other-functionalities/components/massive-phase-shift/massive-phase-shift.component';
 import { DialogModule } from 'primeng/dialog';
 
 @NgModule({

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
 import { ResultInnovationPackageController } from './result-innovation-package.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
@@ -77,7 +77,7 @@ import { ResultCountrySubnationalRepository } from '../../results/result-countri
     ReturnResponse,
     ResultCountrySubnationalRepository,
   ],
-  imports: [VersionsModule, VersioningModule],
+  imports: [VersionsModule, forwardRef(() => VersioningModule)],
   exports: [ResultInnovationPackageRepository],
 })
 export class ResultInnovationPackageModule {}

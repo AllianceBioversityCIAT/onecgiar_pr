@@ -1,4 +1,8 @@
 <div class="innovation_packages_title">
+    <div style="margin-bottom: 0.5rem;">
+        <app-phase-switcher></app-phase-switcher>
+    </div>
+
     <div class="title">
         <div>
             {{this.ipsrDataControlSE.detailData?.title}}
@@ -8,12 +12,12 @@
             <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
                 [verticalMargin]="0"
                 [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-                (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"></app-pr-button>
-
+                (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
+            </app-pr-button>
         </div>
     </div>
-
 </div>
+
 <div class="section_container">
     <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
     <div class="ipsr-detail-line"></div>
@@ -34,7 +38,6 @@
             <div class="item">
                 {{this.ipsrDataControlSE.detailData?.official_code}}
             </div>
-
         </div>
     </div>
 
@@ -43,7 +46,6 @@
         <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
             <div class="info">
                 <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="">
-                <!-- <i class="material-icons-round icon rotating">sync</i> -->
                 <div class="text">Loading section...</div>
             </div>
         </div>

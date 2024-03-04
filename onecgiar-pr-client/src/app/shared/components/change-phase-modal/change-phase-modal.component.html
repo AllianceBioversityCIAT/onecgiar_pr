@@ -1,45 +1,61 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.chagePhaseModal"
-  (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+  [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
   [dismissableMask]="true" [style]="{ padding: '0px' }">
   <div id="change-phase">
     <div class="lateral-bar"></div>
+
     <div class="content-change-phase">
-      <div [style]="{ 'text-align': 'center' }">
+      <div style="text-align: center;">
         <h2 [style]="{ 'margin-bottom': '0px' }">Would you also like to report this result</h2>
-        <h2 [style]="{ 'margin-top': '0px' }">in this phase "{{ version?.phase_name }}"?</h2>
+        <h2 [style]="{ 'margin-top': '0px' }">in this phase "{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}"?</h2>
       </div>
+
       <div class="phase-info-result">
         <div class="pr-my"><b>Result code:</b> {{ api.dataControlSE?.currentResult?.result_code }}</div>
         <div class="pr-my"><b>Type:</b> {{ api.dataControlSE?.currentResult?.result_type }}</div>
         <div class="pr-my"><b>Title:</b> {{ api.dataControlSE?.currentResult?.title }}</div>
         <div class="pr-my"><b>From phase:</b> "{{ api.dataControlSE?.currentResult?.phase_name }}"</div>
       </div>
+
       <div class="info-phase-change">
         <div class="phase-data pa-l">
           <i><b>{{ api.dataControlSE?.currentResult?.phase_name }}</b></i>
         </div>
+
         <div class="icon-change">
-          <img src="../../../../assets/icons/data_transfer.svg" [style]="{ width: '100px' }" alt="data transfer icon"/>
+          <img src="../../../../assets/icons/data_transfer.svg" alt="transfer icon" [style]="{ width: '100px' }" />
         </div>
+
         <div class="phase-data pa-r">
-          <i><b>{{ version?.phase_name }}</b></i>
+          <i><b>{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}</b></i>
         </div>
       </div>
-      <div [style]="{ 'text-align': 'center' }">
-        <span><i>Metadata from the phase <b>'{{ api.dataControlSE?.currentResult?.phase_name }}'</b> will be duplicated
-            in the</i></span><br />
-        <span><i>phase <b>'{{ version?.phase_name }}'</b>.</i></span>
+
+      <div style="text-align: center;">
+        <span>
+          <i>Metadata from the phase <b>'{{ api.dataControlSE?.currentResult?.phase_name }}'</b> will be duplicated
+            in the
+          </i>
+        </span>
+        <br />
+        <span>
+          <i>phase <b>'{{ this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName }}'</b>.</i>
+        </span>
       </div>
+
       <div class="buttons">
         <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel"
-          colorType="secondary" (click)="this.api.dataControlSE.chagePhaseModal = false"> </app-pr-button>
+          colorType="secondary" (click)="this.api.dataControlSE.chagePhaseModal = false">
+        </app-pr-button>
+
         <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting" padding="medium"
-          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3"
+          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3" [icon]="this.requesting ? 'loop' : ''"
           [tooltipText]="this.api.dataControlSE?.currentResult?.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"
-          [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm" (clickEvent)="accept()"
-          [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
+          [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm" (clickEvent)="accept()">
+        </app-pr-button>
       </div>
     </div>
+
     <div class="lateral-bar"></div>
   </div>
 </p-dialog>

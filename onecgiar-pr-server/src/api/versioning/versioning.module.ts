@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { VersioningService } from './versioning.service';
 import { VersioningController } from './versioning.controller';
 import { VersionRepository } from './versioning.repository';
@@ -46,6 +46,24 @@ import { EvidenceSharepointRepository } from '../results/evidences/repositories/
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { IpsrRepository } from '../ipsr/ipsr.repository';
+import { IpsrModule } from '../ipsr/ipsr.module';
+import { ResultInnovationPackageModule } from '../ipsr/result-innovation-package/result-innovation-package.module';
+import { InnovationPathwayModule } from '../ipsr/innovation-pathway/innovation-pathway.module';
+import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
+import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultActorRepository } from '../results/result-actors/repositories/result-actors.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -90,9 +108,24 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
     ResultTypeRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository,
     EvidenceSharepointRepository,
     EvidencesService,
     ShareResultRequestRepository,
+    ResultActorRepository,
+    IpsrRepository,
+    ResultIpAAOutcomeRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpImpactAreaRepository,
+    ResultIpSdgTargetRepository,
+    InnovationPackagingExpertRepository,
+    ResultIpMeasureRepository,
+    ResultIpExpertisesRepository,
+    ResultIpExpertWorkshopOrganizedRepostory,
+    ResultsIpActorRepository,
+    ResultsByIpInnovationUseMeasureRepository,
+    ResultsIpInstitutionTypeRepository
   ],
   exports: [
     EvidencesService,
@@ -131,7 +164,12 @@ import { ShareResultRequestRepository } from '../results/share-result-request/sh
     ResultTypeRepository,
     EvidenceSharepointRepository,
     ShareResultRequestRepository,
+    IpsrRepository,
   ],
-  imports: [SharePointModule],
+  imports: [
+    SharePointModule,
+    forwardRef(() => ResultInnovationPackageModule),
+    forwardRef(() => InnovationPathwayModule),
+  ],
 })
 export class VersioningModule {}

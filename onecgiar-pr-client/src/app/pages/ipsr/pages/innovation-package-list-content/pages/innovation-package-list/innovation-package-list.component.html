@@ -1,11 +1,24 @@
 <div class="section_container">
     <app-section-header titleText="Innovation Packages"
-        description="Here you will see a list of all the Innovation Packages so that you can access them."></app-section-header>
-    <a routerLink="/ipsr/creator"><app-pr-button *ngIf="!this.api.rolesSE.platformIsClosed"
-            text="Create a new Innovation Package" icon="add_box" [reverse]="true"></app-pr-button></a>
+        description="Here you will see a list of all the Innovation Packages so that you can access them.">
+    </app-section-header>
+
+    <div class="ipsr_buttons">
+        <a routerLink="/ipsr/creator">
+            <app-pr-button *ngIf="!this.api.rolesSE.platformIsClosed" 
+            text="Create a new Innovation Package" icon="add_box" [reverse]="true"></app-pr-button>
+        </a>
+        
+        <app-pr-button text="Update an Innovation Package" icon="moving" [reverse]="true"
+        (click)="this.ipsrDataControlSE.ipsrUpdateResultModal = true"></app-pr-button>
+    </div>
 
     <app-ipsr-list-filters></app-ipsr-list-filters>
-    <app-innovation-package-custom-table (deleteEvent)="this.GETAllInnovationPackages()"
-        [total]="this.innovationPackagesList?.length"
-        [tableData]="this.innovationPackagesList | innovationPackageListFilter:this.ipsrListService.text_to_search:this.filterJoin"></app-innovation-package-custom-table>
+    
+    <app-innovation-package-custom-table (deleteEvent)="this.GETAllInnovationPackages()" 
+    [tableData]="this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : this.ipsrListService.text_to_search "
+    [total]="this.ipsrDataControlSE.ipsrResultList?.length"></app-innovation-package-custom-table>
 </div>
+
+<app-update-ipsr-result-modal></app-update-ipsr-result-modal>
+<app-change-phase-modal></app-change-phase-modal>

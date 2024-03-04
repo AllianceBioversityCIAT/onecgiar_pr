@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { InnovationPathwayController } from './innovation-pathway.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
@@ -48,7 +48,7 @@ import { ResultCountrySubnationalRepository } from '../../results/result-countri
 
 @Module({
   controllers: [InnovationPathwayController],
-  imports: [VersioningModule],
+  imports: [forwardRef(() => VersioningModule)],
   providers: [
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,

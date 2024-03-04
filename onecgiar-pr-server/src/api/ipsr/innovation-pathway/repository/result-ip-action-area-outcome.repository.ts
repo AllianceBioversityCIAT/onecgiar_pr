@@ -4,12 +4,78 @@ import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpAAOutcome } from '../entities/result-ip-action-area-outcome.entity';
 import { env } from 'process';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { ReplicableConfigInterface, ConfigCustomQueryInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import { Ipsr } from '../../entities/ipsr.entity';
 
 @Injectable()
 export class ResultIpAAOutcomeRepository
-  extends Repository<ResultIpAAOutcome>
+  extends BaseRepository<ResultIpAAOutcome>
   implements LogicalDelete<ResultIpAAOutcome>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultIpAAOutcome>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          ${config.new_ipsr_id} AS result_by_innovation_package_id,
+          action_area_outcome_id
+      FROM
+          result_ip_action_area_outcome
+      WHERE
+        result_by_innovation_package_id = ${config.old_ipsr_id}
+        AND is_active > 0;
+    `,
+      insertQuery: `
+      INSERT INTO
+        result_ip_action_area_outcome (
+            is_active,
+            created_date,
+            last_updated_date,
+            created_by,
+            last_updated_by,
+            result_by_innovation_package_id,
+            action_area_outcome_id
+        )
+      SELECT
+        is_active,
+        ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+        last_updated_date,
+        ${config.user.id} AS created_by,
+        ${config.user.id} AS last_updated_by,
+        ${config.new_ipsr_id} AS result_by_innovation_package_id,
+        action_area_outcome_id
+      FROM
+          result_ip_action_area_outcome
+      WHERE
+        result_by_innovation_package_id = ${config.old_ipsr_id}
+        AND is_active > 0;
+      `,
+      returnQuery: `
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          ${config.new_ipsr_id} AS result_by_innovation_package_id,
+          action_area_outcome_id
+      FROM
+          result_ip_action_area_outcome
+      WHERE
+        result_by_innovation_package_id = ${config.new_ipsr_id}
+        AND is_active > 0;
+      `,
+    };
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,

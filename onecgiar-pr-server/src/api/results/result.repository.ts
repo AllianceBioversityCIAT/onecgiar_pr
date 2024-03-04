@@ -29,6 +29,9 @@ export class ResultRepository
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
+    console.log("🚀 ~ config:", config)
+    console.log('Entro a Result');
+    
     return {
       findQuery: `
       select
@@ -1025,6 +1028,7 @@ WHERE
     resultCode: number,
     version: number = null,
   ): Promise<number> {
+    if (!version) return null;
     const queryData = `
     SELECT 
     r.id
@@ -1032,15 +1036,13 @@ WHERE
     \`result\` r 
     WHERE r.is_active > 0
     and r.result_code = ?
-    ${
-      version
-        ? `and r.version_id = ${version};`
-        : `ORDER by r.id desc
-    limit 1;`
-    }
+    and r.version_id = ?;
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      const results: Array<{ id }> = await this.query(queryData, [
+        resultCode,
+        version,
+      ]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

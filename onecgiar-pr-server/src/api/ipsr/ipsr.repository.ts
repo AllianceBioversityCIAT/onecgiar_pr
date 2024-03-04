@@ -1,22 +1,119 @@
 import { Injectable } from '@nestjs/common';
 
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Ipsr } from './entities/ipsr.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+  ReplicableInterface
+} from '../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class IpsrRepository
-  extends Repository<Ipsr>
+  extends BaseRepository<Ipsr>
   implements LogicalDelete<Ipsr>
 {
+  createQueries(
+    config: ReplicableConfigInterface<Ipsr>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          result_by_innovation_package_id,
+          result_innovation_package_id,
+          result_id,
+          ipsr_role_id,
+          readinees_evidence_link,
+          use_evidence_link,
+          readiness_level_evidence_based,
+          use_details_of_evidence,
+          readiness_details_of_evidence,
+          use_level_evidence_based,
+          current_innovation_readiness_level,
+          current_innovation_use_level,
+          potential_innovation_readiness_level,
+          potential_innovation_use_level
+      FROM
+          result_by_innovation_package
+      WHERE
+          result_innovation_package_id = ${config.old_result_id}
+          AND is_active > 0;`,
+      insertQuery: `
+      INSERT INTO
+          result_by_innovation_package (
+              is_active,
+              created_date,
+              last_updated_date,
+              created_by,
+              last_updated_by,
+              result_innovation_package_id,
+              result_id,
+              ipsr_role_id,
+              readinees_evidence_link,
+              use_evidence_link,
+              readiness_level_evidence_based,
+              use_details_of_evidence,
+              readiness_details_of_evidence,
+              use_level_evidence_based,
+              current_innovation_readiness_level,
+              current_innovation_use_level,
+              potential_innovation_readiness_level,
+              potential_innovation_use_level
+          )
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          ${config.new_result_id} AS result_innovation_package_id,
+          result_id,
+          ipsr_role_id,
+          readinees_evidence_link,
+          use_evidence_link,
+          readiness_level_evidence_based,
+          use_details_of_evidence,
+          readiness_details_of_evidence,
+          use_level_evidence_based,
+          current_innovation_readiness_level,
+          current_innovation_use_level,
+          potential_innovation_readiness_level,
+          potential_innovation_use_level
+      FROM
+          result_by_innovation_package
+      WHERE
+          result_innovation_package_id = ${config.old_result_id}
+          AND is_active > 0;
+      `,
+      returnQuery: `
+      SELECT
+        result_by_innovation_package_id
+      FROM
+        result_by_innovation_package r1
+      WHERE
+          r1.result_innovation_package_id = ${config.new_result_id}
+          AND r1.is_active > 0
+          AND r1.ipsr_role_id = 1`,
+    };
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Ipsr, dataSource.createEntityManager());
   }
+
   fisicalDelete(resultId: number): Promise<any> {
     const dataQuery = `delete rbip from result_by_innovation_package rbip where rbip.result_innovation_package_id = ?;`;
     return this.query(dataQuery, [resultId])
@@ -129,6 +226,7 @@ export class IpsrRepository
             ci.official_code AS initiative_official_code,
             ci.short_name AS initiative_short_name,
             ci.name AS initiative_name,
+            r.version_id,
             (
                 SELECT
                     rl.name
