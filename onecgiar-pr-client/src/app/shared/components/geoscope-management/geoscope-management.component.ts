@@ -6,11 +6,30 @@ import { ModuleTypeEnum } from '../../enum/api.enum';
 import { AppModuleEnum } from '../../enum/app-module.enum';
 import { ApiService } from '../../services/api/api.service';
 import { ResultLevelService } from '../../../pages/results/pages/result-creator/services/result-level.service';
+import { CommonModule } from '@angular/common';
+import { PrRadioButtonComponent } from '../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
+import { SaveButtonComponent } from '../../../custom-fields/save-button/save-button.component';
+import { FormsModule } from '@angular/forms';
+import { PrYesOrNotComponent } from '../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
+import { PrMultiSelectComponent } from '../../../custom-fields/pr-multi-select/pr-multi-select.component';
+import { SubGeoscopeComponent } from '../../../pages/ipsr/pages/innovation-package-creator/components/ipsr-geoscope-creator/components/sub-geoscope/sub-geoscope.component';
 
 @Component({
   selector: 'app-geoscope-management',
+  standalone: true,
   templateUrl: './geoscope-management.component.html',
-  styleUrls: ['./geoscope-management.component.scss']
+  styleUrls: ['./geoscope-management.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrRadioButtonComponent,
+    PrFieldHeaderComponent,
+    SaveButtonComponent,
+    PrYesOrNotComponent,
+    PrMultiSelectComponent,
+    SubGeoscopeComponent
+  ]
 })
 export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [] };
@@ -29,14 +48,28 @@ export class GeoscopeManagementComponent implements OnInit {
   ];
 
   get labelRadioButtons(): string {
-    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}?` : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
+    return this.internalModule &&
+      this.internalModule.name === ModuleTypeEnum.REPORTING
+      ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(
+          this.resultLevelSE.currentResultLevelName
+        )}?`
+      : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
   }
 
   get descriptionRadioButtons(): string {
-    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}</strong> has taken place/contributed to benefit.` : undefined;
+    return this.internalModule &&
+      this.internalModule.name === ModuleTypeEnum.REPORTING
+      ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(
+          this.resultLevelSE.currentResultLevelName
+        )}</strong> has taken place/contributed to benefit.`
+      : undefined;
   }
 
-  constructor(public regionsCountriesSE: RegionsCountriesService, public api: ApiService, public resultLevelSE: ResultLevelService) {}
+  constructor(
+    public regionsCountriesSE: RegionsCountriesService,
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService
+  ) {}
 
   resetHasScope() {
     switch (this.body.geo_scope_id) {
@@ -61,10 +94,12 @@ export class GeoscopeManagementComponent implements OnInit {
     let tags = '';
     switch (id) {
       case 2:
-        tags += 'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
+        tags +=
+          'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
         break;
       case 3:
-        tags += 'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
+        tags +=
+          'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
         break;
     }
     tags += '';
@@ -79,7 +114,8 @@ export class GeoscopeManagementComponent implements OnInit {
       case GeoScopeEnum.COUNTRY:
       case GeoScopeEnum.SUB_NATIONAL:
         this.body.regions = [];
-        if (GeoScopeEnum.COUNTRY) this.body.countries?.map(el => (el.sub_national = []));
+        if (GeoScopeEnum.COUNTRY)
+          this.body.countries?.map(el => (el.sub_national = []));
         break;
       default:
         this.body.regions = [];
@@ -93,11 +129,27 @@ export class GeoscopeManagementComponent implements OnInit {
   }
 
   thereAnyText(isCountry: boolean): string {
-    return `The list of ${isCountry ? 'countries' : 'regions'} below follows the <a href='${isCountry ? this.ISO3166 : this.UNM49}' class="open_route" target='_blank'>${isCountry ? 'ISO 3166' : 'UN (M.49)'}<a> standard`;
+    return `The list of ${
+      isCountry ? 'countries' : 'regions'
+    } below follows the <a href='${
+      isCountry ? this.ISO3166 : this.UNM49
+    }' class="open_route" target='_blank'>${
+      isCountry ? 'ISO 3166' : 'UN (M.49)'
+    }<a> standard`;
   }
 
   ngOnInit(): void {
     this.internalModule = AppModuleEnum.getFromName(this.module);
-    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING) this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
+    if (
+      this.internalModule &&
+      this.internalModule.name === ModuleTypeEnum.REPORTING
+    )
+      this.geoscopeOptions = [
+        ...this.geoscopeOptions,
+        {
+          full_name: 'This is yet to be determined',
+          id: GeoScopeEnum.DETERMINED
+        }
+      ];
   }
 }

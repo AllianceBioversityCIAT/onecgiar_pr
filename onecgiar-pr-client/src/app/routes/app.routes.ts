@@ -53,9 +53,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-partners/rd-partners.component'
               ).then(c => c.RdPartnersComponent)
           },
-          // {
-          //   path: 'geographic-location'
-          // },
+          {
+            path: 'geographic-location',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.component'
+              ).then(c => c.RdGeographicLocationComponent)
+          },
           // {
           //   path: 'links-to-results'
           // },

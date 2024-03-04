@@ -2,11 +2,22 @@
 /* eslint-disable camelcase */
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { PrSelectComponent } from '../../../../../../../../custom-fields/pr-select/pr-select.component';
+import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-sub-geoscope',
+  standalone: true,
   templateUrl: './sub-geoscope.component.html',
-  styleUrls: ['./sub-geoscope.component.scss']
+  styleUrls: ['./sub-geoscope.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrSelectComponent,
+    PrFieldHeaderComponent
+  ]
 })
 export class SubGeoscopeComponent {
   @Input() body: any = {};
@@ -31,18 +42,29 @@ export class SubGeoscopeComponent {
     this.subNationalTwo = [];
     this.exitsSubLevelOne = true;
     this.exitsSubLevelTwo = true;
-    const isoAlpha = this.body.countries.filter(resp => this.countrySelected == resp.id)[0];
-    this.api.resultsSE.getSubNationalLevelOne(isoAlpha.iso_alpha_2).subscribe(resp => {
-      this.subNationalOne = resp['response'];
-      if (this.subNationalOne.length == 0) {
-        this.exitsSubLevelOne = false;
-        this.exitsSubLevelTwo = false;
+    const isoAlpha = this.body.countries.filter(
+      resp => this.countrySelected == resp.id
+    )[0];
+    this.api.resultsSE
+      .getSubNationalLevelOne(isoAlpha.iso_alpha_2)
+      .subscribe(resp => {
+        this.subNationalOne = resp['response'];
+        if (this.subNationalOne.length == 0) {
+          this.exitsSubLevelOne = false;
+          this.exitsSubLevelTwo = false;
 
-        this.nameCountry = this.body.countries.filter(resp => this.countrySelected == resp.id)[0]['name'];
-        this.nameCountryTwo = this.body.countries.filter(resp => this.countrySelected == resp.id)[0]['name'];
-      }
-    });
-    if (this.body.geoScopeSubNatinals.length == 0 || this.body.geoScopeSubNatinals.length < index + 1) {
+          this.nameCountry = this.body.countries.filter(
+            resp => this.countrySelected == resp.id
+          )[0]['name'];
+          this.nameCountryTwo = this.body.countries.filter(
+            resp => this.countrySelected == resp.id
+          )[0]['name'];
+        }
+      });
+    if (
+      this.body.geoScopeSubNatinals.length == 0 ||
+      this.body.geoScopeSubNatinals.length < index + 1
+    ) {
       const subCountriesSave = {
         idCountry: isoAlpha.id,
         isRegister: 0
@@ -68,16 +90,24 @@ export class SubGeoscopeComponent {
   getSSubNationalLevelTwo(index) {
     this.subNationalTwo = [];
     this.exitsSubLevelTwo = true;
-    const isoAlpha = this.body.countries.filter(resp => this.countrySelected == resp.id)[0];
-    const adminCode = this.subNationalOne.filter(resp => this.subNationalOneSelected == resp.geonameId)[0];
-    const infoSublevelOne = this.subNationalOne.filter(resp => this.subNationalOneSelected == resp.geonameId)[0];
-    this.api.resultsSE.getSubNationalLevelTwo(isoAlpha.iso_alpha_2, adminCode.adminCode1).subscribe(resp => {
-      this.subNationalTwo = resp['response'];
-      if (this.subNationalTwo.length == 0) {
-        this.exitsSubLevelTwo = false;
-        this.nameCountryTwo = infoSublevelOne['name'];
-      }
-    });
+    const isoAlpha = this.body.countries.filter(
+      resp => this.countrySelected == resp.id
+    )[0];
+    const adminCode = this.subNationalOne.filter(
+      resp => this.subNationalOneSelected == resp.geonameId
+    )[0];
+    const infoSublevelOne = this.subNationalOne.filter(
+      resp => this.subNationalOneSelected == resp.geonameId
+    )[0];
+    this.api.resultsSE
+      .getSubNationalLevelTwo(isoAlpha.iso_alpha_2, adminCode.adminCode1)
+      .subscribe(resp => {
+        this.subNationalTwo = resp['response'];
+        if (this.subNationalTwo.length == 0) {
+          this.exitsSubLevelTwo = false;
+          this.nameCountryTwo = infoSublevelOne['name'];
+        }
+      });
 
     if (this.body.geoScopeSubNatinals.length >= index + 1) {
       const subCountriesSave = {
@@ -102,9 +132,15 @@ export class SubGeoscopeComponent {
   }
 
   selectSubLevelTwo(index) {
-    const infoSublevel = this.subNationalTwo.filter(resp => this.subNationalTwoSelected == resp.geonameId)[0];
-    const infoSublevelOne = this.subNationalOne.filter(resp => this.subNationalOneSelected == resp.geonameId)[0];
-    const isoAlpha = this.body.countries.filter(resp => this.countrySelected == resp.id)[0];
+    const infoSublevel = this.subNationalTwo.filter(
+      resp => this.subNationalTwoSelected == resp.geonameId
+    )[0];
+    const infoSublevelOne = this.subNationalOne.filter(
+      resp => this.subNationalOneSelected == resp.geonameId
+    )[0];
+    const isoAlpha = this.body.countries.filter(
+      resp => this.countrySelected == resp.id
+    )[0];
 
     if (this.body.geoScopeSubNatinals.length >= index + 1) {
       const subCountriesSave = {
