@@ -1,6 +1,6 @@
 <div class="local_container">
     <div class="option">
-        <div class="text">Replicate all QAed result innovations from previous phase to the current active phase</div>
+        <div class="text">{{replicateBannerText()}}</div>
         <div class="button">
             <app-pr-button padding="medium"
                 [text]="this.api.dataControlSE.massivePhaseShiftIsRunning?'Running (this process may take time, please wait)':'Execute'"
@@ -13,4 +13,4 @@
 </div>
 
 
-<app-massive-phase-shift></app-massive-phase-shift>
+<app-massive-phase-shift [replicateIPSR]="replicateIPSR"></app-massive-phase-shift>

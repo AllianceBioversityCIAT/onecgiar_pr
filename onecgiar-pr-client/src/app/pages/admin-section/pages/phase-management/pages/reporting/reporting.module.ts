@@ -15,11 +15,10 @@ import { ResultHistoryOfChangesModalModule } from '../../../completeness-status/
 import { FilterByTextModule } from 'src/app/shared/pipes/filter-by-text.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
-import { OtherFunctionalitiesComponent } from '../../other-functionalities/other-functionalities.component';
-import { MassivePhaseShiftComponent } from '../../other-functionalities/components/massive-phase-shift/massive-phase-shift.component';
+import { OtherFunctionalitiesModule } from '../../other-functionalities/other-functionalities.module';
 
 @NgModule({
-  declarations: [ReportingComponent, OtherFunctionalitiesComponent, MassivePhaseShiftComponent],
-  imports: [CommonModule, ReportingRoutingModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  declarations: [ReportingComponent],
+  imports: [CommonModule, ReportingRoutingModule, OtherFunctionalitiesModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
 export class ReportingModule {}

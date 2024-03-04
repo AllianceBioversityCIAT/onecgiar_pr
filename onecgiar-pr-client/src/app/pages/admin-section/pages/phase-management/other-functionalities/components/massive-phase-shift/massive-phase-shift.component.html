@@ -5,26 +5,36 @@
         <div class="lateral-bar"></div>
         <div class="content-change-phase">
             <div [style]="{ 'text-align': 'center' }">
-                <h2 [style]="{ 'margin-bottom': '0px','padding':'10px' }"> {{numberOfResults}} Innovation Development
-                    type results
-                    will be replicated in the active phase, are you sure to execute this action?</h2>
+                <h2 [style]="{ 'margin-bottom': '0px','padding':'10px' }">{{replicateDescription()}}</h2>
             </div>
             <br><br><br><br>
             <div class="info-phase-change">
                 <div class="phase-data pa-l">
-                    <i><b>Reporting 2022</b></i>
+                    <i>
+                        <b>{{this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName}}</b>
+                    </i>
                 </div>
                 <div class="icon-change">
-                    <img src="../../../../assets/icons/data_transfer.svg" [style]="{ width: '100px' }" />
+                    <img src="../../../../assets/icons/data_transfer.svg" alt="data transfer icon" [style]="{ width: '100px' }" />
                 </div>
                 <div class="phase-data pa-r">
-                    <i><b>Reporting 2023</b></i>
+                    <i>
+                        <b>{{this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}}</b>
+                    </i>
                 </div>
             </div>
             <div [style]="{ 'text-align': 'center' }">
-                <span><i>Metadata from the phase <b>'Reporting 2022'</b> will be
-                        duplicated in the</i></span><br />
-                <span><i>phase <b>'Reporting 2023'</b>.</i></span>
+                <span>
+                    <i>
+                        Metadata from the phase <b>'{{this.replicateIPSR ? this.api.dataControlSE.previousIPSRPhase.phaseName : this.api.dataControlSE.previousReportingPhase.phaseName}}'</b> will be duplicated in the
+                    </i>
+                </span>
+                <br />
+                <span>
+                    <i>
+                        phase <b>'{{this.replicateIPSR ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}}'</b>.
+                    </i>
+                </span>
             </div>
             <div class="buttons">
                 <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel"
