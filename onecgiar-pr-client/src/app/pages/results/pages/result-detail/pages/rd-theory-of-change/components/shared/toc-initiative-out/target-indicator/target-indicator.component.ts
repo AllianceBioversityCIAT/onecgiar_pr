@@ -3,16 +3,35 @@ import { environment } from '../../../../../../../../../../../environments/envir
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../multiple-wps/components/mapped-results-modal/mapped-results-modal-service.service';
+import { CommonModule } from '@angular/common';
+import { PrTextareaComponent } from '../../../../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { FormsModule } from '@angular/forms';
+import { PrButtonComponent } from '../../../../../../../../../../custom-fields/pr-button/pr-button.component';
+import { PrYesOrNotComponent } from '../../../../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
+import { AlertStatusComponent } from '../../../../../../../../../../custom-fields/alert-status/alert-status.component';
 @Component({
   selector: 'app-target-indicator',
+  standalone: true,
   templateUrl: './target-indicator.component.html',
-  styleUrls: ['./target-indicator.component.scss']
+  styleUrls: ['./target-indicator.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrTextareaComponent,
+    PrButtonComponent,
+    PrYesOrNotComponent,
+    AlertStatusComponent
+  ]
 })
 export class TargetIndicatorComponent {
   @Input() initiative: any;
   @Input() resultLevelId: any;
 
-  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
+  constructor(
+    public api: ApiService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    public mappedResultService: MappedResultsModalServiceService
+  ) {}
 
   mappedResultsModal(statement, measure, overall, date, contributors: any) {
     this.mappedResultService.mappedResultsModal = true;
@@ -32,7 +51,10 @@ export class TargetIndicatorComponent {
       { title: 'Indicator category', attr: 'result_type_name' },
       { title: 'Phase', attr: 'phase_name' },
       { title: 'Contribution', attr: 'contributing_indicator' },
-      { title: 'Progress narrative against the target', attr: 'target_progress_narrative' }
+      {
+        title: 'Progress narrative against the target',
+        attr: 'target_progress_narrative'
+      }
     ];
   }
 
@@ -51,7 +73,9 @@ export class TargetIndicatorComponent {
   descriptionWarningYear(dateFormat: string, year: number) {
     const dateFormatYear = new Date(dateFormat).getFullYear();
     const isAlert = dateFormatYear === year;
-    const description = !isAlert ? 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.' : '';
+    const description = !isAlert
+      ? 'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.'
+      : '';
 
     return { is_alert: isAlert, description: description };
   }
@@ -61,7 +85,14 @@ export class TargetIndicatorComponent {
   }
 
   checkAlert() {
-    if (this.initiative.type_value !== 'custom' && this.initiative.number_result_type !== this.initiative?.result.result_type_id && this.initiative?.result.result_type_id != 4 && this.initiative?.result.result_type_id != 8) return true;
+    if (
+      this.initiative.type_value !== 'custom' &&
+      this.initiative.number_result_type !==
+        this.initiative?.result.result_type_id &&
+      this.initiative?.result.result_type_id != 4 &&
+      this.initiative?.result.result_type_id != 8
+    )
+      return true;
 
     return false;
   }

@@ -2,6 +2,9 @@ import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { MultipleWPsContentComponent } from './components/multiple-wps-content/multiple-wps-content.component';
+import { CommonModule } from '@angular/common';
+import { PrButtonComponent } from '../../../../../../../../../../custom-fields/pr-button/pr-button.component';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -24,8 +27,10 @@ interface Tab {
 
 @Component({
   selector: 'app-multiple-wps',
+  standalone: true,
   templateUrl: './multiple-wps.component.html',
-  styleUrls: ['./multiple-wps.component.scss']
+  styleUrls: ['./multiple-wps.component.scss'],
+  imports: [CommonModule, MultipleWPsContentComponent, PrButtonComponent]
 })
 export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() editable: boolean;
@@ -45,7 +50,11 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   selectedOptionsOutcome = [];
   selectedOptionsEOI = [];
 
-  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(
+    public api: ApiService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
   ngOnInit(): void {
     this.GET_outcomeList();
@@ -76,46 +85,74 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
-      next: ({ response }) => {
-        this.outputList = response;
-      },
-      error: err => {
-        this.outputList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        1
+      )
+      .subscribe({
+        next: ({ response }) => {
+          this.outputList = response;
+        },
+        error: err => {
+          this.outputList = [];
+          console.error(err);
+        }
+      });
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 2).subscribe({
-      next: ({ response }) => {
-        this.outcomeList = response;
-      },
-      error: err => {
-        this.outcomeList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        2
+      )
+      .subscribe({
+        next: ({ response }) => {
+          this.outcomeList = response;
+        },
+        error: err => {
+          this.outcomeList = [];
+          console.error(err);
+        }
+      });
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 3).subscribe({
-      next: ({ response }) => {
-        response.forEach((item, index) => {
-          item.uniqueId = `${item.toc_result_id}-${index}`;
-        });
-        this.eoiList = response;
-      },
-      error: err => {
-        this.eoiList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        3
+      )
+      .subscribe({
+        next: ({ response }) => {
+          response.forEach((item, index) => {
+            item.uniqueId = `${item.toc_result_id}-${index}`;
+          });
+          this.eoiList = response;
+        },
+        error: err => {
+          this.eoiList = [];
+          console.error(err);
+        }
+      });
   }
 
   dynamicTabTitle(tabNumber) {
-    return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
+    return `TOC-${
+      this.initiative?.planned_result && this.resultLevelId === 1
+        ? 'Output'
+        : 'Outcome'
+    } N° ${tabNumber}`;
   }
 
   getGridTemplateColumns() {
@@ -130,22 +167,38 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     return tab.toc_level_id !== null && tab.toc_result_id !== null;
   }
 
-  getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string): number {
+  getMaxNumberOfTabs(
+    plannedResult: boolean,
+    resultLevelId: number | string
+  ): number {
     let uniqueWorkPackageIds = new Set<number | string>();
 
     if (resultLevelId === 1) {
       if (plannedResult) {
-        uniqueWorkPackageIds = new Set(this.outputList.map(item => item.work_package_id));
+        uniqueWorkPackageIds = new Set(
+          this.outputList.map(item => item.work_package_id)
+        );
       } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
+        uniqueWorkPackageIds = new Set(
+          this.eoiList.map(item => item.toc_result_id)
+        );
       }
     } else if (resultLevelId === 2) {
       if (plannedResult) {
-        const uniqueWorkPackageIdsOutcome = new Set(this.outcomeList.map(item => item.work_package_id));
-        const uniqueWorkPackageIdsEOI = new Set(this.eoiList.map(item => item.toc_result_id));
-        uniqueWorkPackageIds = new Set([...uniqueWorkPackageIdsOutcome, ...uniqueWorkPackageIdsEOI]);
+        const uniqueWorkPackageIdsOutcome = new Set(
+          this.outcomeList.map(item => item.work_package_id)
+        );
+        const uniqueWorkPackageIdsEOI = new Set(
+          this.eoiList.map(item => item.toc_result_id)
+        );
+        uniqueWorkPackageIds = new Set([
+          ...uniqueWorkPackageIdsOutcome,
+          ...uniqueWorkPackageIdsEOI
+        ]);
       } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
+        uniqueWorkPackageIds = new Set(
+          this.eoiList.map(item => item.toc_result_id)
+        );
       }
     }
 
@@ -162,7 +215,11 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   onAddTab() {
-    const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+    const tocLevelId = !this.initiative.planned_result
+      ? 3
+      : this.resultLevelId === 1
+      ? 1
+      : 2;
 
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
@@ -176,11 +233,19 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
       uniqueId: Math.random().toString(36).substring(7)
     });
 
-    this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
+    this.onActiveTab(
+      this.initiative.result_toc_results[
+        this.initiative.result_toc_results.length - 1
+      ]
+    );
   }
 
   onDeleteTab(tab: Tab, tabNumber = 0) {
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${
+      this.initiative?.planned_result && this.resultLevelId === 1
+        ? 'Output'
+        : 'Outcome'
+    } N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(
       {
@@ -208,14 +273,20 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
 
     if (this.isNotifications) return;
 
-    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+    this.initiative.result_toc_results =
+      this.initiative.result_toc_results.filter(
+        t => t.uniqueId !== tab.uniqueId
+      );
 
     this.activeTab = this.initiative?.result_toc_results[0];
 
     if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[
+        this.initiative.index
+      ].result_toc_results = this.initiative.result_toc_results;
     } else {
-      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results =
+        this.initiative.result_toc_results;
     }
 
     if (isOutputTab) {
@@ -232,28 +303,40 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   deleteSelectedOptionOutPut(tab: any) {
-    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.toc_result_id !== tab?.toc_result_id);
+    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(
+      item => item.toc_result_id !== tab?.toc_result_id
+    );
 
     this.outputList = this.outputList.map(item => {
-      const found = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
+      const found = this.selectedOptionsOutput.find(
+        option => option.work_package_id === item.work_package_id
+      );
       item.disabledd = !!found;
       return item;
     });
   }
 
   deleteSelectedOptionOutCome(tab: any) {
-    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.toc_result_id !== tab?.toc_result_id);
+    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(
+      item => item.toc_result_id !== tab?.toc_result_id
+    );
     this.outcomeList = this.outcomeList.map(item => {
-      const found = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
+      const found = this.selectedOptionsOutcome.find(
+        option => option.work_package_id === item.work_package_id
+      );
       item.disabledd = !!found;
       return item;
     });
   }
 
   deleteSelectedOptionEOI(tab: any) {
-    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.toc_result_id !== tab?.toc_result_id);
+    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(
+      item => item.toc_result_id !== tab?.toc_result_id
+    );
     this.eoiList = this.eoiList.map(item => {
-      const found = this.selectedOptionsEOI.find(option => option.uniqueId === item.uniqueId);
+      const found = this.selectedOptionsEOI.find(
+        option => option.uniqueId === item.uniqueId
+      );
       item.disabledd = !!found;
       return item;
     });

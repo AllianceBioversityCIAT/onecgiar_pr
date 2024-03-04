@@ -1,10 +1,14 @@
 import { Component, Input } from '@angular/core';
 import { MappedResultsModalServiceService } from './mapped-results-modal-service.service';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
 
 @Component({
   selector: 'app-mapped-results-modal',
+  standalone: true,
   templateUrl: './mapped-results-modal.component.html',
-  styleUrls: ['./mapped-results-modal.component.scss']
+  styleUrls: ['./mapped-results-modal.component.scss'],
+  imports: [CommonModule, TableModule]
 })
 export class MappedResultsModalComponent {
   @Input() activeTab?: any = {};
@@ -14,7 +18,10 @@ export class MappedResultsModalComponent {
   constructor(public mappedResultService: MappedResultsModalServiceService) {}
 
   openInNewPage(resultCode: string, phase: string) {
-    window.open(`/result/result-detail/${resultCode}/general-information?phase=${phase}`, '_blank');
+    window.open(
+      `/result/result-detail/${resultCode}/general-information?phase=${phase}`,
+      '_blank'
+    );
   }
 
   dynamicModalTitle() {
@@ -31,8 +38,13 @@ export class MappedResultsModalComponent {
         this.combine = true;
         return;
       }
-      const mappedResultTableHTML = document.getElementById('mappedResultTable');
-      this.combine = !mappedResultTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !mappedResultTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      const mappedResultTableHTML =
+        document.getElementById('mappedResultTable');
+      this.combine =
+        !mappedResultTableHTML.querySelectorAll('th[aria-sort="descending"]')
+          .length &&
+        !mappedResultTableHTML.querySelectorAll('th[aria-sort="ascending"]')
+          .length;
 
       return null;
     }, 100);

@@ -11,7 +11,7 @@ import { ExternalToolsComponent } from './shared/components/external-tools/exter
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 import { TawkComponent } from './shared/components/tawk/tawk.component';
 import { GoogleAnalyticsComponent } from './shared/components/external-tools/components/google-analytics/google-analytics.component';
-import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
+// import { ShareRequestModalComponent } from './pages/results/pages/result-detail/components/share-request-modal/share-request-modal.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { DialogModule } from 'primeng/dialog';
 import { CommonModule } from '@angular/common';
@@ -19,14 +19,31 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent, ShareRequestModalComponent, FooterComponent, DialogModule],
+  imports: [
+    RouterOutlet,
+    CommonModule,
+    NavigationBarComponent,
+    HeaderPanelComponent,
+    ExternalToolsComponent,
+    TestEnvironmentLabelComponent,
+    TawkComponent,
+    GoogleAnalyticsComponent,
+    // ShareRequestModalComponent,
+    FooterComponent,
+    DialogModule
+  ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService, public rolesSE: RolesService, public api: ApiService, public footerSE: FooterService) {}
+  constructor(
+    public AuthService: AuthService,
+    public rolesSE: RolesService,
+    public api: ApiService,
+    public footerSE: FooterService
+  ) {}
   ngOnInit(): void {
     this.getGlobalParametersByCategory();
     setTimeout(() => {
@@ -58,8 +75,10 @@ export class AppComponent implements OnInit {
   }
 
   private getGlobalParametersByCategory() {
-    this.api.resultsSE.GET_platformGlobalVariables().subscribe(({ response }) => {
-      this.api.globalVariablesSE.get = response;
-    });
+    this.api.resultsSE
+      .GET_platformGlobalVariables()
+      .subscribe(({ response }) => {
+        this.api.globalVariablesSE.get = response;
+      });
   }
 }

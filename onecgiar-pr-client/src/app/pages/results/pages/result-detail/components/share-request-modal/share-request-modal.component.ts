@@ -9,14 +9,14 @@ import { ResultsNotificationsService } from '../../../results-outlet/pages/resul
 import { RdTheoryOfChangesServicesService } from '../../pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
-import { TocInitiativeOutModule } from '../../pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.module';
+import { TocInitiativeOutComponent } from '../../pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.component';
 
 @Component({
   selector: 'app-share-request-modal',
   standalone: true,
   templateUrl: './share-request-modal.component.html',
   styleUrls: ['./share-request-modal.component.scss'],
-  imports: [CommonModule, DialogModule, TocInitiativeOutModule]
+  imports: [CommonModule, DialogModule, TocInitiativeOutComponent]
 })
 export class ShareRequestModalComponent implements OnInit {
   requesting = false;

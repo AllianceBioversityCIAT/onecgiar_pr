@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-pr-button',
   standalone: true,
   templateUrl: './pr-button.component.html',
   styleUrls: ['./pr-button.component.scss'],
-  imports: [CommonModule]
+  imports: [CommonModule, TooltipModule]
 })
 export class PrButtonComponent {
   @Input() text: string;
@@ -16,7 +17,8 @@ export class PrButtonComponent {
   @Input() rotateRight: boolean = false;
   @Input() underConstruction: boolean = false;
   @Input() showBackground: boolean = true;
-  @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
+  @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' =
+    'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;
   @Input() verticalMargin: number = 10;
