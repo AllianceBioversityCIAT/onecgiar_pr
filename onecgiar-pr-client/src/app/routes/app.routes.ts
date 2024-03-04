@@ -29,13 +29,13 @@ export const routes: Routes = [
             '../pages/results/pages/results-outlet/results-outlet.component'
           ).then(c => c.ResultsOutletComponent),
         children: [
-          // {
-          //   path: 'results-notifications',
-          //   loadComponent: () =>
-          //     import(
-          //       '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.component'
-          //     ).then(c => c.ResultsNotificationsComponent)
-          // },
+          {
+            path: 'results-notifications',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.component'
+              ).then(c => c.ResultsNotificationsComponent)
+          },
           {
             path: 'results-list',
             loadComponent: () =>
