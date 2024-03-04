@@ -402,8 +402,8 @@ export class VersioningService {
       await this._evidencesRepository.replicate(manager, config);
       await this._resultActorRepository.replicate(manager, config);
       await this._resultInitiativeBudgetRepository.replicate(manager, config);
-      // await this._resultNonPooledProjectBudgetRepository.replicate(manager, config);
-      // await this._resultInstitutionsBudgetRepository.replicate(manager, config);
+      await this._resultNonPooledProjectBudgetRepository.replicate(manager, config);
+      await this._resultInstitutionsBudgetRepository.replicate(manager, config);
 
       // IPSR
       await this._resultInnovationPackageRepository.replicate(manager, config);
