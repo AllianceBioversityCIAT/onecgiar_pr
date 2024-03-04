@@ -3,13 +3,16 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Pipe({
-  name: 'panelMenu'
+  name: 'panelMenu',
+  standalone: true
 })
 export class PanelMenuPipe implements PipeTransform {
   constructor(private dataControlSE: DataControlService) {}
   transform(list: any[], resultTypeId: string, toggle) {
     this.dataControlSE?.green_checks?.map(green_check => {
-      let optionFinded = list.find(item => item.path == green_check.section_name);
+      let optionFinded = list.find(
+        item => item.path == green_check.section_name
+      );
       optionFinded.validation = Number(green_check.validation);
     });
     return list.filter(option => {

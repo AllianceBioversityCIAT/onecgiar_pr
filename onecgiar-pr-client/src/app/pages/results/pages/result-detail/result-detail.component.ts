@@ -1,5 +1,10 @@
 import { Component } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  RouterLink,
+  RouterModule
+} from '@angular/router';
 import { NavigationBarService } from '../../../../shared/services/navigation-bar.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
@@ -15,6 +20,13 @@ import { CommonModule } from '@angular/common';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.component';
+import { ToastModule } from 'primeng/toast';
+import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
+import { PartnersRequestComponent } from './components/partners-request/partners-request.component';
+import { UnsubmitModalComponent } from './components/unsubmit-modal/unsubmit-modal.component';
+import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
+import { ResultTitleComponent } from './components/result-title/result-title.component';
+import { PhaseSwitcherComponent } from '../../../../shared/components/phase-switcher/phase-switcher.component';
 
 @Component({
   selector: 'app-result-detail',
@@ -27,7 +39,15 @@ import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.compon
     PanelMenuComponent,
     PrButtonComponent,
     RouterLink,
-    PdfActionsComponent
+    PdfActionsComponent,
+    ToastModule,
+    NoEditContainerComponent,
+    PartnersRequestComponent,
+    UnsubmitModalComponent,
+    SubmissionModalComponent,
+    RouterModule,
+    ResultTitleComponent,
+    PhaseSwitcherComponent
   ]
 })
 export class ResultDetailComponent {

@@ -3,6 +3,7 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 
 @Component({
   selector: 'app-result-title',
+  standalone: true,
   templateUrl: './result-title.component.html',
   styleUrls: ['./result-title.component.scss']
 })

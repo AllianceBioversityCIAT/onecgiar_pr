@@ -1,8 +1,4 @@
 import { Component, Output, EventEmitter } from '@angular/core';
-import {
-  PrRoute,
-  resultDetailRouting
-} from '../../../../../shared/routing/routing-data';
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
@@ -11,16 +7,28 @@ import { SubmissionModalService } from '../components/submission-modal/submissio
 import { DataControlService } from '../../../../../shared/services/data-control.service';
 import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-modal.service';
 import { RolesService } from '../../../../../shared/services/global/roles.service';
+import { CommonModule } from '@angular/common';
+import { PrButtonComponent } from '../../../../../custom-fields/pr-button/pr-button.component';
+import { RouterLink } from '@angular/router';
+import { PanelMenuPipe } from './pipes/panel-menu.pipe';
+import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.component';
 
 @Component({
   selector: 'app-panel-menu',
   standalone: true,
   templateUrl: './panel-menu.component.html',
-  styleUrls: ['./panel-menu.component.scss']
+  styleUrls: ['./panel-menu.component.scss'],
+  imports: [
+    CommonModule,
+    PrButtonComponent,
+    RouterLink,
+    PanelMenuPipe,
+    PdfActionsComponent
+  ]
 })
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
-  navigationOptions: PrRoute[] = resultDetailRouting;
+  navigationOptions: any = [];
   constructor(
     public rolesSE: RolesService,
     public resultLevelSE: ResultLevelService,
