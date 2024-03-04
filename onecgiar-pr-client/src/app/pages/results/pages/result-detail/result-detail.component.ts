@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NavigationBarService } from '../../../../shared/services/navigation-bar.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
@@ -11,6 +11,10 @@ import { GreenChecksService } from '../../../../shared/services/global/green-che
 import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
 import { MessageService } from 'primeng/api';
+import { CommonModule } from '@angular/common';
+import { PanelMenuComponent } from './panel-menu/panel-menu.component';
+import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
+import { PdfActionsComponent } from './components/pdf-actions/pdf-actions.component';
 
 @Component({
   selector: 'app-result-detail',
@@ -18,7 +22,13 @@ import { MessageService } from 'primeng/api';
   templateUrl: './result-detail.component.html',
   styleUrls: ['./result-detail.component.scss'],
   providers: [MessageService],
-  imports: []
+  imports: [
+    CommonModule,
+    PanelMenuComponent,
+    PrButtonComponent,
+    RouterLink,
+    PdfActionsComponent
+  ]
 })
 export class ResultDetailComponent {
   constructor(

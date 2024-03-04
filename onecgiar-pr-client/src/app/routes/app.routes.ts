@@ -15,13 +15,13 @@ export const routes: Routes = [
             '../pages/results/pages/result-creator/result-creator.component'
           ).then(c => c.ResultCreatorComponent)
       },
-      // {
-      //   path: 'result-detail/:id',
-      //   loadComponent: () =>
-      //     import(
-      //       '../pages/results/pages/result-creator/result-creator.component'
-      //     ).then(c => c.ResultDetailComponent)
-      // }
+      {
+        path: 'result-detail/:id',
+        loadComponent: () =>
+          import(
+            '../pages/results/pages/result-detail/result-detail.component'
+          ).then(c => c.ResultDetailComponent)
+      },
       {
         path: 'results-outlet',
         loadComponent: () =>
