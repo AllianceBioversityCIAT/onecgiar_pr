@@ -1,10 +1,15 @@
 import { Component } from '@angular/core';
 import { ResultsNotificationsService } from './pages/results-notifications/results-notifications.service';
+import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { AlertGlobalInfoComponent } from '../../../../shared/components/alert-global-info/alert-global-info.component';
 
 @Component({
   selector: 'app-results-outlet',
+  standalone: true,
   templateUrl: './results-outlet.component.html',
-  styleUrls: ['./results-outlet.component.scss']
+  styleUrls: ['./results-outlet.component.scss'],
+  imports: [CommonModule, RouterModule, AlertGlobalInfoComponent]
 })
 export class ResultsOutletComponent {
   animateBell = true;

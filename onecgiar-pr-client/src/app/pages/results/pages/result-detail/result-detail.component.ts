@@ -14,12 +14,28 @@ import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-result-detail',
+  standalone: true,
   templateUrl: './result-detail.component.html',
   styleUrls: ['./result-detail.component.scss'],
-  providers: [MessageService]
+  providers: [MessageService],
+  imports: []
 })
 export class ResultDetailComponent {
-  constructor(private messageSE: MessageService, public currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, public api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
+  constructor(
+    private messageSE: MessageService,
+    public currentResultSE: CurrentResultService,
+    private shareRequestModalSE: ShareRequestModalService,
+    public navigationBarSE: NavigationBarService,
+    private activatedRoute: ActivatedRoute,
+    public api: ApiService,
+    public saveButtonSE: SaveButtonService,
+    private resultLevelSE: ResultLevelService,
+    private rolesSE: RolesService,
+    private router: Router,
+    public dataControlSE: DataControlService,
+    private pusherService: PusherService,
+    private greenChecksSE: GreenChecksService
+  ) {}
   closeInfo = false;
   ngOnInit(): void {
     this.getData();
@@ -27,7 +43,11 @@ export class ResultDetailComponent {
 
   onCopy() {
     //('onCopy');
-    this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
+    this.messageSE.add({
+      key: 'copyResultLinkPdf',
+      severity: 'success',
+      summary: 'PDF link copied'
+    });
   }
 
   async getData() {
@@ -39,9 +59,11 @@ export class ResultDetailComponent {
       //(this.dataControlSE.currentResult);
     });
     // this.api.resultsSE.currentResultId = this.activatedRoute.snapshot.paramMap.get('id');
-    this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
+    this.api.resultsSE.currentResultCode =
+      this.activatedRoute.snapshot.paramMap.get('id');
     // //(this.activatedRoute.snapshot.queryParamMap.get('phase'));
-    this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
+    this.api.resultsSE.currentResultPhase =
+      this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
     await this.currentResultSE.GET_resultById();
     await this.greenChecksSE.updateGreenChecks();
@@ -54,17 +76,22 @@ export class ResultDetailComponent {
   GET_resultIdToCode() {
     this.currentResultSE.resultIdIsconverted = false;
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.GET_resultIdToCode(this.api.resultsSE.currentResultCode, this.api.resultsSE.currentResultPhase).subscribe(
-        ({ response }) => {
-          this.api.resultsSE.currentResultId = response;
-          //('GET_resultIdToCode');
-          this.currentResultSE.resultIdIsconverted = true;
-          resolve(null);
-        },
-        err => {
-          resolve(null);
-        }
-      );
+      this.api.resultsSE
+        .GET_resultIdToCode(
+          this.api.resultsSE.currentResultCode,
+          this.api.resultsSE.currentResultPhase
+        )
+        .subscribe(
+          ({ response }) => {
+            this.api.resultsSE.currentResultId = response;
+            //('GET_resultIdToCode');
+            this.currentResultSE.resultIdIsconverted = true;
+            resolve(null);
+          },
+          err => {
+            resolve(null);
+          }
+        );
     });
   }
   GET_versioningResult() {
@@ -75,7 +102,9 @@ export class ResultDetailComponent {
 
   ngDoCheck(): void {
     setTimeout(() => {
-      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail(
+        '.section_container'
+      );
     }, 10);
   }
 }
