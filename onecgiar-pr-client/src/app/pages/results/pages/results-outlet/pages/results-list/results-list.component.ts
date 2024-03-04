@@ -19,6 +19,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PdfIconComponent } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 import { MenuModule } from 'primeng/menu';
 import { CustomSpinnerComponent } from '../../../../../../shared/components/custom-spinner/custom-spinner.component';
+import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
 
 @Component({
   selector: 'app-results-list',
@@ -39,7 +40,8 @@ import { CustomSpinnerComponent } from '../../../../../../shared/components/cust
     TooltipModule,
     PdfIconComponent,
     MenuModule,
-    CustomSpinnerComponent
+    CustomSpinnerComponent,
+    ResultsToUpdateModalComponent
   ]
 })
 export class ResultsListComponent implements OnInit, OnDestroy {

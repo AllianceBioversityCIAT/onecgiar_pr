@@ -1,11 +1,30 @@
 import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { CommonModule } from '@angular/common';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { RouterModule } from '@angular/router';
+import { ResultsToUpdateFilterPipe } from './results-to-update-filter.pipe';
+import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { FormsModule } from '@angular/forms';
+import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
 
 @Component({
   selector: 'app-results-to-update-modal',
+  standalone: true,
   templateUrl: './results-to-update-modal.component.html',
-  styleUrls: ['./results-to-update-modal.component.scss']
+  styleUrls: ['./results-to-update-modal.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DialogModule,
+    TableModule,
+    RouterModule,
+    ResultsToUpdateFilterPipe,
+    PrFieldHeaderComponent,
+    PrButtonComponent
+  ]
 })
 export class ResultsToUpdateModalComponent {
   text_to_search = null;
@@ -21,7 +40,10 @@ export class ResultsToUpdateModalComponent {
     { title: 'Created by	', attr: 'full_name' }
   ];
 
-  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
 
   onPressAction(result) {
     this.retrieveModalSE.title = result?.title;
