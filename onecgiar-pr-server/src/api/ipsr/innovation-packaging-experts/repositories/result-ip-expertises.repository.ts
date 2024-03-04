@@ -48,22 +48,25 @@ export class ResultIpExpertisesRepository
             expertises_id
         )
         SELECT
-            rie.is_active,
+            rie3.is_active,
             ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
-            rie.last_updated_date,
+            rie3.last_updated_date,
             ${config.user.id} AS created_by,
             ${config.user.id} AS last_updated_by,
-            re2.result_ip_expert_id AS result_ip_expert_id,
-            rie.expertises_id
-        FROM
-            result_ip_expertises rie
-            LEFT JOIN result_ip_expert re1 ON re1.result_ip_expert_id = rie.result_ip_expert_id
-            LEFT JOIN result_ip_expert re2 ON re2.organization_id = re1.organization_id
-            AND re2.result_id = ${config.new_result_id}
-        WHERE
-            re1.result_id = ${config.old_result_id}
-            AND re1.is_active = 1
-            AND rie.is_active = 1;
+            rie3.result_ip_expert_id AS result_ip_expert_id,
+            rie2.expertises_id
+        FROM 
+            result_ip_expert rie 
+            LEFT JOIN result_ip_expertises rie2 ON rie2.result_ip_expert_id = rie.result_ip_expert_id
+            LEFT JOIN result r ON r.id = rie.result_id 
+            AND r.is_active = 1
+            LEFT JOIN result r2 ON r2.result_code = r.result_code
+            LEFT JOIN result_ip_expert rie3 ON rie3.result_id = r2.id
+          WHERE 
+            r.id = ${config.old_result_id}
+            AND r2.id = ${config.new_result_id}
+            AND rie.is_active = 1
+            AND rie2.is_active = 1;
       `,
       returnQuery: `
       SELECT
