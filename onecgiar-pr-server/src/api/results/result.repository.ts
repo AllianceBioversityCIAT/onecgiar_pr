@@ -1668,7 +1668,7 @@ left join clarisa_countries cc3
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     WHERE rbi3.inititiative_id = ${inititiative_id}
       ${phase ? `and r.version_id = ${phase}` : ''}
-      AND r.status_id = 3
+      AND r.status_id = 2
     GROUP by 
     r.result_code,
     r.id,
