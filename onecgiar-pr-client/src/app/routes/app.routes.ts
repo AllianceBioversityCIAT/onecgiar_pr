@@ -60,9 +60,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-geographic-location/rd-geographic-location.component'
               ).then(c => c.RdGeographicLocationComponent)
           },
-          // {
-          //   path: 'links-to-results'
-          // },
+          {
+            path: 'links-to-results',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.component'
+              ).then(c => c.RdLinksToResultsComponent)
+          },
           // {
           //   path: 'evidences'
           // },

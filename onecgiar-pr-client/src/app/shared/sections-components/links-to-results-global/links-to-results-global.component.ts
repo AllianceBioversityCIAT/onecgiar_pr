@@ -4,11 +4,38 @@ import { ResultsListService } from '../../../pages/results/pages/results-outlet/
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
 import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
+import { FilterResultNotLinkedPipe } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/pipe/filter-result-not-linked.pipe';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { DetailSectionTitleComponent } from '../../../custom-fields/detail-section-title/detail-section-title.component';
+import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrYesOrNotComponent } from '../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
+import { AlertStatusComponent } from '../../../custom-fields/alert-status/alert-status.component';
+import { NoDataTextComponent } from '../../../custom-fields/no-data-text/no-data-text.component';
+import { FormsModule } from '@angular/forms';
+import { AddButtonComponent } from '../../../custom-fields/add-button/add-button.component';
+import { SaveButtonComponent } from '../../../custom-fields/save-button/save-button.component';
+import { EditOrDeleteItemButtonComponent } from '../../../custom-fields/edit-or-delete-item-button/edit-or-delete-item-button.component';
 
 @Component({
   selector: 'app-links-to-results-global',
+  standalone: true,
   templateUrl: './links-to-results-global.component.html',
-  styleUrls: ['./links-to-results-global.component.scss']
+  styleUrls: ['./links-to-results-global.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    FilterResultNotLinkedPipe,
+    DetailSectionTitleComponent,
+    PrFieldHeaderComponent,
+    PrYesOrNotComponent,
+    AlertStatusComponent,
+    NoDataTextComponent,
+    AddButtonComponent,
+    SaveButtonComponent,
+    EditOrDeleteItemButtonComponent
+  ]
 })
 export class LinksToResultsGlobalComponent implements OnInit {
   @Input() isIpsr: boolean = false;
@@ -32,7 +59,12 @@ export class LinksToResultsGlobalComponent implements OnInit {
   innoDevLinks = [];
   innoUseLinks = [];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
+  constructor(
+    public api: ApiService,
+    public resultsListService: ResultsListService,
+    public rolesSE: RolesService,
+    public greenChecksSE: GreenChecksService
+  ) {}
 
   ngOnInit(): void {
     this.api.updateResultsList();
@@ -40,31 +72,45 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_resultsLinked(this.isIpsr).subscribe(({ response }) => {
-      this.linksToResultsBody = response;
+    this.api.resultsSE
+      .GET_resultsLinked(this.isIpsr)
+      .subscribe(({ response }) => {
+        this.linksToResultsBody = response;
 
-      const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+        const currentResultTypeId =
+          this.api?.dataControlSE?.currentResult?.result_type_id;
 
-      if (currentResultTypeId === 1) {
-        const filterByResultTypeId = (resultTypeId: number) => this.linksToResultsBody.links.filter((evidence: any) => evidence.result_type_id === resultTypeId);
+        if (currentResultTypeId === 1) {
+          const filterByResultTypeId = (resultTypeId: number) =>
+            this.linksToResultsBody.links.filter(
+              (evidence: any) => evidence.result_type_id === resultTypeId
+            );
 
-        this.innoDevLinks = filterByResultTypeId(7);
-        this.innoUseLinks = filterByResultTypeId(2);
-        this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          this.innoDevLinks = filterByResultTypeId(7);
+          this.innoUseLinks = filterByResultTypeId(2);
+          this.filteredResults = this.linksToResultsBody.links.filter(
+            (evidence: any) => ![2, 7].includes(evidence.result_type_id)
+          );
 
-        this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
-        this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
-      } else {
-        this.filteredResults = this.linksToResultsBody.links;
-      }
-    });
+          this.linksToResultsBody.linkedInnovation.linked_innovation_dev =
+            this.innoDevLinks.length > 0;
+          this.linksToResultsBody.linkedInnovation.linked_innovation_use =
+            this.innoUseLinks.length > 0;
+        } else {
+          this.filteredResults = this.linksToResultsBody.links;
+        }
+      });
   }
 
   validateOrder(columnAttr) {
     setTimeout(() => {
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
-      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      this.combine =
+        !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]')
+          .length &&
+        !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]')
+          .length;
 
       return null;
     }, 100);
@@ -79,14 +125,17 @@ export class LinksToResultsGlobalComponent implements OnInit {
 
   getFirstByDate(results) {
     const re = results.sort((a, b) => {
-      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+      return (
+        new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+      );
     });
 
     return re[0];
   }
 
   onLinkResult(result) {
-    const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+    const currentResultTypeId =
+      this.api?.dataControlSE?.currentResult?.result_type_id;
     const firstResultByDate = this.getFirstByDate(result.results);
 
     const { results, ...rest } = firstResultByDate;
@@ -97,17 +146,23 @@ export class LinksToResultsGlobalComponent implements OnInit {
           this.linksToResultsBody.linkedInnovation.linked_innovation_use = true;
           this.innoUseLinks.push(rest);
           this.linksToResultsBody.links.push(rest);
-          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          this.filteredResults = this.linksToResultsBody.links.filter(
+            (evidence: any) => ![2, 7].includes(evidence.result_type_id)
+          );
           break;
         case 7:
           this.linksToResultsBody.linkedInnovation.linked_innovation_dev = true;
           this.innoDevLinks.push(rest);
           this.linksToResultsBody.links.push(rest);
-          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          this.filteredResults = this.linksToResultsBody.links.filter(
+            (evidence: any) => ![2, 7].includes(evidence.result_type_id)
+          );
           break;
         default:
           this.linksToResultsBody.links.push(rest);
-          this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+          this.filteredResults = this.linksToResultsBody.links.filter(
+            (evidence: any) => ![2, 7].includes(evidence.result_type_id)
+          );
           break;
       }
     } else {
@@ -119,13 +174,18 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   onRemove(result) {
-    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter(
+      (evidence: any) => evidence.result_code !== result.result_code
+    );
     this.counterPipe++;
 
-    const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
+    const currentResultTypeId =
+      this.api?.dataControlSE?.currentResult?.result_type_id;
 
     if (currentResultTypeId === 1) {
-      this.filteredResults = this.linksToResultsBody.links.filter((evidence: any) => ![2, 7].includes(evidence.result_type_id));
+      this.filteredResults = this.linksToResultsBody.links.filter(
+        (evidence: any) => ![2, 7].includes(evidence.result_type_id)
+      );
     } else {
       this.filteredResults = this.linksToResultsBody.links;
     }
@@ -133,16 +193,26 @@ export class LinksToResultsGlobalComponent implements OnInit {
 
   // New
   onRemoveInnoDev(result) {
-    this.innoDevLinks = this.innoDevLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
-    this.linksToResultsBody.linkedInnovation.linked_innovation_dev = this.innoDevLinks.length > 0;
-    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.innoDevLinks = this.innoDevLinks.filter(
+      (evidence: any) => evidence.result_code !== result.result_code
+    );
+    this.linksToResultsBody.linkedInnovation.linked_innovation_dev =
+      this.innoDevLinks.length > 0;
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter(
+      (evidence: any) => evidence.result_code !== result.result_code
+    );
     this.counterPipe++;
   }
 
   onRemoveInnoUse(result) {
-    this.innoUseLinks = this.innoUseLinks.filter((evidence: any) => evidence.result_code !== result.result_code);
-    this.linksToResultsBody.linkedInnovation.linked_innovation_use = this.innoUseLinks.length > 0;
-    this.linksToResultsBody.links = this.linksToResultsBody.links.filter((evidence: any) => evidence.result_code !== result.result_code);
+    this.innoUseLinks = this.innoUseLinks.filter(
+      (evidence: any) => evidence.result_code !== result.result_code
+    );
+    this.linksToResultsBody.linkedInnovation.linked_innovation_use =
+      this.innoUseLinks.length > 0;
+    this.linksToResultsBody.links = this.linksToResultsBody.links.filter(
+      (evidence: any) => evidence.result_code !== result.result_code
+    );
     this.counterPipe++;
   }
   // New
@@ -156,9 +226,11 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   onSaveSection() {
-    this.api.resultsSE.POST_resultsLinked(this.linksToResultsBody, this.isIpsr).subscribe((resp: any) => {
-      this.getSectionInformation();
-    });
+    this.api.resultsSE
+      .POST_resultsLinked(this.linksToResultsBody, this.isIpsr)
+      .subscribe((resp: any) => {
+        this.getSectionInformation();
+      });
   }
 
   openInNewPage(link) {
@@ -166,16 +238,25 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   results_portfolio_description() {
-    const cgiar_innovation_dashboard_url = 'https://results.cgiar.org/innovations?embed=true&hostOrigin=https%3A%2F%2Fwww.cgiar.org&displayNav=true&year=2020';
-    const here_url = 'https://cgiar.sharepoint.com/:b:/s/ScalingReadiness/ESnzThAALolIrSwH95WSHAoBYiqsOM7DLXLSlyw4szpwWg?e=QFVg9L';
+    const cgiar_innovation_dashboard_url =
+      'https://results.cgiar.org/innovations?embed=true&hostOrigin=https%3A%2F%2Fwww.cgiar.org&displayNav=true&year=2020';
+    const here_url =
+      'https://cgiar.sharepoint.com/:b:/s/ScalingReadiness/ESnzThAALolIrSwH95WSHAoBYiqsOM7DLXLSlyw4szpwWg?e=QFVg9L';
     return `If an innovation use result can be linked to a result that has been previously reported under CGIAR Research Programs (CRPs) and/or projects, and has been documented in the <a href='${cgiar_innovation_dashboard_url}' target="_blank" class='open_route'>CGIAR Innovation Dashboard</a> ,  a link to this result should be provided in the section ‘Results from previous portfolio’.
     <ul><li>Step-by-step guidance on how to browse the CGIAR Innovation Dashboard can be found  <a href='${here_url}' target="_blank" class='open_route'>here</a>.</li></ul>`;
   }
 
   get validateCGSpaceLinks() {
     for (const iterator of this.linksToResultsBody.legacy_link) {
-      if (this.linksToResultsBody.legacy_link.find((evidence: any) => !Boolean(evidence.legacy_link))) return true;
-      const evidencesFinded = this.linksToResultsBody.legacy_link.filter((evidence: any) => evidence.legacy_link == iterator.legacy_link);
+      if (
+        this.linksToResultsBody.legacy_link.find(
+          (evidence: any) => !Boolean(evidence.legacy_link)
+        )
+      )
+        return true;
+      const evidencesFinded = this.linksToResultsBody.legacy_link.filter(
+        (evidence: any) => evidence.legacy_link == iterator.legacy_link
+      );
       if (evidencesFinded.length >= 2) {
         return evidencesFinded.length >= 2;
       }

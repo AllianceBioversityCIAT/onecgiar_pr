@@ -2,13 +2,22 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Pipe({
-  name: 'filterResultNotLinked'
+  name: 'filterResultNotLinked',
+  standalone: true
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
   constructor(private api: ApiService) {}
-  transform(list: any[], linkedList: any[], combine: boolean, counter: number, text_to_search: string): any {
+  transform(
+    list: any[],
+    linkedList: any[],
+    combine: boolean,
+    counter: number,
+    text_to_search: string
+  ): any {
     if (!list?.length) return [];
-    list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
+    list = list.filter(
+      result => result.id != this.api.resultsSE.currentResultId
+    );
     list.map(result => {
       result.selected = false;
     });
@@ -27,11 +36,15 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
         item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
-    return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
+    return resultList.filter(
+      item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1
+    );
   }
 
   convertList(results, combine) {
-    return combine ? this.combineRepeatedResults(results) : this.separateResultInList(results);
+    return combine
+      ? this.combineRepeatedResults(results)
+      : this.separateResultInList(results);
   }
 
   separateResultInList(results) {
