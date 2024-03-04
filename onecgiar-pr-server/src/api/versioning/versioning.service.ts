@@ -625,7 +625,7 @@ export class VersioningService {
         where: {
           is_active: true,
           status: true,
-          app_module_id: AppModuleIdEnum.REPORTING,
+          app_module_id: AppModuleIdEnum.IPSR,
         },
         relations: {
           obj_previous_phase: true,
