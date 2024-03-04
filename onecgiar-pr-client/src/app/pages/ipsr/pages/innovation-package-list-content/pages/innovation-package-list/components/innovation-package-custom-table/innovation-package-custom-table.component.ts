@@ -23,7 +23,8 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
-  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, public retrieveModalSE: RetrieveModalService) {}
+
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -43,6 +44,13 @@ export class InnovationPackageCustomTableComponent {
       }
     },
     {
+      label: 'Update result',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
+    {
       label: 'Delete',
       icon: 'pi pi-fw pi-trash',
       command: () => {
@@ -50,6 +58,7 @@ export class InnovationPackageCustomTableComponent {
       }
     }
   ];
+
   onDelete() {
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
       this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe({
@@ -71,5 +80,7 @@ export class InnovationPackageCustomTableComponent {
     this.retrieveModalSE.requester_initiative_id = onlyNumbers;
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
+
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase.phaseYear && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase.phaseYear;
   }
 }

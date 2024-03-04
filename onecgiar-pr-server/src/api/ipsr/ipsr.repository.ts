@@ -226,6 +226,7 @@ export class IpsrRepository
             ci.official_code AS initiative_official_code,
             ci.short_name AS initiative_short_name,
             ci.name AS initiative_name,
+            r.version_id,
             (
                 SELECT
                     rl.name

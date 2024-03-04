@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-phase-switcher',
@@ -9,7 +10,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 })
 export class PhaseSwitcherComponent implements OnInit {
   route = '';
-  constructor(public api: ApiService, private router: Router, public activatedRoute: ActivatedRoute) {}
+
+  constructor(public api: ApiService, private router: Router, public activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.route = this.router.url.split('?')[0];
@@ -17,6 +19,10 @@ export class PhaseSwitcherComponent implements OnInit {
 
   getRouteWithQueryParams(phaseId) {
     return `${this.route}?phase=${phaseId}`;
+  }
+
+  getFilterPhases() {
+    return this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.ipsrPhaseList : this.api.dataControlSE.resultPhaseList;
   }
 
   goToresultUrl(phaseId) {

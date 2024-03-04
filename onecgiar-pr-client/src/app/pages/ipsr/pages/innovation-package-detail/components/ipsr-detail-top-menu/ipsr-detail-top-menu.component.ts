@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { IPSRDetailRouting } from '../../../router/routing-data-ipsr';
+import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-ipsr-detail-top-menu',
@@ -8,5 +9,5 @@ import { IPSRDetailRouting } from '../../../router/routing-data-ipsr';
 })
 export class IpsrDetailTopMenuComponent {
   menuOptions = IPSRDetailRouting;
-  constructor() {}
+  constructor(public ipsrDataControlSE: IpsrDataControlService) {}
 }
