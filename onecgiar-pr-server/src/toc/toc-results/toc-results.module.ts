@@ -56,6 +56,13 @@ import { ResultIpSdgTargetRepository } from '../../api/ipsr/innovation-pathway/r
 import { InnovationPackagingExpertRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { ResultIpMeasureRepository } from '../../api/ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultIpExpertisesRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../../api/ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { ResultsIpActorRepository } from '../../api/ipsr/results-ip-actors/results-ip-actor.repository';
+import { ResultsByIpInnovationUseMeasureRepository } from '../../api/ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpInstitutionTypeRepository } from '../../api/ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultActorRepository } from '../../api/results/result-actors/repositories/result-actors.repository';
+import { ResultInstitutionsBudgetRepository } from '../../api/results/result_budget/repositories/result_institutions_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../../api/results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -100,16 +107,23 @@ import { ResultIpExpertisesRepository } from '../../api/ipsr/innovation-packagin
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository,
     EvidenceSharepointRepository,
     EvidencesService,
     ShareResultRequestRepository,
+    ResultActorRepository,
     ResultIpAAOutcomeRepository,
     ResultIpEoiOutcomeRepository,
     ResultIpImpactAreaRepository,
     ResultIpSdgTargetRepository,
     InnovationPackagingExpertRepository,
     ResultIpMeasureRepository,
-    ResultIpExpertisesRepository
+    ResultIpExpertisesRepository,
+    ResultIpExpertWorkshopOrganizedRepostory,
+    ResultsIpActorRepository,
+    ResultsByIpInnovationUseMeasureRepository,
+    ResultsIpInstitutionTypeRepository
   ],
   imports: [
     SharePointModule,

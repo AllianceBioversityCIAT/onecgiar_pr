@@ -16,8 +16,6 @@ export class ResultIpExpertisesRepository
   createQueries(
     config: ReplicableConfigInterface<ResultIpExpertises>,
   ): ConfigCustomQueryInterface {
-    console.log('EXpertises');
-    
     return {
       findQuery: `
       SELECT

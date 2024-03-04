@@ -65,6 +65,12 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pat
 import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { ResultIpMeasureRepository } from '../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
+import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultActorRepository } from '../results/result-actors/repositories/result-actors.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class VersioningService {
@@ -99,10 +105,12 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultNonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _evidencesService: EvidencesService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
-    private readonly dataSource: DataSource,
+    private readonly _resultActorRepository: ResultActorRepository,
     private readonly _ipsrRespository: IpsrRepository,
     private readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
     private readonly _resultIpActionAreaOutcomeRepository: ResultIpAAOutcomeRepository,
@@ -111,7 +119,12 @@ export class VersioningService {
     private readonly _resultIpSdgTargetsRepository: ResultIpSdgTargetRepository,
     private readonly _resultIpExpertRepository: InnovationPackagingExpertRepository,
     private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
-    private readonly _resultIpExpertisesRespository: ResultIpExpertisesRepository
+    private readonly _resultIpExpertisesRespository: ResultIpExpertisesRepository,
+    private readonly _resultIpExpertWorkshopOrganizedRepostory: ResultIpExpertWorkshopOrganizedRepostory,
+    private readonly _resultIpResultsActorsRepository: ResultsIpActorRepository,
+    private readonly _resultsIpResultMeasuresRespository: ResultsByIpInnovationUseMeasureRepository,
+    private readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -350,7 +363,6 @@ export class VersioningService {
         },
         true,
       );
-      console.log("🚀 ~ VersioningService ~ data ~ tempData:", tempData)
 
       let dataResult: Result = null;
       if (tempData?.length) {
@@ -371,6 +383,29 @@ export class VersioningService {
         new_ipsr_id: null,
         old_ipsr_id: null,
       };
+
+      // RESULT
+      await this._resultByInitiativesRepository.replicate(manager, config);
+      await this._resultByInitiativesRepository.replicate(manager, config);
+      await this._shareResultRequestRepository.replicate(manager, config);
+      await this._nonPooledProjectRepository.replicate(manager, config);
+      await this._resultsCenterRepository.replicate(manager, config);
+      await this._resultByIntitutionsRepository.replicate(manager, config);
+      await this._resultByInstitutionsByDeliveriesTypeRepository.replicate(
+        manager,
+        config,
+      );
+      await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+      await this._resultCountryRepository.replicate(manager, config);
+      await this._resultRegionRepository.replicate(manager, config);
+      await this._linkedResultRepository.replicate(manager, config);
+      await this._evidencesRepository.replicate(manager, config);
+      await this._resultActorRepository.replicate(manager, config);
+      await this._resultInitiativeBudgetRepository.replicate(manager, config);
+      // await this._resultNonPooledProjectBudgetRepository.replicate(manager, config);
+      // await this._resultInstitutionsBudgetRepository.replicate(manager, config);
+
+      // IPSR
       await this._resultInnovationPackageRepository.replicate(manager, config);
       const tempDataIP = await this._ipsrRespository.replicate(manager, config);
       config.new_ipsr_id = tempDataIP[0].result_by_innovation_package_id;
@@ -391,21 +426,10 @@ export class VersioningService {
       await this._resultIpExpertRepository.replicate(manager, config);
       await this._resultIpMeasureRepository.replicate(manager, config);
       await this._resultIpExpertisesRespository.replicate(manager, config);
-
-      // await this._resultByInitiativesRepository.replicate(manager, config);
-      // await this._shareResultRequestRepository.replicate(manager, config);
-      // await this._nonPooledProjectRepository.replicate(manager, config);
-      // await this._resultsCenterRepository.replicate(manager, config);
-      // await this._resultByIntitutionsRepository.replicate(manager, config);
-      // await this._resultByInstitutionsByDeliveriesTypeRepository.replicate(
-      //   manager,
-      //   config,
-      // );
-      // await this._resultByIntitutionsTypeRepository.replicate(manager, config);
-      // await this._resultCountryRepository.replicate(manager, config);
-      // await this._resultRegionRepository.replicate(manager, config);
-      // await this._linkedResultRepository.replicate(manager, config);
-      // await this._evidencesRepository.replicate(manager, config);
+      await this._resultIpExpertWorkshopOrganizedRepostory.replicate(manager, config);
+      await this._resultIpResultsActorsRepository.replicate(manager, config);
+      await this._resultsIpResultMeasuresRespository.replicate(manager, config);
+      await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
     });
     this._logger.log(
       `IPSR: The change of phase of result ${result.id} is completed correctly.`,
