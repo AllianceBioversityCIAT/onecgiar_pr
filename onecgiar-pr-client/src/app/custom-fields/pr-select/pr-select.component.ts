@@ -19,6 +19,8 @@ import { AlertStatusComponent } from '../alert-status/alert-status.component';
 import { LabelNamePipe } from './label-name.pipe';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ListFilterByTextAndAttrPipe } from '../pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
+import { PrInputComponent } from '../pr-input/pr-input.component';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-pr-select',
@@ -32,7 +34,8 @@ import { ListFilterByTextAndAttrPipe } from '../pr-multi-select/pipes/list-filte
     AlertStatusComponent,
     LabelNamePipe,
     ScrollingModule,
-    ListFilterByTextAndAttrPipe
+    ListFilterByTextAndAttrPipe,
+    InputTextModule
   ],
   providers: [
     {

@@ -46,9 +46,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.component'
               ).then(c => c.RdTheoryOfChangeComponent)
           },
-          // {
-          //   path: 'partners'
-          // },
+          {
+            path: 'partners',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-partners/rd-partners.component'
+              ).then(c => c.RdPartnersComponent)
+          },
           // {
           //   path: 'geographic-location'
           // },
