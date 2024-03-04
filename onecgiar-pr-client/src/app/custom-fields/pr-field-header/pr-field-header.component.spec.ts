@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { PrFieldHeaderComponent } from './pr-field-header.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('PrFieldHeaderComponent', () => {
   let component: PrFieldHeaderComponent;
@@ -8,15 +8,45 @@ describe('PrFieldHeaderComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PrFieldHeaderComponent]
+      declarations: [PrFieldHeaderComponent],
+      imports: [HttpClientModule]
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(PrFieldHeaderComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should have default values for inputs', () => {
+    expect(component.simpleStyle).toBeUndefined();
+    expect(component.label).toBeUndefined();
+    expect(component.description).toBeUndefined();
+    expect(component.required).toBe(true);
+    expect(component.readOnly).toBeUndefined();
+    expect(component.useColon).toBe(true);
+    expect(component.showDescriptionLabel).toBe(true);
+    expect(component.descInlineStyles).toBe('');
+  });
+
+  it('should return description label when showDescriptionLabel is true and rolesSE.readOnly is false', () => {
+    component.showDescriptionLabel = true;
+    component.rolesSE.readOnly = false;
+    expect(component.descriptionLabel).toBe('<strong class="description_header">Description:</strong>');
+  });
+
+  it('should return empty string for description label when showDescriptionLabel is false', () => {
+    component.showDescriptionLabel = false;
+    expect(component.descriptionLabel).toBe('');
+  });
+
+  it('should return empty string for description label when rolesSE.readOnly is true', () => {
+    component.showDescriptionLabel = true;
+    component.rolesSE.readOnly = true;
+    expect(component.descriptionLabel).toBe('');
   });
 });

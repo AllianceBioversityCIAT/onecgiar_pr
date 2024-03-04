@@ -8,12 +8,12 @@ import { IpsrListService } from '../../../services/ipsr-list.service';
 })
 export class InnovationPackageListFilterPipe implements PipeTransform {
   constructor(public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
-  transform(list, word: string, initsSelectedJoinText: number) {
+  transform(list, word: string) {
     return this.filterByInits(this.filterByText(this.filterByPhase(list), word));
   }
 
   filterByText(list, word) {
-    return list.filter((item: any) => (Boolean(item?.full_name) ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1 : false));
+    return list.filter((item: any) => (item?.full_name ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1 : false));
   }
 
   filterByInits(list) {

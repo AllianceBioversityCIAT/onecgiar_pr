@@ -33,13 +33,22 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   showT1RSelectPhase?: boolean;
-  reportingCurrentPhase: any;
+  reportingCurrentPhase = { phaseName: null, phaseYear: null };
+  IPSRCurrentPhase = { phaseName: null, phaseYear: null };
 
   constructor(private titleService: Title, public resultsSE: ResultsApiService) {}
 
   getCurrentPhases() {
     this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
-      this.reportingCurrentPhase = response[0]?.phase_year;
+      this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
+      this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
+    });
+  }
+
+  getCurrentIPSRPhase() {
+    this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.IPSR).subscribe(({ response }) => {
+      this.IPSRCurrentPhase.phaseYear = response[0]?.phase_year;
+      this.IPSRCurrentPhase.phaseName = response[0]?.phase_name;
     });
   }
 

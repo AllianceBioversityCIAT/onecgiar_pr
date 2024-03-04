@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -20,12 +19,11 @@ export class IpsrListFilterService {
     ]
   };
 
-  constructor() {}
   filtersPipeList = [];
   filterJoin: number = 0;
 
   updateMyInitiatives(initiatives) {
-    initiatives?.map(init => {
+    initiatives?.forEach(init => {
       init.selected = true;
       init.attr = init.name;
       init.id = init.initiative_id;
@@ -38,6 +36,7 @@ export class IpsrListFilterService {
     if (option.name != 'All results') this.filters.general[0].options[0].selected = false;
     this.filterJoin++;
   }
+
   cleanAllFilters(option) {
     if (!option.selected) return;
     if (option?.cleanAll !== true) return;
