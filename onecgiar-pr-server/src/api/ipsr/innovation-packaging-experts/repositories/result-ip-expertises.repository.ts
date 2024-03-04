@@ -24,19 +24,13 @@ export class ResultIpExpertisesRepository
           rie.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
-          (
-              SELECT
-                  re2.result_ip_expert_id
-              FROM
-                  result_ip_expert re2
-              WHERE
-                  re2.organization_id = re1.organization_id
-                  AND re2.result_id = ${config.new_result_id}
-          ) AS result_ip_expert_id,
+          re2.result_ip_expert_id AS result_ip_expert_id,
           rie.expertises_id
       FROM
           result_ip_expertises rie
           LEFT JOIN result_ip_expert re1 ON re1.result_ip_expert_id = rie.result_ip_expert_id
+          LEFT JOIN result_ip_expert re2 ON re2.organization_id = re1.organization_id
+          AND re2.result_id = ${config.new_result_id}
       WHERE
           re1.result_id = ${config.old_result_id}
           AND re1.is_active = 1
@@ -59,19 +53,13 @@ export class ResultIpExpertisesRepository
             rie.last_updated_date,
             ${config.user.id} AS created_by,
             ${config.user.id} AS last_updated_by,
-            (
-                SELECT
-                    re2.result_ip_expert_id
-                FROM
-                    result_ip_expert re2
-                WHERE
-                    re2.organization_id = re1.organization_id
-                    AND re2.result_id = ${config.new_result_id}
-            ) AS result_ip_expert_id,
+            re2.result_ip_expert_id AS result_ip_expert_id,
             rie.expertises_id
         FROM
             result_ip_expertises rie
             LEFT JOIN result_ip_expert re1 ON re1.result_ip_expert_id = rie.result_ip_expert_id
+            LEFT JOIN result_ip_expert re2 ON re2.organization_id = re1.organization_id
+            AND re2.result_id = ${config.new_result_id}
         WHERE
             re1.result_id = ${config.old_result_id}
             AND re1.is_active = 1

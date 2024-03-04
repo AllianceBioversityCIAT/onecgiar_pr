@@ -23,7 +23,7 @@ export class ResultInstitutionsBudgetRepository
       SELECT
           rib.is_active,
           ${predeterminedDateValidation(config?.predetermined_date)} AS created_date,
-          rbi.last_updated_date,
+          rib.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           (
@@ -52,7 +52,7 @@ export class ResultInstitutionsBudgetRepository
           result_institutions_budget (
               is_active,
               created_date,
-              rbi.last_updated_date,
+              last_updated_date,
               created_by,
               last_updated_by,
               result_institution_id
@@ -60,21 +60,15 @@ export class ResultInstitutionsBudgetRepository
       SELECT
           rib.is_active,
           ${predeterminedDateValidation(config?.predetermined_date)} AS created_date,
-          rbi.last_updated_date,
+          rib.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
-          (
-              SELECT
-                  result_institution_id
-              FROM
-                  results_by_institution rbi2
-              WHERE
-                rbi2.institutions_id = rbi.institutions_id
-                AND rbi2.result_id = ${config.new_result_id}
-          ) AS result_institution_id
+          rbi2.id AS result_institution_id
       FROM
           result_institutions_budget rib
           LEFT JOIN results_by_institution rbi ON rbi.id = rib.result_institution_id
+          LEFT JOIN results_by_institution rbi2 ON rbi2.institutions_id = rbi.institutions_id
+          AND rbi2.result_id = ${config.new_result_id}
       WHERE 
         rbi.result_id = ${config.old_result_id}
         AND rbi.is_active = 1

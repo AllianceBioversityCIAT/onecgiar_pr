@@ -18,21 +18,22 @@ export class NonPooledProjectBudgetRepository
   createQueries(
     config: ReplicableConfigInterface<NonPooledProjectBudget>,
   ): ConfigCustomQueryInterface {
+    console.log('NonPooledProjectBudget');
     return {
       findQuery: `
       SELECT
-          npp.is_active,
+          nppb.is_active,
           ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
-          last_updated_date,
+          nppb.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           (
             SELECT
-              *
+              npp2.id
             FROM
               non_pooled_project npp2
             WHERE
-              npp2.funder_institution_id = npp.funder_institution_id
+              npp2.center_grant_id = npp.center_grant_id
               AND npp2.results_id = ${config.new_result_id}
           ) AS non_pooled_projetct_id
       FROM
@@ -51,31 +52,20 @@ export class NonPooledProjectBudgetRepository
               last_updated_date,
               created_by,
               last_updated_by,
-              non_pooled_projetct_budget_id,
-              non_pooled_projetct_id,
-              is_determined,
-              in_kind,
-              in_cash,
-              kind_cash
+              non_pooled_projetct_id
           )
       SELECT
-          npp.is_active,
+          nppb.is_active,
           ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
-          last_updated_date,
+          nppb.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
-          (
-            SELECT
-              *
-            FROM
-              non_pooled_project npp2
-            WHERE
-              npp2.funder_institution_id = npp.funder_institution_id
-              AND npp2.results_id = ${config.new_result_id}
-          ) AS non_pooled_projetct_id
+          npp2.id AS non_pooled_projetct_id
       FROM
           non_pooled_projetct_budget nppb
           LEFT JOIN non_pooled_project npp ON npp.id = nppb.non_pooled_projetct_id
+          LEFT JOIN non_pooled_project npp2 ON npp2.center_grant_id = npp.center_grant_id
+          AND npp2.results_id = ${config.new_result_id}
       WHERE 
         npp.results_id = ${config.old_result_id}
         AND npp.is_active = 1
@@ -83,7 +73,7 @@ export class NonPooledProjectBudgetRepository
       `,
       returnQuery: `
       SELECT
-          non_pooled_projetct_budget_id
+          nppb.non_pooled_projetct_budget_id
       FROM
           non_pooled_projetct_budget nppb
           LEFT JOIN non_pooled_project npp ON npp.id = nppb.non_pooled_projetct_id
