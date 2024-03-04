@@ -15,6 +15,7 @@ import { CustomValidationTooltipComponent } from '../custom-validation-tooltip/c
 import { PrFieldValidationsComponent } from '../pr-field-validations/pr-field-validations.component';
 import { YesOrNotByBooleanPipe } from '../pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-pr-input',
@@ -30,7 +31,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
     CustomValidationTooltipComponent,
     PrFieldValidationsComponent,
     YesOrNotByBooleanPipe,
-    InputNumberModule
+    InputNumberModule,
+    InputTextModule
   ],
   providers: [
     {
