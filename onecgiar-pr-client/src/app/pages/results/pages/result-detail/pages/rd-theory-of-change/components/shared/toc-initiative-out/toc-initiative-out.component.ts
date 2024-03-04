@@ -2,7 +2,6 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 import { CommonModule } from '@angular/common';
-import { FeedbackValidationDirectiveModule } from '../../../../../../../../../shared/directives/feedback-validation-directive.module';
 import { TableModule } from 'primeng/table';
 import { RouterModule } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
@@ -10,6 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { PrYesOrNotComponent } from '../../../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
 import { MultipleWPsComponent } from './multiple-wps/multiple-wps.component';
 import { FormsModule } from '@angular/forms';
+import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
 
 @Component({
   selector: 'app-toc-initiative-out',
@@ -18,14 +18,14 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./toc-initiative-out.component.scss'],
   imports: [
     CommonModule,
-    FeedbackValidationDirectiveModule,
     TableModule,
     RouterModule,
     TooltipModule,
     DialogModule,
     PrYesOrNotComponent,
     MultipleWPsComponent,
-    FormsModule
+    FormsModule,
+    FeedbackValidationDirective
   ]
 })
 export class TocInitiativeOutComponent implements OnInit {

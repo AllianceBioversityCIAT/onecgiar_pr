@@ -11,18 +11,64 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { PusherService } from '../../../../../../shared/services/pusher.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
+import { CommonModule } from '@angular/common';
+import { CountInstitutionsTypesPipe } from './pipes/count-institutions-types.pipe';
+import { FeedbackValidationDirective } from '../../../../../../shared/directives/feedback-validation.directive';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { PdfIconComponent } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.component';
+import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
+import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrInputComponent } from '../../../../../../custom-fields/pr-input/pr-input.component';
+import { FormsModule } from '@angular/forms';
+import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
+import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { PrRadioButtonComponent } from '../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
+import { SyncButtonComponent } from '../../../../../../custom-fields/sync-button/sync-button.component';
+import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 
 @Component({
   selector: 'app-rd-general-information',
+  standalone: true,
   templateUrl: './rd-general-information.component.html',
-  styleUrls: ['./rd-general-information.component.scss']
+  styleUrls: ['./rd-general-information.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CountInstitutionsTypesPipe,
+    FeedbackValidationDirective,
+    DialogModule,
+    TableModule,
+    PdfIconComponent,
+    RdAnnualUpdatingComponent,
+    AlertStatusComponent,
+    PrInputComponent,
+    PrButtonComponent,
+    PrTextareaComponent,
+    PrRadioButtonComponent,
+    SaveButtonComponent,
+    SyncButtonComponent,
+    DetailSectionTitleComponent,
+    ChangeResultTypeModalComponent
+  ]
 })
 export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
 
-  constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+  constructor(
+    public api: ApiService,
+    private currentResultSE: CurrentResultService,
+    public scoreSE: ScoreService,
+    public institutionsSE: InstitutionsService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public pusherSE: PusherService
+  ) {}
 
   ngOnInit(): void {
     this.showAlerts();
@@ -33,25 +79,37 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
-      this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = response['phase_year'];
-      this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
-      this.GET_investmentDiscontinuedOptions();
-      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
-    });
+    this.api.resultsSE
+      .GET_generalInformationByResultId()
+      .subscribe(({ response }) => {
+        this.generalInfoBody = response;
+        this.generalInfoBody.reporting_year = response['phase_year'];
+        this.generalInfoBody.institutions_type = [
+          ...this.generalInfoBody.institutions_type,
+          ...this.generalInfoBody.institutions
+        ] as any;
+        this.GET_investmentDiscontinuedOptions();
+        this.isPhaseOpen =
+          !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+      });
   }
 
   GET_investmentDiscontinuedOptions() {
-    this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
-      this.convertChecklistToDiscontinuedOptions(response);
-    });
+    this.api.resultsSE
+      .GET_investmentDiscontinuedOptions()
+      .subscribe(({ response }) => {
+        this.convertChecklistToDiscontinuedOptions(response);
+      });
   }
 
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
     options.forEach(option => {
-      const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      const found = this.generalInfoBody.discontinued_options.find(
+        discontinuedOption =>
+          discontinuedOption.investment_discontinued_option_id ==
+          option.investment_discontinued_option_id
+      );
       if (found) {
         (option.value = true), (option.description = found?.description);
       }
@@ -60,26 +118,37 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   discontinuedOptionsToIds() {
-    this.generalInfoBody.discontinued_options = this.generalInfoBody.discontinued_options.filter(option => option.value === true);
-    this.generalInfoBody.discontinued_options.forEach(option => (option.is_active = true));
+    this.generalInfoBody.discontinued_options =
+      this.generalInfoBody.discontinued_options.filter(
+        option => option.value === true
+      );
+    this.generalInfoBody.discontinued_options.forEach(
+      option => (option.is_active = true)
+    );
   }
 
   onSaveSection() {
     this.discontinuedOptionsToIds();
-    this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
+    this.generalInfoBody.institutions_type =
+      this.generalInfoBody.institutions_type.filter(
+        inst => !inst.hasOwnProperty('institutions_id')
+      );
 
-    if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
-      next: resp => {
-        this.currentResultSE.GET_resultById();
+    if (!this.generalInfoBody.is_discontinued)
+      this.generalInfoBody.discontinued_options = [];
+    this.api.resultsSE
+      .PATCH_generalInformation(this.generalInfoBody)
+      .subscribe({
+        next: resp => {
+          this.currentResultSE.GET_resultById();
 
-        this.getSectionInformation();
-      },
-      error: err => {
-        console.error(err);
-        this.getSectionInformation();
-      }
-    });
+          this.getSectionInformation();
+        },
+        error: err => {
+          console.error(err);
+          this.getSectionInformation();
+        }
+      });
   }
 
   titleTextInfo() {
@@ -98,7 +167,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   genderInformation() {
-    return `<strong>Gender equality tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong>
     <br/>
 
     There are two gender-related targets at systems level.
@@ -117,7 +186,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition, health and food security tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong>
     <br>
     There are two food security and nutrition targets for at systems level:
 
@@ -136,9 +205,9 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   environmentInformation() {
-    return `<strong>Environmental health and biodiversity tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong>
     <br>
-    
+
     There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
@@ -157,16 +226,16 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   povertyInformation() {
-    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
-    
+
     <ul>
       <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
       <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
     </ul>
-    
+
     Three scores are possible:
 
     <ul>
@@ -197,11 +266,15 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   sendIntitutionsTypes() {
-    this.generalInfoBody.institutions_type = [...(this.generalInfoBody?.institutions_type ?? []), ...(this.generalInfoBody?.institutions ?? [])] as any;
+    this.generalInfoBody.institutions_type = [
+      ...(this.generalInfoBody?.institutions_type ?? []),
+      ...(this.generalInfoBody?.institutions ?? [])
+    ] as any;
   }
 
   onChangeKrs() {
-    if (this.generalInfoBody.is_krs === false) this.generalInfoBody.krs_url = null;
+    if (this.generalInfoBody.is_krs === false)
+      this.generalInfoBody.krs_url = null;
   }
 
   onSyncSection() {

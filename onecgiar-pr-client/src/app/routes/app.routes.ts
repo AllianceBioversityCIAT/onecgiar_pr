@@ -20,7 +20,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import(
             '../pages/results/pages/result-detail/result-detail.component'
-          ).then(c => c.ResultDetailComponent)
+          ).then(c => c.ResultDetailComponent),
+        children: [
+          {
+            path: 'general-information',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-general-information/rd-general-information.component'
+              ).then(c => c.RdGeneralInformationComponent)
+          }
+        ]
       },
       {
         path: 'results-outlet',

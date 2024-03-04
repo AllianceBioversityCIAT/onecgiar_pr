@@ -1,7 +1,8 @@
 import { Directive, Input, ElementRef, Renderer2 } from '@angular/core';
 
 @Directive({
-  selector: '[appFeedbackValidation]'
+  selector: '[appFeedbackValidation]',
+  standalone: true
 })
 export class FeedbackValidationDirective {
   @Input() labelText: string = '';
@@ -24,6 +25,8 @@ export class FeedbackValidationDirective {
     this.renderer.setStyle(this.el.nativeElement, 'display', 'none');
   }
   ngDoCheck(): void {
-    this.isComplete ? this.renderer.addClass(this.fieldDiv, 'complete') : this.renderer.removeClass(this.fieldDiv, 'complete');
+    this.isComplete
+      ? this.renderer.addClass(this.fieldDiv, 'complete')
+      : this.renderer.removeClass(this.fieldDiv, 'complete');
   }
 }
