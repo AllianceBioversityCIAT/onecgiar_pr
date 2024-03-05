@@ -5,14 +5,25 @@ import { DomSanitizer, Title } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
 import { Observable } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
+import { CommonModule } from '@angular/common';
+import { PrSelectComponent } from '../../custom-fields/pr-select/pr-select.component';
+import { FormsModule } from '@angular/forms';
+import { NoDataTextComponent } from '../../custom-fields/no-data-text/no-data-text.component';
 
 @Component({
   selector: 'app-quality-assurance',
+  standalone: true,
   templateUrl: './quality-assurance.component.html',
-  styleUrls: ['./quality-assurance.component.scss']
+  styleUrls: ['./quality-assurance.component.scss'],
+  imports: [CommonModule, PrSelectComponent, FormsModule, NoDataTextComponent]
 })
 export class QualityAssuranceComponent implements OnInit {
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private qaSE: QualityAssuranceService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    public sanitizer: DomSanitizer,
+    private qaSE: QualityAssuranceService
+  ) {}
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;
@@ -30,14 +41,18 @@ export class QualityAssuranceComponent implements OnInit {
       if (this.api.rolesSE.isAdmin) {
         this.GET_AllInitiatives();
       } else {
-        this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
-        if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+        this.official_code =
+          this.api.dataControlSE.myInitiativesList[0]?.official_code;
+        if (this.official_code)
+          this.selectOptionEvent({ official_code: this.official_code });
       }
     });
   }
 
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.qaUrl}/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      `${this.qaUrl}/crp?crp_id=${this.official_code}&token=${this.clarisaQaToken}`
+    );
   }
 
   GET_AllInitiatives() {
@@ -45,7 +60,8 @@ export class QualityAssuranceComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
       this.official_code = this.allInitiatives[0]?.official_code;
-      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+      if (this.official_code)
+        this.selectOptionEvent({ official_code: this.official_code });
     });
   }
   GET_ClarisaQaToken(callback) {

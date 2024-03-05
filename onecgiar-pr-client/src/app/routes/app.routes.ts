@@ -269,5 +269,12 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () =>
       import('../pages/login/login.component').then(c => c.LoginComponent)
+  },
+  {
+    path: 'quality-assurance',
+    loadComponent: () =>
+      import('../pages/quality-assurance/quality-assurance.component').then(
+        c => c.QualityAssuranceComponent
+      )
   }
 ];
