@@ -13,7 +13,7 @@ import { SaveButtonComponent } from '../../../custom-fields/save-button/save-but
 import { FormsModule } from '@angular/forms';
 import { PrYesOrNotComponent } from '../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
 import { PrMultiSelectComponent } from '../../../custom-fields/pr-multi-select/pr-multi-select.component';
-import { SubGeoscopeComponent } from '../../../pages/ipsr/pages/innovation-package-creator/components/ipsr-geoscope-creator/components/sub-geoscope/sub-geoscope.component';
+import { SubGeoscopeComponent } from './components/sub-geoscope/sub-geoscope.component';
 
 @Component({
   selector: 'app-geoscope-management',

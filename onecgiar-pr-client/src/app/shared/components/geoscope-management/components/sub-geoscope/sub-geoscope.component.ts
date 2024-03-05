@@ -1,11 +1,16 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ResultsApiService } from '../../../../services/api/results-api.service';
 import { SubNationalInterface } from '../../interfaces/subnational.interface';
+import { CommonModule } from '@angular/common';
+import { PrMultiSelectComponent } from '../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-sub-geoscope',
+  standalone: true,
   templateUrl: './sub-geoscope.component.html',
-  styleUrls: ['./sub-geoscope.component.scss']
+  styleUrls: ['./sub-geoscope.component.scss'],
+  imports: [CommonModule, FormsModule, PrMultiSelectComponent]
 })
 export class SubGeoscopeComponent implements OnInit {
   @Input() countryList: any[] = [];
@@ -43,16 +48,25 @@ export class SubGeoscopeComponent implements OnInit {
     this.obj_country['sub_national'] = this.obj_country.sub_national || [];
     this.getSubNational(this.obj_country.iso_alpha_2, () => {
       this.obj_country.sub_national = this.obj_country.sub_national.map(el => {
-        const formatedName: string = this.subNationList.find(sn => sn.code === el.code)?.formatedName;
+        const formatedName: string = this.subNationList.find(
+          sn => sn.code === el.code
+        )?.formatedName;
         el = { ...el, formatedName };
         return el;
       });
     });
   }
 
-  private subNationalMapper(item: SubNationalInterface[]): SubNationalInterface[] {
+  private subNationalMapper(
+    item: SubNationalInterface[]
+  ): SubNationalInterface[] {
     const findAvalibleName = sn => {
-      return sn?.name || sn?.local_name || sn?.romanization_system_name || `No name available`;
+      return (
+        sn?.name ||
+        sn?.local_name ||
+        sn?.romanization_system_name ||
+        `No name available`
+      );
     };
 
     return item.map(sn => {
