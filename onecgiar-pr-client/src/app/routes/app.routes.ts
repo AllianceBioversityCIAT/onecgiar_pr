@@ -204,15 +204,14 @@ export const routes: Routes = [
           import(
             '../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.component'
           ).then(c => c.TorKeyResultStoryComponent)
+      },
+      {
+        path: 'white',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/white-page/white-page.component'
+          ).then(c => c.WhitePageComponent)
       }
-      // {
-
-      //   path: 'white',
-      //   loadComponent: () =>
-      //     import(
-      //       '../pages/type-one-report/pages/tor-white/tor-white.component'
-      //     ).then(c => c.WhiteComponent)
-      // },
     ]
   },
   {
