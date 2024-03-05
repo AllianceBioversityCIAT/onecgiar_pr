@@ -100,9 +100,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.component'
               ).then(c => c.InnovationUseInfoComponent)
           },
-          // {
-          //   path: 'knowledge-product-info'
-          // },
+          {
+            path: 'knowledge-product-info',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.component'
+              ).then(c => c.KnowledgeProductInfoComponent)
+          },
           // {
           //   path: 'policy-change1-info'
           // },

@@ -4,47 +4,92 @@ import chroma from 'chroma-js';
 
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
+import {
+  FairSpecificData,
+  FullFairData,
+  KnowledgeProductBody
+} from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
+import { CommonModule } from '@angular/common';
+import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrInputComponent } from 'src/app/custom-fields/pr-input/pr-input.component';
+import { FormsModule } from '@angular/forms';
+import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { NgCircleProgressModule } from 'ng-circle-progress';
+import { FeedbackValidationDirective } from '../../../../../../../shared/directives/feedback-validation.directive';
+import { PrSelectComponent } from '../../../../../../../custom-fields/pr-select/pr-select.component';
+import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
+import { SyncButtonComponent } from '../../../../../../../custom-fields/sync-button/sync-button.component';
 
 @Component({
   selector: 'app-knowledge-product-info',
+  standalone: true,
   templateUrl: './knowledge-product-info.component.html',
-  styleUrls: ['./knowledge-product-info.component.scss']
+  styleUrls: ['./knowledge-product-info.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DetailSectionTitleComponent,
+    AlertStatusComponent,
+    PrInputComponent,
+    PrFieldHeaderComponent,
+    NgCircleProgressModule,
+    FeedbackValidationDirective,
+    PrSelectComponent,
+    SaveButtonComponent,
+    SyncButtonComponent
+  ]
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
   sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
   meliaTypes = [];
   ostMeliaStudies = [];
-  private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
+  private readonly kpGradientScale = chroma
+    .scale(['#f44444', '#dcdf38', '#38df7b'])
+    .mode('hcl');
   fair_data: Array<{ key: string; value: FairSpecificData }>;
-  fairGuideline = 'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
+  fairGuideline =
+    'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
 
-  constructor(public api: ApiService, public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(
+    public api: ApiService,
+    public rolesSE: RolesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
-      this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
-      this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
-      this.sectionData.isMeliaProduct = response.is_melia;
-      this.sectionData.ostMeliaId = response.ost_melia_study_id;
-      this.sectionData.ostSubmitted = response.melia_previous_submitted;
-      if (!this.sectionData.isMeliaProduct) this.sectionData.isMeliaProduct = false;
-    });
-    this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
-      this.meliaTypes = response;
-    });
-    this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
-      this.ostMeliaStudies = response;
-    });
+    this.api.resultsSE
+      .GET_resultknowledgeProducts()
+      .subscribe(({ response }) => {
+        this.knowledgeProductBody = this._mapFields(
+          response as KnowledgeProductBody
+        );
+        this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
+        this.sectionData.isMeliaProduct = response.is_melia;
+        this.sectionData.ostMeliaId = response.ost_melia_study_id;
+        this.sectionData.ostSubmitted = response.melia_previous_submitted;
+        if (!this.sectionData.isMeliaProduct)
+          this.sectionData.isMeliaProduct = false;
+      });
+    this.api.resultsSE
+      .GET_allClarisaMeliaStudyTypes()
+      .subscribe(({ response }) => {
+        this.meliaTypes = response;
+      });
+    this.api.resultsSE
+      .GET_ostMeliaStudiesByResultId()
+      .subscribe(({ response }) => {
+        this.ostMeliaStudies = response;
+      });
   }
 
   onSyncSection() {
@@ -66,7 +111,9 @@ export class KnowledgeProductInfoComponent implements OnInit {
     );
   }
 
-  private _mapFields(response: KnowledgeProductBody): KnowledgeProductBodyMapped {
+  private _mapFields(
+    response: KnowledgeProductBody
+  ): KnowledgeProductBodyMapped {
     const mapped = new KnowledgeProductBodyMapped();
     mapped.warnings = response.warnings;
 
@@ -85,7 +132,9 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.onlineYearCG = response.metadataCG?.online_year;
     this.fair_data = this.filterOutObject(response.fair_data);
 
-    const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
+    const journalArticle: boolean = (response.type ?? '')
+      .toLocaleLowerCase()
+      .includes('journal article');
     if (journalArticle) {
       if (response.metadataCG?.doi) {
         if (response.metadataWOS) {
@@ -112,10 +161,18 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return this.kpGradientScale(value).hex();
   }
 
-  private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
+  private getMetadataFromCGSpace(
+    mapped: KnowledgeProductBodyMapped,
+    response: KnowledgeProductBody
+  ) {
+    mapped.is_peer_reviewed_CG = this.transformBoolean(
+      response.metadataCG?.is_peer_reviewed
+    );
     mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
-    mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
+    mapped.accessibility_CG =
+      response.metadataCG?.accessibility == true
+        ? 'Open Access'
+        : 'Limited Access';
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
@@ -127,22 +184,34 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return value ? 'Yes' : 'No';
   }
 
-  private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
-    mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
+  private getMetadataFromWoS(
+    mapped: KnowledgeProductBodyMapped,
+    response: KnowledgeProductBody
+  ) {
+    mapped.is_peer_reviewed_WOS = this.transformBoolean(
+      response.metadataWOS?.is_peer_reviewed
+    );
     mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
-    mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
+    mapped.accessibility_WOS =
+      response.metadataWOS?.accessibility == true
+        ? 'Open Access'
+        : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
   }
 
-  filterOutObject(fairObject: FullFairData): Array<{ key: string; value: FairSpecificData }> {
+  filterOutObject(
+    fairObject: FullFairData
+  ): Array<{ key: string; value: FairSpecificData }> {
     return Object.keys(fairObject)
       .filter(key => key != 'total_score')
       .map(key => ({ key, value: fairObject[key] }));
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCH_knowledgeProductSection(this.sectionData).subscribe(({ response }) => {
-      this.getSectionInformation();
-    });
+    this.api.resultsSE
+      .PATCH_knowledgeProductSection(this.sectionData)
+      .subscribe(({ response }) => {
+        this.getSectionInformation();
+      });
   }
 }
