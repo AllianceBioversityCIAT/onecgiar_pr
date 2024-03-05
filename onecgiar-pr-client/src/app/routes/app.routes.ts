@@ -152,6 +152,13 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'type-one-report',
+    loadComponent: () =>
+      import('../pages/type-one-report/type-one-report.component').then(
+        c => c.TypeOneReportComponent
+      )
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('../pages/login/login.component').then(c => c.LoginComponent)

@@ -270,78 +270,50 @@ export const resultDetailRouting: PrRoute[] = [
   }
 ];
 
-// export const TypePneReportRouting: PrRoute[] = [
-//   {
-//     prName: 'Fact sheet',
-//     underConstruction: false,
-//     path: 'fact-sheet',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module'
-//       ).then(m => m.TorFactSheetModule)
-//   },
-//   {
-//     prName: 'TOC Diagrams',
-//     underConstruction: false,
-//     path: 'toc-diagrams',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-toc-diagrams/tor-toc-diagrams.module'
-//       ).then(m => m.TorTocDiagramsModule)
-//   },
-//   {
-//     prName: 'Key results',
-//     underConstruction: false,
-//     path: 'key-results',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-key-results/tor-key-results.module'
-//       ).then(m => m.TorKeyResultsModule)
-//   },
-//   {
-//     prName: 'Partnerships',
-//     underConstruction: false,
-//     path: 'partnerships',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-partnerships/tor-partnerships.module'
-//       ).then(m => m.TorPartnershipsModule)
-//   },
-//   {
-//     prName: 'Portfolio linkages',
-//     underConstruction: false,
-//     path: 'portfolio-linkages',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-portfolio-linkages/tor-portfolio-linkages.module'
-//       ).then(m => m.TorPortfolioLinkagesModule)
-//   },
-//   {
-//     prName: 'Key result story',
-//     underConstruction: false,
-//     path: 'key-result-story',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module'
-//       ).then(m => m.TorKeyResultStoryModule)
-//   },
-//   {
-//     prName: '',
-//     underConstruction: false,
-//     path: 'white',
-//     loadChildren: () =>
-//       import(
-//         '../../pages/type-one-report/pages/white-page/white-page.module'
-//       ).then(m => m.WhitePageModule)
-//   },
-//   {
-//     prName: '',
-//     path: '**',
-//     underConstruction: false,
-//     pathMatch: 'full',
-//     redirectTo: 'fact-sheet'
-//   }
-// ];
+export const TypePneReportRouting: PrRoute[] = [
+  {
+    prName: 'Fact sheet',
+    underConstruction: false,
+    path: 'fact-sheet'
+  },
+  {
+    prName: 'TOC Diagrams',
+    underConstruction: false,
+    path: 'toc-diagrams'
+  },
+  {
+    prName: 'Key results',
+    underConstruction: false,
+    path: 'key-results'
+  },
+  {
+    prName: 'Partnerships',
+    underConstruction: false,
+    path: 'partnerships'
+  },
+  {
+    prName: 'Portfolio linkages',
+    underConstruction: false,
+    path: 'portfolio-linkages'
+  },
+  {
+    prName: 'Key result story',
+    underConstruction: false,
+    path: 'key-result-story'
+  },
+  {
+    prName: '',
+    underConstruction: false,
+    path: 'white'
+  },
+  {
+    prName: '',
+    path: '**',
+    underConstruction: false,
+    pathMatch: 'full',
+    redirectTo: 'fact-sheet'
+  }
+];
 
 export interface PrRoute extends Route {
   prName: string;

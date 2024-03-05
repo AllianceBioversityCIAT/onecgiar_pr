@@ -2,23 +2,48 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
 import { TypePneReportRouting } from '../../shared/routing/routing-data';
+import { CommonModule } from '@angular/common';
+import { TorPanelMenuComponent } from './components/tor-panel-menu/tor-panel-menu.component';
+import { PrSelectComponent } from '../../custom-fields/pr-select/pr-select.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-type-one-report',
+  standalone: true,
   templateUrl: './type-one-report.component.html',
-  styleUrls: ['./type-one-report.component.scss']
+  styleUrls: ['./type-one-report.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TorPanelMenuComponent,
+    PrSelectComponent,
+    RouterModule
+  ]
 })
 export class TypeOneReportComponent implements OnInit {
   sections: any = [];
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    public typeOneReportSE: TypeOneReportService,
+    private rolesSE: RolesService,
+    public router: Router,
+    public phasesSE: PhasesService
+  ) {}
 
   ngOnInit(): void {
-    TypePneReportRouting.forEach((section: any, index) => (section.prName ? this.sections.push({ ...section, name: `Section ${index + 1}: ${section.prName}` }) : null));
+    TypePneReportRouting.forEach((section: any, index) =>
+      section.prName
+        ? this.sections.push({
+            ...section,
+            name: `Section ${index + 1}: ${section.prName}`
+          })
+        : null
+    );
 
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Type one report');
@@ -55,24 +80,30 @@ export class TypeOneReportComponent implements OnInit {
     if (!this.api.rolesSE.isAdmin) return this.selectFirstInitiative();
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.typeOneReportSE.allInitiatives = response;
-      this.typeOneReportSE.initiativeSelected = this.typeOneReportSE.allInitiatives[0]?.official_code;
-      this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
+      this.typeOneReportSE.initiativeSelected =
+        this.typeOneReportSE.allInitiatives[0]?.official_code;
+      this.typeOneReportSE.currentInitiativeShortName =
+        this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
       this.typeOneReportSE.sanitizeUrl();
     });
   }
 
   selectFirstInitiative() {
-    this.typeOneReportSE.initiativeSelected = this.api.dataControlSE.myInitiativesList[0]?.official_code;
+    this.typeOneReportSE.initiativeSelected =
+      this.api.dataControlSE.myInitiativesList[0]?.official_code;
     this.typeOneReportSE.sanitizeUrl();
   }
 
   getInitiativeShortName(official_code) {
-    const list = this.api.rolesSE.isAdmin ? this.typeOneReportSE.allInitiatives : this.api.dataControlSE.myInitiativesList;
+    const list = this.api.rolesSE.isAdmin
+      ? this.typeOneReportSE.allInitiatives
+      : this.api.dataControlSE.myInitiativesList;
     return list.find(init => init.official_code == official_code)?.short_name;
   }
 
   selectInitiativeEvent() {
-    this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
+    this.typeOneReportSE.currentInitiativeShortName =
+      this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
     const currentUrl = this.router.url;
     this.router.navigateByUrl(`/type-one-report/white`).then(() => {
       console.log('navigate');
