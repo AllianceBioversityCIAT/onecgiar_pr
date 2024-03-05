@@ -1,5 +1,11 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, Input } from '@angular/core';
 import { MessageService } from 'primeng/api';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
+import { TorKrsPrimaryImpactAreaSelectorComponent } from './components/tor-krs-primary-impact-area-selector/tor-krs-primary-impact-area-selector.component';
+import { ToastModule } from 'primeng/toast';
 
 interface Header {
   attr: string;
@@ -9,9 +15,18 @@ interface Header {
 
 @Component({
   selector: 'app-simple-table-with-clipboard',
+  standalone: true,
   templateUrl: './simple-table-with-clipboard.component.html',
   styleUrls: ['./simple-table-with-clipboard.component.scss'],
-  providers: [MessageService]
+  providers: [MessageService],
+  imports: [
+    CommonModule,
+    TableModule,
+    ProgressBarModule,
+    SkeletonModule,
+    TorKrsPrimaryImpactAreaSelectorComponent,
+    ToastModule
+  ]
 })
 export class SimpleTableWithClipboardComponent {
   @Input() distribution: 'left' | 'normal' = 'normal';
@@ -40,7 +55,12 @@ export class SimpleTableWithClipboardComponent {
       document.getSelection().removeAllRanges();
       document.getSelection().addRange(range);
       document.execCommand('copy');
-      this.messageService.add({ key: 'myKey1', severity: 'info', summary: 'Copied', detail: 'Table copied to clipboard' });
+      this.messageService.add({
+        key: 'myKey1',
+        severity: 'info',
+        summary: 'Copied',
+        detail: 'Table copied to clipboard'
+      });
       document.getSelection().removeAllRanges();
       setTimeout(() => {
         this.flatFormat = false;

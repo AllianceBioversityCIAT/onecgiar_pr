@@ -2,11 +2,15 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
+import { SimpleTableWithClipboardComponent } from '../../../../shared/components/simple-table-with-clipboard/simple-table-with-clipboard.component';
+import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
 
 @Component({
   selector: 'app-tor-fact-sheet',
+  standalone: true,
   templateUrl: './tor-fact-sheet.component.html',
-  styleUrls: ['./tor-fact-sheet.component.scss']
+  styleUrls: ['./tor-fact-sheet.component.scss'],
+  imports: [SimpleTableWithClipboardComponent, AlertStatusComponent]
 })
 export class TorFactSheetComponent implements OnInit {
   loadingData = false;
@@ -45,34 +49,55 @@ export class TorFactSheetComponent implements OnInit {
     <br/>
     The CGIAR GENDER Impact Platform has adapted the OECD gender marker, splitting the 1 score into 1A and 1B. For gender equality, scores are: 0 = Not targeted; 1A = Gender accommodative/aware; 1B = Gender responsive; and 2 = Principal. These scores are derived from Initiative proposals, and refer to the score given to the Initiative overall based on their proposal.`;
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService) {}
+  constructor(
+    public api: ApiService,
+    public typeOneReportSE: TypeOneReportService
+  ) {}
 
   ngOnInit(): void {
     this.loadingData = true;
-    this.api.resultsSE.GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
-      const data = response;
-      this.convertBudgetData(data);
-      this.data[0].value = data.initiative_name;
-      this.data[1].value = data.short_name;
-      this.data[2].value = data.iniative_lead;
-      this.data[3].value = data.initiative_deputy;
-      this.data[4].value = data.action_area;
-      this.data[5].value = data.start_date;
-      this.data[6].value = data.end_date;
-      this.concatGeo(data);
-      this.data[8].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
-      this.data[9].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
-      this.data[10].value = data.climateGenderScore[0]?.gender_score ? `<strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
-      this.data[11].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
-      this.loadingData = false;
-    });
+    this.api.resultsSE
+      .GET_factSheetByInitiativeId(
+        this.typeOneReportSE.getInitiativeID(
+          this.typeOneReportSE.initiativeSelected
+        )?.id
+      )
+      .subscribe(({ response }) => {
+        const data = response;
+        this.convertBudgetData(data);
+        this.data[0].value = data.initiative_name;
+        this.data[1].value = data.short_name;
+        this.data[2].value = data.iniative_lead;
+        this.data[3].value = data.initiative_deputy;
+        this.data[4].value = data.action_area;
+        this.data[5].value = data.start_date;
+        this.data[6].value = data.end_date;
+        this.concatGeo(data);
+        this.data[8].value = data?.climateGenderScore[0]?.adaptation_score
+          ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
+        this.data[9].value = data.climateGenderScore[0]?.mitigation_score
+          ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
+        this.data[10].value = data.climateGenderScore[0]?.gender_score
+          ? `<strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
+        this.data[11].value = data?.web_page
+          ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`
+          : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
+        this.loadingData = false;
+      });
   }
 
   convertBudgetData(data) {
     const convertBudget = (budget, target) => {
       const dataItem = {};
       budget.forEach(element => {
-        target.header.push({ attr: element.year, name: element.year, type: 'currency' });
+        target.header.push({
+          attr: element.year,
+          name: element.year,
+          type: 'currency'
+        });
         dataItem[element.year] = element.total;
       });
 
@@ -87,14 +112,24 @@ export class TorFactSheetComponent implements OnInit {
   }
 
   concatGeo(data) {
-    const regions = data.regionsProposal?.map(element => element.name).join('; ');
-    const countries = data.countriesProposal?.map(element => element.name).join('; ');
+    const regions = data.regionsProposal
+      ?.map(element => element.name)
+      .join('; ');
+    const countries = data.countriesProposal
+      ?.map(element => element.name)
+      .join('; ');
 
-    this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
-    this.data[7].value += regions ? `${regions}<br>` : '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
+    this.data[7].value +=
+      '<strong>Regions targeted in the proposal:</strong><br>';
+    this.data[7].value += regions
+      ? `${regions}<br>`
+      : '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
 
-    this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
-    this.data[7].value += countries ? `${countries}<br>` : '<div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
+    this.data[7].value +=
+      '<br><strong>Countries targeted in the proposal:</strong><br>';
+    this.data[7].value += countries
+      ? `${countries}<br>`
+      : '<div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
   }
 
   concatEoiOutcome(data) {

@@ -156,7 +156,45 @@ export const routes: Routes = [
     loadComponent: () =>
       import('../pages/type-one-report/type-one-report.component').then(
         c => c.TypeOneReportComponent
-      )
+      ),
+    children: [
+      {
+        path: '',
+        redirectTo: 'fact-sheet',
+        pathMatch: 'full'
+      },
+      {
+        path: 'fact-sheet',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.component'
+          ).then(c => c.TorFactSheetComponent)
+      }
+      // {
+
+      //   path: 'toc-diagrams'
+      // },
+      // {
+
+      //   path: 'key-results'
+      // },
+      // {
+
+      //   path: 'partnerships'
+      // },
+      // {
+
+      //   path: 'portfolio-linkages'
+      // },
+      // {
+
+      //   path: 'key-result-story'
+      // },
+      // {
+
+      //   path: 'white'
+      // },
+    ]
   },
   {
     path: 'login',
