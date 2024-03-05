@@ -32,11 +32,11 @@ export const routes: Routes = [
             '../pages/results/pages/result-detail/result-detail.component'
           ).then(c => c.ResultDetailComponent),
         children: [
-          {
-            path: '',
-            redirectTo: 'general-information',
-            pathMatch: 'full'
-          },
+          // {
+          //   path: '',
+          //   redirectTo: 'general-information',
+          //   pathMatch: 'full'
+          // },
           {
             path: 'general-information',
             loadComponent: () =>
@@ -86,12 +86,20 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.component'
               ).then(c => c.CapDevInfoComponent)
           },
-          // {
-          //   path: 'innovation-dev-info'
-          // },
-          // {
-          //   path: 'innovation-use-info'
-          // },
+          {
+            path: 'innovation-dev-info',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.component'
+              ).then(c => c.InnovationDevInfoComponent)
+          },
+          {
+            path: 'innovation-use-info',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-use-info/innovation-use-info.component'
+              ).then(c => c.InnovationUseInfoComponent)
+          },
           // {
           //   path: 'knowledge-product-info'
           // },

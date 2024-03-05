@@ -1,11 +1,37 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model/innovationDevInfoBody';
+import {
+  Actor,
+  InnovationDevInfoBody,
+  Measure,
+  Organization
+} from '../../model/innovationDevInfoBody';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrFieldHeaderComponent } from 'src/app/custom-fields/pr-field-header/pr-field-header.component';
+import { PrRadioButtonComponent } from '../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
+import { SkeletonModule } from 'primeng/skeleton';
+import { PrSelectComponent } from '../../../../../../../../../custom-fields/pr-select/pr-select.component';
+import { NoDataTextComponent } from '../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
+import { AddButtonComponent } from '../../../../../../../../../custom-fields/add-button/add-button.component';
 
 @Component({
   selector: 'app-anticipated-innovation-user',
+  standalone: true,
   templateUrl: './anticipated-innovation-user.component.html',
-  styleUrls: ['./anticipated-innovation-user.component.scss']
+  styleUrls: ['./anticipated-innovation-user.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    PrRadioButtonComponent,
+    FeedbackValidationDirective,
+    SkeletonModule,
+    PrSelectComponent,
+    NoDataTextComponent,
+    AddButtonComponent
+  ]
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
@@ -21,11 +47,21 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   checkAlert() {
-    const actors = this.body.innovatonUse.actors.filter(item => item.actor_type_id !== null);
-    const organizations = this.body.innovatonUse.organization.filter(item => item.is_active !== false);
-    const measures = this.body.innovatonUse.measures.filter(item => item.is_active !== false);
+    const actors = this.body.innovatonUse.actors.filter(
+      item => item.actor_type_id !== null
+    );
+    const organizations = this.body.innovatonUse.organization.filter(
+      item => item.is_active !== false
+    );
+    const measures = this.body.innovatonUse.measures.filter(
+      item => item.is_active !== false
+    );
     if (!this.body.innovation_user_to_be_determined) {
-      if (actors?.length > 0 || organizations?.length > 0 || measures?.length > 0) {
+      if (
+        actors?.length > 0 ||
+        organizations?.length > 0 ||
+        measures?.length > 0
+      ) {
         return true;
       }
       return false;
@@ -37,7 +73,13 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   checkGenderAlert(actor) {
     if (actor.sex_and_age_disaggregation) return true;
 
-    if (actor.has_men || actor.has_men_youth || actor.has_women || actor.has_women_youth) return true;
+    if (
+      actor.has_men ||
+      actor.has_men_youth ||
+      actor.has_women ||
+      actor.has_women_youth
+    )
+      return true;
 
     return false;
   }
@@ -55,7 +97,9 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
+    const fundedList = this.institutionsTypeTreeList.find(
+      inst => inst.code == institution_types_id
+    );
     return fundedList?.childrens ?? [];
   }
 
@@ -99,7 +143,8 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   get disableOrganizations() {
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
-      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+      if (!resp.institution_sub_type_id)
+        list.push({ code: resp.institution_types_id });
     });
     return list;
   }
@@ -113,7 +158,9 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item[attr])
+      : list.filter(item => item.is_active != false);
     return finalList.length;
   }
 

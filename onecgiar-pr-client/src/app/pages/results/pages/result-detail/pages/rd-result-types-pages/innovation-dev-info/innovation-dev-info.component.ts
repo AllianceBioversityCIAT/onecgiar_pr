@@ -5,20 +5,65 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrInputComponent } from '../../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrSelectComponent } from '../../../../../../../custom-fields/pr-select/pr-select.component';
+import { AnticipatedInnovationUserComponent } from './components/anticipated-innovation-user/anticipated-innovation-user.component';
+import { GesiInnovationAssessmentComponent } from './components/gesi-innovation-assessment/gesi-innovation-assessment.component';
+import { ScaleImpactAnalysisComponent } from './components/scale-impact-analysis/scale-impact-analysis.component';
+import { IntellectualPropertyRightsComponent } from './components/intellectual-property-rights/intellectual-property-rights.component';
+import { InnovationTeamDiversityComponent } from './components/innovation-team-diversity/innovation-team-diversity.component';
+import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrRangeLevelComponent } from '../../../../../../../custom-fields/pr-range-level/pr-range-level.component';
+import { EstimatesComponent } from './components/estimates/estimates.component';
+import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
+import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
+import { PrRadioButtonComponent } from '../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrTextareaComponent } from '../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
 
 @Component({
   selector: 'app-innovation-dev-info',
+  standalone: true,
   templateUrl: './innovation-dev-info.component.html',
-  styleUrls: ['./innovation-dev-info.component.scss']
+  styleUrls: ['./innovation-dev-info.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DetailSectionTitleComponent,
+    AlertStatusComponent,
+    PrInputComponent,
+    PrSelectComponent,
+    AnticipatedInnovationUserComponent,
+    GesiInnovationAssessmentComponent,
+    ScaleImpactAnalysisComponent,
+    IntellectualPropertyRightsComponent,
+    InnovationTeamDiversityComponent,
+    PrFieldHeaderComponent,
+    PrRangeLevelComponent,
+    EstimatesComponent,
+    InnovationLinksComponent,
+    SaveButtonComponent,
+    PrRadioButtonComponent,
+    PrTextareaComponent
+  ]
 })
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   savingSection = false;
-  innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
-  innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
+  innovationDevelopmentQuestions: InnovationDevelopmentQuestions =
+    new InnovationDevelopmentQuestions();
+  innovationDevelopmentLinks: InnovationDevelopmentLinks =
+    new InnovationDevelopmentLinks();
 
-  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
+  constructor(
+    private api: ApiService,
+    public innovationControlListSE: InnovationControlListService,
+    private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -26,15 +71,31 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   GET_questionsInnovationDevelopment() {
-    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(({ response }) => {
-      this.innovationDevelopmentQuestions = response;
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.responsible_innovation_and_scaling.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.innovation_team_diversity);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
-      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
-    });
+    this.api.resultsSE
+      .GET_questionsInnovationDevelopment()
+      .subscribe(({ response }) => {
+        this.innovationDevelopmentQuestions = response;
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.responsible_innovation_and_scaling
+            .q1
+        );
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.responsible_innovation_and_scaling
+            .q2
+        );
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.innovation_team_diversity
+        );
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.intellectual_property_rights.q1
+        );
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.intellectual_property_rights.q2
+        );
+        this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
+          this.innovationDevelopmentQuestions.intellectual_property_rights.q3
+        );
+      });
   }
 
   getSectionInformation() {
@@ -44,7 +105,9 @@ export class InnovationDevInfoComponent implements OnInit {
       next: ({ response }) => {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
-        this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
+        this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(
+          this.innovationDevInfoBody.innovation_user_to_be_determined
+        );
         this.savingSection = false;
       },
       error: err => {
@@ -64,11 +127,13 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   convertOrganizationsTosave() {
-    this.innovationDevInfoBody.innovatonUse.organization.forEach((item: any) => {
-      if (item.institution_sub_type_id) {
-        item.institution_types_id = item.institution_sub_type_id;
+    this.innovationDevInfoBody.innovatonUse.organization.forEach(
+      (item: any) => {
+        if (item.institution_sub_type_id) {
+          item.institution_types_id = item.institution_sub_type_id;
+        }
       }
-    });
+    );
   }
 
   onSaveSection() {
@@ -78,16 +143,21 @@ export class InnovationDevInfoComponent implements OnInit {
       this.innovationDevInfoBody.number_of_varieties = null;
       this.innovationDevInfoBody.is_new_variety = null;
     }
-    this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
-      next: ({ response }) => {
-        this.getSectionInformation();
-        this.savingSection = false;
-      },
-      error: err => {
-        console.error(err);
-        this.savingSection = false;
-      }
-    });
+    this.api.resultsSE
+      .PATCH_innovationDev({
+        ...this.innovationDevInfoBody,
+        ...this.innovationDevelopmentQuestions
+      })
+      .subscribe({
+        next: ({ response }) => {
+          this.getSectionInformation();
+          this.savingSection = false;
+        },
+        error: err => {
+          console.error(err);
+          this.savingSection = false;
+        }
+      });
   }
 
   pdfOptions = [
@@ -109,9 +179,9 @@ export class InnovationDevInfoComponent implements OnInit {
 
   alertInfoText2() {
     return `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
-    * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/general-information?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
+    * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/general-information?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>
     <br><br>
-    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation. 
+    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation.
     <br><br>
     Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
   }

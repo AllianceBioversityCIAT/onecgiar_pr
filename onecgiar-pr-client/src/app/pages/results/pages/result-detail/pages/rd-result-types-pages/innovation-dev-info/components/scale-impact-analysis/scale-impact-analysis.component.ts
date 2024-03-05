@@ -2,11 +2,16 @@ import { Component, Input, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
+import { CommonModule } from '@angular/common';
+import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
 
 @Component({
   selector: 'app-scale-impact-analysis',
+  standalone: true,
   templateUrl: './scale-impact-analysis.component.html',
-  styleUrls: ['./scale-impact-analysis.component.scss']
+  styleUrls: ['./scale-impact-analysis.component.scss'],
+  imports: [CommonModule, PrFieldHeaderComponent, FeedbackValidationDirective]
 })
 export class ScaleImpactAnalysisComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();

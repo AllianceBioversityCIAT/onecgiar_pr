@@ -1,11 +1,34 @@
 import { Component, Input } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
-import { Actor, IpsrStep1Body, Measure, Organization } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import {
+  Actor,
+  IpsrStep1Body,
+  Measure,
+  Organization
+} from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import { PrFieldHeaderComponent } from 'src/app/custom-fields/pr-field-header/pr-field-header.component';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrSelectComponent } from '../../../custom-fields/pr-select/pr-select.component';
+import { PrInputComponent } from '../../../custom-fields/pr-input/pr-input.component';
+import { NoDataTextComponent } from '../../../custom-fields/no-data-text/no-data-text.component';
+import { AddButtonComponent } from '../../../custom-fields/add-button/add-button.component';
 
 @Component({
   selector: 'app-innovation-use-form',
+  standalone: true,
   templateUrl: './innovation-use-form.component.html',
-  styleUrls: ['./innovation-use-form.component.scss']
+  styleUrls: ['./innovation-use-form.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    PrSelectComponent,
+    PrInputComponent,
+    PrFieldHeaderComponent,
+    NoDataTextComponent,
+    AddButtonComponent
+  ]
 })
 export class InnovationUseFormComponent {
   actorsTypeList = [];
@@ -37,7 +60,9 @@ export class InnovationUseFormComponent {
       return this.institutionsTypeTreeChildrensCache[institution_types_id];
     }
 
-    const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
+    const fundedList = this.institutionsTypeTreeList.find(
+      inst => inst.code == institution_types_id
+    );
     const childrens = fundedList?.childrens ?? [];
 
     this.institutionsTypeTreeChildrensCache[institution_types_id] = childrens;
@@ -95,7 +120,9 @@ export class InnovationUseFormComponent {
   }
 
   calculateTotalField(actorItem) {
-    if (!actorItem.sex_and_age_disaggregation) actorItem.how_many = Number(actorItem.women || 0) + Number(actorItem.men || 0);
+    if (!actorItem.sex_and_age_disaggregation)
+      actorItem.how_many =
+        Number(actorItem.women || 0) + Number(actorItem.men || 0);
   }
 
   get disableOrganizations() {
@@ -103,13 +130,16 @@ export class InnovationUseFormComponent {
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
       //(resp);
-      if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+      if (!resp.institution_sub_type_id)
+        list.push({ code: resp.institution_types_id });
     });
     return list;
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item[attr])
+      : list.filter(item => item.is_active != false);
     return finalList.length;
   }
 
@@ -125,7 +155,10 @@ export class InnovationUseFormComponent {
     const genderYouth = isWomen ? 'women_youth' : 'men_youth';
     const genderNonYouth = isWomen ? 'women_non_youth' : 'men_non_youth';
     clearTimeout(this.executeTimer);
-    if (this.body.innovatonUse.actors[i][genderYouth] < 0 || this.body.innovatonUse.actors[i][gender] < 0) {
+    if (
+      this.body.innovatonUse.actors[i][genderYouth] < 0 ||
+      this.body.innovatonUse.actors[i][gender] < 0
+    ) {
       if (this.body.innovatonUse.actors[i][genderYouth] < 0)
         setTimeout(() => {
           this.body.innovatonUse.actors[i][genderYouth] = null;
@@ -135,25 +168,37 @@ export class InnovationUseFormComponent {
           this.body.innovatonUse.actors[i][gender] = 0;
         }, 90);
     }
-    if (this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth] < 0) {
+    if (
+      this.body.innovatonUse.actors[i][gender] -
+        this.body.innovatonUse.actors[i][genderYouth] <
+      0
+    ) {
       this.executeTimer = setTimeout(() => {
-        this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
-        this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
-        this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
+        this.body.innovatonUse.actors[i][genderYouth] =
+          this.body.innovatonUse.actors[i].previousWomen_youth;
+        this.body.innovatonUse.actors[i][gender] =
+          this.body.innovatonUse.actors[i].previousWomen;
+        this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] =
+          true;
         const element: any = document.getElementById('removeFocus');
         element.focus();
         this.calculateTotalField(actorItem);
         setTimeout(() => {
-          this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
+          this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] =
+            false;
           this.calculateTotalField(actorItem);
         }, 3000);
       }, 1000);
     } else {
-      this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i][gender];
-      this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];
+      this.body.innovatonUse.actors[i].previousWomen =
+        this.body.innovatonUse.actors[i][gender];
+      this.body.innovatonUse.actors[i].previousWomen_youth =
+        this.body.innovatonUse.actors[i][genderYouth];
     }
     setTimeout(() => {
-      this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
+      this.body.innovatonUse.actors[i][genderNonYouth] =
+        this.body.innovatonUse.actors[i][gender] -
+        this.body.innovatonUse.actors[i][genderYouth];
       this.calculateTotalField(actorItem);
     }, 1100);
     this.calculateTotalField(actorItem);

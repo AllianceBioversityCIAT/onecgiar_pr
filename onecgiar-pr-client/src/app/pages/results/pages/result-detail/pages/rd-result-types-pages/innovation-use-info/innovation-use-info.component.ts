@@ -1,11 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import { CommonModule } from '@angular/common';
+import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { InnovationUseFormComponent } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.component';
+import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-innovation-use-info',
+  standalone: true,
   templateUrl: './innovation-use-info.component.html',
-  styleUrls: ['./innovation-use-info.component.scss']
+  styleUrls: ['./innovation-use-info.component.scss'],
+  imports: [
+    CommonModule,
+    DetailSectionTitleComponent,
+    InnovationUseFormComponent,
+    SaveButtonComponent
+  ]
 })
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new IpsrStep1Body();
@@ -20,7 +31,9 @@ export class InnovationUseInfoComponent implements OnInit {
     this.api.resultsSE.GET_innovationUse().subscribe(
       ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
-        this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
+        this.convertOrganizations(
+          this.innovationUseInfoBody?.innovatonUse?.organization
+        );
         //(response);
         //(response);
         // //(this.innovationUseInfoBody);
@@ -35,19 +48,23 @@ export class InnovationUseInfoComponent implements OnInit {
     this.savingSection = true;
     this.convertOrganizationsTosave();
     //({ innovatonUse: this.innovationUseInfoBody.innovatonUse });
-    this.api.resultsSE.PATCH_innovationUse({ innovatonUse: this.innovationUseInfoBody.innovatonUse }).subscribe(
-      resp => {
-        //(resp);
-        // setTimeout(() => {
-        this.getSectionInformation();
-        // }, 3000);
-        this.savingSection = false;
-      },
-      err => {
-        console.error(err);
-        this.savingSection = false;
-      }
-    );
+    this.api.resultsSE
+      .PATCH_innovationUse({
+        innovatonUse: this.innovationUseInfoBody.innovatonUse
+      })
+      .subscribe(
+        resp => {
+          //(resp);
+          // setTimeout(() => {
+          this.getSectionInformation();
+          // }, 3000);
+          this.savingSection = false;
+        },
+        err => {
+          console.error(err);
+          this.savingSection = false;
+        }
+      );
   }
 
   convertOrganizations(organizations) {

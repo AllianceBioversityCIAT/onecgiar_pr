@@ -1,11 +1,31 @@
 import { Component, Input } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { InputTextModule } from 'primeng/inputtext';
+import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
+import { PrInputComponent } from '../../../../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrRadioButtonComponent } from '../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { NoDataTextComponent } from 'src/app/custom-fields/no-data-text/no-data-text.component';
+import { NonPooledInfoComponent } from './components/non-pooled-info/non-pooled-info.component';
 
 @Component({
   selector: 'app-estimates',
+  standalone: true,
   templateUrl: './estimates.component.html',
-  styleUrls: ['./estimates.component.scss']
+  styleUrls: ['./estimates.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    PrInputComponent,
+    PrRadioButtonComponent,
+    NoDataTextComponent,
+    FeedbackValidationDirective,
+    NonPooledInfoComponent
+  ]
 })
 export class EstimatesComponent {
   @Input() body = new InnovationDevInfoBody();

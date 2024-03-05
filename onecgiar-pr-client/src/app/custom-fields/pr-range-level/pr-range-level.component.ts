@@ -1,12 +1,20 @@
-import { Component, EventEmitter, Input, Output, forwardRef } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  forwardRef
+} from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-pr-range-level',
   standalone: true,
   templateUrl: './pr-range-level.component.html',
   styleUrls: ['./pr-range-level.component.scss'],
+  imports: [CommonModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -72,7 +80,10 @@ export class PrRangeLevelComponent {
   }
 
   get sizeArray() {
-    if (!this.list?.length) Array.from({ length: this.size + 1 }).forEach((_, i) => this.list.push(i));
+    if (!this.list?.length)
+      Array.from({ length: this.size + 1 }).forEach((_, i) =>
+        this.list.push(i)
+      );
 
     return this.list;
   }
