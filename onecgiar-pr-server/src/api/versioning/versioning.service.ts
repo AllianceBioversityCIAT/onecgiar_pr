@@ -353,8 +353,9 @@ export class VersioningService {
       `IPSR: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
     );
 
+    let tempData: Result[] = null;
     const data = await this.dataSource.transaction(async (manager) => {
-      const tempData = await this._resultRepository.replicate(
+      tempData = await this._resultRepository.replicate(
         manager,
         {
           old_result_id: result.id,
@@ -430,13 +431,17 @@ export class VersioningService {
       await this._resultIpResultsActorsRepository.replicate(manager, config);
       await this._resultsIpResultMeasuresRespository.replicate(manager, config);
       await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
+
+      return dataResult;
     });
+
     this._logger.log(
-      `IPSR: The change of phase of result ${result.id} is completed correctly.`,
+      `IPSR: The change of phase of result ${tempData[0].result_code} is completed correctly.`,
     );
     this._logger.log(
-      `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data}`,
+      `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
     );
+      console.log("🚀 ~ VersioningService ~ $_phaseChangeIPSR ~ data:", tempData[0])
     return data;
   }
 
