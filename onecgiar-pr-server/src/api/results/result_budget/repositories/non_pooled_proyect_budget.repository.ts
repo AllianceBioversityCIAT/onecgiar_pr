@@ -18,7 +18,6 @@ export class NonPooledProjectBudgetRepository
   createQueries(
     config: ReplicableConfigInterface<NonPooledProjectBudget>,
   ): ConfigCustomQueryInterface {
-    console.log('NonPooledProjectBudget');
     return {
       findQuery: `
       SELECT
