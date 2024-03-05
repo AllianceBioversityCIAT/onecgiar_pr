@@ -104,7 +104,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   removeFocus(option?) {
     if (option?.disabled) return;
     const element: any = document.getElementById(
-      this.optionValue + this.indexReference ?? ''
+      this.optionValue + this.indexReference
     );
     element.blur();
   }
