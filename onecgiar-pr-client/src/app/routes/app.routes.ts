@@ -2,6 +2,11 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
+    path: '',
+    redirectTo: 'result',
+    pathMatch: 'full'
+  },
+  {
     path: 'result',
     loadComponent: () =>
       import('../pages/results/results.component').then(
@@ -67,9 +72,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.component'
               ).then(c => c.RdLinksToResultsComponent)
           },
-          // {
-          //   path: 'evidences'
-          // },
+          {
+            path: 'evidences',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component'
+              ).then(c => c.RdEvidencesComponent)
+          },
           {
             path: '**',
             pathMatch: 'full',

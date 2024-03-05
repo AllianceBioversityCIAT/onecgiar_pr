@@ -2,11 +2,36 @@ import { Component, Input, EventEmitter, Output } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrRadioButtonComponent } from '../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrInputComponent } from '../../../../../../../custom-fields/pr-input/pr-input.component';
+import { FeedbackValidationDirective } from '../../../../../../../shared/directives/feedback-validation.directive';
+import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrButtonComponent } from '../../../../../../../custom-fields/pr-button/pr-button.component';
+import { PrCheckboxComponent } from '../../../../../../../custom-fields/pr-checkbox/pr-checkbox.component';
+import { PrTextareaComponent } from '../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { EditOrDeleteItemButtonComponent } from '../../../../../../../custom-fields/edit-or-delete-item-button/edit-or-delete-item-button.component';
 
 @Component({
   selector: 'app-evidence-item',
+  standalone: true,
   templateUrl: './evidence-item.component.html',
-  styleUrls: ['./evidence-item.component.scss']
+  styleUrls: ['./evidence-item.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrRadioButtonComponent,
+    PrInputComponent,
+    FeedbackValidationDirective,
+    AlertStatusComponent,
+    PrFieldHeaderComponent,
+    PrButtonComponent,
+    PrCheckboxComponent,
+    PrTextareaComponent,
+    EditOrDeleteItemButtonComponent
+  ]
 })
 export class EvidenceItemComponent {
   @Input() evidence: EvidencesCreateInterface;
@@ -32,25 +57,47 @@ export class EvidenceItemComponent {
   <li>You agree to the SharePoint link being displayed on the CGIAR Results Dashboard.</li>
   `;
 
-  constructor(public dataControlSE: DataControlService, public api: ApiService) {}
+  constructor(
+    public dataControlSE: DataControlService,
+    public api: ApiService
+  ) {}
 
   validateFileTypes(file: File) {
-    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.docx', '.pptx', '.jpeg', '.xlsx'];
+    const validFileTypes = [
+      '.jpg',
+      '.png',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.pptx',
+      '.jpeg',
+      '.xlsx'
+    ];
     const extension = '.' + file.name.split('.').pop();
     const fileSizeInGB = file.size / (1024 * 1024 * 1024);
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
   }
 
   isInvalidLink(value: string = '') {
-    const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i);
+    const regex = new RegExp(
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
+    );
 
     return regex.test(value.trim());
   }
 
   deleteItem() {
-    this.api.alertsFe.show({ id: 'confirm-delete-evidence', title: `Are you sure you want to delete this evidence?`, status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.deleteEvent.emit();
-    });
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-evidence',
+        title: `Are you sure you want to delete this evidence?`,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.deleteEvent.emit();
+      }
+    );
   }
 
   onFileSelected(event: any) {

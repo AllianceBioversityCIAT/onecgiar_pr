@@ -3,10 +3,29 @@ import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
+import { CommonModule } from '@angular/common';
+import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
+import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
+import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
+import { AddButtonComponent } from '../../../../../../custom-fields/add-button/add-button.component';
+import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
+import { FeedbackValidationDirective } from '../../../../../../shared/directives/feedback-validation.directive';
 @Component({
   selector: 'app-rd-evidences',
+  standalone: true,
   templateUrl: './rd-evidences.component.html',
-  styleUrls: ['./rd-evidences.component.scss']
+  styleUrls: ['./rd-evidences.component.scss'],
+  imports: [
+    CommonModule,
+    DetailSectionTitleComponent,
+    AlertStatusComponent,
+    EvidenceItemComponent,
+    NoDataTextComponent,
+    AddButtonComponent,
+    SaveButtonComponent,
+    FeedbackValidationDirective
+  ]
 })
 export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
@@ -14,13 +33,21 @@ export class RdEvidencesComponent implements OnInit {
   isOptional: boolean = false;
 
   alertStatus() {
-    if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
-    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files can be uploaded.</li>';
-    if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
+    if (this.api.dataControlSE.isKnowledgeProduct)
+      return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
+    let mainText =
+      '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files can be uploaded.</li>';
+    if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
+      mainText +=
+        '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
     mainText += '</ul> ';
     return mainText;
   }
-  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService, private saveButtonSE: SaveButtonService) {}
+  constructor(
+    public api: ApiService,
+    public innovationControlListSE: InnovationControlListService,
+    private saveButtonSE: SaveButtonService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -30,7 +57,10 @@ export class RdEvidencesComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
-      this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
+      this.readinessLevel =
+        this.innovationControlListSE.readinessLevelsList.findIndex(
+          item => item.id == response?.innovation_readiness_level_id
+        );
       this.isOptional = Boolean(this.readinessLevel === 0);
     });
   }
@@ -38,7 +68,12 @@ export class RdEvidencesComponent implements OnInit {
   async getAndCalculateFilePercentage(response, evidenceIterator) {
     let nextRange = response?.nextExpectedRanges[0];
     let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
-    if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
+    if (
+      !totalBytes ||
+      !response.nextExpectedRanges?.length ||
+      evidenceIterator.percentage == 100
+    )
+      return;
     let progressPercentage = (startByte / totalBytes) * 100;
     evidenceIterator.percentage = progressPercentage.toFixed(0);
   }
@@ -52,24 +87,37 @@ export class RdEvidencesComponent implements OnInit {
     const { evidences } = this.evidencesBody;
     let count = 0;
     for (const evidenceIterator of evidences) {
-      if ( evidenceIterator.file ) count++;
+      if (evidenceIterator.file) count++;
       if (!evidenceIterator?.file) continue;
       try {
-        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name, count });
+        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession(
+          {
+            resultId: this.evidencesBody.result_id,
+            fileName: evidenceIterator?.file?.name,
+            count
+          }
+        );
         const intervalId = setInterval(async () => {
           try {
-            const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
-            if (response?.nextExpectedRanges[0]) this.getAndCalculateFilePercentage(response, evidenceIterator);
+            const response =
+              await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
+            if (response?.nextExpectedRanges[0])
+              this.getAndCalculateFilePercentage(response, evidenceIterator);
           } catch (error) {
             this.endLoadFile(intervalId, evidenceIterator);
           }
         }, 2000);
-        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidenceIterator.file, uploadUrl);
+        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(
+          evidenceIterator.file,
+          uploadUrl
+        );
         this.endLoadFile(intervalId, evidenceIterator);
         evidenceIterator.link = response?.webUrl;
         evidenceIterator.sp_document_id = response?.id;
         evidenceIterator.sp_file_name = response?.name;
-        evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
+        evidenceIterator.sp_folder_path = response?.parentReference?.path
+          .split('root:')
+          .pop();
       } catch (error) {
         console.log(error);
       }
@@ -96,19 +144,43 @@ export class RdEvidencesComponent implements OnInit {
 
   validateCheckBoxes() {
     const tags = [
-      { tag: 'gender', level: this.evidencesBody?.gender_tag_level, related: 'gender_related' },
-      { tag: 'climate change', level: this.evidencesBody?.climate_change_tag_level, related: 'youth_related' },
-      { tag: 'nutrition', level: this.evidencesBody?.nutrition_tag_level, related: 'nutrition_related' },
-      { tag: 'environment', level: this.evidencesBody?.environmental_biodiversity_tag_level, related: 'environmental_biodiversity_related' },
-      { tag: 'poverty', level: this.evidencesBody?.poverty_tag_level, related: 'poverty_related' }
+      {
+        tag: 'gender',
+        level: this.evidencesBody?.gender_tag_level,
+        related: 'gender_related'
+      },
+      {
+        tag: 'climate change',
+        level: this.evidencesBody?.climate_change_tag_level,
+        related: 'youth_related'
+      },
+      {
+        tag: 'nutrition',
+        level: this.evidencesBody?.nutrition_tag_level,
+        related: 'nutrition_related'
+      },
+      {
+        tag: 'environment',
+        level: this.evidencesBody?.environmental_biodiversity_tag_level,
+        related: 'environmental_biodiversity_related'
+      },
+      {
+        tag: 'poverty',
+        level: this.evidencesBody?.poverty_tag_level,
+        related: 'poverty_related'
+      }
     ];
 
     const evidences = this.evidencesBody.evidences;
-    const hasTagRelated = (related: string) => evidences.some(evidence => evidence[related]);
+    const hasTagRelated = (related: string) =>
+      evidences.some(evidence => evidence[related]);
 
     const text = tags
       .filter(({ level, related }) => level === '3' && !hasTagRelated(related))
-      .map(({ tag }) => `<li>At least one of the evidence sources must have the ${tag} checkbox marked if the ${tag} tag has a score of 2.</li>`)
+      .map(
+        ({ tag }) =>
+          `<li>At least one of the evidence sources must have the ${tag} checkbox marked if the ${tag} tag has a score of 2.</li>`
+      )
       .join('');
 
     if (!text) {
@@ -127,12 +199,23 @@ export class RdEvidencesComponent implements OnInit {
     if (this.evidencesBody.evidences.length < 2) return false;
 
     for (const evidenteIterator of this.evidencesBody.evidences) {
-      if (this.evidencesBody.evidences.find(evidence => !evidence?.link && !evidence?.is_sharepoint)) return true;
-      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);
+      if (
+        this.evidencesBody.evidences.find(
+          evidence => !evidence?.link && !evidence?.is_sharepoint
+        )
+      )
+        return true;
+      const evidencesFinded = this.evidencesBody.evidences.filter(
+        evidence =>
+          evidence.link == evidenteIterator.link && !evidence.is_sharepoint
+      );
       if (evidencesFinded.length >= 2) {
         return true;
       }
-      if (evidenteIterator.is_sharepoint && !(evidenteIterator?.file || evidenteIterator?.link)) {
+      if (
+        evidenteIterator.is_sharepoint &&
+        !(evidenteIterator?.file || evidenteIterator?.link)
+      ) {
         return true;
       }
     }
