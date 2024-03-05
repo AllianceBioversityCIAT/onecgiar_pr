@@ -276,5 +276,12 @@ export const routes: Routes = [
       import('../pages/quality-assurance/quality-assurance.component').then(
         c => c.QualityAssuranceComponent
       )
+  },
+  {
+    path: 'init-admin-module',
+    loadComponent: () =>
+      import('../pages/init-admin-section/init-admin-section.component').then(
+        c => c.InitAdminSectionComponent
+      )
   }
 ];
