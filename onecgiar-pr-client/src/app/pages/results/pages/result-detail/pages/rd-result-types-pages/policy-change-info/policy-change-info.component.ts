@@ -1,13 +1,35 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { InnovationUseInfoBody, policyChangeQuestions } from './model/innovationUseInfoBody';
+import {
+  InnovationUseInfoBody,
+  policyChangeQuestions
+} from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
+import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrSelectComponent } from '../../../../../../../custom-fields/pr-select/pr-select.component';
+import { PrInputComponent } from '../../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrMultiSelectComponent } from '../../../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
+import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-policy-change-info',
+  standalone: true,
   templateUrl: './policy-change-info.component.html',
-  styleUrls: ['./policy-change-info.component.scss']
+  styleUrls: ['./policy-change-info.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DetailSectionTitleComponent,
+    AlertStatusComponent,
+    PrSelectComponent,
+    PrInputComponent,
+    PrMultiSelectComponent,
+    SaveButtonComponent
+  ]
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
@@ -16,7 +38,10 @@ export class PolicyChangeInfoComponent implements OnInit {
   relatedTo: string = '';
   relatedToOptions = [
     { value: 'policy-change', label: 'Policy change' },
-    { value: 'capacity-development', label: 'The capacity development of key actors in a policy process' }
+    {
+      value: 'capacity-development',
+      label: 'The capacity development of key actors in a policy process'
+    }
   ];
 
   // relatedToEngagementOptions = [
@@ -24,7 +49,11 @@ export class PolicyChangeInfoComponent implements OnInit {
   //   { value: false, label: 'No' }
   // ];
 
-  constructor(public api: ApiService, public policyControlListSE: PolicyControlListService, public institutionsService: InstitutionsService) {}
+  constructor(
+    public api: ApiService,
+    public policyControlListSE: PolicyControlListService,
+    public institutionsService: InstitutionsService
+  ) {}
 
   ngOnInit(): void {
     this.showAlerts();
@@ -52,10 +81,14 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   getPolicyChangesQuestions() {
-    this.api.resultsSE.GET_policyChangesQuestions().subscribe(({ response }) => {
-      this.policyChangeQuestions = response;
-      this.relatedTo = this.policyChangeQuestions?.optionsWithAnswers.filter(option => option.answer_boolean === true)[0]?.result_question_id;
-    });
+    this.api.resultsSE
+      .GET_policyChangesQuestions()
+      .subscribe(({ response }) => {
+        this.policyChangeQuestions = response;
+        this.relatedTo = this.policyChangeQuestions?.optionsWithAnswers.filter(
+          option => option.answer_boolean === true
+        )[0]?.result_question_id;
+      });
   }
 
   policyTypeDescriptions() {

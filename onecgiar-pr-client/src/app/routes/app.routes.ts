@@ -32,11 +32,11 @@ export const routes: Routes = [
             '../pages/results/pages/result-detail/result-detail.component'
           ).then(c => c.ResultDetailComponent),
         children: [
-          // {
-          //   path: '',
-          //   redirectTo: 'general-information',
-          //   pathMatch: 'full'
-          // },
+          {
+            path: '',
+            redirectTo: 'general-information',
+            pathMatch: 'full'
+          },
           {
             path: 'general-information',
             loadComponent: () =>
@@ -107,9 +107,13 @@ export const routes: Routes = [
                 '../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/knowledge-product-info.component'
               ).then(c => c.KnowledgeProductInfoComponent)
           },
-          // {
-          //   path: 'policy-change1-info'
-          // },
+          {
+            path: 'policy-change-info',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-result-types-pages/policy-change-info/policy-change-info.component'
+              ).then(c => c.PolicyChangeInfoComponent)
+          },
           {
             path: '**',
             pathMatch: 'full',

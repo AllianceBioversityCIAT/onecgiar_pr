@@ -224,7 +224,7 @@ export const rdResultTypesPages: PrRoute[] = [
   },
   {
     prName: 'Policy change info',
-    path: 'policy-change1-info',
+    path: 'policy-change-info',
     prHide: 1,
     underConstruction: false
   }
