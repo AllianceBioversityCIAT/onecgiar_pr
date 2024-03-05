@@ -55,7 +55,11 @@ export class ResultInstitutionsBudgetRepository
               last_updated_date,
               created_by,
               last_updated_by,
-              result_institution_id
+              result_institution_id,
+              is_determined,
+              in_kind,
+              in_cash,
+              kind_cash
           )
       SELECT
           rib.is_active,
@@ -63,7 +67,11 @@ export class ResultInstitutionsBudgetRepository
           rib.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
-          rbi2.id AS result_institution_id
+          rbi2.id AS result_institution_id,
+          rib.is_determined,
+          rib.in_kind,
+          rib.in_cash,
+          rib.kind_cash
       FROM
           result_institutions_budget rib
           LEFT JOIN results_by_institution rbi ON rbi.id = rib.result_institution_id
