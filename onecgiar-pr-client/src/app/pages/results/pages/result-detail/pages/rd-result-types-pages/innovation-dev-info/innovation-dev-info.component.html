@@ -36,7 +36,7 @@
     <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
     <div class="paddingLeft20">
-        <app-gesi-innovation-assessment [body]="innovationDevInfoBody"
+        <app-gesi-innovation-assessment [body]="innovationDevInfoBody" *ngIf="loaded"
             [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
         <app-scale-impact-analysis [body]="innovationDevInfoBody"
             [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
@@ -47,7 +47,7 @@
 
     <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
         description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
-        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br> 
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
         Please provide information such as first name, family name, email address and organizational affiliations."
         [(ngModel)]="innovationDevInfoBody.innovation_developers">
     </app-pr-textarea>

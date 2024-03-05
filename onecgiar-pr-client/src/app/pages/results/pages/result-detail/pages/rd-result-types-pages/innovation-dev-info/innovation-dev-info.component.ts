@@ -54,6 +54,7 @@ export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
   range = 5;
   savingSection = false;
+  loaded = false;
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions =
     new InnovationDevelopmentQuestions();
   innovationDevelopmentLinks: InnovationDevelopmentLinks =
@@ -71,9 +72,9 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   GET_questionsInnovationDevelopment() {
-    this.api.resultsSE
-      .GET_questionsInnovationDevelopment()
-      .subscribe(({ response }) => {
+    this.loaded = false;
+    this.api.resultsSE.GET_questionsInnovationDevelopment().subscribe(
+      ({ response }) => {
         this.innovationDevelopmentQuestions = response;
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
           this.innovationDevelopmentQuestions.responsible_innovation_and_scaling
@@ -95,7 +96,12 @@ export class InnovationDevInfoComponent implements OnInit {
         this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(
           this.innovationDevelopmentQuestions.intellectual_property_rights.q3
         );
-      });
+        this.loaded = true;
+      },
+      err => {
+        this.loaded = true;
+      }
+    );
   }
 
   getSectionInformation() {
