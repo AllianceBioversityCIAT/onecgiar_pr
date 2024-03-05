@@ -169,30 +169,49 @@ export const routes: Routes = [
           import(
             '../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.component'
           ).then(c => c.TorFactSheetComponent)
+      },
+      {
+        path: 'toc-diagrams',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-toc-diagrams/tor-toc-diagrams.component'
+          ).then(c => c.TorTocDiagramsComponent)
+      },
+      {
+        path: 'key-results',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-key-results/tor-key-results.component'
+          ).then(c => c.TorKeyResultsComponent)
+      },
+      {
+        path: 'partnerships',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-partnerships/tor-partnerships.component'
+          ).then(c => c.TorPartnershipsComponent)
+      },
+      {
+        path: 'portfolio-linkages',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-portfolio-linkages/tor-portfolio-linkages.component'
+          ).then(c => c.TorPortfolioLinkagesComponent)
+      },
+      {
+        path: 'key-result-story',
+        loadComponent: () =>
+          import(
+            '../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.component'
+          ).then(c => c.TorKeyResultStoryComponent)
       }
       // {
 
-      //   path: 'toc-diagrams'
-      // },
-      // {
-
-      //   path: 'key-results'
-      // },
-      // {
-
-      //   path: 'partnerships'
-      // },
-      // {
-
-      //   path: 'portfolio-linkages'
-      // },
-      // {
-
-      //   path: 'key-result-story'
-      // },
-      // {
-
-      //   path: 'white'
+      //   path: 'white',
+      //   loadComponent: () =>
+      //     import(
+      //       '../pages/type-one-report/pages/tor-white/tor-white.component'
+      //     ).then(c => c.WhiteComponent)
       // },
     ]
   },

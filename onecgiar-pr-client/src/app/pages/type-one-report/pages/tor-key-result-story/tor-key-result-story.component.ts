@@ -2,14 +2,28 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
+import { CommonModule } from '@angular/common';
+import { NoDataTextComponent } from '../../../../custom-fields/no-data-text/no-data-text.component';
+import { SimpleTableWithClipboardComponent } from '../../../../shared/components/simple-table-with-clipboard/simple-table-with-clipboard.component';
+import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-tor-key-result-story',
+  standalone: true,
   templateUrl: './tor-key-result-story.component.html',
-  styleUrls: ['./tor-key-result-story.component.scss']
+  styleUrls: ['./tor-key-result-story.component.scss'],
+  imports: [
+    CommonModule,
+    NoDataTextComponent,
+    SimpleTableWithClipboardComponent,
+    SaveButtonComponent
+  ]
 })
 export class TorKeyResultStoryComponent implements OnInit {
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService) {}
+  constructor(
+    public api: ApiService,
+    public typeOneReportSE: TypeOneReportService
+  ) {}
   tablesList = [];
 
   ngOnInit(): void {
@@ -17,25 +31,40 @@ export class TorKeyResultStoryComponent implements OnInit {
   }
 
   GET_keyResultStoryInitiativeId() {
-    this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id, this.typeOneReportSE.phaseSelected).subscribe(({ response }) => {
-      this.typeOneReportSE.keyResultStoryData = response;
-      this.tablesList = [];
-      response.forEach(table => {
-        this.formatTable(table);
+    this.api.resultsSE
+      .GET_keyResultStoryInitiativeId(
+        this.typeOneReportSE.getInitiativeID(
+          this.typeOneReportSE.initiativeSelected
+        )?.id,
+        this.typeOneReportSE.phaseSelected
+      )
+      .subscribe(({ response }) => {
+        this.typeOneReportSE.keyResultStoryData = response;
+        this.tablesList = [];
+        response.forEach(table => {
+          this.formatTable(table);
+        });
       });
-    });
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData).subscribe({
-      next: resp => {
-        this.GET_keyResultStoryInitiativeId();
-        this.api.alertsFe.show({ id: 'save-button', title: 'Key result story informaion saved correctly', description: '', status: 'success', closeIn: 500 });
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
+    this.api.resultsSE
+      .PATCH_primaryImpactAreaKrs(this.typeOneReportSE.keyResultStoryData)
+      .subscribe({
+        next: resp => {
+          this.GET_keyResultStoryInitiativeId();
+          this.api.alertsFe.show({
+            id: 'save-button',
+            title: 'Key result story informaion saved correctly',
+            description: '',
+            status: 'success',
+            closeIn: 500
+          });
+        },
+        error: err => {
+          console.error(err);
+        }
+      });
   }
 
   formatTable(tableData) {
@@ -55,19 +84,36 @@ export class TorKeyResultStoryComponent implements OnInit {
       return;
     }
 
-    data[0].value = table.result_title || '<div class="no-data-text-format">There is no result title data</div>';
+    data[0].value =
+      table.result_title ||
+      '<div class="no-data-text-format">There is no result title data</div>';
     data[0].id = table.result_code;
-    data[1].value = table.contributing_initiative || '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
-    data[2].value = table.contributing_center || '<div class="no-data-text-format">There are no contributing centers data</div>';
-    data[3].value = table.contribution_external_partner || '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
-    const countriesText = table.countries ? `<strong>Countries:</strong><br> ${table.countries} <br>` : '';
-    const regionsText = table.regions ? `<br><strong>Regions:</strong><br>${table.regions}<br> ` : '';
-    data[4].value = table.countries || table.regions ? countriesText + regionsText : '<div class="no-data-text-format">There is no Geographic location data</div>';
+    data[1].value =
+      table.contributing_initiative ||
+      '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
+    data[2].value =
+      table.contributing_center ||
+      '<div class="no-data-text-format">There are no contributing centers data</div>';
+    data[3].value =
+      table.contribution_external_partner ||
+      '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
+    const countriesText = table.countries
+      ? `<strong>Countries:</strong><br> ${table.countries} <br>`
+      : '';
+    const regionsText = table.regions
+      ? `<br><strong>Regions:</strong><br>${table.regions}<br> `
+      : '';
+    data[4].value =
+      table.countries || table.regions
+        ? countriesText + regionsText
+        : '<div class="no-data-text-format">There is no Geographic location data</div>';
 
     this.tablesList.push({ data, header });
   }
 
   validateOneDropDown() {
-    return this.typeOneReportSE.keyResultStoryData.some(item => JSON.parse(item?.impact_areas)?.length);
+    return this.typeOneReportSE.keyResultStoryData.some(
+      item => JSON.parse(item?.impact_areas)?.length
+    );
   }
 }
