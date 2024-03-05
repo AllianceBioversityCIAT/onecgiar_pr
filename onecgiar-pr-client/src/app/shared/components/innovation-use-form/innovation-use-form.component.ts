@@ -140,8 +140,6 @@ export class InnovationUseFormComponent {
         this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
         this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
-        const element: any = document.getElementById('removeFocus');
-        element.focus();
         this.calculateTotalField(actorItem);
         setTimeout(() => {
           this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
