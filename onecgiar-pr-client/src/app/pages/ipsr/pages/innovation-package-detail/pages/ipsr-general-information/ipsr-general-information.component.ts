@@ -3,16 +3,37 @@ import { ScoreService } from '../../../../../../shared/services/global/score.ser
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrGeneralInformationBody } from './model/ipsr-general-information.model';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrInputComponent } from '../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrRadioButtonComponent } from '../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-ipsr-general-information',
+  standalone: true,
   templateUrl: './ipsr-general-information.component.html',
-  styleUrls: ['./ipsr-general-information.component.scss']
+  styleUrls: ['./ipsr-general-information.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrInputComponent,
+    PrTextareaComponent,
+    AlertStatusComponent,
+    PrRadioButtonComponent,
+    SaveButtonComponent
+  ]
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
-  constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    private api: ApiService,
+    public scoreSE: ScoreService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -20,26 +41,48 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
-      this.ipsrGeneralInformationBody = response;
-      this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-    });
+    this.api.resultsSE
+      .GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId)
+      .subscribe(({ response }) => {
+        this.ipsrGeneralInformationBody = response;
+        this.ipsrGeneralInformationBody.is_krs = Boolean(
+          Number(this.ipsrGeneralInformationBody.is_krs)
+        );
+      });
   }
 
   onChangeKrs() {
-    if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
+    if (this.ipsrGeneralInformationBody.is_krs === false)
+      this.ipsrGeneralInformationBody.is_krs = null;
   }
   onSaveSection() {
-    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
-      next: resp => {
-        this.getSectionInformation();
-        this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
-      },
-      error: err => {
-        console.error(err);
-        this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
-      }
-    });
+    this.api.resultsSE
+      .PATCHIpsrGeneralInfo(
+        this.ipsrGeneralInformationBody,
+        this.ipsrDataControlSE.resultInnovationId
+      )
+      .subscribe({
+        next: resp => {
+          this.getSectionInformation();
+          this.api.alertsFe.show({
+            id: 'save-button',
+            title: 'Section saved successfully',
+            description: '',
+            status: 'success',
+            closeIn: 500
+          });
+        },
+        error: err => {
+          console.error(err);
+          this.api.alertsFe.show({
+            id: 'save-button',
+            title: 'There was an error saving the section',
+            description: '',
+            status: 'error',
+            closeIn: 500
+          });
+        }
+      });
   }
 
   climateInformation() {
@@ -63,9 +106,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition, health and food security tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong>
     <br>
-    
+
     There are two food security and nutrition targets for at systems level:
 
     <ul>
@@ -83,9 +126,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   environmentInformation() {
-    return `<strong>Environmental health and biodiversity tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong>
     <br>
-    
+
     There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
@@ -104,16 +147,16 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   povertyInformation() {
-    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
-    
+
     <ul>
       <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
       <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
     </ul>
-    
+
     Three scores are possible:
 
     <ul>
@@ -124,7 +167,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   genderInformation() {
-    return `<strong>Gender equality tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong>
     <br/>
 
     There are two gender-related targets at systems level.

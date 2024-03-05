@@ -9,7 +9,7 @@ import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-moda
 import { RolesService } from '../../../../../shared/services/global/roles.service';
 import { CommonModule } from '@angular/common';
 import { PrButtonComponent } from '../../../../../custom-fields/pr-button/pr-button.component';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PanelMenuPipe } from './pipes/panel-menu.pipe';
 import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.component';
 import {
@@ -26,6 +26,7 @@ import {
     CommonModule,
     PrButtonComponent,
     RouterLink,
+    RouterLinkActive,
     PanelMenuPipe,
     PdfActionsComponent
   ]

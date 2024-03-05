@@ -215,6 +215,57 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'ipsr',
+    loadComponent: () =>
+      import('../pages/ipsr/ipsr.component').then(c => c.IpsrComponent),
+    children: [
+      // {
+      //   path: '',
+      //   redirectTo: 'list',
+      //   pathMatch: 'full'
+      // },
+      // {
+      //   path: 'creator'
+      // },
+      // {
+      //   path: 'list',
+      //   children: [
+
+      //   ]
+      // },
+      {
+        path: 'detail/:id',
+        loadComponent: () =>
+          import(
+            '../pages/ipsr/pages/innovation-package-detail/innovation-package-detail.component'
+          ).then(c => c.InnovationPackageDetailComponent),
+        children: [
+          {
+            path: '**',
+            pathMatch: 'full',
+            redirectTo: 'general-information'
+          },
+          {
+            path: 'general-information',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-general-information/ipsr-general-information.component'
+              ).then(c => c.IpsrGeneralInformationComponent)
+          }
+          // {
+          //   path: 'contributors'
+          // },
+          // {
+          //   path: 'ipsr-innovation-use-pathway'
+          // },
+          // {
+          //   path: 'link-to-results'
+          // }
+        ]
+      }
+    ]
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('../pages/login/login.component').then(c => c.LoginComponent)
