@@ -3,11 +3,30 @@ import { environment } from '../../../../../../../../environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
 import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
+import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
+import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrRadioButtonComponent } from '../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrMultiSelectComponent } from '../../../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
+import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-cap-dev-info',
+  standalone: true,
   templateUrl: './cap-dev-info.component.html',
-  styleUrls: ['./cap-dev-info.component.scss']
+  styleUrls: ['./cap-dev-info.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DetailSectionTitleComponent,
+    AlertStatusComponent,
+    PrFieldHeaderComponent,
+    PrRadioButtonComponent,
+    PrMultiSelectComponent,
+    SaveButtonComponent
+  ]
 })
 export class CapDevInfoComponent implements OnInit {
   capDevInfoRoutingBody = new CapDevInfoRoutingBody();
@@ -23,7 +42,10 @@ export class CapDevInfoComponent implements OnInit {
   ];
   peopleTrainedDesc = `If gender disaggregated data is not available, please indicate the number of people trained in the "Unknown" field.`;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
+  constructor(
+    public api: ApiService,
+    public institutionsSE: InstitutionsService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -65,12 +87,16 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   get_capdev_term_id() {
-    if (this.capDevInfoRoutingBody.capdev_term_id == 4) return (this.capdev_term_id_1 = 4);
+    if (this.capDevInfoRoutingBody.capdev_term_id == 4)
+      return (this.capdev_term_id_1 = 4);
     if (this.capDevInfoRoutingBody.capdev_term_id == 3) {
       return (this.capdev_term_id_1 = 3);
     }
 
-    if (this.capDevInfoRoutingBody.capdev_term_id == 1 || this.capDevInfoRoutingBody.capdev_term_id == 2) {
+    if (
+      this.capDevInfoRoutingBody.capdev_term_id == 1 ||
+      this.capDevInfoRoutingBody.capdev_term_id == 2
+    ) {
       this.capdev_term_id_1 = 4;
       this.capdev_term_id_2 = this.capDevInfoRoutingBody.capdev_term_id;
     }
@@ -82,17 +108,22 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   validate_capdev_term_id() {
-    this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
+    this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2
+      ? this.capdev_term_id_2
+      : this.capdev_term_id_1;
   }
 
   onSaveSection() {
     this.validate_capdev_term_id();
 
-    if (!this.capDevInfoRoutingBody.is_attending_for_organization) this.cleanOrganizationsList();
+    if (!this.capDevInfoRoutingBody.is_attending_for_organization)
+      this.cleanOrganizationsList();
 
-    this.api.resultsSE.PATCH_capacityDevelopent(this.capDevInfoRoutingBody).subscribe((resp: any) => {
-      this.getSectionInformation();
-    });
+    this.api.resultsSE
+      .PATCH_capacityDevelopent(this.capDevInfoRoutingBody)
+      .subscribe((resp: any) => {
+        this.getSectionInformation();
+      });
   }
 
   deliveryMethodDescription() {
@@ -100,14 +131,18 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp: any) => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', (e: any) => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    this.api.dataControlSE
+      .findClassTenSeconds('alert-event')
+      .then((resp: any) => {
+        try {
+          document
+            .querySelector('.alert-event')
+            .addEventListener('click', (e: any) => {
+              this.api.dataControlSE.showPartnersRequest = true;
+            });
+        } catch (error) {
+          console.error(error);
+        }
+      });
   }
 }

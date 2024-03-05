@@ -80,6 +80,25 @@ export const routes: Routes = [
               ).then(c => c.RdEvidencesComponent)
           },
           {
+            path: 'cap-dev-info',
+            loadComponent: () =>
+              import(
+                '../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.component'
+              ).then(c => c.CapDevInfoComponent)
+          },
+          // {
+          //   path: 'innovation-dev-info'
+          // },
+          // {
+          //   path: 'innovation-use-info'
+          // },
+          // {
+          //   path: 'knowledge-product-info'
+          // },
+          // {
+          //   path: 'policy-change1-info'
+          // },
+          {
             path: '**',
             pathMatch: 'full',
             redirectTo: 'general-information'
