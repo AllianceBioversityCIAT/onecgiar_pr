@@ -482,7 +482,6 @@ export class ResultInnovationPackageService {
             });
         }
 
-        //this should not happen, as the geoscope can only be saved when the ipsr is created
         if (resultCountrySubnational) {
           await this._resultCountrySubnationalRepository.update(
             resultCountrySubnational.result_country_subnational_id,

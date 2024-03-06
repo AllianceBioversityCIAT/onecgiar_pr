@@ -10,7 +10,6 @@
 </div>
 
 <app-geoscope-management 
-        [readOnly]="true"
         module="ipsr"
         [body]="this.ipsrStep1Body">
 </app-geoscope-management>
@@ -23,7 +22,6 @@
         *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-action-area-outcomes>
     <app-step-n1-impact-areas [body]="this.ipsrStep1Body"></app-step-n1-impact-areas>
     <app-step-n1-sdg-targets [body]="this.ipsrStep1Body"></app-step-n1-sdg-targets>
-    <!-- <app-step-n1-innovaton-use [body]="this.ipsrStep1Body"></app-step-n1-innovaton-use> -->
     <div class="ipsr-sub-title-2">Targeted innovation use</div>
     <app-innovation-use-form [body]="this.ipsrStep1Body"></app-innovation-use-form>
     <app-step-n1-institutions [body]="this.ipsrStep1Body"></app-step-n1-institutions>

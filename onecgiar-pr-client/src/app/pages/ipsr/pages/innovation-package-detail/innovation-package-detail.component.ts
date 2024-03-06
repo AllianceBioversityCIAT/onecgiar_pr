@@ -6,7 +6,6 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
   selector: 'app-innovation-package-detail',
@@ -33,13 +32,14 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
       this.api.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
       const is_phase_open = response?.is_phase_open;
+
       switch (is_phase_open) {
         case 0:
-          this.api.rolesSE.readOnly = this.api.rolesSE.isAdmin;
+          this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
           break;
 
         case 1:
-          if (this.dataControlSE.currentResult.status == 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+          if (this.dataControlSE.currentResult.status_id !== '1' && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
           break;
       }
 
