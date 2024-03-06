@@ -336,7 +336,28 @@ export const routes: Routes = [
         loadComponent: () =>
           import(
             '../pages/admin-section/pages/phase-management/phase-management.component'
-          ).then(c => c.PhaseManagementComponent)
+          ).then(c => c.PhaseManagementComponent),
+        children: [
+          {
+            path: '',
+            redirectTo: 'reporting',
+            pathMatch: 'full'
+          },
+          {
+            path: 'reporting',
+            loadComponent: () =>
+              import(
+                '../pages/admin-section/pages/phase-management/pages/reporting/reporting.component'
+              ).then(c => c.ReportingComponent)
+          },
+          {
+            path: 'innovation-package',
+            loadComponent: () =>
+              import(
+                '../pages/admin-section/pages/phase-management/pages/innovation-package/innovation-package.component'
+              ).then(c => c.InnovationPackageComponent)
+          }
+        ]
       }
     ]
   }

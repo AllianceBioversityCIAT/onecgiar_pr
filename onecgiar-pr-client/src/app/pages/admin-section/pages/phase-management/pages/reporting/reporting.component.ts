@@ -1,15 +1,50 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { Table } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
+import {
+  ModuleTypeEnum,
+  StatusPhaseEnum
+} from '../../../../../../shared/enum/api.enum';
 import { Phase } from '../../../../../../shared/interfaces/phase.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { CommonModule } from '@angular/common';
+import { OtherFunctionalitiesComponent } from '../../other-functionalities/other-functionalities.component';
+import { MassivePhaseShiftComponent } from '../../other-functionalities/components/massive-phase-shift/massive-phase-shift.component';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { DropdownModule } from 'primeng/dropdown';
+import { TagModule } from 'primeng/tag';
+import { InputTextModule } from 'primeng/inputtext';
+import { FormsModule } from '@angular/forms';
+import { ResultHistoryOfChangesModalComponent } from '../../../completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.component';
+import { FilterByTextPipe } from '../../../../../../shared/pipes/filter-by-text.pipe';
+import { TooltipModule } from 'primeng/tooltip';
+import { CalendarModule } from 'primeng/calendar';
+import { PrSelectComponent } from '../../../../../../custom-fields/pr-select/pr-select.component';
 
 @Component({
   selector: 'app-reporting',
+  standalone: true,
   templateUrl: './reporting.component.html',
-  styleUrls: ['./reporting.component.scss']
+  styleUrls: ['./reporting.component.scss'],
+  imports: [
+    CommonModule,
+    OtherFunctionalitiesComponent,
+    MassivePhaseShiftComponent,
+    DialogModule,
+    ButtonModule,
+    DropdownModule,
+    TagModule,
+    InputTextModule,
+    TableModule,
+    FormsModule,
+    ResultHistoryOfChangesModalComponent,
+    FilterByTextPipe,
+    TooltipModule,
+    CalendarModule,
+    PrSelectComponent
+  ]
 })
 export class ReportingComponent implements OnInit {
   columnOrder = [
@@ -28,7 +63,8 @@ export class ReportingComponent implements OnInit {
   tocPhaseList = [];
   resultYearsList = [];
   textToFind = '';
-  disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
+  disabledActionsText =
+    'Finish editing the phase to be able to edit or delete this phase.';
   @ViewChild('dt') table: Table;
   status = [
     {
@@ -41,7 +77,11 @@ export class ReportingComponent implements OnInit {
     }
   ];
 
-  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
+  constructor(
+    public resultsSE: ResultsApiService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public phasesService: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.getAllPhases();
@@ -75,11 +115,16 @@ export class ReportingComponent implements OnInit {
 
   getMandatoryIncompleteFields(phaseItem): string {
     let text = '';
-    if (!phaseItem.phase_name_ts) text += '<strong> Name </strong> is required to create <br>';
-    if (!phaseItem.phase_year_ts) text += '<strong> Reporting year </strong> is required to create <br>';
-    if (!phaseItem.toc_pahse_id_ts) text += '<strong> Toc phase </strong> is required to create <br>';
-    if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
-    if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
+    if (!phaseItem.phase_name_ts)
+      text += '<strong> Name </strong> is required to create <br>';
+    if (!phaseItem.phase_year_ts)
+      text += '<strong> Reporting year </strong> is required to create <br>';
+    if (!phaseItem.toc_pahse_id_ts)
+      text += '<strong> Toc phase </strong> is required to create <br>';
+    if (!phaseItem.start_date_ts)
+      text += '<strong> Start date </strong> is required to create <br>';
+    if (!phaseItem.end_date_ts)
+      text += '<strong> End date </strong>is required to create <br>';
     return text;
   }
 
@@ -100,15 +145,19 @@ export class ReportingComponent implements OnInit {
   }
 
   getAllPhases() {
-    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
-      this.phaseList = response;
-      this.previousPhaseList = [...response];
-      this.previousPhaseList.push({
-        phase_name: 'N/A',
-        id: null
+    this.resultsSE
+      .GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING)
+      .subscribe(({ response }) => {
+        this.phaseList = response;
+        this.previousPhaseList = [...response];
+        this.previousPhaseList.push({
+          phase_name: 'N/A',
+          id: null
+        });
+        this.phaseList.map((phaseItem: Phase) =>
+          this.updateVariablesToSave(phaseItem)
+        );
       });
-      this.phaseList.map((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
-    });
   }
 
   savePhase(phase) {
@@ -116,7 +165,12 @@ export class ReportingComponent implements OnInit {
     this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe(
       () => {
         this.getAllPhases();
-        this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({
+          id: 'manage-phase-save',
+          title: 'Phase saved',
+          status: 'success',
+          closeIn: 500
+        });
         this.phasesService.getNewPhases();
       },
       err => {
@@ -133,37 +187,67 @@ export class ReportingComponent implements OnInit {
     this.resultsSE.POST_createPhase(phase).subscribe(
       () => {
         this.getAllPhases();
-        this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({
+          id: 'manage-phase-save',
+          title: 'Phase created',
+          status: 'success',
+          closeIn: 500
+        });
         phase.isNew = false;
         this.phasesService.getNewPhases();
       },
       err => {
         console.error(err);
-        this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Create phase', description: err?.error?.message, status: 'error', closeIn: 500 });
+        this.customizedAlertsFeSE.show({
+          id: 'manage-error',
+          title: 'Create phase',
+          description: err?.error?.message,
+          status: 'error',
+          closeIn: 500
+        });
       }
     );
   }
 
   deletePhase({ id }) {
-    this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.resultsSE.DELETE_updatePhase(id).subscribe(
-        () => this.getAllPhases(),
-        err => {
-          console.error(err);
-          this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Delete phase', description: err?.error?.message, status: 'error', closeIn: 500 });
-        }
-      );
-    });
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'manage-phase',
+        title: 'Delete phase',
+        description: 'Are you sure you want to delete the current phase?',
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.resultsSE.DELETE_updatePhase(id).subscribe(
+          () => this.getAllPhases(),
+          err => {
+            console.error(err);
+            this.customizedAlertsFeSE.show({
+              id: 'manage-error',
+              title: 'Delete phase',
+              description: err?.error?.message,
+              status: 'error',
+              closeIn: 500
+            });
+          }
+        );
+      }
+    );
   }
 
   getTocPhaseName(toc_pahse_id) {
-    const tocPhaseElement = this.tocPhaseList.find(phaseItem => phaseItem?.phase_id == toc_pahse_id);
+    const tocPhaseElement = this.tocPhaseList.find(
+      phaseItem => phaseItem?.phase_id == toc_pahse_id
+    );
     return tocPhaseElement?.name + ' - ' + tocPhaseElement?.status;
   }
 
   getFeedback() {
-    if (this.phaseList.some(phaseItem => phaseItem.isNew)) return 'Create or cancel to add a new phase';
-    if (this.phaseList.some(phaseItem => phaseItem.editing)) return 'Save or cancel to add a new phase';
+    if (this.phaseList.some(phaseItem => phaseItem.isNew))
+      return 'Create or cancel to add a new phase';
+    if (this.phaseList.some(phaseItem => phaseItem.editing))
+      return 'Save or cancel to add a new phase';
     return '';
   }
 
@@ -175,13 +259,17 @@ export class ReportingComponent implements OnInit {
   }
 
   onlyPreviousPhase(currentPhase: any) {
-    return this.phaseList.filter(el => el.phase_year_ts >= currentPhase.phase_year_ts);
+    return this.phaseList.filter(
+      el => el.phase_year_ts >= currentPhase.phase_year_ts
+    );
   }
 
   cancelAction(phase) {
     phase.editing = false;
     if (!phase.isNew) return;
-    const index = this.phaseList.findIndex(phaseItem => phaseItem.id == phase.id);
+    const index = this.phaseList.findIndex(
+      phaseItem => phaseItem.id == phase.id
+    );
     const phaseListCopy: any[] = [...this.phaseList];
     this.phaseList = [];
     phaseListCopy.splice(index, 1);

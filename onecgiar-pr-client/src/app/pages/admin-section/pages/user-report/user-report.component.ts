@@ -5,13 +5,20 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
 import { FilterByTextPipe } from '../../../../shared/pipes/filter-by-text.pipe';
+import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 
 @Component({
   selector: 'app-user-report',
   standalone: true,
   templateUrl: './user-report.component.html',
   styleUrls: ['./user-report.component.scss'],
-  imports: [CommonModule, TableModule, FormsModule, FilterByTextPipe]
+  imports: [
+    CommonModule,
+    TableModule,
+    FormsModule,
+    FilterByTextPipe,
+    PrButtonComponent
+  ]
 })
 export class UserReportComponent implements OnInit {
   textToFind = '';
