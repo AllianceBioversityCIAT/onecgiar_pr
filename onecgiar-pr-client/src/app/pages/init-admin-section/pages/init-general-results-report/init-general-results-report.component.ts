@@ -3,11 +3,32 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { CustomizedAlertsFeService } from '../../../../shared/services/customized-alerts-fe.service';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { CommonModule } from '@angular/common';
+import { FilterInitWithRoleCoordAndLeadPipe } from '../../pipes/filter-init-with-role-coord-and-lead/filter-init-with-role-coord-and-lead.pipe';
+import { TableModule } from 'primeng/table';
+import { FilterByTextPipe } from '../../../../shared/pipes/filter-by-text.pipe';
+import { FilterByAttrWithValuePipe } from '../../../../shared/pipes/filter-by-attr-with-value/filter-by-attr-with-value.pipe';
+import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
+import { PrMultiSelectComponent } from '../../../../custom-fields/pr-multi-select/pr-multi-select.component';
+import { FormsModule } from '@angular/forms';
+import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 
 @Component({
   selector: 'app-init-general-results-report',
+  standalone: true,
   templateUrl: './init-general-results-report.component.html',
-  styleUrls: ['./init-general-results-report.component.scss']
+  styleUrls: ['./init-general-results-report.component.scss'],
+  imports: [
+    CommonModule,
+    FilterInitWithRoleCoordAndLeadPipe,
+    TableModule,
+    FilterByTextPipe,
+    FilterByAttrWithValuePipe,
+    AlertStatusComponent,
+    PrMultiSelectComponent,
+    FormsModule,
+    PrButtonComponent
+  ]
 })
 export class InitGeneralResultsReportComponent implements OnInit {
   textToFind = '';
@@ -21,7 +42,12 @@ export class InitGeneralResultsReportComponent implements OnInit {
   reportingPhases: any[] = [];
   phasesSelected = [];
   resultStatusList = [];
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    private exportTablesSE: ExportTablesService,
+    private customAlertService: CustomizedAlertsFeService,
+    private phasesSE: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.getAll();
@@ -40,7 +66,8 @@ export class InitGeneralResultsReportComponent implements OnInit {
   }
 
   getPhases() {
-    const selectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const selectOpenPhases = (phases: any[]) =>
+      (this.phasesSelected = phases.filter((phase: any) => phase.status));
     const useAlreadyLoadedPhases = () => {
       selectOpenPhases(this.phasesSE.phases.reporting);
       this.reportingPhases = this.phasesSE.phases.reporting;
@@ -53,11 +80,15 @@ export class InitGeneralResultsReportComponent implements OnInit {
       });
     };
 
-    this.phasesSE.phases.reporting.length ? useAlreadyLoadedPhases() : listenWhenPhasesAreLoaded();
+    this.phasesSE.phases.reporting.length
+      ? useAlreadyLoadedPhases()
+      : listenWhenPhasesAreLoaded();
   }
 
   onSelectDropdown() {
-    const inits = this.initiativesSelected.map((init: any) => init.initiative_id);
+    const inits = this.initiativesSelected.map(
+      (init: any) => init.initiative_id
+    );
     const phases = this.phasesSelected.map((phase: any) => phase.id);
     // (inits);
     this.POST_reportSesultsCompleteness(inits, phases);
@@ -80,19 +111,23 @@ export class InitGeneralResultsReportComponent implements OnInit {
 
   POST_reportSesultsCompleteness(inits: any[], phases: any[]) {
     this.resultsList = [];
-    this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, 2).subscribe(({ response }) => {
-      console.log(response);
-      this.resultsList = response;
+    this.api.resultsSE
+      .POST_reportSesultsCompleteness(inits, phases, 2)
+      .subscribe(({ response }) => {
+        console.log(response);
+        this.resultsList = response;
 
-      this.resultsList.forEach((result: any) => {
-        // result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
-        // Get status name
-        const status = this.resultStatusList.find((status: any) => status.status_id == result.status_id);
-        const statusName = status?.name;
-        const className = status?.className;
-        result.full_name_html = `<div class="completeness-${className} completeness-state">${statusName}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+        this.resultsList.forEach((result: any) => {
+          // result.full_name_html = `<div class="completeness-${result.is_submitted == 1 ? 'submitted' : 'editing'} completeness-state">${result.is_submitted == 1 ? 'Submitted' : 'Editing'}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+          // Get status name
+          const status = this.resultStatusList.find(
+            (status: any) => status.status_id == result.status_id
+          );
+          const statusName = status?.name;
+          const className = status?.className;
+          result.full_name_html = `<div class="completeness-${className} completeness-state">${statusName}</div> <strong>Result code: (${result.result_code})</strong> - ${result.result_title}  - <strong>Official code: (${result.official_code})</strong> - <strong>Indicator category: (${result.result_type_name})</strong>`;
+        });
       });
-    });
   }
 
   dataToExport = [];
@@ -105,16 +140,25 @@ export class InitGeneralResultsReportComponent implements OnInit {
     this.requestCounter = 0;
 
     const list = [];
-    const uniqueResultIdsSet = new Set(resultsRelected.map((item: any) => item.results_id));
+    const uniqueResultIdsSet = new Set(
+      resultsRelected.map((item: any) => item.results_id)
+    );
     const uniqueResultIds = [...uniqueResultIdsSet];
     uniqueResultIds?.forEach(element => {
       list.push(element);
     });
 
     // Usar Promise.all para esperar a que todas las promesas se resuelvan
-    await Promise.all(list.map((result, key) => this.POST_excelFullReportPromise(result, key)));
+    await Promise.all(
+      list.map((result, key) => this.POST_excelFullReportPromise(result, key))
+    );
 
-    this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+    this.exportTablesSE.exportMultipleSheetsExcel(
+      this.dataToExport,
+      'results_list',
+      null,
+      this.tocToExport
+    );
     this.requesting = false;
   }
 
@@ -123,12 +167,20 @@ export class InitGeneralResultsReportComponent implements OnInit {
       this.api.resultsSE.POST_excelFullReport([result]).subscribe(
         ({ response }) => {
           this.requestCounter++;
-          if (response?.fullReport?.length) this.dataToExport.push(...response.fullReport);
-          if (response?.resultsAgaintsToc?.length) this.tocToExport.push(...response.resultsAgaintsToc);
+          if (response?.fullReport?.length)
+            this.dataToExport.push(...response.fullReport);
+          if (response?.resultsAgaintsToc?.length)
+            this.tocToExport.push(...response.resultsAgaintsToc);
           resolve(null);
         },
         err => {
-          this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+          this.customAlertService.show({
+            id: 'loginAlert',
+            title: 'Oops!',
+            description:
+              'There was an error in the system while generating the report. If the issue persists, please contact the technical team.',
+            status: 'error'
+          });
           resolve(null);
         }
       );

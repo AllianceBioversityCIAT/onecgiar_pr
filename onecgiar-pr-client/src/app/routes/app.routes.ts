@@ -295,10 +295,14 @@ export const routes: Routes = [
           import(
             '../pages/init-admin-section/pages/init-completeness-status/init-completeness-status.component'
           ).then(c => c.InitCompletenessStatusComponent)
+      },
+      {
+        path: 'init-general-results-report',
+        loadComponent: () =>
+          import(
+            '../pages/init-admin-section/pages/init-general-results-report/init-general-results-report.component'
+          ).then(c => c.InitGeneralResultsReportComponent)
       }
-      // {
-      //   path: 'init-general-results-report'
-      // }
     ]
   }
 ];
