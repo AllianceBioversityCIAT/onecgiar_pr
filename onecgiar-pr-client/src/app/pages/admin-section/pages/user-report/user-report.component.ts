@@ -1,16 +1,25 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { FormsModule } from '@angular/forms';
+import { FilterByTextPipe } from '../../../../shared/pipes/filter-by-text.pipe';
 
 @Component({
   selector: 'app-user-report',
+  standalone: true,
   templateUrl: './user-report.component.html',
-  styleUrls: ['./user-report.component.scss']
+  styleUrls: ['./user-report.component.scss'],
+  imports: [CommonModule, TableModule, FormsModule, FilterByTextPipe]
 })
 export class UserReportComponent implements OnInit {
   textToFind = '';
   usersList = [];
-  constructor(private api: ApiService, public exportTablesSE: ExportTablesService) {}
+  constructor(
+    private api: ApiService,
+    public exportTablesSE: ExportTablesService
+  ) {}
 
   ngOnInit(): void {
     this.GET_reportUsers();
@@ -36,7 +45,15 @@ export class UserReportComponent implements OnInit {
       app_role_name: 'Application role'
     });
     usersList.map(result => {
-      const { user_id, init_name_official_code, user_email, user_first_name, user_last_name, app_role_name, initiative_role_name } = result;
+      const {
+        user_id,
+        init_name_official_code,
+        user_email,
+        user_first_name,
+        user_last_name,
+        app_role_name,
+        initiative_role_name
+      } = result;
       //(is_submitted);
       usersListMapped.push({
         user_id: this.convertToNodata(user_id),
@@ -49,7 +66,20 @@ export class UserReportComponent implements OnInit {
       });
     });
     // console.table(resultsListMapped);
-    const wscols = [{ wpx: 70 }, { wpx: 600 }, { wpx: 200 }, { wpx: 100 }, { wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    const wscols = [
+      { wpx: 70 },
+      { wpx: 600 },
+      { wpx: 200 },
+      { wpx: 100 },
+      { wpx: 120 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 }
+    ];
     this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
   }
 

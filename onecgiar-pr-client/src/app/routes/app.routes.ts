@@ -323,13 +323,21 @@ export const routes: Routes = [
           import(
             '../pages/admin-section/pages/completeness-status/completeness-status.component'
           ).then(c => c.CompletenessStatusComponent)
+      },
+      {
+        path: 'user-report',
+        loadComponent: () =>
+          import(
+            '../pages/admin-section/pages/user-report/user-report.component'
+          ).then(c => c.UserReportComponent)
+      },
+      {
+        path: 'phase-management',
+        loadComponent: () =>
+          import(
+            '../pages/admin-section/pages/phase-management/phase-management.component'
+          ).then(c => c.PhaseManagementComponent)
       }
-      // {
-      //   path: 'user-report'
-      // },
-      // {
-      //   path: 'phase-management'
-      // }
     ]
   }
 ];
