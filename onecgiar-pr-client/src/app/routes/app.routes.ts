@@ -241,9 +241,9 @@ export const routes: Routes = [
           ).then(c => c.InnovationPackageDetailComponent),
         children: [
           {
-            path: '**',
-            pathMatch: 'full',
-            redirectTo: 'general-information'
+            path: '',
+            redirectTo: 'general-information',
+            pathMatch: 'full'
           },
           {
             path: 'general-information',
@@ -303,6 +303,33 @@ export const routes: Routes = [
             '../pages/init-admin-section/pages/init-general-results-report/init-general-results-report.component'
           ).then(c => c.InitGeneralResultsReportComponent)
       }
+    ]
+  },
+  {
+    path: 'admin-module',
+    loadComponent: () =>
+      import('../pages/admin-section/admin-section.component').then(
+        c => c.AdminSectionComponent
+      ),
+    children: [
+      {
+        path: '',
+        redirectTo: 'completeness-status',
+        pathMatch: 'full'
+      },
+      {
+        path: 'completeness-status',
+        loadComponent: () =>
+          import(
+            '../pages/admin-section/pages/completeness-status/completeness-status.component'
+          ).then(c => c.CompletenessStatusComponent)
+      }
+      // {
+      //   path: 'user-report'
+      // },
+      // {
+      //   path: 'phase-management'
+      // }
     ]
   }
 ];

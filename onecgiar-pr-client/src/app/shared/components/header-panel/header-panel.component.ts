@@ -7,18 +7,23 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 import { TawkComponent } from '../tawk/tawk.component';
 import { CommonModule } from '@angular/common';
 import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-header-panel',
   standalone: true,
   templateUrl: './header-panel.component.html',
   styleUrls: ['./header-panel.component.scss'],
-  imports: [CommonModule, TawkComponent, PrButtonComponent]
+  imports: [CommonModule, TawkComponent, PrButtonComponent, RouterLink]
 })
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
-  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService) {}
+  constructor(
+    public api: ApiService,
+    public dataControlSE: DataControlService,
+    public globalLinksSE: GlobalLinksService
+  ) {}
   ngOnInit(): void {
     this.api.updateUserData(() => {});
   }
@@ -31,6 +36,10 @@ export class HeaderPanelComponent implements OnInit {
     const left = window.screenX + (window.outerWidth - w) / 2;
     const url = this.globalLinksSE.links.url_platform_information;
 
-    window.open(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
+    window.open(
+      url,
+      'Information center',
+      `left=${left},top=${top},width=${w},height=${h}`
+    );
   }
 }
