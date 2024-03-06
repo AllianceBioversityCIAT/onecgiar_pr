@@ -4,35 +4,33 @@
     [(ngModel)]="this.body.result_innovation_package.assessed_during_expert_workshop_id">
 </app-pr-radio-button>
 
-
-
 <div class="box"
     *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id && this.body.result_innovation_package.assessed_during_expert_workshop_id != 3">
+    
     <br>
+    
     <app-pr-field-header [required]="false" [description]="goToStep()"></app-pr-field-header>
 
-    <table class="">
+    <table>
         <tr class="table_title">
-            <!-- <th [attr.colspan]="header?.length">{{tableTitle || 'Untitled'}}</th> -->
-            <th [attr.rowspan]="2">Package element</th>
-            <th [attr.colspan]="2">Current situation (now)</th>
-            <th [attr.colspan]="2" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">
+            <th [attr.rowspan]="2" id="Package element">Package element</th>
+            <th [attr.colspan]="2" id="Current situation (now)">Current situation (now)</th>
+            <th id="Potential situation (12 months later)" [attr.colspan]="2" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">
                 Potential situation (12 months later)</th>
         </tr>
-        <tr class="table_title">
-            <th>Innovation readiness</th>
-            <th>Innovation use</th>
-            <th *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">Innovation readiness
-            </th>
-            <th *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">Innovation use</th>
-        </tr>
-        <tr>
 
+        <tr class="table_title">
+            <th id="Innovation readiness">Innovation readiness</th>
+            <th id="Innovation use">Innovation use</th>
+            <th id="Innovation readiness2" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">
+                Innovation readiness
+            </th>
+            <th id="Innovation use" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">Innovation use</th>
+        </tr>
+
+        <tr>
             <td *ngFor="let attr of attrList; let j=index" [ngClass]="{'first_col': j <= 0,'min_select':j>=1}"
                 [hidden]="j>= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
-
-                <!-- <div>{{attrList[j]}} {{j}}</div> -->
-
                 <div *ngIf="j <= 0">
                     <strong>Core innovation</strong>
                     <div>{{this.body?.result_ip_result_core?.obj_result?.title}}</div>
@@ -42,15 +40,11 @@
                     placeholder="Select a level" [(ngModel)]="this.body.result_ip_result_core[attrList[j]]">
                 </app-pr-select>
             </td>
-
         </tr>
-        <tr *ngFor="let resultComplementary of body.result_ip_result_complementary; let i=index">
 
+        <tr *ngFor="let resultComplementary of body.result_ip_result_complementary; let i=index">
             <td *ngFor="let attr of attrList; let j=index"
                 [hidden]="j>= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
-
-                <!-- <div>{{attrList[j]}} {{j}}</div> -->
-
                 <div *ngIf="j <= 0">
                     <strong>Complementary innovation/enabler/solution #{{i+1}}</strong>
                     <div>{{resultComplementary?.obj_result?.title}}</div>
@@ -60,7 +54,6 @@
                     placeholder="Select a level" [(ngModel)]="resultComplementary[attrList[j]]">
                 </app-pr-select>
             </td>
-
         </tr>
     </table>
 </div>

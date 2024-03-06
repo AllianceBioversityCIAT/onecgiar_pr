@@ -1,11 +1,33 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { trigger, state, style, transition, animate } from '@angular/animations';
+import {
+  trigger,
+  state,
+  style,
+  transition,
+  animate
+} from '@angular/animations';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-collapsible-container',
+  standalone: true,
   templateUrl: './collapsible-container.component.html',
   styleUrls: ['./collapsible-container.component.scss'],
-  animations: [trigger('expandable', [state('expand', style({ height: '*' })), state('collapse', style({ height: '0' })), transition('collapse => expand', animate('.3s cubic-bezier(0.455, 0.03, 0.515, 0.955)')), transition('expand => collapse', animate('.3s cubic-bezier(0.455, 0.03, 0.515, 0.955)'))])]
+  imports: [CommonModule],
+  animations: [
+    trigger('expandable', [
+      state('expand', style({ height: '*' })),
+      state('collapse', style({ height: '0' })),
+      transition(
+        'collapse => expand',
+        animate('.3s cubic-bezier(0.455, 0.03, 0.515, 0.955)')
+      ),
+      transition(
+        'expand => collapse',
+        animate('.3s cubic-bezier(0.455, 0.03, 0.515, 0.955)')
+      )
+    ])
+  ]
 })
 export class CollapsibleContainerComponent implements OnInit {
   @Input() collapse: boolean = true;

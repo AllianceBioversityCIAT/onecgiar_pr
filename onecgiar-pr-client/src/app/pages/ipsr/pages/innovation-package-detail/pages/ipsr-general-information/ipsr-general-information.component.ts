@@ -16,24 +16,12 @@ import { SaveButtonComponent } from '../../../../../../custom-fields/save-button
   standalone: true,
   templateUrl: './ipsr-general-information.component.html',
   styleUrls: ['./ipsr-general-information.component.scss'],
-  imports: [
-    CommonModule,
-    FormsModule,
-    PrInputComponent,
-    PrTextareaComponent,
-    AlertStatusComponent,
-    PrRadioButtonComponent,
-    SaveButtonComponent
-  ]
+  imports: [CommonModule, FormsModule, PrInputComponent, PrTextareaComponent, AlertStatusComponent, PrRadioButtonComponent, SaveButtonComponent]
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
-  constructor(
-    private api: ApiService,
-    public scoreSE: ScoreService,
-    public ipsrDataControlSE: IpsrDataControlService
-  ) {}
+  constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -41,48 +29,38 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE
-      .GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId)
-      .subscribe(({ response }) => {
-        this.ipsrGeneralInformationBody = response;
-        this.ipsrGeneralInformationBody.is_krs = Boolean(
-          Number(this.ipsrGeneralInformationBody.is_krs)
-        );
-      });
+    this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
+      this.ipsrGeneralInformationBody = response;
+      this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+    });
   }
 
   onChangeKrs() {
-    if (this.ipsrGeneralInformationBody.is_krs === false)
-      this.ipsrGeneralInformationBody.is_krs = null;
+    if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
   onSaveSection() {
-    this.api.resultsSE
-      .PATCHIpsrGeneralInfo(
-        this.ipsrGeneralInformationBody,
-        this.ipsrDataControlSE.resultInnovationId
-      )
-      .subscribe({
-        next: resp => {
-          this.getSectionInformation();
-          this.api.alertsFe.show({
-            id: 'save-button',
-            title: 'Section saved successfully',
-            description: '',
-            status: 'success',
-            closeIn: 500
-          });
-        },
-        error: err => {
-          console.error(err);
-          this.api.alertsFe.show({
-            id: 'save-button',
-            title: 'There was an error saving the section',
-            description: '',
-            status: 'error',
-            closeIn: 500
-          });
-        }
-      });
+    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
+      next: resp => {
+        this.getSectionInformation();
+        this.api.alertsFe.show({
+          id: 'save-button',
+          title: 'Section saved successfully',
+          description: '',
+          status: 'success',
+          closeIn: 500
+        });
+      },
+      error: err => {
+        console.error(err);
+        this.api.alertsFe.show({
+          id: 'save-button',
+          title: 'There was an error saving the section',
+          description: '',
+          status: 'error',
+          closeIn: 500
+        });
+      }
+    });
   }
 
   climateInformation() {

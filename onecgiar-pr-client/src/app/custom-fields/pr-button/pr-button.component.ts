@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -9,7 +9,7 @@ import { TooltipModule } from 'primeng/tooltip';
   styleUrls: ['./pr-button.component.scss'],
   imports: [CommonModule, TooltipModule]
 })
-export class PrButtonComponent {
+export class PrButtonComponent implements OnInit {
   @Input() text: string;
   @Input() icon: string;
   @Input() reverse: boolean = false;

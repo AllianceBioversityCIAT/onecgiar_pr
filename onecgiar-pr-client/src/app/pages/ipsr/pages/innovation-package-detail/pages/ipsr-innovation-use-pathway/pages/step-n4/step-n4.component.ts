@@ -3,64 +3,98 @@ import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-co
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { ApiService } from 'src/app/shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { StepN4InitiativeInvestmentTableComponent } from './components/step-n4-initiative-investment-table/step-n4-initiative-investment-table.component';
+import { StepN4BilateralInvestmentTableComponent } from './components/step-n4-bilateral-investment-table/step-n4-bilateral-investment-table.component';
+import { StepN4PartnerCoInvestmentTableComponent } from './components/step-n4-partner-co-investment-table/step-n4-partner-co-investment-table.component';
+import { PrRadioButtonComponent } from '../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { StepN4PictureLinksComponent } from './components/step-n4-picture-links/step-n4-picture-links.component';
+import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-reference-material-links/step-n4-reference-material-links.component';
+import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
+import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
 
 @Component({
   selector: 'app-step-n4',
+  standalone: true,
   templateUrl: './step-n4.component.html',
-  styleUrls: ['./step-n4.component.scss']
+  styleUrls: ['./step-n4.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    StepN4InitiativeInvestmentTableComponent,
+    StepN4BilateralInvestmentTableComponent,
+    StepN4PartnerCoInvestmentTableComponent,
+    PrRadioButtonComponent,
+    PrFieldHeaderComponent,
+    StepN4PictureLinksComponent,
+    StepN4ReferenceMaterialLinksComponent,
+    PrButtonComponent,
+    SaveButtonComponent
+  ]
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No, not necessary at this stage' }
   ];
+
+  constructor(
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    private router: Router
+  ) {}
+
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
       try {
-        document.querySelector('.alert-event-3').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
+        document
+          .querySelector('.alert-event-3')
+          .addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
       } catch (error) {}
     });
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
-      //('%cGET', 'font-size: 20px; color: #2BBE28;');
-      //(response);
-      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
-      //(response);
-      this.ipsrStep4Body = response;
-      // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
-    });
+    this.api.resultsSE
+      .GETInnovationPathwayStepFourByRiId()
+      .subscribe(({ response }) => {
+        this.ipsrStep4Body = response;
+      });
   }
   onSaveSection() {
-    //('%cPATCH', 'font-size: 20px; color: #f68541;');
-    //(this.ipsrStep4Body);
-    //('%c____________________', 'font-size: 20px; color: #f68541;');
-    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
-      this.getSectionInformation();
-      // }, 3000);
-    });
+    this.api.resultsSE
+      .PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body)
+      .subscribe(({ response }) => {
+        this.getSectionInformation();
+      });
   }
 
   onSavePrevious(descrip) {
-    if (this.api.rolesSE.readOnly) return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
-    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
-      this.getSectionInformation();
-      // }, 3000);
-      setTimeout(() => {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
-      }, 1000);
-    });
+    if (this.api.rolesSE.readOnly)
+      return this.router.navigate([
+        '/ipsr/detail/' +
+          this.ipsrDataControlSE.resultInnovationCode +
+          '/ipsr-innovation-use-pathway/step-3'
+      ]);
+    this.api.resultsSE
+      .PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip)
+      .subscribe(({ response }) => {
+        this.getSectionInformation();
+        setTimeout(() => {
+          this.router.navigate([
+            '/ipsr/detail/' +
+              this.ipsrDataControlSE.resultInnovationCode +
+              '/ipsr-innovation-use-pathway/step-3'
+          ]);
+        }, 1000);
+      });
     return null;
   }
 

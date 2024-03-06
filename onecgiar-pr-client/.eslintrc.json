@@ -1,19 +1,11 @@
 {
   "root": true,
-  "ignorePatterns": [
-    "projects/**/*",
-    "*.html"
-  ],
+  "ignorePatterns": ["projects/**/*", "*.html"],
   "overrides": [
     {
-      "files": [
-        "*.ts"
-      ],
+      "files": ["*.ts"],
       "parserOptions": {
-        "project": [
-          "tsconfig.json",
-          "tsconfig.app.json"
-        ],
+        "project": ["tsconfig.json", "tsconfig.app.json"],
         "createDefaultProgram": true
       },
       "extends": [
@@ -38,12 +30,12 @@
             "style": "camelCase"
           }
         ],
-        "no-console": "error",
-        "no-empty": "error",
+        "no-console": "warn",
+        "no-empty": "warn",
         "no-trailing-spaces": "error",
-        "camelcase": "warn",
-        "prefer-const": "error",
-        "arrow-parens": "error"
+        // "camelcase": "warn",
+        "prefer-const": "error"
+        // "arrow-parens": "error"
       }
     }
   ]

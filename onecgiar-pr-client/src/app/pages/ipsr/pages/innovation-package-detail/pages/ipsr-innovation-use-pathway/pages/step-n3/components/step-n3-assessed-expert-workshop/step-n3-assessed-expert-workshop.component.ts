@@ -1,45 +1,74 @@
+import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { ApiService } from 'src/app/shared/services/api/api.service';
+import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrFieldHeaderComponent } from '../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrSelectComponent } from '../../../../../../../../../../custom-fields/pr-select/pr-select.component';
 
 @Component({
   selector: 'app-step-n3-assessed-expert-workshop',
+  standalone: true,
   templateUrl: './step-n3-assessed-expert-workshop.component.html',
-  styleUrls: ['./step-n3-assessed-expert-workshop.component.scss']
+  styleUrls: ['./step-n3-assessed-expert-workshop.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrRadioButtonComponent,
+    PrFieldHeaderComponent,
+    PrSelectComponent
+  ]
 })
-export class StepN3AssessedExpertWorkshopComponent {
+export class StepN3AssessedExpertWorkshopComponent implements OnInit {
   @Input() body: any;
   radioOptions = [];
   readinessList = [];
   useList = [];
-  attrList = ['', 'current_innovation_readiness_level', 'current_innovation_use_level', 'potential_innovation_readiness_level', 'potential_innovation_use_level'];
+  attrList = [
+    '',
+    'current_innovation_readiness_level',
+    'current_innovation_use_level',
+    'potential_innovation_readiness_level',
+    'potential_innovation_use_level'
+  ];
   informationList = [
     {
       title: 'Core innovation',
-      description: 'Technology and business model for mechanized rice straw collection in Vietnam'
+      description:
+        'Technology and business model for mechanized rice straw collection in Vietnam'
     },
     {
       title: 'Complementary innovation/enabler/solution #1',
-      description: 'GenderUp for scaling: A method that supports innovation teams in gender responsible scaling'
+      description:
+        'GenderUp for scaling: A method that supports innovation teams in gender responsible scaling'
     },
     {
       title: 'Complementary innovation/enabler/solution #2',
-      description: 'Framework developed to prioritize innovations and technologies with potential to reduce food systems greenhouse gas emissions'
+      description:
+        'Framework developed to prioritize innovations and technologies with potential to reduce food systems greenhouse gas emissions'
     }
   ];
 
-  constructor(private api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    private api: ApiService,
+    private ipsrDataControlSE: IpsrDataControlService
+  ) {}
+
   ngOnInit(): void {
-    this.api.resultsSE.getAssessedDuringExpertWorkshop().subscribe(({ response }) => {
-      //(response);
-      this.radioOptions = response;
-    });
+    this.api.resultsSE
+      .getAssessedDuringExpertWorkshop()
+      .subscribe(({ response }) => {
+        this.radioOptions = response;
+      });
     this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
   }
+
   useLevelDelfAssessment() {
     return `<a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view"  class="open_route" target="_blank">Click here</a> to see all innovation use levels`;
   }
+
   goToStep() {
     return `<li>In case you want to add one more complementary innovation/enabler/solution <a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2</a>.</li>
     <li><a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank">Click here </a> to see the definition of all readiness levels.</li>
@@ -47,24 +76,32 @@ export class StepN3AssessedExpertWorkshopComponent {
     <li><strong>YOUR READINESS AND USE SCORES IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a> AND <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>
     `;
   }
+
   GETAllClarisaInnovationReadinessLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      //(response);
-      this.readinessList = response;
-      this.readinessList.map((option, index) => (option.index = String(index)));
-    });
+    this.api.resultsSE
+      .GETAllClarisaInnovationReadinessLevels()
+      .subscribe(({ response }) => {
+        this.readinessList = response;
+        this.readinessList.map(
+          (option, index) => (option.index = String(index))
+        );
+      });
   }
+
   GETAllClarisaInnovationUseLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
-      this.useList = response;
-      this.useList.map((option, index) => (option.index = String(index)));
-    });
+    this.api.resultsSE
+      .GETAllClarisaInnovationUseLevels()
+      .subscribe(({ response }) => {
+        this.useList = response;
+        this.useList.map((option, index) => (option.index = String(index)));
+      });
   }
+
   rangeListByIndex(index) {
     if (index % 2 === 0) {
-      return this.useList; // Es par
+      return this.useList;
     } else {
-      return this.readinessList; // Es impar
+      return this.readinessList;
     }
   }
 }

@@ -8,7 +8,6 @@
         </div>
         <div class="items custom_scroll" *ngIf="expand">
             <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
-                <!-- <div class="status"></div> -->
                 <i class="material-icons-round">
                     warning
                 </i>
@@ -23,7 +22,7 @@
         </div>
     </div>
     <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">
-        <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"
+        <app-pr-button padding="medium" [text]=" this.saveButtonSE.isSaving ? 'Saving' : text"
             [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
             [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving || disabled}"></app-pr-button>
     </div>

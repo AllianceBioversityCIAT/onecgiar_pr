@@ -1,12 +1,15 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.visible"
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
-    <div class="modal_title" *ngIf="this.isonlyread == false">Edit bilateral</div>
-    <div class="modal_title" *ngIf="this.isonlyread == true">Bilateral Info</div>
+    <div class="modal_title" *ngIf="this.isonlyread == false">
+        Edit bilateral
+    </div>
+
+    <div class="modal_title" *ngIf="this.isonlyread == true">
+        Bilateral Info
+    </div>
+
     <div class="modal_container partners-request-container" *ngIf="showForm">
-
-
-
         <app-pr-select class="segment_title_margin" [options]="this.institutionsSE?.institutionsList"
             label="Funder name" optionLabel="full_name" optionValue="institutions_id" placeholder="Select funder"
             [(ngModel)]="biltarealBody.funder_institution_id" [readOnly]="this.isonlyread">
@@ -25,11 +28,8 @@
             optionLabel="full_name" optionValue="lead_center" placeholder="Select donor"
             [(ngModel)]="biltarealBody.lead_center_id" placeholder="Lead/Contract Center goes here..." [readOnly]="this.isonlyread">
         </app-pr-select>
-
-
-
-
     </div>
+
     <div class="buttons">
         <app-pr-button padding="medium" *ngIf="this.isonlyread == false" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
             (click)="this.visible = false">
@@ -41,7 +41,6 @@
             [text]="this.requesting?'Edited bilateral':'Edit bilateral'" [rotating]="this.requesting"
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onAddBilateral()" ></app-pr-button>
     </div>
-
 </p-dialog>
 
 <div class="buttonOpen" (click)="visible=true" *ngIf="this.isonlyread == false">

@@ -29,17 +29,18 @@
 
             <app-pr-field-header label="Description" [required]="false"
                 description='
-           <li> Ensure the description is understandable for a non-specialist reader.</li>
-           <li> Avoid acronyms and technical jargon</li>
-           <li> Avoid repetition of the title</li>
-           <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
-            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false"
-                [(ngModel)]="bodyNewComplementaryInnovation.description"></app-pr-textarea>
-
+            <li> Ensure the description is understandable for a non-specialist reader.</li>
+            <li> Avoid acronyms and technical jargon</li>
+            <li> Avoid repetition of the title</li>
+            <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
+            
+            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false" [(ngModel)]="bodyNewComplementaryInnovation.description">
+            </app-pr-textarea>
 
             <app-pr-field-header label="Function" [required]="true"
-                description='
-            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
+                description='What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'>
+            </app-pr-field-header>
+
             <div class="selectedInnovation">
                 <span style="display: flex;flex-direction: column; width: 50%;">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
@@ -48,12 +49,10 @@
                                 [inputId]="innovation.complementary_innovation_functions_id"
                                 [(ngModel)]="selectedValues"></p-checkbox>
                             <label> {{ innovation.name }}</label>
-
                         </div>
                     </div>
-
-
                 </span>
+
                 <span style="display: flex;flex-direction: column; width: 50%; margin-left: '10px';">
                     <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
                         <div *ngIf="i >= 5" style="margin-top: 10px;">
@@ -62,28 +61,28 @@
                                 [(ngModel)]="selectedValues"></p-checkbox>
                             <label> {{ innovation.name }}</label>
                         </div>
-
                     </div>
+
                     <app-pr-input label="Other enabler functions" placeholder="" [required]="false"
                         [(ngModel)]="bodyNewComplementaryInnovation.other_funcions"></app-pr-input>
                 </span>
-
-
             </div>
 
-            <app-pr-field-header label="Reference materials" [required]="false" description='
-            Max 3.'></app-pr-field-header>
+            <app-pr-field-header label="Reference materials" [required]="false" description='Max 3.'></app-pr-field-header>
+
             <div style="display: flex; flex-direction: row;" *ngFor="let i of inputs">
-                <div
-                    style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
-                    {{i}}</div>
-                <div style="width: 95%;"><app-pr-input placeholder="Link"
-                        [(ngModel)]="linksComplemntaryInnovation[i-1]['link']"> </app-pr-input></div>
-            </div>
-            <app-pr-button text="Add reference material" padding="medium" (click)="addNewInput()"
-                [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
-            <!-- flagsCode="iso_alpha_2" -->
+                <div style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
+                    {{i}}
+                </div>
 
+                <div style="width: 95%;">
+                    <app-pr-input placeholder="Link" [(ngModel)]="linksComplemntaryInnovation[i-1]['link']">
+                    </app-pr-input>
+                </div>
+            </div>
+
+            <app-pr-button text="Add reference material" padding="medium" (click)="addNewInput()" [ngClass]="{'globalDisabled': statusAdd}">
+            </app-pr-button>
 
             <app-pr-radio-button
                 label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
@@ -91,15 +90,16 @@
                 [(ngModel)]="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
                 (ngModelChange)="this.bodyNewComplementaryInnovation.specify_projects_organizations = null">
             </app-pr-radio-button>
+            
             <div style="margin-top: 10px;"></div>
+
             <app-pr-textarea *ngIf="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
                 placeholder="Please specify..." description="Please specify those projects or organizations."
                 [(ngModel)]="this.bodyNewComplementaryInnovation.specify_projects_organizations"></app-pr-textarea>
-
         </div>
     </div>
-    <div class="buttons">
 
+    <div class="buttons">
         <app-pr-button text="Save and continue" padding="medium" colorType="success" (click)="onSave()"></app-pr-button>
     </div>
 

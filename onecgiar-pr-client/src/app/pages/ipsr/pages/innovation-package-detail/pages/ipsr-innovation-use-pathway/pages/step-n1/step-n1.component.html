@@ -14,27 +14,25 @@
         module="ipsr"
         [body]="this.ipsrStep1Body">
 </app-geoscope-management>
+
 <div class="step_sub_section">
-
-
     <app-step-n1-eoi-outcomes [body]="this.ipsrStep1Body"
         *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-eoi-outcomes>
     <app-step-n1-action-area-outcomes [body]="this.ipsrStep1Body"
         *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-action-area-outcomes>
     <app-step-n1-impact-areas [body]="this.ipsrStep1Body"></app-step-n1-impact-areas>
     <app-step-n1-sdg-targets [body]="this.ipsrStep1Body"></app-step-n1-sdg-targets>
-    <!-- <app-step-n1-innovaton-use [body]="this.ipsrStep1Body"></app-step-n1-innovaton-use> -->
     <div class="ipsr-sub-title-2">Targeted innovation use</div>
     <app-innovation-use-form [body]="this.ipsrStep1Body"></app-innovation-use-form>
     <app-step-n1-institutions [body]="this.ipsrStep1Body"></app-step-n1-institutions>
     <app-step-n1-scaling-ambition-blurb [body]="this.ipsrStep1Body"></app-step-n1-scaling-ambition-blurb>
-
 </div>
 
 <app-step-n1-experts [body]="this.ipsrStep1Body"></app-step-n1-experts>
 <app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation>
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
 </app-save-button>
+
 <div class="toggle_change_step">
     <app-pr-button (click)="saveAndNextStep('next')" padding="big"
         [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"

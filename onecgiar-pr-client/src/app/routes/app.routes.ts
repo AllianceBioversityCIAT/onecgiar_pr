@@ -242,8 +242,8 @@ export const routes: Routes = [
         children: [
           {
             path: '',
-            redirectTo: 'general-information',
-            pathMatch: 'full'
+            pathMatch: 'full',
+            redirectTo: 'general-information'
           },
           {
             path: 'general-information',
@@ -251,16 +251,84 @@ export const routes: Routes = [
               import(
                 '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-general-information/ipsr-general-information.component'
               ).then(c => c.IpsrGeneralInformationComponent)
+          },
+          {
+            path: 'contributors',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-contributors/ipsr-contributors.component'
+              ).then(c => c.IpsrContributorsComponent)
+          },
+          {
+            path: 'ipsr-innovation-use-pathway',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/ipsr-innovation-use-pathway.component'
+              ).then(c => c.IpsrInnovationUsePathwayComponent),
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                redirectTo: 'step-1'
+              },
+              {
+                path: 'step-1',
+                loadComponent: () =>
+                  import(
+                    '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/step-n1.component'
+                  ).then(c => c.StepN1Component)
+              },
+              {
+                path: 'step-2',
+                loadComponent: () =>
+                  import(
+                    '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/step-n2.component'
+                  ).then(c => c.StepN2Component),
+                children: [
+                  {
+                    path: '',
+                    pathMatch: 'full',
+                    redirectTo: 'complementary-innovation'
+                  },
+                  {
+                    path: 'basic-info',
+                    loadComponent: () =>
+                      import(
+                        '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/step-two-basic-info/step-two-basic-info.component'
+                      ).then(c => c.StepTwoBasicInfoComponent)
+                  },
+                  {
+                    path: 'complementary-innovation',
+                    loadComponent: () =>
+                      import(
+                        '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n2/pages/complementary-innovation/complementary-innovation.component'
+                      ).then(c => c.ComplementaryInnovationComponent)
+                  }
+                ]
+              },
+              {
+                path: 'step-3',
+                loadComponent: () =>
+                  import(
+                    '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n3/step-n3.component'
+                  ).then(c => c.StepN3Component)
+              },
+              {
+                path: 'step-4',
+                loadComponent: () =>
+                  import(
+                    '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n4/step-n4.component'
+                  ).then(c => c.StepN4Component)
+              }
+            ]
+          },
+          {
+            path: 'link-to-results',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-detail/pages/ipsr-link-to-results/ipsr-link-to-results.component'
+              ).then(c => c.IpsrLinkToResultsComponent)
           }
-          // {
-          //   path: 'contributors'
-          // },
-          // {
-          //   path: 'ipsr-innovation-use-pathway'
-          // },
-          // {
-          //   path: 'link-to-results'
-          // }
         ]
       }
     ]

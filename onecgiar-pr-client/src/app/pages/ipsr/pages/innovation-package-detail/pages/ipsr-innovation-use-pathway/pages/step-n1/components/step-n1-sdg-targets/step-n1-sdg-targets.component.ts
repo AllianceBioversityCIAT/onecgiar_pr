@@ -1,11 +1,22 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { PrFieldHeaderComponent } from '../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrMultiSelectComponent } from '../../../../../../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
 
 @Component({
   selector: 'app-step-n1-sdg-targets',
+  standalone: true,
   templateUrl: './step-n1-sdg-targets.component.html',
-  styleUrls: ['./step-n1-sdg-targets.component.scss']
+  styleUrls: ['./step-n1-sdg-targets.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PrFieldHeaderComponent,
+    PrMultiSelectComponent
+  ]
 })
 export class StepN1SdgTargetsComponent implements OnInit {
   currentsdgID = null;
@@ -25,7 +36,10 @@ export class StepN1SdgTargetsComponent implements OnInit {
         this.sdgTargetLis.forEach(sdg => {
           sdg.sdgId = sdg.sdg.usnd_code;
           sdg.short_name = sdg.sdg.short_name;
-          sdg.sdgList.map(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+          sdg.sdgList.map(
+            item =>
+              (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`)
+          );
         });
       },
       error: err => {
@@ -35,7 +49,9 @@ export class StepN1SdgTargetsComponent implements OnInit {
   }
 
   removeOption(option) {
-    const index = this.body.sdgTargets.findIndex((valueItem: any) => valueItem.id == option.id);
+    const index = this.body.sdgTargets.findIndex(
+      (valueItem: any) => valueItem.id == option.id
+    );
     this.body.sdgTargets.splice(index, 1);
   }
 

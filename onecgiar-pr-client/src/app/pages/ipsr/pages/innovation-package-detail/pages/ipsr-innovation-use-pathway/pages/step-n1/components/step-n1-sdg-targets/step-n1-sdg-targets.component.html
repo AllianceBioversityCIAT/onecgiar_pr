@@ -2,6 +2,7 @@
     label="Specify to which SDG Target(s) the scaling of the core innovation is expected to contribute to by 2030 in the specific country/ subnational context"></app-pr-field-header>
 
 <div>Select an SDG to filter the list of targets:</div>
+
 <div class="sdg_targets">
     <div class="sdg_item" *ngFor="let sdgItem of this.sdgTargetLis" (click)="onSelectSDG(sdgItem)">
         <img [src]="'assets/sdg/'+sdgItem?.sdgId+'.png'" alt="" srcset=""
@@ -19,9 +20,12 @@
 </div>
 
 <div class="selected_container custom_scroll dropdown-50p">
+    
     <br>
+    
     <app-pr-field-header [description]="'All SDG target(s) selected('+this.body.sdgTargets?.length+'):'">
     </app-pr-field-header>
+    
     <div class="chips_container">
         <div class="pr_chip_selected" *ngFor="let option of this.body.sdgTargets; let i=index"
             [ngClass]="{'is_active_false': false}">

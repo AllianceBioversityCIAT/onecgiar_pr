@@ -2,11 +2,8 @@
     <div class="ipsr-sub-title">Consensus and Consultation</div>
 
     <div *ngFor="let item of this.fields">
-        <!-- <h1>{{this.body.result_ip[item.idAttr]}} - {{item.idAttr}}</h1> -->
         <app-pr-radio-button [label]="item.label" [options]="item.radioOptions" optionLabel="name"
             [optionValue]="item.idAttr" [(ngModel)]="this.body.result_ip[item.idAttr]">
         </app-pr-radio-button>
     </div>
 </div>
-
-<!-- <div class="step_divider"></div> -->

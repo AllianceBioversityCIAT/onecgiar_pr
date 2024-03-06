@@ -1,9 +1,18 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../../../../../../../services/manage-innovations-list.service';
-import { Observable } from 'rxjs';
 import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { TableModule } from 'primeng/table';
+import { FilterByTextPipe } from '../../../../../../../../../../../../shared/pipes/filter-by-text.pipe';
+import { DialogModule } from 'primeng/dialog';
+import { PrFieldHeaderComponent } from '../../../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrInputComponent } from '../../../../../../../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrTextareaComponent } from '../../../../../../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { CheckboxModule } from 'primeng/checkbox';
+import { PrButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-button/pr-button.component';
+import { PrRadioButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { CommonModule, NgClass, NgIf } from '@angular/common';
 
 interface ComplementaryInnovation {
   climate_change_tag_level_id: string;
@@ -25,10 +34,22 @@ interface ComplementaryInnovation {
 }
 @Component({
   selector: 'app-table-innovation',
-
+  standalone: true,
   templateUrl: './table-innovation.component.html',
-
-  styleUrls: ['./table-innovation.component.scss']
+  styleUrls: ['./table-innovation.component.scss'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    FilterByTextPipe,
+    DialogModule,
+    PrFieldHeaderComponent,
+    PrInputComponent,
+    PrTextareaComponent,
+    CheckboxModule,
+    PrButtonComponent,
+    PrRadioButtonComponent
+  ]
 })
 export class TableInnovationComponent {
   coreInnovationSelected: ComplementaryInnovation;
@@ -40,7 +61,8 @@ export class TableInnovationComponent {
   informationComplementaryInnovation: ComplementaryInnovation[] = [];
   loading: boolean = true;
   isInitiative: boolean = true;
-  informationComplentary: complementaryInnovation = new complementaryInnovation();
+  informationComplentary: ComplementaryInnovation2 =
+    new ComplementaryInnovation2();
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Output() saveedit = new EventEmitter<any>();
   @Input() selectionsInnovation: any[];
@@ -49,7 +71,12 @@ export class TableInnovationComponent {
   selectComplementary: any[] = [];
   complementaries = false;
   idInnovation: number;
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
+
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public manageInnovationsListSE: ManageInnovationsListService
+  ) {}
 
   columnOrder = [
     { title: 'Code', attr: 'result_code' },
@@ -71,7 +98,9 @@ export class TableInnovationComponent {
   }
 
   getComplementaryInnovation(id, isRead, result) {
-    this.isInitiative = this.api.rolesSE.validateInitiative(this.ipsrDataControlSE.initiative_id);
+    this.isInitiative = this.api.rolesSE.validateInitiative(
+      this.ipsrDataControlSE.initiative_id
+    );
     if (result.result_type_id == 11) {
       this.status = true;
       if (isRead == 0) {
@@ -83,30 +112,49 @@ export class TableInnovationComponent {
       this.api.resultsSE.GETComplementaryById(id).subscribe(resp => {
         this.complementaries = false;
         this.selectComplementary = [];
-        this.informationComplentary.projects_organizations_working_on_innovation = resp['response']['findResultComplementaryInnovation']['projects_organizations_working_on_innovation'];
-        this.informationComplentary.specify_projects_organizations = resp['response']['findResultComplementaryInnovation']['specify_projects_organizations'];
-        this.informationComplentary.title = resp['response']['findResult']['title'];
-        this.informationComplentary.description = resp['response']['findResult']['description'];
-        this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title'];
-        this.informationComplentary.other_funcions = resp['response']['findResultComplementaryInnovation']['other_funcions'];
-        this.informationComplentary.referenceMaterials = resp['response']['evidence'];
-        resp['response']['findComplementaryInnovationFuctions'].forEach(element => {
-          this.selectComplementary.push(element['complementary_innovation_function_id']);
-        });
+        this.informationComplentary.projects_organizations_working_on_innovation =
+          resp['response']['findResultComplementaryInnovation'][
+            'projects_organizations_working_on_innovation'
+          ];
+        this.informationComplentary.specify_projects_organizations =
+          resp['response']['findResultComplementaryInnovation'][
+            'specify_projects_organizations'
+          ];
+        this.informationComplentary.title =
+          resp['response']['findResult']['title'];
+        this.informationComplentary.description =
+          resp['response']['findResult']['description'];
+        this.informationComplentary.short_title =
+          resp['response']['findResultComplementaryInnovation']['short_title'];
+        this.informationComplentary.other_funcions =
+          resp['response']['findResultComplementaryInnovation'][
+            'other_funcions'
+          ];
+        this.informationComplentary.referenceMaterials =
+          resp['response']['evidence'];
+        resp['response']['findComplementaryInnovationFuctions'].forEach(
+          element => {
+            this.selectComplementary.push(
+              element['complementary_innovation_function_id']
+            );
+          }
+        );
         setTimeout(() => {
           this.complementaries = true;
         }, 100);
       });
     } else {
-      const url = '/result/result-detail/' + result['result_code'] + '/general-information';
-      //this.router.navigate(['/result/result-detail/'+result['result_code']+'/general-information'], "_blank");
+      const url =
+        '/result/result-detail/' +
+        result['result_code'] +
+        '/general-information';
       window.open(url, '_blank');
     }
   }
 
   addNewInput() {
     if (this.informationComplentary.referenceMaterials.length < 3) {
-      this.informationComplentary.referenceMaterials.push(new references());
+      this.informationComplentary.referenceMaterials.push(new References());
     } else {
       this.statusAdd = true;
     }
@@ -116,45 +164,67 @@ export class TableInnovationComponent {
 
   onSave() {
     this.informationComplentary.complementaryFunctions = [];
-    for (let index = 0; index < this.selectComplementary.length; index++) {
+
+    for (const element of this.selectComplementary) {
       const complementaryFunctions = {
-        complementary_innovation_functions_id: this.selectComplementary[index]
+        complementary_innovation_functions_id: element
       };
-      this.informationComplentary.complementaryFunctions.push(complementaryFunctions);
+      this.informationComplentary.complementaryFunctions.push(
+        complementaryFunctions
+      );
     }
-    this.api.resultsSE.PATCHcomplementaryinnovation(this.informationComplentary, this.idInnovation).subscribe(resp => {
-      this.status = false;
-      this.saveedit.emit(true);
-    });
+
+    this.api.resultsSE
+      .PATCHcomplementaryinnovation(
+        this.informationComplentary,
+        this.idInnovation
+      )
+      .subscribe(resp => {
+        this.status = false;
+        this.saveedit.emit(true);
+      });
   }
 
   Ondelete(id) {
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
-      //('delete');
-      this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe(
-        resp => {
-          this.status = false;
-          this.saveedit.emit(true);
-        },
-        err => {
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
-        }
-      );
-    });
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to remove this complementary innovation?`,
+        description: ``,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe({
+          next: resp => {
+            this.status = false;
+            this.saveedit.emit(true);
+          },
+          error: err => {
+            this.api.alertsFe.show({
+              id: 'delete-error',
+              title: 'Error when delete result',
+              description: '',
+              status: 'error'
+            });
+          }
+        });
+      }
+    );
   }
 }
 
-export class complementaryInnovation {
+export class ComplementaryInnovation2 {
   short_title: string = null;
   title: string = null;
   description: string = null;
-  referenceMaterials: references[] = [];
+  referenceMaterials: References[] = [];
   complementaryFunctions: any[] = new Array();
   other_funcions: string;
   projects_organizations_working_on_innovation: string;
   specify_projects_organizations: boolean;
 }
 
-export class references {
+export class References {
   link: string = null;
 }
