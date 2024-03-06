@@ -6,7 +6,6 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
   selector: 'app-innovation-package-detail',
