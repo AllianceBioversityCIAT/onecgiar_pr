@@ -37,9 +37,6 @@
                 <app-tor-krs-primary-impact-area-selector [selectOptions]="dataItem[headerItem.attr]"
                     [result_code]="data[0].id" [flatFormat]="flatFormat"
                     *ngIf="headerItem.attr=='value' && i == 6 && data[0].id && validateObj(dataItem[headerItem.attr])"></app-tor-krs-primary-impact-area-selector>
-                <!-- 
-                <app-tor-krs-others-primary-impact-area [result_code]="data[0].id"
-                    *ngIf="headerItem.attr=='value' && i == 7 && data[0].id"></app-tor-krs-others-primary-impact-area> -->
             </td>
         </tr>
     </table>
