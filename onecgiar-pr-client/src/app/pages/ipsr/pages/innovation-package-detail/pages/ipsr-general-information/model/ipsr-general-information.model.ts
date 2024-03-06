@@ -15,4 +15,5 @@ export class IpsrGeneralInformationBody {
   evidence_environment_tag: string;
   poverty_tag_level_id: number;
   evidence_poverty_tag: string;
+  is_replicated?: boolean;
 }
