@@ -3,11 +3,30 @@ import { ApiService } from '../../services/api/api.service';
 import { ResultHistoryOfChangesModalService } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.service';
 import { ExportTablesService } from '../../services/export-tables.service';
 import { PhasesService } from '../../services/global/phases.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TableModule } from 'primeng/table';
+import { ResultHistoryOfChangesModalComponent } from '../../../pages/admin-section/pages/completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.component';
+import { FilterByTextPipe } from '../../pipes/filter-by-text.pipe';
+import { FilterInitWithRoleCoordAndLeadPipe } from '../../../pages/init-admin-section/pipes/filter-init-with-role-coord-and-lead/filter-init-with-role-coord-and-lead.pipe';
+import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
+import { PrMultiSelectComponent } from '../../../custom-fields/pr-multi-select/pr-multi-select.component';
 
 @Component({
   selector: 'app-global-completeness-status',
+  standalone: true,
   templateUrl: './global-completeness-status.component.html',
-  styleUrls: ['./global-completeness-status.component.scss']
+  styleUrls: ['./global-completeness-status.component.scss'],
+  imports: [
+    CommonModule,
+    TableModule,
+    FormsModule,
+    ResultHistoryOfChangesModalComponent,
+    FilterByTextPipe,
+    FilterInitWithRoleCoordAndLeadPipe,
+    PrButtonComponent,
+    PrMultiSelectComponent
+  ]
 })
 export class GlobalCompletenessStatusComponent implements OnInit {
   @Input() initMode: boolean = false;
@@ -37,7 +56,12 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     { title: 'Section seven', attr: 'section_seven_value' }
   ];
 
-  constructor(public api: ApiService, public phasesSE: PhasesService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  constructor(
+    public api: ApiService,
+    public phasesSE: PhasesService,
+    public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService,
+    public exportTablesSE: ExportTablesService
+  ) {}
 
   ngOnInit(): void {
     // this.POST_reportSesultsCompleteness([], []);
@@ -46,7 +70,8 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   }
 
   getThePhases() {
-    const autoSelectOpenPhases = (phases: any[]) => (this.phasesSelected = phases.filter((phase: any) => phase.status));
+    const autoSelectOpenPhases = (phases: any[]) =>
+      (this.phasesSelected = phases.filter((phase: any) => phase.status));
     const useLoadedPhases = () => {
       autoSelectOpenPhases(this.phasesSE.phases.reporting);
       this.reportingPhases = this.phasesSE.phases.reporting;
@@ -59,13 +84,17 @@ export class GlobalCompletenessStatusComponent implements OnInit {
       });
     };
 
-    this.phasesSE.phases.reporting.length ? useLoadedPhases() : listenWhenPhasesAreLoaded();
+    this.phasesSE.phases.reporting.length
+      ? useLoadedPhases()
+      : listenWhenPhasesAreLoaded();
   }
 
   POST_reportSesultsCompleteness(inits: any[], phases: any[], role?: number) {
-    this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, role).subscribe(({ response }) => {
-      this.resultsList = response;
-    });
+    this.api.resultsSE
+      .POST_reportSesultsCompleteness(inits, phases, role)
+      .subscribe(({ response }) => {
+        this.resultsList = response;
+      });
   }
 
   onRemoveinit(option) {}
@@ -94,7 +123,23 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     });
 
     resultsList.map((result: any) => {
-      const { result_code, result_title, phase_name, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
+      const {
+        result_code,
+        result_title,
+        phase_name,
+        official_code,
+        completeness,
+        result_type_name,
+        general_information,
+        theory_of_change,
+        partners,
+        geographic_location,
+        links_to_results,
+        evidence,
+        section_seven,
+        is_submitted,
+        pdf_link
+      } = result;
 
       resultsListMapped.push({
         result_code,
@@ -114,8 +159,28 @@ export class GlobalCompletenessStatusComponent implements OnInit {
         pdf_link: pdf_link
       });
     });
-    const wscols = [{ wpx: 70 }, { wpx: 100 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
-    this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
+    const wscols = [
+      { wpx: 70 },
+      { wpx: 100 },
+      { wpx: 800 },
+      { wpx: 100 },
+      { wpx: 130 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 }
+    ];
+    this.exportTablesSE.exportExcel(
+      resultsListMapped,
+      'completeness_status',
+      wscols
+    );
     this.requesting = false;
   }
 
@@ -128,7 +193,10 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     this.api.dataControlSE.myInitiativesList.forEach((init: any) => {
       if (init?.role != 'Lead' && init?.role != 'Coordinator') return;
       inits.push(init.initiative_id);
-      this.initiativesSelected.push({ id: init.initiative_id, full_name: init.full_name });
+      this.initiativesSelected.push({
+        id: init.initiative_id,
+        full_name: init.full_name
+      });
     });
     return inits;
   }
@@ -144,7 +212,11 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     let inits = this.initiativesSelected.map((init: any) => init.id);
     const phases = this.phasesSelected.map((phase: any) => phase.id);
     if (this.initMode && !inits.length) inits = this.mapMyInitiativesList();
-    this.POST_reportSesultsCompleteness(inits, phases, inits?.length ? null : 1);
+    this.POST_reportSesultsCompleteness(
+      inits,
+      phases,
+      inits?.length ? null : 1
+    );
   }
 
   convertToYesOrNot(value, nullOptionindex?) {
@@ -161,8 +233,10 @@ export class GlobalCompletenessStatusComponent implements OnInit {
   openInformationModal(resultId) {
     this.api.dataControlSE.showResultHistoryOfChangesModal = true;
     this.resultHistoryOfChangesModalSE.historyOfChangesList = [];
-    this.api.resultsSE.GET_historicalByResultId(resultId).subscribe(({ response }) => {
-      this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
-    });
+    this.api.resultsSE
+      .GET_historicalByResultId(resultId)
+      .subscribe(({ response }) => {
+        this.resultHistoryOfChangesModalSE.historyOfChangesList = response;
+      });
   }
 }

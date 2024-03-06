@@ -1,12 +1,25 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultHistoryOfChangesModalService } from './result-history-of-changes-modal.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
+import { CommonModule } from '@angular/common';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
+import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 
 @Component({
   selector: 'app-result-history-of-changes-modal',
+  standalone: true,
   templateUrl: './result-history-of-changes-modal.component.html',
-  styleUrls: ['./result-history-of-changes-modal.component.scss']
+  styleUrls: ['./result-history-of-changes-modal.component.scss'],
+  imports: [
+    CommonModule,
+    DialogModule,
+    TableModule,
+    PrButtonComponent,
+    NoDataTextComponent
+  ]
 })
 export class ResultHistoryOfChangesModalComponent {
   columnOrder = [
@@ -26,7 +39,11 @@ export class ResultHistoryOfChangesModalComponent {
     { title: 'Section seven', attr: 'section_seven_value' }
   ];
 
-  constructor(public api: ApiService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  constructor(
+    public api: ApiService,
+    public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService,
+    public exportTablesSE: ExportTablesService
+  ) {}
   cleanObject() {}
 
   exportExcel(resultsList) {
@@ -43,7 +60,16 @@ export class ResultHistoryOfChangesModalComponent {
       is_submit: 'Status'
     });
     resultsList.map(result => {
-      const { comment, user_last_name, user_first_name, email, initiative_role, app_role, created_date, is_submit } = result;
+      const {
+        comment,
+        user_last_name,
+        user_first_name,
+        email,
+        initiative_role,
+        app_role,
+        created_date,
+        is_submit
+      } = result;
       //(initiative_role);
       resultsListMapped.push({
         comment: this.convertToNodata(comment, 1),
@@ -57,8 +83,21 @@ export class ResultHistoryOfChangesModalComponent {
       });
     });
     // console.table(resultsListMapped);
-    const wscols = [{ wpx: 200 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 }, { wpx: 200 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
-    this.exportTablesSE.exportExcel(resultsListMapped, 'History_of_changes', wscols);
+    const wscols = [
+      { wpx: 200 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 150 },
+      { wpx: 200 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 }
+    ];
+    this.exportTablesSE.exportExcel(
+      resultsListMapped,
+      'History_of_changes',
+      wscols
+    );
   }
 
   convertToNodata(value, nullOptionindex?) {

@@ -1,11 +1,14 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterInitWithRoleCoordAndLead'
+  name: 'filterInitWithRoleCoordAndLead',
+  standalone: true
 })
 export class FilterInitWithRoleCoordAndLeadPipe implements PipeTransform {
   transform(list) {
-    const resultList = list?.filter(init => init?.role == 'Lead' || init?.role == 'Coordinator');
+    const resultList = list?.filter(
+      init => init?.role == 'Lead' || init?.role == 'Coordinator'
+    );
     if (!resultList?.length) return [];
     return resultList;
   }

@@ -282,6 +282,23 @@ export const routes: Routes = [
     loadComponent: () =>
       import('../pages/init-admin-section/init-admin-section.component').then(
         c => c.InitAdminSectionComponent
-      )
+      ),
+    children: [
+      {
+        path: '',
+        redirectTo: 'init-completeness-status',
+        pathMatch: 'full'
+      },
+      {
+        path: 'init-completeness-status',
+        loadComponent: () =>
+          import(
+            '../pages/init-admin-section/pages/init-completeness-status/init-completeness-status.component'
+          ).then(c => c.InitCompletenessStatusComponent)
+      }
+      // {
+      //   path: 'init-general-results-report'
+      // }
+    ]
   }
 ];
