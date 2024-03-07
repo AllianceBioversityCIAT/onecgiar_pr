@@ -2,13 +2,14 @@ import { Component, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { CdkCopyToClipboard } from '@angular/cdk/clipboard';
 
 @Component({
   selector: 'app-step-n1-scaling-ambition-blurb',
   standalone: true,
   templateUrl: './step-n1-scaling-ambition-blurb.component.html',
   styleUrls: ['./step-n1-scaling-ambition-blurb.component.scss'],
-  imports: [ToastModule],
+  imports: [ToastModule, CdkCopyToClipboard],
   providers: [MessageService]
 })
 export class StepN1ScalingAmbitionBlurbComponent {

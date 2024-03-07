@@ -4,7 +4,7 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { environment } from '../../../../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { TooltipModule } from 'primeng/tooltip';
-import { ClipboardModule } from '@angular/cdk/clipboard';
+import { CdkCopyToClipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { ToastModule } from 'primeng/toast';
 import { PdfIconComponent } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 
@@ -13,7 +13,7 @@ import { PdfIconComponent } from '../../../../../../shared/icon-components/pdf-i
   standalone: true,
   templateUrl: './pdf-actions.component.html',
   styleUrls: ['./pdf-actions.component.scss'],
-  providers: [MessageService],
+  providers: [MessageService, CdkCopyToClipboard],
   imports: [
     CommonModule,
     PdfIconComponent,

@@ -8,8 +8,4 @@ import { GlobalCompletenessStatusComponent } from '../../../../shared/components
   styleUrls: ['./init-completeness-status.component.scss'],
   imports: [GlobalCompletenessStatusComponent]
 })
-export class InitCompletenessStatusComponent {
-  constructor() {
-    console.log('inasas');
-  }
-}
+export class InitCompletenessStatusComponent {}
