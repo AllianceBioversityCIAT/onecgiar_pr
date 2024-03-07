@@ -36,5 +36,5 @@ export class UpdateGeneralInformationDto {
   public is_krs?: boolean;
   public krs_url?: string;
   public is_discontinued!: boolean;
-  public discontinued_options!: ResultsInvestmentDiscontinuedOption[];
+  public discontinued_options!: any[];
 }

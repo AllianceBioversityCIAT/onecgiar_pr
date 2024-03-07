@@ -687,9 +687,7 @@ export class ResultInnovationPackageService {
         is_discontinued: req?.is_discontinued,
       });
 
-      if (
-        req?.is_discontinued
-      ) {
+      if (req?.is_discontinued) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           req.discontinued_options.map(
             (el) => el.investment_discontinued_option_id,
@@ -711,7 +709,7 @@ export class ResultInnovationPackageService {
             await this._resultsInvestmentDiscontinuedOptionRepository.update(
               res.results_investment_discontinued_option_id,
               {
-                is_active: i.is_active,
+                is_active: i.value,
                 description: i?.description,
                 last_updated_by: user.id,
               },
@@ -727,7 +725,15 @@ export class ResultInnovationPackageService {
             });
           }
         }
-      } 
+      } else {
+        await this._resultsInvestmentDiscontinuedOptionRepository.update(
+          { result_id: resultId },
+          {
+            is_active: false,
+            last_updated_by: user.id,
+          },
+        );
+      }
 
       const genderEvidenceExist = await this._evidenceRepository.findOne({
         where: {
