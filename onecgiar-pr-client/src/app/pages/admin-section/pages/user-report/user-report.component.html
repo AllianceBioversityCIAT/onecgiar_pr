@@ -8,7 +8,7 @@
             (click)="this.exportExcel(this.usersList)"></app-pr-button>
     </div>
     <p-table [value]="this.usersList | filterByText:this.textToFind" [scrollable]="true" [paginator]="true"
-        [rowsPerPageOptions]="[20,50,100]" [rows]="20" scrollHeight="calc(100vh - 235px)" style="min-width:200px">
+        [rowsPerPageOptions]="[20,50,100]" [rows]="20" scrollHeight="calc(100vh - 235px)" >
         <ng-template pTemplate="header">
             <tr>
                 <th pSortableColumn="user_id" style="min-width:150px">User id <p-sortIcon field="user_id"></p-sortIcon>
