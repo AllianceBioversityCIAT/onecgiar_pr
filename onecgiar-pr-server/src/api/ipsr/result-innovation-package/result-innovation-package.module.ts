@@ -38,6 +38,7 @@ import { EvidencesRepository } from '../../results/evidences/evidences.repositor
 import { IpsrService } from '../ipsr.service';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -76,6 +77,7 @@ import { ResultCountrySubnationalRepository } from '../../results/result-countri
     IpsrService,
     ReturnResponse,
     ResultCountrySubnationalRepository,
+    ResultsInvestmentDiscontinuedOptionRepository
   ],
   imports: [VersionsModule, forwardRef(() => VersioningModule)],
   exports: [ResultInnovationPackageRepository],

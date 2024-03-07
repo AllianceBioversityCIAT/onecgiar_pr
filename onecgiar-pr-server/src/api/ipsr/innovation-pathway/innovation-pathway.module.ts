@@ -58,6 +58,7 @@ import { resultValidationRepository } from '../../results/results-validation-mod
 import { UnitTimeRepository } from '../result-innovation-package/repositories/unit_time.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { IpsrService } from '../ipsr.service';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
@@ -116,7 +117,8 @@ import { IpsrService } from '../ipsr.service';
     resultValidationRepository,
     UnitTimeRepository,
     TocResultsRepository,
-    IpsrService
+    IpsrService,
+    ResultsInvestmentDiscontinuedOptionRepository
   ],
 })
 export class InnovationPathwayModule {}
