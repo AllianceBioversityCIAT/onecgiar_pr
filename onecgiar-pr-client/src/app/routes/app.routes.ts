@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { PdfReportsComponent } from '../pages/pdf-reports/pdf-reports.component';
+import { CheckLoginGuard } from '../shared/guards/check-login.guard';
+import { CheckAdminGuard } from '../shared/guards/check-admin.guard';
 
 export const routes: Routes = [
   {
@@ -9,6 +11,7 @@ export const routes: Routes = [
   },
   {
     path: 'result',
+    canActivate: [CheckLoginGuard],
     loadComponent: () =>
       import('../pages/results/results.component').then(
         c => c.ResultsComponent
@@ -217,6 +220,7 @@ export const routes: Routes = [
   },
   {
     path: 'ipsr',
+    canActivate: [CheckLoginGuard],
     loadComponent: () =>
       import('../pages/ipsr/ipsr.component').then(c => c.IpsrComponent),
     children: [
@@ -367,6 +371,7 @@ export const routes: Routes = [
   },
   {
     path: 'quality-assurance',
+    canActivate: [CheckLoginGuard],
     loadComponent: () =>
       import('../pages/quality-assurance/quality-assurance.component').then(
         c => c.QualityAssuranceComponent
@@ -402,6 +407,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin-module',
+    canActivate: [CheckAdminGuard],
     loadComponent: () =>
       import('../pages/admin-section/admin-section.component').then(
         c => c.AdminSectionComponent
