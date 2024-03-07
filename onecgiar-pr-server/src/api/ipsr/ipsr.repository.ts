@@ -244,6 +244,8 @@ export class IpsrRepository
                     rt.id = r.result_type_id
             ) AS result_type,
             v.status as is_phase_open,
+            r.is_replicated,
+            r.is_discontinued,
             v.phase_name,
             v.phase_year 
         FROM
@@ -403,7 +405,9 @@ export class IpsrRepository
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person,
-            r.reported_year_id
+            r.reported_year_id,
+            r.is_replicated,
+            r.is_discontinued
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id

@@ -16,4 +16,5 @@ export class IpsrGeneralInformationBody {
   poverty_tag_level_id: number;
   evidence_poverty_tag: string;
   is_replicated?: boolean;
+  discontinued_options: any[];
 }
