@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { PdfReportsComponent } from '../pages/pdf-reports/pdf-reports.component';
 
 export const routes: Routes = [
   {
@@ -454,5 +455,12 @@ export const routes: Routes = [
         ]
       }
     ]
+  },
+  {
+    path: 'reports/result-details/:id',
+    loadComponent: () =>
+      import('../pages/pdf-reports/pdf-reports.component').then(
+        c => c.PdfReportsComponent
+      )
   }
 ];

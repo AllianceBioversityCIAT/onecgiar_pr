@@ -1,10 +1,13 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { internationalizationData } from '../../data/internationalizationData';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-page-alert',
+  standalone: true,
   templateUrl: './page-alert.component.html',
-  styleUrls: ['./page-alert.component.scss']
+  styleUrls: ['./page-alert.component.scss'],
+  imports: [CommonModule]
 })
 export class PageAlertComponent {
   internationalizationData = internationalizationData;

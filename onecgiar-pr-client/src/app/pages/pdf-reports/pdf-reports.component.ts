@@ -1,14 +1,18 @@
+import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from 'src/app/shared/services/api/auth.service';
 import { environment } from 'src/environments/environment';
+import { PageAlertComponent } from '../../shared/components/page-alert/page-alert.component';
 
 @Component({
   selector: 'app-pdf-reports',
+  standalone: true,
   templateUrl: './pdf-reports.component.html',
-  styleUrls: ['./pdf-reports.component.scss']
+  styleUrls: ['./pdf-reports.component.scss'],
+  imports: [CommonModule, PageAlertComponent]
 })
 export class PdfReportsComponent implements OnInit {
   iframeLoaded = null;
@@ -17,7 +21,12 @@ export class PdfReportsComponent implements OnInit {
     message: null
   };
   report = new Report(this.activatedRoute, this.sanitizer);
-  constructor(private authService: AuthService, private activatedRoute: ActivatedRoute, public sanitizer: DomSanitizer, public http: HttpClient) {}
+  constructor(
+    private authService: AuthService,
+    private activatedRoute: ActivatedRoute,
+    public sanitizer: DomSanitizer,
+    public http: HttpClient
+  ) {}
 
   ngOnInit(): void {
     this.authService.inLogin = true;
@@ -27,7 +36,8 @@ export class PdfReportsComponent implements OnInit {
   }
 
   getPdfData() {
-    if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
+    if (!this.activatedRoute.snapshot.paramMap.get('id'))
+      return (this.error.type = 'warning');
     this.iframeLoaded = true;
     //(this.report.iframeRoute);
     this.http.get<any>(this.report.iframeRoute).subscribe(
@@ -47,7 +57,8 @@ export class PdfReportsComponent implements OnInit {
 
   validateErrors({ message, status }) {
     const statusText = String(status);
-    this.error.type = statusText[0] == '5' ? 'error' : statusText[0] == '4' ? 'warning' : null;
+    this.error.type =
+      statusText[0] == '5' ? 'error' : statusText[0] == '4' ? 'warning' : null;
     // switch (status) {
     //   case '404':
     //     return '';
@@ -72,19 +83,32 @@ class Report {
   }
 
   sanitizeUrl() {
-    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.iframeRoute);
+    this.sanitizedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+      this.iframeRoute
+    );
   }
 
   get iframeRoute() {
-    return `${environment.apiBaseUrl}api/platform-report/result/${this.activatedRoute.snapshot.paramMap.get('id')}${this.qParamsObjectToqueryParams()}`;
+    return `${
+      environment.apiBaseUrl
+    }api/platform-report/result/${this.activatedRoute.snapshot.paramMap.get(
+      'id'
+    )}${this.qParamsObjectToqueryParams()}`;
   }
 
   qParamsObjectToqueryParams() {
-    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap.params);
+    const objectKeys = Object.keys(
+      this.activatedRoute.snapshot.queryParamMap.params
+    );
     if (!objectKeys.length) return '';
     let queryParamsText = '';
     const params = this.activatedRoute.snapshot.queryParamMap.params;
-    objectKeys.forEach((key, i) => (queryParamsText += (i > 0 && params[key] ? '&' : '') + (params[key] ? `${key}=${params[key]}` : '')));
+    objectKeys.forEach(
+      (key, i) =>
+        (queryParamsText +=
+          (i > 0 && params[key] ? '&' : '') +
+          (params[key] ? `${key}=${params[key]}` : ''))
+    );
 
     return queryParamsText ? '?' + queryParamsText : '';
   }
