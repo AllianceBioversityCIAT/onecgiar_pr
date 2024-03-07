@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterModule } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { IpsrGreenCheckComponent } from '../../../../../../components/ipsr-green-check/ipsr-green-check.component';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./step-n2.component.scss'],
   imports: [
     CommonModule,
-    RouterModule,
+    RouterOutlet,
     RouterLink,
     RouterLinkActive,
     IpsrGreenCheckComponent

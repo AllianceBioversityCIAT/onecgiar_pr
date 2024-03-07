@@ -1,6 +1,11 @@
 import { Component } from '@angular/core';
 import { ResultsNotificationsService } from './pages/results-notifications/results-notifications.service';
-import { RouterModule } from '@angular/router';
+import {
+  RouterLink,
+  RouterLinkActive,
+  RouterModule,
+  RouterOutlet
+} from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AlertGlobalInfoComponent } from '../../../../shared/components/alert-global-info/alert-global-info.component';
 
@@ -9,7 +14,13 @@ import { AlertGlobalInfoComponent } from '../../../../shared/components/alert-gl
   standalone: true,
   templateUrl: './results-outlet.component.html',
   styleUrls: ['./results-outlet.component.scss'],
-  imports: [CommonModule, RouterModule, AlertGlobalInfoComponent]
+  imports: [
+    CommonModule,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    AlertGlobalInfoComponent
+  ]
 })
 export class ResultsOutletComponent {
   animateBell = true;

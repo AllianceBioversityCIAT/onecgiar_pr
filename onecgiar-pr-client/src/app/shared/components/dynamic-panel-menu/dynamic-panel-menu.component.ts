@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, Input } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, Input } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterModule } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -8,7 +8,7 @@ import { TooltipModule } from 'primeng/tooltip';
   standalone: true,
   templateUrl: './dynamic-panel-menu.component.html',
   styleUrls: ['./dynamic-panel-menu.component.scss'],
-  imports: [CommonModule, RouterModule, TooltipModule]
+  imports: [CommonModule, RouterLink, RouterLinkActive, TooltipModule]
 })
 export class DynamicPanelMenuComponent {
   @Input() options: any;
