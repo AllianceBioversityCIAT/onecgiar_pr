@@ -23,7 +23,25 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+      this.GET_investmentDiscontinuedOptions();
     });
+  }
+
+  GET_investmentDiscontinuedOptions() {
+    this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
+      this.convertChecklistToDiscontinuedOptions(response);
+    });
+  }
+
+  convertChecklistToDiscontinuedOptions(response) {
+    const options = [...response];
+    options.forEach(option => {
+      const found = this.ipsrGeneralInformationBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      if (found) {
+        (option.value = true), (option.description = found?.description);
+      }
+    });
+    this.ipsrGeneralInformationBody.discontinued_options = options;
   }
 
   onChangeKrs() {
