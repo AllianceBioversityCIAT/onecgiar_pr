@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'innovationPackageListFilter'
+  name: 'innovationPackageListFilter',
+  standalone: true
 })
 export class InnovationPackageListFilterPipe implements PipeTransform {
   transform(list, word: string, inits: any, initsSelectedJoinText: any) {
@@ -11,13 +12,21 @@ export class InnovationPackageListFilterPipe implements PipeTransform {
   }
 
   filterByText(list, word) {
-    return list.filter((item: any) => (Boolean(item?.full_name) ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1 : false));
+    return list.filter((item: any) =>
+      Boolean(item?.full_name)
+        ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1
+        : false
+    );
   }
 
   filterByInits(list, inits) {
     if (inits.every(init => init.selected !== true)) return list;
     return list.filter(item => {
-      return Boolean(inits.find(init => init.official_code == item?.official_code && init.selected));
+      return Boolean(
+        inits.find(
+          init => init.official_code == item?.official_code && init.selected
+        )
+      );
     });
   }
 }

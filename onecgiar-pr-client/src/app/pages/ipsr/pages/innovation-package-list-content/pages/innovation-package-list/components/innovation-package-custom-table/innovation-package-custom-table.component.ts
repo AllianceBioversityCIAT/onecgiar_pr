@@ -2,11 +2,17 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { RouterModule } from '@angular/router';
+import { MenuModule } from 'primeng/menu';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
+  standalone: true,
   templateUrl: './innovation-package-custom-table.component.html',
-  styleUrls: ['./innovation-package-custom-table.component.scss']
+  styleUrls: ['./innovation-package-custom-table.component.scss'],
+  imports: [CommonModule, TableModule, RouterModule, MenuModule]
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
@@ -23,7 +29,10 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
-  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -51,17 +60,38 @@ export class InnovationPackageCustomTableComponent {
     }
   ];
   onDelete() {
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe({
-        next: resp => {
-          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
-          this.deleteEvent.emit();
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
-        }
-      });
-    });
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`,
+        description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.api.resultsSE
+          .DELETEInnovationPackage(this.currentInnovationPackageToAction.id)
+          .subscribe({
+            next: resp => {
+              this.api.alertsFe.show({
+                id: 'confirm-delete-result-su',
+                title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`,
+                description: ``,
+                status: 'success'
+              });
+              this.deleteEvent.emit();
+            },
+            error: err => {
+              this.api.alertsFe.show({
+                id: 'delete-error',
+                title: 'Error when delete Innovation Package',
+                description: '',
+                status: 'error'
+              });
+            }
+          });
+      }
+    );
   }
   onPressAction(result) {
     const onlyNumbers = result?.official_code.replace(/[^0-9]+/g, '');

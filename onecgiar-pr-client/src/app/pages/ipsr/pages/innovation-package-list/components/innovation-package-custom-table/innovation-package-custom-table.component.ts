@@ -2,11 +2,17 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { MenuItem } from 'primeng/api';
 import { RetrieveModalService } from '../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { RouterModule } from '@angular/router';
+import { MenuModule } from 'primeng/menu';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
+  standalone: true,
   templateUrl: './innovation-package-custom-table.component.html',
-  styleUrls: ['./innovation-package-custom-table.component.scss']
+  styleUrls: ['./innovation-package-custom-table.component.scss'],
+  imports: [CommonModule, TableModule, RouterModule, MenuModule]
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
@@ -20,7 +26,10 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Status', attr: 'status' },
     { title: 'Year', attr: 'reported_year_id' }
   ];
-  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
   items: MenuItem[] = [
     {
       label: 'Map to TOC',
@@ -59,20 +68,41 @@ export class InnovationPackageCustomTableComponent {
   ];
   onDelete() {
     //(this.api.dataControlSE.currentResult);
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      //('delete');
-      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe(
-        resp => {
-          //(resp);
-          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
-          this.deleteEvent.emit();
-        },
-        err => {
-          console.error(err);
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
-        }
-      );
-    });
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`,
+        description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        //('delete');
+        this.api.resultsSE
+          .DELETEInnovationPackage(this.currentInnovationPackageToAction.id)
+          .subscribe(
+            resp => {
+              //(resp);
+              this.api.alertsFe.show({
+                id: 'confirm-delete-result-su',
+                title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`,
+                description: ``,
+                status: 'success'
+              });
+              this.deleteEvent.emit();
+            },
+            err => {
+              console.error(err);
+              this.api.alertsFe.show({
+                id: 'delete-error',
+                title: 'Error when delete Innovation Package',
+                description: '',
+                status: 'error'
+              });
+            }
+          );
+      }
+    );
   }
   onPressAction(result) {
     //(result);

@@ -3,11 +3,28 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { IpsrListService } from './services/ipsr-list.service';
 import { IpsrListFilterService } from './services/ipsr-list-filter.service';
+import { CommonModule } from '@angular/common';
+import { InnovationPackageCustomTableComponent } from './components/innovation-package-custom-table/innovation-package-custom-table.component';
+import { SectionHeaderComponent } from '../../../../components/section-header/section-header.component';
+import { FilterByTextPipe } from '../../../../../../shared/pipes/filter-by-text.pipe';
+import { InnovationPackageListFilterPipe } from './components/innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
+import { IpsrListFiltersComponent } from './components/ipsr-list-filters/ipsr-list-filters.component';
+import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
 
 @Component({
   selector: 'app-innovation-package-list',
+  standalone: true,
   templateUrl: './innovation-package-list.component.html',
-  styleUrls: ['./innovation-package-list.component.scss']
+  styleUrls: ['./innovation-package-list.component.scss'],
+  imports: [
+    CommonModule,
+    InnovationPackageCustomTableComponent,
+    SectionHeaderComponent,
+    FilterByTextPipe,
+    InnovationPackageListFilterPipe,
+    IpsrListFiltersComponent,
+    PrButtonComponent
+  ]
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
   innovationPackagesList = [];
@@ -15,12 +32,20 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   phasesList = [];
   filterJoin = 0;
 
-  constructor(public api: ApiService, public phaseServices: PhasesService, public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
+  constructor(
+    public api: ApiService,
+    public phaseServices: PhasesService,
+    public ipsrListService: IpsrListService,
+    public ipsrListFilterSE: IpsrListFilterService
+  ) {}
 
   ngOnInit(): void {
     this.api.rolesSE.isAdmin ? this.deselectInits() : null;
     this.GETAllInnovationPackages();
-    this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
+    this.phaseServices.phases.ipsr.forEach(item => ({
+      ...item,
+      selected: item.status
+    }));
   }
 
   GETAllInnovationPackages() {
@@ -45,14 +70,20 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   }
 
   get everyDeselected() {
-    return this.api.dataControlSE.myInitiativesList.every(item => item.selected != true);
+    return this.api.dataControlSE.myInitiativesList.every(
+      item => item.selected != true
+    );
   }
 
   deselectInits() {
-    this.api.dataControlSE.myInitiativesList.map(item => (item.selected = false));
+    this.api.dataControlSE.myInitiativesList.map(
+      item => (item.selected = false)
+    );
   }
 
   ngOnDestroy(): void {
-    this.api.dataControlSE?.myInitiativesList.map(item => (item.selected = true));
+    this.api.dataControlSE?.myInitiativesList.map(
+      item => (item.selected = true)
+    );
   }
 }

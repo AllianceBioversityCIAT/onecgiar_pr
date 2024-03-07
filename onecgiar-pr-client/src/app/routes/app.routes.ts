@@ -219,20 +219,42 @@ export const routes: Routes = [
     loadComponent: () =>
       import('../pages/ipsr/ipsr.component').then(c => c.IpsrComponent),
     children: [
-      // {
-      //   path: '',
-      //   redirectTo: 'list',
-      //   pathMatch: 'full'
-      // },
+      {
+        path: '',
+        redirectTo: 'list',
+        pathMatch: 'full'
+      },
       // {
       //   path: 'creator'
       // },
-      // {
-      //   path: 'list',
-      //   children: [
-
-      //   ]
-      // },
+      {
+        path: 'list',
+        loadComponent: () =>
+          import(
+            '../pages/ipsr/pages/innovation-package-list-content/innovation-package-list-content.component'
+          ).then(c => c.InnovationPackageListContentComponent),
+        children: [
+          {
+            path: '',
+            redirectTo: 'innovation-list',
+            pathMatch: 'full'
+          },
+          {
+            path: 'innovation-list',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-list-content/pages/innovation-package-list/innovation-package-list.component'
+              ).then(c => c.InnovationPackageListComponent)
+          },
+          {
+            path: 'notifications',
+            loadComponent: () =>
+              import(
+                '../pages/ipsr/pages/innovation-package-list-content/pages/innovation-packages-notification/innovation-packages-notification.component'
+              ).then(c => c.InnovationPackagesNotificationComponent)
+          }
+        ]
+      },
       {
         path: 'detail/:id',
         loadComponent: () =>
