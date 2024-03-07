@@ -1,7 +1,18 @@
-import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Output,
+  EventEmitter,
+  Input,
+  OnDestroy
+} from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../services/manage-innovations-list.service';
 import { InnovationPackageCreatorBody } from '../../model/innovation-package-creator.model';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TableModule } from 'primeng/table';
+import { FilterByTextPipe } from '../../../../../../shared/pipes/filter-by-text.pipe';
 interface CoreInnovationSelected {
   result_id: string;
   result_code: string;
@@ -15,20 +26,25 @@ interface CoreInnovationSelected {
 }
 @Component({
   selector: 'app-results-innovation-output-list',
+  standalone: true,
   templateUrl: './results-innovation-output-list.component.html',
-  styleUrls: ['./results-innovation-output-list.component.scss']
+  styleUrls: ['./results-innovation-output-list.component.scss'],
+  imports: [CommonModule, FormsModule, TableModule, FilterByTextPipe]
 })
-export class ResultsInnovationOutputListComponent {
+export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
   coreInnovationSelected: CoreInnovationSelected;
   searchText = '';
   @Input() body = new InnovationPackageCreatorBody();
   @Output() selectInnovationEvent = new EventEmitter<CoreInnovationSelected>();
-  constructor(public api: ApiService, public manageInnovationsListSE: ManageInnovationsListService) {}
+
+  constructor(
+    public api: ApiService,
+    public manageInnovationsListSE: ManageInnovationsListService
+  ) {}
 
   ngOnInit(): void {
     this.cleanSelected();
     this.manageInnovationsListSE.GETallInnovations(this.body.initiative_id);
-    //(this.api.rolesSE.readOnly);
   }
 
   ngOnDestroy(): void {
@@ -41,9 +57,11 @@ export class ResultsInnovationOutputListComponent {
     { title: 'Lead', attr: 'official_code' },
     { title: 'Creation date', attr: 'creation_date' }
   ];
+
   openInNewPage(link) {
     window.open(link, '_blank');
   }
+
   selectInnovation(result: CoreInnovationSelected) {
     this.cleanSelected();
     result.selected = true;
@@ -51,6 +69,8 @@ export class ResultsInnovationOutputListComponent {
   }
 
   cleanSelected() {
-    this.manageInnovationsListSE.allInnovationsList.map((inno: CoreInnovationSelected) => (inno.selected = false));
+    this.manageInnovationsListSE.allInnovationsList.map(
+      (inno: CoreInnovationSelected) => (inno.selected = false)
+    );
   }
 }

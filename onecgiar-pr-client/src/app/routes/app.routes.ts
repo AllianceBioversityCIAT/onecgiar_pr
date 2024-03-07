@@ -224,9 +224,13 @@ export const routes: Routes = [
       //   redirectTo: 'list',
       //   pathMatch: 'full'
       // },
-      // {
-      //   path: 'creator'
-      // },
+      {
+        path: 'creator',
+        loadComponent: () =>
+          import(
+            '../pages/ipsr/pages/innovation-package-creator/innovation-package-creator.component'
+          ).then(c => c.InnovationPackageCreatorComponent)
+      },
       // {
       //   path: 'list',
       //   children: [

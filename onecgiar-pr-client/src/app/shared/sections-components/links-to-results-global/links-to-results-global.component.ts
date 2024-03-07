@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { AddButtonComponent } from '../../../custom-fields/add-button/add-button.component';
 import { SaveButtonComponent } from '../../../custom-fields/save-button/save-button.component';
 import { EditOrDeleteItemButtonComponent } from '../../../custom-fields/edit-or-delete-item-button/edit-or-delete-item-button.component';
+import { PrInputComponent } from '../../../custom-fields/pr-input/pr-input.component';
 
 @Component({
   selector: 'app-links-to-results-global',
@@ -30,6 +31,7 @@ import { EditOrDeleteItemButtonComponent } from '../../../custom-fields/edit-or-
     DetailSectionTitleComponent,
     PrFieldHeaderComponent,
     PrYesOrNotComponent,
+    PrInputComponent,
     AlertStatusComponent,
     NoDataTextComponent,
     AddButtonComponent,
@@ -104,7 +106,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      if (columnAttr == 'result_code') return (this.combine = true);
+      if (columnAttr == 'result_code') return this.combine;
       const resultListTableHTML = document.getElementById('resultListTable');
       this.combine =
         !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]')
@@ -250,7 +252,7 @@ export class LinksToResultsGlobalComponent implements OnInit {
     for (const iterator of this.linksToResultsBody.legacy_link) {
       if (
         this.linksToResultsBody.legacy_link.find(
-          (evidence: any) => !Boolean(evidence.legacy_link)
+          (evidence: any) => !evidence.legacy_link
         )
       )
         return true;
