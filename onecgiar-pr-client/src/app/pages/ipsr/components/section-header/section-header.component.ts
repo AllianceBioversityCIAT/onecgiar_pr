@@ -11,6 +11,4 @@ import { Component, Input } from '@angular/core';
 export class SectionHeaderComponent {
   @Input() titleText: string;
   @Input() description: string;
-
-  constructor() {}
 }
