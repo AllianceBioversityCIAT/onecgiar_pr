@@ -2,14 +2,14 @@ import { Component } from '@angular/core';
 import { DataControlService } from '../../shared/services/data-control.service';
 import { CommonModule } from '@angular/common';
 import { DynamicPanelMenuComponent } from '../../shared/components/dynamic-panel-menu/dynamic-panel-menu.component';
-import { RouterModule } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-admin-section',
   standalone: true,
   templateUrl: './admin-section.component.html',
   styleUrls: ['./admin-section.component.scss'],
-  imports: [CommonModule, DynamicPanelMenuComponent, RouterModule]
+  imports: [CommonModule, DynamicPanelMenuComponent, RouterOutlet]
 })
 export class AdminSectionComponent {
   sections = [

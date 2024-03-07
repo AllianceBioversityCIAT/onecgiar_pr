@@ -2,14 +2,14 @@ import { Component } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-ipsr',
   standalone: true,
   templateUrl: './ipsr.component.html',
   styleUrls: ['./ipsr.component.scss'],
-  imports: [CommonModule, RouterModule]
+  imports: [CommonModule, RouterOutlet]
 })
 export class IpsrComponent {
   constructor(

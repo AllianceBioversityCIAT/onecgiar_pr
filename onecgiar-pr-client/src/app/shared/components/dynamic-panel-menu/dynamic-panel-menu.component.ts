@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterModule } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({

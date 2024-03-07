@@ -4,7 +4,6 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
-import { RouterModule } from '@angular/router';
 import { ResultsToUpdateFilterPipe } from './results-to-update-filter.pipe';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { FormsModule } from '@angular/forms';
@@ -20,7 +19,6 @@ import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-butt
     FormsModule,
     DialogModule,
     TableModule,
-    RouterModule,
     ResultsToUpdateFilterPipe,
     PrFieldHeaderComponent,
     PrButtonComponent

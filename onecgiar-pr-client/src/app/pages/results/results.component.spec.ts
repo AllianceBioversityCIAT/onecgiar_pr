@@ -1,9 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
 import { ResultsComponent } from './results.component';
 import { HttpClientModule } from '@angular/common/http';
 import { ApiService } from '../../../app/shared/services/api/api.service';
-import { environment } from '../../../environments/environment';
 import { IpsrDataControlService } from '../ipsr/services/ipsr-data-control.service';
 
 describe('ResultsComponent', () => {
@@ -14,21 +12,21 @@ describe('ResultsComponent', () => {
 
   beforeEach(async () => {
     mockApiService = {
-      dataControlSE:{
-        detailSectionTitle:jest.fn()
+      dataControlSE: {
+        detailSectionTitle: jest.fn()
       },
-      rolesSE:{
-        platformIsClosed:true
+      rolesSE: {
+        platformIsClosed: true
       },
       globalVariablesSE: {
         get: {
-          result_is_closed:true
+          result_is_closed: true
         }
       }
-    }
+    };
     mockIpsrDataControlService = {
-      inIpsr:false
-    }
+      inIpsr: false
+    };
     await TestBed.configureTestingModule({
       declarations: [ResultsComponent],
       providers: [
@@ -41,24 +39,25 @@ describe('ResultsComponent', () => {
           useValue: mockIpsrDataControlService
         }
       ],
-      imports: [
-        HttpClientModule,
-        RouterModule
-      ],
+      imports: [HttpClientModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultsComponent);
     component = fixture.componentInstance;
   });
 
-
   describe('ngOnInit', () => {
     it('should set properties correctly in ngOnInit', () => {
       component.ngOnInit();
-      const spy = jest.spyOn(mockApiService.dataControlSE, 'detailSectionTitle');
+      const spy = jest.spyOn(
+        mockApiService.dataControlSE,
+        'detailSectionTitle'
+      );
       expect(spy).toHaveBeenCalledWith('Results');
       expect(mockIpsrDataControlService.inIpsr).toBeFalsy();
-      expect(mockApiService.rolesSE.platformIsClosed).toBe(mockApiService.globalVariablesSE.get.result_is_closed);
+      expect(mockApiService.rolesSE.platformIsClosed).toBe(
+        mockApiService.globalVariablesSE.get.result_is_closed
+      );
     });
   });
 });

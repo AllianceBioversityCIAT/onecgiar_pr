@@ -11,12 +11,7 @@ import { ResultHistoryOfChangesModalComponent } from '../completeness-status/com
 import { FilterByTextPipe } from '../../../../shared/pipes/filter-by-text.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
-import {
-  RouterLink,
-  RouterLinkActive,
-  RouterModule,
-  RouterOutlet
-} from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-phase-management',

@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import { Component, DoCheck, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { IpsrDataControlService } from '../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -22,7 +22,7 @@ import { IpsrSubmissionModalComponent } from './components/ipsr-submission-modal
     CommonModule,
     PrButtonComponent,
     IpsrDetailTopMenuComponent,
-    RouterModule,
+    RouterOutlet,
     PartnersRequestComponent,
     IpsrUnsubmitModalComponent,
     IpsrSubmissionModalComponent

@@ -1,10 +1,5 @@
 import { Component } from '@angular/core';
-import {
-  ActivatedRoute,
-  Router,
-  RouterLink,
-  RouterModule
-} from '@angular/router';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { NavigationBarService } from '../../../../shared/services/navigation-bar.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
@@ -38,14 +33,13 @@ import { PhaseSwitcherComponent } from '../../../../shared/components/phase-swit
     CommonModule,
     PanelMenuComponent,
     PrButtonComponent,
-    RouterLink,
+    RouterOutlet,
     PdfActionsComponent,
     ToastModule,
     NoEditContainerComponent,
     PartnersRequestComponent,
     UnsubmitModalComponent,
     SubmissionModalComponent,
-    RouterModule,
     ResultTitleComponent,
     PhaseSwitcherComponent
   ]

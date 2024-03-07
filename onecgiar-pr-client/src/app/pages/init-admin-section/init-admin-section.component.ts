@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { DynamicPanelMenuComponent } from '../../shared/components/dynamic-panel-menu/dynamic-panel-menu.component';
 
 @Component({
@@ -10,7 +10,7 @@ import { DynamicPanelMenuComponent } from '../../shared/components/dynamic-panel
   standalone: true,
   templateUrl: './init-admin-section.component.html',
   styleUrls: ['./init-admin-section.component.scss'],
-  imports: [CommonModule, RouterModule, DynamicPanelMenuComponent]
+  imports: [CommonModule, RouterOutlet, DynamicPanelMenuComponent]
 })
 export class InitAdminSectionComponent implements OnInit {
   sections = [

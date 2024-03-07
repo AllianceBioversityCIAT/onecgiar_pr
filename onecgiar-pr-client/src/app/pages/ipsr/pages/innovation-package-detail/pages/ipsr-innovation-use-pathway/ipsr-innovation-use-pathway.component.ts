@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { SteperNavigationComponent } from '../../../../../../shared/components/steper-navigation/steper-navigation.component';
 
 @Component({
@@ -7,7 +7,7 @@ import { SteperNavigationComponent } from '../../../../../../shared/components/s
   standalone: true,
   templateUrl: './ipsr-innovation-use-pathway.component.html',
   styleUrls: ['./ipsr-innovation-use-pathway.component.scss'],
-  imports: [RouterModule, SteperNavigationComponent]
+  imports: [SteperNavigationComponent, RouterOutlet]
 })
 export class IpsrInnovationUsePathwayComponent implements OnInit {
   menuOptions: any[];

@@ -2,7 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
 import { TypePneReportRouting } from '../../shared/routing/routing-data';
@@ -21,7 +21,7 @@ import { FormsModule } from '@angular/forms';
     FormsModule,
     TorPanelMenuComponent,
     PrSelectComponent,
-    RouterModule
+    RouterOutlet
   ]
 })
 export class TypeOneReportComponent implements OnInit {

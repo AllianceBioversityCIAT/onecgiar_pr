@@ -3,7 +3,6 @@ import { ApiService } from '../../../../../../../../../shared/services/api/api.s
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
-import { RouterModule } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { PrYesOrNotComponent } from '../../../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
@@ -19,7 +18,6 @@ import { FeedbackValidationDirective } from '../../../../../../../../../shared/d
   imports: [
     CommonModule,
     TableModule,
-    RouterModule,
     TooltipModule,
     DialogModule,
     PrYesOrNotComponent,

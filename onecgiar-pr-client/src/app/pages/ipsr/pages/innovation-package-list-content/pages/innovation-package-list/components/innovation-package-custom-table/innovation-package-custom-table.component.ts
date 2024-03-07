@@ -4,15 +4,15 @@ import { RetrieveModalService } from '../../../../../../../results/pages/result-
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
-import { RouterModule } from '@angular/router';
 import { MenuModule } from 'primeng/menu';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
   standalone: true,
   templateUrl: './innovation-package-custom-table.component.html',
   styleUrls: ['./innovation-package-custom-table.component.scss'],
-  imports: [CommonModule, TableModule, RouterModule, MenuModule]
+  imports: [CommonModule, TableModule, MenuModule, RouterLink]
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
