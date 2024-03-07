@@ -13,6 +13,7 @@ import { PrSelectComponent } from '../../../custom-fields/pr-select/pr-select.co
 import { PrInputComponent } from '../../../custom-fields/pr-input/pr-input.component';
 import { NoDataTextComponent } from '../../../custom-fields/no-data-text/no-data-text.component';
 import { AddButtonComponent } from '../../../custom-fields/add-button/add-button.component';
+import { YmzListStructureItemDirective } from '../../directives/ymz-list-structure-item/ymz-list-structure-item.directive';
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -27,7 +28,8 @@ import { AddButtonComponent } from '../../../custom-fields/add-button/add-button
     PrInputComponent,
     PrFieldHeaderComponent,
     NoDataTextComponent,
-    AddButtonComponent
+    AddButtonComponent,
+    YmzListStructureItemDirective
   ]
 })
 export class InnovationUseFormComponent {

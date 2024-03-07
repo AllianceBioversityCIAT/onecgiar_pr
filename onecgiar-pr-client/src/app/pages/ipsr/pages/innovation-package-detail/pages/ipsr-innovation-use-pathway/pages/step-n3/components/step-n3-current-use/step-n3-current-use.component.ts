@@ -13,6 +13,7 @@ import { PrSelectComponent } from '../../../../../../../../../../custom-fields/p
 import { PrInputComponent } from '../../../../../../../../../../custom-fields/pr-input/pr-input.component';
 import { NoDataTextComponent } from '../../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { AddButtonComponent } from '../../../../../../../../../../custom-fields/add-button/add-button.component';
+import { YmzListStructureItemDirective } from '../../../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.directive';
 
 @Component({
   selector: 'app-step-n3-current-use',
@@ -26,7 +27,8 @@ import { AddButtonComponent } from '../../../../../../../../../../custom-fields/
     PrSelectComponent,
     PrInputComponent,
     NoDataTextComponent,
-    AddButtonComponent
+    AddButtonComponent,
+    YmzListStructureItemDirective
   ]
 })
 export class StepN3CurrentUseComponent {

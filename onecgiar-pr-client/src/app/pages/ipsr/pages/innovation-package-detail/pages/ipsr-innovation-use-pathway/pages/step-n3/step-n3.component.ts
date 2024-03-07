@@ -23,6 +23,7 @@ import { AlertStatusComponent } from '../../../../../../../../custom-fields/aler
 import { StepN3CurrentUseComponent } from './components/step-n3-current-use/step-n3-current-use.component';
 import { StepN3ComplementaryInnovationsComponent } from './components/step-n3-complementary-innovations/step-n3-complementary-innovations.component';
 import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
+import { YmzListStructureItemDirective } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.directive';
 
 @Component({
   selector: 'app-step-n3',
@@ -44,7 +45,8 @@ import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-
     AlertStatusComponent,
     StepN3CurrentUseComponent,
     StepN3ComplementaryInnovationsComponent,
-    SaveButtonComponent
+    SaveButtonComponent,
+    YmzListStructureItemDirective
   ]
 })
 export class StepN3Component implements OnInit {

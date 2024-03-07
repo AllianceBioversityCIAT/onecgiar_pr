@@ -13,6 +13,7 @@ import { FeedbackValidationDirective } from '../../../../../../../../../../share
 import { NoDataTextComponent } from '../../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { AddButtonComponent } from '../../../../../../../../../../custom-fields/add-button/add-button.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { YmzListStructureItemDirective } from '../../../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.directive';
 
 @Component({
   selector: 'app-step-n1-experts',
@@ -29,7 +30,8 @@ import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fie
     FeedbackValidationDirective,
     NoDataTextComponent,
     AddButtonComponent,
-    PrRadioButtonComponent
+    PrRadioButtonComponent,
+    YmzListStructureItemDirective
   ]
 })
 export class StepN1ExpertsComponent {

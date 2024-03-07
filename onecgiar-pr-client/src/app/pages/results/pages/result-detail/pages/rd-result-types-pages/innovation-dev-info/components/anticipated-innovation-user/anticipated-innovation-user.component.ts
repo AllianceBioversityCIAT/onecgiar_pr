@@ -15,6 +15,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { PrSelectComponent } from '../../../../../../../../../custom-fields/pr-select/pr-select.component';
 import { NoDataTextComponent } from '../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { AddButtonComponent } from '../../../../../../../../../custom-fields/add-button/add-button.component';
+import { YmzListStructureItemDirective } from '../../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.directive';
 
 @Component({
   selector: 'app-anticipated-innovation-user',
@@ -30,7 +31,8 @@ import { AddButtonComponent } from '../../../../../../../../../custom-fields/add
     SkeletonModule,
     PrSelectComponent,
     NoDataTextComponent,
-    AddButtonComponent
+    AddButtonComponent,
+    YmzListStructureItemDirective
   ]
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
