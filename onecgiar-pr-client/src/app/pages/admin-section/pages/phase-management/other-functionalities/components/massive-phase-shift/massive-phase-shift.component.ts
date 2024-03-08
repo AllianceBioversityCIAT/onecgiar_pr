@@ -10,11 +10,13 @@ export class MassivePhaseShiftComponent implements OnInit {
   @Input() replicateIPSR: boolean = false;
   requesting = false;
   numberOfResults = 0;
+  numberOfResultsIPSR = 0;
 
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.GET_numberOfResultsByResultType();
+    this.GET_numberOfResultsIPSR();
   }
 
   GET_numberOfResultsByResultType() {
@@ -26,9 +28,18 @@ export class MassivePhaseShiftComponent implements OnInit {
     });
   }
 
+  GET_numberOfResultsIPSR() {
+    this.api.resultsSE.GET_numberOfResultsByResultType(1, 10).subscribe({
+      next: (resp: any) => {
+        this.numberOfResultsIPSR = resp.response.count;
+      },
+      error: err => {}
+    });
+  }
+
   replicateDescription() {
     if (this.replicateIPSR) {
-      return 'IPSR results will be replicated in the active phase, are you sure to execute this action?';
+      return `${this.numberOfResultsIPSR} IPSR results will be replicated in the active phase, are you sure to execute this action?`;
     }
 
     return `${this.numberOfResults} Innovation Development type results will be replicated in the active phase, are you sure to execute this action?`;
