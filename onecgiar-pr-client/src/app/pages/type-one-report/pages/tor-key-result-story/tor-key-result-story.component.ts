@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { NoDataTextComponent } from '../../../../custom-fields/no-data-text/no-data-text.component';
 import { SimpleTableWithClipboardComponent } from '../../../../shared/components/simple-table-with-clipboard/simple-table-with-clipboard.component';
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
+import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
 
 @Component({
   selector: 'app-tor-key-result-story',
@@ -16,7 +17,8 @@ import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-
     CommonModule,
     NoDataTextComponent,
     SimpleTableWithClipboardComponent,
-    SaveButtonComponent
+    SaveButtonComponent,
+    AlertStatusComponent
   ]
 })
 export class TorKeyResultStoryComponent implements OnInit {
