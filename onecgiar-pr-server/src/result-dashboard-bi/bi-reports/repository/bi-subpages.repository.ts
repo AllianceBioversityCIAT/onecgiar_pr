@@ -15,13 +15,13 @@ export class BiSubpagesRepository extends Repository<BiSubpages> {
         return 'A parameter is missing to make the query.';
 
       const biSubpage = await this.query(
-        `select section_name from bi_subpages bs WHERE bs.report_name = ? and bs.section_number = ?`,
+        `select section_name_code from bi_subpages bs WHERE bs.report_name = ? and bs.section_number = ?`,
         [getBiSubpagesDto.report_name, getBiSubpagesDto.subpage_id],
       );
 
-      const { section_name } = biSubpage.shift() ?? {};
+      const { section_name_code } = biSubpage.shift() ?? {};
 
-      return section_name || 'Record not found';
+      return section_name_code || 'Record not found';
     } catch (error) {
       console.error(error);
       return error.message;

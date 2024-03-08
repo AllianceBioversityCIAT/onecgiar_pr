@@ -107,7 +107,7 @@ export class BiReportRepository extends Repository<BiReport> {
             .pipe(map((resp) => resp.data)),
         );
       } catch (error) {
-        return error;
+        return { ...error, isError: true };
       }
 
       const reportTokenBiDto = new TokenReportBiDto();
@@ -223,10 +223,10 @@ export class BiReportRepository extends Repository<BiReport> {
     }
 
     if (reportsExist != null && reportsExist.length != 0) {
-      const registerInToken = await this.getTokenPowerBi(
-        report_name,
-        subpage_id,
-      );
+      let registerInToken = null;
+      registerInToken = await this.getTokenPowerBi(report_name, subpage_id);
+      if (registerInToken?.isError)
+        throw new NotFoundException({ message: 'Error generating bi token' });
       const responseToken = await registerInToken['reportsInformation'].filter(
         (report) => report.name == report_name,
       );
