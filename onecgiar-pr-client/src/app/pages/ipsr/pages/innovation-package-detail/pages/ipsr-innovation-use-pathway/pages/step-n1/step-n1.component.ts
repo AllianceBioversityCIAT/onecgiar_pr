@@ -41,8 +41,6 @@ export class StepN1Component implements OnInit {
 
       this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
 
-      //? // (this.ipsrStep1Body);
-
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
         this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
       }
@@ -55,14 +53,10 @@ export class StepN1Component implements OnInit {
     });
   }
   onSaveSection() {
-    //("body");
-
-    //? //(this.ipsrStep1Body);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      //(resp?.response[0].response);
-      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
+      location.reload();
     });
   }
 
@@ -70,8 +64,6 @@ export class StepN1Component implements OnInit {
     if (this.api.rolesSE.readOnly) return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
-      //(resp?.response[0].response);
-      // this.ipsrDataControlSE.detailData.title = resp?.response[0].response;
       this.getSectionInformation();
       setTimeout(() => {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
