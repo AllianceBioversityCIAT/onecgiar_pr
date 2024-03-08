@@ -403,7 +403,10 @@ export class VersioningService {
       await this._evidencesRepository.replicate(manager, config);
       await this._resultActorRepository.replicate(manager, config);
       await this._resultInitiativeBudgetRepository.replicate(manager, config);
-      await this._resultNonPooledProjectBudgetRepository.replicate(manager, config);
+      await this._resultNonPooledProjectBudgetRepository.replicate(
+        manager,
+        config,
+      );
       await this._resultInstitutionsBudgetRepository.replicate(manager, config);
 
       // IPSR
@@ -420,14 +423,20 @@ export class VersioningService {
       });
       config.old_ipsr_id = rbip[0].result_by_innovation_package_id;
 
-      await this._resultIpActionAreaOutcomeRepository.replicate(manager, config);
+      await this._resultIpActionAreaOutcomeRepository.replicate(
+        manager,
+        config,
+      );
       await this._resultIpEoiOutcomeRepository.replicate(manager, config);
       await this._resultIpIaRepository.replicate(manager, config);
       await this._resultIpSdgTargetsRepository.replicate(manager, config);
       await this._resultIpExpertRepository.replicate(manager, config);
       await this._resultIpMeasureRepository.replicate(manager, config);
       await this._resultIpExpertisesRespository.replicate(manager, config);
-      await this._resultIpExpertWorkshopOrganizedRepostory.replicate(manager, config);
+      await this._resultIpExpertWorkshopOrganizedRepostory.replicate(
+        manager,
+        config,
+      );
       await this._resultIpResultsActorsRepository.replicate(manager, config);
       await this._resultsIpResultMeasuresRespository.replicate(manager, config);
       await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
@@ -441,7 +450,10 @@ export class VersioningService {
     this._logger.log(
       `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
     );
-      console.log("🚀 ~ VersioningService ~ $_phaseChangeIPSR ~ data:", tempData[0])
+    console.log(
+      '🚀 ~ VersioningService ~ $_phaseChangeIPSR ~ data:',
+      tempData[0],
+    );
     return data;
   }
 
@@ -470,7 +482,10 @@ export class VersioningService {
   }
 
   async versionProcess(result_id: number, user: TokenDto) {
-    console.log("🚀 ~ VersioningService ~ versionProcess ~ result_id:", result_id)
+    console.log(
+      '🚀 ~ VersioningService ~ versionProcess ~ result_id:',
+      result_id,
+    );
     try {
       const legacy_result = await this._resultRepository.findOne({
         where: {
@@ -552,18 +567,30 @@ export class VersioningService {
         where: {
           is_active: true,
           status: true,
-          app_module_id: AppModuleIdEnum.REPORTING,
+          app_module_id:
+            this.$_validationModule(result_type_id) == 1
+              ? AppModuleIdEnum.REPORTING
+              : AppModuleIdEnum.IPSR,
         },
         relations: {
           obj_previous_phase: true,
         },
       });
 
-      const countResults =
-        await this._versionRepository.$_getAllInovationDevToReplicate(
-          phase,
-          result_type_id,
-        );
+      let countResults: Result[] = null;
+      if (this.$_validationModule(result_type_id) == 1) {
+        countResults =
+          await this._versionRepository.$_getAllInovationDevToReplicate(
+            phase,
+            result_type_id,
+          );
+      } else {
+        countResults =
+          await this._versionRepository.$_getAllInovationPackageToReplicate(
+            phase,
+            result_type_id,
+          );
+      }
 
       const names = await this._versionRepository.getDataStatusAndTypeResult(
         status,
@@ -646,7 +673,9 @@ export class VersioningService {
       }
 
       const results =
-        await this._versionRepository.$_getAllInovationPackageToReplicate(phase);
+        await this._versionRepository.$_getAllInovationPackageToReplicate(
+          phase,
+        );
 
       for (const r of results) {
         if (this.$_genericValidation(r.result_code, phase.id)) {
