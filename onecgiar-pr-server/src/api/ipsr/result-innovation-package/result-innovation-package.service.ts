@@ -720,6 +720,7 @@ export class ResultInnovationPackageService {
               investment_discontinued_option_id:
                 i.investment_discontinued_option_id,
               description: i?.description,
+              is_active: i.value ? true : false,
               created_by: user.id,
               last_updated_by: user.id,
             });
