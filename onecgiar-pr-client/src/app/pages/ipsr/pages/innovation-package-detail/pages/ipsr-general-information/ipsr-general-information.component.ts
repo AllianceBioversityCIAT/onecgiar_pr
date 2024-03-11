@@ -38,7 +38,8 @@ export class IpsrGeneralInformationComponent implements OnInit {
     options.forEach(option => {
       const found = this.ipsrGeneralInformationBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
       if (found) {
-        (option.value = true), (option.description = found?.description);
+        option.value = true;
+        option.description = found?.description;
       }
     });
     this.ipsrGeneralInformationBody.discontinued_options = options;
@@ -47,6 +48,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   onChangeKrs() {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
+
   onSaveSection() {
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
       next: resp => {

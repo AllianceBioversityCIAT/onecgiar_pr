@@ -56,9 +56,9 @@ export class StepN1Component implements OnInit {
   onSaveSection() {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      this.getSectionInformation();
       const currentUrl = this.router.url;
-      this.router.navigateByUrl(`/`).then(() => {
+      this.getSectionInformation();
+      this.router.navigateByUrl(`/ipsr/list/innovation-list`).then(() => {
         setTimeout(() => {
           this.router.navigateByUrl(currentUrl);
         }, 100);
@@ -74,11 +74,9 @@ export class StepN1Component implements OnInit {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultIdNextStep(this.ipsrStep1Body, descrip).subscribe((resp: any) => {
       this.getSectionInformation();
-      setTimeout(() => {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
-      }, 1000);
+      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
+        queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+      });
     });
     return null;
   }
@@ -106,14 +104,18 @@ export class StepN1Component implements OnInit {
         document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
     this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
       try {
         document.querySelector('.alert-event-2').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 }

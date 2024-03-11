@@ -32,7 +32,7 @@ describe('StepN1Component', () => {
   let fixture: ComponentFixture<StepN1Component>;
   let mockApiService: any;
   let mockRouter: any;
-  let mockGETInnovationPathwayByStepOneResultIdResponse = {
+  const mockGETInnovationPathwayByStepOneResultIdResponse = {
     innovatonUse: {
       organization: [],
       actors: [],
@@ -100,13 +100,13 @@ describe('StepN1Component', () => {
       },
       resultsSE: {
         GETInnovationPathwayByStepOneResultId: () => of({ response: mockGETInnovationPathwayByStepOneResultIdResponse }),
-        PATCHInnovationPathwayByStepOneResultId: () => of({response: [] }),
-        PATCHInnovationPathwayByStepOneResultIdNextStep: () => of({response: [] }),
-        GET_AllCLARISARegions: () => of({response: [] }),
-        GET_AllCLARISACountries: () => of({response: [] }),
-        GET_TypeByResultLevel: () => of({response: [resultLevel] }),
-        GETAllActorsTypes: () => of({response: [] }),
-        GETInstitutionsTypeTree: () => of({response: [] }),
+        PATCHInnovationPathwayByStepOneResultId: () => of({ response: [] }),
+        PATCHInnovationPathwayByStepOneResultIdNextStep: () => of({ response: [] }),
+        GET_AllCLARISARegions: () => of({ response: [] }),
+        GET_AllCLARISACountries: () => of({ response: [] }),
+        GET_TypeByResultLevel: () => of({ response: [resultLevel] }),
+        GETAllActorsTypes: () => of({ response: [] }),
+        GETInstitutionsTypeTree: () => of({ response: [] }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
         GET_allChildlessInstitutionTypes: () => of({ response: [] }),
@@ -115,7 +115,7 @@ describe('StepN1Component', () => {
         getAllInnoPaRelevantCountry: () => of({ response: [] }),
         getAllInnoPaRegionalLeadership: () => of({ response: [] }),
         getAllInnoPaRegionalIntegrated: () => of({ response: [] }),
-        getAllInnoPaActiveBackstopping: () => of({ response: [] }),
+        getAllInnoPaActiveBackstopping: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
@@ -124,35 +124,12 @@ describe('StepN1Component', () => {
 
     mockRouter = {
       navigate: jest.fn(),
+      navigateByUrl: jest.fn()
     };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        StepN1Component,
-        PrButtonComponent,
-        StepN1ConsensusAndConsultationComponent,
-        PrRadioButtonComponent,
-        PrFieldHeaderComponent,
-        StepN1ExpertsComponent,
-        NoDataTextComponent,
-        StepN1ScalingAmbitionBlurbComponent,
-        CdkCopyToClipboard,
-        StepN1InstitutionsComponent,
-        PrMultiSelectComponent,
-        InnovationUseFormComponent,
-        StepN1SdgTargetsComponent,
-        StepN1ImpactAreasComponent,
-        GeoscopeManagementComponent,
-        SaveButtonComponent,
-        FeedbackValidationDirective
-      ],
-      imports: [
-        HttpClientTestingModule,
-        TooltipModule,
-        FormsModule,
-        RadioButtonModule,
-        ToastModule
-      ],
+      declarations: [StepN1Component, PrButtonComponent, StepN1ConsensusAndConsultationComponent, PrRadioButtonComponent, PrFieldHeaderComponent, StepN1ExpertsComponent, NoDataTextComponent, StepN1ScalingAmbitionBlurbComponent, CdkCopyToClipboard, StepN1InstitutionsComponent, PrMultiSelectComponent, InnovationUseFormComponent, StepN1SdgTargetsComponent, StepN1ImpactAreasComponent, GeoscopeManagementComponent, SaveButtonComponent, FeedbackValidationDirective],
+      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule],
       providers: [
         {
           provide: ApiService,
@@ -161,10 +138,9 @@ describe('StepN1Component', () => {
         {
           provide: Router,
           useValue: mockRouter
-        },
+        }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(StepN1Component);
     component = fixture.componentInstance;
@@ -173,7 +149,6 @@ describe('StepN1Component', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-
 
   describe('ngOnInit()', () => {
     it('should call getSectionInformation, requestEvent, and api.dataControlSE.detailSectionTitle on ngOnInit', () => {
@@ -201,18 +176,18 @@ describe('StepN1Component', () => {
       expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
       expect(component.ipsrStep1Body.actionAreaOutcomes[0]).toEqual({
-        full_name: '<strong>code</strong> - statement', 
-        outcomeSMOcode: 'code', 
+        full_name: '<strong>code</strong> - statement',
+        outcomeSMOcode: 'code',
         outcomeStatement: 'statement'
       });
       expect(component.ipsrStep1Body.sdgTargets[0]).toEqual({
-        full_name: '<strong>code</strong> - target', 
-        sdg_target: 'target', 
+        full_name: '<strong>code</strong> - target',
+        sdg_target: 'target',
         sdg_target_code: 'code'
       });
       expect(component.ipsrStep1Body.impactAreas[0]).toEqual({
-        full_name: '<strong>name</strong> - target', 
-        name: 'name', 
+        full_name: '<strong>name</strong> - target',
+        name: 'name',
         target: 'target'
       });
       expect(component.ipsrStep1Body.experts[0].expertises[0]).toEqual({
@@ -229,7 +204,7 @@ describe('StepN1Component', () => {
       expect(component.ipsrStep1Body.innovatonUse.organization).toHaveLength(1);
     });
     it('should call convertOrganizations and update ipsrStep1Body on GETInnovationPathwayByStepOneResultId response when ipsrStep1Body.experts is empty', () => {
-      mockGETInnovationPathwayByStepOneResultIdResponse.experts = []
+      mockGETInnovationPathwayByStepOneResultIdResponse.experts = [];
       const spy = jest.spyOn(component, 'convertOrganizations');
 
       component.getSectionInformation();
@@ -240,18 +215,18 @@ describe('StepN1Component', () => {
       expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
       expect(component.ipsrStep1Body.actionAreaOutcomes[0]).toEqual({
-        full_name: '<strong>code</strong> - statement', 
-        outcomeSMOcode: 'code', 
+        full_name: '<strong>code</strong> - statement',
+        outcomeSMOcode: 'code',
         outcomeStatement: 'statement'
       });
       expect(component.ipsrStep1Body.sdgTargets[0]).toEqual({
-        full_name: '<strong>code</strong> - target', 
-        sdg_target: 'target', 
+        full_name: '<strong>code</strong> - target',
+        sdg_target: 'target',
         sdg_target_code: 'code'
       });
       expect(component.ipsrStep1Body.impactAreas[0]).toEqual({
-        full_name: '<strong>name</strong> - target', 
-        name: 'name', 
+        full_name: '<strong>name</strong> - target',
+        name: 'name',
         target: 'target'
       });
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
@@ -261,19 +236,20 @@ describe('StepN1Component', () => {
       expect(component.ipsrStep1Body.innovatonUse.actors).toHaveLength(1);
       expect(component.ipsrStep1Body.innovatonUse.organization).toHaveLength(1);
       expect(component.ipsrStep1Body.experts).toHaveLength(1);
-
     });
   });
 
   describe('onSaveSection()', () => {
     it('should call convertOrganizationsTosave, should call getSectionInformation on PATCHInnovationPathwayByStepOneResultId response', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
+      const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
       const PATCHInnovationPathwayByStepOneResultIdSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/ipsr/list/innovation-list');
       expect(PATCHInnovationPathwayByStepOneResultIdSpy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
@@ -288,20 +264,24 @@ describe('StepN1Component', () => {
 
       component.saveAndNextStep('description');
 
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
+        queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
+      });
       expect(spy).not.toHaveBeenCalled();
     });
     it('should call PATCHInnovationPathwayByStepOneResultIdNextStep and navigate to step-2 when roles are not read-only', () => {
       mockApiService.rolesSE.readOnly = false;
-      component.ipsrDataControlSE.resultInnovationCode = 'code'
-      const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+      component.ipsrDataControlSE.resultInnovationCode = 'code';
+      const routerNavigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultIdNextStep');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
-  
+
       const result = component.saveAndNextStep('description');
       jest.runAllTimers();
 
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+      expect(routerNavigateSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
+        queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
+      });
       expect(spy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
       expect(result).toBeNull();
@@ -310,10 +290,8 @@ describe('StepN1Component', () => {
 
   describe('convertOrganizations()', () => {
     it('should convert organizations with parent_institution_type_id', () => {
-      const organizations = [
-        { parent_institution_type_id: 1, institution_types_id: 2, institution_sub_type_id: 0 },
-      ];
-  
+      const organizations = [{ parent_institution_type_id: 1, institution_types_id: 2, institution_sub_type_id: 0 }];
+
       component.convertOrganizations(organizations);
 
       expect(organizations[0].institution_sub_type_id).toBe(2);
@@ -323,20 +301,20 @@ describe('StepN1Component', () => {
 
   describe('convertOrganizationsTosave()', () => {
     it('should convert organizations to save with institution_sub_type_id', () => {
-      const organization = { 
-        institution_sub_type_id: 1 ,
-        institution_types_id: 1, 
-        how_many: 1, 
-        other_institution: '', 
+      const organization = {
+        institution_sub_type_id: 1,
+        institution_types_id: 1,
+        how_many: 1,
+        other_institution: '',
         graduate_students: '',
-        hide: false, 
-        is_active: true, 
+        hide: false,
+        is_active: true,
         id: 1
       };
       component.ipsrStep1Body.innovatonUse.organization = [organization];
-  
+
       component.convertOrganizationsTosave();
-  
+
       expect(organization.institution_types_id).toBe(1);
     });
   });
@@ -345,13 +323,14 @@ describe('StepN1Component', () => {
     it('should show partners request on click of alert-event and alert-event-2', async () => {
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>
         <div class="alert-event-2"></div>
         `,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       await component.requestEvent();
 
@@ -363,13 +342,13 @@ describe('StepN1Component', () => {
         alertDiv.dispatchEvent(clickEvent);
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
-  
+
       if (alertDiv2) {
         const clickEvent = new MouseEvent('click');
         alertDiv2.dispatchEvent(clickEvent);
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
-  
+
       expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
     });
   });
