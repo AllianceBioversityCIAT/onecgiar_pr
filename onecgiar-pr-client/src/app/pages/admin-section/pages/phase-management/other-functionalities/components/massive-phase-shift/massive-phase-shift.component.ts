@@ -39,7 +39,7 @@ export class MassivePhaseShiftComponent implements OnInit {
 
   replicateDescription() {
     if (this.replicateIPSR) {
-      return `${this.numberOfResultsIPSR} IPSR results will be replicated in the active phase, are you sure to execute this action?`;
+      return `${this.numberOfResultsIPSR} Innovation Packages will be replicated in the active phase, are you sure to execute this action?`;
     }
 
     return `${this.numberOfResults} Innovation Development type results will be replicated in the active phase, are you sure to execute this action?`;
