@@ -89,15 +89,21 @@ export class StepN3Component implements OnInit {
   onsaveSection(descrip) {
     if (this.api.rolesSE.readOnly) {
       if (descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       } else {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
       return;
     }
 
     if (descrip == 'previous') {
-      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
+      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation'], {
+        queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+      });
     }
     this.convertOrganizationsTosave();
 
@@ -106,9 +112,13 @@ export class StepN3Component implements OnInit {
 
       setTimeout(() => {
         if (descrip == 'next') {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
+          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
+            queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+          });
         } else {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
+          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4'], {
+            queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+          });
         }
       }, 1000);
     });
