@@ -685,6 +685,11 @@ export class ResultInnovationPackageService {
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
         is_discontinued: req?.is_discontinued,
+        status_id: req?.is_discontinued
+          ? 4
+          : resultExist.status_id == 4
+            ? 1
+            : resultExist.status_id,
       });
 
       if (req?.is_discontinued) {
