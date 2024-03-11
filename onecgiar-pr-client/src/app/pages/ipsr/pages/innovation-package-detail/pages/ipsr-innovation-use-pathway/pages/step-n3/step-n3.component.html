@@ -121,10 +121,10 @@
 </app-save-button>
 
 <div class="toggle_change_step">
-    <app-pr-button (click)="onsaveSection('next')" padding="big"
+    <app-pr-button (click)="onsaveSection('previous')" padding="big"
         [text]="this.api.rolesSE.readOnly ? 'Go to previous step':'Save & go to previous step'" icon="arrow_circle_left"
         [reverse]="true"></app-pr-button>
-    <app-pr-button (click)="onsaveSection('previous')" padding="big"
+    <app-pr-button (click)="onsaveSection('next')" padding="big"
         [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"
         icon="arrow_circle_right"></app-pr-button>
 </div>
