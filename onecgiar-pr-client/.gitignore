@@ -48,3 +48,8 @@ Thumbs.db
 .angular
 
 /todo-list
+
+# Firebase
+.firebaserc
+firebase.json
+.firebase/*
