@@ -31,7 +31,7 @@ export class StepN3Component implements OnInit {
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
     return finalList.length;
   }
 
@@ -86,31 +86,23 @@ export class StepN3Component implements OnInit {
     });
   }
 
-  onsaveSection(descrip) {
+  onsaveSection(descrip: string) {
+    const urlBasePath = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
+    const urlPath = descrip === 'next' ? `${urlBasePath}/step-4` : `${urlBasePath}/step-2`;
+    const queryParams = { phase: this.ipsrDataControlSE.resultInnovationPhase };
+
     if (this.api.rolesSE.readOnly) {
-      if (descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
-      } else {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
-      }
+      this.router.navigate([urlPath], { queryParams });
+
       return;
     }
 
-    if (descrip == 'previous') {
-      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
-    }
     this.convertOrganizationsTosave();
 
-    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
+    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(() => {
       this.getSectionInformation();
 
-      setTimeout(() => {
-        if (descrip == 'next') {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
-        } else {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
-        }
-      }, 1000);
+      this.router.navigate([urlPath], { queryParams });
     });
   }
 
