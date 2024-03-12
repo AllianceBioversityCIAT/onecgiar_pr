@@ -19,33 +19,9 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.ipsrDataControlSE.resultInnovationPhase = this.activatedRoute.snapshot.queryParams['phase'];
     this.GET_resultIdToCode(() => {
-      this.GETInnovationPackageDetail();
+      this.api.GETInnovationPackageDetail();
       this.ipsrCompletenessStatusSE.updateGreenChecks();
       this.getIPSRPhases();
-    });
-  }
-
-  GETInnovationPackageDetail() {
-    this.api.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
-      response.initiative_id = response?.inititiative_id;
-      response.official_code = response?.initiative_official_code;
-      this.api.rolesSE.validateReadOnly(response);
-      this.dataControlSE.currentResult = response;
-      const is_phase_open = response?.is_phase_open;
-
-      switch (is_phase_open) {
-        case 0:
-          this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
-          break;
-
-        case 1:
-          if (this.dataControlSE.currentResult.status_id !== '1' && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
-          break;
-      }
-
-      this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
-      this.ipsrDataControlSE.resultInnovationPhase = response?.version_id;
-      this.ipsrDataControlSE.detailData = response;
     });
   }
 
