@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import { create as createPDF } from 'pdf-creator-node';
@@ -14,6 +14,7 @@ import { Result } from '../results/entities/result.entity';
 
 @Injectable()
 export class PlatformReportService {
+  private readonly _logger: Logger = new Logger(PlatformReportService.name);
   public constructor(
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
@@ -178,6 +179,7 @@ export class PlatformReportService {
           return res;
         })
         .catch((_error) => {
+          this._logger.error(_error);
           return null;
         });
 
