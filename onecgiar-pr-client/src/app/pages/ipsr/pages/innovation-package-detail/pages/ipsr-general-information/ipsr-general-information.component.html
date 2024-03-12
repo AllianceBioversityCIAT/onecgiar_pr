@@ -139,5 +139,7 @@
     type="text" [required]="false" [(ngModel)]="this.ipsrGeneralInformationBody.krs_url">
 </app-pr-input>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()">
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"
+    [editable]="this.api.rolesSE.access.canDdit && !this.api.dataControlSE?.currentResult?.status"
+>
 </app-save-button>

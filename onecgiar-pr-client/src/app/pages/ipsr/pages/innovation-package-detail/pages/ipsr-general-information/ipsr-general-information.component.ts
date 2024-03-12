@@ -12,7 +12,7 @@ import { IpsrGeneralInformationBody } from './model/ipsr-general-information.mod
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
-  constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -52,6 +52,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   onSaveSection() {
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
       next: resp => {
+        this.api.GETInnovationPackageDetail();
         this.getSectionInformation();
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       },
