@@ -700,7 +700,7 @@ export class resultValidationRepository
         [resultId],
       )) as Evidence[];
       const multiplePerField = allEvidences.some(
-        (e) => e.link && this._regex.test(e.link),
+        (e) => e.link && this._regex.test(e.link.trim()),
       );
 
       if (resultTypeId == 7) {
