@@ -56,13 +56,8 @@ export class StepN1Component implements OnInit {
   onSaveSection() {
     this.convertOrganizationsTosave();
     this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      const currentUrl = this.router.url;
+      this.api.GETInnovationPackageDetail();
       this.getSectionInformation();
-      this.router.navigateByUrl(`/ipsr/list/innovation-list`).then(() => {
-        setTimeout(() => {
-          this.router.navigateByUrl(currentUrl);
-        }, 100);
-      });
     });
   }
 
