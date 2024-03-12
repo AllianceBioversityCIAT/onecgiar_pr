@@ -10,11 +10,11 @@
             styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
             <ng-template pTemplate="header">
                 <tr>
-                    <th *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
-                    <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                    <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
+                    <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                         <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                     </th>
-                    <th *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
+                    <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
@@ -117,7 +117,7 @@
                     <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
                         <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id"
                             [inputId]="subItem.complementary_innovation_functions_id" [(ngModel)]="selectComplementary"
-                            (ngModelChange)=" selected()" [disabled]="isReadonly"></p-checkbox>
+                            [disabled]="isReadonly"></p-checkbox>
                         <label> {{ subItem.name }}</label>
                     </div>
 
@@ -161,7 +161,6 @@
                 description="Please specify those projects or organizations."
                 [(ngModel)]="this.informationComplentary.specify_projects_organizations"></app-pr-textarea>
 
-            <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
     <div class="buttons">
