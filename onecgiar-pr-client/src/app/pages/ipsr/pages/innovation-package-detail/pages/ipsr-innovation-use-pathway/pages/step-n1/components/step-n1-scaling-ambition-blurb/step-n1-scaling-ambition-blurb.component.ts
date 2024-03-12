@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { MessageService } from 'primeng/api';
 

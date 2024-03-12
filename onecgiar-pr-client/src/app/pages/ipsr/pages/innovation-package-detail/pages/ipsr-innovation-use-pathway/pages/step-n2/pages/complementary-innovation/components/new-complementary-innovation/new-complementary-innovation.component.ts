@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../../../services/ipsr-data-control.service';
 
@@ -22,7 +22,6 @@ export class CreateComplementaryInnovationDto {
   styleUrls: ['./new-complementary-innovation.component.scss']
 })
 export class NewComplementaryInnovationComponent implements OnInit {
-  constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
   status: boolean;
   linksRegister: number = 1;
   inputs: any = [1];
@@ -38,8 +37,10 @@ export class NewComplementaryInnovationComponent implements OnInit {
   bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
   selectedValues: any[] = [];
   @Output() createInnovationEvent = new EventEmitter<any>();
+
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+
   ngOnInit(): void {
-    //(this.complementaryInnovationFunction);
     this.linksComplemntaryInnovation = [{ link: '' }, { link: '' }, { link: '' }];
   }
 
@@ -56,28 +57,23 @@ export class NewComplementaryInnovationComponent implements OnInit {
   }
 
   onSave() {
-    //(this.selectedValues);
-
     this.linksComplemntaryInnovation = this.linksComplemntaryInnovation.filter(element => element.link != '');
     this.bodyNewComplementaryInnovation.referenceMaterials = this.linksComplemntaryInnovation;
     this.bodyNewComplementaryInnovation.complementaryFunctions = this.selectedValues;
-    this.bodyNewComplementaryInnovation.initiative_id = Number(this.ipsrDataControlSE.detailData.inititiative_id);
+    this.bodyNewComplementaryInnovation.initiative_id = Number(this.ipsrDataControlSE?.detailData?.inititiative_id);
     if (this.bodyNewComplementaryInnovation.other_funcions == undefined) {
       this.bodyNewComplementaryInnovation.other_funcions = '';
     }
-    //(this.bodyNewComplementaryInnovation);
     this.linksComplemntaryInnovation = [{ link: '' }, { link: '' }, { link: '' }];
 
     let innovation;
     this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe(resp => {
-      //(resp);
       innovation = resp['response']['createResult'];
       if (innovation['initiative_id'] < 10) {
         innovation['initiative_official_code'] = 'INIT-0' + innovation['initiative_id'];
       } else {
         innovation['initiative_official_code'] = 'INIT-' + innovation['initiative_id'];
       }
-      //(innovation);
 
       this.createInnovationEvent.emit(innovation);
     });

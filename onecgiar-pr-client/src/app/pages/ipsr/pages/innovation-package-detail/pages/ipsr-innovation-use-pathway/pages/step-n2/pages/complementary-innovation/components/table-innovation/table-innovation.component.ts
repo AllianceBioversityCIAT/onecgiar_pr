@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../../../../../../../services/manage-innovations-list.service';
-import { Observable } from 'rxjs';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
+import { IpsrDataControlService } from '../../../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 
 interface ComplementaryInnovation {
@@ -25,9 +24,7 @@ interface ComplementaryInnovation {
 }
 @Component({
   selector: 'app-table-innovation',
-
   templateUrl: './table-innovation.component.html',
-
   styleUrls: ['./table-innovation.component.scss']
 })
 export class TableInnovationComponent {
@@ -40,7 +37,7 @@ export class TableInnovationComponent {
   informationComplementaryInnovation: ComplementaryInnovation[] = [];
   loading: boolean = true;
   isInitiative: boolean = true;
-  informationComplentary: complementaryInnovation = new complementaryInnovation();
+  informationComplentary: ComplementaryInnovationClass = new ComplementaryInnovationClass();
   @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
   @Output() saveedit = new EventEmitter<any>();
   @Input() selectionsInnovation: any[];
@@ -49,6 +46,7 @@ export class TableInnovationComponent {
   selectComplementary: any[] = [];
   complementaries = false;
   idInnovation: number;
+
   constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
 
   columnOrder = [
@@ -99,26 +97,23 @@ export class TableInnovationComponent {
       });
     } else {
       const url = '/result/result-detail/' + result['result_code'] + '/general-information';
-      //this.router.navigate(['/result/result-detail/'+result['result_code']+'/general-information'], "_blank");
       window.open(url, '_blank');
     }
   }
 
   addNewInput() {
     if (this.informationComplentary.referenceMaterials.length < 3) {
-      this.informationComplentary.referenceMaterials.push(new references());
+      this.informationComplentary.referenceMaterials.push(new References());
     } else {
       this.statusAdd = true;
     }
   }
 
-  selected() {}
-
   onSave() {
     this.informationComplentary.complementaryFunctions = [];
-    for (let index = 0; index < this.selectComplementary.length; index++) {
+    for (const element of this.selectComplementary) {
       const complementaryFunctions = {
-        complementary_innovation_functions_id: this.selectComplementary[index]
+        complementary_innovation_functions_id: element
       };
       this.informationComplentary.complementaryFunctions.push(complementaryFunctions);
     }
@@ -130,31 +125,30 @@ export class TableInnovationComponent {
 
   Ondelete(id) {
     this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
-      //('delete');
-      this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe(
-        resp => {
+      this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe({
+        next: resp => {
           this.status = false;
           this.saveedit.emit(true);
         },
-        err => {
+        error: err => {
           this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
         }
-      );
+      });
     });
   }
 }
 
-export class complementaryInnovation {
+export class ComplementaryInnovationClass {
   short_title: string = null;
   title: string = null;
   description: string = null;
-  referenceMaterials: references[] = [];
+  referenceMaterials: References[] = [];
   complementaryFunctions: any[] = new Array();
   other_funcions: string;
   projects_organizations_working_on_innovation: string;
   specify_projects_organizations: boolean;
 }
 
-export class references {
+export class References {
   link: string = null;
 }
