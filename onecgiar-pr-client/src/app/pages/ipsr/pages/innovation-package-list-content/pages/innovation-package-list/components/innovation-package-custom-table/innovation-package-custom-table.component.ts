@@ -14,7 +14,6 @@ export class InnovationPackageCustomTableComponent {
   @Output() deleteEvent = new EventEmitter();
   currentInnovationPackageToAction = { id: '', title: '' };
   columnOrder = [
-    { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
     { title: 'Submitter', attr: 'official_code' },
     { title: 'Status', attr: 'status' },

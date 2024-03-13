@@ -28,6 +28,7 @@ export class ChangePhaseModalComponent implements OnInit {
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
         this.api.dataControlSE.updateResultModal = false;
+        this.ipsrDataControlSE.ipsrUpdateResultModal = false;
 
         const navigateToLink = this.ipsrDataControlSE.inIpsr ? `/ipsr/detail/${response?.result_code}/general-information` : `/result/result-detail/${response?.result_code}/general-information`;
 
