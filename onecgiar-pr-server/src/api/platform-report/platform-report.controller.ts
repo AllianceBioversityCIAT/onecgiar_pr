@@ -10,6 +10,7 @@ import { PlatformReportService } from './platform-report.service';
 import { Response } from 'express';
 import { returnErrorDto } from '../../shared/handlers/error.utils';
 import { ReadStream } from 'typeorm/platform/PlatformTools';
+import { PlatformReportEnum } from './entities/platform-report.enum';
 
 @Controller()
 export class PlatformReportController {
@@ -21,12 +22,41 @@ export class PlatformReportController {
     @Query() query: { phase: string; downloadable: boolean },
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile | returnErrorDto> {
+    return this.getReportByResultCode(
+      code,
+      query.phase,
+      res,
+      PlatformReportEnum.FULL_RESULT_REPORT,
+    );
+  }
+
+  @Get('/ipsr/:code')
+  async getFullIPSRReportByResultCode(
+    @Param('code') code: string,
+    @Query() query: { phase: string; downloadable: boolean },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile | returnErrorDto> {
+    return this.getReportByResultCode(
+      code,
+      query.phase,
+      res,
+      PlatformReportEnum.FULL_IPSR_REPORT,
+    );
+  }
+
+  private async getReportByResultCode(
+    code: string,
+    phase: string,
+    res: Response,
+    reportType: PlatformReportEnum,
+  ): Promise<StreamableFile | returnErrorDto> {
     code = code?.trim();
-    query.phase = query.phase?.trim();
+    phase = phase?.trim();
     let result =
       await this._platformReportService.getFullResultReportByResultCode(
         code,
-        query.phase,
+        phase,
+        reportType,
       );
 
     if (result?.['message']) {
@@ -34,9 +64,7 @@ export class PlatformReportController {
     }
     result = <{ pdf: ReadStream; filename_date: any }>result;
 
-    const contentDisposition = `${
-      query.downloadable ?? false ? 'attachment;' : ''
-    }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
+    const contentDisposition = `attachment;filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
 
     res.set({
       'Content-Disposition': contentDisposition,
