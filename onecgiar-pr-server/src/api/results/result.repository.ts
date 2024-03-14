@@ -94,7 +94,7 @@ export class ResultRepository
         nutrition_tag_level_id,
         environmental_biodiversity_tag_level_id,
         poverty_tag_level_id,
-        ,is_replicated
+        is_replicated
         ) select
         r2.description,
         r2.is_active,
