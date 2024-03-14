@@ -116,6 +116,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     return `${this.selectedLabel} (${this.value?.length})`;
   }
 
+  validateShowDeleteButton(option) {
+    if (this.selectedPrimary) {
+      return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic && this.selectedPrimary !== option.id;
+    }
+
+    return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic;
+  }
+
   onChange(_) {}
 
   onTouch() {}
