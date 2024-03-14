@@ -63,6 +63,7 @@ import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-instituti
 import { ResultActorRepository } from '../results/result-actors/repositories/result-actors.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -123,7 +124,8 @@ import { ResultInstitutionsBudgetRepository } from '../results/result_budget/rep
     ResultIpExpertWorkshopOrganizedRepostory,
     ResultsIpActorRepository,
     ResultsByIpInnovationUseMeasureRepository,
-    ResultsIpInstitutionTypeRepository
+    ResultsIpInstitutionTypeRepository,
+    ResultCountrySubnationalRepository
   ],
   exports: [
     EvidencesService,

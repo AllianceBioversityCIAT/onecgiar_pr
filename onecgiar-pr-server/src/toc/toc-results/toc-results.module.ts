@@ -63,6 +63,7 @@ import { ResultsIpInstitutionTypeRepository } from '../../api/ipsr/results-ip-in
 import { ResultActorRepository } from '../../api/results/result-actors/repositories/result-actors.repository';
 import { ResultInstitutionsBudgetRepository } from '../../api/results/result_budget/repositories/result_institutions_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../../api/results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -123,7 +124,8 @@ import { NonPooledProjectBudgetRepository } from '../../api/results/result_budge
     ResultIpExpertWorkshopOrganizedRepostory,
     ResultsIpActorRepository,
     ResultsByIpInnovationUseMeasureRepository,
-    ResultsIpInstitutionTypeRepository
+    ResultsIpInstitutionTypeRepository,
+    ResultCountrySubnationalRepository
   ],
   imports: [
     SharePointModule,

@@ -71,6 +71,7 @@ import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-instituti
 import { ResultActorRepository } from '../results/result-actors/repositories/result-actors.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Injectable()
 export class VersioningService {
@@ -90,6 +91,7 @@ export class VersioningService {
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
+    private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
     private readonly _linkedResultRepository: LinkedResultRepository,
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
@@ -387,7 +389,6 @@ export class VersioningService {
 
       // RESULT
       await this._resultByInitiativesRepository.replicate(manager, config);
-      await this._resultByInitiativesRepository.replicate(manager, config);
       await this._shareResultRequestRepository.replicate(manager, config);
       await this._nonPooledProjectRepository.replicate(manager, config);
       await this._resultsCenterRepository.replicate(manager, config);
@@ -399,6 +400,7 @@ export class VersioningService {
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
       await this._resultCountryRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
+      await this._resultCountrySubnationalRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);
       await this._evidencesRepository.replicate(manager, config);
       await this._resultActorRepository.replicate(manager, config);
@@ -449,10 +451,6 @@ export class VersioningService {
     );
     this._logger.log(
       `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
-    );
-    console.log(
-      '🚀 ~ VersioningService ~ $_phaseChangeIPSR ~ data:',
-      tempData[0],
     );
     return data;
   }

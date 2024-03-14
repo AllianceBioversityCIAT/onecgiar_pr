@@ -29,7 +29,6 @@ export class ResultRepository
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
-    console.log("🚀 ~ config:", config)
     return {
       findQuery: `
       select
