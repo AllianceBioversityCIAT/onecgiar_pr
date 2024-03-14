@@ -115,10 +115,10 @@
             <div class="container" *ngIf="complementaries">
                 <div class="col{{i}}" *ngFor="let item of columns; let i = index">
                     <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
-                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id"
+                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id" id="checkbox{{subItem.complementary_innovation_functions_id}}"
                             [inputId]="subItem.complementary_innovation_functions_id" [(ngModel)]="selectComplementary"
                             [disabled]="isReadonly"></p-checkbox>
-                        <label> {{ subItem.name }}</label>
+                        <label for="checkbox{{subItem.complementary_innovation_functions_id}}"> {{ subItem.name }}</label>
                     </div>
 
                 </div>
