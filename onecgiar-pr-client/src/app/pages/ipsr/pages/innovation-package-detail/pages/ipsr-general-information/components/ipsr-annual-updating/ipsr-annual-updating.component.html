@@ -20,7 +20,7 @@
                     [isStatic]=" this.api.rolesSE.access.canDdit">
                 </app-pr-checkbox>
                 <app-pr-input *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
-                    placeholder="Enter text" type="text" [required]="false"
+                    placeholder="Enter text" type="text" [required]="false" [isStatic]="true"
                     [(ngModel)]="this.discontinuedOption.description">
                 </app-pr-input>
             </div>
