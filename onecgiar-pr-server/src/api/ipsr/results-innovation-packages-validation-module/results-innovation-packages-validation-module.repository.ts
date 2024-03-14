@@ -113,6 +113,32 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND e.nutrition_related
                         AND e.is_active = 1
                 ) = 0
+            )
+            OR (
+                r.is_discontinued IS NULL
+                OR (
+                    r.is_discontinued = 1
+                    AND (
+                        SELECT
+                            SUM(
+                                IF(
+                                    rido.investment_discontinued_option_id = 6,
+                                    IF(
+                                        rido.description = ''
+                                        AND rido.description IS NULL,
+                                        0,
+                                        1
+                                    ),
+                                    1
+                                )
+                            ) - COUNT(rido.results_investment_discontinued_option_id) AS datas
+                        FROM
+                            results_investment_discontinued_options rido
+                        WHERE
+                            rido.is_active > 0
+                            AND rido.result_id = r.id
+                    ) IS NULL
+                )
             ) THEN FALSE
             ELSE TRUE
         END AS validation
