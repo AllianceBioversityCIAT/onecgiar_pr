@@ -74,10 +74,10 @@ describe('TableInnovationComponent', () => {
   });
 
   it('should open a new page when getComplementaryInnovation is called with result_type_id not equal to 11', () => {
-    const result = { result_type_id: 10, result_code: '123' };
+    const result = { result_type_id: 10, result_code: '123', version_id: 1 };
     const windowOpenSpy = jest.spyOn(window, 'open');
     component.getComplementaryInnovation(1, 0, result);
-    expect(windowOpenSpy).toHaveBeenCalledWith('/result/result-detail/123/general-information', '_blank');
+    expect(windowOpenSpy).toHaveBeenCalledWith('/result/result-detail/123/general-information?phase=1', '_blank');
   });
 
   it('should add a new input to referenceMaterials when addNewInput is called and referenceMaterials length is less than 3', () => {

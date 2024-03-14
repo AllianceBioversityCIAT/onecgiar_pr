@@ -96,7 +96,7 @@ export class TableInnovationComponent {
         }, 100);
       });
     } else {
-      const url = '/result/result-detail/' + result['result_code'] + '/general-information';
+      const url = `/result/result-detail/${result.result_code}/general-information?phase=${result.version_id}`;
       window.open(url, '_blank');
     }
   }

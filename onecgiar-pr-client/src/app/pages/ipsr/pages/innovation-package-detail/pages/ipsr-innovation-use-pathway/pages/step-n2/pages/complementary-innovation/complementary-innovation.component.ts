@@ -36,7 +36,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   cols = [];
   isInitiative: boolean = true;
 
-  constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public router: Router) {}
 
   ngOnInit(): void {
     this.api.isStepTwoOne = true;
@@ -62,7 +62,7 @@ export class ComplementaryInnovationComponent implements OnInit {
     });
   }
 
-  async createInnovationEvent(e) {
+  createInnovationEvent(e) {
     this.innovationPackageCreatorBody.push(e);
     this.getInformationInnovationComentary(true);
   }
@@ -118,7 +118,7 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(resp => {});
   }
 
-  async onSavePreviuosNext(descrip) {
+  onSavePreviuosNext(descrip) {
     if (this.api.rolesSE.readOnly) {
       if (descrip == 'next') {
         this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
@@ -163,7 +163,6 @@ export class ComplementaryInnovationComponent implements OnInit {
       });
       this.informationComplementaryInnovations.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
-        inno.result_code = Number(inno.result_code);
         this.isInitiative = this.api.rolesSE.validateInitiative(inno.initiative_id);
         inno.permissos = this.isInitiative;
       });
