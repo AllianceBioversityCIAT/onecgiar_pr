@@ -90,7 +90,10 @@ export class ResultRepository
         ,has_countries
         ,geographic_scope_id
         ,lead_contact_person
-        ,result_code
+        ,result_code,
+        nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id,
         ,is_replicated
         ) select
         r2.description,
@@ -121,6 +124,9 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.nutrition_tag_level_id,
+        r2.environmental_biodiversity_tag_level_id,
+        r2.poverty_tag_level_id,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
