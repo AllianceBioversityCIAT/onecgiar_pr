@@ -23,7 +23,7 @@ export class ChangePhaseModalComponent implements OnInit {
     this.requesting = true;
     this.api.resultsSE.PATCH_versioningProcess(this.api.dataControlSE.currentResult.id).subscribe({
       next: ({ response }) => {
-        this.api.alertsFe.show({ id: 'noti', title: `Successful replication`, description: `Result ${this.api.dataControlSE.currentResult.result_code} successfully replicated in phase ${this.api.dataControlSE.reportingCurrentPhase.phaseName}.`, status: 'success' });
+        this.api.alertsFe.show({ id: 'noti', title: `Successful replication`, description: `Result ${this.api.dataControlSE.currentResult.result_code} successfully replicated in phase ${this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}.`, status: 'success' });
         this.requesting = false;
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
