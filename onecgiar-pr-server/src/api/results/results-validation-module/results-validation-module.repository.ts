@@ -703,7 +703,12 @@ export class resultValidationRepository
         (e) => e.link && this._regex.test(e.link.trim()),
       );
 
-      if (resultTypeId == 7) {
+      if (resultTypeId == 5 && allEvidences.length == 0) {
+        return {
+          section_name: 'evidences',
+          validation: 1,
+        };
+      } else if (resultTypeId == 7) {
         const dacQuery = `
 			SELECT
 				r.gender_tag_level_id,
