@@ -5,7 +5,9 @@ export class StringContentComparator {
    *
    * @param {string} string1 - The first string to compare.
    * @param {string} string2 - The second string to compare.
-   * @returns {boolean} - Returns true if the contents of the strings are the same after considering the specific Unicode characters as equivalent. Returns false otherwise.
+   * @param {boolean} nullFirst - If true, null values are considered greater than non-null values.
+   * @returns {number} - Returns 0 if the contents of the strings are the same after considering the specific
+   * Unicode characters as equivalent. Returns the result of the lexicographic comparison of the two strings.
    *
    * @example
    * var stringOne = 'İstanbul';

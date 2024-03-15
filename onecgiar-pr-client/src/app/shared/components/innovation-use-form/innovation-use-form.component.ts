@@ -37,6 +37,7 @@ export class InnovationUseFormComponent {
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
   @Input() saving: boolean = false;
+
   constructor(public api: ApiService) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
@@ -44,14 +45,11 @@ export class InnovationUseFormComponent {
 
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      //(response);
       this.actorsTypeList = response;
     });
   }
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      //(response);
-      // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
@@ -103,7 +101,6 @@ export class InnovationUseFormComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
-    //(this.body.innovatonUse.measures);
   }
   get getAllSubTypes() {
     const list = [];
@@ -128,7 +125,6 @@ export class InnovationUseFormComponent {
   }
 
   get disableOrganizations() {
-    //(this.institutionsTypeTreeList);
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
       //(resp);
@@ -146,7 +142,6 @@ export class InnovationUseFormComponent {
   }
 
   removeOrganization(organizationItem) {
-    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;
@@ -190,7 +185,7 @@ export class InnovationUseFormComponent {
             false;
           this.calculateTotalField(actorItem);
         }, 3000);
-      }, 1000);
+      }, 500);
     } else {
       this.body.innovatonUse.actors[i].previousWomen =
         this.body.innovatonUse.actors[i][gender];

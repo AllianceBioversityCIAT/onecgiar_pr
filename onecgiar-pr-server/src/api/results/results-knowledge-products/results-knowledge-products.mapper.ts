@@ -14,6 +14,7 @@ import { ResultsKnowledgeProductKeyword } from './entities/results-knowledge-pro
 import { ResultsKnowledgeProductMetadata } from './entities/results-knowledge-product-metadata.entity';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
 import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
+import { StringContentComparator } from '../../../shared/utils/string-content-comparator';
 
 @Injectable()
 export class ResultsKnowledgeProductMapper {
@@ -103,10 +104,19 @@ export class ResultsKnowledgeProductMapper {
       new ResultsKnowledgeProductMetadataDto();
 
     metadataCGSpace.source = 'CGSpace';
-    metadataCGSpace.accessibility = dto?.['Open Access'] === 'Open Access';
+    metadataCGSpace.accessibility =
+      StringContentComparator.contentCompare(
+        'Open Access',
+        dto?.['Open Access'],
+      ) == 0;
     metadataCGSpace.doi = dto?.DOI;
-    metadataCGSpace.is_isi = dto?.ISI === 'ISI Journal';
-    metadataCGSpace.is_peer_reviewed = dto?.['Peer-reviewed'] === 'Peer Review';
+    metadataCGSpace.is_isi =
+      StringContentComparator.contentCompare('ISI Journal', dto?.ISI) == 0;
+    metadataCGSpace.is_peer_reviewed =
+      StringContentComparator.contentCompare(
+        'Peer Review',
+        dto?.['Peer-reviewed'],
+      ) == 0;
     metadataCGSpace.issue_year = this.extractOnlyYearFromDateString(
       dto?.['Issued date'],
     );
