@@ -1,8 +1,9 @@
 .table_container {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100vw - 270px);
+    width: 100%;
     padding: 10px;
-    overflow: hidden;
     position: relative;
 
     .options {
