@@ -13,7 +13,6 @@ export class GlobalLinksService {
 
   getInfo() {
     this.api.resultsSE.GET_platformGlobalVariablesByCategoryId(3).subscribe(({ response }) => {
-      console.log(response);
       this.links = response.reduce((acc, item) => {
         acc[item.name] = item.value;
         return acc;
