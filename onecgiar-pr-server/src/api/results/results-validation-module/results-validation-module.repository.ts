@@ -4,6 +4,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
+import { Evidence } from '../evidences/entities/evidence.entity';
 
 @Injectable()
 export class resultValidationRepository
@@ -16,6 +17,10 @@ export class resultValidationRepository
   ) {
     super(Validation, dataSource.createEntityManager());
   }
+
+  private _regex = new RegExp(
+    /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i,
+  );
 
   fisicalDelete(resultId: number): Promise<any> {
     const queryData = `delete v from validation v where v.results_id = ?;`;
@@ -690,7 +695,20 @@ export class resultValidationRepository
       const level = await this.innoReadinessLevel(resultId);
       let isAnyDAC3 = false;
 
-      if (resultTypeId == 7) {
+      const allEvidences = (await this.query(
+        'select * from evidence e where e.result_id = ? and e.is_active',
+        [resultId],
+      )) as Evidence[];
+      const multiplePerField = allEvidences.some(
+        (e) => e.link && this._regex.test(e.link.trim()),
+      );
+
+      if (resultTypeId == 5 && allEvidences.length == 0) {
+        return {
+          section_name: 'evidences',
+          validation: 1,
+        };
+      } else if (resultTypeId == 7) {
         const dacQuery = `
 			SELECT
 				r.gender_tag_level_id,
@@ -721,7 +739,12 @@ export class resultValidationRepository
             await this.dataSource.query(queryData);
 
           return evidenceValidations.length
-            ? evidenceValidations[0]
+            ? {
+                section_name: evidenceValidations[0].section_name,
+                validation: Number(
+                  evidenceValidations[0].validation && multiplePerField,
+                ),
+              }
             : undefined;
         } else if (resultTypeId == 7 && level == 0) {
           const response = {
@@ -735,7 +758,14 @@ export class resultValidationRepository
       const evidenceValidations: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
 
-      return evidenceValidations.length ? evidenceValidations[0] : undefined;
+      return evidenceValidations.length
+        ? {
+            section_name: evidenceValidations[0].section_name,
+            validation: Number(
+              evidenceValidations[0].validation && multiplePerField,
+            ),
+          }
+        : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
