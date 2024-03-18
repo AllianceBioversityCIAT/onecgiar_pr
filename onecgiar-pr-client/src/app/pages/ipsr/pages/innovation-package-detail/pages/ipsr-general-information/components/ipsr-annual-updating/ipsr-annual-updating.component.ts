@@ -21,11 +21,7 @@ export class IpsrAnnualUpdatingComponent {
 
   constructor(public api: ApiService) {}
 
-  isIpsrDiscontinuedOptionsTrue() {
-    if (!this.ipsrGeneralInfoBody.is_discontinued) return true;
-
-    if (this.ipsrGeneralInfoBody.is_discontinued) {
-      return this.ipsrGeneralInfoBody.discontinued_options.some(option => option.value);
-    } else return false;
+  isIpsrDiscontinuedOptionsTrue(): boolean {
+    return this.ipsrGeneralInfoBody?.is_discontinued ? this.ipsrGeneralInfoBody.discontinued_options.some(option => option.value) : true;
   }
 }
