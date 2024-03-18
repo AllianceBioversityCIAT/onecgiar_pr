@@ -1,13 +1,13 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n3-assessed-expert-workshop',
   templateUrl: './step-n3-assessed-expert-workshop.component.html',
   styleUrls: ['./step-n3-assessed-expert-workshop.component.scss']
 })
-export class StepN3AssessedExpertWorkshopComponent {
+export class StepN3AssessedExpertWorkshopComponent implements OnInit {
   @Input() body: any;
   radioOptions = [];
   readinessList = [];
@@ -28,18 +28,20 @@ export class StepN3AssessedExpertWorkshopComponent {
     }
   ];
 
-  constructor(private api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+
   ngOnInit(): void {
     this.api.resultsSE.getAssessedDuringExpertWorkshop().subscribe(({ response }) => {
-      //(response);
       this.radioOptions = response;
     });
     this.GETAllClarisaInnovationReadinessLevels();
     this.GETAllClarisaInnovationUseLevels();
   }
+
   useLevelDelfAssessment() {
     return `<a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view"  class="open_route" target="_blank">Click here</a> to see all innovation use levels`;
   }
+
   goToStep() {
     return `<li>In case you want to add one more complementary innovation/enabler/solution <a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2</a>.</li>
     <li><a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank">Click here </a> to see the definition of all readiness levels.</li>
@@ -47,24 +49,26 @@ export class StepN3AssessedExpertWorkshopComponent {
     <li><strong>YOUR READINESS AND USE SCORES IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a> AND <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>
     `;
   }
+
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
-      //(response);
       this.readinessList = response;
       this.readinessList.map((option, index) => (option.index = String(index)));
     });
   }
+
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
       this.useList = response;
       this.useList.map((option, index) => (option.index = String(index)));
     });
   }
+
   rangeListByIndex(index) {
     if (index % 2 === 0) {
-      return this.useList; // Es par
+      return this.useList;
     } else {
-      return this.readinessList; // Es impar
+      return this.readinessList;
     }
   }
 }

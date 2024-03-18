@@ -53,7 +53,7 @@
     <div class="ipsr-sub-title-2" style="margin-top: 20px;">Core innovation</div>
 
     <app-pr-field-header label="" style="margin-left: 20px;" [required]="false"
-        description='<a href="{{resultUrl(result_core_innovation?.core_result_code)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'>
+        description='<a href="{{resultUrl(result_core_innovation?.core_result_code, result_core_innovation?.core_result_current_phase)}}" target="_blank"> {{result_core_innovation?.core_title}} </a>'>
     </app-pr-field-header>
 
 
@@ -121,10 +121,10 @@
 </app-save-button>
 
 <div class="toggle_change_step">
-    <app-pr-button (click)="onsaveSection('previous')" padding="big"
+    <app-pr-button (click)="onSaveSectionWithStep('previous')" padding="big"
         [text]="this.api.rolesSE.readOnly ? 'Go to previous step':'Save & go to previous step'" icon="arrow_circle_left"
         [reverse]="true"></app-pr-button>
-    <app-pr-button (click)="onsaveSection('next')" padding="big"
+    <app-pr-button (click)="onSaveSectionWithStep('next')" padding="big"
         [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"
         icon="arrow_circle_right"></app-pr-button>
 </div>
