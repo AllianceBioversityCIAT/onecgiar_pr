@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
 import { TypePneReportRouting } from '../../shared/routing/routing-data';
+import { GlobalVariablesService } from '../../shared/services/global-variables.service';
 
 @Component({
   selector: 'app-type-one-report',
@@ -15,7 +16,7 @@ import { TypePneReportRouting } from '../../shared/routing/routing-data';
 export class TypeOneReportComponent implements OnInit {
   sections: any = [];
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService) {}
+  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService, public globalVariablesSE: GlobalVariablesService) {}
 
   ngOnInit(): void {
     TypePneReportRouting.forEach((section: any, index) => (section.prName ? this.sections.push({ ...section, name: `Section ${index + 1}: ${section.prName}` }) : null));
@@ -28,7 +29,7 @@ export class TypeOneReportComponent implements OnInit {
 
   getThePhases() {
     const autoSelectOpenPhases = (phases: any[]) => {
-      const openPhase = phases.find((phase: any) => phase.status);
+      let openPhase = phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
       this.typeOneReportSE.phaseSelected = openPhase?.id;
     };
 

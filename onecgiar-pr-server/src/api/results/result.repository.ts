@@ -1663,6 +1663,7 @@ left join clarisa_countries cc3
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
+                                          and rbi3.is_active > 0
     WHERE rbi3.inititiative_id = ${inititiative_id}
       ${phase ? `and r.version_id = ${phase}` : ''}
       AND r.status_id = 2
