@@ -15,6 +15,7 @@ import { GlobalVariablesService } from '../../shared/services/global-variables.s
 })
 export class TypeOneReportComponent implements OnInit {
   sections: any = [];
+  phaseNameLoaded = '';
 
   constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService, public globalVariablesSE: GlobalVariablesService) {}
 
@@ -31,6 +32,8 @@ export class TypeOneReportComponent implements OnInit {
     const autoSelectOpenPhases = (phases: any[]) => {
       let openPhase = phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
       this.typeOneReportSE.phaseSelected = openPhase?.id;
+      this.typeOneReportSE.phaseDefaultId = openPhase?.id;
+      this.phaseNameLoaded = openPhase?.phase_name_status;
     };
 
     const useLoadedPhases = () => {

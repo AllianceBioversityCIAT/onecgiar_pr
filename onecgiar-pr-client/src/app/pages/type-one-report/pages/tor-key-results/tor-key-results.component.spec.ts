@@ -70,7 +70,7 @@ describe('TorKeyResultsComponent', () => {
 
     component.exportExcel(initiativeSelected);
 
-    expect(mockApiService.resultsSE.GET_excelFullReportByInitiativeId).toHaveBeenCalledWith(component.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, component.typeOneReportSE.phaseSelected);
+    expect(mockApiService.resultsSE.GET_excelFullReportByInitiativeId).toHaveBeenCalledWith(component.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, component.typeOneReportSE.phaseDefaultId);
     expect(mockExportTablesService.exportExcel).toHaveBeenCalledWith('mockResponse', 'Initiative-progress-and-key-results');
   });
 

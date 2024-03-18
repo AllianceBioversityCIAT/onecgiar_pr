@@ -2,6 +2,16 @@
   display: grid;
   grid-template-columns: 320px 1fr;
 
+  .phaseLoaded {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--pr-color-primary);
+    border-radius: 4px;
+    color: white;
+    margin: 3px;
+  }
+
   .initiatives_selector {
     padding: 10px;
     background-color: white;
@@ -11,8 +21,6 @@
     padding: 20px 45px;
 
     .tor_section_container {
-      // box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.116);
-
       .initiative {
         display: grid;
         grid-template-columns: 1fr;
@@ -27,13 +35,7 @@
             width: 100%;
             display: grid;
             gap: 10px;
-            &.two {
-              grid-template-columns: 1fr 250px;
-            }
-
-            &.one {
-              grid-template-columns: 1fr;
-            }
+            grid-template-columns: 1fr 250px;
           }
 
           .label {
