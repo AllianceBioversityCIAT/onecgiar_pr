@@ -63,5 +63,5 @@ export class ClarisaInitiative {
   @JoinColumn({
     name: 'cgiar_entity_type_id',
   })
-  obj_cgiar_entity_type: ClarisaCgiarEntityType;
+  obj_cgiar_entity_type?: ClarisaCgiarEntityType;
 }
