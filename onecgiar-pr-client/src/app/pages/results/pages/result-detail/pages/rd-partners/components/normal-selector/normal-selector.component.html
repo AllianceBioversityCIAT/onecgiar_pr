@@ -80,7 +80,7 @@
 
     <div>
         <app-pr-field-header label="Partner types"
-            [description]="'Total partner(s) type ('+ this.partnerUniqueTypes.length + '):'" [required]="false">
+            [description]="'Total partner(s) type ('+ (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes:this.rdPartnersSE.toggle)?.length + '):'" [required]="false">
         </app-pr-field-header>
 
         <div class="chips_container custom_scroll">
