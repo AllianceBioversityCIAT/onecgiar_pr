@@ -16,9 +16,10 @@ import { PdfIconModule } from 'src/app/shared/icon-components/pdf-icon/pdf-icon.
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultsToUpdateModalModule } from './components/results-to-update-modal/results-to-update-modal.module';
 import { CustomSpinnerModule } from 'src/app/shared/components/custom-spinner/custom-spinner.module';
+import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 
 @NgModule({
   declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
-  imports: [CommonModule, ResultsListRoutingModule, CustomSpinnerModule, TableModule, ButtonModule, MenuModule, ResultsToUpdateModalModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule, PdfIconModule, TooltipModule]
+  imports: [CommonModule, ResultsListRoutingModule, CustomSpinnerModule, TableModule, ButtonModule, MenuModule, ResultsToUpdateModalModule, ChangePhaseModalModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule, PdfIconModule, TooltipModule]
 })
 export class ResultsListModule {}

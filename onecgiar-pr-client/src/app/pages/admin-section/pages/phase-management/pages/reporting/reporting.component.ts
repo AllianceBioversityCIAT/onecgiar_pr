@@ -4,6 +4,7 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 import { Phase } from '../../../../../../shared/interfaces/phase.interface';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 
 @Component({
   selector: 'app-reporting',
@@ -40,7 +41,7 @@ export class ReportingComponent implements OnInit {
     }
   ];
 
-  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     this.getAllPhases();
@@ -116,6 +117,7 @@ export class ReportingComponent implements OnInit {
       () => {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
+        this.phasesService.getNewPhases();
       },
       err => {
         console.error(err);
@@ -133,6 +135,7 @@ export class ReportingComponent implements OnInit {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
         phase.isNew = false;
+        this.phasesService.getNewPhases();
       },
       err => {
         console.error(err);

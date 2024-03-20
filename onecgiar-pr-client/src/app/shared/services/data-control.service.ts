@@ -3,6 +3,8 @@ import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
 import { Title } from '@angular/platform-browser';
 import { CurrentResult } from '../interfaces/current-result.interface';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../enum/api.enum';
+import { ResultsApiService } from './api/results-api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -31,8 +33,15 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   showT1RSelectPhase?: boolean;
+  reportingCurrentPhase: any;
 
-  constructor(private titleService: Title) {}
+  constructor(private titleService: Title, public resultsSE: ResultsApiService) {}
+
+  getCurrentPhases() {
+    this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+      this.reportingCurrentPhase = response[0]?.phase_year;
+    });
+  }
 
   validateBody(body: any) {
     return Object.entries(body).every((item: any) => item[1]);
@@ -56,7 +65,7 @@ export class DataControlService {
         }
         if (seconds == 10) {
           clearInterval(timer);
-          reject('error');
+          reject(new Error('Timeout after 10 seconds'));
         }
       }, 1000);
     });
@@ -95,7 +104,7 @@ export class DataControlService {
     let inputs;
     let selects;
     try {
-      inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !Boolean(field.value));
+      inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !field.value);
       selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
     } catch (error) {}
     return inputs || selects;
@@ -110,7 +119,7 @@ export class DataControlService {
     try {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory .input-validation')).filter(field => {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
-        const isEmpty = !Boolean(field?.innerText);
+        const isEmpty = !field?.innerText;
 
         if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
 
@@ -129,7 +138,7 @@ export class DataControlService {
   }
 
   detailSectionTitle(sectionName, title?) {
-    this.titleService.setTitle(title ? title : sectionName);
-    this.currentSectionName = title ? title : sectionName;
+    this.titleService.setTitle(title || sectionName);
+    this.currentSectionName = title || sectionName;
   }
 }
