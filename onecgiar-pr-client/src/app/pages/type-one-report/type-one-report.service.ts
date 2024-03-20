@@ -14,6 +14,7 @@ export class TypeOneReportService {
   allInitiatives = [];
   reportingPhases: any[] = [];
   phaseSelected = null;
+  phaseDefaultId = null;
   currentInitiativeShortName = null;
   currentBiPage = null;
 

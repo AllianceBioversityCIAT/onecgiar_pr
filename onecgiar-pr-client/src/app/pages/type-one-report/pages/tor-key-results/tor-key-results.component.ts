@@ -24,7 +24,7 @@ export class TorKeyResultsComponent implements OnDestroy {
 
   exportExcel(initiativeSelected) {
     this.requesting = true;
-    this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, this.typeOneReportSE.phaseSelected).subscribe({
+    this.api.resultsSE.GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, this.typeOneReportSE.phaseDefaultId).subscribe({
       next: ({ response }) => {
         this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
         this.requesting = false;

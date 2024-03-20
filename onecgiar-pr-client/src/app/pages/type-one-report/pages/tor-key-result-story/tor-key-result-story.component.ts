@@ -17,7 +17,7 @@ export class TorKeyResultStoryComponent implements OnInit {
   }
 
   GET_keyResultStoryInitiativeId() {
-    this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id, this.typeOneReportSE.phaseSelected).subscribe(({ response }) => {
+    this.api.resultsSE.GET_keyResultStoryInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id, this.typeOneReportSE.phaseDefaultId).subscribe(({ response }) => {
       this.typeOneReportSE.keyResultStoryData = response;
       this.tablesList = [];
       response.forEach(table => {
