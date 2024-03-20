@@ -17,5 +17,5 @@ export class ClarisaCgiarEntityType {
   name: string;
 
   @OneToMany(() => ClarisaInitiative, (ci) => ci.obj_cgiar_entity_type)
-  clarisa_initiative_array: ClarisaInitiative[];
+  clarisa_initiative_array?: ClarisaInitiative[];
 }

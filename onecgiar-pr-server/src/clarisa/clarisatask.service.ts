@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosStatic } from 'axios';
 import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
 import { ClariasaActionAreaRepository } from './clarisa-action-areas/ClariasaActionArea.repository';
 import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaInitiatives.repository';
@@ -36,11 +36,22 @@ import { ClarisaTocPhaseRepository } from './clarisa-toc-phases/clarisa-toc-phas
 import { ClarisaSubnationalScopeRepository } from './clarisa-subnational-scope/clarisa-subnational-scope.repository';
 import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ClarisaCgiarEntityTypeRepository } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.repository';
+import { DataSource } from 'typeorm';
+import { ClarisaCgiarEntityType } from './clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
+import { ClarisaInitiative } from './clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ClarisaInitiativeResponse } from '../shared/globalInterfaces/clarisa-response.interfaces';
 
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string = `${env.CLA_URL}api/`;
-  private readonly configAuth = {
+  private count: {
+    standard: number;
+    important: number;
+  } = {
+    standard: 1,
+    important: 1,
+  };
+  private readonly configAuth: AxiosRequestConfig = {
     auth: {
       username: env.CLA_USER,
       password: env.CLA_PASSWORD,
@@ -48,6 +59,7 @@ export class ClarisaTaskService {
   };
   private readonly _logger: Logger = new Logger(ClarisaTaskService.name);
   constructor(
+    private readonly dataSource: DataSource,
     private readonly _clarisaMeliaStudyTypeRepository: ClarisaMeliaStudyTypeRepository,
     private readonly _clariasaActionAreaRepository: ClariasaActionAreaRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
@@ -79,49 +91,157 @@ export class ClarisaTaskService {
 
   public async clarisaBootstrap() {
     this._logger.debug(`Cloning of CLARISA control lists`);
-    let count = 1;
-    //count = await this.cloneClarisaCountries(count, true);
-    //count = await this.cloneClarisaMeliaStudyTypes(count, true);
-    //count = await this.cloneClarisaGlobalTargetType(count, true);
-    //count = await this.cloneClarisaRegions(count, true);
-    //count = await this.cloneClarisaInitiatives(count, true);
-    //count = await this.cloneClarisaActionArea(count, true);
-    //count = await this.cloneClarisaImpactAreaIndicators(count, true);
-    //count = await this.cloneClarisaImpactArea(count, true);
-    //count = await this.cloneClarisaOutcomeIndicators(count, true);
-    //count = await this.cloneClarisaRegionsType(count, true);
+    this.count.standard = 1;
 
-    count = await this.cloneClarisaRegions(count);
-    count = await this.cloneClarisaCountries(count);
-    count = await this.cloneClarisaMeliaStudyTypes(count);
-    count = await this.cloneClarisaActionArea(count);
-    count = await this.cloneCgiarEntityType(count);
-    count = await this.cloneClarisaInitiatives(count);
-    count = await this.cloneClarisaImpactArea(count);
-    count = await this.cloneClarisaGlobalTargetType(count);
-    count = await this.cloneClarisaImpactAreaIndicators(count);
-    count = await this.cloneClarisaOutcomeIndicators(count);
-    count = await this.cloneClarisaRegionsType(count);
-    count = await this.cloneClarisaInstitutionsType(count);
-    count = await this.cloneClarisaPolicyStageRepository(count);
-    count = await this.cloneClarisaInnovationTypeRepository(count);
-    count = await this.cloneClarisaInnovationReadinessLevelRepository(count);
-    count = await this.cloneClarisaInnovationCharacteristicRepository(count);
-    count = await this.cloneClarisaActionAreaOutcomeRepository(count);
-    count = await this.cloneClarisaGeographicScope(count);
-    count = await this.cloneClarisaCenterRepository(count);
-    count = await this.cloneClarisaPolicyTypeRepository(count);
-    count = await this.cloneClarisaSdgs(count);
-    count = await this.cloneClarisaSdgsTargets(count);
-    count = await this.cloneClarisaTocPhases(count);
-    count = await this.cloneClarisaSubnationalScope(count);
-    await this.cloneResultTocRepository(count);
+    this.count.standard = await this.cloneClarisaRegions(this.count.standard);
+    this.count.standard = await this.cloneClarisaCountries(this.count.standard);
+    this.count.standard = await this.cloneClarisaMeliaStudyTypes(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaActionArea(
+      this.count.standard,
+    );
+    //this.count.standard = await this.cloneCgiarEntityType(this.count.standard);
+    await this.cloningProcess<ClarisaCgiarEntityType>(
+      ClarisaCgiarEntityType,
+      this.cloneClarisaEntityTypes(),
+      this.count.standard,
+    );
+
+    await this.cloningProcess<ClarisaInitiative>(
+      ClarisaInitiative,
+      this.cloneClarisaInitiative(),
+      this.count.standard,
+    );
+
+    /*this.count.standard = await this.cloneClarisaInitiatives(
+      this.count.standard,
+    );*/
+    this.count.standard = await this.cloneClarisaImpactArea(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaGlobalTargetType(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaImpactAreaIndicators(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaOutcomeIndicators(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaRegionsType(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaInstitutionsType(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaPolicyStageRepository(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaInnovationTypeRepository(
+      this.count.standard,
+    );
+    this.count.standard =
+      await this.cloneClarisaInnovationReadinessLevelRepository(
+        this.count.standard,
+      );
+    this.count.standard =
+      await this.cloneClarisaInnovationCharacteristicRepository(
+        this.count.standard,
+      );
+    this.count.standard = await this.cloneClarisaActionAreaOutcomeRepository(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaGeographicScope(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaCenterRepository(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaPolicyTypeRepository(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaSdgs(this.count.standard);
+    this.count.standard = await this.cloneClarisaSdgsTargets(
+      this.count.standard,
+    );
+    this.count.standard = await this.cloneClarisaTocPhases(this.count.standard);
+    this.count.standard = await this.cloneClarisaSubnationalScope(
+      this.count.standard,
+    );
+    await this.cloneResultTocRepository(this.count.standard);
   }
 
   public async clarisaBootstrapImportantData() {
     this._logger.debug(`Cloning of CLARISA important control lists`);
     const count = 1;
     await this.cloneClarisaInstitutions(count);
+  }
+
+  private host(path: string): string {
+    return `${this.clarisaHost}${path}`;
+  }
+
+  private async cloningProcess<E>(
+    entity: new () => E,
+    dataToSave: Promise<E[]>,
+    counter: number,
+  ) {
+    try {
+      dataToSave
+        .then(
+          async (data) =>
+            await this.dataSource.getRepository(entity).save(data),
+        )
+        .catch((error) => {
+          console.log(error);
+        });
+      this._logger.verbose(
+        `[${counter}]: All ${entity.name} control list data has been created`,
+      );
+    } catch (error) {
+      this._logger.error(
+        `[${counter}]: Error in manipulating the data of ${entity.name}`,
+      );
+      this._logger.error(error);
+    }
+    counter++;
+  }
+
+  async cloneClarisaEntityTypes(): Promise<ClarisaCgiarEntityType[]> {
+    const rawData: ClarisaCgiarEntityType[] = await lastValueFrom(
+      this._httpService
+        .get(this.host('cgiar-entity-types'), this.configAuth)
+        .pipe(map((resp) => resp.data)),
+    );
+    return rawData.map(
+      (el: ClarisaCgiarEntityType): ClarisaCgiarEntityType => ({
+        code: el.code,
+        name: el.name,
+      }),
+    );
+  }
+
+  async cloneClarisaInitiative(): Promise<ClarisaInitiative[]> {
+    const rawData: ClarisaInitiativeResponse[] = await lastValueFrom(
+      this._httpService
+        .get(this.host('initiatives'), this.configAuth)
+        .pipe(map((resp) => resp.data)),
+    );
+    const tocId = await this._clarisaInitiativesRepository.getTocIdFromOst();
+    return rawData.map((el: ClarisaInitiativeResponse) => {
+      const tocData = tocId.filter((toc) => toc.initiativeId == el.id);
+      return {
+        id: el.id,
+        official_code: el.official_code,
+        name: el.name,
+        short_name: el.short_name,
+        action_area_id: el.action_area_id,
+        active: el.active,
+        toc_id: tocData?.[0]?.toc_id || null,
+        cgiar_entity_type_id: el.type_id,
+      };
+    });
   }
 
   private async cloneClarisaSubnationalScope(
@@ -297,6 +417,8 @@ export class ClarisaTaskService {
         data.map((el: any) => {
           const tocData = tocId.filter((toc) => toc.initiativeId == el['id']);
           el['toc_id'] = tocData.length ? tocData[0].toc_id : null;
+          el['cgiar_entity_type_id'] = el?.['type_id'];
+          delete el?.['type_id'];
         });
 
         await this._clarisaInitiativesRepository.save(data);
