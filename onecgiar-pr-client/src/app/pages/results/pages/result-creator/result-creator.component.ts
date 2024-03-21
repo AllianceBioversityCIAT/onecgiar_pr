@@ -55,12 +55,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   onSelectInit() {
-    // console.log('onSelectInit');
-
     const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList) || []).find(init => init.id == this.resultLevelSE.resultBody.initiative_id);
     const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
-    console.log(init.typeCode);
-    console.log(resultType);
     this.currentResultType = resultType?.name;
   }
 
@@ -88,7 +84,6 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.GET_cgiarEntityTypes(entityTypesResponse => {
-        console.log(entityTypesResponse);
         this.cgiarEntityTypes = entityTypesResponse;
         this.allInitiatives = response;
 
@@ -99,12 +94,11 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         });
 
         const groupList = entityTypesResponse;
-        let resultList = [];
+        const resultList = [];
         groupList?.forEach(groupItem => {
-          // console.log(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
-          resultList.push(groupItem, ...this.allInitiatives.filter(item => item.typeCode == groupItem.code));
+          const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+          if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
         });
-        // console.log(resultList);
         this.allInitiatives = resultList;
       });
     });
