@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import { create as createPDF } from 'pdf-creator-node';
@@ -14,13 +14,18 @@ import { Result } from '../results/entities/result.entity';
 
 @Injectable()
 export class PlatformReportService {
+  private readonly _logger: Logger = new Logger(PlatformReportService.name);
   public constructor(
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
     private readonly _resultRepository: ResultRepository,
   ) {}
 
-  async getFullResultReportByResultCode(result_code: string, phase: string) {
+  async getFullResultReportByResultCode(
+    result_code: string,
+    phase: string,
+    report_type: PlatformReportEnum,
+  ) {
     try {
       const cleanResultCodeInput = Number(result_code);
       if (Number.isNaN(cleanResultCodeInput)) {
@@ -53,10 +58,9 @@ export class PlatformReportService {
         };
         throw error;
       }
-      const enumValue = PlatformReportEnum.FULL_RESULT_REPORT;
 
       const report = await this._platformReportRepository.findOne({
-        where: { id: enumValue.id },
+        where: { id: report_type.id },
         relations: { template_object: { children_array: true } },
       });
 
@@ -178,6 +182,7 @@ export class PlatformReportService {
           return res;
         })
         .catch((_error) => {
+          this._logger.error(_error);
           return null;
         });
 

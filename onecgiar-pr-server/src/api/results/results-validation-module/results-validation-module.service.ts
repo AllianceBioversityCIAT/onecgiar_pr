@@ -57,16 +57,12 @@ export class ResultsValidationModuleService {
       }
       response.push({ section_name: 'links-to-results', validation: 1 });
 
-      if (result.result_type_id == 5) {
-        response.push({ section_name: 'evidences', validation: 1 });
-      } else {
-        response.push(
-          await this._resultValidationRepository.evidenceValidation(
-            result.result_type_id,
-            result.id,
-          ),
-        );
-      }
+      response.push(
+        await this._resultValidationRepository.evidenceValidation(
+          result.result_type_id,
+          result.id,
+        ),
+      );
 
       switch (result.result_type_id) {
         case 1:
@@ -168,14 +164,10 @@ export class ResultsValidationModuleService {
       }
       response.push({ section_name: 'links-to-results', validation: 1 });
 
-      if (result.result_type_id == 5) {
-        response.push({ section_name: 'evidences', validation: 1 });
-      } else {
-        response.push({
-          section_name: 'evidences',
-          validation: validation?.evidence || 0,
-        });
-      }
+      response.push({
+        section_name: 'evidences',
+        validation: validation?.evidence || 0,
+      });
 
       switch (result.result_type_id) {
         case 1:
@@ -310,21 +302,13 @@ export class ResultsValidationModuleService {
         validation: newValidation.links_to_results,
       });
 
-      if (result.result_type_id == 5) {
-        newValidation.evidence = 1;
-        response.push({
-          section_name: 'evidences',
-          validation: newValidation.evidence,
-        });
-      } else {
-        const vEvidence =
-          await this._resultValidationRepository.evidenceValidation(
-            result.result_type_id,
-            result.id,
-          );
-        newValidation.evidence = vEvidence.validation;
-        response.push(vEvidence);
-      }
+      const vEvidence =
+        await this._resultValidationRepository.evidenceValidation(
+          result.result_type_id,
+          result.id,
+        );
+      newValidation.evidence = vEvidence.validation;
+      response.push(vEvidence);
 
       switch (result.result_type_id) {
         case 1:
@@ -473,21 +457,13 @@ export class ResultsValidationModuleService {
           validation: newValidation.links_to_results,
         });
 
-        if (result.result_type_id == 5) {
-          newValidation.evidence = 1;
-          response.push({
-            section_name: 'evidences',
-            validation: newValidation.evidence,
-          });
-        } else {
-          const vEvidence =
-            await this._resultValidationRepository.evidenceValidation(
-              result.result_type_id,
-              result.id,
-            );
-          newValidation.evidence = vEvidence.validation;
-          response.push(vEvidence);
-        }
+        const vEvidence =
+          await this._resultValidationRepository.evidenceValidation(
+            result.result_type_id,
+            result.id,
+          );
+        newValidation.evidence = vEvidence.validation;
+        response.push(vEvidence);
 
         switch (result.result_type_id) {
           case 1:
