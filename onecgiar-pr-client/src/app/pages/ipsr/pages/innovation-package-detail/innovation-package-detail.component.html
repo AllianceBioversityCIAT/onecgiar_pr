@@ -10,18 +10,22 @@
         <app-phase-switcher></app-phase-switcher>
     </div>
 
-    <div class="title">
-        <div>
-            {{this.ipsrDataControlSE.detailData?.title}}
-        </div>
-        <div class="submit_button"
+    <div class="title_container">
+        <div class="title">
+            <div>
+                {{this.ipsrDataControlSE.detailData?.title}}
+            </div>
+            <div class="submit_button"
             *ngIf="(this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id))&&!this.api.rolesSE.platformIsClosed">
             <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
-                [verticalMargin]="0"
-                [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-                (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
-            </app-pr-button>
-        </div>
+            [verticalMargin]="0"
+            [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
+            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
+        </app-pr-button>
+    </div>
+
+    </div>
+        <app-pdf-actions (copyEvent)="onCopy()" [horizontal]="true"></app-pdf-actions>
     </div>
 </div>
 
@@ -63,3 +67,4 @@
 <app-partners-request></app-partners-request>
 <app-ipsr-unsubmit-modal></app-ipsr-unsubmit-modal>
 <app-ipsr-submission-modal></app-ipsr-submission-modal>
+<p-toast key="copyResultLinkPdf" position="bottom-center"></p-toast>
