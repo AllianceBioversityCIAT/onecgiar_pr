@@ -10,9 +10,11 @@ import { IpsrSubmissionModalComponent } from './components/ipsr-submission-modal
 import { IpsrUnsubmitModalComponent } from './components/ipsr-unsubmit-modal/ipsr-unsubmit-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
+import { PdfActionsModule } from '../../../results/pages/result-detail/components/pdf-actions/pdf-actions.module';
+import { ToastModule } from 'primeng/toast';
 
 @NgModule({
   declarations: [InnovationPackageDetailComponent, IpsrSubmissionModalComponent, IpsrUnsubmitModalComponent],
-  imports: [CommonModule, InnovationPackageDetailRoutingModule, IpsrDetailTopMenuModule, CustomFieldsModule, PartnersRequestModule, DialogModule, PhaseSwitcherModule]
+  imports: [CommonModule, InnovationPackageDetailRoutingModule, IpsrDetailTopMenuModule, PdfActionsModule, ToastModule, CustomFieldsModule, PartnersRequestModule, DialogModule, PhaseSwitcherModule]
 })
 export class InnovationPackageDetailModule {}

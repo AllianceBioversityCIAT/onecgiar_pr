@@ -6,14 +6,16 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-innovation-package-detail',
   templateUrl: './innovation-package-detail.component.html',
-  styleUrls: ['./innovation-package-detail.component.scss']
+  styleUrls: ['./innovation-package-detail.component.scss'],
+  providers: [MessageService]
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
-  constructor(private activatedRoute: ActivatedRoute, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService, private router: Router) {}
+  constructor(private activatedRoute: ActivatedRoute, private messageSE: MessageService, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService, private router: Router) {}
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
@@ -23,6 +25,10 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
       this.ipsrCompletenessStatusSE.updateGreenChecks();
       this.getIPSRPhases();
     });
+  }
+
+  onCopy() {
+    this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
   }
 
   GET_resultIdToCode(callback) {

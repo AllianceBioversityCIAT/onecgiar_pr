@@ -11,6 +11,7 @@
                 <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
+                <th id="pdf">PDF</th>
                 <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
             </tr>
         </ng-template>
@@ -36,6 +37,13 @@
                             {{column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')}}
                         </a>
                     </ng-container>
+                </td>
+
+                <td>
+                    <a class="subResults" pTooltip="Click to view the pdf" tooltipPosition="bottom" *ngFor="let subResult of result['results']"
+                    [href]="'/reports/result-details/' + subResult?.result_code + '/ipsr' + '?phase='+subResult?.version_id" target="_blank" rel="noopener noreferrer">
+                        <app-pdf-icon></app-pdf-icon>
+                    </a>
                 </td>
 
                 <td *ngIf="!this.api.rolesSE.platformIsClosed">
