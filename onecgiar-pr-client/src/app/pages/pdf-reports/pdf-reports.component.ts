@@ -45,7 +45,13 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
 
   validateErrors({ message, status }) {
     const statusText = String(status);
-    this.error.type = statusText[0] == '5' ? 'error' : statusText[0] == '4' ? 'warning' : null;
+    if (statusText.startsWith('5')) {
+      this.error.type = 'error';
+    } else if (statusText.startsWith('4')) {
+      this.error.type = 'warning';
+    } else {
+      this.error.type = null;
+    }
   }
 
   ngOnDestroy(): void {
