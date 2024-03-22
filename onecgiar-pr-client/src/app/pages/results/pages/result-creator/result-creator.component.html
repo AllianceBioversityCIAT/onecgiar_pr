@@ -26,7 +26,7 @@
       <app-pr-select class="segment_title_margin" [group]="true"
       groupName="name" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
         *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        placeholder="Select Initiative" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
+        placeholder="Select" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
 
