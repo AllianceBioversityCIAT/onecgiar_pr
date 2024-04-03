@@ -10,8 +10,8 @@ export class InvestmentDiscontinuedOptionsController {
     private readonly investmentDiscontinuedOptionsService: InvestmentDiscontinuedOptionsService,
   ) {}
 
-  @Get()
-  findAll() {
-    return this.investmentDiscontinuedOptionsService.findAll();
+  @Get('/:resultTypeId')
+  findAll(resultTypeId: number) {
+    return this.investmentDiscontinuedOptionsService.findAll(resultTypeId);
   }
 }
