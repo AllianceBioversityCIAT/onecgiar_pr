@@ -300,6 +300,7 @@ export class IpsrRepository
                 WHERE
                     rt.id = r.result_type_id
             ) AS innovation_type,
+            r.result_type_id,
             r.geographic_scope_id,
             cgs.name AS geoscope,
             r.gender_tag_level_id,
