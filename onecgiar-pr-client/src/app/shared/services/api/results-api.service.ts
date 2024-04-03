@@ -817,8 +817,8 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
 
-  GET_investmentDiscontinuedOptions() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
+  GET_investmentDiscontinuedOptions(result_type_id) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}`);
   }
 
   GET_versioningResult() {
