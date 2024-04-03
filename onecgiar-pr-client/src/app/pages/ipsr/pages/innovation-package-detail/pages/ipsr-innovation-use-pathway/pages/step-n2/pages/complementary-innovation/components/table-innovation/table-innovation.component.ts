@@ -28,27 +28,12 @@ interface ComplementaryInnovation {
   styleUrls: ['./table-innovation.component.scss']
 })
 export class TableInnovationComponent {
-  coreInnovationSelected: ComplementaryInnovation;
   searchText = '';
-  InnovationSelect: any;
   status = false;
   statusAdd = false;
   isReadonly = false;
-  informationComplementaryInnovation: ComplementaryInnovation[] = [];
-  loading: boolean = true;
   isInitiative: boolean = true;
   informationComplentary: ComplementaryInnovationClass = new ComplementaryInnovationClass();
-  @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
-  @Output() saveedit = new EventEmitter<any>();
-  @Input() selectionsInnovation: any[];
-  @Input() informationComplementaryInnovations: any[] = [];
-  @Input() columns: any[];
-  selectComplementary: any[] = [];
-  complementaries = false;
-  idInnovation: number;
-
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
-
   columnOrder = [
     { title: 'Code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
@@ -60,12 +45,24 @@ export class TableInnovationComponent {
     { name: 'Yes', value: true },
     { name: 'No', value: false }
   ];
-  openInNewPage(link) {
-    window.open(link, '_blank');
-  }
+  selectComplementary: any[] = [];
+  complementaries = false;
+  idInnovation: number;
+  @Input() informationComplementaryInnovations: any[] = [];
+  @Input() columns: any[];
+  @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
+  @Output() saveedit = new EventEmitter<any>();
+  @Output() cancelInnovation = new EventEmitter<any>();
+
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
+
   selectInnovation(result: ComplementaryInnovation) {
     result.selected = true;
     this.selectInnovationEvent.emit(result);
+  }
+
+  cancelInnovationEvent(result_id) {
+    this.cancelInnovation.emit(result_id);
   }
 
   getComplementaryInnovation(id, isRead, result) {

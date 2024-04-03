@@ -21,9 +21,10 @@
                 <tr>
                     <td class="actionsSelect" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? selectInnovation(result) : null">
-                            <i class="material-icons-round" style="font-size: 20px;">check_circle</i>
+                        <div class="link_button"
+                            (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result.result_id)">
+                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="!result.selected">check_circle</i>
+                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="result.selected">remove_circle_outline</i>
                         </div>
                     </td>
                     <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
@@ -42,7 +43,6 @@
                         </div>
                     </td>
                     <td class="actions" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
-
                         <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
                             <i class="material-icons-round" style="font-size: 20px;">visibility</i>
                         </div>
