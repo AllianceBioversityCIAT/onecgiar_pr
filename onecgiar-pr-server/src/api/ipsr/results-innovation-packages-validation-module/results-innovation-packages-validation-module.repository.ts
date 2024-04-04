@@ -122,7 +122,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         SELECT
                             SUM(
                                 IF(
-                                    rido.investment_discontinued_option_id = 6,
+                                    rido.investment_discontinued_option_id = 12,
                                     IF(
                                         rido.description = ''
                                         AND rido.description IS NULL,

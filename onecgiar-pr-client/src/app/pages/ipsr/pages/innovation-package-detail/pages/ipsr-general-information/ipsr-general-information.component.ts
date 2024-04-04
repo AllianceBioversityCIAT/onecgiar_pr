@@ -23,12 +23,12 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-      this.GET_investmentDiscontinuedOptions();
+      this.GET_investmentDiscontinuedOptions(response.result_type_id);
     });
   }
 
-  GET_investmentDiscontinuedOptions() {
-    this.api.resultsSE.GET_investmentDiscontinuedOptions().subscribe(({ response }) => {
+  GET_investmentDiscontinuedOptions(result_type_id) {
+    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id).subscribe(({ response }) => {
       this.convertChecklistToDiscontinuedOptions(response);
     });
   }
