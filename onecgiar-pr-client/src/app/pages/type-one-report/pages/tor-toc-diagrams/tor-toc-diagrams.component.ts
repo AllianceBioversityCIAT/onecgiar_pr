@@ -17,7 +17,7 @@ export class TorTocDiagramsComponent implements OnInit {
 
   getResultFolders() {
     this.folderUrl = '';
-    this.api.endpointsSE.resultFolders(this.typeOneReportSE.phaseSelected).subscribe({
+    this.api.endpointsSE.resultFolders(this.typeOneReportSE.phaseDefaultId).subscribe({
       next: resp => {
         const firstFolderPath = resp?.response?.[0]?.folder_path;
         this.folderUrl = firstFolderPath || '';

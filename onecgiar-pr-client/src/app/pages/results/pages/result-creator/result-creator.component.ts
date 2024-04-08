@@ -24,7 +24,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   If you need support to modify any of the harvested metadata from CGSpace, contact your Center’s knowledge manager.<br><br>`;
   allInitiatives = [];
   allPhases = [];
-
+  cgiarEntityTypes = [];
+  currentResultType = '';
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
 
   ngOnInit(): void {
@@ -53,16 +54,53 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     }, 600);
   }
 
+  onSelectInit() {
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList) || []).find(init => init.id == this.resultLevelSE.resultBody.initiative_id);
+    const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
+    this.currentResultType = resultType?.name;
+  }
+
   getAllPhases() {
     const reportingPhases = this.phasesService?.phases?.reporting || [];
     const ipsrPhases = this.phasesService?.phases?.ipsr || [];
     this.allPhases = [...reportingPhases, ...ipsrPhases];
   }
 
+  GET_cgiarEntityTypes(callback) {
+    this.api.resultsSE.GET_cgiarEntityTypes().subscribe(
+      ({ response }) => {
+        response.forEach(element => {
+          element.isLabel = true;
+        });
+        callback(response);
+      },
+      err => {
+        callback();
+      }
+    );
+  }
+
   GET_AllInitiatives() {
     if (!this.api.rolesSE.isAdmin) return;
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      this.allInitiatives = response;
+      this.GET_cgiarEntityTypes(entityTypesResponse => {
+        this.cgiarEntityTypes = entityTypesResponse;
+        this.allInitiatives = response;
+
+        this.allInitiatives.forEach(initiative => {
+          const { code, name } = initiative?.obj_cgiar_entity_type || {};
+          initiative.typeCode = code;
+          initiative.typeName = name;
+        });
+
+        const groupList = entityTypesResponse;
+        const resultList = [];
+        groupList?.forEach(groupItem => {
+          const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+          if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
+        });
+        this.allInitiatives = resultList;
+      });
     });
   }
 

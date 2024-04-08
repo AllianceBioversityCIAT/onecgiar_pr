@@ -36,7 +36,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() indexReference: number = null;
   @Input() noDataText: string = '';
   @Input() fieldDisabled: boolean = false;
-
+  @Input() group: boolean = false;
+  @Input() groupCode: string = '';
+  @Input() groupName: string = '';
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];
   @Input() _value: string;
