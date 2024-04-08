@@ -24,7 +24,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() placeholder: string;
   @Input() label: string;
   @Input() selectedLabel: string;
-  @Input() selectedLabel2?: string;
+  @Input() nextSelectedLabel?: string; // This variable represents the extra concatenation to increase or have an additional counter, since by default it only shows one counter and the requirements make us generate an additional one.
   @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
@@ -111,7 +111,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   selectedLabelDescription() {
-    if (this.selectedLabel2) return `${this.selectedLabel}(${this.value?.length}) ${this.selectedLabel2}(${this.value?.length})`;
+    if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
 
     return `${this.selectedLabel} (${this.value?.length})`;
   }
