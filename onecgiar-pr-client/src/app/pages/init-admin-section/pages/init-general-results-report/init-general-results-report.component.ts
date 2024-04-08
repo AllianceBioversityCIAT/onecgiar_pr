@@ -31,7 +31,6 @@ export class InitGeneralResultsReportComponent implements OnInit {
 
   getAllResultStatuses() {
     this.api.resultsSE.GET_allResultStatuses().subscribe(({ response }) => {
-      console.log(response);
       this.resultStatusList = response;
       this.resultStatusList.forEach((status: any) => {
         status.className = status.name.replace(' ', '-').toLowerCase();
@@ -81,7 +80,6 @@ export class InitGeneralResultsReportComponent implements OnInit {
   POST_reportSesultsCompleteness(inits: any[], phases: any[]) {
     this.resultsList = [];
     this.api.resultsSE.POST_reportSesultsCompleteness(inits, phases, 2).subscribe(({ response }) => {
-      console.log(response);
       this.resultsList = response;
 
       this.resultsList.forEach((result: any) => {
