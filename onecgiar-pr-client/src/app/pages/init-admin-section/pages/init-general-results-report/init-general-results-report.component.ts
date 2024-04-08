@@ -111,8 +111,9 @@ export class InitGeneralResultsReportComponent implements OnInit {
       list.push(element);
     });
 
-    // Usar Promise.all para esperar a que todas las promesas se resuelvan
-    await Promise.all(list.map((result, key) => this.POST_excelFullReportPromise(result, key)));
+    for (const [key, result] of list.entries()) {
+      await this.POST_excelFullReportPromise(result, key);
+    }
 
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
     this.requesting = false;
