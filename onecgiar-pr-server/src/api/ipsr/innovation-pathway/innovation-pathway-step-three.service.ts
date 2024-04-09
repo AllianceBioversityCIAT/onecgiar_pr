@@ -634,7 +634,10 @@ export class InnovationPathwayStepThreeService {
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
           });
-          if (useLevel?.obj_use_level_evidence_based.level === 0) {
+          if (
+            useLevel?.obj_use_level_evidence_based &&
+            useLevel.obj_use_level_evidence_based.level === 0
+          ) {
             await this._resultsIpInstitutionTypeRepository.update(ite.id, {
               last_updated_by: user.id,
               institution_types_id: null,

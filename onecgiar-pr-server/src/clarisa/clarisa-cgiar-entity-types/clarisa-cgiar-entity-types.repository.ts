@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaCgiarEntityType } from './entities/clarisa-cgiar-entity-type.entity';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
 @Injectable()
 export class ClarisaCgiarEntityTypeRepository extends Repository<ClarisaCgiarEntityType> {
@@ -16,11 +17,11 @@ export class ClarisaCgiarEntityTypeRepository extends Repository<ClarisaCgiarEnt
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
+      throw ReturnResponseUtil.format({
         message: `[${ClarisaCgiarEntityTypeRepository.name}] => deleteAllData error: ${error}`,
         response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 }
