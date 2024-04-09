@@ -56,8 +56,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.currentOptionsLength = this.options?.length;
 
     this._optionsIntance.forEach((resp: any) => {
-      resp.disabled = false;
-      resp.selected = false;
+      if (resp.disabled == true) resp.disabled = false;
+      if (resp.selected == true) resp.selected = false;
     });
 
     this.disableOptions?.map(disableOption => {
@@ -77,14 +77,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (this.selectAll === false)
       this._optionsIntance.forEach((resp: any) => {
-        resp.selected = false;
+        if (resp.disabled) resp.selected = false;
         this.value = [];
       });
 
     if (this.selectAll === true) {
       this.value = [];
       this._optionsIntance.forEach((resp: any) => {
-        resp.selected = true;
+        if (resp.disabled) resp.selected = true;
         this.value.push(resp);
       });
     }
