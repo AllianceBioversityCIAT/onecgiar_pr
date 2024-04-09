@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
-import axios, { AxiosRequestConfig, AxiosStatic } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { ClarisaMeliaStudyTypeRepository } from './clarisa-melia-study-type/ClariasaMeliasStudyType.repository';
 import { ClariasaActionAreaRepository } from './clarisa-action-areas/ClariasaActionArea.repository';
 import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaInitiatives.repository';
@@ -39,14 +39,12 @@ import { DataSource } from 'typeorm';
 import { ClarisaCgiarEntityType } from './clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
 import { ClarisaInitiative } from './clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaInitiativeResponse } from '../shared/globalInterfaces/clarisa-response.interfaces';
+import { ClarisaTaskCount } from '../shared/globalInterfaces/clarisa.interfaces';
 
 @Injectable()
 export class ClarisaTaskService {
   private readonly clarisaHost: string = `${env.CLA_URL}api/`;
-  private count: {
-    standard: number;
-    important: number;
-  } = {
+  private count: ClarisaTaskCount = {
     standard: 1,
     important: 1,
   };
