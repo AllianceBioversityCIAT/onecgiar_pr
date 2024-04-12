@@ -25,6 +25,7 @@ export class UpdateInnovationPathwayDto {
   public is_not_diverse_justification!: string;
   public regions: regionsInterface[];
   public countries: countriesInterface[];
+  public scalig_ambition!: {};
 }
 
 export interface regionsInterface {
