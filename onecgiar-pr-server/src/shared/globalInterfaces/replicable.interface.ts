@@ -10,6 +10,8 @@ export interface ReplicableConfigInterface<T> {
   new_result_id?: number;
   old_result_id?: number;
   predetermined_date?: Date;
+  new_ipsr_id?: number;
+  old_ipsr_id?: number;
   f?: {
     custonFunction?: (res: T | T[]) => T | T[];
     errorFunction?: (error: any) => void;

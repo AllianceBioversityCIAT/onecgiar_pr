@@ -1,0 +1,68 @@
+.modal_container {
+  padding: 20px 50px 80px 50px;
+  width: 100vw !important;
+  max-width: 90vw !important;
+  min-height: 50vh;
+
+  .ipsr_modal_description {
+    font-weight: 700;
+    text-align: center;
+    color: var(--pr-color-secondary);
+    padding: 20px 20vw;
+    font-size: 1.2rem;
+  }
+}
+
+.ipsr_modal_title {
+  background-color: var(--pr-color-secondary);
+  width: 100%;
+  font-size: 1.3em;
+  font-weight: 600;
+  color: white;
+  padding: 10px 20px;
+  border-bottom-right-radius: 10px;
+}
+
+.ipsr_modal_noDataText {
+  text-align: center;
+  padding: 50px 0px;
+  font-size: 1.3em;
+  font-weight: 500;
+  color: var(--pr-color-primary);
+}
+
+.new_tag {
+  background-color: var(--pr-color-primary);
+  margin-right: 10px;
+  padding: 2px 3px;
+  font-size: 0.8em;
+  border-radius: 3px;
+  color: white;
+  height: 17px;
+}
+
+.ipsr_modal_actions_buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ipsr_link_button {
+  color: white;
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: center;
+  height: max-content;
+  width: max-content;
+
+  &.view {
+    background-color: var(--pr-color-secondary);
+    outline: none;
+    color: white;
+  }
+
+  &.update {
+    background-color: var(--pr-color-primary);
+  }
+}

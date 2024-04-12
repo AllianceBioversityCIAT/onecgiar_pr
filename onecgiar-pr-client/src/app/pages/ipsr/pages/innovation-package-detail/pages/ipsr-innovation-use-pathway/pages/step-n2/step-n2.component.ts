@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n2',
@@ -8,37 +8,25 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   styleUrls: ['./step-n2.component.scss']
 })
 export class StepN2Component implements OnInit {
-  constructor(public api: ApiService, private router: Router) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 2');
   }
 
   routerStep() {
-    const router = '';
-
-    if (this.api.rolesSE.isAdmin && this.api.isStepTwoTwo == false) {
+    if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo) {
       return 'basic-info';
     }
-    if (this.api.isStepTwoTwo) {
-      return '../step-3';
-    } else {
-      return '../step-3';
-    }
-    return router;
+
+    return '../step-3';
   }
 
   routerStepBack() {
-    const router = '';
-
-    if (this.api.rolesSE.isAdmin && this.api.isStepTwoOne == false) {
+    if (this.api.rolesSE.isAdmin && !this.api.isStepTwoOne) {
       return 'complementary-innovation';
     }
-    if (this.api.isStepTwoOne) {
-      return '../step-1';
-    } else {
-      return '../step-1';
-    }
-    return router;
+
+    return '../step-1';
   }
 }

@@ -3,6 +3,7 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { isProduction } from '../../shared/utils/validation.utils';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
 export class IpsrService {
@@ -10,6 +11,7 @@ export class IpsrService {
     protected readonly _handlersError: HandlersError,
     private readonly _returnResponse: ReturnResponse,
     protected readonly _ipsrRespository: IpsrRepository,
+    private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
   async findAllInnovations(initiativeId: number[]) {
@@ -59,6 +61,16 @@ export class IpsrService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const discontinued_options =
+        await this._resultsInvestmentDiscontinuedOptionRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+
+      result[0].discontinued_options = discontinued_options;
 
       return {
         response: result[0],

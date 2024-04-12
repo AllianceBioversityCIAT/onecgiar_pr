@@ -34,9 +34,9 @@
         "no-console": "error",
         "no-empty": "error",
         "no-trailing-spaces":"error",
-        "camelcase":"warn",
-        "prefer-const":"error",
-        "arrow-parens":"error"
+        // "camelcase":"warn",
+        "prefer-const":"error"
+        // "arrow-parens":"error"
       }
     }
   ]

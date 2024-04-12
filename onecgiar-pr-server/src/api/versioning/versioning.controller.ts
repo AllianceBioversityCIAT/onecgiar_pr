@@ -64,11 +64,18 @@ export class VersioningController {
     return this.versioningService.getAllPhases();
   }
 
-  @Patch('execute/annual/replicate')
+  @Patch('execute/annual/replicate/result')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
-  updateAnnually(@UserToken() user: TokenDto) {
+  updateAnnuallyResult(@UserToken() user: TokenDto) {
     return this.versioningService.annualReplicationProcessInnovationDev(user);
+  }
+
+  @Patch('execute/annual/replicate/innovation-package')
+  @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
+  @UseGuards(ValidRoleGuard)
+  updateAnnuallyIPSR(@UserToken() user: TokenDto) {
+    return this.versioningService.annualReplicationProcessInnovationPackage(user);
   }
 
   @Patch('change/status/qa')

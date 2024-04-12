@@ -45,6 +45,7 @@ import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ClarisaSubnationalScope } from '../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -80,6 +81,7 @@ export class ResultInnovationPackageService {
     private readonly _ipsrService: IpsrService,
     private readonly _versioningService: VersioningService,
     private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
+    private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
   async findUnitTime() {
@@ -482,7 +484,6 @@ export class ResultInnovationPackageService {
             });
         }
 
-        //this should not happen, as the geoscope can only be saved when the ipsr is created
         if (resultCountrySubnational) {
           await this._resultCountrySubnationalRepository.update(
             resultCountrySubnational.result_country_subnational_id,
@@ -669,6 +670,16 @@ export class ResultInnovationPackageService {
         }
       }
 
+      let status: number;
+
+      if (req?.is_discontinued) {
+        status = 4;
+      } else if (resultExist.status_id == 4) {
+        status = 1;
+      } else {
+        status = resultExist.status_id;
+      }
+
       await this._resultRepository.update(resultId, {
         title: req?.title,
         description: req?.description,
@@ -683,7 +694,58 @@ export class ResultInnovationPackageService {
         krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
+        is_discontinued: req?.is_discontinued,
+        status_id: status,
       });
+
+      if (req?.is_discontinued) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          req.discontinued_options.map(
+            (el) => el.investment_discontinued_option_id,
+          ),
+          resultId,
+          user.id,
+        );
+        for (const i of req.discontinued_options) {
+          const res =
+            await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
+              where: {
+                result_id: resultId,
+                investment_discontinued_option_id:
+                  i.investment_discontinued_option_id,
+              },
+            });
+
+          if (res) {
+            await this._resultsInvestmentDiscontinuedOptionRepository.update(
+              res.results_investment_discontinued_option_id,
+              {
+                is_active: i.value,
+                description: i?.description,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            await this._resultsInvestmentDiscontinuedOptionRepository.save({
+              result_id: resultId,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+              description: i?.description,
+              is_active: Boolean(i.value),
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          }
+        }
+      } else {
+        await this._resultsInvestmentDiscontinuedOptionRepository.update(
+          { result_id: resultId },
+          {
+            is_active: false,
+            last_updated_by: user.id,
+          },
+        );
+      }
 
       const genderEvidenceExist = await this._evidenceRepository.findOne({
         where: {

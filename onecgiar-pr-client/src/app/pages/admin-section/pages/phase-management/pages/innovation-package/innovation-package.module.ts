@@ -15,9 +15,10 @@ import { ResultHistoryOfChangesModalModule } from '../../../completeness-status/
 import { FilterByTextModule } from 'src/app/shared/pipes/filter-by-text.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
+import { OtherFunctionalitiesModule } from '../../other-functionalities/other-functionalities.module';
 
 @NgModule({
   declarations: [InnovationPackageComponent],
-  imports: [CommonModule, InnovationPackageRoutingModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  imports: [CommonModule, InnovationPackageRoutingModule, OtherFunctionalitiesModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
 })
 export class InnovationPackageModule {}

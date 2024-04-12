@@ -1,8 +1,8 @@
 /* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -20,6 +20,7 @@ export class StepN3Component implements OnInit {
   ];
   result_core_innovation: any;
   innoUseLevel: number;
+  rangeLevel2Required = true;
 
   constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
@@ -31,7 +32,7 @@ export class StepN3Component implements OnInit {
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
     return finalList.length;
   }
 
@@ -49,7 +50,7 @@ export class StepN3Component implements OnInit {
     const readiness_level_evidence_based_index = this.rangesOptions.findIndex(item => item.id == bodyItem['readiness_level_evidence_based']);
     return readiness_level_evidence_based_index != 0;
   }
-  rangeLevel2Required = true;
+
   updateRangeLevel2(bodyItem) {
     const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
     return use_level_evidence_based_index != 0;
@@ -86,31 +87,23 @@ export class StepN3Component implements OnInit {
     });
   }
 
-  onsaveSection(descrip) {
+  onSaveSectionWithStep(descrip: string) {
+    const urlBasePath = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
+    const urlPath = descrip === 'next' ? `${urlBasePath}/step-4` : `${urlBasePath}/step-2`;
+    const queryParams = { phase: this.ipsrDataControlSE.resultInnovationPhase };
+
     if (this.api.rolesSE.readOnly) {
-      if (descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
-      } else {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
-      }
+      this.router.navigate([urlPath], { queryParams });
+
       return;
     }
 
-    if (descrip == 'previous') {
-      this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
-    }
     this.convertOrganizationsTosave();
 
-    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(({ response }) => {
+    this.api.resultsSE.PATCHInnovationPathwayByRiIdNextPrevius(this.ipsrStep3Body, descrip).subscribe(() => {
       this.getSectionInformation();
 
-      setTimeout(() => {
-        if (descrip == 'next') {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2']);
-        } else {
-          this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-4']);
-        }
-      }, 1000);
+      this.router.navigate([urlPath], { queryParams });
     });
   }
 
@@ -164,8 +157,8 @@ export class StepN3Component implements OnInit {
     this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
   }
 
-  resultUrl(resultCode) {
-    return `/result/result-detail/${resultCode}/general-information`;
+  resultUrl(resultCode, phase) {
+    return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
   }
 
   workshopDescription() {

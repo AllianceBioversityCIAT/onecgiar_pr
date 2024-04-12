@@ -13,4 +13,5 @@ export interface GlobalVariables {
   result_is_closed?: boolean;
   show_global_info?: boolean;
   global_info_message?: string;
+  t1r_default_phase?: string;
 }

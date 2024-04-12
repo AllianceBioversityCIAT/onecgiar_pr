@@ -1,7 +1,6 @@
 <div class="local_container">
     <div class="line">
-        <!-- <div class="line_value"></div> -->
-        <div class="circle" [routerLink]="option?.path" routerLinkActive="active"
+        <div class="circle" [routerLink]="option?.path" routerLinkActive="active" [queryParams]="option?.queryParams"
             *ngFor="let option of options ; let i=index">
             <div class="green_check_absolute">
                 <app-ipsr-green-check [objectReference]="'stepSections.'+i"></app-ipsr-green-check>

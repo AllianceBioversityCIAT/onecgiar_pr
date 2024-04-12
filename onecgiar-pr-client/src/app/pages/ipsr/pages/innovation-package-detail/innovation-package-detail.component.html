@@ -1,19 +1,34 @@
 <div class="innovation_packages_title">
-    <div class="title">
-        <div>
-            {{this.ipsrDataControlSE.detailData?.title}}
-        </div>
-        <div class="submit_button"
-            *ngIf="(this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id))&&!this.api.rolesSE.platformIsClosed">
-            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
-                [verticalMargin]="0"
-                [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-                (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"></app-pr-button>
-
-        </div>
+    <div class="back_button" style="margin-left: -25px; max-width: 250px;">
+        <a routerLink="/ipsr/list/innovation-list" class="open_link_in_new_page">
+            <app-pr-button text="Back to Innovation Packages list" icon="arrow_back" [reverse]="true" [showBackground]="false">
+            </app-pr-button>
+        </a>
     </div>
 
+    <div style="margin-bottom: 0.5rem;">
+        <app-phase-switcher></app-phase-switcher>
+    </div>
+
+    <div class="title_container">
+        <div class="title">
+            <div>
+                {{this.ipsrDataControlSE.detailData?.title}}
+            </div>
+            <div class="submit_button"
+            *ngIf="(this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id))&&!this.api.rolesSE.platformIsClosed">
+            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
+            [verticalMargin]="0"
+            [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
+            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
+        </app-pr-button>
+    </div>
+
+    </div>
+        <app-pdf-actions (copyEvent)="onCopy()" [horizontal]="true"></app-pdf-actions>
+    </div>
 </div>
+
 <div class="section_container">
     <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
     <div class="ipsr-detail-line"></div>
@@ -34,7 +49,6 @@
             <div class="item">
                 {{this.ipsrDataControlSE.detailData?.official_code}}
             </div>
-
         </div>
     </div>
 
@@ -43,7 +57,6 @@
         <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
             <div class="info">
                 <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="">
-                <!-- <i class="material-icons-round icon rotating">sync</i> -->
                 <div class="text">Loading section...</div>
             </div>
         </div>
@@ -54,3 +67,4 @@
 <app-partners-request></app-partners-request>
 <app-ipsr-unsubmit-modal></app-ipsr-unsubmit-modal>
 <app-ipsr-submission-modal></app-ipsr-submission-modal>
+<p-toast key="copyResultLinkPdf" position="bottom-center"></p-toast>

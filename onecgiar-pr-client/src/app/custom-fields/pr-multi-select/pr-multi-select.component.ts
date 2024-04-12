@@ -24,6 +24,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() placeholder: string;
   @Input() label: string;
   @Input() selectedLabel: string;
+  @Input() nextSelectedLabel?: string; // This variable represents the extra concatenation to increase or have an additional counter, since by default it only shows one counter and the requirements make us generate an additional one.
   @Input() selectedOptionLabel: string;
   @Input() description: string;
   @Input() readOnly: boolean;
@@ -55,8 +56,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.currentOptionsLength = this.options?.length;
 
     this._optionsIntance.forEach((resp: any) => {
-      resp.disabled = false;
-      resp.selected = false;
+      if (resp.disabled === true) resp.disabled = false;
+      if (resp.selected === true) resp.selected = false;
     });
 
     this.disableOptions?.map(disableOption => {
@@ -76,14 +77,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (this.selectAll === false)
       this._optionsIntance.forEach((resp: any) => {
-        resp.selected = false;
+        if (resp.disabled === true) resp.selected = false;
         this.value = [];
       });
 
     if (this.selectAll === true) {
       this.value = [];
       this._optionsIntance.forEach((resp: any) => {
-        resp.selected = true;
+        if (resp.disabled === true) resp.selected = true;
         this.value.push(resp);
       });
     }
@@ -107,6 +108,20 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
       this._value = v;
       this.onChange(v);
     }
+  }
+
+  validateShowDeleteButton(option) {
+    if (this.selectedPrimary) {
+      return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic && this.selectedPrimary !== option.id;
+    }
+
+    return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic;
+  }
+  
+  selectedLabelDescription() {
+    if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
+
+    return `${this.selectedLabel} (${this.value?.length})`;
   }
 
   onChange(_) {}

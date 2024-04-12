@@ -1,5 +1,4 @@
-/* eslint-disable arrow-parens */
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Expert, IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../../../../../shared/services/global/institutions.service';
@@ -10,7 +9,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   templateUrl: './step-n1-experts.component.html',
   styleUrls: ['./step-n1-experts.component.scss']
 })
-export class StepN1ExpertsComponent {
+export class StepN1ExpertsComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   expertisesList = [];
   engagingOptions = [
@@ -18,7 +17,9 @@ export class StepN1ExpertsComponent {
     { id: false, name: 'No, the list of experts is not yet as diverse as desired and can be improved by adding the following expert groups:' }
   ];
 
-  constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, private api: ApiService) {
+  constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, public api: ApiService) {}
+
+  ngOnInit() {
     this.GETAllInnovationPackagingExpertsExpertises();
   }
 
@@ -32,7 +33,7 @@ export class StepN1ExpertsComponent {
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
     return finalList.length;
   }
 
