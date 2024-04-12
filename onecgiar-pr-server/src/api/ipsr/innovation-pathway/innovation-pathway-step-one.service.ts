@@ -543,6 +543,7 @@ export class InnovationPathwayStepOneService {
           consensus,
           partners,
           innovationUse,
+          geoScope,
         ],
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
@@ -564,7 +565,6 @@ export class InnovationPathwayStepOneService {
       const geoScopeId = UpdateInnovationPathwayDto.geo_scope_id;
 
       const resultRegions: ResultRegion[] = [];
-      const newInnovationCountries: ResultCountry[] = [];
 
       const coreResult = await this._innovationByResultRepository.findOneBy({
         result_innovation_package_id: resultId,
@@ -636,7 +636,10 @@ export class InnovationPathwayStepOneService {
               result_id: resultId,
               country_id: ct.id,
             });
+
+            const newInnovationCountries: ResultCountry[] = [];
             newInnovationCountries.push(newRc);
+            
             if (geoScopeId === 5 && ct?.sub_national?.length) {
               await this.$_resultInnovationPackageService.saveSubNational(
                 newRc.result_country_id,
@@ -657,8 +660,7 @@ export class InnovationPathwayStepOneService {
         geographic_scope_id: geoScopeId,
         title: innovationTitle,
       });
-      const newInnovationRegions =
-        await this._resultRegionRepository.save(resultRegions);
+      await this._resultRegionRepository.save(resultRegions);
 
       return {
         response: { status: 'Success' },

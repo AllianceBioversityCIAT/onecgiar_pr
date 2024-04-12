@@ -48,7 +48,6 @@ import { ResultCountrySubnationalRepository } from '../../results/result-countri
 import { ResultInnovationPackageService } from '../result-innovation-package/result-innovation-package.service';
 import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
 import { ActiveBackstoppingRepository } from '../result-innovation-package/repositories/active-backstopping.repository';
-import { ResultInnovationPackageModule } from '../result-innovation-package/result-innovation-package.module';
 import { consensusInitiativeWorkPackageRepository } from '../result-innovation-package/repositories/consensus-initiative-work-package.repository';
 import { RegionalIntegratedRepository } from '../result-innovation-package/repositories/regional-integrated.repository';
 import { RegionalLeadershipRepository } from '../result-innovation-package/repositories/regional-leadership.repository';

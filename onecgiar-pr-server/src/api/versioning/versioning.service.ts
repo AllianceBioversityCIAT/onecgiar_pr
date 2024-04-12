@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  HttpStatus,
-  Logger,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
@@ -676,7 +670,8 @@ export class VersioningService {
         );
 
       for (const r of results) {
-        if (this.$_genericValidation(r.result_code, phase.id)) {
+        const isValid = await this.$_genericValidation(r.result_code, phase.id);
+        if (isValid) {
           await this.$_phaseChangeIPSR(r, phase, user);
         }
       }
