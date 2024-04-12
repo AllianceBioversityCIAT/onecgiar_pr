@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
 import { IpsrController } from './ipsr.controller';
 import { NonPooledPackageProjectsModule } from './non-pooled-package-projects/non-pooled-package-projects.module';
@@ -23,6 +23,7 @@ import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovati
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
+import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
 
 @Module({
   controllers: [IpsrController],
@@ -46,6 +47,7 @@ import { ReturnResponse } from '../../shared/handlers/error.utils';
     ResultsByIpInnovationUseMeasuresModule,
     ResultsInnovationPackagesValidationModuleModule,
     AssessedDuringExpertWorkshopModule,
+    forwardRef(() => ResultsInvestmentDiscontinuedOptionsModule)
   ],
   exports: [IpsrRepository, IpsrService],
 })

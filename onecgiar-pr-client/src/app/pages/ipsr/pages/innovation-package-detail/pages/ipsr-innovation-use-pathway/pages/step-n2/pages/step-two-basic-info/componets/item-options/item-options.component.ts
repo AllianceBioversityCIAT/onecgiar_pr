@@ -12,43 +12,35 @@ export class ItemOptionsComponent implements OnInit {
   @Input() typeTwo: any[] = [];
   selectedOne: any[] = [];
   selectedCategories: any[] = [];
+
   constructor() {}
 
   ngOnInit(): void {
-    //(this.optionsInnovations);
     this.selectedOne = Array.from(this.typeOne);
     this.selectedCategories = Array.from(this.typeTwo);
   }
 
   selectes(category) {
-    //(category);
     const index = this.selectedCategories.findIndex(resp => category.complementary_innovation_enabler_types_id == resp.complementary_innovation_enabler_types_id);
-    //(index);
     if (index != -1) {
       this.selectedOne = this.selectedOne.concat(category.subCategories);
     }
     if (index == -1 && category.subCategories.length != 0) {
       this.selectedOne = [];
     }
-    //(this.selectedOne);
-    //(this.selectedCategories);
-
     this.typeOne = this.selectedOne;
     this.typeTwo = this.selectedCategories;
   }
 
   subSelectes(category) {
-    //(this.selectedOne);
     if (category.subCategories.length != this.selectedOne.length) {
       const index = this.selectedCategories.findIndex(resp => category.complementary_innovation_enabler_types_id == resp.complementary_innovation_enabler_types_id);
       if (index != -1) {
         this.selectedCategories.splice(index, 1);
-        //(this.selectedCategories);
       }
     }
     if (category.subCategories.length == this.selectedOne.length) {
       this.selectedCategories.push(category);
-      //(this.selectedCategories);
     }
   }
 }

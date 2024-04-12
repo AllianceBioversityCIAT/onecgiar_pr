@@ -192,7 +192,6 @@ export class ResultsApiService {
       map(resp => {
         if (resp?.response?.mqap_institutions) {
           resp?.response?.mqap_institutions.map(resp => {
-            //(resp?.user_matched_institution?.deliveries);
             if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
           });
         }
@@ -215,7 +214,6 @@ export class ResultsApiService {
   }
 
   POST_partnerRequest(body: PartnersRequestBody) {
-    //(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
     return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body);
   }
 
@@ -244,7 +242,6 @@ export class ResultsApiService {
   GET_AllWithoutResults() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
       map(resp => {
-        //(resp.response);
         resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
         return resp;
       })
@@ -274,7 +271,6 @@ export class ResultsApiService {
   POST_evidences(body: EvidencesBody) {
     const formData = new FormData();
     formData.append('jsonData', JSON.stringify(body));
-    console.log(body.evidences);
     body.evidences.forEach((evidence: EvidencesCreateInterface) => {
       formData.append('files', evidence.file);
     });
@@ -321,7 +317,6 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        //(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
@@ -393,7 +388,6 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
       map(resp => {
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
-        //(resp.response);
         return resp;
       })
     );
@@ -403,7 +397,6 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`).pipe(
       map(resp => {
         resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
-        //(resp.response);
         return resp;
       })
     );
@@ -446,7 +439,6 @@ export class ResultsApiService {
   GET_clarisaPolicyStages() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/policy-stages/get/all`).pipe(
       map(resp => {
-        //(resp.response);
         resp?.response.map(stage => (stage.full_name = `<strong>${stage.name}</strong> - ${stage.definition}`));
         return resp;
       })
@@ -514,7 +506,6 @@ export class ResultsApiService {
   POST_reportSesultsCompleteness(initiatives: any[], phases: any[], rol_user?) {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/completeness`, { rol_user, initiatives, phases }).pipe(
       map(resp => {
-        //(resp.responee);
         resp?.response.map(result => {
           result.full_name = `${result.result_title} ${result.result_code} ${result.official_code} ${result.result_type_name}`;
           result.result_code = Number(result.result_code);
@@ -539,7 +530,6 @@ export class ResultsApiService {
   GET_reportUsers() {
     return this.http.get<any>(`${this.apiBaseUrl}admin-panel/report/users`).pipe(
       map(resp => {
-        //(resp.response);
         resp?.response.map(user => {
           user.full_name = `${user.user_id} ${user.user_first_name} ${user.user_last_name} ${user.user_email} ${user.initiative_name} ${user.official_code} ${user.initiative_role_name}`;
           user.init_name_official_code = `${user?.official_code ? '(' + user?.official_code + ') ' : ''}${user?.initiative_name}`;
@@ -600,7 +590,6 @@ export class ResultsApiService {
   GETContributorsByIpsrResultId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
       map(resp => {
-        //(resp.response);
         resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
         return resp;
       }),
@@ -652,8 +641,6 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayStepTwoInnovationSelect() {
-    //(this.ipsrDataControlSE.resultInnovationId);
-
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${this.ipsrDataControlSE.resultInnovationId}`);
   }
 
@@ -830,16 +817,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
   }
 
-  GET_investmentDiscontinuedOptions() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
+  GET_investmentDiscontinuedOptions(result_type_id) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${result_type_id}`);
   }
 
   GET_versioningResult() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
 
-  PATCH_versioningAnnually() {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate`, {});
+  PATCH_versioningAnnually(replicateIPSR = false) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate/${replicateIPSR ? 'innovation-package' : 'result'}`, {});
   }
 
   GET_numberOfResultsByResultType(statusId, resultTypeId) {

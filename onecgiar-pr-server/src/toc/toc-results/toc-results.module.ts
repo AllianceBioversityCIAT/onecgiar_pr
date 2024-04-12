@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TocResultsService } from './toc-results.service';
 import { TocResultsController } from './toc-results.controller';
 import { TocResultsRepository } from './toc-results.repository';
@@ -46,6 +46,24 @@ import { EvidenceSharepointRepository } from '../../api/results/evidences/reposi
 import { EvidencesService } from '../../api/results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { ShareResultRequestRepository } from '../../api/results/share-result-request/share-result-request.repository';
+import { VersioningModule } from '../../api/versioning/versioning.module';
+import { ResultInnovationPackageModule } from '../../api/ipsr/result-innovation-package/result-innovation-package.module';
+import { InnovationPathwayModule } from '../../api/ipsr/innovation-pathway/innovation-pathway.module';
+import { ResultIpAAOutcomeRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../../api/ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { InnovationPackagingExpertRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../../api/ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../../api/ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../../api/ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { ResultsIpActorRepository } from '../../api/ipsr/results-ip-actors/results-ip-actor.repository';
+import { ResultsByIpInnovationUseMeasureRepository } from '../../api/ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpInstitutionTypeRepository } from '../../api/ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultActorRepository } from '../../api/results/result-actors/repositories/result-actors.repository';
+import { ResultInstitutionsBudgetRepository } from '../../api/results/result_budget/repositories/result_institutions_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../../api/results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -90,11 +108,31 @@ import { ShareResultRequestRepository } from '../../api/results/share-result-req
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository,
     EvidenceSharepointRepository,
     EvidencesService,
     ShareResultRequestRepository,
+    ResultActorRepository,
+    ResultIpAAOutcomeRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpImpactAreaRepository,
+    ResultIpSdgTargetRepository,
+    InnovationPackagingExpertRepository,
+    ResultIpMeasureRepository,
+    ResultIpExpertisesRepository,
+    ResultIpExpertWorkshopOrganizedRepostory,
+    ResultsIpActorRepository,
+    ResultsByIpInnovationUseMeasureRepository,
+    ResultsIpInstitutionTypeRepository,
+    ResultCountrySubnationalRepository
   ],
-  imports: [SharePointModule],
+  imports: [
+    SharePointModule,
+    forwardRef(() => VersioningModule),
+    forwardRef(() => ResultInnovationPackageModule),
+    forwardRef(() => InnovationPathwayModule),
+  ],
   exports: [TocResultsRepository],
 })
 export class TocResultsModule {}

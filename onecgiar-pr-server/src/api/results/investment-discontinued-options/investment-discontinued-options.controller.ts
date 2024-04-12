@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { InvestmentDiscontinuedOptionsService } from './investment-discontinued-options.service';
 import { UseInterceptors } from '@nestjs/common';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
@@ -10,8 +10,8 @@ export class InvestmentDiscontinuedOptionsController {
     private readonly investmentDiscontinuedOptionsService: InvestmentDiscontinuedOptionsService,
   ) {}
 
-  @Get()
-  findAll() {
-    return this.investmentDiscontinuedOptionsService.findAll();
+  @Get('/:resultTypeId')
+  findAll(@Param('resultTypeId') resultTypeId: number) {
+    return this.investmentDiscontinuedOptionsService.findAll(resultTypeId);
   }
 }

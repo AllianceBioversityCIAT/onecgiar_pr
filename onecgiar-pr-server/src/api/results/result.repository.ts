@@ -90,8 +90,11 @@ export class ResultRepository
         ,has_countries
         ,geographic_scope_id
         ,lead_contact_person
-        ,result_code
-        ,is_replicated
+        ,result_code,
+        nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id,
+        is_replicated
         ) select
         r2.description,
         r2.is_active,
@@ -121,6 +124,9 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.nutrition_tag_level_id,
+        r2.environmental_biodiversity_tag_level_id,
+        r2.poverty_tag_level_id,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -1025,6 +1031,7 @@ WHERE
     resultCode: number,
     version: number = null,
   ): Promise<number> {
+    if (!version) return null;
     const queryData = `
     SELECT 
     r.id
@@ -1032,15 +1039,13 @@ WHERE
     \`result\` r 
     WHERE r.is_active > 0
     and r.result_code = ?
-    ${
-      version
-        ? `and r.version_id = ${version};`
-        : `ORDER by r.id desc
-    limit 1;`
-    }
+    and r.version_id = ?;
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      const results: Array<{ id }> = await this.query(queryData, [
+        resultCode,
+        version,
+      ]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

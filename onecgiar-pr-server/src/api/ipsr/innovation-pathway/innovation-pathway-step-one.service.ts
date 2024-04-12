@@ -48,6 +48,7 @@ import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
+import { ResultInnovationPackageService } from '../result-innovation-package/result-innovation-package.service';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -77,6 +78,7 @@ export class InnovationPathwayStepOneService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     protected readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
+    private $_resultInnovationPackageService: ResultInnovationPackageService,
   ) {}
 
   async getStepOne(resultId: number) {
@@ -243,11 +245,13 @@ export class InnovationPathwayStepOneService {
 
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${resInitLead?.obj_initiative
-          ?.short_name} and partners will work together with${this.arrayToStringAnd(
+        body: `By 2024, the ${
+          resInitLead?.obj_initiative?.short_name
+        } and partners will work together with${this.arrayToStringAnd(
           institutions?.map((el) => el['institutions_name']),
-        )} to accomplish the use of ${coreData?.obj_result
-          ?.title} by${this.innovationUseString(
+        )} to accomplish the use of ${
+          coreData?.obj_result?.title
+        } by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
           innovatonUse.organization.map((el) => el),
           innovatonUse.measures.map((el) => el),
@@ -533,6 +537,11 @@ export class InnovationPathwayStepOneService {
         version,
         UpdateInnovationPathwayDto,
       );
+      const geoScope = await this.saveGeoScope(
+        result,
+        UpdateInnovationPathwayDto,
+        user,
+      );
 
       return {
         response: [
@@ -545,8 +554,128 @@ export class InnovationPathwayStepOneService {
           consensus,
           partners,
           innovationUse,
+          geoScope,
         ],
         message: 'The data was updated correctly',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveGeoScope(
+    result: Result,
+    UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
+    user: TokenDto,
+  ) {
+    try {
+      const regions = UpdateInnovationPathwayDto.regions;
+      const countries = UpdateInnovationPathwayDto.countries;
+      const resultId = result.id;
+      const geoScopeId = UpdateInnovationPathwayDto.geo_scope_id;
+
+      const resultRegions: ResultRegion[] = [];
+
+      const coreResult = await this._innovationByResultRepository.findOneBy({
+        result_innovation_package_id: resultId,
+        ipsr_role_id: 1,
+        is_active: true,
+      });
+
+      let coreTitle = await this._resultRepository.findOne({
+        where: { id: coreResult.result_id },
+      });
+
+      await this._resultRegionRepository.update(
+        { result_id: resultId },
+        {
+          is_active: false,
+        },
+      );
+      const existCountries = await this._resultCountryRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+      });
+
+      for (const c of existCountries) {
+        await this._resultCountryRepository.update(c.result_country_id, {
+          is_active: false,
+        });
+
+        await this._resultCountrySubnationalRepository.find({
+          where: {
+            result_country_id: c.result_country_id,
+            is_active: true,
+          },
+        });
+      }
+
+      let innovationTitle = '';
+      if (geoScopeId === 2) {
+        if (regions) {
+          for (const r of regions) {
+            const newRegions = new ResultRegion();
+            newRegions.result_id = resultId;
+            newRegions.region_id = r.id;
+            newRegions.is_active = true;
+            resultRegions.push(newRegions);
+          }
+        }
+        const regionsList = regions.map((r) => r.name);
+        if (coreTitle.title.endsWith('.')) {
+          coreTitle.title = coreTitle.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title} in ${regionsList.slice(0, -1).join(', ')}${
+          regionsList.length > 1 ? ' and ' : ''
+        }${regionsList[regionsList.length - 1]}`;
+      } else if ([3, 4, 5].includes(geoScopeId)) {
+        if (countries) {
+          const countriesList = countries.map((c) => c.name);
+          if (result.title.endsWith('.')) {
+            result.title = result.title.replace(/\.$/, '');
+          }
+          innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title.toLocaleLowerCase()} in ${countriesList
+            .slice(0, -1)
+            .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+            countriesList[countriesList.length - 1]
+          }`;
+          for (const ct of countries) {
+            const newRc = await this._resultCountryRepository.save({
+              result_id: resultId,
+              country_id: ct.id,
+            });
+
+            const newInnovationCountries: ResultCountry[] = [];
+            newInnovationCountries.push(newRc);
+            
+            if (geoScopeId === 5 && ct?.sub_national?.length) {
+              await this.$_resultInnovationPackageService.saveSubNational(
+                newRc.result_country_id,
+                ct.sub_national,
+                user,
+              );
+            }
+          }
+        }
+      } else {
+        if (coreTitle.title.endsWith('.')) {
+          coreTitle.title = coreTitle.title.replace(/\.$/, '');
+        }
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title.toLocaleLowerCase().trim()}.`;
+      }
+
+      await this._resultRepository.update(resultId, {
+        geographic_scope_id: geoScopeId,
+        title: innovationTitle,
+      });
+      await this._resultRegionRepository.save(resultRegions);
+
+      return {
+        response: { status: 'Success' },
+        message: 'The Geo Scope was saved correctly',
         status: HttpStatus.OK,
       };
     } catch (error) {

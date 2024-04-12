@@ -7,6 +7,7 @@ import { CreateResultIPDto } from '../../result-innovation-package/dto/create-re
 import { ResultCountriesSubNational } from '../../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateComplementaryInnovationDto } from './create-complementary-innovation.dto';
+import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 export class UpdateInnovationPathwayDto {
   public result_id: number;
   public geo_scope_id: number;
@@ -15,8 +16,6 @@ export class UpdateInnovationPathwayDto {
   public experts: CreateInnovationPackagingExpertDto[];
   public result_ip: ResultInnovationPackage & CreateResultIPDto;
   public innovatonUse: innovatonUseInterface;
-  public regions: regionsInterface[];
-  public countries: countriesInterface[];
   public institutions: institutionsInterface[];
   public sdgTargets: sdgTargetsInterface[];
   public eoiOutcomes: eoiOutcomesInterface[];
@@ -24,8 +23,10 @@ export class UpdateInnovationPathwayDto {
   public impactAreas: impactAreasInterface[];
   public experts_is_diverse!: boolean;
   public is_not_diverse_justification!: string;
-  public scalig_ambition!: {};
+  public regions: regionsInterface[];
+  public countries: countriesInterface[];
 }
+
 export interface regionsInterface {
   id: number;
   name: string;
@@ -33,8 +34,9 @@ export interface regionsInterface {
 export interface countriesInterface {
   id: number;
   name: string;
-  result_countries_sub_national?: ResultCountriesSubNational[];
+  sub_national?: ClarisaSubnationalScope[];
 }
+
 export interface eoiOutcomesInterface {
   toc_result_id: number;
 }

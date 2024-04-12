@@ -11,11 +11,13 @@ import { Router } from '@angular/router';
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
   radioOptions = [
     { id: true, name: 'Yes' },
     { id: false, name: 'No, not necessary at this stage' }
   ];
+
+  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
+
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
@@ -30,35 +32,26 @@ export class StepN4Component implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
-      //('%cGET', 'font-size: 20px; color: #2BBE28;');
-      //(response);
-      //('%c____________________', 'font-size: 20px; color: #2BBE28;');
-      //(response);
       this.ipsrStep4Body = response;
-      // this.ipsrStep4Body.institutions_expected_investment.map(item => (item.institutions_type_name = item.institutions_name));
     });
   }
   onSaveSection() {
-    //('%cPATCH', 'font-size: 20px; color: #f68541;');
-    //(this.ipsrStep4Body);
-    //('%c____________________', 'font-size: 20px; color: #f68541;');
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
       this.getSectionInformation();
-      // }, 3000);
     });
   }
 
   onSavePrevious(descrip) {
-    if (this.api.rolesSE.readOnly) return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+    if (this.api.rolesSE.readOnly)
+      return this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+        queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+      });
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiIdPrevious(this.ipsrStep4Body, descrip).subscribe(({ response }) => {
-      //(response);
-      // setTimeout(() => {
       this.getSectionInformation();
-      // }, 3000);
       setTimeout(() => {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }, 1000);
     });
     return null;

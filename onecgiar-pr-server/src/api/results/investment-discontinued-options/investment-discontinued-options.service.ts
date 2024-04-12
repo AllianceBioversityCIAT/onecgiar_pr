@@ -10,9 +10,11 @@ export class InvestmentDiscontinuedOptionsService {
     private readonly _investmentDiscontinuedOptionRepository: InvestmentDiscontinuedOptionRepository,
   ) {}
 
-  async findAll() {
+  async findAll(resultTypeId: number) {
     try {
-      const res = await this._investmentDiscontinuedOptionRepository.find();
+      const res = await this._investmentDiscontinuedOptionRepository.find({
+        where: { result_type_id: resultTypeId },
+      });
       return this._returnResponse.format({
         message: 'InvestmentDiscontinuedOptions found',
         response: res,

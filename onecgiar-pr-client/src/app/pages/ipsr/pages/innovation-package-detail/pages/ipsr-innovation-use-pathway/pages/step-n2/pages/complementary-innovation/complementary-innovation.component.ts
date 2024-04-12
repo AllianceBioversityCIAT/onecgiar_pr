@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
@@ -35,7 +35,8 @@ export class ComplementaryInnovationComponent implements OnInit {
   informationComplementaryInnovations: any[] = [];
   cols = [];
   isInitiative: boolean = true;
-  constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public router: Router) {}
 
   ngOnInit(): void {
     this.api.isStepTwoOne = true;
@@ -44,10 +45,8 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.innovationSving();
 
     this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe(resp => {
-      //(resp);
       this.complemntaryFunction = resp['response'];
       this.columns();
-      //(this.cols);
     });
 
     this.getInformationInnovationComentary(false);
@@ -60,11 +59,10 @@ export class ComplementaryInnovationComponent implements OnInit {
   innovationSving() {
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe(resp => {
       this.innovationPackageCreatorBody = resp['response'];
-      ////(resp);
     });
   }
 
-  async createInnovationEvent(e) {
+  createInnovationEvent(e) {
     this.innovationPackageCreatorBody.push(e);
     this.getInformationInnovationComentary(true);
   }
@@ -99,7 +97,6 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   regiterInnovationComplementary(complementaryInnovcation) {
     const seletedInnovation = [];
-    ////(complementaryInnovcation);
     complementaryInnovcation.forEach(element => {
       if (element.hasOwnProperty('result_id')) {
         seletedInnovation.push({
@@ -115,40 +112,44 @@ export class ComplementaryInnovationComponent implements OnInit {
     return seletedInnovation;
   }
 
-  async onSaveSection() {
-    this.body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
-    ////(this.body);
+  onSaveSection() {
+    this.body = this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
 
-    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(resp => {
-      ////(resp);
-    });
-    ////(this.regiterInnovationComplementary(this.innovationPackageCreatorBody));
+    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(resp => {});
   }
 
-  async onSavePreviuosNext(descrip) {
-    //(descrip);
+  onSavePreviuosNext(descrip) {
     if (this.api.rolesSE.readOnly) {
       if (descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
 
       if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
       return;
     }
-    this.body = await this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
+    this.body = this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
     this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, descrip).subscribe(resp => {
-      ////(resp);
-      if (this.api.rolesSE.isAdmin && this.api.isStepTwoTwo == false && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/basic-info']);
+      if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo && descrip == 'next') {
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/basic-info'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
       if (this.api.isStepTwoTwo && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
 
       if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
     });
   }
@@ -162,7 +163,6 @@ export class ComplementaryInnovationComponent implements OnInit {
       });
       this.informationComplementaryInnovations.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
-        inno.result_code = Number(inno.result_code);
         this.isInitiative = this.api.rolesSE.validateInitiative(inno.initiative_id);
         inno.permissos = this.isInitiative;
       });

@@ -1,5 +1,12 @@
 .section_container {
-    margin-top: 30px;
-    min-height: calc(100vh - 200px);
-    padding: 30px 50px 0px 50px;
+  margin-top: 30px;
+  min-height: calc(100vh - 200px);
+  padding: 30px 50px 0px 50px;
+}
+
+.ipsr_buttons {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: 10px;
 }

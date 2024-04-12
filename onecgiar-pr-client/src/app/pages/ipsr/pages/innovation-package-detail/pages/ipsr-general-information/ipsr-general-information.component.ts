@@ -12,7 +12,7 @@ import { IpsrGeneralInformationBody } from './model/ipsr-general-information.mod
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
-  constructor(private api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -23,15 +23,36 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
+      this.GET_investmentDiscontinuedOptions(response.result_type_id);
     });
+  }
+
+  GET_investmentDiscontinuedOptions(result_type_id) {
+    this.api.resultsSE.GET_investmentDiscontinuedOptions(result_type_id).subscribe(({ response }) => {
+      this.convertChecklistToDiscontinuedOptions(response);
+    });
+  }
+
+  convertChecklistToDiscontinuedOptions(response) {
+    const options = [...response];
+    options.forEach(option => {
+      const found = this.ipsrGeneralInformationBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      if (found) {
+        option.value = true;
+        option.description = found?.description;
+      }
+    });
+    this.ipsrGeneralInformationBody.discontinued_options = options;
   }
 
   onChangeKrs() {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
+
   onSaveSection() {
     this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
       next: resp => {
+        this.api.GETInnovationPackageDetail();
         this.getSectionInformation();
         this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       },

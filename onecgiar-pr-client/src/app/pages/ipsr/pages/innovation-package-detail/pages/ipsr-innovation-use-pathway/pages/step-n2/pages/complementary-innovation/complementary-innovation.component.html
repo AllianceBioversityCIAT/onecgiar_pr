@@ -1,9 +1,10 @@
 <app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions"
     description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
 <app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)"
-    [selectionsInnovation]="innovationPackageCreatorBody"
     [informationComplementaryInnovations]="informationComplementaryInnovations" [columns]="cols"
-    (saveedit)="saveEdit($event)"></app-table-innovation>
+    (saveedit)="saveEdit($event)"
+    (cancelInnovation)="cancelInnovation($event)" 
+    ></app-table-innovation>
 
 
 <app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction"

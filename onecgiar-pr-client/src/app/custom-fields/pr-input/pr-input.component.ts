@@ -54,6 +54,8 @@ export class PrInputComponent implements ControlValueAccessor {
 
   set value(v: string) {
     if (v !== this._value) {
+      if (this.type === 'link') v = v.trim();
+
       this._value = v;
       if (Number(v) < 0) this._value = 0;
       this.onChange(v);

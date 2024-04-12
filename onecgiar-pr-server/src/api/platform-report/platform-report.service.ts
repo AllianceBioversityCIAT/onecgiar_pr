@@ -21,7 +21,11 @@ export class PlatformReportService {
     private readonly _resultRepository: ResultRepository,
   ) {}
 
-  async getFullResultReportByResultCode(result_code: string, phase: string) {
+  async getFullResultReportByResultCode(
+    result_code: string,
+    phase: string,
+    report_type: PlatformReportEnum,
+  ) {
     try {
       const cleanResultCodeInput = Number(result_code);
       if (Number.isNaN(cleanResultCodeInput)) {
@@ -54,10 +58,9 @@ export class PlatformReportService {
         };
         throw error;
       }
-      const enumValue = PlatformReportEnum.FULL_RESULT_REPORT;
 
       const report = await this._platformReportRepository.findOne({
-        where: { id: enumValue.id },
+        where: { id: report_type.id },
         relations: { template_object: { children_array: true } },
       });
 

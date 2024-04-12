@@ -22,7 +22,9 @@ export class RdAnnualUpdatingComponent implements OnInit {
   ];
   constructor(public api: ApiService) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    console.log(this.generalInfoBody);
+  }
 
   // Create a function that determines if this.generalInfoBody.discontinued_options some value is true if this.generalInfoBody.is_discontinued is true
   isDiscontinuedOptionsTrue() {

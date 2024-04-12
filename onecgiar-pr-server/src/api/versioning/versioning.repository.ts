@@ -111,6 +111,32 @@ export class VersionRepository extends Repository<Version> {
       });
   }
 
+  $_getAllInovationPackageToReplicate(
+    phase: Version,
+    result_type = 10,
+  ): Promise<Result[]> {
+    const queryData = `
+    select *
+    from \`result\` r 
+    left join (select r2.result_code 
+    			from \`result\` r2 
+    			where r2.result_type_id = ${result_type} 
+    				and r2.is_active > 0 
+    				and r2.version_id = ?) rv on rv.result_code = r.result_code 
+    where r.result_type_id = ${result_type}
+    and r.version_id = ?
+    and r.is_active > 0
+    and rv.result_code is null;
+      `;
+    return this.query(queryData, [phase.id, phase.obj_previous_phase.id])
+      .then((res) => {
+        return res;
+      })
+      .catch((_err) => {
+        return [];
+      });
+  }
+
   $_setQaStatusToResult(results_id: number[]) {
     if (!results_id?.length) return null;
     const queryData = `

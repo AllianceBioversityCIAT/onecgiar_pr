@@ -18,23 +18,7 @@ export class PhasesService {
   private phasesSubject = new Subject<any[]>();
 
   constructor(private readonly api: ResultsApiService, private filterService: ResultsListFilterService, private ipsrFilterService: IpsrListFilterService) {
-    this.api.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe({
-      next: ({ response }) => {
-        this.phases.ipsr = response.filter(item => item.app_module_id == 2).map(item => ({ ...item, selected: item.status }));
-        this.phases.reporting = response.filter(item => item.app_module_id == 1).map(item => ({ ...item, selected: item.status }));
-        this.filterService.filters.general[1].options = this.phases.reporting.map(item => ({
-          attr: item.phase_name,
-          selected: item.status,
-          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
-        }));
-        this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => ({
-          attr: item.phase_name,
-          selected: item.status,
-          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
-        }));
-        this.phasesSubject.next(this.phases.reporting);
-      }
-    });
+    this.getNewPhases();
   }
 
   getNewPhases() {

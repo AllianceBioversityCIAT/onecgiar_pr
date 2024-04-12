@@ -85,7 +85,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase;
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
   }
 
   onDownLoadTableAsExcel() {

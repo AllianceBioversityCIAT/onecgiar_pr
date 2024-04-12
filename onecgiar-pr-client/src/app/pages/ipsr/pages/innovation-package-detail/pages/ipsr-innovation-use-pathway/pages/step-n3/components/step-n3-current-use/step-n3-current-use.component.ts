@@ -1,46 +1,51 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from '../../model/Ipsr-step-3-body.model';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n3-current-use',
   templateUrl: './step-n3-current-use.component.html',
   styleUrls: ['./step-n3-current-use.component.scss']
 })
-export class StepN3CurrentUseComponent {
-  actorsTypeList = [];
-  institutionsTypeTreeList = [];
+export class StepN3CurrentUseComponent implements OnInit {
   @Input() body = new IpsrStep3Body();
-  constructor(public api: ApiService) {
+  actorsTypeList = [];
+  executeTimer = null;
+  institutionsTypeTreeList = [];
+
+  constructor(public api: ApiService) {}
+
+  ngOnInit() {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
+
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
-      //(response);
       this.actorsTypeList = response;
     });
   }
+
   GETInstitutionsTypeTree() {
     this.api.resultsSE.GETInstitutionsTypeTree().subscribe(({ response }) => {
-      //(response);
-      // this.actorsTypeList = response;
       this.institutionsTypeTreeList = response;
     });
   }
+
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
     return finalList.length;
   }
+
   getInstitutionsTypeTreeChildrens(institution_types_id) {
-    //(institution_types_id);
     const fundedList = this.institutionsTypeTreeList.find(inst => inst.code == institution_types_id);
-    //(fundedList?.childrens);
     return fundedList?.childrens ?? [];
   }
+
   actorTypeDescription() {
     return `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`;
   }
+
   cleanActor(actorItem) {
     actorItem.women = null;
     actorItem.women_youth = null;
@@ -50,6 +55,7 @@ export class StepN3CurrentUseComponent {
     actorItem.men_non_youth = null;
     actorItem.how_many = null;
   }
+
   reloadSelect(organizationItem) {
     organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
@@ -57,12 +63,15 @@ export class StepN3CurrentUseComponent {
       organizationItem.hide = false;
     }, 300);
   }
+
   addActor() {
     this.body.innovatonUse.actors.push(new ActorN3());
   }
+
   addOrganization() {
     this.body.innovatonUse.organization.push(new OrganizationN3());
   }
+
   addOther() {
     this.body.innovatonUse.measures.push(new MeasureN3());
   }
@@ -74,6 +83,7 @@ export class StepN3CurrentUseComponent {
     });
     return list;
   }
+
   get disableOrganizations() {
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
@@ -81,8 +91,8 @@ export class StepN3CurrentUseComponent {
     });
     return list;
   }
+
   removeOrganization(organizationItem) {
-    //(organizationItem);
     organizationItem.institution_sub_type_id = null;
     organizationItem.institution_types_id = null;
     organizationItem.is_active = false;
@@ -91,6 +101,7 @@ export class StepN3CurrentUseComponent {
   removeOther(actors) {
     return actors.filter(item => item.actor_type_id != 5);
   }
+
   removeOtherInOrg(disableOrganizations) {
     return disableOrganizations.filter(item => item.code != 78);
   }
@@ -99,7 +110,6 @@ export class StepN3CurrentUseComponent {
     if (!actorItem.sex_and_age_disaggregation) actorItem.how_many = Number(actorItem.women || 0) + Number(actorItem.men || 0);
   }
 
-  executeTimer = null;
   validateYouth(i, isWomen: boolean, actorItem) {
     const gender = isWomen ? 'women' : 'men';
     const genderYouth = isWomen ? 'women_youth' : 'men_youth';

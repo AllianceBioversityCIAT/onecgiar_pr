@@ -5,6 +5,7 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 import { Phase } from '../../../../../../shared/interfaces/phase.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-reporting',
@@ -41,12 +42,13 @@ export class ReportingComponent implements OnInit {
     }
   ];
 
-  constructor(public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
+  constructor(public api: ApiService, public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     this.getAllPhases();
     this.getTocPhases();
     this.get_resultYears();
+    this.api.dataControlSE.getCurrentPhases();
   }
 
   disablePreviousYear() {
@@ -113,16 +115,17 @@ export class ReportingComponent implements OnInit {
 
   savePhase(phase) {
     this.updateMainVariables(phase);
-    this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe(
-      () => {
+    this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe({
+      next: () => {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
         this.phasesService.getNewPhases();
+        this.api.dataControlSE.getCurrentPhases();
       },
-      err => {
+      error: err => {
         console.error(err);
       }
-    );
+    });
     phase.editing = false;
   }
 
@@ -130,29 +133,30 @@ export class ReportingComponent implements OnInit {
     phase.app_module_id = 1;
     this.updateMainVariables(phase);
 
-    this.resultsSE.POST_createPhase(phase).subscribe(
-      () => {
+    this.resultsSE.POST_createPhase(phase).subscribe({
+      next: () => {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
         phase.isNew = false;
         this.phasesService.getNewPhases();
+        this.api.dataControlSE.getCurrentPhases();
       },
-      err => {
+      error: err => {
         console.error(err);
         this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Create phase', description: err?.error?.message, status: 'error', closeIn: 500 });
       }
-    );
+    });
   }
 
   deletePhase({ id }) {
     this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.resultsSE.DELETE_updatePhase(id).subscribe(
-        () => this.getAllPhases(),
-        err => {
+      this.resultsSE.DELETE_updatePhase(id).subscribe({
+        next: () => this.getAllPhases(),
+        error: err => {
           console.error(err);
           this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Delete phase', description: err?.error?.message, status: 'error', closeIn: 500 });
         }
-      );
+      });
     });
   }
 
