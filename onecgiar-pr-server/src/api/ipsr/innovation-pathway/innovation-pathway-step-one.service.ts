@@ -479,6 +479,16 @@ export class InnovationPathwayStepOneService {
         });
       }
 
+      const scalingText = UpdateInnovationPathwayDto.scalig_ambition['body'];
+
+      const scalingAmbitionBlurb =
+        await this._resultInnovationPackageRepository.update(
+          { result_innovation_package_id: result.id },
+          {
+            scaling_ambition_blurb: scalingText,
+          },
+        );
+
       const specifyAspiredOutcomesAndImpact =
         await this.saveSpecifyAspiredOutcomesAndImpact(
           result,
@@ -535,6 +545,7 @@ export class InnovationPathwayStepOneService {
 
       return {
         response: [
+          scalingAmbitionBlurb,
           specifyAspiredOutcomesAndImpact,
           actionAreaOutcomes,
           impactAreas,
