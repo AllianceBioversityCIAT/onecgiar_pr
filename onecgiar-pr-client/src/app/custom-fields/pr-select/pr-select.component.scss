@@ -1,70 +1,77 @@
 .field_container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-    .inputTitle {
-        font-size: 1.2em;
-        font-weight: 500;
-    }
+  .inputTitle {
+    font-size: 1.2em;
+    font-weight: 500;
+  }
 
-    .p-fluid {
-        width: 100%;
-    }
+  .p-fluid {
+    width: 100%;
+  }
 }
 
 .flags {
-    padding-left: 25px;
+  padding-left: 25px;
 }
 
 .option {
-    position: relative;
+  position: relative;
 
-    img {
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 20px;
-    }
+  img {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+  }
 }
 
 .no-options-text {
-    color: var(--pr-color-primary);
-    text-align: center;
-    padding-top: 80px;
-    font-size: 1.2em;
-    font-weight: 500;
-
-
+  color: var(--pr-color-primary);
+  text-align: center;
+  padding-top: 80px;
+  font-size: 1.2em;
+  font-weight: 500;
 }
 
 .selected {
-    color: var(--pr-color-primary) !important;
+  color: var(--pr-color-primary) !important;
+}
+
+.labelGroup {
+  font-weight: 600;
+  cursor: none;
+  pointer-events: none;
+  border-top: 1px solid #adadad;
+  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  box-sizing: border-box;
 }
 
 .select-disable {
-    background-color: rgb(245, 245, 245) !important;
-    cursor: not-allowed;
+  background-color: rgb(245, 245, 245) !important;
+  cursor: not-allowed;
 
-    .text {
-        color: gray;
-    }
+  .text {
+    color: gray;
+  }
 
-    .options {
-        opacity: 0;
-        pointer-events: none;
-    }
+  .options {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .pr-field .read-only {
-    padding: 8px 10px;
-    // border: 1px solid #ebebeb;
-    box-shadow: 0px 0px 14px 0px #dcdcdc;
-    border-radius: 5px;
+  padding: 8px 10px;
+  // border: 1px solid #ebebeb;
+  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  border-radius: 5px;
 }
 
 .field_disabled {
-    border: 1px dashed rgb(216, 216, 216);
-    padding: 20px;
+  border: 1px dashed rgb(216, 216, 216);
+  padding: 20px;
 }

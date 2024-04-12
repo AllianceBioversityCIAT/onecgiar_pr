@@ -40,8 +40,9 @@
         </div>
     </a>
     <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
-        <app-pr-field-header [description]="this.selectedLabel+'('+value?.length+')'">
+        <app-pr-field-header [description]="selectedLabelDescription()">
         </app-pr-field-header>
+        
         <div class="chips_container" *ngIf="this.selectedOptionLabel">
             <div class="pr_chip_selected" *ngFor="let option of value; let i=index"
                 [ngClass]="{'is_active_false': logicalDeletion && option.is_active == false}">

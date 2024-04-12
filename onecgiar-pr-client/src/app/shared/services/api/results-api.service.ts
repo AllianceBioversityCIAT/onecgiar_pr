@@ -848,4 +848,8 @@ export class ResultsApiService {
   GET_platformGlobalVariablesByCategoryId(categoryId) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/global-parameters/category/${categoryId}`);
   }
+
+  GET_cgiarEntityTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
+  }
 }
