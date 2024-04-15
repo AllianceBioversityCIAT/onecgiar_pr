@@ -22,9 +22,9 @@ export class PdfActionsComponent {
 
   get link() {
     if (this.ipsrDataControlSE.inIpsr) {
-      return `${environment.frontBaseUrl}reports/result-details/${this.ipsrDataControlSE.resultInnovationCode}/ipsr?phase=${this.ipsrDataControlSE.resultInnovationPhase}`;
+      return `${environment.frontBaseUrl}reports/ipsr-details/${this.ipsrDataControlSE.resultInnovationCode}?phase=${this.ipsrDataControlSE.resultInnovationPhase}`;
     }
 
-    return `${environment.frontBaseUrl}reports/result-details/${this.api.currentResultCode}/result?phase=${this.api.currentResultPhase}`;
+    return `${environment.frontBaseUrl}reports/result-details/${this.api.currentResultCode}?phase=${this.api.currentResultPhase}`;
   }
 }

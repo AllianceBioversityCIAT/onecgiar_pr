@@ -56,8 +56,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.currentOptionsLength = this.options?.length;
 
     this._optionsIntance.forEach((resp: any) => {
-      if (resp.disabled == true) resp.disabled = false;
-      if (resp.selected == true) resp.selected = false;
+      if (resp.disabled === true) resp.disabled = false;
+      if (resp.selected === true) resp.selected = false;
     });
 
     this.disableOptions?.map(disableOption => {
@@ -77,14 +77,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (this.selectAll === false)
       this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled) resp.selected = false;
+        if (resp.disabled === true) resp.selected = false;
         this.value = [];
       });
 
     if (this.selectAll === true) {
       this.value = [];
       this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled) resp.selected = true;
+        if (resp.disabled === true) resp.selected = true;
         this.value.push(resp);
       });
     }
@@ -110,18 +110,18 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     }
   }
 
-  selectedLabelDescription() {
-    if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
-
-    return `${this.selectedLabel} (${this.value?.length})`;
-  }
-
   validateShowDeleteButton(option) {
     if (this.selectedPrimary) {
       return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic && this.selectedPrimary !== option.id;
     }
 
     return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic;
+  }
+
+  selectedLabelDescription() {
+    if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
+
+    return `${this.selectedLabel} (${this.value?.length})`;
   }
 
   onChange(_) {}

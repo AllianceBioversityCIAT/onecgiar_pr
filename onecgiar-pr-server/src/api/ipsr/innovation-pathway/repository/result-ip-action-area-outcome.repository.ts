@@ -7,7 +7,6 @@ import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interf
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { ReplicableConfigInterface, ConfigCustomQueryInterface } from '../../../../shared/globalInterfaces/replicable.interface';
-import { Ipsr } from '../../entities/ipsr.entity';
 
 @Injectable()
 export class ResultIpAAOutcomeRepository

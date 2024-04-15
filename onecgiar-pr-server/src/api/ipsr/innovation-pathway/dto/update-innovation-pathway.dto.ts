@@ -26,6 +26,7 @@ export class UpdateInnovationPathwayDto {
   public scalig_ambition!: {};
   public regions: regionsInterface[];
   public countries: countriesInterface[];
+  public scalig_ambition!: {};
 }
 
 export interface regionsInterface {

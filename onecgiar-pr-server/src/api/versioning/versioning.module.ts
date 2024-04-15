@@ -47,7 +47,6 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { IpsrRepository } from '../ipsr/ipsr.repository';
-import { IpsrModule } from '../ipsr/ipsr.module';
 import { ResultInnovationPackageModule } from '../ipsr/result-innovation-package/result-innovation-package.module';
 import { InnovationPathwayModule } from '../ipsr/innovation-pathway/innovation-pathway.module';
 import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';

@@ -35,12 +35,14 @@ export class StepN3ComplementaryInnovationsComponent implements OnInit {
 
   updateRangeLevel1(bodyItem) {
     const readiness_level_evidence_based_index = this.rangesOptions.findIndex(item => item.id == bodyItem['readiness_level_evidence_based']);
-    return (this.rangeLevel1Required = readiness_level_evidence_based_index != 0);
+    this.rangeLevel1Required = readiness_level_evidence_based_index != 0;
+    return this.rangeLevel1Required;
   }
 
   updateRangeLevel2(bodyItem) {
     const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
-    return (this.rangeLevel2Required = use_level_evidence_based_index != 0);
+    this.rangeLevel2Required = use_level_evidence_based_index != 0;
+    return this.rangeLevel2Required;
   }
 
   allFieldsRequired(bodyItem) {

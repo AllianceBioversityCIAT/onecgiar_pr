@@ -8,7 +8,6 @@ import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface
 } from '../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
