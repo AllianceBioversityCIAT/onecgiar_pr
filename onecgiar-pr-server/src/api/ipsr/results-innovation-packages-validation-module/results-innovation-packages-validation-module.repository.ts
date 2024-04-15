@@ -115,30 +115,11 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 ) = 0
             )
             OR (
-                r.is_discontinued IS NULL
-                OR (
-                    r.is_discontinued = 1
-                    AND (
-                        SELECT
-                            SUM(
-                                IF(
-                                    rido.investment_discontinued_option_id = 12,
-                                    IF(
-                                        rido.description = ''
-                                        AND rido.description IS NULL,
-                                        0,
-                                        1
-                                    ),
-                                    1
-                                )
-                            ) - COUNT(rido.results_investment_discontinued_option_id) AS datas
-                        FROM
-                            results_investment_discontinued_options rido
-                        WHERE
-                            rido.is_active > 0
-                            AND rido.result_id = r.id
-                    ) IS NULL
-                )
+                if(r.is_discontinued = 0 or r.is_replicated = 0, 
+                    0, 
+                    (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas 
+                    from results_investment_discontinued_options rido 
+                    where rido.is_active > 0 and rido.result_id = r.id))
             ) THEN FALSE
             ELSE TRUE
         END AS validation
