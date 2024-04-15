@@ -73,7 +73,9 @@ class Report {
   }
 
   get iframeRoute() {
-    const { module, id: resultId } = this.activatedRoute.snapshot.paramMap.params || {};
+    const { id: resultId } = this.activatedRoute.snapshot.paramMap.params || {};
+
+    const module = this.activatedRoute.snapshot._routerState.url.includes('ipsr') ? 'ipsr' : 'result';
 
     return `${environment.apiBaseUrl}api/platform-report/${module}/${resultId}${this.qParamsObjectToqueryParams()}`;
   }
