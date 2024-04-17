@@ -1,6 +1,6 @@
 export class EmbedCredentialsDTO {
   embed_token: string;
-  reportsInformation: ReportInformation[];
+  report: ReportInformation;
 }
 
 export class BodyPowerBiDTO {

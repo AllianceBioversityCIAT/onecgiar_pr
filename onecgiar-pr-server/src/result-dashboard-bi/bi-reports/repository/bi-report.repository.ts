@@ -14,7 +14,6 @@ import { CreateBiReportDto } from '../dto/create-bi-report.dto';
 import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
-import { TokenBiReportRepository } from './token-bi-reports.repository';
 import { GetBiSubpagesDto } from '../dto/get-bi-subpages.dto';
 import { BiSubpagesRepository } from './bi-subpages.repository';
 
@@ -26,7 +25,6 @@ export class BiReportRepository extends Repository<BiReport> {
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
     private _servicesClarisaCredentials: ClarisaCredentialsBiService,
-    private tokenBireports: TokenBiReportRepository,
     private biSubpagesRepository: BiSubpagesRepository,
   ) {
     super(BiReport, dataSource.createEntityManager());
@@ -103,10 +101,8 @@ export class BiReportRepository extends Repository<BiReport> {
       reportTokenBiDto.token_bi = tokenPowerBi.token;
       reportTokenBiDto.expiration_toke_id = tokenPowerBi.expiration;
       reportTokenBiDto.is_active = true;
-      await this.tokenBireports.save(reportTokenBiDto);
       const informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO();
       informationEmbedBi.embed_token = tokenPowerBi.token;
-      const auxReportsInfo: ReportInformation[] = [];
       const reportsInfo: ReportInformation = report;
       reportsInfo.embed_url =
         this.credentialsBi.embed_url_base +
@@ -115,8 +111,7 @@ export class BiReportRepository extends Repository<BiReport> {
         report.group_id +
         '&config=' +
         this.credentialsBi.config_id;
-      auxReportsInfo.push(reportsInfo);
-      informationEmbedBi.reportsInformation = auxReportsInfo;
+      informationEmbedBi.report = reportsInfo;
 
       return informationEmbedBi;
     }
@@ -138,51 +133,10 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportById(id: number) {
-    this.credentialsBi =
-      await this._servicesClarisaCredentials.getCredentialsBi();
-    const tokensReports: TokenBiReport[] = await this.tokenBireports.query(
-      `select * from token_report_bi trb order by id desc limit 1;`,
-    );
-    const today = new Date();
-    const reportsExist = await this.findOneBy({ id, is_active: true });
-    if (reportsExist != null) {
-      if (
-        tokensReports.length <= 0 ||
-        Date.parse(tokensReports[0].expiration_toke_id.toString()) <
-          Date.parse(today.toString())
-      ) {
-        const registerInToken = await this.getTokenPowerBi(Number(id));
-        const responseToken = await registerInToken[
-          'reportsInformation'
-        ].filter((report) => report.id == id);
-        return {
-          token: registerInToken['embed_token'],
-          report: responseToken[0],
-        };
-      } else {
-        const reportsInfo: ReportInformation = new ReportInformation();
-        reportsInfo.id = reportsExist.id;
-        reportsInfo.report_id = reportsExist.report_id;
-        reportsInfo.name = reportsExist.report_name;
-        reportsInfo.order = reportsExist.report_order;
-        reportsInfo.embed_url =
-          this.credentialsBi.embed_url_base +
-          reportsExist.report_id +
-          '&groupId=' +
-          reportsExist.group_id +
-          '&config=' +
-          this.credentialsBi.config_id;
-
-        return {
-          token: tokensReports[0].token_bi,
-          report: reportsInfo,
-        };
-      }
-    } else {
-      return {
-        error: 'This Report not exists',
-      };
-    }
+    return {
+      token: id,
+      report: {},
+    };
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
@@ -208,15 +162,12 @@ export class BiReportRepository extends Repository<BiReport> {
       // console.log(registerInToken);
       if (registerInToken?.isError)
         throw new NotFoundException({ message: 'Error generating bi token' });
-      const responseToken = await registerInToken['reportsInformation'].filter(
-        (report) => report.report_name == report_name,
-      );
 
       return {
-        token: registerInToken['embed_token'],
+        token: registerInToken.embed_token,
         azureValidation: registerInToken ? 1 : 0,
         filters: filterList,
-        report: { ...responseToken[0], mainPage },
+        report: { ...registerInToken.report, mainPage },
       };
     } else {
       throw new NotFoundException({ message: 'This report does not exist' });
