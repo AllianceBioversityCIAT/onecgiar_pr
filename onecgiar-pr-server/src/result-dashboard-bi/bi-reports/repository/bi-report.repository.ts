@@ -208,9 +208,9 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
-    const mainPage = await this.biSubpagesRepository.getReportSubPage(
-      getBiSubpagesDto,
-    );
+    let filterList = [];
+    const mainPage =
+      await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
 
     const { report_name, subpage_id } = getBiSubpagesDto;
     let reportsExist = null;
@@ -218,6 +218,7 @@ export class BiReportRepository extends Repository<BiReport> {
       this.credentialsBi =
         await this._servicesClarisaCredentials.getCredentialsBi();
       reportsExist = await this.getReportByName(report_name);
+      filterList = await this.getFiltersByReportId(reportsExist[0].id);
     } catch (error) {
       console.error(error);
     }
@@ -234,6 +235,7 @@ export class BiReportRepository extends Repository<BiReport> {
       return {
         token: registerInToken['embed_token'],
         azureValidation: registerInToken ? 1 : 0,
+        filters: filterList,
         report: { ...responseToken[0], mainPage },
       };
     } else {
@@ -250,6 +252,13 @@ export class BiReportRepository extends Repository<BiReport> {
     return await this.query(
       `select * from bi_reports br WHERE br.report_name = ? and is_active = 1`,
       [report_name],
+    );
+  }
+
+  async getFiltersByReportId(report_id: number) {
+    return await this.query(
+      `select * from bi_filters bf WHERE bf.report_id = ?`,
+      [report_id],
     );
   }
 }
