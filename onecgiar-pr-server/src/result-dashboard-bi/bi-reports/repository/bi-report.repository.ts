@@ -67,46 +67,35 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi(
-    report_name?: string | number,
-    subpageId?: string | number,
-  ) {
-    let reportsBi: BiReport[] = await this.getReportsBi(subpageId);
-    reportsBi = reportsBi.filter((report) =>
-      typeof report_name === 'number'
-        ? report.id == report_name
-        : report.report_name == report_name,
-    );
-    if (reportsBi.length > 0) {
-      const datasets: BodyPowerBiDTO[] = [];
-      const reportsId: BodyPowerBiDTO[] = [];
-
+  async getTokenPowerBi(report: any) {
+    console.log('getTokenPowerBi');
+    if (report) {
       const barerTokenAzure = await this.getBarerTokenAzure();
-      reportsBi.forEach((resp) => {
-        const auxIdReportBi: BodyPowerBiDTO = new BodyPowerBiDTO();
-        const auxIdDataSetsBi: BodyPowerBiDTO = new BodyPowerBiDTO();
-        auxIdReportBi.id = resp.report_id;
-        reportsId.push(auxIdReportBi);
-        auxIdDataSetsBi.id = resp.dataset_id;
-        datasets.push(auxIdDataSetsBi);
-      });
-
-      const bodyRequestPowerBi = {
-        datasets: datasets,
-        reports: reportsId,
-      };
       let tokenPowerBi;
+      console.log('get azure token');
+      console.log('token', barerTokenAzure.access_token);
+      console.log([{ id: report.dataset_id }]);
+      console.log([{ id: report.report_id }]);
       try {
         tokenPowerBi = await lastValueFrom(
           this._httpService
-            .post(`${this.credentialsBi.api_token_url}`, bodyRequestPowerBi, {
-              headers: {
-                Authorization: `Bearer ${barerTokenAzure.access_token}`,
+            .post(
+              `${this.credentialsBi.api_token_url}`,
+              {
+                datasets: [{ id: report.dataset_id }],
+                reports: [{ id: report.report_id }],
               },
-            })
+              {
+                headers: {
+                  Authorization: `Bearer ${barerTokenAzure.access_token}`,
+                },
+              },
+            )
             .pipe(map((resp) => resp.data)),
         );
+        console.log(tokenPowerBi.token);
       } catch (error) {
+        console.log(error);
         return { ...error, isError: true };
       }
 
@@ -115,28 +104,18 @@ export class BiReportRepository extends Repository<BiReport> {
       reportTokenBiDto.expiration_toke_id = tokenPowerBi.expiration;
       reportTokenBiDto.is_active = true;
       await this.tokenBireports.save(reportTokenBiDto);
-
       const informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO();
       informationEmbedBi.embed_token = tokenPowerBi.token;
       const auxReportsInfo: ReportInformation[] = [];
-      reportsBi.forEach((resp) => {
-        const reportsInfo: ReportInformation = new ReportInformation();
-        reportsInfo.id = resp.id;
-        reportsInfo.resport_id = resp.report_id;
-        reportsInfo.name = resp.report_name;
-        reportsInfo.description = resp.report_description;
-        reportsInfo.title = resp.report_title;
-        reportsInfo.order = resp.report_order;
-        reportsInfo.hasFullScreen = resp.has_full_screen;
-        reportsInfo.embed_url =
-          this.credentialsBi.embed_url_base +
-          resp.report_id +
-          '&groupId=' +
-          resp.group_id +
-          '&config=' +
-          this.credentialsBi.config_id;
-        auxReportsInfo.push(reportsInfo);
-      });
+      const reportsInfo: ReportInformation = report;
+      reportsInfo.embed_url =
+        this.credentialsBi.embed_url_base +
+        report.report_id +
+        '&groupId=' +
+        report.group_id +
+        '&config=' +
+        this.credentialsBi.config_id;
+      auxReportsInfo.push(reportsInfo);
       informationEmbedBi.reportsInformation = auxReportsInfo;
 
       return informationEmbedBi;
@@ -148,7 +127,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi(subpageId?: number | string) {
+  async getReportsBi() {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -183,9 +162,8 @@ export class BiReportRepository extends Repository<BiReport> {
       } else {
         const reportsInfo: ReportInformation = new ReportInformation();
         reportsInfo.id = reportsExist.id;
-        reportsInfo.resport_id = reportsExist.report_id;
+        reportsInfo.report_id = reportsExist.report_id;
         reportsInfo.name = reportsExist.report_name;
-        reportsInfo.description = reportsExist.report_description;
         reportsInfo.order = reportsExist.report_order;
         reportsInfo.embed_url =
           this.credentialsBi.embed_url_base +
@@ -212,24 +190,26 @@ export class BiReportRepository extends Repository<BiReport> {
     const mainPage =
       await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
 
-    const { report_name, subpage_id } = getBiSubpagesDto;
-    let reportsExist = null;
+    const { report_name } = getBiSubpagesDto;
+    let report = null;
     try {
       this.credentialsBi =
         await this._servicesClarisaCredentials.getCredentialsBi();
-      reportsExist = await this.getReportByName(report_name);
-      filterList = await this.getFiltersByReportId(reportsExist[0].id);
+      report = await this.getReportByName(report_name);
+      report = report.pop();
+      filterList = await this.getFiltersByReportId(report.id);
     } catch (error) {
       console.error(error);
     }
 
-    if (reportsExist != null && reportsExist.length != 0) {
+    if (report != null && report.length != 0) {
       let registerInToken = null;
-      registerInToken = await this.getTokenPowerBi(report_name, subpage_id);
+      registerInToken = await this.getTokenPowerBi(report);
+      // console.log(registerInToken);
       if (registerInToken?.isError)
         throw new NotFoundException({ message: 'Error generating bi token' });
       const responseToken = await registerInToken['reportsInformation'].filter(
-        (report) => report.name == report_name,
+        (report) => report.report_name == report_name,
       );
 
       return {
