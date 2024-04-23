@@ -12,6 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.0",
+    "morgan": "^1.10.0",
     "puppeteer": "^22.6.4"
   },
   "devDependencies": {
