@@ -43,7 +43,7 @@ router.get('/bi-front', async (req: Request, res: Response) => {
       url
     });
   } catch (error) {
-    res.status(400).json({ error });
+    res.status(400).json({ error: String(error) });
   }
 });
 
