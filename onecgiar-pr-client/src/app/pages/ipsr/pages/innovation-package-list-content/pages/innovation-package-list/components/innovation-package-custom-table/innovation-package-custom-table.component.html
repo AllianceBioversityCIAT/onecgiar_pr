@@ -41,7 +41,7 @@
 
                 <td>
                     <a class="subResults" pTooltip="Click to view the pdf" tooltipPosition="bottom" *ngFor="let subResult of result['results']"
-                    [href]="'/reports/result-details/' + subResult?.result_code + '/ipsr' + '?phase='+subResult?.version_id" target="_blank" rel="noopener noreferrer">
+                    [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase='+subResult?.version_id" target="_blank" rel="noopener noreferrer">
                         <app-pdf-icon></app-pdf-icon>
                     </a>
                 </td>

@@ -1,6 +1,6 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
-import { ResultsInvestmentDiscontinuedOption } from '../../../results/results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
+
 export class CreateResultInnovationPackageDto {
   public result_id: number;
   public initiative_id: number;

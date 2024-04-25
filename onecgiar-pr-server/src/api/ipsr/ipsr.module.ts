@@ -23,7 +23,6 @@ import { ResultsByIpInnovationUseMeasuresModule } from './results-by-ip-innovati
 import { ResultsInnovationPackagesValidationModuleModule } from './results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { ResultsInvestmentDiscontinuedOptionRepository } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
 
 @Module({

@@ -9,7 +9,8 @@ export const routingApp: PrRoute[] = [
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   { prName: 'Quality Assurance', onlytest: false, underConstruction: false, canActivate: [CheckLoginGuard], path: 'quality-assurance', loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule) },
   { prName: 'INIT Admin Module', onlytest: false, prHide: false, path: 'init-admin-module', loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule) },
-  { prName: 'reports', prHide: true, path: 'reports/result-details/:id/:module', loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule) },
+  { prName: 'reports', prHide: true, path: 'reports/result-details/:id', loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule) },
+  { prName: 'ipsr', prHide: true, path: 'reports/ipsr-details/:id', loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
 ];
 

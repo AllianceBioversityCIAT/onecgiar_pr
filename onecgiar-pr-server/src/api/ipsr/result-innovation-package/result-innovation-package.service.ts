@@ -670,6 +670,16 @@ export class ResultInnovationPackageService {
         }
       }
 
+      let status: number;
+
+      if (req?.is_discontinued) {
+        status = 4;
+      } else if (resultExist.status_id == 4) {
+        status = 1;
+      } else {
+        status = resultExist.status_id;
+      }
+
       await this._resultRepository.update(resultId, {
         title: req?.title,
         description: req?.description,
@@ -685,11 +695,7 @@ export class ResultInnovationPackageService {
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
         is_discontinued: req?.is_discontinued,
-        status_id: req?.is_discontinued
-          ? 4
-          : resultExist.status_id == 4
-            ? 1
-            : resultExist.status_id,
+        status_id: status,
       });
 
       if (req?.is_discontinued) {
@@ -725,7 +731,7 @@ export class ResultInnovationPackageService {
               investment_discontinued_option_id:
                 i.investment_discontinued_option_id,
               description: i?.description,
-              is_active: i.value ? true : false,
+              is_active: Boolean(i.value),
               created_by: user.id,
               last_updated_by: user.id,
             });
