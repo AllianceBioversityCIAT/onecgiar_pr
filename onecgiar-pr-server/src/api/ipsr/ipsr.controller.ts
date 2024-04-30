@@ -43,4 +43,17 @@ export class IpsrController {
 
     throw new HttpException({ message, response }, status);
   }
+
+  @Get('get/ipsr/list/date/:initDate/:lastDate')
+  async getIpsrList(
+    @Param('initDate') initDate: Date,
+    @Param('lastDate') lastDate: Date,
+  ) {
+    const { message, response, status } = await this.ipsrService.getIpsrList(
+      initDate,
+      lastDate,
+    );
+
+    throw new HttpException({ message, response }, status);
+  }
 }

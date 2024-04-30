@@ -11,6 +11,7 @@ import {
 } from '../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
+import { env } from 'process';
 
 @Injectable()
 export class IpsrRepository
@@ -649,6 +650,173 @@ export class IpsrRepository
       throw this._handlersError.returnErrorRepository({
         className: IpsrRepository.name,
         error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getIpsrList(initDate: Date, lastDate: Date) {
+    const ipsrListQuery = `
+    SELECT
+        r.result_code AS 'Result Code',
+        v.phase_name as 'Reporting phase',
+        r.reported_year_id as 'Reporting year',
+        r.title as 'Result title',
+        (
+            SELECT rt.name
+            FROM result_type rt
+            WHERE
+                id = r.result_type_id
+        ) AS 'Result type',
+        (
+            SELECT CONCAT(
+                    r2.result_code, ' - ', r2.title
+                )
+            FROM result r2
+            WHERE
+                r2.id = rbip.result_id
+        ) AS 'Core innovation',
+        (
+            SELECT CONCAT(
+                    u.first_name, ' ', u.last_name
+                )
+            FROM users u
+            WHERE
+                u.id = r.created_by
+        ) AS 'Submitter',
+        (
+            SELECT rs.status_name
+            FROM result_status rs
+            WHERE
+                rs.result_status_id = r.status_id
+        ) AS 'Status',
+        (
+            IFNULL(
+                (
+                    SELECT gtl.description
+                    FROM prdb.gender_tag_level gtl
+                    WHERE
+                        gtl.id = r.gender_tag_level_id
+                ), 'Not provided'
+            )
+        ) AS 'Gender tag level',
+        (
+            IFNULL(
+                (
+                    SELECT gtl.description
+                    FROM prdb.gender_tag_level gtl
+                    WHERE
+                        gtl.id = r.climate_change_tag_level_id
+                ), 'Not provided'
+            )
+        ) AS 'Climate change tag level',
+        (
+            IFNULL(
+                (
+                    SELECT gtl.description
+                    FROM prdb.gender_tag_level gtl
+                    WHERE
+                        gtl.id = r.nutrition_tag_level_id
+                ), 'Not provided'
+            )
+        ) AS 'Nutrition tag level',
+        (
+            IFNULL(
+                (
+                    SELECT gtl.description
+                    FROM prdb.gender_tag_level gtl
+                    WHERE
+                        gtl.id = r.environmental_biodiversity_tag_level_id
+                ), 'Not provided'
+            )
+        ) AS 'Environment and/or biodiversity Tag Level',
+        (
+            IFNULL(
+                (
+                    SELECT gtl.description
+                    FROM prdb.gender_tag_level gtl
+                    WHERE
+                        gtl.id = r.poverty_tag_level_id
+                ), 'Not provided'
+            )
+        ) AS 'Poverty tag level',
+        DATE(r.created_date) AS 'Creation date',
+        (
+            SELECT CONCAT(
+                    ci.official_code, ' - ', ci.name
+                )
+            FROM
+                results_by_inititiative rbi
+                LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+            WHERE
+                rbi.result_id = r.id
+                AND rbi.initiative_role_id = 1
+                AND rbi.is_active > 0
+        ) AS 'Lead initiative',
+        IFNULL(
+            (
+                SELECT GROUP_CONCAT(
+                        ci.official_code, ' - ', ci.name SEPARATOR '\n'
+                    )
+                FROM
+                    results_by_inititiative rbi
+                    LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+                WHERE
+                    rbi.result_id = r.id
+                    AND rbi.initiative_role_id = 2
+                    AND rbi.is_active > 0
+            ), 'Not provided'
+        ) AS 'Contributing initiative(s)',
+        IFNULL(
+            (
+                SELECT cirl.level
+                FROM
+                    clarisa_innovation_readiness_level cirl
+                WHERE
+                    cirl.id = rip.readiness_level_evidence_based
+            ), 'Not provided'
+        ) AS 'Innovation readiness',
+        IFNULL(
+            (
+                SELECT ciul.level
+                FROM
+                    clarisa_innovation_use_levels ciul
+                WHERE
+                    ciul.id = rip.use_level_evidence_based
+            ), 'Not provided'
+        ) AS 'Innovation use',
+        IF(
+            (v.phase_year > 2023), 
+            CONCAT(
+              '${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id
+            ), 
+            'Not applicable'
+        ) AS 'PDF Link'
+    FROM
+        result r
+        LEFT JOIN version v ON r.version_id = v.id
+        LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
+        LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
+        AND rbip.ipsr_role_id = 1
+    WHERE
+        r.is_active > 0
+        AND r.result_type_id = 10
+        AND r.created_date >= ?
+        AND r.created_date <= ?
+    ORDER BY r.created_date DESC;
+    `;
+    try {
+      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
+        '?',
+        initDate,
+        lastDate,
+      ]);
+
+      return ipsrList;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error,
         debug: true,
       });
     }

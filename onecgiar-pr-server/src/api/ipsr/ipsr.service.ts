@@ -104,4 +104,29 @@ export class IpsrService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async getIpsrList(initDate: Date, lastDate: Date) {
+    try {
+      const ipsrList = await this._ipsrRespository.getIpsrList(
+        initDate,
+        lastDate,
+      );
+
+      if (!ipsrList[0]) {
+        throw {
+          response: ipsrList,
+          message: 'No results found for the selected dates.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: ipsrList,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 }
