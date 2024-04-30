@@ -11,7 +11,7 @@
                 <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
-                <th id="pdf">PDF</th>
+                <th id="pdf" *ngIf="false">PDF</th>
                 <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
             </tr>
         </ng-template>
@@ -39,7 +39,7 @@
                     </ng-container>
                 </td>
 
-                <td>
+                <td *ngIf="false">
                     <a class="subResults" pTooltip="Click to view the pdf" tooltipPosition="bottom" *ngFor="let subResult of result['results']"
                     [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase='+subResult?.version_id" target="_blank" rel="noopener noreferrer">
                         <app-pdf-icon></app-pdf-icon>
