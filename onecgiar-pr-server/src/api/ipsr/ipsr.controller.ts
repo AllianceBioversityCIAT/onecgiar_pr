@@ -44,7 +44,7 @@ export class IpsrController {
     throw new HttpException({ message, response }, status);
   }
 
-  @Get('get/ipsr/list/date/:initDate/:lastDate')
+  @Get('get/list/date/:initDate/:lastDate')
   async getIpsrList(
     @Param('initDate') initDate: Date,
     @Param('lastDate') lastDate: Date,
