@@ -1,14 +1,14 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ResultActorsService } from './result-actors.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultActorsController {
   constructor(private readonly resultActorsService: ResultActorsService) {}
 
   @Get('type/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.resultActorsService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.resultActorsService.findAll();
   }
 }

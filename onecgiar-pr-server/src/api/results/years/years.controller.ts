@@ -3,10 +3,11 @@ import { YearsService } from './years.service';
 import { CreateYearDto } from './dto/create-year.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HttpException, UseInterceptors } from '@nestjs/common';
+import { UseInterceptors } from '@nestjs/common';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class YearsController {
   constructor(private readonly yearsService: YearsService) {}
 
@@ -16,25 +17,15 @@ export class YearsController {
     @Body() createYear: CreateYearDto,
     @Param('year') year: string,
   ) {
-    const { message, response, status } = await this.yearsService.create(
-      year,
-      user,
-      createYear,
-    );
-    throw new HttpException({ message, response }, status);
+    return this.yearsService.create(year, user, createYear);
   }
 
   @Patch('active/:year')
   async findAll(@UserToken() user: TokenDto, @Param('year') year: string) {
-    const { message, response, status } = await this.yearsService.activeYear(
-      year,
-      user,
-    );
-    throw new HttpException({ message, response }, status);
+    return this.yearsService.activeYear(year, user);
   }
 
   @Get()
-  @UseInterceptors(ResponseInterceptor)
   async findAllYear() {
     return this.yearsService.findAllYear();
   }

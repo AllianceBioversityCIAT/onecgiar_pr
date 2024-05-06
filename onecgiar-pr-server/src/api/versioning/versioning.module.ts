@@ -126,7 +126,7 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
     ResultsIpActorRepository,
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpInstitutionTypeRepository,
-    ResultCountrySubnationalRepository
+    ResultCountrySubnationalRepository,
   ],
   exports: [
     EvidencesService,

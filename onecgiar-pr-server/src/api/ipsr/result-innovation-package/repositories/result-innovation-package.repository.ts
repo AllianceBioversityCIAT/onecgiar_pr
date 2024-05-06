@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { ConfigCustomQueryInterface, ReplicableConfigInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
@@ -19,7 +22,9 @@ export class ResultInnovationPackageRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -81,7 +86,9 @@ export class ResultInnovationPackageRepository
           )
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -122,7 +129,7 @@ export class ResultInnovationPackageRepository
           AND is_active > 0;`,
     };
   }
-  
+
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,

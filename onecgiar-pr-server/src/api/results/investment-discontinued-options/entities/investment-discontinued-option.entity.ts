@@ -1,4 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { ResultType } from '../../result_types/entities/result_type.entity';
 
 @Entity('investment_discontinued_option')
@@ -21,10 +27,7 @@ export class InvestmentDiscontinuedOption {
   })
   result_type_id: number;
 
-  @ManyToOne(
-    () => ResultType,
-    (rt) => rt.obj_result_type_discontinued,
-  )
+  @ManyToOne(() => ResultType, (rt) => rt.obj_result_type_discontinued)
   @JoinColumn({
     name: 'result_type_id',
   })

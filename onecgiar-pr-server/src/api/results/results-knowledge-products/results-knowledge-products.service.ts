@@ -154,7 +154,7 @@ export class ResultsKnowledgeProductsService {
       const newMetadata =
         cgspaceResponse.response as ResultsKnowledgeProductDto;
 
-      let updatedKnowledgeProduct =
+      const updatedKnowledgeProduct =
         this._resultsKnowledgeProductMapper.updateEntity(
           resultKnowledgeProduct,
           newMetadata,

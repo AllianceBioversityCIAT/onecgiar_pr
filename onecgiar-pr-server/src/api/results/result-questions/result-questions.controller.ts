@@ -1,27 +1,23 @@
-import { Controller, Get, Param, HttpException } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { ResultQuestionsService } from './result-questions.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultQuestionsController {
   constructor(
     private readonly resultQuestionsService: ResultQuestionsService,
   ) {}
 
   @Get('policy-change/:resultId')
-  async findQuestionPolicyChange(@Param('resultId') resultId: number) {
-    const { response, message, status } =
-      await this.resultQuestionsService.findQuestionPolicyChange(resultId);
-
-    throw new HttpException({ response, message }, status);
+  findQuestionPolicyChange(@Param('resultId') resultId: number) {
+    return this.resultQuestionsService.findQuestionPolicyChange(resultId);
   }
 
   @Get('innovation-development/:resultId')
-  async findQuestionInnovationDevelopment(@Param('resultId') resultId: number) {
-    const { response, message, status } =
-      await this.resultQuestionsService.findQuestionInnovationDevelopment(
-        resultId,
-      );
-
-    throw new HttpException({ response, message }, status);
+  findQuestionInnovationDevelopment(@Param('resultId') resultId: number) {
+    return this.resultQuestionsService.findQuestionInnovationDevelopment(
+      resultId,
+    );
   }
 }

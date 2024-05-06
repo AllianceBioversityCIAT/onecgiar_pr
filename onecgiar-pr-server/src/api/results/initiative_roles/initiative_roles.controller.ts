@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { InitiativeRolesService } from './initiative_roles.service';
 import { CreateInitiativeRoleDto } from './dto/create-initiative_role.dto';
 import { UpdateInitiativeRoleDto } from './dto/update-initiative_role.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('initiative-roles')
+@UseInterceptors(ResponseInterceptor)
 export class InitiativeRolesController {
   constructor(
     private readonly initiativeRolesService: InitiativeRolesService,

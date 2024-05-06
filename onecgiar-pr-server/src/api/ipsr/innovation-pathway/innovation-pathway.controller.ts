@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import {
@@ -26,8 +26,10 @@ import {
   institutionsInterface,
   SaveStepFour,
 } from './dto/save-step-four.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class InnovationPathwayController {
   constructor(
     private readonly _innovationPathwayStepOneServiceService: InnovationPathwayStepOneService,
@@ -38,205 +40,170 @@ export class InnovationPathwayController {
 
   // STEP ONE
   @Get('get-step-one/:resultId')
-  async getStepOne(@Param('resultId') resultId: string) {
-    const { message, response, status } =
-      await this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
-
-    throw new HttpException({ message, response }, status);
+  getStepOne(@Param('resultId') resultId: string) {
+    return this._innovationPathwayStepOneServiceService.getStepOne(+resultId);
   }
 
   @Patch('save/step-one/:resultId')
-  async updateStepOne(
+  updateStepOne(
     @Param('resultId') resultId: string,
     @Body() updateInnovationPathwayDto: UpdateInnovationPathwayDto,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepOneServiceService.updateMain(
-        +resultId,
-        updateInnovationPathwayDto,
-        user,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepOneServiceService.updateMain(
+      +resultId,
+      updateInnovationPathwayDto,
+      user,
+    );
   }
 
   @Patch('retrieve/aa-outcomes/:resultId')
-  async updateStepOneInstitutions(
+  updateStepOneInstitutions(
     @Param('resultId') resultId: string,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepOneServiceService.retrieveAaOutcomes(
-        +resultId,
-        user,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepOneServiceService.retrieveAaOutcomes(
+      +resultId,
+      user,
+    );
   }
 
   // STEP TWO
   @Patch('save/step-two/:resultId')
-  async updateSteptwo(
+  updateSteptwo(
     @Param('resultId') resultId: string,
     @Body() saveData: SaveStepTwoOne,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.saveSetepTowOne(
-        +resultId,
-        user,
-        saveData.complementaryInovatins,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepTwoService.saveSetepTowOne(
+      +resultId,
+      user,
+      saveData.complementaryInovatins,
+    );
   }
 
   @Post('save/complementary-innovation/:resultId')
-  async saveComplementaryInnovation(
+  saveComplementaryInnovation(
     @Param('resultId') resultId: string,
     @Body() createComplementaryInnovationDto: CreateComplementaryInnovationDto,
     @UserToken() User: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.saveComplementaryInnovation(
-        +resultId,
-        User,
-        createComplementaryInnovationDto,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepTwoService.saveComplementaryInnovation(
+      +resultId,
+      User,
+      createComplementaryInnovationDto,
+    );
   }
 
   @Get('get/complementary-innovation/:complementaryInnovationId')
-  async getComplementaryInnovationById(
+  getComplementaryInnovationById(
     @Param('complementaryInnovationId') complementaryInnovationId: number,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.getComplementaryInnovationById(
-        +complementaryInnovationId,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepTwoService.getComplementaryInnovationById(
+      +complementaryInnovationId,
+    );
   }
 
   @Patch('updated/complementary-innovation/:complementaryInnovationId')
-  async updateComplementaryInnovation(
+  updateComplementaryInnovation(
     @Param('complementaryInnovationId') complementaryInnovationId: number,
     @Body() updateComplementaryInnovationDto: UpdateComplementaryInnovationDto,
     @UserToken() User: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.updateComplementaryInnovation(
-        complementaryInnovationId,
-        User,
-        updateComplementaryInnovationDto,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepTwoService.updateComplementaryInnovation(
+      complementaryInnovationId,
+      User,
+      updateComplementaryInnovationDto,
+    );
   }
 
   @Delete('delete/complementary-innovation/:complementaryInnovationId')
-  async inactiveComplementaryInnovation(
+  inactiveComplementaryInnovation(
     @Param('complementaryInnovationId') complementaryInnovationId: number,
     @UserToken() User: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.inactiveComplementaryInnovation(
-        +complementaryInnovationId,
-        User,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepTwoService.inactiveComplementaryInnovation(
+      +complementaryInnovationId,
+      User,
+    );
   }
 
   @Get('get/step-two/:resultId')
-  async getSteptwo(@Param('resultId') resultId: string) {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.getStepTwoOne(+resultId);
-    throw new HttpException({ message, response }, status);
+  getSteptwo(@Param('resultId') resultId: string) {
+    return this._innovationPathwayStepTwoService.getStepTwoOne(+resultId);
   }
 
   @Get('get/complementary-innovations')
-  async getComplementaryInnovation() {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.findInnovationsAndComplementary();
-    throw new HttpException({ message, response }, status);
+  getComplementaryInnovation() {
+    return this._innovationPathwayStepTwoService.findInnovationsAndComplementary();
   }
 
   @Get('get/complementary-innovations-functions')
-  async getComplementaryInnovationFunctions() {
-    const { message, response, status } =
-      await this._innovationPathwayStepTwoService.findComplementaryInnovationFuctions();
-    throw new HttpException({ message, response }, status);
+  getComplementaryInnovationFunctions() {
+    return this._innovationPathwayStepTwoService.findComplementaryInnovationFuctions();
   }
 
   // STEP THREE
   @Patch('save/step-three/:resultId')
-  async updateStepthree(
+  updateStepthree(
     @Param('resultId') resultId: string,
     @Body() saveData: SaveStepTwoThree,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, statusCode } =
-      await this._innovationPathwayStepThreeService.saveComplementaryinnovation(
-        +resultId,
-        user,
-        saveData,
-      );
-    throw new HttpException({ message, response }, statusCode);
+    return this._innovationPathwayStepThreeService.saveComplementaryinnovation(
+      +resultId,
+      user,
+      saveData,
+    );
   }
 
   @Get('get/step-three/:resultId')
-  async getStepthree(@Param('resultId') resultId: string) {
-    const { message, response, status } =
-      await this._innovationPathwayStepThreeService.getStepThree(+resultId);
-    throw new HttpException({ message, response }, status);
+  getStepthree(@Param('resultId') resultId: string) {
+    return this._innovationPathwayStepThreeService.getStepThree(+resultId);
   }
 
   @Get('get/step-four/:resultId')
-  async getStepFour(@Param('resultId') resultId: string) {
-    const { message, response, status } =
-      await this._innovationPathwayStepFourService.getStepFour(+resultId);
-    throw new HttpException({ message, response }, status);
+  getStepFour(@Param('resultId') resultId: string) {
+    return this._innovationPathwayStepFourService.getStepFour(+resultId);
   }
 
   // STEP FOUR
   @Patch('save/step-four/:resultId')
-  async updateStepFour(
+  updateStepFour(
     @Param('resultId') resultId: string,
     @Body() saveStepFourDto: SaveStepFour,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepFourService.saveMain(
-        +resultId,
-        user,
-        saveStepFourDto,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepFourService.saveMain(
+      +resultId,
+      user,
+      saveStepFourDto,
+    );
   }
 
   @Patch('save/step-four/partners/:resultId')
-  async saveFourPartners(
+  saveFourPartners(
     @Param('resultId') resultId: string,
     @Body() partners: institutionsInterface,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepFourService.savePartners(
-        +resultId,
-        user,
-        partners,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepFourService.savePartners(
+      +resultId,
+      user,
+      partners,
+    );
   }
 
   @Patch('save/step-four/bilaterals/:resultId')
-  async saveFourBilaterals(
+  saveFourBilaterals(
     @Param('resultId') resultId: string,
     @Body() bilaterals: donorInterfaceToc,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this._innovationPathwayStepFourService.saveBilaterals(
-        +resultId,
-        user,
-        bilaterals,
-      );
-    throw new HttpException({ message, response }, status);
+    return this._innovationPathwayStepFourService.saveBilaterals(
+      +resultId,
+      user,
+      bilaterals,
+    );
   }
 }

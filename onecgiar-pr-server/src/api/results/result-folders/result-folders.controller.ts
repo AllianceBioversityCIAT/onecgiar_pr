@@ -74,4 +74,3 @@ export class ResultFoldersController {
     return this.resultFoldersService.findResultFoldersType(status, +id);
   }
 }
-

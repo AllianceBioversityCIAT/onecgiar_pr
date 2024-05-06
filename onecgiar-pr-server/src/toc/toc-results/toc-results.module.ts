@@ -127,7 +127,7 @@ import { ResultCountrySubnationalRepository } from '../../api/results/result-cou
     ResultsIpActorRepository,
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpInstitutionTypeRepository,
-    ResultCountrySubnationalRepository
+    ResultCountrySubnationalRepository,
   ],
   imports: [
     SharePointModule,

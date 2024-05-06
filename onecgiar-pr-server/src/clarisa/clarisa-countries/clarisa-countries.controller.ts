@@ -1,17 +1,16 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaCountriesService } from './clarisa-countries.service';
-import { HttpException } from '@nestjs/common';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaCountriesController {
   constructor(
     private readonly clarisaCountriesService: ClarisaCountriesService,
   ) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.clarisaCountriesService.findAllCountries();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.clarisaCountriesService.findAllCountries();
   }
 }

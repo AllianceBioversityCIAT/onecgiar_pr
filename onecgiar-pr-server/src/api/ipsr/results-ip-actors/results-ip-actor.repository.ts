@@ -22,7 +22,9 @@ export class ResultsIpActorRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -63,7 +65,9 @@ export class ResultsIpActorRepository
           )
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
