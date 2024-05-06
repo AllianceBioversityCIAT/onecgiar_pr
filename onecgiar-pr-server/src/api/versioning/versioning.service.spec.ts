@@ -54,6 +54,23 @@ import { GlobalParameterRepository } from '../global-parameter/repositories/glob
 import { HttpStatus } from '@nestjs/common';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultActorRepository } from '../results/result-actors/repositories/result-actors.repository';
+import { IpsrRepository } from '../ipsr/ipsr.repository';
+import { ResultInnovationPackageRepository } from '../ipsr/result-innovation-package/repositories/result-innovation-package.repository';
+import { ResultIpAAOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultIpEoiOutcomeRepository } from '../ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpImpactAreaRepository } from '../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultIpSdgTargetRepository } from '../ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { ResultIpMeasureRepository } from '../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
+import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
+import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -110,6 +127,23 @@ describe('VersioningService', () => {
         EvidenceSharepointRepository,
         EvidencesService,
         ShareResultRequestRepository,
+        ResultCountrySubnationalRepository,
+        NonPooledProjectBudgetRepository,
+        ResultInstitutionsBudgetRepository,
+        ResultActorRepository,
+        IpsrRepository,
+        ResultInnovationPackageRepository,
+        ResultIpAAOutcomeRepository,
+        ResultIpEoiOutcomeRepository,
+        ResultIpImpactAreaRepository,
+        ResultIpSdgTargetRepository,
+        InnovationPackagingExpertRepository,
+        ResultIpMeasureRepository,
+        ResultIpExpertisesRepository,
+        ResultIpExpertWorkshopOrganizedRepostory,
+        ResultsIpActorRepository,
+        ResultsByIpInnovationUseMeasureRepository,
+        ResultsIpInstitutionTypeRepository,
         {
           provide: GlobalParameterCacheService,
           useValue: {

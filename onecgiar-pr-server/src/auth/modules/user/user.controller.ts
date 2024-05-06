@@ -4,16 +4,11 @@ import {
   Post,
   Body,
   Param,
-  UseFilters,
-  Headers,
   UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateFullUserDto } from './dto/create-full-user.dto';
-import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
-import { HttpException } from '@nestjs/common';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';

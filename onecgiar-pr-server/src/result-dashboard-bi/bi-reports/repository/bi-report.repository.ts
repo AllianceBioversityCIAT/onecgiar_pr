@@ -45,18 +45,17 @@ export class BiReportRepository extends Repository<BiReport> {
       },
     };
     //Organice url azure
-    this.credentialsBi.azure_api_url =
-      await this.credentialsBi.azure_api_url.replace(
-        '{tenantID}',
-        this.credentialsBi.tenant_id,
-      );
+    this.credentialsBi.azure_api_url = this.credentialsBi.azure_api_url.replace(
+      '{tenantID}',
+      this.credentialsBi.tenant_id,
+    );
 
     //Bearer token
     let dataCredentials: any;
 
     try {
       dataCredentials = await lastValueFrom(
-        await this._httpService
+        this._httpService
           .post(`${this.credentialsBi.azure_api_url}`, params, config)
           .pipe(map((resp) => resp.data)),
       );
@@ -66,8 +65,11 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi(report_name?: string | number) {
-    let reportsBi: BiReport[] = await this.getReportsBi();
+  async getTokenPowerBi(
+    report_name?: string | number,
+    subpage_id?: number | string,
+  ) {
+    let reportsBi: BiReport[] = await this.getReportsBi(subpage_id);
     reportsBi = reportsBi.filter((report) =>
       typeof report_name === 'number'
         ? report.id == report_name
@@ -144,7 +146,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi() {
+  async getReportsBi(_subpageId?: number | string) {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,

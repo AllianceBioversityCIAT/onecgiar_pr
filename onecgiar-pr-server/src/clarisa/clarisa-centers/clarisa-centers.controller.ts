@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpException,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaCentersService } from './clarisa-centers.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 

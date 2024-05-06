@@ -245,13 +245,11 @@ export class InnovationPathwayStepOneService {
 
       const scalig_ambition = {
         title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${
-          resInitLead?.obj_initiative?.short_name
-        } and partners will work together with${this.arrayToStringAnd(
+        body: `By 2024, the ${resInitLead?.obj_initiative
+          ?.short_name} and partners will work together with${this.arrayToStringAnd(
           institutions?.map((el) => el['institutions_name']),
-        )} to accomplish the use of ${
-          coreData?.obj_result?.title
-        } by${this.innovationUseString(
+        )} to accomplish the use of ${coreData?.obj_result
+          ?.title} by${this.innovationUseString(
           innovatonUse.actors.map((el) => el),
           innovatonUse.organization.map((el) => el),
           innovatonUse.measures.map((el) => el),
@@ -572,7 +570,7 @@ export class InnovationPathwayStepOneService {
         is_active: true,
       });
 
-      let coreTitle = await this._resultRepository.findOne({
+      const coreTitle = await this._resultRepository.findOne({
         where: { id: coreResult.result_id },
       });
 
@@ -617,7 +615,9 @@ export class InnovationPathwayStepOneService {
         if (coreTitle.title.endsWith('.')) {
           coreTitle.title = coreTitle.title.replace(/\.$/, '');
         }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title} in ${regionsList.slice(0, -1).join(', ')}${
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+          coreTitle.title
+        } in ${regionsList.slice(0, -1).join(', ')}${
           regionsList.length > 1 ? ' and ' : ''
         }${regionsList[regionsList.length - 1]}`;
       } else if ([3, 4, 5].includes(geoScopeId)) {
@@ -639,7 +639,7 @@ export class InnovationPathwayStepOneService {
 
             const newInnovationCountries: ResultCountry[] = [];
             newInnovationCountries.push(newRc);
-            
+
             if (geoScopeId === 5 && ct?.sub_national?.length) {
               await this.$_resultInnovationPackageService.saveSubNational(
                 newRc.result_country_id,
@@ -653,7 +653,9 @@ export class InnovationPathwayStepOneService {
         if (coreTitle.title.endsWith('.')) {
           coreTitle.title = coreTitle.title.replace(/\.$/, '');
         }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title.toLocaleLowerCase().trim()}.`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${coreTitle.title
+          .toLocaleLowerCase()
+          .trim()}.`;
       }
 
       await this._resultRepository.update(resultId, {

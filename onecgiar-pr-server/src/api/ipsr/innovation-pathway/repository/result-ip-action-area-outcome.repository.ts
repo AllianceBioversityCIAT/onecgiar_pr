@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpAAOutcome } from '../entities/result-ip-action-area-outcome.entity';
 import { env } from 'process';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
-import { ReplicableConfigInterface, ConfigCustomQueryInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ReplicableConfigInterface,
+  ConfigCustomQueryInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 
 @Injectable()
 export class ResultIpAAOutcomeRepository
@@ -20,7 +23,9 @@ export class ResultIpAAOutcomeRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -45,7 +50,9 @@ export class ResultIpAAOutcomeRepository
         )
       SELECT
         is_active,
-        ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+        ${predeterminedDateValidation(
+          config.predetermined_date,
+        )} AS created_date,
         last_updated_date,
         ${config.user.id} AS created_by,
         ${config.user.id} AS last_updated_by,
@@ -60,7 +67,9 @@ export class ResultIpAAOutcomeRepository
       returnQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,

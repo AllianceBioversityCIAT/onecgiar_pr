@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';

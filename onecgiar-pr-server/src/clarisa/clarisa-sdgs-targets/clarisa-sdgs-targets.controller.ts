@@ -10,7 +10,7 @@ export class ClarisaSdgsTargetsController {
   ) {}
 
   @Get('all')
-   findAll() {
+  findAll() {
     return this.clarisaSdgsTargetsService.findAll();
   }
 }

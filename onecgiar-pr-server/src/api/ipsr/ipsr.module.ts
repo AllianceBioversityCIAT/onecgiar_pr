@@ -47,7 +47,7 @@ import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-i
     ResultsByIpInnovationUseMeasuresModule,
     ResultsInnovationPackagesValidationModuleModule,
     AssessedDuringExpertWorkshopModule,
-    forwardRef(() => ResultsInvestmentDiscontinuedOptionsModule)
+    forwardRef(() => ResultsInvestmentDiscontinuedOptionsModule),
   ],
   exports: [IpsrRepository, IpsrService],
 })

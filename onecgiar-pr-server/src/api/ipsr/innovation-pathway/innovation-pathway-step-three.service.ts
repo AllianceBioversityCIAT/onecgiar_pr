@@ -446,11 +446,14 @@ export class InnovationPathwayStepThreeService {
         result_core_innovation: {
           core_result_code: core_innovation.result_code,
           core_title: core_innovation.title,
-          core_result_current_phase: core_innovation.version_id
+          core_result_current_phase: core_innovation.version_id,
         },
       };
 
-      console.log("🚀 ~ InnovationPathwayStepThreeService ~ getStepThree ~ returdata:", returdata)
+      console.log(
+        '🚀 ~ InnovationPathwayStepThreeService ~ getStepThree ~ returdata:',
+        returdata,
+      );
       return {
         response: returdata,
         message: 'Successful response',
