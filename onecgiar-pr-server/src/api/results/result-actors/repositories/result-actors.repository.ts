@@ -1,19 +1,110 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ResultActor } from '../entities/result-actor.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import {
+  ConfigCustomQueryInterface,
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()
 export class ResultActorRepository
-  extends Repository<ResultActor>
+  extends BaseRepository<ResultActor>
   implements ReplicableInterface<ResultActor>, LogicalDelete<ResultActor>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultActor>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          women,
+          women_youth,
+          men,
+          men_youth,
+          ${config.new_result_id} AS result_id,
+          actor_type_id,
+          other_actor_type,
+          sex_and_age_disaggregation,
+          how_many,
+          has_women,
+          has_women_youth,
+          has_men,
+          has_men_youth
+      FROM
+          result_actors
+      WHERE
+          result_id = ${config.old_result_id} 
+          AND is_active > 0;
+      `,
+      insertQuery: `
+      INSERT INTO
+          result_actors (
+              is_active,
+              created_date,
+              last_updated_date,
+              created_by,
+              last_updated_by,
+              women,
+              women_youth,
+              men,
+              men_youth,
+              result_id,
+              actor_type_id,
+              other_actor_type,
+              sex_and_age_disaggregation,
+              how_many,
+              has_women,
+              has_women_youth,
+              has_men,
+              has_men_youth
+          )
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          women,
+          women_youth,
+          men,
+          men_youth,
+          ${config.new_result_id} AS result_id,
+          actor_type_id,
+          other_actor_type,
+          sex_and_age_disaggregation,
+          how_many,
+          has_women,
+          has_women_youth,
+          has_men,
+          has_men_youth
+      FROM
+          result_actors
+      WHERE
+          result_id = ${config.old_result_id} 
+          AND is_active > 0;
+      `,
+      returnQuery: `
+      SELECT
+          result_actors_id
+      FROM
+          result_actors
+        WHERE
+          result_id = ${config.new_result_id} 
+          AND is_active > 0;
+      `,
+    }
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,

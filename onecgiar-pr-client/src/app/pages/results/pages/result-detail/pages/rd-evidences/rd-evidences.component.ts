@@ -124,6 +124,8 @@ export class RdEvidencesComponent implements OnInit {
     return `<ul>${text}</ul>`;
   }
   get validateCGSpaceLinks() {
+    if (this.evidencesBody.evidences.length < 2) return false;
+
     for (const evidenteIterator of this.evidencesBody.evidences) {
       if (this.evidencesBody.evidences.find(evidence => !evidence?.link && !evidence?.is_sharepoint)) return true;
       const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);

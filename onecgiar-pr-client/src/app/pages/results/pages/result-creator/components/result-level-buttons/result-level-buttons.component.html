@@ -18,13 +18,15 @@
 </div>
 
 <div class="segment">
-    <div class="segmet_title">Initiative level</div>
+    <div class="segmet_title">
+        {{this.currentResultType === 'OneCGIAR Platform' ?'Platform':'Initiative'}} level
+    </div>
     <div class="all_results_level_Container">
         <div class="resultLevel shadow-1" [ngClass]="{'selected': resultLevel?.selected}" [hidden]="i < 2"
             *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i=index"
             (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
             <div class="name" [style.background]="'var(--pr-color-result-level-'+resultLevel?.id+')'">
-                {{resultLevel.name}}
+            {{this.currentResultType === 'OneCGIAR Platform' ?'Platform':'Initiative'}} {{resultLevel.name}}
             </div>
             <div class="description">{{resultLevel.description}}</div>
         </div>

@@ -144,10 +144,7 @@ tr {
 
 
 .actions {
-    gap: 10px;
-    display: flex;
-    align-content: center;
-    justify-content: center;
+
     .view {
         background-color: var(--pr-color-secondary) !important;
         width: min-content !important;
@@ -168,10 +165,6 @@ tr {
 }
 
 .actionsSelect {
-    gap: 10px;
-    display: flex;
-    align-content: center;
-    justify-content: center;
     .view {
         background-color: var(--pr-color-secondary) !important;
         width: min-content !important;

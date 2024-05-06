@@ -1,8 +1,8 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Output, Input } from '@angular/core';
 import { MessageService } from 'primeng/api';
-import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { environment } from '../../../../../../../environments/environment';
+import { IpsrDataControlService } from '../../../../../ipsr/services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-pdf-actions',
@@ -12,12 +12,19 @@ import { environment } from '../../../../../../../environments/environment';
 })
 export class PdfActionsComponent {
   @Output() copyEvent = new EventEmitter();
-  constructor(private messageSE: MessageService, private api: ResultsApiService) {}
+  @Input() horizontal?: boolean = false;
+
+  constructor(private api: ResultsApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+
   copyLink() {
     this.copyEvent.emit();
   }
 
   get link() {
+    if (this.ipsrDataControlSE.inIpsr) {
+      return `${environment.frontBaseUrl}reports/ipsr-details/${this.ipsrDataControlSE.resultInnovationCode}?phase=${this.ipsrDataControlSE.resultInnovationPhase}`;
+    }
+
     return `${environment.frontBaseUrl}reports/result-details/${this.api.currentResultCode}?phase=${this.api.currentResultPhase}`;
   }
 }

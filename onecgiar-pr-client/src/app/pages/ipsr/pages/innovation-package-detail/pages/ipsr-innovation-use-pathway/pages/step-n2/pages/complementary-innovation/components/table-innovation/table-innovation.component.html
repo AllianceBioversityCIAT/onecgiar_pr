@@ -10,20 +10,21 @@
             styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
             <ng-template pTemplate="header">
                 <tr>
-                    <th *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
-                    <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                    <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
+                    <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
                         <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                     </th>
-                    <th *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
+                    <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
                 <tr>
                     <td class="actionsSelect" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button" [ngClass]="{'globalDisabled': result.selected}"
-                            (click)="!result.selected ? selectInnovation(result) : null">
-                            <i class="material-icons-round" style="font-size: 20px;">check_circle</i>
+                        <div class="link_button"
+                            (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result.result_id)">
+                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="!result.selected">check_circle</i>
+                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="result.selected">remove_circle_outline</i>
                         </div>
                     </td>
                     <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
@@ -42,7 +43,6 @@
                         </div>
                     </td>
                     <td class="actions" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
-
                         <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
                             <i class="material-icons-round" style="font-size: 20px;">visibility</i>
                         </div>
@@ -115,10 +115,10 @@
             <div class="container" *ngIf="complementaries">
                 <div class="col{{i}}" *ngFor="let item of columns; let i = index">
                     <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
-                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id"
+                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id" id="checkbox{{subItem.complementary_innovation_functions_id}}"
                             [inputId]="subItem.complementary_innovation_functions_id" [(ngModel)]="selectComplementary"
-                            (ngModelChange)=" selected()" [disabled]="isReadonly"></p-checkbox>
-                        <label> {{ subItem.name }}</label>
+                            [disabled]="isReadonly"></p-checkbox>
+                        <label for="checkbox{{subItem.complementary_innovation_functions_id}}"> {{ subItem.name }}</label>
                     </div>
 
                 </div>
@@ -161,7 +161,6 @@
                 description="Please specify those projects or organizations."
                 [(ngModel)]="this.informationComplentary.specify_projects_organizations"></app-pr-textarea>
 
-            <!-- flagsCode="iso_alpha_2" -->
         </div>
     </div>
     <div class="buttons">

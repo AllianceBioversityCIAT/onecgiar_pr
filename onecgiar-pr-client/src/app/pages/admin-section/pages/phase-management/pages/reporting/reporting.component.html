@@ -113,5 +113,7 @@
   </div>
 </div>
 
-<div class="setting_title">Other functionalities</div>
-<app-other-functionalities></app-other-functionalities>
+<div style="margin-top: 2rem;" *ngIf="this.api.dataControlSE.previousReportingPhase.phaseName">
+  <div class="setting_title">Other functionalities</div>
+  <app-other-functionalities [replicateIPSR]="false"></app-other-functionalities>
+</div>

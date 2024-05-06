@@ -85,7 +85,8 @@ export class ResultInitiativeBudgetRepository
                               and rbi2.result_id = r2.id 
         WHERE r2.id = ${config.new_result_id}
            and r.id = ${config.old_result_id}
-           and rbi.initiative_role_id = 1;`,
+           and rbi.initiative_role_id = 1
+           AND rbi.is_active > 0;`,
       returnQuery: `
            SELECT 
            rib.*

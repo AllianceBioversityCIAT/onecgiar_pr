@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { BiReportsService } from './bi-reports.service';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
 import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
@@ -29,6 +29,11 @@ export class BiReportsController {
 
   @Post('/reportName')
   findOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
+    return this.biReportsService.findOneReportName(getBiSubpagesDto);
+  }
+
+  @Get('/reportName')
+  findReportByName(@Query() getBiSubpagesDto: GetBiSubpagesDto) {
     return this.biReportsService.findOneReportName(getBiSubpagesDto);
   }
 

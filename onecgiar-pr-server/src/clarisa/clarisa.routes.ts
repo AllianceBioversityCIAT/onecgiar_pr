@@ -25,6 +25,7 @@ import { ClarisaFirstOrderAdministrativeDivisionModule } from './clarisa-first-o
 import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
 import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
 import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clarisa-subnational-scope.module';
+import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -130,5 +131,9 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'subnational-scope',
     module: ClarisaSubnationalScopeModule,
+  },
+  {
+    path: 'cgiar-entity-types',
+    module: ClarisaCgiarEntityTypesModule,
   },
 ];

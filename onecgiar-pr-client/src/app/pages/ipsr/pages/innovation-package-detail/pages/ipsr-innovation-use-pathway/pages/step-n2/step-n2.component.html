@@ -1,12 +1,12 @@
-<div class="step_title"> <strong>Step 2:</strong>Innovation Packaging </div>
+<div class="step_title"> <strong>Step 2:</strong>Innovation Packaging</div>
 <div class="local_container section_container">
     <div class="tabs">
-        <a class="tab" routerLinkActive="active" routerLink="complementary-innovation">2.1 Complementary
-            innovations/enablers/solutions
+        <a class="tab" routerLinkActive="active" routerLink="complementary-innovation" [queryParams]="{ phase: this.ipsrDataControlSE.resultInnovationPhase }">
+            2.1 Complementary innovations/enablers/solutions
             <app-ipsr-green-check objectReference="stepSections.1.stepSubSections.0"></app-ipsr-green-check>
         </a>
-        <a class="tab" routerLinkActive="active" routerLink="basic-info" *ngIf="this.api.rolesSE.isAdmin">2.2 Basic
-            info
+        <a class="tab" routerLinkActive="active" routerLink="basic-info"  [queryParams]="{ phase: this.ipsrDataControlSE.resultInnovationPhase }" *ngIf="this.api.rolesSE.isAdmin">
+            2.2 Basic info
             <app-ipsr-green-check objectReference="stepSections.1.stepSubSections.1"></app-ipsr-green-check></a>
     </div>
     <div class="outlet">

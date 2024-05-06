@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 
@@ -8,5 +8,6 @@ import { ResultLevelService } from '../../services/result-level.service';
   styleUrls: ['./result-level-buttons.component.scss']
 })
 export class ResultLevelButtonsComponent {
+  @Input() currentResultType: any;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
 }

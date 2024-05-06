@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -7,12 +7,16 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
   styleUrls: ['./massive-phase-shift.component.scss']
 })
 export class MassivePhaseShiftComponent implements OnInit {
+  @Input() replicateIPSR: boolean = false;
   requesting = false;
   numberOfResults = 0;
+  numberOfResultsIPSR = 0;
+
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.GET_numberOfResultsByResultType();
+    this.GET_numberOfResultsIPSR();
   }
 
   GET_numberOfResultsByResultType() {
@@ -24,13 +28,31 @@ export class MassivePhaseShiftComponent implements OnInit {
     });
   }
 
+  GET_numberOfResultsIPSR() {
+    this.api.resultsSE.GET_numberOfResultsByResultType(1, 10).subscribe({
+      next: (resp: any) => {
+        this.numberOfResultsIPSR = resp.response.count;
+      },
+      error: err => {}
+    });
+  }
+
+  replicateDescription() {
+    if (this.replicateIPSR) {
+      return `${this.numberOfResultsIPSR} Innovation Packages will be replicated in the active phase, are you sure to execute this action?`;
+    }
+
+    return `${this.numberOfResults} Innovation Development type results will be replicated in the active phase, are you sure to execute this action?`;
+  }
+
   accept() {
     this.api.dataControlSE.showMassivePhaseShiftModal = false;
     this.api.dataControlSE.massivePhaseShiftIsRunning = true;
-    this.api.resultsSE.PATCH_versioningAnnually().subscribe({
+    this.api.resultsSE.PATCH_versioningAnnually(this.replicateIPSR).subscribe({
       next: (resp: any) => {
         this.api.dataControlSE.massivePhaseShiftIsRunning = false;
-        this.api.alertsFe.show({ id: 'accept', closeIn: 10000, title: 'Process executed successfully', description: this.numberOfResults + ' results of type Innovation Development have been replicated from the previous phase to the current phase.', status: 'success' });
+        const alertDesc = this.replicateIPSR ? 'IPSR replicated' : `${this.numberOfResults} results of type Innovation Development have been replicated from the previous phase to the current phase.`;
+        this.api.alertsFe.show({ id: 'accept', closeIn: 10000, title: 'Process executed successfully', description: alertDesc, status: 'success' });
         this.GET_numberOfResultsByResultType();
       },
       error: err => {

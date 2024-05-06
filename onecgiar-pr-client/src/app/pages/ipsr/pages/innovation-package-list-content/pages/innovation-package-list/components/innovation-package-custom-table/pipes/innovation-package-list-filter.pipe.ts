@@ -8,12 +8,12 @@ import { IpsrListService } from '../../../services/ipsr-list.service';
 })
 export class InnovationPackageListFilterPipe implements PipeTransform {
   constructor(public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
-  transform(list, word: string, initsSelectedJoinText: number) {
-    return this.filterByInits(this.filterByText(this.filterByPhase(list), word));
+  transform(list, word: string) {
+    return this.combineRepeatedResults(this.filterByInits(this.filterByText(this.filterByPhase(list), word)));
   }
 
   filterByText(list, word) {
-    return list.filter((item: any) => (Boolean(item?.full_name) ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1 : false));
+    return list.filter((item: any) => (item?.full_name ? item?.full_name.toUpperCase().indexOf(word?.toUpperCase()) > -1 : false));
   }
 
   filterByInits(list) {
@@ -31,5 +31,19 @@ export class InnovationPackageListFilterPipe implements PipeTransform {
       for (const filter of resultsFilters) if (filter?.attr == result?.phase_name) return true;
       return false;
     });
+  }
+
+  combineRepeatedResults(results) {
+    const uniqueResults = [];
+
+    results.forEach(result => {
+      if (!uniqueResults.find(r => r.result_code === result.result_code)) {
+        result.results = results.filter(r => r.result_code === result.result_code);
+        result.results.sort((a, b) => a.phase_year - b.phase_year);
+        uniqueResults.push(result);
+      }
+    });
+
+    return uniqueResults;
   }
 }

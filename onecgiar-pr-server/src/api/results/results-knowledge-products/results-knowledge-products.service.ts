@@ -172,8 +172,8 @@ export class ResultsKnowledgeProductsService {
       );
 
       //authors
-      updatedKnowledgeProduct.result_knowledge_product_keyword_array =
-        await this._resultsKnowledgeProductKeywordRepository.find({
+      updatedKnowledgeProduct.result_knowledge_product_author_array =
+        await this._resultsKnowledgeProductAuthorRepository.find({
           where: {
             result_knowledge_product_id:
               updatedKnowledgeProduct.result_knowledge_product_id,
@@ -192,8 +192,8 @@ export class ResultsKnowledgeProductsService {
       );
 
       //keywords
-      updatedKnowledgeProduct.result_knowledge_product_author_array =
-        await this._resultsKnowledgeProductAuthorRepository.find({
+      updatedKnowledgeProduct.result_knowledge_product_keyword_array =
+        await this._resultsKnowledgeProductKeywordRepository.find({
           where: {
             result_knowledge_product_id:
               updatedKnowledgeProduct.result_knowledge_product_id,
@@ -216,10 +216,28 @@ export class ResultsKnowledgeProductsService {
         true,
       );
 
-      updatedKnowledgeProduct =
-        await this._resultsKnowledgeProductRepository.save(
-          updatedKnowledgeProduct,
-        );
+      await this._resultsKnowledgeProductRepository.update(
+        {
+          result_knowledge_product_id:
+            updatedKnowledgeProduct.result_knowledge_product_id,
+        },
+        {
+          findable: updatedKnowledgeProduct.findable,
+          accesible: updatedKnowledgeProduct.accesible,
+          interoperable: updatedKnowledgeProduct.interoperable,
+          reusable: updatedKnowledgeProduct.reusable,
+          cgspace_countries: updatedKnowledgeProduct.cgspace_countries,
+          cgspace_regions: updatedKnowledgeProduct.cgspace_regions,
+          last_updated_by: user.id,
+          comodity: updatedKnowledgeProduct.comodity,
+          sponsors: updatedKnowledgeProduct.sponsors,
+          description: updatedKnowledgeProduct.description,
+          doi: updatedKnowledgeProduct.doi,
+          knowledge_product_type:
+            updatedKnowledgeProduct.knowledge_product_type,
+          licence: updatedKnowledgeProduct.licence,
+        },
+      );
 
       //updating general result tables
       await this._resultRepository.update(
@@ -912,7 +930,7 @@ export class ResultsKnowledgeProductsService {
 
       //creating own evidence linking it to itself
       this._evidenceRepository.save({
-        link: `https://cgspace.cgiar.org/handle/${resultsKnowledgeProductDto.handle}`,
+        link: `https://hdl.handle.net/${resultsKnowledgeProductDto.handle}`,
         result_id: newResult.id,
         created_by: user.id,
         is_supplementary: false,

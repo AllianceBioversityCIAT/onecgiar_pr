@@ -19,6 +19,11 @@ export class StepN1InnovatonUseComponent {
     this.GETInstitutionsTypeTree();
   }
 
+  ngOnInit() {
+    this.GETAllActorsTypes();
+    this.GETInstitutionsTypeTree();
+  }
+
   GETAllActorsTypes() {
     this.api.resultsSE.GETAllActorsTypes().subscribe(({ response }) => {
       this.actorsTypeList = response;
@@ -130,14 +135,12 @@ export class StepN1InnovatonUseComponent {
         this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
         this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
-        const element: any = document.getElementById('removeFocus');
-        element.focus();
         this.calculateTotalField(actorItem);
         setTimeout(() => {
           this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
           this.calculateTotalField(actorItem);
         }, 3000);
-      }, 1000);
+      }, 500);
     } else {
       this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i][gender];
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];

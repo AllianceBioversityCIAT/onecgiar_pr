@@ -89,8 +89,11 @@ export class ResultRepository
         ,has_countries
         ,geographic_scope_id
         ,lead_contact_person
-        ,result_code
-        ,is_replicated
+        ,result_code,
+        nutrition_tag_level_id,
+        environmental_biodiversity_tag_level_id,
+        poverty_tag_level_id,
+        is_replicated
         ) select
         r2.description,
         r2.is_active,
@@ -120,6 +123,9 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.nutrition_tag_level_id,
+        r2.environmental_biodiversity_tag_level_id,
+        r2.poverty_tag_level_id,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -801,7 +807,9 @@ WHERE
     v.phase_year,
     r.is_discontinued,
     r.is_replicated,
-    r.in_qa as inQA
+    r.in_qa as inQA,
+    ci.cgiar_entity_type_id,
+    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 
@@ -812,6 +820,7 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     inner join \`version\` v on v.id = r.version_id 
+    inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id
 WHERE
     r.id = ${id}
     and r.is_active > 0;
@@ -1021,6 +1030,7 @@ WHERE
     resultCode: number,
     version: number = null,
   ): Promise<number> {
+    if (!version) return null;
     const queryData = `
     SELECT 
     r.id
@@ -1028,15 +1038,13 @@ WHERE
     \`result\` r 
     WHERE r.is_active > 0
     and r.result_code = ?
-    ${
-      version
-        ? `and r.version_id = ${version};`
-        : `ORDER by r.id desc
-    limit 1;`
-    }
+    and r.version_id = ?;
     `;
     try {
-      const results: Array<{ id }> = await this.query(queryData, [resultCode]);
+      const results: Array<{ id }> = await this.query(queryData, [
+        resultCode,
+        version,
+      ]);
       return results?.length ? results[0].id : null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -1662,9 +1670,10 @@ left join clarisa_countries cc3
   /*  left join evidence e on e.result_id = r.id and e.is_active > 0 */
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
     left join results_by_inititiative rbi3 on rbi3.result_id = r.id
+                                          and rbi3.is_active > 0
     WHERE rbi3.inititiative_id = ${inititiative_id}
       ${phase ? `and r.version_id = ${phase}` : ''}
-      AND r.status_id = 3
+      AND r.status_id = 2
     GROUP by 
     r.result_code,
     r.id,

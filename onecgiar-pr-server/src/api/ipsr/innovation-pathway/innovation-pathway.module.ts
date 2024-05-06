@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
 import { InnovationPathwayController } from './innovation-pathway.controller';
 import { ResultRepository } from '../../../api/results/result.repository';
@@ -45,10 +45,23 @@ import { ResultIpExpertisesRepository } from '../innovation-packaging-experts/re
 import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultInnovationPackageService } from '../result-innovation-package/result-innovation-package.service';
+import { ClarisaActionAreaOutcomeRepository } from '../../../clarisa/clarisa-action-area-outcome/clarisa-action-area-outcome.repository';
+import { ActiveBackstoppingRepository } from '../result-innovation-package/repositories/active-backstopping.repository';
+import { consensusInitiativeWorkPackageRepository } from '../result-innovation-package/repositories/consensus-initiative-work-package.repository';
+import { RegionalIntegratedRepository } from '../result-innovation-package/repositories/regional-integrated.repository';
+import { RegionalLeadershipRepository } from '../result-innovation-package/repositories/regional-leadership.repository';
+import { RelevantCountryRepository } from '../result-innovation-package/repositories/relevant-country.repository';
+import { ResultByEvidencesRepository } from '../../results/results_by_evidences/result_by_evidences.repository';
+import { resultValidationRepository } from '../../results/results-validation-module/results-validation-module.repository';
+import { UnitTimeRepository } from '../result-innovation-package/repositories/unit_time.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
+import { IpsrService } from '../ipsr.service';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Module({
   controllers: [InnovationPathwayController],
-  imports: [VersioningModule],
+  imports: [forwardRef(() => VersioningModule)],
   providers: [
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,
@@ -91,7 +104,20 @@ import { ResultCountrySubnationalRepository } from '../../results/result-countri
     ResultInstitutionsBudgetRepository,
     ResultIpExpertisesRepository,
     ResultCountrySubnationalRepository,
+    ResultInnovationPackageService,
+    ClarisaActionAreaOutcomeRepository,
+    ActiveBackstoppingRepository,
     ResultIpExpertWorkshopOrganizedRepostory,
+    consensusInitiativeWorkPackageRepository,
+    RegionalIntegratedRepository,
+    RegionalLeadershipRepository,
+    RelevantCountryRepository,
+    ResultByEvidencesRepository,
+    resultValidationRepository,
+    UnitTimeRepository,
+    TocResultsRepository,
+    IpsrService,
+    ResultsInvestmentDiscontinuedOptionRepository
   ],
 })
 export class InnovationPathwayModule {}

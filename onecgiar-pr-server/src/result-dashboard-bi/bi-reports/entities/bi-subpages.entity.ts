@@ -26,4 +26,11 @@ export class BiSubpages extends BaseEntity {
     nullable: false,
   })
   section_name: string;
+
+  @Column({
+    name: 'section_name_code',
+    type: 'text',
+    nullable: false,
+  })
+  section_name_code: string;
 }
