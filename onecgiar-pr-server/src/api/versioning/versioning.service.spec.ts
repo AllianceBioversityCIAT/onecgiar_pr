@@ -71,6 +71,7 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pat
 import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
 import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -144,6 +145,7 @@ describe('VersioningService', () => {
         ResultsIpActorRepository,
         ResultsByIpInnovationUseMeasureRepository,
         ResultsIpInstitutionTypeRepository,
+        ResultTypeRepository,
         {
           provide: GlobalParameterCacheService,
           useValue: {
