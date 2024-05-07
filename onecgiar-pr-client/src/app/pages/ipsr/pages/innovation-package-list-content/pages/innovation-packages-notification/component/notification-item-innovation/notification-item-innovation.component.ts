@@ -62,8 +62,8 @@ export class NotificationItemInnovationComponent {
     return this.notification?.status == 1 && this.notification?.request_status_id == 1;
   }
 
-  resultUrl(resultCode) {
-    return `/ipsr/detail/${resultCode}/general-information`;
+  resultUrl(notification) {
+    return `/ipsr/detail/${notification.result_code}/general-information?phase=${notification.version_id}`;
   }
 
   acceptOrReject(response) {
