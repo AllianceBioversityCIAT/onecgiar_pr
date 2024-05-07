@@ -614,10 +614,11 @@ export class IpsrRepository
   async getInnovationCoreStepOne(resultId: number) {
     const innovationByIdQuery = `
         SELECT
-            rbip.result_id 
+            rbip.result_id
         FROM 
             result_by_innovation_package rbip
-        WHERE rbip.result_innovation_package_id = ?;
+        WHERE 
+          rbip.result_innovation_package_id = ?;
         `;
 
     const coreInnovationQuery = `
@@ -630,7 +631,8 @@ export class IpsrRepository
                 FROM 
                     clarisa_initiatives ci
                 WHERE ci.id = rbi.inititiative_id 
-            ) AS official_code
+            ) AS official_code,
+            r.version_id
         FROM
             result r 
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
