@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 cd ./onecgiar-pr-server
-npm run lint
+npx lint-staged
 git add .
 npm run test
 cd ..
