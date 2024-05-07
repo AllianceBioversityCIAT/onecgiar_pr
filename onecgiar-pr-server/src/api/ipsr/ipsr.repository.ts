@@ -149,6 +149,7 @@ export class IpsrRepository
             r.result_type_id,
             r.result_level_id,
             rbi.inititiative_id AS initiative_id,
+            r.version_id,
             IF(
                 (rbi.initiative_role_id = 2),
                 (
