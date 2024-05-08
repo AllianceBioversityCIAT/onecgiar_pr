@@ -6,7 +6,8 @@ To install and run this project, follow these steps:
 
 ```bash
 git clone https://github.com/AllianceBioversityCIAT/onecgiar_pr.git
-cd onecgiar_pr
-npm ci
-npm run prepare
+
+cd ./onecgiar_pr && npm ci && npm run prepare
+cd ./onecgiar-pr-server && npm ci
+cd ./onecgiar-pr-client && npm ci
 ```
