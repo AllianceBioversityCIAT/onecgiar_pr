@@ -589,7 +589,7 @@ export class VersioningService {
       await this._versionRepository.$_getAllInovationDevToReplicate(phase);
 
     for (const r of results) {
-      const validation: Boolean = await this.$_genericValidation(
+      const validation: boolean = await this.$_genericValidation(
         r.result_code,
         phase.id,
       );
