@@ -132,4 +132,5 @@ export class CoreResult {
   result_code: string = null;
   title: string = null;
   official_code: string = null;
+  version_id: number | string | null = null;
 }

@@ -88,7 +88,7 @@ export class ResultCountriesService {
           countries.map((e) => e.id),
         );
         if (countries?.length) {
-          let resultCountryArray = await this.handleResultCountryArray(
+          const resultCountryArray = await this.handleResultCountryArray(
             result,
             countries,
           );

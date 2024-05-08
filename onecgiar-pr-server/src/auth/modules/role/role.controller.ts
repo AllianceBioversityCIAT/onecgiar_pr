@@ -6,14 +6,17 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RoleService } from './role.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Roles } from './roles.decorator';
 import { RoleApp } from './role.enum';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('role')
+@UseInterceptors(ResponseInterceptor)
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 

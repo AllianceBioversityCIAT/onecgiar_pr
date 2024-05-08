@@ -10,10 +10,10 @@
         [rowsPerPageOptions]="[10,50,100]" paginatorDropdownAppendTo="body">
         <ng-template pTemplate="header">
             <tr>
-                <th pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder" class="{{column.attr}}">
+                <th [id]="column.attr" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder" class="{{column.attr}}">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
-                <th *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
+                <th *ngIf="!this.api.rolesSE.platformIsClosed" id="action">Action</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-result>
@@ -34,8 +34,8 @@
                     </div>
                 </td>
                 <td class="actions" *ngIf="!this.api.rolesSE.platformIsClosed">
-                    <div class="link_button view"
-                        (click)="openInNewPage('/result/result-detail/' + result?.result_code)">View
+                    <div class="link_button view" (click)="openInNewPage('/result/result-detail/' + result?.result_code + '/general-information?phase=' + result.version_id)">
+                        View
                     </div>
                     <div class="link_button"
                         *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"

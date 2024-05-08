@@ -5,7 +5,7 @@
 <div class="ipsr_chip_container">
     <div class="text">{{this.coreResult.result_code}} - <strong>{{this.coreResult.title}}</strong> -
         {{this.coreResult.official_code}}</div>
-    <a class="material-icons-round" [routerLink]="'/result/result-detail/'+this.coreResult.result_code"
+    <a class="material-icons-round" href="/result/result-detail/{{this.coreResult.result_code}}/general-information?phase={{this.coreResult.version_id}}"
         target="_blank">open_in_new</a>
 </div>
 

@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RestrictionsByRoleService } from './restrictions-by-role.service';
 import { CreateRestrictionsByRoleDto } from './dto/create-restrictions-by-role.dto';
 import { UpdateRestrictionsByRoleDto } from './dto/update-restrictions-by-role.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('restrictions-by-role')
+@UseInterceptors(ResponseInterceptor)
 export class RestrictionsByRoleController {
   constructor(
     private readonly restrictionsByRoleService: RestrictionsByRoleService,

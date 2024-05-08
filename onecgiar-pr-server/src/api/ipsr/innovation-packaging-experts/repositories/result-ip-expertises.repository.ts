@@ -3,7 +3,10 @@ import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpExpertises } from '../entities/result_ip_expertises.entity';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { ConfigCustomQueryInterface, ReplicableConfigInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
@@ -12,7 +15,6 @@ export class ResultIpExpertisesRepository
   extends BaseRepository<ResultIpExpertises>
   implements LogicalDelete<ResultIpExpertises>
 {
-
   createQueries(
     config: ReplicableConfigInterface<ResultIpExpertises>,
   ): ConfigCustomQueryInterface {
@@ -20,7 +22,9 @@ export class ResultIpExpertisesRepository
       findQuery: `
       SELECT
           rie.is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           rie.last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -49,7 +53,9 @@ export class ResultIpExpertisesRepository
         )
         SELECT
             rie3.is_active,
-            ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+            ${predeterminedDateValidation(
+              config.predetermined_date,
+            )} AS created_date,
             rie3.last_updated_date,
             ${config.user.id} AS created_by,
             ${config.user.id} AS last_updated_by,
@@ -79,7 +85,7 @@ export class ResultIpExpertisesRepository
           AND re1.is_active = 1
           AND rie.is_active = 1;
       `,
-    }
+    };
   }
 
   constructor(

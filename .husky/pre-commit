@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+cd ./onecgiar-pr-server
+npx lint-staged
+git add .
+npm run test
+cd ..
+cd ./onecgiar-pr-client

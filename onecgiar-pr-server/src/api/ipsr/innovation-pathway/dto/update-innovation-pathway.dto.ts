@@ -4,7 +4,6 @@ import { ResultsByInstitutionType } from '../../../results/results_by_institutio
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultIpMeasure } from '../../result-ip-measures/entities/result-ip-measure.entity';
 import { CreateResultIPDto } from '../../result-innovation-package/dto/create-result-ip.dto';
-import { ResultCountriesSubNational } from '../../../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateComplementaryInnovationDto } from './create-complementary-innovation.dto';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
@@ -25,7 +24,7 @@ export class UpdateInnovationPathwayDto {
   public is_not_diverse_justification!: string;
   public regions: regionsInterface[];
   public countries: countriesInterface[];
-  public scalig_ambition!: {};
+  public scalig_ambition!: unknown;
 }
 
 export interface regionsInterface {

@@ -1,16 +1,16 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { CapdevsDeliveryMethodsService } from './capdevs-delivery-methods.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class CapdevsDeliveryMethodsController {
   constructor(
     private readonly capdevsDeliveryMethodsService: CapdevsDeliveryMethodsService,
   ) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.capdevsDeliveryMethodsService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.capdevsDeliveryMethodsService.findAll();
   }
 }

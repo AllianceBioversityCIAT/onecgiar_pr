@@ -46,4 +46,3 @@ export class ResultFolder extends BaseEntityControlList {
   @JoinColumn({ name: 'folder_type_id' })
   obj_folder_type: ResultFolderType;
 }
-

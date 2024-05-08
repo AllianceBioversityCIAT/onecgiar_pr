@@ -1,5 +1,5 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { DepthSearch } from './dto/depth-search.dto';
@@ -13,7 +13,6 @@ import { ResultTypeDto } from './dto/result-types.dto';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
 
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
