@@ -1,14 +1,14 @@
-import { Controller, Get, Param, HttpException } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { ResultsCentersService } from './results-centers.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsCentersController {
   constructor(private readonly resultsCentersService: ResultsCentersService) {}
 
   @Get('get/result/:resultId')
-  async findREsultCenterByResultId(@Param('resultId') resultId: number) {
-    const { message, response, status } =
-      await this.resultsCentersService.findREsultCenterByResultId(resultId);
-    throw new HttpException({ message, response }, status);
+  findREsultCenterByResultId(@Param('resultId') resultId: number) {
+    return this.resultsCentersService.findREsultCenterByResultId(resultId);
   }
 }

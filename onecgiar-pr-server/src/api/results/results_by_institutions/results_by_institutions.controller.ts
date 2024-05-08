@@ -6,17 +6,18 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
-  Headers,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
 import { UpdateResultsByInstitutionDto } from './dto/update-results_by_institution.dto';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller('/')
+@UseInterceptors(ResponseInterceptor)
 export class ResultsByInstitutionsController {
   constructor(
     private readonly resultsByInstitutionsService: ResultsByInstitutionsService,
@@ -30,46 +31,35 @@ export class ResultsByInstitutionsController {
   }
 
   @Get('result/:id')
-  async findAll(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
-    throw new HttpException({ message, response }, status);
+  findAll(@Param('id') id: number) {
+    return this.resultsByInstitutionsService.getGetInstitutionsByResultId(id);
   }
 
   @Get('actors/result/:id')
-  async findAllByActors(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionsService.getGetInstitutionsActorsByResultId(
-        id,
-      );
-    throw new HttpException({ message, response }, status);
+  findAllByActors(@Param('id') id: number) {
+    return this.resultsByInstitutionsService.getGetInstitutionsActorsByResultId(
+      id,
+    );
   }
 
   @Get('partners/result/:id')
-  async findAllByPartners(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionsService.getGetInstitutionsPartnersByResultId(
-        id,
-      );
-    throw new HttpException({ message, response }, status);
+  findAllByPartners(@Param('id') id: number) {
+    return this.resultsByInstitutionsService.getGetInstitutionsPartnersByResultId(
+      id,
+    );
   }
 
   @Patch('create/partners/:id')
-  async findOne(
+  findOne(
     @Body() updatePartners: SaveResultsByInstitutionDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Param('id') id: number,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     updatePartners.result_id = id;
-    const { message, response, status } =
-      await this.resultsByInstitutionsService.savePartnersInstitutionsByResult(
-        updatePartners,
-        token,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.resultsByInstitutionsService.savePartnersInstitutionsByResult(
+      updatePartners,
+      user,
+    );
   }
 
   @Patch(':id')

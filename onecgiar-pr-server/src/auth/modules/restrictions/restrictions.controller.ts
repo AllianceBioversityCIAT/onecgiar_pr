@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RestrictionsService } from './restrictions.service';
 import { CreateRestrictionDto } from './dto/create-restriction.dto';
 import { UpdateRestrictionDto } from './dto/update-restriction.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('restrictions')
+@UseInterceptors(ResponseInterceptor)
 export class RestrictionsController {
   constructor(private readonly restrictionsService: RestrictionsService) {}
 

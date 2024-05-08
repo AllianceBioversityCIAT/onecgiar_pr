@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { EvidenceTypesService } from './evidence_types.service';
 import { CreateEvidenceTypeDto } from './dto/create-evidence_type.dto';
 import { UpdateEvidenceTypeDto } from './dto/update-evidence_type.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('evidence-types')
+@UseInterceptors(ResponseInterceptor)
 export class EvidenceTypesController {
   constructor(private readonly evidenceTypesService: EvidenceTypesService) {}
 

@@ -4,15 +4,18 @@ import {
   Post,
   Body,
   Param,
-  Headers,
-  HttpException,
+  UseInterceptors,
+  HttpStatus,
 } from '@nestjs/common';
 import { ClarisaConnectionsService } from './clarisa-connections.service';
 import { CreateClarisaConnectionDto } from './dto/create-clarisa-connection.dto';
-import { HeadersDto } from '../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../shared/decorators/user-token.decorator';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaConnectionsController {
   constructor(
     private readonly clarisaConnectionsService: ClarisaConnectionsService,
@@ -21,35 +24,31 @@ export class ClarisaConnectionsController {
   @Post('partner-request/:resultId')
   create(
     @Body() createClarisaConnectionDto: CreateClarisaConnectionDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
     return this.clarisaConnectionsService.create(
       createClarisaConnectionDto,
       resultId,
-      token,
+      user,
     );
   }
 
   @Get('execute-task')
   executeTask() {
     this.clarisaConnectionsService.executeTask();
-    return 1;
+    return ReturnResponseUtil.format({
+      message: 'Task executed',
+      response: 'Task executed',
+      statusCode: HttpStatus.OK,
+    });
   }
 
   @Get('qa/token/:officialCode')
-  async findOne(
+  findOne(
     @Param('officialCode') officialCode: string,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-    const { message, response, status } =
-      await this.clarisaConnectionsService.clarisaQaToken(officialCode, token);
-    throw new HttpException({ message, response }, status);
+    return this.clarisaConnectionsService.clarisaQaToken(officialCode, user);
   }
 }

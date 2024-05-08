@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsByInititiativesService } from './results_by_inititiatives.service';
 import { CreateResultsByInititiativeDto } from './dto/create-results_by_inititiative.dto';
 import { UpdateResultsByInititiativeDto } from './dto/update-results_by_inititiative.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('/')
+@UseInterceptors(ResponseInterceptor)
 export class ResultsByInititiativesController {
   constructor(
     private readonly resultsByInititiativesService: ResultsByInititiativesService,

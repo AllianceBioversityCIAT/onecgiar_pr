@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { PrmsUserSupport } from '../shared/utils/prms-user-support.util';
+import { getUserSupportId } from '../shared/utils/prms-user-support.util';
 import { env } from 'process';
 
 export class InsertResultFoldersType1701879395364
@@ -7,7 +7,7 @@ export class InsertResultFoldersType1701879395364
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
     queryRunner.query(
-      `INSERT INTO result_folders_type (name, created_by) VALUES ('Type one report', ${PrmsUserSupport.getUserSupportId(
+      `INSERT INTO result_folders_type (name, created_by) VALUES ('Type one report', ${getUserSupportId(
         env.SUPPORT_USER,
       )})`,
     );

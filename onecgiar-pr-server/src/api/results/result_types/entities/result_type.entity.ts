@@ -21,7 +21,6 @@ export class ResultType {
   })
   description!: string;
 
-  
   @Column({
     name: 'is_active',
     type: 'boolean',
@@ -33,6 +32,9 @@ export class ResultType {
   @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
   obj_result_type: ResultQuestion[];
 
-  @OneToMany(() => InvestmentDiscontinuedOption, (rq) => rq.result_type_discontinued)
+  @OneToMany(
+    () => InvestmentDiscontinuedOption,
+    (rq) => rq.result_type_discontinued,
+  )
   obj_result_type_discontinued: InvestmentDiscontinuedOption[];
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ShareResultRequest } from './entities/share-result-request.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { RequestStatus } from './entities/request-status.entity';
@@ -7,9 +7,7 @@ import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
 @Injectable()

@@ -4,7 +4,10 @@ import { DataSource } from 'typeorm';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
-import { ConfigCustomQueryInterface, ReplicableConfigInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
@@ -12,7 +15,6 @@ export class ResultCountrySubnationalRepository
   extends BaseRepository<ResultCountrySubnational>
   implements LogicalDelete<ResultCountrySubnational>
 {
-
   createQueries(
     config: ReplicableConfigInterface<ResultCountrySubnational>,
   ): ConfigCustomQueryInterface {
@@ -20,8 +22,12 @@ export class ResultCountrySubnationalRepository
       findQuery: `
       SELECT
           rcs.is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
-          ${predeterminedDateValidation(config.predetermined_date)} AS last_updated_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           (
@@ -55,8 +61,12 @@ export class ResultCountrySubnationalRepository
         )
       SELECT
           rcs.is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
-          ${predeterminedDateValidation(config.predetermined_date)} AS last_updated_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           (
@@ -87,7 +97,7 @@ export class ResultCountrySubnationalRepository
         rc.result_id = ${config.new_result_id}
         AND rc.is_active = 1;
       `,
-    }
+    };
   }
 
   constructor(
