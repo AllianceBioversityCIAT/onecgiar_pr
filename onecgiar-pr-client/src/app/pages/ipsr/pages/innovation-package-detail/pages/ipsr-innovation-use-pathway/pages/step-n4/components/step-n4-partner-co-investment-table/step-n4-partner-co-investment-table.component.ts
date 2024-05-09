@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { RolesService } from 'src/app/shared/services/global/roles.service';
 import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
@@ -8,12 +8,11 @@ import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.se
   templateUrl: './step-n4-partner-co-investment-table.component.html',
   styleUrls: ['./step-n4-partner-co-investment-table.component.scss']
 })
-export class StepN4PartnerCoInvestmentTableComponent implements OnInit {
+export class StepN4PartnerCoInvestmentTableComponent {
   @Input() body = new IpsrStep4Body();
 
   constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
 
-  ngOnInit(): void {}
   validateDeliverySelection(deliveries, deliveryId) {
     if (!(typeof deliveries == 'object')) return false;
     const index = deliveries.indexOf(deliveryId);

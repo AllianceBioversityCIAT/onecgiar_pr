@@ -71,7 +71,7 @@ export class RdEvidencesComponent implements OnInit {
         evidenceIterator.sp_file_name = response?.name;
         evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   }

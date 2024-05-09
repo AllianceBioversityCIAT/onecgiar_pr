@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, DoCheck, Input, OnInit } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
 import { CentersService } from 'src/app/shared/services/global/centers.service';
@@ -9,7 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './step-n4-edit-bilateral.component.html',
   styleUrls: ['./step-n4-edit-bilateral.component.scss']
 })
-export class StepN4EditBilateralComponent implements OnInit {
+export class StepN4EditBilateralComponent implements OnInit, DoCheck {
   @Input() body: any;
   @Input() isonlyread: boolean;
   visible = false;

@@ -79,7 +79,6 @@ export class TypeOneReportComponent implements OnInit {
     this.typeOneReportSE.currentInitiativeShortName = this.getInitiativeShortName(this.typeOneReportSE.initiativeSelected);
     const currentUrl = this.router.url;
     this.router.navigateByUrl(`/type-one-report/white`).then(() => {
-      console.log('navigate');
       setTimeout(() => {
         this.router.navigateByUrl(currentUrl);
       }, 100);

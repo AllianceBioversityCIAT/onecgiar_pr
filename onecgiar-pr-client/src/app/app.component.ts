@@ -25,7 +25,9 @@ export class AppComponent implements OnInit {
         document.querySelector('.pSelectP').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
     this.copyTokenToClipboard();
   }
@@ -35,7 +37,6 @@ export class AppComponent implements OnInit {
     document.onkeyup = function () {
       var e = e || window.event;
       if (e.altKey && e.which == 84) {
-        console.log('event');
         navigator.clipboard.writeText(localStorage.getItem('token'));
         alert('Token copied to clipboard');
         return false;

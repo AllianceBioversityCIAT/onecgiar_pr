@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter, Input } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, Input, OnDestroy } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ManageInnovationsListService } from '../../../../services/manage-innovations-list.service';
 import { InnovationPackageCreatorBody } from '../../model/innovation-package-creator.model';
@@ -18,7 +18,7 @@ interface CoreInnovationSelected {
   templateUrl: './results-innovation-output-list.component.html',
   styleUrls: ['./results-innovation-output-list.component.scss']
 })
-export class ResultsInnovationOutputListComponent {
+export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
   coreInnovationSelected: CoreInnovationSelected;
   searchText = '';
   @Input() body = new InnovationPackageCreatorBody();

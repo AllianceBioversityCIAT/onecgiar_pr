@@ -32,7 +32,9 @@ export class RdPartnersComponent implements OnInit {
             this.api.dataControlSE.showPartnersRequest = true;
           });
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 
