@@ -26,9 +26,9 @@ describe('RetrieveModalComponent', () => {
   let mockRetrieveModalService: any;
   let router: Router;
 
-  const mockPOST_updateRequestResponse = { 
-    newResultHeader: { 
-      result_code: '123' 
+  const mockPOST_updateRequestResponse = {
+    newResultHeader: {
+      result_code: '123'
     } };
   const mockGET_AllInitiativesResponse = [{
     initiative_id: 1,

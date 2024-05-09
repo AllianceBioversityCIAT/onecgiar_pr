@@ -24,7 +24,7 @@ describe('RdTheoryOfChangeComponent', () => {
       name: 'Initiative 1'
     }
   ];
-  let mockGET_tocResponse = {
+  const mockGET_tocResponse = {
     contributing_and_primary_initiative: [
       {
         id: 1,
@@ -395,15 +395,15 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('toggleActiveContributor()', () => {
     it('should toggle the is_active property to true', () => {
       const item = { is_active: false };
-  
+
       component.toggleActiveContributor(item);
-  
+
       expect(item.is_active).toBeTruthy();
     });
-  
+
     it('should toggle the is_active property to false', () => {
       const item = { is_active: true };
-  
+
       component.toggleActiveContributor(item);
 
       expect(item.is_active).toBeFalsy();
@@ -415,9 +415,9 @@ describe('RdTheoryOfChangeComponent', () => {
       const contributor1 = { initiative_id: 1 };
       const contributor2 = { initiative_id: 2 };
       component.theoryOfChangeBody.contributors_result_toc_result = [contributor1, contributor2];
-  
+
       component.onRemoveContributingInitiative({ remove: { id: 1 } });
-  
+
       expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual([contributor2]);
     });
   });
@@ -425,7 +425,7 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('onRemoveContribuiting()', () => {
     it('should remove the contributing initiative by index', () => {
       component.contributingInitiativeNew = ['initiative1', 'initiative2', 'initiative3'];
-  
+
       component.onRemoveContribuiting(1);
 
       expect(component.contributingInitiativeNew).toEqual(['initiative1', 'initiative3']);
@@ -435,9 +435,9 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('addBilateralContribution()', () => {
     it('should add a new donor interface to contributing_np_projects', () => {
       const initialLength = component.theoryOfChangeBody.contributing_np_projects.length;
-  
+
       component.addBilateralContribution();
-  
+
       expect(component.theoryOfChangeBody.contributing_np_projects.length).toBe(initialLength + 1);
     });
   });
@@ -450,7 +450,7 @@ describe('RdTheoryOfChangeComponent', () => {
         'text/html');
       jest.spyOn(document, 'querySelector')
         .mockImplementation((selector) => dom.querySelector(selector));
-  
+
       await component.requestEvent();
       const alertDiv = dom.querySelector('.alert-event');
       if (alertDiv) {
@@ -465,7 +465,7 @@ describe('RdTheoryOfChangeComponent', () => {
     it('should set primary to true for the specified center', async () => {
       await component.getSectionInformation();
       component.addPrimary(component.theoryOfChangeBody.contributing_center[1]);
-  
+
       expect(component.theoryOfChangeBody.contributing_center[1].primary).toBeTruthy();
       expect(component.theoryOfChangeBody.contributing_center[0].primary).toBeFalsy();
     });
@@ -475,7 +475,7 @@ describe('RdTheoryOfChangeComponent', () => {
     it('should delete the contributing center at the specified index', async () => {
       await component.getSectionInformation();
       component.deletContributingCenter(1);
-  
+
       expect(component.theoryOfChangeBody.contributing_center.length).toBe(1);
     });
   });
@@ -501,7 +501,7 @@ describe('RdTheoryOfChangeComponent', () => {
         },
       ];
       component.deleteEvidence(0);
-  
+
       expect(component.theoryOfChangeBody.contributing_np_projects.length).toBe(1);
     });
   });
@@ -511,7 +511,7 @@ describe('RdTheoryOfChangeComponent', () => {
       await component.getSectionInformation();
 
       component.validatePrimarySelection();
-  
+
       expect(component.theoryOfChangeBody.contributing_center[0].primary).toBeTruthy();
     });
   });

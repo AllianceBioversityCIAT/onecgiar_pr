@@ -27,13 +27,13 @@ export class PusherService {
   validaeFirstUserToEdit() {
     //(this.presenceChannel?.members);
     if (!this.presenceChannel?.members) return false;
-    let { members, myID } = this.presenceChannel?.members;
+    const { members, myID } = this.presenceChannel?.members;
 
     // if (this.firstUser) return true;
     if (!Object.keys(members).length) return true;
     //(members)
 
-    let membersList: any = [];
+    const membersList: any = [];
 
     Object.keys(members).map(item => {
       const date = new Date(members[item]?.today);
@@ -44,7 +44,7 @@ export class PusherService {
       generalRoles = members[item]?.roles;
 
       // TODO: Tener ene cuenta estado de la iniciativa
-      let oldDate = new Date('4000-05-31T20:40:34.081Z');
+      const oldDate = new Date('4000-05-31T20:40:34.081Z');
       //(members)
 
       membersList.push({
@@ -70,7 +70,7 @@ export class PusherService {
     //(this.firstUser +' - '+this.secondUser)
     if (!this.firstUser) this.secondUser = true;
     if (this.firstUser && this.secondUser) {
-      let currentUrl = this.router.url;
+      const currentUrl = this.router.url;
       //(currentUrl);
       this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}`).then(() => {
         setTimeout(() => {

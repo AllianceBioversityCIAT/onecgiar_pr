@@ -118,20 +118,20 @@ describe('ResultsListComponent', () => {
 
   describe('Menu Items', () => {
     it('should set showShareRequest to true', () => {
-      component.items[0].command(); 
-  
+      component.items[0].command();
+
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set showShareRequest to true on command call of itemsWithDelete[0]', () => {
-      component.itemsWithDelete[0].command(); 
-  
+      component.itemsWithDelete[0].command();
+
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set chagePhaseModal to true on command call of itemsWithDelete[1]', () => {
-      component.itemsWithDelete[1].command(); 
-  
+      component.itemsWithDelete[1].command();
+
       expect(mockApiService.dataControlSE.chagePhaseModal).toBeTruthy();
     });
 
@@ -141,9 +141,9 @@ describe('ResultsListComponent', () => {
         scrollIntoView: jest.fn()
       });
 
-      component.itemsWithDelete[2].command(); 
+      component.itemsWithDelete[2].command();
       jest.runAllTimers();
-  
+
       expect(spy).toHaveBeenCalled();
     });
   });
@@ -225,7 +225,7 @@ describe('ResultsListComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult');
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-  
+
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
       });
@@ -242,7 +242,7 @@ describe('ResultsListComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));;
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
       const consoleErrorSpy = jest.spyOn(console, 'error');
-  
+
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
       });
@@ -264,9 +264,9 @@ describe('ResultsListComponent', () => {
   describe('getAllPhases()', () => {
     it('should update currentPhase property on successful API call', () => {
      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_versioning');
-  
+
       component.getAllPhases();
-  
+
       expect(component.currentPhase).toEqual(2023);
       expect(spy).toHaveBeenCalled();
     });
@@ -275,7 +275,7 @@ describe('ResultsListComponent', () => {
   describe('ngOnDestroy()', () => {
     it('should set selected to true for each item in myInitiativesList', () => {
       component.ngOnDestroy();
-  
+
       expect(mockApiService.dataControlSE.myInitiativesList.every(item => item.selected)).toBeTruthy();
     });
   });

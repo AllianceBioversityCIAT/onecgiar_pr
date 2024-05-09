@@ -9,7 +9,7 @@ describe('TocImpactSectionComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         TocImpactSectionComponent,
         PrFieldHeaderComponent
       ],
@@ -28,7 +28,7 @@ describe('TocImpactSectionComponent', () => {
     it('should get label with the correct full name', () => {
       const fullName = 'Example Name';
       const label = component.getLabel(fullName);
-  
+
       expect(label).toBe(`Is this result planned in the ${fullName} SAPLING ToC?:`);
     });
   });

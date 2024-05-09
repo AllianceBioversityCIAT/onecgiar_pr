@@ -16,11 +16,11 @@ export class CustomizedAlertsFsService {
   constructor() {}
 
   show(alertOptions: alertOptions) {
-    let { id, title, description = '', status, querySelector, position } = alertOptions;
+    const { id, title, description = '', status, querySelector, position } = alertOptions;
     this.showed = true;
     let alert = document.getElementById(id);
 
-    let appRoot = document.querySelector(querySelector);
+    const appRoot = document.querySelector(querySelector);
     appRoot.insertAdjacentHTML(
       position,
       `
@@ -43,7 +43,7 @@ export class CustomizedAlertsFsService {
 
   hide(id) {
     this.showed = false;
-    let alert: any = document.getElementById(`alert-${id}`);
+    const alert: any = document.getElementById(`alert-${id}`);
     if (alert) alert.classList.add('animate__animated', 'animate__bounceOut');
   }
 }

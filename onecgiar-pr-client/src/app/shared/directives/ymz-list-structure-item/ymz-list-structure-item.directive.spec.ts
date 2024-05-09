@@ -24,7 +24,7 @@ describe('YmzListStructureItemDirective', () => {
     }
     TestBed.configureTestingModule({
       declarations: [
-        YmzListStructureItemDirective, 
+        YmzListStructureItemDirective,
         TestComponent
       ],
       providers: [
@@ -54,7 +54,7 @@ describe('YmzListStructureItemDirective', () => {
 
   it('should emit deleteEvent on click', () => {
     const hostElement = el.query(By.directive(YmzListStructureItemDirective)).nativeElement;
-    
+
     const spy = jest.spyOn(component, 'onDelete');
 
     hostElement.click();
@@ -68,7 +68,7 @@ describe('YmzListStructureItemDirective', () => {
 
     const deleteIcon = el.query(By.css('.clickEvent.deleteItem i.material-icons-round.ymz-lsi-delete-icon'));
     const divElement = el.query(By.css('.clickEvent.deleteItem'));
-    
+
     expect(divElement).toBeTruthy();
     expect(deleteIcon).toBeTruthy();
     expect(deleteIcon.nativeElement.innerText).toContain('delete');
@@ -82,7 +82,7 @@ describe('YmzListStructureItemDirective', () => {
 
     const divElement = el.query(By.css('.clickEvent.deleteItem'));
     const deleteIcon = el.query(By.css('.clickEvent.deleteItem i.material-icons-round.ymz-lsi-delete-icon'));
-    
+
     expect(divElement).toBeFalsy();
     expect(deleteIcon).toBeFalsy();
     expect(mockRolesService.readOnly).toBeTruthy();

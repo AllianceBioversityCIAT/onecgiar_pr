@@ -16,7 +16,7 @@ describe('PolicyChangeInfoComponent', () => {
   let component: PolicyChangeInfoComponent;
   let fixture: ComponentFixture<PolicyChangeInfoComponent>;
   let mockApiService: any;
-  let mockPolicyChangeQuestions = {
+  const mockPolicyChangeQuestions = {
     optionsWithAnswers: [
       {
         answer_boolean: true,
@@ -165,7 +165,7 @@ describe('PolicyChangeInfoComponent', () => {
     it('should save section successfully', () => {
       const spyPATCH_policyChanges = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
-     
+
       component.onSaveSection();
 
       expect(spyPATCH_policyChanges).toHaveBeenCalled();

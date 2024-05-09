@@ -12,7 +12,7 @@ describe('ScaleImpactAnalysisComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         ScaleImpactAnalysisComponent,
         PrRadioButtonComponent,
         PrFieldHeaderComponent

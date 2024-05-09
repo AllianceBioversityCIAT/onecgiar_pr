@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RdGeneralInformationComponent } from './rd-general-information.component';
-import { of, throwError } from 'rxjs'; 
+import { of, throwError } from 'rxjs';
 import { ApiService } from './../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFsService } from './../../../../../../shared/services/customized-alerts-fs.service';
 import { ScoreService } from './../../../../../../shared/services/global/score.service';
@@ -380,7 +380,7 @@ describe('RdGeneralInformationComponent', () => {
       component.generalInfoBody.institutions = undefined;
 
       component.sendIntitutionsTypes();
-  
+
       expect(component.generalInfoBody.institutions_type).toEqual([]);
     });
   });

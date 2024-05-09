@@ -19,17 +19,17 @@ describe('IpsrContributorsComponent', () => {
   let component: IpsrContributorsComponent;
   let fixture: ComponentFixture<IpsrContributorsComponent>;
   let mockApiService: any;
-  let mockResponse = {
+  const mockResponse = {
     result_toc_result: {
       result_toc_results: [{ planned_result: true }, { planned_result: null }],
     },
     contributors_result_toc_result: [
-      { 
+      {
         result_toc_results: [
-          { 
-            planned_result: false 
+          {
+            planned_result: false
           }
-        ] 
+        ]
       }
     ],
     institutions: [
@@ -68,10 +68,10 @@ describe('IpsrContributorsComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [
-        IpsrContributorsComponent, 
-        SaveButtonComponent, 
-        IpsrContributorsCentersComponent, 
-        PrMultiSelectComponent, 
+        IpsrContributorsComponent,
+        SaveButtonComponent,
+        IpsrContributorsCentersComponent,
+        PrMultiSelectComponent,
         PrFieldHeaderComponent,
         IpsrContributorsNonCgiarPartnersComponent,
         IpsrNonPooledProjectsComponent,
@@ -103,9 +103,9 @@ describe('IpsrContributorsComponent', () => {
   describe('ngOnInit', () => {
     it('should call getSectionInformation on ngOnInit', () => {
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
-  
+
       component.ngOnInit();
-  
+
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
   });
@@ -113,9 +113,9 @@ describe('IpsrContributorsComponent', () => {
   describe('getSectionInformation', () => {
     it('should call getSectionInformation and set data on getSectionInformation', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GETContributorsByIpsrResultId');
-  
+
       component.getSectionInformation();
-  
+
       expect(spy).toHaveBeenCalled();
       expect(component.contributorsBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(mockResponse);
@@ -130,9 +130,9 @@ describe('IpsrContributorsComponent', () => {
       mockResponse.result_toc_result.result_toc_results[0].planned_result = null
 
       const spy = jest.spyOn(mockApiService.resultsSE, 'GETContributorsByIpsrResultId');
-  
+
       component.getSectionInformation();
-  
+
       expect(spy).toHaveBeenCalled();
       expect(component.contributorsBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(mockResponse);
@@ -151,7 +151,7 @@ describe('IpsrContributorsComponent', () => {
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
-  
+
       expect(patchContributorsSpy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
@@ -201,13 +201,13 @@ describe('IpsrContributorsComponent', () => {
         alertDiv.dispatchEvent(clickEvent);
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
-  
+
       if (alertDiv2) {
         const clickEvent = new MouseEvent('click');
         alertDiv2.dispatchEvent(clickEvent);
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
-  
+
       expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
     });
   });

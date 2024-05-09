@@ -6,7 +6,7 @@ describe('FilterTargetsPipe', () => {
   beforeEach(() => {
     pipe = new FilterTargetsPipe();
   });
-  
+
   it('should filter the list based on impact area id', () => {
     const list = [
       { impactAreaId: 1, name: 'Target 1' },

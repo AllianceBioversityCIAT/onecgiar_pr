@@ -23,8 +23,8 @@ import { CheckboxModule } from 'primeng/checkbox';
   imports: [
     CommonModule,
     ComplementaryInnovationRoutingModule,
-    TableModule, 
-    RouterModule, 
+    TableModule,
+    RouterModule,
     FilterByTextModule,
     FormsModule,
     CustomFieldsModule,

@@ -30,7 +30,7 @@ export class TypeOneReportComponent implements OnInit {
 
   getThePhases() {
     const autoSelectOpenPhases = (phases: any[]) => {
-      let openPhase = phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
+      const openPhase = phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
       this.typeOneReportSE.phaseSelected = openPhase?.id;
       this.typeOneReportSE.phaseDefaultId = openPhase?.id;
       this.phaseNameLoaded = openPhase?.phase_name_status;

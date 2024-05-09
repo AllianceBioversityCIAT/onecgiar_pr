@@ -17,7 +17,7 @@ describe('QualityAssuranceComponent', () => {
   let component: QualityAssuranceComponent;
   let fixture: ComponentFixture<QualityAssuranceComponent>;
   let mockApiService: any;
-  let mockInitiatives = [
+  const mockInitiatives = [
     { official_code: 1, initiative_id: 1, name: 'Initiative 1' },
     { initiative_id: 2, name: 'Initiative 2' }
   ];
@@ -63,9 +63,9 @@ describe('QualityAssuranceComponent', () => {
         FormsModule
       ],
       providers: [
-        { 
-          provide: ApiService, 
-          useValue: mockApiService 
+        {
+          provide: ApiService,
+          useValue: mockApiService
         },
       ]
     })
@@ -109,9 +109,9 @@ describe('QualityAssuranceComponent', () => {
       component.official_code = 1;
       component.clarisaQaToken = 'token';
       const spy = jest.spyOn(component.sanitizer, 'bypassSecurityTrustResourceUrl');
-  
+
       component.sanitizeUrl();
-  
+
       const expectedResult = {
         changingThisBreaksApplicationSecurity: "https://url.com/crp?crp_id=1&token=token"
       };
@@ -138,7 +138,7 @@ describe('QualityAssuranceComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
 
       component.GET_AllInitiatives();
-  
+
       expect(spy).not.toHaveBeenCalled();
     });
   });
