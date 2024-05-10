@@ -14,11 +14,29 @@ import { InnovationLinksComponent } from './components/innovation-links/innovati
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
 import { DialogModule } from 'primeng/dialog';
-import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 import { SkeletonModule } from 'primeng/skeleton';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
-  declarations: [InnovationDevInfoComponent, GesiInnovationAssessmentComponent, ScaleImpactAnalysisComponent, IntellectualPropertyRightsComponent, InnovationTeamDiversityComponent, AnticipatedInnovationUserComponent, EstimatesComponent, InnovationLinksComponent, NonPooledInfoComponent],
-  imports: [CommonModule, InnovationDevInfoRoutingModule, CustomFieldsModule, YmzListStructureItemModule, DialogModule, FeedbackValidationDirectiveModule, SkeletonModule]
+  declarations: [
+    InnovationDevInfoComponent,
+    GesiInnovationAssessmentComponent,
+    ScaleImpactAnalysisComponent,
+    IntellectualPropertyRightsComponent,
+    InnovationTeamDiversityComponent,
+    AnticipatedInnovationUserComponent,
+    EstimatesComponent,
+    InnovationLinksComponent,
+    NonPooledInfoComponent
+  ],
+  imports: [
+    CommonModule,
+    InnovationDevInfoRoutingModule,
+    CustomFieldsModule,
+    YmzListStructureItemModule,
+    DialogModule,
+    FeedbackValidationDirectiveModule,
+    SkeletonModule
+  ]
 })
 export class InnovationDevInfoModule {}

@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
-import { InstitutionsexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
+import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-step-n4-partner-co-investment-table',
@@ -33,7 +33,9 @@ export class StepN4PartnerCoInvestmentTableComponent {
     partner.institution.is_active = false;
   }
   hasElementsWithId(list) {
-    const finalList = this.rolesSE.readOnly ? list.filter(item => item.institution.created_by) : list.filter(item => item.institution.is_active != false);
+    const finalList = this.rolesSE.readOnly
+      ? list.filter(item => item.institution.created_by)
+      : list.filter(item => item.institution.is_active != false);
     return finalList.length;
   }
 }

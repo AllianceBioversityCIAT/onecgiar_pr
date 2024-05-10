@@ -1,6 +1,6 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { IpsrStep4Body, IpsrpictureStep4 } from '../../model/Ipsr-step-4-body.model';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
+import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-step-n4-reference-material-links',
@@ -14,16 +14,15 @@ export class StepN4ReferenceMaterialLinksComponent {
   addItem() {
     this.body.ipsr_materials.push(new IpsrpictureStep4());
   }
-  delete(index){
-
-    this.body.ipsr_materials.splice(index, 1);;
+  delete(index) {
+    this.body.ipsr_materials.splice(index, 1);
   }
-  addReferenceDescription(){
+  addReferenceDescription() {
     return `
       <ul>
       <li>Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc.</li>
       <li>The image(s) will be used in the final report, therefore consent to use the image(s) is needed.</li>
       </ul>
-    `
+    `;
   }
 }

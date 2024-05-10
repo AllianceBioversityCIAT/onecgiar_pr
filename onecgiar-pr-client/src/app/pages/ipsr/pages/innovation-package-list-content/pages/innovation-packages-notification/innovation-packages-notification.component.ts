@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { ShareRequestModalService } from 'src/app/pages/results/pages/result-detail/components/share-request-modal/share-request-modal.service';
-import { ResultsNotificationsService } from 'src/app/pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { ModuleTypeEnum, StatusPhaseEnum } from 'src/app/shared/enum/api.enum';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ShareRequestModalService } from '../../../../../results/pages/result-detail/components/share-request-modal/share-request-modal.service';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
+import { ResultsNotificationsService } from '../../../../../results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 
 @Component({
   selector: 'app-innovation-packages-notification',
@@ -15,7 +15,11 @@ export class InnovationPackagesNotificationComponent implements OnInit {
   phaseFilter = null;
   initiativeIdFilter = null;
 
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, public resultsNotificationsSE: ResultsNotificationsService) {}
+  constructor(
+    public api: ApiService,
+    private shareRequestModalSE: ShareRequestModalService,
+    public resultsNotificationsSE: ResultsNotificationsService
+  ) {}
 
   ngOnInit(): void {
     this.getAllPhases();

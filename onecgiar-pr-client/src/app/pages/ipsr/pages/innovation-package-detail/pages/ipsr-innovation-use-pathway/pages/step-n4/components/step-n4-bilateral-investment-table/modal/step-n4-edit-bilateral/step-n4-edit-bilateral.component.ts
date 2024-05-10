@@ -1,8 +1,8 @@
 import { Component, DoCheck, Input, OnInit } from '@angular/core';
-import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
-import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
-import { CentersService } from 'src/app/shared/services/global/centers.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { BilateralexpectedinvestmentStep4 } from '../../../../model/Ipsr-step-4-body.model';
+import { CentersService } from '../../../../../../../../../../../../shared/services/global/centers.service';
+import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
+import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
   selector: 'app-step-n4-edit-bilateral',
@@ -20,7 +20,6 @@ export class StepN4EditBilateralComponent implements OnInit, DoCheck {
   constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
 
   ngOnInit(): void {
-    //(this.body);
     this.biltarealBody.center_grant_id = this.body.obj_non_pooled_projetct?.center_grant_id;
     this.biltarealBody.funder_institution_id = this.body.obj_non_pooled_projetct?.funder_institution_id;
     this.biltarealBody.grant_title = this.body.obj_non_pooled_projetct?.grant_title;

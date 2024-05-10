@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from 'src/app/shared/services/api/auth.service';
-import { environment } from 'src/environments/environment';
+import { AuthService } from '../../shared/services/api/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-pdf-reports',

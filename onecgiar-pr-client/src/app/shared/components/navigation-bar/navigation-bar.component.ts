@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { PrRoute, routingApp } from '../../routing/routing-data';
 import { NavigationBarService } from '../../services/navigation-bar.service';
 import { RolesService } from '../../services/global/roles.service';
-import { environment } from 'src/environments/environment';
 import { DataControlService } from '../../services/data-control.service';
 import { AuthService } from '../../services/api/auth.service';
 import { ApiService } from '../../services/api/api.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-navigation-bar',
