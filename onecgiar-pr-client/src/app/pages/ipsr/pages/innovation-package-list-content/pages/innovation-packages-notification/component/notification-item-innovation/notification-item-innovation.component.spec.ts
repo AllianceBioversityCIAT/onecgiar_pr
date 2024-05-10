@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { NotificationItemInnovationComponent } from './notification-item-innovation.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('NotificationItemInnovationComponent', () => {
   let component: NotificationItemInnovationComponent;
@@ -8,13 +9,12 @@ describe('NotificationItemInnovationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ NotificationItemInnovationComponent ]
-    })
-    .compileComponents();
+      declarations: [NotificationItemInnovationComponent],
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(NotificationItemInnovationComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

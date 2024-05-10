@@ -14,28 +14,28 @@ export class StepN4PartnerCoInvestmentTableComponent {
   constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
-    if (!(typeof deliveries == 'object')) return false;
+    if (typeof deliveries != 'object') return false;
     const index = deliveries.indexOf(deliveryId);
-    return index < 0 ? false : true;
+    return index >= 0;
   }
+
   onSelectDelivery(option, deliveryId) {
-    //('onSelectDelivery');
     if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
       const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
       option?.deliveries.splice(index, 1);
     }
     const index = option?.deliveries?.indexOf(deliveryId) == undefined ? -1 : option?.deliveries?.indexOf(deliveryId);
     if (deliveryId == 4 && index < 0) option.deliveries = [];
-    if (!(typeof option?.deliveries == 'object')) option.deliveries = [];
+    if (typeof option?.deliveries != 'object') option.deliveries = [];
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
+
   deletePartner(partner) {
     partner.institution.is_active = false;
   }
+
   hasElementsWithId(list) {
-    const finalList = this.rolesSE.readOnly
-      ? list.filter(item => item.institution.created_by)
-      : list.filter(item => item.institution.is_active != false);
+    const finalList = this.rolesSE.readOnly ? list.filter(item => item.institution.created_by) : list.filter(item => item.institution.is_active);
     return finalList.length;
   }
 }

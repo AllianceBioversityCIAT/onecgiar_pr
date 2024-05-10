@@ -16,27 +16,28 @@ export class StepN4AddBilateralComponent implements DoCheck {
   showForm = true;
   requesting = false;
   formIsInvalid = false;
+
   constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
 
   onAddBilateral() {
     this.requesting = true;
-    this.api.resultsSE.PATCHInnovationPathwayStep4Bilaterals(this.biltarealBody).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.PATCHInnovationPathwayStep4Bilaterals(this.biltarealBody).subscribe({
+      next: ({ response }) => {
         this.requesting = false;
         this.body.bilateral_expected_investment.push(response);
+
         this.visible = false;
         this.api.alertsFe.show({ id: 'biltareal', title: `Biltareal has been added.`, status: 'success' });
       },
-      err => {
+      error: err => {
         this.api.alertsFe.show({ id: 'biltareal-error', title: 'Error when requesting partner', description: '', status: 'error' });
         this.requesting = false;
         this.visible = false;
       }
-    );
+    });
   }
 
   cleanObject() {
-    //('cleanForm');
     this.showForm = false;
     this.biltarealBody = new AddBilateralBody();
     setTimeout(() => {

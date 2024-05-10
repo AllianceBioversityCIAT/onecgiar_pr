@@ -75,13 +75,13 @@ class Report {
   get iframeRoute() {
     const { id: resultId } = this.activatedRoute.snapshot.paramMap.params || {};
 
-    const module = this.activatedRoute.snapshot._routerState.url.includes('ipsr') ? 'ipsr' : 'result';
+    const module = this.activatedRoute.snapshot._routerState?.url.includes('ipsr') ? 'ipsr' : 'result';
 
     return `${environment.apiBaseUrl}api/platform-report/${module}/${resultId}${this.qParamsObjectToqueryParams()}`;
   }
 
   qParamsObjectToqueryParams() {
-    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap.params);
+    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap?.params || {});
     if (!objectKeys.length) return '';
     let queryParamsText = '';
     const params = this.activatedRoute.snapshot.queryParamMap.params;
