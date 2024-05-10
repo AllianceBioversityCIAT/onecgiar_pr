@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { InnovationUseFormComponent } from './innovation-use-form.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('InnovationUseFormComponent', () => {
   let component: InnovationUseFormComponent;
@@ -8,9 +9,9 @@ describe('InnovationUseFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ InnovationUseFormComponent ]
-    })
-    .compileComponents();
+      declarations: [InnovationUseFormComponent],
+      imports: [HttpClientModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(InnovationUseFormComponent);
     component = fixture.componentInstance;
