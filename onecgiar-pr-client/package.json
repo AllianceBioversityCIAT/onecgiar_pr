@@ -72,7 +72,8 @@
       "!./src/app/**/model/*.ts",
       "!./src/app/**/models/*.ts",
       "!./src/app/**/routing-data-ipsr.ts",
-      "!./src/app/**/routing-data.ts"
+      "!./src/app/**/routing-data.ts",
+      "!./src/app/custom-fields/**/*"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",
