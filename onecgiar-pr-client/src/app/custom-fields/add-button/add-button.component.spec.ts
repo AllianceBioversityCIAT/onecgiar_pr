@@ -6,11 +6,11 @@ describe('AddButtonComponent', () => {
   let component: AddButtonComponent;
   let fixture: ComponentFixture<AddButtonComponent>;
 
-  beforeEach(async(() => {
+  beforeEach(() => {
     TestBed.configureTestingModule({
       declarations: [AddButtonComponent]
     }).compileComponents();
-  }));
+  });
 
   beforeEach(() => {
     fixture = TestBed.createComponent(AddButtonComponent);
@@ -20,5 +20,9 @@ describe('AddButtonComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should have a default name', () => {
+    expect(component.name).toBe('Unnamed');
   });
 });
