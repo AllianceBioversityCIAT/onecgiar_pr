@@ -1198,7 +1198,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}toc/get/version/${service.ipsrDataControlSE.resultInnovationId}/initiative/${init}/resultToc/${id_toc}`);
+      const req = httpMock.expectOne(
+        `${service.apiBaseUrl}toc/get/version/${service.ipsrDataControlSE.resultInnovationId}/initiative/${init}/resultToc/${id_toc}`
+      );
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -2395,7 +2397,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
@@ -2413,7 +2417,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2432,7 +2438,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2536,7 +2544,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-two/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -2636,7 +2646,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2655,7 +2667,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2705,7 +2719,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2722,7 +2738,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-three/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-three/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
@@ -2739,7 +2757,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2758,7 +2778,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2803,7 +2825,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
@@ -2820,7 +2844,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2839,7 +2865,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
       expect(spy).toHaveBeenCalled();
@@ -2870,7 +2898,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
 
@@ -2903,7 +2933,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(mockBody);
 
@@ -2918,7 +2950,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -2952,7 +2986,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`
+      );
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
@@ -2984,7 +3020,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ comment });
 
@@ -3053,7 +3091,9 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${service.ipsrDataControlSE.resultInnovationId}`);
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${service.ipsrDataControlSE.resultInnovationId}`
+      );
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
@@ -3275,8 +3315,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
-
   describe('GET_versioningResult', () => {
     it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr exists', done => {
       service.ipsrDataControlSE.inIpsr = 'test';
@@ -3312,7 +3350,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate/result`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({});
 
