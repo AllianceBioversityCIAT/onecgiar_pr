@@ -8,6 +8,7 @@ import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { InnovationPackageListFilterPipe } from '../innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
+import { IpsrToUpdateFilterPipe } from './ipsr-to-update-filter.pipe';
 
 describe('UpdateIpsrResultModalComponent', () => {
   let component: UpdateIpsrResultModalComponent;
@@ -17,7 +18,7 @@ describe('UpdateIpsrResultModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [UpdateIpsrResultModalComponent, InnovationPackageListFilterPipe, PrFieldHeaderComponent],
+      declarations: [UpdateIpsrResultModalComponent, InnovationPackageListFilterPipe, PrFieldHeaderComponent, IpsrToUpdateFilterPipe],
       providers: [ApiService, IpsrDataControlService, RetrieveModalService],
       imports: [HttpClientModule, TableModule, DialogModule]
     }).compileComponents();
