@@ -38,12 +38,12 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/result-toc-action-area.repository';
-import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
-import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/result-toc-result-target-indicator.repository';
-import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
-import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
+import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/repositories/result-toc-impact-area-repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultsTocResultRepository } from '../results/results-toc-results/results-toc-results.repository';
 import { resultValidationRepository } from '../results/results-validation-module/results-validation-module.repository';
 import { ResultByEvidencesRepository } from '../results/results_by_evidences/result_by_evidences.repository';
@@ -91,6 +91,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -181,6 +182,7 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
     ResultCountriesSubNationalRepository,
     KnowledgeProductFairBaselineRepository,
     ResultCountrySubnationalRepository,
+    ResultsTocResultIndicatorsService,
   ],
   imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [

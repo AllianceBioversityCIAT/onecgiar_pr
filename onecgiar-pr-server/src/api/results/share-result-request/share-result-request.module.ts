@@ -12,18 +12,20 @@ import { VersionsService } from '../versions/versions.service';
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
-import { ResultsTocResultIndicatorsRepository } from '../results-toc-results/results-toc-results-indicators.repository';
-import { ResultsTocSdgTargetRepository } from '../results-toc-results/result-toc-sdg-target-repository';
-import { ResultsTocImpactAreaTargetRepository } from '../results-toc-results/result-toc-impact-area-repository';
-import { ResultsSdgTargetRepository } from '../results-toc-results/results-sdg-targets.respository';
+import { ResultsTocResultIndicatorsRepository } from '../results-toc-results/repositories/results-toc-results-indicators.repository';
+import { ResultsTocSdgTargetRepository } from '../results-toc-results/repositories/result-toc-sdg-target-repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results-toc-results/repositories/result-toc-impact-area-repository';
+import { ResultsSdgTargetRepository } from '../results-toc-results/repositories/results-sdg-targets.respository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
-import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/result-toc-action-area.repository';
-import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/result-toc-result-target-indicator.repository';
+import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsTocResultIndicatorsService } from '../results-toc-results/results-toc-result-indicators.service';
 
 @Module({
   controllers: [ShareResultRequestController],
   providers: [
     ShareResultRequestService,
+    ResultsTocResultIndicatorsService,
     ShareResultRequestRepository,
     HandlersError,
     ResultRepository,
