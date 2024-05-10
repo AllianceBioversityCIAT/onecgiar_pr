@@ -358,35 +358,36 @@ describe('RdTheoryOfChangeComponent', () => {
 
   describe('onSelectContributingInitiative()', () => {
     it('should add contributors to contributors_result_toc_result when not found', async () => {
-      await component.getSectionInformation();
-      component.onSelectContributingInitiative();
+      component.getSectionInformation(() => {
+        component.onSelectContributingInitiative();
 
-      const expectedContributor = [
-        {
-          index: 0,
-          initiative_id: 1,
-          planned_result: null,
-          result_toc_results: [
-            {
-              planned_result: undefined
-            }
-          ],
-          showMultipleWPsContent: true
-        },
-        {
-          action_area_outcome_id: null,
-          id: null,
-          initiative_id: 2,
-          official_code: 'code',
-          planned_result: null,
-          result_toc_result_id: null,
-          results_id: null,
-          short_name: 'name',
-          toc_level_id: null,
-          toc_result_id: null
-        }
-      ];
-      expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual(expectedContributor);
+        const expectedContributor = [
+          {
+            index: 0,
+            initiative_id: 1,
+            planned_result: null,
+            result_toc_results: [
+              {
+                planned_result: undefined
+              }
+            ],
+            showMultipleWPsContent: true
+          },
+          {
+            action_area_outcome_id: null,
+            id: null,
+            initiative_id: 2,
+            official_code: 'code',
+            planned_result: null,
+            result_toc_result_id: null,
+            results_id: null,
+            short_name: 'name',
+            toc_level_id: null,
+            toc_result_id: null
+          }
+        ];
+        expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual(expectedContributor);
+      });
     });
   });
 

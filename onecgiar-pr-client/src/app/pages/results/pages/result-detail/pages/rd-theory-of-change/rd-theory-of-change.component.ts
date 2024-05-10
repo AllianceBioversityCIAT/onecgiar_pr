@@ -181,7 +181,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
       (result: any) => result?.initiative_id === e.remove.id
     );
     this.theoryOfChangeBody.contributors_result_toc_result.splice(contributorFinded, 1);
-    this.theoryOfChangeBody.contributing_and_primary_initiative = this.theoryOfChangeBody.contributing_and_primary_initiative.filter(
+    this.theoryOfChangeBody.contributing_and_primary_initiative = this.theoryOfChangeBody.contributing_and_primary_initiative?.filter(
       init => init.id !== e.remove.id
     );
   }
