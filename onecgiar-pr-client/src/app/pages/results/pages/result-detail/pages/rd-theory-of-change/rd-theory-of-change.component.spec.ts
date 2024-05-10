@@ -13,7 +13,6 @@ import { of, throwError } from 'rxjs';
 
 jest.useFakeTimers();
 
-
 describe('RdTheoryOfChangeComponent', () => {
   let component: RdTheoryOfChangeComponent;
   let fixture: ComponentFixture<RdTheoryOfChangeComponent>;
@@ -36,34 +35,35 @@ describe('RdTheoryOfChangeComponent', () => {
     impactsTarge: [
       {
         name: 'name',
-        target: 'target',
+        target: 'target'
       }
     ],
     sdgTargets: [
       {
         sdg_target_code: 'code',
-        sdg_target: 'target',
+        sdg_target: 'target'
       }
     ],
     result_toc_result: {
-      initiative_id: 1,
-      result_toc_results: [{
-        planned_result: true
-      }],
-      planned_result: true
-    },
-    contributors_result_toc_result: [{
       initiative_id: 1,
       result_toc_results: [
         {
           planned_result: true
         }
-      ]
-    }],
-    contributing_center: [
-      {primary: false },
-      {primary: false }
+      ],
+      planned_result: true
+    },
+    contributors_result_toc_result: [
+      {
+        initiative_id: 1,
+        result_toc_results: [
+          {
+            planned_result: true
+          }
+        ]
+      }
     ],
+    contributing_center: [{ primary: false }, { primary: false }],
     contributing_initiatives: [
       {
         id: 1,
@@ -71,7 +71,7 @@ describe('RdTheoryOfChangeComponent', () => {
         official_code: 'code'
       }
     ]
-  }
+  };
 
   beforeEach(async () => {
     mockApiService = {
@@ -83,7 +83,7 @@ describe('RdTheoryOfChangeComponent', () => {
         GET_AllCLARISACenters: () => of({ response: [] }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
-        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+        GET_allChildlessInstitutionTypes: () => of({ response: [] })
       },
       alertsFe: {
         show: jest.fn().mockImplementationOnce((config, callback) => {
@@ -93,9 +93,9 @@ describe('RdTheoryOfChangeComponent', () => {
       dataControlSE: {
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
-        },
+        }
       }
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -107,10 +107,7 @@ describe('RdTheoryOfChangeComponent', () => {
         DetailSectionTitleComponent,
         FeedbackValidationDirective
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -136,12 +133,13 @@ describe('RdTheoryOfChangeComponent', () => {
       const spyGetContributingCenterOptions = jest.spyOn(component, 'getContributingCenterOptions');
 
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
       <div class="alert-event"></div>`,
-        'text/html');
+        'text/html'
+      );
 
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       component.ngOnInit();
       expect(spyRequestEvent).toHaveBeenCalled();
@@ -164,16 +162,6 @@ describe('RdTheoryOfChangeComponent', () => {
     });
   });
 
-  describe('print()', () => {
-    it('should log the center options', () => {
-      const consoleSpy = jest.spyOn(console, 'log');
-
-      component.print();
-
-      expect(consoleSpy).toHaveBeenCalledWith(component.contributingCenterOptions);
-    });
-  });
-
   describe('disabledCenters()', () => {
     it('should update cgspaceDisabledList based on contributing_center', () => {
       component.theoryOfChangeBody.contributing_center = [
@@ -187,14 +175,16 @@ describe('RdTheoryOfChangeComponent', () => {
           code: 'code',
           name: 'name'
         }
-      ]
+      ];
       component.disabledCenters();
 
-      expect(component.cgspaceDisabledList).toEqual([{
-        from_cgspace: true,
-        code: 'code',
-        name: 'name'
-      }]);
+      expect(component.cgspaceDisabledList).toEqual([
+        {
+          from_cgspace: true,
+          code: 'code',
+          name: 'name'
+        }
+      ]);
     });
   });
 
@@ -212,19 +202,24 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('getSectionInformation()', () => {
     it('should update theoryOfChangeBody and related services correctly', async () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_toc');
+      const mockSetTimeout = jest.spyOn(window, 'setTimeout');
 
-      await component.getSectionInformation();
-      jest.runAllTimers();
-
-      expect(component.theoryOfChangeBody).toEqual(mockGET_tocResponse);
-      expect(component.theoryOfChangeBody?.contributing_and_primary_initiative[0].full_name).toBe(`code - <strong>name</strong> - initiative`)
-      expect(component.theoryOfChangeBody?.impactsTarge[0].full_name).toBe(`<strong>name</strong> - target`);
-      expect(component.theoryOfChangeBody?.sdgTargets[0].full_name).toBe(`<strong>code</strong> - target`);
-      expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockGET_tocResponse.result_toc_result);
-      expect(component.theoryOfChangesServices.result_toc_result.planned_result).toEqual(mockGET_tocResponse.result_toc_result?.result_toc_results[0].planned_result);
-      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockGET_tocResponse.contributors_result_toc_result);
-      expect(component.theoryOfChangesServices.contributors_result_toc_result[0].planned_result).toEqual(mockGET_tocResponse.contributors_result_toc_result[0].result_toc_results[0].planned_result);
-      expect(spy).toHaveBeenCalled();
+      component.getSectionInformation(() => {
+        expect(component.theoryOfChangeBody).toEqual(mockGET_tocResponse);
+        expect(component.theoryOfChangeBody?.contributing_and_primary_initiative[0].full_name).toBe(`code - <strong>name</strong> - initiative`);
+        expect(component.theoryOfChangeBody?.impactsTarge[0].full_name).toBe(`<strong>name</strong> - target`);
+        expect(component.theoryOfChangeBody?.sdgTargets[0].full_name).toBe(`<strong>code</strong> - target`);
+        expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockGET_tocResponse.result_toc_result);
+        expect(component.theoryOfChangesServices.result_toc_result.planned_result).toEqual(
+          mockGET_tocResponse.result_toc_result?.result_toc_results[0].planned_result
+        );
+        expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockGET_tocResponse.contributors_result_toc_result);
+        expect(component.theoryOfChangesServices.contributors_result_toc_result[0].planned_result).toEqual(
+          mockGET_tocResponse.contributors_result_toc_result[0].result_toc_results[0].planned_result
+        );
+        expect(mockSetTimeout).toHaveBeenCalled();
+        expect(spy).toHaveBeenCalled();
+      });
     });
 
     it('should update theoryOfChangeBody and related services correctly when theoryOfChangesServices.result_toc_result.planned_result and tab.result_toc_results[0].planned_result does not exist', async () => {
@@ -233,17 +228,18 @@ describe('RdTheoryOfChangeComponent', () => {
 
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_toc');
 
-      await component.getSectionInformation();
-      jest.runAllTimers();
+      component.getSectionInformation(() => {
+        jest.runAllTimers();
 
-      expect(component.theoryOfChangesServices.result_toc_result.planned_result).toBeNull();
-      expect(component.theoryOfChangesServices.contributors_result_toc_result[0].planned_result).toBeNull();
-      expect(component.theoryOfChangeBody?.contributing_and_primary_initiative[0].full_name).toBe(`code - <strong>name</strong> - initiative`)
-      expect(component.theoryOfChangeBody?.impactsTarge[0].full_name).toBe(`<strong>name</strong> - target`);
-      expect(component.theoryOfChangeBody?.sdgTargets[0].full_name).toBe(`<strong>code</strong> - target`);
-      expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockGET_tocResponse.result_toc_result);
-      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockGET_tocResponse.contributors_result_toc_result);
-      expect(spy).toHaveBeenCalled();
+        expect(component.theoryOfChangesServices.result_toc_result.planned_result).toBeNull();
+        expect(component.theoryOfChangesServices.contributors_result_toc_result[0].planned_result).toBeNull();
+        expect(component.theoryOfChangeBody?.contributing_and_primary_initiative[0].full_name).toBe(`code - <strong>name</strong> - initiative`);
+        expect(component.theoryOfChangeBody?.impactsTarge[0].full_name).toBe(`<strong>name</strong> - target`);
+        expect(component.theoryOfChangeBody?.sdgTargets[0].full_name).toBe(`<strong>code</strong> - target`);
+        expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockGET_tocResponse.result_toc_result);
+        expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockGET_tocResponse.contributors_result_toc_result);
+        expect(spy).toHaveBeenCalled();
+      });
     });
 
     it('should handle errors from GET_toc correctly', async () => {
@@ -276,7 +272,7 @@ describe('RdTheoryOfChangeComponent', () => {
           },
           center_grant_id: '',
           lead_center: ''
-        },
+        }
       ];
 
       expect(component.validateGranTitle).toBeFalsy();
@@ -298,7 +294,7 @@ describe('RdTheoryOfChangeComponent', () => {
           },
           center_grant_id: '',
           lead_center: ''
-        },
+        }
       ];
 
       expect(component.validateGranTitle).toBeTruthy();
@@ -331,12 +327,13 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('someEditable()', () => {
     it('should return true when .global-editable element is present', () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
       <div class="global-editable"></div>`,
-        'text/html');
+        'text/html'
+      );
 
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       const result = component.someEditable();
 
@@ -345,12 +342,13 @@ describe('RdTheoryOfChangeComponent', () => {
 
     it('should return false when .global-editable element is not present', () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
       <div></div>`,
-        'text/html');
+        'text/html'
+      );
 
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       const result = component.someEditable();
 
@@ -379,15 +377,15 @@ describe('RdTheoryOfChangeComponent', () => {
           action_area_outcome_id: null,
           id: null,
           initiative_id: 2,
-          official_code: "code",
+          official_code: 'code',
           planned_result: null,
           result_toc_result_id: null,
           results_id: null,
-          short_name: "name",
+          short_name: 'name',
           toc_level_id: null,
           toc_result_id: null
         }
-      ]
+      ];
       expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual(expectedContributor);
     });
   });
@@ -445,11 +443,12 @@ describe('RdTheoryOfChangeComponent', () => {
   describe('requestEvent()', () => {
     it('should handle the click event on alert-event', async () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>`,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       await component.requestEvent();
       const alertDiv = dom.querySelector('.alert-event');
@@ -498,7 +497,7 @@ describe('RdTheoryOfChangeComponent', () => {
           },
           center_grant_id: '',
           lead_center: ''
-        },
+        }
       ];
       component.deleteEvidence(0);
 
