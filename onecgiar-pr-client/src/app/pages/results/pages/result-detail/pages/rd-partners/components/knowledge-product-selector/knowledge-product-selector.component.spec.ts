@@ -14,17 +14,17 @@ describe('KnowledgeProductSelectorComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       dataControlSE: {
-        currentResult: { 
-          result_code: 123, 
-          version_id: 456 
-        } 
+        currentResult: {
+          result_code: 123,
+          version_id: 456
+        }
       }
     }
     mockInstitutionsService = {
       institutionsList: [
-        { 
-          institutions_id: 5, 
-          institutions_type_name: 'Type 1' 
+        {
+          institutions_id: 5,
+          institutions_type_name: 'Type 1'
         }
       ]
     }
@@ -55,15 +55,15 @@ describe('KnowledgeProductSelectorComponent', () => {
 
   describe('institutions_institutions_type_name()', () => {
     it('should set institutions_type_name in institutions_institutions_type_name method', () => {
-      const partner = { 
-        user_matched_institution: { 
-          institutions_id: 5 , 
+      const partner = {
+        user_matched_institution: {
+          institutions_id: 5 ,
           institutions_type_name: ''
-        } 
+        }
       };
-  
+
       component.institutions_institutions_type_name(partner);
-  
+
       expect(partner.user_matched_institution.institutions_type_name).toEqual('Type 1');
     });
   });

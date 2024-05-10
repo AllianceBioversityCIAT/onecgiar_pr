@@ -33,7 +33,7 @@ describe('IpsrSubmissionModalComponent', () => {
       alertsFe: {
         show: jest.fn()
       }
-    }; 
+    };
 
     mockIpsrDataControlService = {
       detailData: {
@@ -45,7 +45,7 @@ describe('IpsrSubmissionModalComponent', () => {
     }
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         IpsrSubmissionModalComponent,
         PrButtonComponent,
         PrTextareaComponent,
@@ -94,7 +94,7 @@ describe('IpsrSubmissionModalComponent', () => {
       const comment = 'comment';
       component.comment = comment
       component.onSubmit();
-  
+
       expect(spy).toHaveBeenCalledWith(comment);
       expect(mockIpsrDataControlService.detailData.status).toBe('status');
       expect(spyShow).toHaveBeenCalledWith({

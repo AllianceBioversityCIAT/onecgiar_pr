@@ -10,7 +10,7 @@ describe('IpsrNonPooledProjectsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         IpsrNonPooledProjectsComponent,
         NoDataTextComponent,
         PrFieldHeaderComponent
@@ -29,14 +29,14 @@ describe('IpsrNonPooledProjectsComponent', () => {
   describe('deleteEvidence', () => {
     it('should delete evidence from contributing_np_projects array', () => {
       component.contributorsBody.contributing_np_projects = [{
-        funder: 1, 
-        grant_title: '', 
-        center_grant_id: '', 
+        funder: 1,
+        grant_title: '',
+        center_grant_id: '',
         lead_center: ''
       }];
-  
+
       component.deleteEvidence(0);
-  
+
       expect(component.contributorsBody.contributing_np_projects).toEqual([]);
     });
   });
@@ -44,14 +44,14 @@ describe('IpsrNonPooledProjectsComponent', () => {
   describe('addBilateralContribution', () => {
     it('should add a new donorInterfaceToc to contributing_np_projects array', () => {
       const initialLength = component.contributorsBody.contributing_np_projects.length;
-  
+
       component.addBilateralContribution();
-  
+
       expect(component.contributorsBody.contributing_np_projects.length).toBe(initialLength + 1);
       expect(component.contributorsBody.contributing_np_projects[initialLength]).toEqual({
-        funder: null, 
-        grant_title: null, 
-        center_grant_id: null, 
+        funder: null,
+        grant_title: null,
+        center_grant_id: null,
         lead_center: null
       });
     });

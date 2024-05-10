@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, DoCheck, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NavigationBarService } from '../../../../shared/services/navigation-bar.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -18,7 +18,7 @@ import { MessageService } from 'primeng/api';
   styleUrls: ['./result-detail.component.scss'],
   providers: [MessageService]
 })
-export class ResultDetailComponent {
+export class ResultDetailComponent implements OnInit, DoCheck {
   constructor(private messageSE: MessageService, public currentResultSE: CurrentResultService, private shareRequestModalSE: ShareRequestModalService, public navigationBarSE: NavigationBarService, private activatedRoute: ActivatedRoute, public api: ApiService, public saveButtonSE: SaveButtonService, private resultLevelSE: ResultLevelService, private rolesSE: RolesService, private router: Router, public dataControlSE: DataControlService, private pusherService: PusherService, private greenChecksSE: GreenChecksService) {}
   closeInfo = false;
   ngOnInit(): void {

@@ -119,7 +119,9 @@ export class ApiService {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
       };
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   setTitle(title) {

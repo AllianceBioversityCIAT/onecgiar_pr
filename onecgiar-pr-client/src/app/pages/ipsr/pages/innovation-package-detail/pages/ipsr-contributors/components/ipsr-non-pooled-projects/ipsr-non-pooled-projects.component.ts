@@ -12,9 +12,7 @@ import { CentersService } from '../../../../../../../../shared/services/global/c
 export class IpsrNonPooledProjectsComponent {
   @Input() contributorsBody = new ContributorsBody();
   constructor(public institutionsSE: InstitutionsService, public api: ApiService, public centersSE: CentersService) {}
-  ngOnInit(): void {
-    // this.requestEvent();
-  }
+
   deleteEvidence(index) {
     //(index);
     this.contributorsBody.contributing_np_projects.splice(index, 1);
@@ -29,7 +27,7 @@ export class IpsrNonPooledProjectsComponent {
   //       document.querySelector('.alert-event').addEventListener('click', e => {
   //         this.api.dataControlSE.showPartnersRequest = true;
   //       });
-  //     } catch (error) {}
+  //     } catch (error) { console.error(error); }
   //   });
   // }
 }

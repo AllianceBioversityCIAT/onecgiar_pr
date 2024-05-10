@@ -1,10 +1,10 @@
-import { Directive, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
+import { Directive, Output, EventEmitter, ElementRef, HostListener, OnInit } from '@angular/core';
 import { RolesService } from '../../services/global/roles.service';
 
 @Directive({
   selector: '[appYmzListStructureItem]'
 })
-export class YmzListStructureItemDirective {
+export class YmzListStructureItemDirective implements OnInit {
   @Output() deleteEvent = new EventEmitter();
   constructor(private el: ElementRef, private rolesSE: RolesService) {
     el.nativeElement.classList.add('ymz-list-structure-item');

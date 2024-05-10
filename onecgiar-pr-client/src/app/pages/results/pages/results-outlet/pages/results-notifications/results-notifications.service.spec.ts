@@ -7,7 +7,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 describe('ResultsNotificationsService', () => {
   let service: ResultsNotificationsService;
   let mockApiService: any;
-  let mockGET_allRequestResponse = {
+  const mockGET_allRequestResponse = {
     requestData: [{
       approving_inititiative_id: 1,
       result_type_id: 10
@@ -57,17 +57,17 @@ describe('ResultsNotificationsService', () => {
       service.get_section_information();
 
       expect(service.data).toEqual([
-        { 
-          approving_inititiative_id: 1, 
-          result_type_id: 10, 
-          readOnly: true 
-        },
-        { 
+        {
+          approving_inititiative_id: 1,
           result_type_id: 10,
-          requester_initiative_id: 1, 
-          request_status_id: 4, 
-          shared_inititiative_id: 1, 
-          pending: true 
+          readOnly: true
+        },
+        {
+          result_type_id: 10,
+          requester_initiative_id: 1,
+          request_status_id: 4,
+          shared_inititiative_id: 1,
+          pending: true
         },
       ]);
     });
@@ -76,15 +76,15 @@ describe('ResultsNotificationsService', () => {
       service.get_section_information();
 
       expect(service.data).toEqual([
-        { 
-          approving_inititiative_id: 1, 
-          result_type_id: 10, 
-          readOnly: true 
-        },
-        { 
+        {
+          approving_inititiative_id: 1,
           result_type_id: 10,
-          requester_initiative_id: 1, 
-          request_status_id: 2, 
+          readOnly: true
+        },
+        {
+          result_type_id: 10,
+          requester_initiative_id: 1,
+          request_status_id: 2,
         },
       ]);
     });
@@ -105,17 +105,17 @@ describe('ResultsNotificationsService', () => {
       service.get_section_innovation_packages();
 
       expect(service.dataIPSR).toEqual([
-        { 
-          approving_inititiative_id: 1, 
-          result_type_id: 10, 
-          readOnly: true 
+        {
+          approving_inititiative_id: 1,
+          result_type_id: 10,
+          readOnly: true
         },
-        { 
-          requester_initiative_id: 1, 
-          request_status_id: 4, 
-          shared_inititiative_id: 1, 
-          result_type_id: 10, 
-          pending: true 
+        {
+          requester_initiative_id: 1,
+          request_status_id: 4,
+          shared_inititiative_id: 1,
+          result_type_id: 10,
+          pending: true
         },
       ]);
     });
@@ -125,15 +125,15 @@ describe('ResultsNotificationsService', () => {
       service.get_section_innovation_packages();
 
       expect(service.dataIPSR).toEqual([
-        { 
-          approving_inititiative_id: 1, 
-          result_type_id: 10, 
-          readOnly: true 
+        {
+          approving_inititiative_id: 1,
+          result_type_id: 10,
+          readOnly: true
         },
-        { 
-          requester_initiative_id: 1, 
-          request_status_id: 2, 
-          result_type_id: 10, 
+        {
+          requester_initiative_id: 1,
+          request_status_id: 2,
+          result_type_id: 10,
         },
       ]);
     });

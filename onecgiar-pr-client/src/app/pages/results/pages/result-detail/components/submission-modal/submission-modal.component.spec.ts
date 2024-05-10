@@ -33,7 +33,7 @@ describe('SubmissionModalComponent', () => {
     }
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         SubmissionModalComponent,
         PrButtonComponent,
         PrTextareaComponent,
@@ -65,9 +65,9 @@ describe('SubmissionModalComponent', () => {
   describe('cleanObject', () => {
     it('should clean comment property', () => {
       component.comment = 'Some comment';
-  
+
       component.cleanObject();
-  
+
       expect(component.comment).toBeNull();
     });
   });
@@ -78,13 +78,13 @@ describe('SubmissionModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
-      
+
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
       expect(component.submissionModalSE.showModal).toBeFalsy();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'submodal',
-        title: `Success`, 
+        title: `Success`,
         description: `The result has been submitted.`,
         status: 'success',
       });
@@ -100,12 +100,12 @@ describe('SubmissionModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
-      
+
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'submodalerror',
-        title: `Error in submitting`, 
+        title: `Error in submitting`,
         description: `error message`,
         status: 'error',
       });

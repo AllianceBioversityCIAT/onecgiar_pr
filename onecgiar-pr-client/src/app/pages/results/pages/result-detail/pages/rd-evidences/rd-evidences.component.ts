@@ -36,10 +36,10 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   async getAndCalculateFilePercentage(response, evidenceIterator) {
-    let nextRange = response?.nextExpectedRanges[0];
-    let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
+    const nextRange = response?.nextExpectedRanges[0];
+    const [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
     if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
-    let progressPercentage = (startByte / totalBytes) * 100;
+    const progressPercentage = (startByte / totalBytes) * 100;
     evidenceIterator.percentage = progressPercentage.toFixed(0);
   }
 
@@ -71,7 +71,7 @@ export class RdEvidencesComponent implements OnInit {
         evidenceIterator.sp_file_name = response?.name;
         evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   }

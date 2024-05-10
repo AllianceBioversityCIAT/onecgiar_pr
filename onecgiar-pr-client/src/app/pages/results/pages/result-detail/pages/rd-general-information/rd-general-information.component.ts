@@ -99,7 +99,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   genderInformation() {
-    return `<strong>Gender equality tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong>
     <br/>
 
     There are two gender-related targets at systems level.
@@ -118,7 +118,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition, health and food security tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong>
     <br>
     There are two food security and nutrition targets for at systems level:
 
@@ -137,9 +137,9 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   environmentInformation() {
-    return `<strong>Environmental health and biodiversity tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong>
     <br>
-    
+
     There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
@@ -158,16 +158,16 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   povertyInformation() {
-    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
-    
+
     <ul>
       <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
       <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
     </ul>
-    
+
     Three scores are possible:
 
     <ul>
@@ -265,7 +265,9 @@ export class RdGeneralInformationComponent implements OnInit {
       document.getElementById('partnerRequest').addEventListener('click', e => {
         this.api.dataControlSE.showPartnersRequest = true;
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   requestEvent() {
@@ -274,7 +276,9 @@ export class RdGeneralInformationComponent implements OnInit {
         document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 }

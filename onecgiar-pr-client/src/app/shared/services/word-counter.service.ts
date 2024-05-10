@@ -9,8 +9,8 @@ export class WordCounterService {
   counter(words: string) {
     let wordCount = 0;
     if (words) {
-      let textReplaced = words.replace(/(<(\/?p)>)|(&nbsp;)/gi, ' ').replace(/(<([^>]+)>)/gi, '');
-      let splitWords = textReplaced.split(' ');
+      const textReplaced = words.replace(/(<(\/?p)>)|(&nbsp;)/gi, ' ').replace(/(<([^>]+)>)/gi, '');
+      const splitWords = textReplaced.split(' ');
       if (splitWords.length) {
         wordCount = 0;
         splitWords.map(item => {

@@ -1,4 +1,4 @@
-import { Directive, Input, ElementRef, Renderer2, OnInit, DoCheck } from '@angular/core';
+import { Directive, Input, ElementRef, Renderer2, DoCheck, OnInit } from '@angular/core';
 
 @Directive({
   selector: '[appFeedbackValidation]'

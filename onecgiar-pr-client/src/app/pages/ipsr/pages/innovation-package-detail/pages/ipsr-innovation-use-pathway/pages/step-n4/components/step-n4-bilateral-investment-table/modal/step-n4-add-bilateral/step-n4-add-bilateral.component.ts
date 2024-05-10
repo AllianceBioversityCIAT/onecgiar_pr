@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input, DoCheck } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { InstitutionsService } from 'src/app/shared/services/global/institutions.service';
 import { CentersService } from 'src/app/shared/services/global/centers.service';
@@ -9,7 +9,7 @@ import { ApiService } from 'src/app/shared/services/api/api.service';
   templateUrl: './step-n4-add-bilateral.component.html',
   styleUrls: ['./step-n4-add-bilateral.component.scss']
 })
-export class StepN4AddBilateralComponent implements OnInit {
+export class StepN4AddBilateralComponent implements DoCheck {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
   visible = false;
   biltarealBody = new AddBilateralBody();
@@ -17,8 +17,6 @@ export class StepN4AddBilateralComponent implements OnInit {
   requesting = false;
   formIsInvalid = false;
   constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
-
-  ngOnInit(): void {}
 
   onAddBilateral() {
     this.requesting = true;

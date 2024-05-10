@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
@@ -6,8 +6,8 @@ import { TypeOneReportService } from '../../type-one-report.service';
   templateUrl: './tor-portfolio-linkages.component.html',
   styleUrls: ['./tor-portfolio-linkages.component.scss']
 })
-export class TorPortfolioLinkagesComponent {
-  constructor(public typeOneReportSE: TypeOneReportService){
+export class TorPortfolioLinkagesComponent implements OnDestroy {
+  constructor(public typeOneReportSE: TypeOneReportService) {
     this.typeOneReportSE.currentBiPage = 5;
     this.typeOneReportSE.sanitizeUrl();
   }

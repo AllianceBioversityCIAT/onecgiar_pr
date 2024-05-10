@@ -15,7 +15,7 @@ export class StepN4ReferenceMaterialLinksComponent {
     this.body.ipsr_materials.push(new IpsrpictureStep4());
   }
   delete(index){
-   
+
     this.body.ipsr_materials.splice(index, 1);;
   }
   addReferenceDescription(){

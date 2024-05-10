@@ -9,7 +9,7 @@ describe('ActionAreaOutcomeComponent', () => {
   let component: ActionAreaOutcomeComponent;
   let fixture: ComponentFixture<ActionAreaOutcomeComponent>;
   let mockApiService: any;
-  let mockResponse = {
+  const mockResponse = {
     systemTrasnformation: [
       {
         outcomeSMOcode: 'outcomeSMOcode',
@@ -40,9 +40,9 @@ describe('ActionAreaOutcomeComponent', () => {
         readOnly: false
       }
     }
-    
+
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         ActionAreaOutcomeComponent ,
         PrFieldHeaderComponent
       ],
@@ -105,11 +105,11 @@ describe('ActionAreaOutcomeComponent', () => {
         { targetId: 3, impactAreaId: 2, name: 'Indicator 3' },
         { targetId: 4, impactAreaId: 2, name: 'Indicator 4' },
       ];
-  
+
       component.allImpactAreaIndicators = mockAllImpactAreaIndicators;
-  
+
       const filter = component.filterImpactAreaIndicatorsByImpactAreaID(1);
-  
+
       expect(filter.length).toBe(2);
       expect(filter).toEqual([
         { targetId: 1, impactAreaId: 1, name: 'Indicator 1' },
@@ -126,9 +126,9 @@ describe('ActionAreaOutcomeComponent', () => {
         { targetId: 2 },
         { targetId: 3 },
       ];
-  
+
       component.removeOption(optionToRemove);
-  
+
       expect(component.body.length).toBe(2);
       expect(component.body).toEqual([
         { targetId: 2 },
@@ -139,29 +139,29 @@ describe('ActionAreaOutcomeComponent', () => {
 
   describe('selectImpactArea()', () => {
     it('should select impact area', () => {
-      let impactAreaItem = { id: 1, selected: undefined };
+      const impactAreaItem = { id: 1, selected: undefined };
       component.impactAreasData = [
-        { 
-          id: 1, 
+        {
+          id: 1,
           selected: false ,
           imageRoute: '',
            color: '',
            name: ''
         },
       ];
-  
+
       component.selectImpactArea(impactAreaItem);
-  
+
       expect(impactAreaItem.selected).toBeTruthy();
       expect(component.currentImpactAreaID).toBe(impactAreaItem.id);
     });
 
     it('should not select impact area if rolesSE.readOnly is true', () => {
       mockApiService.rolesSE.readOnly = true;
-      let impactAreaItem = { id: 1, selected: undefined };
+      const impactAreaItem = { id: 1, selected: undefined };
 
       component.selectImpactArea(impactAreaItem);
-  
+
       expect(impactAreaItem.selected).toBeFalsy();
       expect(component.currentImpactAreaID).toBeNull();
     });

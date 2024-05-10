@@ -206,11 +206,11 @@ describe('PartnersRequestComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(component.requesting).toBeFalsy();
       expect(mockApiService.dataControlSE.showPartnersRequest).toBeFalsy();
-      expect(spyShow).toHaveBeenCalledWith({ 
-        id: 'partners-error', 
-        title: 'Error when requesting partner', 
-        description: '', 
-        status: 'error' 
+      expect(spyShow).toHaveBeenCalledWith({
+        id: 'partners-error',
+        title: 'Error when requesting partner',
+        description: '',
+        status: 'error'
       });
     });
   });

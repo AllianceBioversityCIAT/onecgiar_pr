@@ -14,7 +14,7 @@ describe('TocInitiativeOutputSectionComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         TocInitiativeOutputSectionComponent,
         TocInitiativeOutComponent,
         PrFieldHeaderComponent,

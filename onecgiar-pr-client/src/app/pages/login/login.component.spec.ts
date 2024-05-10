@@ -22,7 +22,7 @@ describe('LoginComponent', () => {
   let mockRouter: any;
   let mockRolesService: any;
   let mockCustomizedAlertsFeService: any;
-  let mockuserAuthResponse = {
+  const mockuserAuthResponse = {
     token: 'token',
     user: 'user'
   }

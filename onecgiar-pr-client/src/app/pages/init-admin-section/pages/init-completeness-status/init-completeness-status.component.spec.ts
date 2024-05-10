@@ -21,7 +21,7 @@ describe('InitCompletenessStatusComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         InitCompletenessStatusComponent,
         GlobalCompletenessStatusComponent,
         FilterInitWithRoleCoordAndLeadPipe,

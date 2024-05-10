@@ -21,7 +21,7 @@ describe('IpsrContributorsTocComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         IpsrContributorsTocComponent,
         PrFieldHeaderComponent,
         PrMultiSelectComponent
@@ -47,9 +47,9 @@ describe('IpsrContributorsTocComponent', () => {
   describe('ngOnInit', () => {
     it('should call GET_AllWithoutResults on ngOnInit', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllWithoutResults');
-  
+
       component.ngOnInit();
-  
+
       expect(spy).toHaveBeenCalled();
     });
   });
@@ -57,9 +57,9 @@ describe('IpsrContributorsTocComponent', () => {
   describe('GET_AllWithoutResults', () => {
     it('should call GET_AllWithoutResults on ngOnInit', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllWithoutResults');
-  
+
       component.GET_AllWithoutResults();
-  
+
       expect(spy).toHaveBeenCalled();
       expect(component.contributingInitiativesList).toEqual(mockResponse)
     });
@@ -67,17 +67,17 @@ describe('IpsrContributorsTocComponent', () => {
 
   describe('getcontributingInitiativesList', () => {
     it('getcontributingInitiativesList should filter out the current initiative', () => {
-      component.contributorsBody.result_toc_result = { 
+      component.contributorsBody.result_toc_result = {
         initiative_id: 1,
-        planned_result: false, 
-        official_code: 'code', 
-        short_name: 'name', 
+        planned_result: false,
+        official_code: 'code',
+        short_name: 'name',
         result_toc_results: []
       };
       component.contributingInitiativesList = mockResponse;
-  
+
       const result = component.getcontributingInitiativesList;
-  
+
       expect(result).toEqual([]);
     });
   });
@@ -85,13 +85,13 @@ describe('IpsrContributorsTocComponent', () => {
   describe('toggleActiveContributor', () => {
     it('toggleActiveContributor should toggle is_active property', () => {
       const item = { is_active: false };
-  
+
       component.toggleActiveContributor(item);
-  
+
       expect(item.is_active).toBeTruthy();
-  
+
       component.toggleActiveContributor(item);
-  
+
       expect(item.is_active).toBeFalsy();
     });
   })

@@ -1,15 +1,13 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-alert-global-info',
   templateUrl: './alert-global-info.component.html',
   styleUrls: ['./alert-global-info.component.scss']
 })
-export class AlertGlobalInfoComponent implements OnInit {
+export class AlertGlobalInfoComponent {
   @Input() className?: string;
   @Input() inlineStyles?: string;
 
   constructor() {}
-
-  ngOnInit(): void {}
 }

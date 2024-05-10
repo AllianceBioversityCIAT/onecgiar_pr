@@ -73,12 +73,12 @@ describe('ResultLevelService', () => {
   });
 
   describe('removeResultTypes()', () => {
-    it('should remove result types with specified ids', () => {       
+    it('should remove result types with specified ids', () => {
       const list = [
         { id: 1, result_type: [{ id: 10 }, { id: 11 }] },
         { id: 3, result_type: [{ id: 10 }, { id: 11 }] },
       ];
-  
+
       service.removeResultTypes(list);
 
       expect(list[0].result_type).toEqual([{ id: 10 }, { id: 11 }]);
