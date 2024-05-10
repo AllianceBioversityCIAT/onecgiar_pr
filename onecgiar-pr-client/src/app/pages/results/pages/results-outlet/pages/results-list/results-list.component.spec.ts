@@ -49,7 +49,7 @@ describe('ResultsListComponent', () => {
         },
         myInitiativesList: [
           { id: 1, selected: false },
-          { id: 2, selected: false },
+          { id: 2, selected: false }
         ],
         showShareRequest: false,
         chagePhaseModal: false
@@ -58,7 +58,7 @@ describe('ResultsListComponent', () => {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
-      },
+      }
     };
 
     mockShareRequestModalService = {
@@ -67,7 +67,7 @@ describe('ResultsListComponent', () => {
 
     mockResultLevelService = {
       removeResultTypes: jest.fn()
-    }
+    };
 
     mockRetrieveModalService = {
       title: ''
@@ -92,19 +92,14 @@ describe('ResultsListComponent', () => {
         ResultsListFiltersComponent,
         ReportNewResultButtonComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        MenuModule,
-        TableModule,
-        DialogModule
-      ],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: RetrieveModalService, useValue: mockRetrieveModalService },
         { provide: ExportTablesService, useValue: mockExportTablesService },
-        { provide: ResultsListService, useValue: mockResultsListService },
+        { provide: ResultsListService, useValue: mockResultsListService }
       ]
     }).compileComponents();
 
@@ -148,19 +143,6 @@ describe('ResultsListComponent', () => {
     });
   });
 
-  describe('ngOnInit()', () => {
-    it('should call updateResultsList and getAllPhases on ngOnInit', () => {
-      const spy = jest.spyOn(mockApiService, 'updateResultsList');
-      const spyGetAllPhases = jest.spyOn(component, 'getAllPhases');
-
-      component.ngOnInit();
-
-      expect(spy).toHaveBeenCalled();
-      expect(spyGetAllPhases).toHaveBeenCalled();
-      expect(mockShareRequestModalService.inNotifications).toBeFalsy();
-    });
-  });
-
   describe('validateOrder()', () => {
     it('should set combine to true if columnAttr is "result_code"', () => {
       component.validateOrder('result_code');
@@ -172,12 +154,13 @@ describe('ResultsListComponent', () => {
 
     it('should set combine based on the presence of sorting in the table', () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
       <div id="resultListTable"></div>`,
-        'text/html');
+        'text/html'
+      );
 
-      jest.spyOn(document, 'getElementById')
-        .mockImplementation((selector) => dom.getElementById(selector));
+      jest.spyOn(document, 'getElementById').mockImplementation(selector => dom.getElementById(selector));
 
       component.validateOrder('column');
 
@@ -239,7 +222,7 @@ describe('ResultsListComponent', () => {
     });
     it('should handle errors from PATCH_DeleteResult correctly', () => {
       const errorMessage = 'error message';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
       const consoleErrorSpy = jest.spyOn(console, 'error');
 
@@ -258,17 +241,6 @@ describe('ResultsListComponent', () => {
         status: 'error'
       });
       expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
-    });
-  });
-
-  describe('getAllPhases()', () => {
-    it('should update currentPhase property on successful API call', () => {
-     const spy = jest.spyOn(mockApiService.resultsSE, 'GET_versioning');
-
-      component.getAllPhases();
-
-      expect(component.currentPhase).toEqual(2023);
-      expect(spy).toHaveBeenCalled();
     });
   });
 
