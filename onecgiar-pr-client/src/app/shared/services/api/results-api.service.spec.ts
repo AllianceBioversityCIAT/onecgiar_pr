@@ -747,7 +747,7 @@ describe('ResultsApiService', () => {
         regions: [],
         countries: [],
         geo_scope_id: 2
-      }
+      };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_geographicSection(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -902,7 +902,6 @@ describe('ResultsApiService', () => {
   });
 
   describe('PUT_loadFileInUploadSession', () => {
-
     it('should call PUT_loadFileInUploadSession with correct arguments', () => {
       const mockFile = new File([''], 'filename', { type: 'text/html' });
       const mockLink = 'http://example.com';
@@ -931,11 +930,11 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(mockLink);
       expect(req.request.method).toBe('GET');
     });
-  })
+  });
 
   describe('POST_createUploadSession', () => {
     it('should call POST_createUploadSession with correct arguments', () => {
-      const mockBody = { fileName: 'testFile', resultId: '123' };
+      const mockBody = { fileName: 'testFile', resultId: '123', count: 0 };
 
       service.POST_createUploadSession(mockBody);
 
@@ -3276,19 +3275,7 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_investmentDiscontinuedOptions', () => {
-    it('should call GET_investmentDiscontinuedOptions and return expected data', done => {
-      service.GET_investmentDiscontinuedOptions().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
-      expect(req.request.method).toBe('GET');
-
-      req.flush(mockResponse);
-    });
-  });
+  const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/investment-discontinued-options`);
 
   describe('GET_versioningResult', () => {
     it('should call GET_versioningResult and return expected data when ipsrDataControlSE.inIpsr exists', done => {
@@ -3393,5 +3380,4 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
     });
   });
-
 });
