@@ -25,8 +25,8 @@ export class StepN4AddPartnerComponent {
   onAddPartner() {
     this.requesting = true;
 
-    this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe(
-      ({ response }) => {
+    this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe({
+      next: ({ response }) => {
         response.institution.institutions_type_name = response?.institution?.obj_institutions?.obj_institution_type_code?.name;
         response.institution.institutions_name = response?.institution?.obj_institutions?.name;
         this.requesting = false;
@@ -34,16 +34,15 @@ export class StepN4AddPartnerComponent {
         this.visible = false;
         this.api.alertsFe.show({ id: 'Partner', title: `Partner has been added.`, status: 'success' });
       },
-      err => {
+      error: err => {
         this.api.alertsFe.show({ id: 'Partner-error', title: 'Error when add partner', description: '', status: 'error' });
         this.requesting = false;
         this.visible = false;
       }
-    );
+    });
   }
 
   cleanObject() {
-    //('cleanForm');
     this.showForm = false;
     this.partnerBody = new AddPartnerBody();
     setTimeout(() => {

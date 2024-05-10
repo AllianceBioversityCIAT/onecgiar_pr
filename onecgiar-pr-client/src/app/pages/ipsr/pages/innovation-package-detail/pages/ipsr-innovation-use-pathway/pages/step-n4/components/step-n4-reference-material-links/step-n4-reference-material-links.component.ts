@@ -9,14 +9,17 @@ import { RolesService } from '../../../../../../../../../../shared/services/glob
 })
 export class StepN4ReferenceMaterialLinksComponent {
   @Input() body = new IpsrStep4Body();
+
   constructor(public rolesSE: RolesService) {}
 
   addItem() {
     this.body.ipsr_materials.push(new IpsrpictureStep4());
   }
+
   delete(index) {
     this.body.ipsr_materials.splice(index, 1);
   }
+
   addReferenceDescription() {
     return `
       <ul>
