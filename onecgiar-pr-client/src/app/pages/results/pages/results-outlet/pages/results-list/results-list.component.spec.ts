@@ -44,6 +44,8 @@ describe('ResultsListComponent', () => {
         currentResultId: 1
       },
       dataControlSE: {
+        getCurrentPhases: () => {},
+        reportingCurrentPhase: { phaseYear: 2024 },
         currentResult: {
           phase_year: 2023
         },
