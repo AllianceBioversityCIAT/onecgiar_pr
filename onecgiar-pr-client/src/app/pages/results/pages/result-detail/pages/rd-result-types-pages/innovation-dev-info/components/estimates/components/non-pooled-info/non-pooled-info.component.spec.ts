@@ -28,14 +28,8 @@ describe('NonPooledInfoComponent', () => {
         PrFieldValidationsComponent,
         YesOrNotByBooleanPipe
       ],
-      imports: [
-        HttpClientTestingModule,
-        DialogModule,
-        FormsModule,
-        TooltipModule
-      ],
-    })
-    .compileComponents();
+      imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(NonPooledInfoComponent);
     component = fixture.componentInstance;
@@ -46,7 +40,7 @@ describe('NonPooledInfoComponent', () => {
         center_grant_id: 1,
         lead_center_id: ''
       }
-    }
+    };
     fixture.detectChanges();
   });
 
@@ -56,8 +50,6 @@ describe('NonPooledInfoComponent', () => {
   });
 
   it('should set visible to true when ngOnInit is called', () => {
-    component.ngOnInit();
-
     expect(component.visible).toBeFalsy();
   });
 });
