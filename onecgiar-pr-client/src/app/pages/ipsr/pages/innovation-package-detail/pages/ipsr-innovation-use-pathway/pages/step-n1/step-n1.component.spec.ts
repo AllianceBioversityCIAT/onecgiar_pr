@@ -119,7 +119,8 @@ describe('StepN1Component', () => {
       },
       rolesSE: {
         readOnly: false
-      }
+      },
+      GETInnovationPackageDetail: jest.fn()
     };
 
     mockRouter = {
@@ -242,14 +243,12 @@ describe('StepN1Component', () => {
   describe('onSaveSection()', () => {
     it('should call convertOrganizationsTosave, should call getSectionInformation on PATCHInnovationPathwayByStepOneResultId response', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
-      const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
       const PATCHInnovationPathwayByStepOneResultIdSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/ipsr/list/innovation-list');
       expect(PATCHInnovationPathwayByStepOneResultIdSpy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
@@ -332,7 +331,7 @@ describe('StepN1Component', () => {
       );
       jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      await component.requestEvent();
+      component.requestEvent();
 
       const alertDiv = dom.querySelector('.alert-event');
       const alertDiv2 = dom.querySelector('.alert-event-2');
