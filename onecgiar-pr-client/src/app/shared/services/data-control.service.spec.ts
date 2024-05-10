@@ -6,12 +6,14 @@ jest.useFakeTimers();
 describe('DataControlService', () => {
   let service: DataControlService;
   let titleServiceMock: any;
+  let resultsSE: any;
 
   beforeEach(() => {
     titleServiceMock = {
       setTitle: jest.fn()
     };
-    service = new DataControlService(titleServiceMock); // Add the missing argument here
+    resultsSE = {};
+    service = new DataControlService(titleServiceMock, resultsSE); // Add the missing argument here
   });
 
   describe('validateBody', () => {
@@ -53,7 +55,7 @@ describe('DataControlService', () => {
       const promise = service.listenTextTenSeconds(text);
       jest.runAllTimers();
 
-      await expect(promise).rejects.toBe('error');
+      await expect(promise).rejects.toStrictEqual(new Error('Timeout after 10 seconds'));
     });
   });
 
