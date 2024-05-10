@@ -7,15 +7,16 @@ import {
   ReplicableConfigInterface,
   ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
-import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
-import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
-import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
-import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
+import { ResultsTocResultIndicatorsRepository } from './repositories/results-toc-results-indicators.repository';
+import { ResultsTocImpactAreaTargetRepository } from './repositories/result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from './repositories/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from './repositories/results-sdg-targets.respository';
+import { ResultsActionAreaOutcomeRepository } from './repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './repositories/result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
+import { ResultsTocResultIndicatorsService } from './results-toc-result-indicators.service';
 
 @Injectable()
 export class ResultsTocResultRepository
@@ -31,12 +32,13 @@ export class ResultsTocResultRepository
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsTocResultIndicatorRepository: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
     private readonly _resultsTocSdgTargetRepository: ResultsTocSdgTargetRepository,
     private readonly _resultsSdgTargetRepository: ResultsSdgTargetRepository,
     private readonly _resultActionAreaRepository: ResultsActionAreaOutcomeRepository,
     private readonly _resultTocIndicatorTargetRepository: ResultsTocTargetIndicatorRepository,
+    private readonly _resultsTocResultIndicators: ResultsTocResultIndicatorsService,
   ) {
     super(ResultsTocResult, dataSource.createEntityManager());
   }
@@ -1520,29 +1522,30 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveInditicatorsContributing(
+  async saveInditicatorsContributingV1(
     targetsIndicator: any[],
     id_result_toc_result?: number,
   ) {
     try {
       if (id_result_toc_result) {
-        await this._resultsTocResultIndicator.update(
+        await this._resultsTocResultIndicatorRepository.update(
           { results_toc_results_id: id_result_toc_result },
           { is_active: false },
         );
       }
 
       for (const itemIndicator of targetsIndicator) {
-        const targetIndicators = await this._resultsTocResultIndicator.findOne({
-          where: {
-            results_toc_results_id: id_result_toc_result,
-            toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
-          },
-        });
+        const targetIndicators =
+          await this._resultsTocResultIndicatorRepository.findOne({
+            where: {
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+            },
+          });
 
         if (targetIndicators) {
           targetIndicators.is_active = true;
-          await this._resultsTocResultIndicator.update(
+          await this._resultsTocResultIndicatorRepository.update(
             {
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
@@ -1607,7 +1610,7 @@ export class ResultsTocResultRepository
           }
         } else {
           const resultTocResultIndicator =
-            await this._resultsTocResultIndicator.save({
+            await this._resultsTocResultIndicatorRepository.save({
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
@@ -2212,7 +2215,7 @@ select *
 
             // * Save Indicators
             if (toc?.indicators) {
-              await this.saveInditicatorsContributing(
+              await this._resultsTocResultIndicators.saveIndicatorContributing(
                 toc?.indicators,
                 rtrExist?.result_toc_result_id,
               );
@@ -2312,7 +2315,7 @@ select *
 
     // * Save Indicators
     if (toc?.indicators) {
-      await this.saveInditicatorsContributing(
+      await this._resultsTocResultIndicators.saveIndicatorContributing(
         toc?.indicators,
         rtrExist?.result_toc_result_id,
       );

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultIndicatorTarget } from './entities/result-toc-result-target-indicators.entity';
-import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { ResultIndicatorTarget } from '../entities/result-toc-result-target-indicators.entity';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsTocTargetIndicatorRepository
