@@ -29,4 +29,9 @@ describe('FilterByTextPipe', () => {
     const list = [{ full_name: 'Test' }, { full_name: 'Example' }];
     expect(pipe.transform(list, 'NoMatch')).toEqual([]);
   });
+
+  it('should skip items with no full_name', () => {
+    const list = [{ full_name: 'Test' }, { full_name: null }, {}];
+    expect(pipe.transform(list, 'Test')).toEqual([{ full_name: 'Test' }]);
+  });
 });
