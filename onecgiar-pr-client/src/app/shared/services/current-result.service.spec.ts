@@ -80,4 +80,38 @@ describe('CurrentResultService', () => {
       status: 'error'
     });
   });
+
+  it('should handle is_phase_open = 1 when getting result by id', async () => {
+    const response = {
+      result_level_name: 'level1',
+      result_level_id: 'id1',
+      result_type_id: 'type1',
+      is_phase_open: 1,
+      status_id: 2,
+      is_discontinued: true
+    };
+
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    await service.GET_resultById();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(true);
+  });
+
+  it('should handle is_phase_open = 1 and status_id = 1 when getting result by id', async () => {
+    const response = {
+      result_level_name: 'level1',
+      result_level_id: 'id1',
+      result_type_id: 'type1',
+      is_phase_open: 1,
+      status_id: 1,
+      is_discontinued: false
+    };
+
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    await service.GET_resultById();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(false);
+  });
 });
