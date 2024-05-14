@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-interface alertOptions {
+export interface alertOptions {
   id;
   title;
   description?: string;
