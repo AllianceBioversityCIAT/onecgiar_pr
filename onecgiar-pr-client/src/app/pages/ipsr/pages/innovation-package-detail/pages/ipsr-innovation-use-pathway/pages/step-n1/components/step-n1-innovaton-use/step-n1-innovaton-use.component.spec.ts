@@ -189,7 +189,11 @@ describe('StepN1InnovatonUseComponent', () => {
   });
 
   it('should return a list of institution_sub_type_id from body.innovatonUse.organization', () => {
-    component.body.innovatonUse.organization = [{ institution_sub_type_id: 1 }, { institution_sub_type_id: 2 }, { institution_sub_type_id: 3 }] as any;
+    component.body.innovatonUse.organization = [
+      { institution_sub_type_id: 1 },
+      { institution_sub_type_id: 2 },
+      { institution_sub_type_id: 3 }
+    ] as any;
 
     const subTypes = component.getAllSubTypes;
 

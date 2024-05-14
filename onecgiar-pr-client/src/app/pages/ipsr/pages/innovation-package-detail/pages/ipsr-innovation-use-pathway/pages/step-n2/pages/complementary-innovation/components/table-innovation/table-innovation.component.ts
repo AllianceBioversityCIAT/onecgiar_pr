@@ -54,7 +54,12 @@ export class TableInnovationComponent {
   @Output() saveedit = new EventEmitter<any>();
   @Output() cancelInnovation = new EventEmitter<any>();
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public manageInnovationsListSE: ManageInnovationsListService, private router: Router) {}
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public manageInnovationsListSE: ManageInnovationsListService,
+    private router: Router
+  ) {}
 
   selectInnovation(result: ComplementaryInnovation) {
     result.selected = true;
@@ -78,8 +83,10 @@ export class TableInnovationComponent {
       this.api.resultsSE.GETComplementaryById(id).subscribe(resp => {
         this.complementaries = false;
         this.selectComplementary = [];
-        this.informationComplentary.projects_organizations_working_on_innovation = resp['response']['findResultComplementaryInnovation']['projects_organizations_working_on_innovation'];
-        this.informationComplentary.specify_projects_organizations = resp['response']['findResultComplementaryInnovation']['specify_projects_organizations'];
+        this.informationComplentary.projects_organizations_working_on_innovation =
+          resp['response']['findResultComplementaryInnovation']['projects_organizations_working_on_innovation'];
+        this.informationComplentary.specify_projects_organizations =
+          resp['response']['findResultComplementaryInnovation']['specify_projects_organizations'];
         this.informationComplentary.title = resp['response']['findResult']['title'];
         this.informationComplentary.description = resp['response']['findResult']['description'];
         this.informationComplentary.short_title = resp['response']['findResultComplementaryInnovation']['short_title'];
@@ -120,18 +127,32 @@ export class TableInnovationComponent {
     });
   }
 
-  Ondelete(id) {
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to remove this complementary innovation?`, description: ``, status: 'success', confirmText: 'Yes, delete' }, () => {
-      this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe({
-        next: resp => {
-          this.status = false;
-          this.saveedit.emit(true);
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
-        }
-      });
-    });
+  Ondelete(id, callback?) {
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to remove this complementary innovation?`,
+        description: ``,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe({
+          next: resp => {
+            this.status = false;
+            this.saveedit.emit(true);
+          },
+          error: err => {
+            this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+          },
+          complete: () => {
+            if (callback) {
+              callback();
+            }
+          }
+        });
+      }
+    );
   }
 }
 
