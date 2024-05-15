@@ -36,7 +36,7 @@ describe('ResultCreatorComponent', () => {
   const mockResponsePOST_resultCreateHeader = {
     result_code: 1,
     version_id: 1
-  }
+  };
 
   beforeEach(async () => {
     mockApiService = {
@@ -57,16 +57,16 @@ describe('ResultCreatorComponent', () => {
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
         myInitiativesList: myInitiativesList,
-        validateBody: jest.fn(),
+        validateBody: jest.fn()
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
         GET_FindResultsElastic: () => of(mockResponseGET_FindResultsElastic),
         POST_resultCreateHeader: () => of({ response: mockResponsePOST_resultCreateHeader }),
         POST_createWithHandle: () => of({ response: mockResponsePOST_resultCreateHeader }),
-        GET_mqapValidation: () => of({ response: { title: 'Title' } }),
+        GET_mqapValidation: () => of({ response: { title: 'Title' } })
       }
-    }
+    };
     mockResultLevelService = {
       cleanData: jest.fn(),
       resultBody: {
@@ -77,16 +77,14 @@ describe('ResultCreatorComponent', () => {
         handler: jest.fn()
       },
       updateResultsList: jest.fn(),
-      currentResultTypeList: [
-        { id: 1, name: 'Type1' },
-      ]
-    }
+      currentResultTypeList: [{ id: 1, name: 'Type1' }]
+    };
     mockPhasesService = {
       phases: {
         reporting: [{ id: 1 }],
-        ipsr: [{ name: 'ipsr' }],
-      },
-    }
+        ipsr: [{ name: 'ipsr' }]
+      }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -95,13 +93,9 @@ describe('ResultCreatorComponent', () => {
         ResultLevelButtonsComponent,
         SaveButtonComponent,
         RetrieveModalComponent,
-        AlertStatusComponent,
+        AlertStatusComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        DialogModule,
-        RouterTestingModule
-      ],
+      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule],
       providers: [
         ResultsApiService,
         {
@@ -115,25 +109,26 @@ describe('ResultCreatorComponent', () => {
         {
           provide: PhasesService,
           useValue: mockPhasesService
-        },
+        }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultCreatorComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
-
   });
 
   describe('ngOnInit', () => {
     it('should initialize component and update data correctly', () => {
-      component.resultLevelSE.resultLevelList = [{
-        id: 1,
-        selected: true,
-        name: 'name',
-        description: 'description',
-        result_type: []
-      }];
+      component.resultLevelSE.resultLevelList = [
+        {
+          id: 1,
+          selected: true,
+          name: 'name',
+          description: 'description',
+          result_type: []
+        }
+      ];
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
       const spyCleanData = jest.spyOn(mockResultLevelService, 'cleanData');
       const spyShow = jest.spyOn(mockApiService.alertsFs, 'show');
@@ -181,9 +176,10 @@ describe('ResultCreatorComponent', () => {
     it('should set allInitiatives correctly if user is an admin', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
 
-      component.GET_AllInitiatives();
-      expect(component.allInitiatives).toEqual(myInitiativesList);
-      expect(spy).toHaveBeenCalled();
+      component.GET_AllInitiatives(() => {
+        expect(component.allInitiatives).toEqual(myInitiativesList);
+        expect(spy).toHaveBeenCalled();
+      });
     });
 
     it('should not set allInitiatives if user is not an admin', () => {
@@ -221,7 +217,7 @@ describe('ResultCreatorComponent', () => {
     it('should return "Title..." if resultTypeName is undefined', () => {
       mockResultLevelService.resultBody.result_type_id = undefined;
       mockResultLevelService.currentResultTypeList = undefined;
-      const resultTypeNamePlaceholder = component.resultTypeNamePlaceholder
+      const resultTypeNamePlaceholder = component.resultTypeNamePlaceholder;
 
       expect(resultTypeNamePlaceholder).toBe('Title...');
     });
@@ -281,14 +277,16 @@ describe('ResultCreatorComponent', () => {
     it('should set depthSearchList and exactTitleFound on successful API response', () => {
       const title = 'title 1';
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic');
-      const mock = [{
-        id: 1,
-        phase: {
+      const mock = [
+        {
           id: 1,
-        },
-        title: "title",
-        version_id: 1,
-      }];
+          phase: {
+            id: 1
+          },
+          title: 'title',
+          version_id: 1
+        }
+      ];
 
       component.getAllPhases();
       component.depthSearch(title);
@@ -349,14 +347,12 @@ describe('ResultCreatorComponent', () => {
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();
-      expect(navigateSpy).toHaveBeenCalledWith(
-        [`/result/result-detail/1/general-information`],
-        { queryParams: { phase: 1 } }
-      );
+      expect(navigateSpy).toHaveBeenCalledWith([`/result/result-detail/1/general-information`], { queryParams: { phase: 1 } });
       expect(spyAlertShow).toHaveBeenCalled();
     });
     it('should show error message if POST_resultCreateHeader call fails', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_resultCreateHeader')
+      const spy = jest
+        .spyOn(mockApiService.resultsSE, 'POST_resultCreateHeader')
         .mockReturnValue(throwError({ error: { message: 'Test error message' } }));
       const spyAlertShow = jest.spyOn(mockApiService.alertsFe, 'show');
       component.onSaveSection();
@@ -366,7 +362,7 @@ describe('ResultCreatorComponent', () => {
         id: 'reportResultError',
         title: 'Error!',
         description: 'Test error message',
-        status: 'error',
+        status: 'error'
       });
     });
     it('should call POST_createWithHandle when result_type_id is 6', () => {
@@ -379,13 +375,14 @@ describe('ResultCreatorComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(navigateSpy).toHaveBeenCalledWith(['/result/result-detail/1/general-information'], {
-        queryParams: { phase: 1 },
+        queryParams: { phase: 1 }
       });
     });
     it('should show error message if POST_createWithHandle call fails', () => {
       mockResultLevelService.resultBody.result_type_id = 6;
       TestBed.inject(ResultLevelService);
-      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createWithHandle')
+      const spy = jest
+        .spyOn(mockApiService.resultsSE, 'POST_createWithHandle')
         .mockReturnValue(throwError({ error: { message: 'Test error message' } }));
       const spyAlertShow = jest.spyOn(mockApiService.alertsFe, 'show');
       component.onSaveSection();
@@ -395,7 +392,7 @@ describe('ResultCreatorComponent', () => {
         id: 'reportResultError',
         title: 'Error!',
         description: 'Test error message',
-        status: 'error',
+        status: 'error'
       });
     });
   });
@@ -404,7 +401,7 @@ describe('ResultCreatorComponent', () => {
       mockResultLevelService.resultBody = {
         result_type_id: 1,
         result_level_id: 2,
-        result_name: 'result_name',
+        result_name: 'result_name'
       };
 
       const result = component.valdiateNormalFields();
@@ -415,8 +412,8 @@ describe('ResultCreatorComponent', () => {
       mockResultLevelService.resultBody = {
         initiative_id: 1,
         result_level_id: 2,
-        result_name: 'result_name',
-      }
+        result_name: 'result_name'
+      };
 
       const result = component.valdiateNormalFields();
 
@@ -427,8 +424,8 @@ describe('ResultCreatorComponent', () => {
       mockResultLevelService.resultBody = {
         initiative_id: 1,
         result_type_id: 2,
-        result_name: 'result_name',
-      }
+        result_name: 'result_name'
+      };
 
       const result = component.valdiateNormalFields();
 
@@ -439,8 +436,8 @@ describe('ResultCreatorComponent', () => {
       mockResultLevelService.resultBody = {
         initiative_id: 1,
         result_type_id: 2,
-        result_level_id: 1,
-      }
+        result_level_id: 1
+      };
 
       const result = component.valdiateNormalFields();
 
@@ -452,8 +449,8 @@ describe('ResultCreatorComponent', () => {
         initiative_id: 1,
         result_type_id: 2,
         result_level_id: 1,
-        result_name: 'result_name',
-      }
+        result_name: 'result_name'
+      };
 
       const result = component.valdiateNormalFields();
 
@@ -493,12 +490,11 @@ describe('ResultCreatorComponent', () => {
         id: 'reportResultSuccess',
         title: 'Metadata successfully retrieved',
         description: 'Title: Title',
-        status: 'success',
+        status: 'success'
       });
     });
     it('should show error message if GET_mqapValidation call fails', () => {
-      jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation')
-        .mockReturnValue(throwError({ error: { message: 'Test error message' } }));
+      jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation').mockReturnValue(throwError({ error: { message: 'Test error message' } }));
       const showSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.GET_mqapValidation();
@@ -509,9 +505,8 @@ describe('ResultCreatorComponent', () => {
         id: 'reportResultError',
         title: 'Error!',
         description: 'Test error message',
-        status: 'error',
+        status: 'error'
       });
     });
   });
-
 });

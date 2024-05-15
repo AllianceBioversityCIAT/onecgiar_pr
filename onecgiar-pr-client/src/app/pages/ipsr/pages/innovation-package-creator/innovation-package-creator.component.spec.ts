@@ -26,7 +26,8 @@ describe('InnovationPackageCreatorComponent', () => {
   const myInitiativesList = [{ id: 1, name: 'Initiative 1' }];
   const mockPOSTResultInnovationPackageResponse = {
     newInnovationHeader: {
-      result_code: 1
+      result_code: 1,
+      version_id: 1
     }
   };
   const mockResponse = {
@@ -219,7 +220,9 @@ describe('InnovationPackageCreatorComponent', () => {
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalledWith(component.innovationPackageCreatorBody);
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(`/ipsr/detail/${mockPOSTResultInnovationPackageResponse.newInnovationHeader.result_code}`);
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(
+        `/ipsr/detail/${mockPOSTResultInnovationPackageResponse.newInnovationHeader.result_code}/general-information?phase=${mockPOSTResultInnovationPackageResponse.newInnovationHeader.version_id}`
+      );
       expect(spyShow).toHaveBeenCalledWith({
         id: 'ipsr-creator',
         title: 'Innovation package created',

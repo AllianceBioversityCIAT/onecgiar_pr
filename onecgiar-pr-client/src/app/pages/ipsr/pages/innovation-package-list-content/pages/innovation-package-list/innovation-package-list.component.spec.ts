@@ -20,6 +20,8 @@ import { InnovationPackageListFilterPipe } from './components/innovation-package
 import { UpdateIpsrResultModalComponent } from './components/update-ipsr-result-modal/update-ipsr-result-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { IpsrToUpdateFilterPipe } from './components/update-ipsr-result-modal/ipsr-to-update-filter.pipe';
+import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 
 describe('InnovationPackageListComponent', () => {
   let component: InnovationPackageListComponent;
@@ -29,7 +31,18 @@ describe('InnovationPackageListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [InnovationPackageListComponent, InnovationPackageCustomTableComponent, IpsrListFiltersComponent, PrButtonComponent, SectionHeaderComponent, InnovationPackageListFilterPipe, UpdateIpsrResultModalComponent, PrFieldHeaderComponent],
+      declarations: [
+        InnovationPackageListComponent,
+        IpsrToUpdateFilterPipe,
+        InnovationPackageCustomTableComponent,
+        ChangePhaseModalComponent,
+        IpsrListFiltersComponent,
+        PrButtonComponent,
+        SectionHeaderComponent,
+        InnovationPackageListFilterPipe,
+        UpdateIpsrResultModalComponent,
+        PrFieldHeaderComponent
+      ],
       providers: [
         ApiService,
         PhasesService,

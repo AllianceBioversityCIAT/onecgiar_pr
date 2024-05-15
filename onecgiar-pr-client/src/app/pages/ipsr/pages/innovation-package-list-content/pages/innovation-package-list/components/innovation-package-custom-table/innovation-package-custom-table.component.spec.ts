@@ -71,7 +71,7 @@ describe('InnovationPackageCustomTableComponent', () => {
   it('should call onDelete when "Delete" is selected', () => {
     const onDeleteSpy = jest.spyOn(component, 'onDelete');
 
-    component.itemsWithDelete[1].command();
+    component.itemsWithDelete[2].command();
 
     expect(onDeleteSpy).toHaveBeenCalled();
   });

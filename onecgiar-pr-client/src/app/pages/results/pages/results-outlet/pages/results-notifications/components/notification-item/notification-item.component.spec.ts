@@ -145,11 +145,14 @@ describe('NotificationItemComponent', () => {
 
   describe('resultUrl()', () => {
     it('should generate the correct result URL', () => {
-      const mockResultCode = 'ABC123';
+      const mockNotification = {
+        result_code: 'resultCode',
+        version_id:'1'
+      }
 
-      const result = component.resultUrl(mockResultCode);
+      const result = component.resultUrl(mockNotification);
 
-      expect(result).toBe(`/result/result-detail/${mockResultCode}`);
+      expect(result).toBe(`/result/result-detail/${mockNotification.result_code}/general-information?phase=${mockNotification.version_id}`);
     });
   });
 

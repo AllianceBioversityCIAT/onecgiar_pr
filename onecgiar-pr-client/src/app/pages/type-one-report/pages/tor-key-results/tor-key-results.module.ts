@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 
 import { TorKeyResultsRoutingModule } from './tor-key-results-routing.module';
 import { TorKeyResultsComponent } from './tor-key-results.component';
-import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 @NgModule({
   declarations: [TorKeyResultsComponent],

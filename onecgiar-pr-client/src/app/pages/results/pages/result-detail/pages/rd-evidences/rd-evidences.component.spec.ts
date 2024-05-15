@@ -9,7 +9,6 @@ import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-tex
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { EvidencesBody } from './model/evidencesBody.model';
 
 jest.useFakeTimers();
 
@@ -225,7 +224,7 @@ describe('RdEvidencesComponent', () => {
       component.evidencesBody.evidences = mockEvidences;
       jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession')
         .mockRejectedValue('Error from POST_createUploadSession');
-      const consoleSpy = jest.spyOn(console, 'log');
+      const consoleSpy = jest.spyOn(console, 'error');
 
       await component.loadAllFiles();
 
@@ -344,6 +343,8 @@ describe('RdEvidencesComponent', () => {
         poverty_tag_level: '3',
         evidences: [
           { link: null, is_sharepoint: false, file: null },
+          { link: null, is_sharepoint: false, file: null },
+          { link: null, is_sharepoint: false, file: null },
         ],
       };
 
@@ -361,6 +362,8 @@ describe('RdEvidencesComponent', () => {
         environmental_biodiversity_tag_level: '2',
         poverty_tag_level: '3',
         evidences: [
+          { link: null, is_sharepoint: true, file: null },
+          { link: null, is_sharepoint: true, file: null },
           { link: null, is_sharepoint: true, file: null },
         ],
       };
