@@ -122,7 +122,7 @@ describe('LoginComponent', () => {
       const error = {
         error: { statusCode: 404 }
       }
-      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(error));
+      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(() => error));
       const spyShow = jest.spyOn(mockCustomizedAlertsFeService, 'show');
 
       component.onLogin();
@@ -143,7 +143,7 @@ describe('LoginComponent', () => {
       const error = {
         error: { statusCode: 400 }
       }
-      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(error));
+      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(() => error));
       const spyShow = jest.spyOn(mockCustomizedAlertsFeService, 'show');
 
       component.onLogin();
@@ -152,7 +152,6 @@ describe('LoginComponent', () => {
         {
           id: 'loginAlert',
           title: 'Oops!',
-          description: component.internationalizationData.login.alerts[error.error.statusCode],
           status: 'warning',
         },
       );

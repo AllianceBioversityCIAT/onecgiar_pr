@@ -1,9 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
+import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
-import { RolesService } from 'src/app/shared/services/global/roles.service';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
+import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-step-n4-bilateral-investment-table',
@@ -14,7 +14,12 @@ export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
   showModal = false;
   isInitiative = true;
-  constructor(public rolesSE: RolesService, public manageRipUnitTimeSE: ManageRipUnitTimeService, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}
+  constructor(
+    public rolesSE: RolesService,
+    public manageRipUnitTimeSE: ManageRipUnitTimeService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService
+  ) {}
 
   ngOnInit(): void {
     setTimeout(() => {

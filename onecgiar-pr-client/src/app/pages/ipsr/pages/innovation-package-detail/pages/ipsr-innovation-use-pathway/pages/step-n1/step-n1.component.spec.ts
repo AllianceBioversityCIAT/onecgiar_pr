@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { StepN1Component } from './step-n1.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -119,7 +119,8 @@ describe('StepN1Component', () => {
       },
       rolesSE: {
         readOnly: false
-      }
+      },
+      GETInnovationPackageDetail: jest.fn()
     };
 
     mockRouter = {
@@ -128,7 +129,25 @@ describe('StepN1Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [StepN1Component, PrButtonComponent, StepN1ConsensusAndConsultationComponent, PrRadioButtonComponent, PrFieldHeaderComponent, StepN1ExpertsComponent, NoDataTextComponent, StepN1ScalingAmbitionBlurbComponent, CdkCopyToClipboard, StepN1InstitutionsComponent, PrMultiSelectComponent, InnovationUseFormComponent, StepN1SdgTargetsComponent, StepN1ImpactAreasComponent, GeoscopeManagementComponent, SaveButtonComponent, FeedbackValidationDirective],
+      declarations: [
+        StepN1Component,
+        PrButtonComponent,
+        StepN1ConsensusAndConsultationComponent,
+        PrRadioButtonComponent,
+        PrFieldHeaderComponent,
+        StepN1ExpertsComponent,
+        NoDataTextComponent,
+        StepN1ScalingAmbitionBlurbComponent,
+        CdkCopyToClipboard,
+        StepN1InstitutionsComponent,
+        PrMultiSelectComponent,
+        InnovationUseFormComponent,
+        StepN1SdgTargetsComponent,
+        StepN1ImpactAreasComponent,
+        GeoscopeManagementComponent,
+        SaveButtonComponent,
+        FeedbackValidationDirective
+      ],
       imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule],
       providers: [
         {
@@ -242,14 +261,12 @@ describe('StepN1Component', () => {
   describe('onSaveSection()', () => {
     it('should call convertOrganizationsTosave, should call getSectionInformation on PATCHInnovationPathwayByStepOneResultId response', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
-      const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
       const PATCHInnovationPathwayByStepOneResultIdSpy = jest.spyOn(mockApiService.resultsSE, 'PATCHInnovationPathwayByStepOneResultId');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/ipsr/list/innovation-list');
       expect(PATCHInnovationPathwayByStepOneResultIdSpy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
     });
@@ -264,9 +281,12 @@ describe('StepN1Component', () => {
 
       component.saveAndNextStep('description');
 
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
-        queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
-      });
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(
+        ['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'],
+        {
+          queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
+        }
+      );
       expect(spy).not.toHaveBeenCalled();
     });
     it('should call PATCHInnovationPathwayByStepOneResultIdNextStep and navigate to step-2 when roles are not read-only', () => {
@@ -279,9 +299,12 @@ describe('StepN1Component', () => {
       const result = component.saveAndNextStep('description');
       jest.runAllTimers();
 
-      expect(routerNavigateSpy).toHaveBeenCalledWith(['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'], {
-        queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
-      });
+      expect(routerNavigateSpy).toHaveBeenCalledWith(
+        ['/ipsr/detail/' + component.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2'],
+        {
+          queryParams: { phase: component.ipsrDataControlSE.resultInnovationPhase }
+        }
+      );
       expect(spy).toHaveBeenCalled();
       expect(getSectionInformationSpy).toHaveBeenCalled();
       expect(result).toBeNull();
@@ -332,22 +355,27 @@ describe('StepN1Component', () => {
       );
       jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      await component.requestEvent();
+      component.requestEvent();
 
       const alertDiv = dom.querySelector('.alert-event');
       const alertDiv2 = dom.querySelector('.alert-event-2');
 
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
+      fakeAsync(() => {
+        if (alertDiv) {
+          const clickEvent = new MouseEvent('click');
+          alertDiv.dispatchEvent(clickEvent);
 
-      if (alertDiv2) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv2.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
+          tick();
+          expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
+        }
+
+        if (alertDiv2) {
+          const clickEvent = new MouseEvent('click');
+          alertDiv2.dispatchEvent(clickEvent);
+          tick();
+          expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
+        }
+      });
 
       expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
     });

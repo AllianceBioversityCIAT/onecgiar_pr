@@ -86,11 +86,11 @@ export class InnovationPathwayController {
   saveComplementaryInnovation(
     @Param('resultId') resultId: string,
     @Body() createComplementaryInnovationDto: CreateComplementaryInnovationDto,
-    @UserToken() User: TokenDto,
+    @UserToken() user: TokenDto,
   ) {
     return this._innovationPathwayStepTwoService.saveComplementaryInnovation(
       +resultId,
-      User,
+      user,
       createComplementaryInnovationDto,
     );
   }

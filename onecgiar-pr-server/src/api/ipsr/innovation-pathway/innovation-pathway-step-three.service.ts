@@ -466,10 +466,6 @@ export class InnovationPathwayStepThreeService {
         },
       };
 
-      console.log(
-        '🚀 ~ InnovationPathwayStepThreeService ~ getStepThree ~ returdata:',
-        returdata,
-      );
       return {
         response: returdata,
         message: 'Successful response',

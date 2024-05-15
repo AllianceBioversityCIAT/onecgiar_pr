@@ -9,7 +9,7 @@ interface Wscols {
 })
 export class ExportTablesService {
   constructor(private customAlertService: CustomizedAlertsFeService) {}
-  exportExcel(list, fileName: string, wscols?: Wscols[]) {
+  exportExcel(list, fileName: string, wscols?: Wscols[], callback?) {
     try {
       import('xlsx').then(xlsx => {
         const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
@@ -17,13 +17,15 @@ export class ExportTablesService {
         const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
         const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
         this.saveAsExcelFile(excelBuffer, fileName);
+        callback && callback();
       });
     } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Erorr generating file', status: 'error' });
+      callback && callback();
     }
   }
 
-  exportMultipleSheetsExcel(list: any[], fileName: string, wscols?: Wscols[], tocToExport?: any[]) {
+  exportMultipleSheetsExcel(list: any[], fileName: string, wscols?: Wscols[], tocToExport?: any[], callback?) {
     try {
       import('xlsx').then(xlsx => {
         const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
@@ -35,9 +37,11 @@ export class ExportTablesService {
         const workbook = { Sheets: { data: worksheet, 'TOC indicators by result': tocsheet }, SheetNames: ['data', 'TOC indicators by result'] };
         const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
         this.saveAsExcelFile(excelBuffer, fileName);
+        callback();
       });
     } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
+      callback();
     }
   }
 

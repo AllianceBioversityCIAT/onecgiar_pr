@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { resultRouting, routingApp } from 'src/app/shared/routing/routing-data';
 import { ResultsComponent } from './results.component';
+import { resultRouting } from '../../shared/routing/routing-data';
 
 const routes: Routes = [
   {

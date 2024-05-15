@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { TypeOneReportService } from '../../../../../pages/type-one-report/type-one-report.service';
 
 @Component({
@@ -11,17 +11,16 @@ export class TorKrsOthersPrimaryImpactAreaComponent {
   @Input() result_code;
 
   getImpactAreasList(keyResultStoryData) {
-    //(this.resultIndex);
-    //(keyResultStoryData);
-    //(keyResultStoryData?.impact_area_id);
-    const impact_areas = JSON.parse(keyResultStoryData.impact_areas);
+    let impact_areas = [];
+    if (keyResultStoryData?.impact_areas) {
+      impact_areas = JSON.parse(keyResultStoryData.impact_areas);
+    }
     let text = '';
     impact_areas?.forEach(element => {
       text += `${element.nameImpact}${'; '}`;
     });
     text = text.substring(0, text.length - 2);
     text += '<br>';
-    //(text);
     return text;
   }
 

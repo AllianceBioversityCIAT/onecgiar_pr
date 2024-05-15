@@ -65,8 +65,8 @@ describe('TorTocDiagramsComponent', () => {
 
   it('should log error when getResultFolders throws an error', () => {
     const mockError = new Error('Error getting result folders');
-    jest.spyOn(apiService.endpointsSE, 'resultFolders').mockReturnValue(throwError(mockError));
-    const consoleSpy = jest.spyOn(console, 'log');
+    jest.spyOn(apiService.endpointsSE, 'resultFolders').mockReturnValue(throwError(() => mockError));
+    const consoleSpy = jest.spyOn(console, 'error');
 
     component.getResultFolders();
 

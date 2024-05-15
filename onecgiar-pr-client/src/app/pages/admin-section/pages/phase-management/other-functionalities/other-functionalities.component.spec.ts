@@ -29,13 +29,21 @@ describe('OtherFunctionalitiesComponent', () => {
 
   describe('execute', () => {
     it('should set showMassivePhaseShiftModal to true', () => {
-      // Arrange
-
-      // Act
       component.execute();
-
-      // Assert
       expect(component.api.dataControlSE.showMassivePhaseShiftModal).toBe(true);
+    });
+  });
+  describe('replicateBannerText', () => {
+    it('should return the correct string when replicateIPSR is true', () => {
+      component.replicateIPSR = true;
+      const result = component.replicateBannerText();
+      expect(result).toBe('Replicate all Innovation Packages from previous phase to the current active phase');
+    });
+
+    it('should return the correct string when replicateIPSR is false', () => {
+      component.replicateIPSR = false;
+      const result = component.replicateBannerText();
+      expect(result).toBe('Replicate all QAed result innovations from previous phase to the current active phase');
     });
   });
 });

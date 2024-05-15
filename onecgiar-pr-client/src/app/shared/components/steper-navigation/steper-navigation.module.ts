@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SteperNavigationComponent } from './steper-navigation.component';
 import { RouterModule } from '@angular/router';
-import { IpsrGreenCheckModule } from 'src/app/pages/ipsr/components/ipsr-green-check/ipsr-green-check.module';
+import { IpsrGreenCheckModule } from '../../../pages/ipsr/components/ipsr-green-check/ipsr-green-check.module';
 
 @NgModule({
   declarations: [SteperNavigationComponent],

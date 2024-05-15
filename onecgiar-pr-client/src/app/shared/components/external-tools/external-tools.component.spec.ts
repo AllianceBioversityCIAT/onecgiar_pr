@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ExternalToolsComponent } from './external-tools.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('ExternalToolsComponent', () => {
   let component: ExternalToolsComponent;
@@ -8,7 +9,8 @@ describe('ExternalToolsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ExternalToolsComponent]
+      declarations: [ExternalToolsComponent],
+      imports: [HttpClientModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ExternalToolsComponent);

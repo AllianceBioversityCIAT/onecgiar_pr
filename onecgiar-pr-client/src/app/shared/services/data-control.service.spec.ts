@@ -6,12 +6,14 @@ jest.useFakeTimers();
 describe('DataControlService', () => {
   let service: DataControlService;
   let titleServiceMock: any;
+  let resultsSE: any;
 
   beforeEach(() => {
     titleServiceMock = {
       setTitle: jest.fn()
-    }
-    service = new DataControlService(titleServiceMock)
+    };
+    resultsSE = {};
+    service = new DataControlService(titleServiceMock, resultsSE); // Add the missing argument here
   });
 
   describe('validateBody', () => {
@@ -53,18 +55,19 @@ describe('DataControlService', () => {
       const promise = service.listenTextTenSeconds(text);
       jest.runAllTimers();
 
-      await expect(promise).rejects.toBe('error');
+      await expect(promise).rejects.toStrictEqual(new Error('Timeout after 10 seconds'));
     });
   });
 
   describe('findClassTenSeconds', () => {
     it('should resolve with element when element is found', async () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="container"></div>`,
-      'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       const promise = service.findClassTenSeconds('container');
       jest.runAllTimers();
@@ -118,41 +121,42 @@ describe('DataControlService', () => {
     let dom;
     beforeEach(() => {
       parser = new DOMParser();
-      dom = parser.parseFromString(`
+      dom = parser.parseFromString(
+        `
       <div class="container">
         <div class="pr-input mandatory">
           <input/>
         </div>
         <div class="pr-select mandatory">
         </div>
-      </div>`, 'text/html');
+      </div>`,
+        'text/html'
+      );
     });
     it('should return true if htmlContainer is not found', () => {
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       const result = service.someMandatoryFieldIncomplete('.class');
       expect(result).toBeTruthy();
     });
     it('should return true if mandatory input has empty value', () => {
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-      jest.spyOn(document, 'querySelectorAll')
-        .mockImplementation(selector => dom.querySelectorAll(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
 
       const result = service.someMandatoryFieldIncomplete('.container');
       expect(result).toBe(true);
     });
     it('should return true if mandatory select is not complete', () => {
-      dom = parser.parseFromString(`
+      dom = parser.parseFromString(
+        `
       <div class="container">
         <div class="pr-select mandatory">
         </div>
-      </div>`, 'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-      jest.spyOn(document, 'querySelectorAll')
-        .mockImplementation(selector => dom.querySelectorAll(selector));
+      </div>`,
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
 
       const result = service.someMandatoryFieldIncomplete('.container');
       expect(result).toBe(true);
@@ -164,7 +168,8 @@ describe('DataControlService', () => {
     let dom;
     beforeEach(() => {
       parser = new DOMParser();
-      dom = parser.parseFromString(`
+      dom = parser.parseFromString(
+        `
       <div>
         <span class="pr_label"></span>
         <div class="container">
@@ -172,39 +177,39 @@ describe('DataControlService', () => {
             <div class="input-validation"></div>
           </div>
         </div>
-      </div>`, 'text/html');
+      </div>`,
+        'text/html'
+      );
     });
     it('should return true if htmlContainer is not found', () => {
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       const result = service.someMandatoryFieldIncompleteResultDetail('.class');
       expect(result).toBeTruthy();
     });
     it('should return true if inputs have missing values and populate fieldFeedbackList', () => {
       dom.querySelector('.pr_label').innerText = 'tag';
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-      jest.spyOn(document, 'querySelectorAll')
-        .mockImplementation(selector => dom.querySelectorAll(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
 
       const result = service.someMandatoryFieldIncompleteResultDetail('.container');
       expect(result).toBe(true);
       expect(service.fieldFeedbackList).toContain('tag');
     });
     it('should return true if selects are incomplete and populate fieldFeedbackList', () => {
-      dom = parser.parseFromString(`
+      dom = parser.parseFromString(
+        `
       <div>
         <div class="container">
           <span class="pr_label"></span>
           <div class="pr-field mandatory"></div>
         </div>
-      </div>`, 'text/html');
+      </div>`,
+        'text/html'
+      );
       dom.querySelector('.pr_label').innerText = 'tag';
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-      jest.spyOn(document, 'querySelectorAll')
-        .mockImplementation(selector => dom.querySelectorAll(selector));
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
 
       const result = service.someMandatoryFieldIncompleteResultDetail('.container');
       expect(result).toBe(true);
@@ -216,7 +221,7 @@ describe('DataControlService', () => {
     it('should set the title and currentSectionName', () => {
       const sectionName = 'Test Section';
       const title = 'Test Title';
-      const spy = jest.spyOn(titleServiceMock,'setTitle')
+      const spy = jest.spyOn(titleServiceMock, 'setTitle');
       service.detailSectionTitle(sectionName, title);
 
       expect(spy).toHaveBeenCalled();
@@ -224,7 +229,7 @@ describe('DataControlService', () => {
     });
     it('should set the title and currentSectionName to sectionName if title is not provided', () => {
       const sectionName = 'Test Section';
-      const spy = jest.spyOn(titleServiceMock,'setTitle')
+      const spy = jest.spyOn(titleServiceMock, 'setTitle');
       service.detailSectionTitle(sectionName);
 
       expect(spy).toHaveBeenCalled();
