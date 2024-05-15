@@ -24,7 +24,7 @@ export class UpdateInnovationPathwayDto {
   public is_not_diverse_justification!: string;
   public regions: regionsInterface[];
   public countries: countriesInterface[];
-  public scalig_ambition?: scaligAmbition;
+  public scalig_ambition?: ScaligAmbition;
 }
 
 export interface regionsInterface {
@@ -62,7 +62,7 @@ interface institutionsInterface {
   deliveries?: number[];
 }
 
-interface scaligAmbition {
+interface ScaligAmbition {
   title?: string;
   body?: string;
 }
