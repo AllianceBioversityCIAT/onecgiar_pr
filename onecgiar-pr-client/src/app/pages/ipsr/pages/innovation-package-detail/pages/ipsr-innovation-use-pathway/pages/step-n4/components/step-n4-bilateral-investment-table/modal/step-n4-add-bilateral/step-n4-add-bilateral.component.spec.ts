@@ -15,7 +15,6 @@ describe('StepN4AddBilateralComponent', () => {
 
     fixture = TestBed.createComponent(StepN4AddBilateralComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
