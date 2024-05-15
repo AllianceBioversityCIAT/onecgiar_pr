@@ -97,4 +97,22 @@ describe('NavigationBarComponent', () => {
     environment.production = false;
     expect(component.validateAdminModuleAndRole(option)).toBe(false);
   });
+  it('should set navbar_fixed to true when document.documentElement.scrollTop is over 70 and window.pageYOffset is null', () => {
+    // Simulate scroll event
+    Object.defineProperty(window, 'pageYOffset', { value: null });
+    Object.defineProperty(document.documentElement, 'scrollTop', { value: 200 });
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(mockNavigationBarService.navbar_fixed).toBe(false);
+  });
+
+  it('should set navbar_fixed to true when document.body.scrollTop is over 70 and window.pageYOffset and document.documentElement.scrollTop are null', () => {
+    // Simulate scroll event
+    Object.defineProperty(window, 'pageYOffset', { value: null });
+    Object.defineProperty(document.documentElement, 'scrollTop', { value: null });
+    Object.defineProperty(document.body, 'scrollTop', { value: 200 });
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(mockNavigationBarService.navbar_fixed).toBe(false);
+  });
 });
