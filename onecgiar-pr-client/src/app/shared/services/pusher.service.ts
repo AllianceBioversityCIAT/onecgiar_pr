@@ -26,7 +26,7 @@ export class PusherService {
   secondUser = null;
   validaeFirstUserToEdit() {
     if (!this.presenceChannel?.members) return false;
-    const { members, myID } = this.presenceChannel?.members;
+    const { members, myID } = this.presenceChannel?.members || {};
 
     if (!Object.keys(members).length) return true;
 
