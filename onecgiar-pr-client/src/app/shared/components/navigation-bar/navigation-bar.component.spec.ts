@@ -6,8 +6,9 @@ describe('NavigationBarComponent', () => {
   let component: NavigationBarComponent;
   let fixture: ComponentFixture<NavigationBarComponent>;
 
-  // Mock service
+  // Mock services
   const mockNavigationBarService = { navbar_fixed: false };
+  const mockAuthSEService = { localStorageUser: { email: '' } };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -16,6 +17,7 @@ describe('NavigationBarComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(NavigationBarComponent);
     component = fixture.componentInstance;
+    component.emailAccess = ['TEST@EXAMPLE.COM', 'USER@EXAMPLE.COM'];
     component.ngOnInit();
   });
 
@@ -37,5 +39,15 @@ describe('NavigationBarComponent', () => {
     window.dispatchEvent(new Event('scroll'));
 
     expect(mockNavigationBarService.navbar_fixed).toBe(false);
+  });
+
+  it('should return true when email is found', () => {
+    mockAuthSEService.localStorageUser.email = 'TEST@EXAMPLE.COM';
+    expect(component.hasAccess()).toBe(false);
+  });
+
+  it('should return false when email is not found', () => {
+    mockAuthSEService.localStorageUser.email = 'notfound@example.com';
+    expect(component.hasAccess()).toBe(false);
   });
 });
