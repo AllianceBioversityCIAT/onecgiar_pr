@@ -111,6 +111,7 @@ describe('GlobalCompletenessStatusComponent', () => {
     ];
     const mapSpy = jest.spyOn(component, 'mapMyInitiativesList').mockReturnValue([1, 2]);
     const postSpy = jest.spyOn(component, 'POST_reportSesultsCompleteness');
+    component.GET_initiativesByUser();
 
     component.initiativesSelected = mockInitiatives;
     component.phasesSelected = mockPhases;
@@ -120,5 +121,26 @@ describe('GlobalCompletenessStatusComponent', () => {
 
     expect(mapSpy).toHaveBeenCalled();
     expect(postSpy).toHaveBeenCalledWith([1, 2], [1, 2], null);
+  });
+  describe('convertToYesOrNot', () => {
+    it('should return "No" when value is 0', () => {
+      const result = component.convertToYesOrNot(0);
+      expect(result).toEqual('No');
+    });
+
+    it('should return "Yes" when value is 1', () => {
+      const result = component.convertToYesOrNot(1);
+      expect(result).toEqual('Yes');
+    });
+
+    it('should return "Not applicable" when value is not 0 or 1 and nullOptionindex is not provided', () => {
+      const result = component.convertToYesOrNot(2);
+      expect(result).toEqual('Not applicable');
+    });
+
+    it('should return "Not provided" when value is not 0 or 1 and nullOptionindex is 1', () => {
+      const result = component.convertToYesOrNot(2, 1);
+      expect(result).toEqual('Not provided');
+    });
   });
 });
