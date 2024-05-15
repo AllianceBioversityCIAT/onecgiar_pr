@@ -12,12 +12,25 @@ import { FormsModule } from '@angular/forms';
 import { ListFilterByTextAndAttrPipe } from '../../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
 import { DialogModule } from 'primeng/dialog';
+import { of } from 'rxjs';
 
 describe('GlobalCompletenessStatusComponent', () => {
   let component: GlobalCompletenessStatusComponent;
   let fixture: ComponentFixture<GlobalCompletenessStatusComponent>;
+  let apiServiceMock: any;
 
   beforeEach(async () => {
+    apiServiceMock = {
+      resultsSE: {
+        POST_reportSesultsCompleteness: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_historicalByResultId: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      dataControlSE: {
+        myInitiativesList: [],
+        showResultHistoryOfChangesModal: false
+      }
+    };
     await TestBed.configureTestingModule({
       declarations: [
         GlobalCompletenessStatusComponent,
@@ -36,5 +49,38 @@ describe('GlobalCompletenessStatusComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should map initiatives correctly', () => {
+    setTimeout(() => {
+      const mappedInitiatives = component.mapMyInitiativesList();
+      expect(mappedInitiatives).toEqual([1, 2]);
+      expect(component.initiativesSelected).toEqual([
+        { id: 1, full_name: 'Initiative 1' },
+        { id: 2, full_name: 'Initiative 2' }
+      ]);
+    }, 1000);
+  });
+
+  it('should call exportExcel on exportTablesSE when exportToExcel is called', () => {
+    const spy = jest.spyOn(component.exportTablesSE, 'exportExcel');
+    component.exportExcel([]);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should call POST_reportSesultsCompleteness with mapped initiatives when GET_initiativesByUser is called', () => {
+    const spy = jest.spyOn(component, 'POST_reportSesultsCompleteness');
+    const mapSpy = jest.spyOn(component, 'mapMyInitiativesList').mockReturnValue([1, 2]);
+    component.GET_initiativesByUser();
+    expect(mapSpy).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith([1, 2], []);
+  });
+
+  it('should call GET_AllInitiatives and POST_reportSesultsCompleteness when GET_AllInitiatives is called', () => {
+    const getSpy = jest.spyOn(component.api.resultsSE, 'GET_AllInitiatives').mockReturnValue(of({ response: [] }));
+    const postSpy = jest.spyOn(component, 'POST_reportSesultsCompleteness');
+    component.GET_AllInitiatives();
+    expect(getSpy).toHaveBeenCalled();
+    expect(postSpy).toHaveBeenCalledWith([], []);
   });
 });
