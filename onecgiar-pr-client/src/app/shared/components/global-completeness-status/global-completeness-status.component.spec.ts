@@ -154,4 +154,38 @@ describe('GlobalCompletenessStatusComponent', () => {
       expect(result).toEqual('Completed');
     });
   });
+  it('should set properties and call GET_historicalByResultId when openInformationModal is called', () => {
+    const mockResultId = 1;
+    const mockResponse = [{ id: 1, change: 'Change 1' }];
+    const getSpy = jest.spyOn(component.api.resultsSE, 'GET_historicalByResultId').mockReturnValue(of({ response: mockResponse }));
+
+    component.openInformationModal(mockResultId);
+
+    expect(component.api.dataControlSE.showResultHistoryOfChangesModal).toBe(true);
+    expect(getSpy).toHaveBeenCalledWith(mockResultId);
+    expect(component.resultHistoryOfChangesModalSE.historyOfChangesList).toEqual(mockResponse);
+  });
+  describe('ngOnInit', () => {
+    it('should call GET_initiativesByUser and getThePhases when initMode is true', () => {
+      const getInitiativesSpy = jest.spyOn(component, 'GET_initiativesByUser');
+      const getPhasesSpy = jest.spyOn(component, 'getThePhases');
+
+      component.initMode = true;
+      component.ngOnInit();
+
+      expect(getInitiativesSpy).toHaveBeenCalled();
+      expect(getPhasesSpy).toHaveBeenCalled();
+    });
+
+    it('should call GET_AllInitiatives and getThePhases when initMode is false', () => {
+      const getAllInitiativesSpy = jest.spyOn(component, 'GET_AllInitiatives');
+      const getPhasesSpy = jest.spyOn(component, 'getThePhases');
+
+      component.initMode = false;
+      component.ngOnInit();
+
+      expect(getAllInitiativesSpy).toHaveBeenCalled();
+      expect(getPhasesSpy).toHaveBeenCalled();
+    });
+  });
 });
