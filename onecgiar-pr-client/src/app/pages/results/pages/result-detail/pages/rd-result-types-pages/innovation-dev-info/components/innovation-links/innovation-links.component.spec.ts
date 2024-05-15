@@ -39,7 +39,7 @@ describe('InnovationLinksComponent', () => {
   describe('temporalLinkDescription()', () => {
     it('should return temporal link description', () => {
       const description = component.temporalLinkDescription();
-      
+
       expect(description).toContain('high-resolution images');
       expect(description).toContain('final report of the survey');
     });
@@ -58,15 +58,15 @@ describe('InnovationLinksComponent', () => {
       component.body.pictures = [];
 
       component.addLinkPictures();
-  
+
       expect(component.body.pictures).toHaveLength(1);
       expect(component.body.pictures[0].link).toBe('');
     });
     it('should add a link to pictures', () => {
       component.body.pictures = [{ link: '' }, { link: 'https://test.com' }];
-  
+
       component.addLinkPictures();
-  
+
       expect(component.body.pictures).toHaveLength(2);
       expect(component.body.pictures[0].link).toBe('https://test.com');
       expect(component.body.pictures[1].link).toBe('');
@@ -80,9 +80,9 @@ describe('InnovationLinksComponent', () => {
         { link: 'https://test.com/link1' },
         { link: 'https://test.com/link2' },
       ];
-  
+
       component.deleteLinkPictures(1);
-  
+
       expect(component.body.pictures).toHaveLength(1);
       expect(component.body.pictures).toEqual([{ link: 'https://test.com/link1' }])
     });
@@ -93,7 +93,7 @@ describe('InnovationLinksComponent', () => {
       component.body.reference_materials = [];
 
       component.addLinkReferences();
-  
+
       expect(component.body.reference_materials).toHaveLength(1);
       expect(component.body.reference_materials[0].link).toBe('');
     });
@@ -103,9 +103,9 @@ describe('InnovationLinksComponent', () => {
         { link: '' },
         { link: 'https://test.com/link2' },
       ];
-  
+
       component.addLinkReferences();
-  
+
       expect(component.body.reference_materials).toHaveLength(3);
       expect(component.body.reference_materials[0].link).toBe('https://test.com/link1');
       expect(component.body.reference_materials[1].link).toBe('https://test.com/link2');
@@ -119,9 +119,9 @@ describe('InnovationLinksComponent', () => {
         { link: 'https://test.com/link1' },
         { link: 'https://test.com/link2' },
       ];
-  
+
       component.deleteLinkReferences(1);
-  
+
       expect(component.body.reference_materials).toHaveLength(1);
       expect(component.body.reference_materials).toEqual([{ link: 'https://test.com/link1' }]);
     });

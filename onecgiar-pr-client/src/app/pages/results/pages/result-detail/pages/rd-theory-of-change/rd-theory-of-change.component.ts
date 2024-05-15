@@ -38,10 +38,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
     });
   }
 
-  print() {
-    console.log(this.contributingCenterOptions);
-  }
-
   disabledCenters() {
     this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
   }
@@ -171,7 +167,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
           this.api.dataControlSE.showPartnersRequest = true;
         });
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     });
   }

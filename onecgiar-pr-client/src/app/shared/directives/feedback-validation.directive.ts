@@ -1,9 +1,9 @@
-import { Directive, Input, ElementRef, Renderer2 } from '@angular/core';
+import { Directive, Input, ElementRef, Renderer2, DoCheck, OnInit } from '@angular/core';
 
 @Directive({
   selector: '[appFeedbackValidation]'
 })
-export class FeedbackValidationDirective {
+export class FeedbackValidationDirective implements OnInit, DoCheck {
   @Input() labelText: string = '';
   @Input() isComplete: boolean = false;
   fieldDiv = null;

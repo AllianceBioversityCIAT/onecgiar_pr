@@ -5,8 +5,4 @@ import { Component } from '@angular/core';
   templateUrl: './init-completeness-status.component.html',
   styleUrls: ['./init-completeness-status.component.scss']
 })
-export class InitCompletenessStatusComponent {
-  constructor() {
-    console.log('inasas');
-  }
-}
+export class InitCompletenessStatusComponent {}

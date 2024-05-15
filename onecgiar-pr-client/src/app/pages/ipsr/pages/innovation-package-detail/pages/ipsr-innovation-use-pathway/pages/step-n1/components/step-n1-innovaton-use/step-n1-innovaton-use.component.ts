@@ -1,5 +1,5 @@
 /* eslint-disable arrow-parens */
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Actor, IpsrStep1Body, Measure, Organization } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
@@ -8,7 +8,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   templateUrl: './step-n1-innovaton-use.component.html',
   styleUrls: ['./step-n1-innovaton-use.component.scss']
 })
-export class StepN1InnovatonUseComponent {
+export class StepN1InnovatonUseComponent implements OnInit {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   executeTimer = null;

@@ -17,7 +17,7 @@ describe('PdfActionsComponent', () => {
       currentResultPhase: 1
     }
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         PdfActionsComponent,
         PdfIconComponent
       ],

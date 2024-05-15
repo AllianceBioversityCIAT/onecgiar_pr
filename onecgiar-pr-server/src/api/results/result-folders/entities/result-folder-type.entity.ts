@@ -16,4 +16,3 @@ export class ResultFolderType extends BaseEntityControlList {
   })
   name: string;
 }
-

@@ -12,7 +12,7 @@ describe('InnovationTeamDiversityComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         InnovationTeamDiversityComponent,
         PrRadioButtonComponent,
         PrFieldHeaderComponent,

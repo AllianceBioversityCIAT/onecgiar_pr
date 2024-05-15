@@ -19,12 +19,12 @@ describe('RdEvidencesComponent', () => {
   let mockApiService: any;
   let mockInnovationControlListService: any;
   let mockSaveButtonService: any;
-  let mockGET_evidencesResponse = {
+  const mockGET_evidencesResponse = {
     evidences: [],
     innovation_readiness_level_id: 1,
   };
-  let mockGET_loadFileInUploadSessionResponse = 'sampleUploadUrl';
-  let mockPUT_loadFileInUploadSessionResponse = {
+  const mockGET_loadFileInUploadSessionResponse = 'sampleUploadUrl';
+  const mockPUT_loadFileInUploadSessionResponse = {
     webUrl: 'webUrl',
     id: 'id',
     name: 'name',
@@ -367,7 +367,7 @@ describe('RdEvidencesComponent', () => {
 
       const result = component.validateCGSpaceLinks;
 
-      expect(result).toBeTruthy(); 
+      expect(result).toBeTruthy();
     });
 
     it('should return false if no evidence meets the conditions', () => {
@@ -379,7 +379,7 @@ describe('RdEvidencesComponent', () => {
         environmental_biodiversity_tag_level: '2',
         poverty_tag_level: '3',
         evidences: [
-          
+
         ],
       };
 

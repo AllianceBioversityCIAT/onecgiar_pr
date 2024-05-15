@@ -10,7 +10,6 @@ import { VersionsService } from '../../results/versions/versions.service';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { SaveStepTwoThree } from './dto/save-step-three.dto';
@@ -447,11 +446,10 @@ export class InnovationPathwayStepThreeService {
         result_core_innovation: {
           core_result_code: core_innovation.result_code,
           core_title: core_innovation.title,
-          core_result_current_phase: core_innovation.version_id
+          core_result_current_phase: core_innovation.version_id,
         },
       };
 
-      console.log("🚀 ~ InnovationPathwayStepThreeService ~ getStepThree ~ returdata:", returdata)
       return {
         response: returdata,
         message: 'Successful response',

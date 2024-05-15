@@ -48,7 +48,7 @@ describe('IpsrContributorsCentersComponent', () => {
       expect(component.contributorsBody.contributing_center[0].primary).toBeTruthy();
     });
   });
-  
+
   describe('deletContributingCenter', () => {
     it('should call deletContributingCenter correctly', () => {
       const index = 0;

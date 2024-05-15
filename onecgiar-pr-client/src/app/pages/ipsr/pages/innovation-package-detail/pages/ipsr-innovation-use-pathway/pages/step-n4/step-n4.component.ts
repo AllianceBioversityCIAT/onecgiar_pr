@@ -26,7 +26,9 @@ export class StepN4Component implements OnInit {
         document.querySelector('.alert-event-3').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 

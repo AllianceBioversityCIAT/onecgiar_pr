@@ -4,7 +4,10 @@ import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultIpEoiOutcome } from '../entities/result-ip-eoi-outcome.entity';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { env } from 'process';
-import { ReplicableConfigInterface, ConfigCustomQueryInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ReplicableConfigInterface,
+  ConfigCustomQueryInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
@@ -13,7 +16,6 @@ export class ResultIpEoiOutcomeRepository
   extends BaseRepository<ResultIpEoiOutcome>
   implements LogicalDelete<ResultIpEoiOutcome>
 {
-
   createQueries(
     config: ReplicableConfigInterface<ResultIpEoiOutcome>,
   ): ConfigCustomQueryInterface {
@@ -21,7 +23,9 @@ export class ResultIpEoiOutcomeRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -48,7 +52,9 @@ export class ResultIpEoiOutcomeRepository
         )
         SELECT
             is_active,
-            ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+            ${predeterminedDateValidation(
+              config.predetermined_date,
+            )} AS created_date,
             last_updated_date,
             ${config.user.id} AS created_by,
             ${config.user.id} AS last_updated_by,

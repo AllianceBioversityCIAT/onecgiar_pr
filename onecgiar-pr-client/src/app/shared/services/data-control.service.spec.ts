@@ -61,7 +61,7 @@ describe('DataControlService', () => {
     it('should resolve with element when element is found', async () => {
       const parser = new DOMParser();
       const dom = parser.parseFromString(`
-        <div class="container"></div>`, 
+        <div class="container"></div>`,
       'text/html');
       jest.spyOn(document, 'querySelector')
         .mockImplementation((selector) => dom.querySelector(selector));
@@ -218,7 +218,7 @@ describe('DataControlService', () => {
       const title = 'Test Title';
       const spy = jest.spyOn(titleServiceMock,'setTitle')
       service.detailSectionTitle(sectionName, title);
-  
+
       expect(spy).toHaveBeenCalled();
       expect(service.currentSectionName).toBe(title);
     });
@@ -226,7 +226,7 @@ describe('DataControlService', () => {
       const sectionName = 'Test Section';
       const spy = jest.spyOn(titleServiceMock,'setTitle')
       service.detailSectionTitle(sectionName);
-  
+
       expect(spy).toHaveBeenCalled();
       expect(service.currentSectionName).toBe(sectionName);
     });

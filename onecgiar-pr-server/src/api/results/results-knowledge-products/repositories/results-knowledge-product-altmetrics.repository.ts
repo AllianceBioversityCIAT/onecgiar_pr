@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ResultsKnowledgeProductAltmetric } from '../entities/results-knowledge-product-altmetrics.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import {
   VERSIONING,

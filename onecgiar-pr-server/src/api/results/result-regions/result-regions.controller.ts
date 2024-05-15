@@ -1,8 +1,10 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
 import { ResultRegionsService } from './result-regions.service';
 import { CreateResultRegionDto } from './dto/create-result-region.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('result-regions')
+@UseInterceptors(ResponseInterceptor)
 export class ResultRegionsController {
   constructor(private readonly resultRegionsService: ResultRegionsService) {}
 

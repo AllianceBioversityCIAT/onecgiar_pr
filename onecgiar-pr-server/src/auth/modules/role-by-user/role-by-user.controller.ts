@@ -4,40 +4,29 @@ import {
   Post,
   Body,
   Param,
-  UseFilters,
-  HttpException,
-  Headers,
+  UseInterceptors,
 } from '@nestjs/common';
 import { RoleByUserService } from './role-by-user.service';
 import { CreateRoleByUserDto } from './dto/create-role-by-user.dto';
-import { HttpExceptionFilter } from '../../../shared/handlers/error.exception';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller()
-@UseFilters(new HttpExceptionFilter())
+@UseInterceptors(ResponseInterceptor)
 export class RoleByUserController {
   constructor(private readonly roleByUserService: RoleByUserService) {}
 
   @Post()
-  async create(
+  create(
     @Body() createRoleByUserDto: CreateRoleByUserDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-    const { message, response, status } = await this.roleByUserService.create(
-      createRoleByUserDto,
-      token,
-    );
-    throw new HttpException({ message, response }, status);
+    return this.roleByUserService.create(createRoleByUserDto, user);
   }
 
   @Get('get/user/:id')
-  async findAll(@Param('id') userId: number) {
-    const { message, response, status } =
-      await this.roleByUserService.allRolesByUser(userId);
-    throw new HttpException({ message, response }, status);
+  findAll(@Param('id') userId: number) {
+    return this.roleByUserService.allRolesByUser(userId);
   }
 }

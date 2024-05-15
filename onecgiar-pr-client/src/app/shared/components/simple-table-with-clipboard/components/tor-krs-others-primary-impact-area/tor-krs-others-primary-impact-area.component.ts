@@ -6,10 +6,9 @@ import { TypeOneReportService } from '../../../../../pages/type-one-report/type-
   templateUrl: './tor-krs-others-primary-impact-area.component.html',
   styleUrls: ['./tor-krs-others-primary-impact-area.component.scss']
 })
-export class TorKrsOthersPrimaryImpactAreaComponent implements OnInit {
+export class TorKrsOthersPrimaryImpactAreaComponent {
   constructor(public typeOneReportSE: TypeOneReportService) {}
   @Input() result_code;
-  ngOnInit(): void {}
 
   getImpactAreasList(keyResultStoryData) {
     //(this.resultIndex);

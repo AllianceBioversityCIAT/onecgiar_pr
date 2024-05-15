@@ -154,7 +154,7 @@ describe('SubGeoscopeComponent', () => {
       component.body.geoScopeSubNatinals = [{}, {}];
 
       component.delete(1);
-  
+
       expect(emitSpy).toHaveBeenCalledWith(1);
       expect(component.body.geoScopeSubNatinals.length).toBe(1);
       expect(component.body.geoScopeSubNatinals).toEqual([{}]);
@@ -164,20 +164,20 @@ describe('SubGeoscopeComponent', () => {
   describe('selectSubLevelTwo', () => {
     it('should update geoScopeSubNatinals with sub_level_one and sub_level_two information', () => {
       component.subNationalOne = [
-        { 
-          geonameId: 1, 
-          name: 'nameOne' 
+        {
+          geonameId: 1,
+          name: 'nameOne'
         },
       ];
       component.subNationalTwo = [
-        { 
-          geonameId: 11, 
-          name: 'nameTwo' 
+        {
+          geonameId: 11,
+          name: 'nameTwo'
         },
       ];
       component.subNationalOneSelected = 1;
       component.subNationalTwoSelected = 11;
-  
+
       component.selectSubLevelTwo(0);
 
       expect(component.body.geoScopeSubNatinals[0]).toEqual({

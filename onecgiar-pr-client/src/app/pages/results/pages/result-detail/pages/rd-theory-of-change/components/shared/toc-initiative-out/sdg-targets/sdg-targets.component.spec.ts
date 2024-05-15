@@ -9,7 +9,7 @@ describe('SdgTargetsComponent', () => {
   let component: SdgTargetsComponent;
   let fixture: ComponentFixture<SdgTargetsComponent>;
   let mockApiService: any;
-  let mockResponse = [
+  const mockResponse = [
     {
       sdg: {
         usnd_code: 1,
@@ -83,7 +83,7 @@ describe('SdgTargetsComponent', () => {
       expect(component.sdgTargetLis).toEqual(mockResponse);
       expect(component.sdgTargetLis[0].sdgList).toEqual([
         {
-          full_name: "<strong>code</strong> - Target", 
+          full_name: "<strong>code</strong> - Target",
           sdg_target: "Target", "sdg_target_code": "code"
         }
       ]);
@@ -105,9 +105,9 @@ describe('SdgTargetsComponent', () => {
     it('should set body correctly in removeOption', () => {
       component.body = [{ id: 1 }, { id: 2 }, { id: 3 }];
       const option = { id: 2 };
-  
+
       component.removeOption(option);
-  
+
       expect(component.body).toEqual([{ id: 1 }, { id: 3 }]);
     });
   });
@@ -116,9 +116,9 @@ describe('SdgTargetsComponent', () => {
     it('should set selected SDG and currentsdgID in onSelectSDG', () => {
       const sdgItem = { sdgId: 1, selected: false };
       component.sdgTargetLis = [{ sdgId: 1, selected: false }, { sdgId: 2, selected: false }];
-  
+
       component.onSelectSDG(sdgItem);
-  
+
       expect(component.sdgTargetLis[0].selected).toBeFalsy();
       expect(component.sdgTargetLis[1].selected).toBeFalsy();
       expect(component.currentsdgID).toBe(1);

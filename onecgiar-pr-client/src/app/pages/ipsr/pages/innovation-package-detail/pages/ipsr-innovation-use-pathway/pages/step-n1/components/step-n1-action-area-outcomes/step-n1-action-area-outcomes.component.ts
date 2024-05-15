@@ -8,7 +8,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   templateUrl: './step-n1-action-area-outcomes.component.html',
   styleUrls: ['./step-n1-action-area-outcomes.component.scss']
 })
-export class StepN1ActionAreaOutcomesComponent {
+export class StepN1ActionAreaOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   actionAreasOutcomesList: any = null;
   constructor(private ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}

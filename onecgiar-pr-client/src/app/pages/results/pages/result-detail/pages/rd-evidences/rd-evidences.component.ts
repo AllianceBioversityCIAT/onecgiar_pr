@@ -36,10 +36,10 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   async getAndCalculateFilePercentage(response, evidenceIterator) {
-    let nextRange = response?.nextExpectedRanges[0];
-    let [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
+    const nextRange = response?.nextExpectedRanges[0];
+    const [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
     if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
-    let progressPercentage = (startByte / totalBytes) * 100;
+    const progressPercentage = (startByte / totalBytes) * 100;
     evidenceIterator.percentage = progressPercentage.toFixed(0);
   }
 
@@ -52,10 +52,10 @@ export class RdEvidencesComponent implements OnInit {
     const { evidences } = this.evidencesBody;
     let count = 0;
     for (const evidenceIterator of evidences) {
-      if ( evidenceIterator.file ) count++;
+      if (evidenceIterator.file) count++;
       if (!evidenceIterator?.file) continue;
       try {
-        const { uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name, count });
+        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name, count });
         const intervalId = setInterval(async () => {
           try {
             const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
@@ -71,7 +71,7 @@ export class RdEvidencesComponent implements OnInit {
         evidenceIterator.sp_file_name = response?.name;
         evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   }

@@ -139,9 +139,9 @@ describe('RdPartnersService', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, "GET_partnersSection")
       .mockReturnValue(throwError('API Error'));
       const noApplicablePartner = false;
-    
+
       service.getSectionInformation(noApplicablePartner);
-       
+
       expect(spy).toHaveBeenCalled();
       expect(service.partnersBody.no_applicable_partner).toBe(noApplicablePartner);
     });
@@ -151,7 +151,7 @@ describe('RdPartnersService', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, "GET_centers")
 
       service.getCenterInformation();
-      
+
       expect(spy).toHaveBeenCalled();
     });
   });

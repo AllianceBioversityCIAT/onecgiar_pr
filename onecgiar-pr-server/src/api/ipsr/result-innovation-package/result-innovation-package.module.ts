@@ -77,7 +77,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
     IpsrService,
     ReturnResponse,
     ResultCountrySubnationalRepository,
-    ResultsInvestmentDiscontinuedOptionRepository
+    ResultsInvestmentDiscontinuedOptionRepository,
   ],
   imports: [VersionsModule, forwardRef(() => VersioningModule)],
   exports: [ResultInnovationPackageRepository],

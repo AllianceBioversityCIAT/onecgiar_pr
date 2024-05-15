@@ -4,4 +4,3 @@ export class CreateResultFolderDto {
   public phase_id: number;
   public justification!: string;
 }
-

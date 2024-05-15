@@ -75,7 +75,9 @@ export class VersioningController {
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
   updateAnnuallyIPSR(@UserToken() user: TokenDto) {
-    return this.versioningService.annualReplicationProcessInnovationPackage(user);
+    return this.versioningService.annualReplicationProcessInnovationPackage(
+      user,
+    );
   }
 
   @Patch('change/status/qa')

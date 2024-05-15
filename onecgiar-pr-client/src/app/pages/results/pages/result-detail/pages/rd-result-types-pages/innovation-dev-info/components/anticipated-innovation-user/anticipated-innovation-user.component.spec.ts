@@ -139,13 +139,13 @@ describe('AnticipatedInnovationUserComponent', () => {
       const result = component.checkGenderAlert(actor);
       expect(result).toBeTruthy();
     });
-  
+
     it('should return true if actor has any of the gender-related flags', () => {
       const actor = { sex_and_age_disaggregation: false, has_men: true, has_men_youth: false, has_women: false, has_women_youth: false };
       const result = component.checkGenderAlert(actor);
       expect(result).toBeTruthy();
     });
-  
+
     it('should return false if neither sex_and_age_disaggregation nor gender-related flags are true', () => {
       const actor = { sex_and_age_disaggregation: false, has_men: false, has_men_youth: false, has_women: false, has_women_youth: false };
       const result = component.checkGenderAlert(actor);
@@ -314,7 +314,7 @@ describe('AnticipatedInnovationUserComponent', () => {
         { code: 78 },
         { code: 456 },
       ];
-  
+
       const result = component.removeOtherInOrg(disableOrganizations);
 
       expect(result).toHaveLength(2);
@@ -325,9 +325,9 @@ describe('AnticipatedInnovationUserComponent', () => {
   describe('addOrganization()', () => {
     it('should add a new organization to the list', () => {
       const currentLength = component.body.innovatonUse.organization.length;
-  
+
       component.addOrganization();
-  
+
       expect(component.body.innovatonUse.organization).toHaveLength(currentLength + 1);
       expect(component.body.innovatonUse.organization[currentLength]).toBeInstanceOf(Organization);
     });
@@ -346,9 +346,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         id: 1
       }
       component.body.innovatonUse.organization = [organization];
-  
+
       const result = component.disableOrganizations;
-  
+
       expect(result).toEqual([{code:1}])
     });
   });
@@ -366,9 +366,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         id: 1
       }
       component.body.innovatonUse.organization = [organization];
-  
+
       const result = component.getAllSubTypes;
-  
+
       expect(result).toEqual([{code:2}])
     });
   });
@@ -380,11 +380,11 @@ describe('AnticipatedInnovationUserComponent', () => {
         { id: 2, is_active: false },
         { id: 3, is_active: true },
       ];
-  
+
       const result = component.hasElementsWithId(list, 'id');
-  
+
       expect(typeof result === 'number').toBeTruthy();
-      expect(result).toBe(2); 
+      expect(result).toBe(2);
     });
     it('should filter elements when rolesSE.readOnly is true', () => {
       mockApiService.rolesSE.readOnly = true;
@@ -393,11 +393,11 @@ describe('AnticipatedInnovationUserComponent', () => {
         { id: 2, is_active: false },
         { id: 3, is_active: true },
       ];
-  
+
       const result = component.hasElementsWithId(list, 'id');
-  
+
       expect(typeof result === 'number').toBeTruthy();
-      expect(result).toBe(3); 
+      expect(result).toBe(3);
     });
   });
 
@@ -418,9 +418,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         { actor_type_id: 5 },
         { actor_type_id: 3 },
       ];
-  
+
       const filteredActors = component.removeOther(actors);
-  
+
       expect(filteredActors).toHaveLength(2);
       expect(filteredActors.every(actor => actor.actor_type_id !== 5)).toBeTruthy();
     });
@@ -429,9 +429,9 @@ describe('AnticipatedInnovationUserComponent', () => {
   describe('addActor()', () => {
     it('should add a new actor to the list', () => {
       const initialActorsLength = component.body.innovatonUse.actors.length;
-  
+
       component.addActor();
-  
+
       const newActorsLength = component.body.innovatonUse.actors.length;
       expect(newActorsLength).toBe(initialActorsLength + 1);
       expect(component.body.innovatonUse.actors[newActorsLength - 1]).toBeInstanceOf(Actor);
@@ -441,9 +441,9 @@ describe('AnticipatedInnovationUserComponent', () => {
   describe('addOtherMesure()', () => {
     it('should add a new measure to the list', () => {
       const initialMeasuresLength = component.body.innovatonUse.measures.length;
-  
+
       component.addOtherMesure();
-  
+
       const newMeasuresLength = component.body.innovatonUse.measures.length;
       expect(newMeasuresLength).toBe(initialMeasuresLength + 1);
       expect(component.body.innovatonUse.measures[newMeasuresLength - 1]).toBeInstanceOf(Measure);
@@ -466,9 +466,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         men_non_youth: 'some value',
         how_many: 'some value'
       };
-  
+
       component.cleanActor(actorItem);
-  
+
       expect(actorItem.has_men).toBeFalsy();
       expect(actorItem.has_men_youth).toBeFalsy();
       expect(actorItem.has_women).toBeFalsy();
