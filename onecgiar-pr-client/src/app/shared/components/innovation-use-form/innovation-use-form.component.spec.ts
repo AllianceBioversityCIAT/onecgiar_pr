@@ -271,4 +271,67 @@ describe('InnovationUseFormComponent', () => {
     const description = component.actorTypeDescription();
     expect(description).toContain("CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years");
   });
+  // Test for calculateTotalField when sex_and_age_disaggregation is false
+  it('should calculate total field when sex_and_age_disaggregation is false', () => {
+    const actorItem = { women: 10, men: 5, sex_and_age_disaggregation: false, how_many: 0 } as Actor;
+    component.calculateTotalField(actorItem);
+    expect(actorItem.how_many).toBe(15);
+  });
+
+  // Test for calculateTotalField when sex_and_age_disaggregation is true
+  it('should not calculate total field when sex_and_age_disaggregation is true', () => {
+    const actorItem = { women: 10, men: 5, sex_and_age_disaggregation: true, how_many: 0 } as Actor;
+    component.calculateTotalField(actorItem);
+    expect(actorItem.how_many).toBe(0);
+  });
+
+  // Test for validateYouth when genderYouth is less than 0
+  it('should set genderYouth to null when genderYouth is less than 0', () => {
+    component.body.innovatonUse.actors = [{ women: 10, women_youth: -1, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
+    const actorItem = component.body.innovatonUse.actors[0];
+    component.validateYouth(0, true, actorItem);
+    setTimeout(() => {
+      expect(actorItem.women_youth).toBeNull();
+    }, 100);
+  });
+
+  // Test for validateYouth when gender is less than 0
+  it('should set gender to 0 when gender is less than 0', () => {
+    component.body.innovatonUse.actors = [{ women: -1, women_youth: 5, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
+    const actorItem = component.body.innovatonUse.actors[0];
+    component.validateYouth(0, true, actorItem);
+    setTimeout(() => {
+      expect(actorItem.women).toBe(0);
+    }, 100);
+  });
+
+  // Test for validateYouth when gender is less than genderYouth
+  it('should handle when gender is less than genderYouth', done => {
+    component.body.innovatonUse.actors = [
+      { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
+    ];
+    const actorItem = component.body.innovatonUse.actors[0];
+    component.validateYouth(0, true, actorItem);
+    setTimeout(() => {
+      expect(actorItem.women_youth).toBe(10);
+      expect(actorItem.women).toBe(5);
+      done();
+    }, 600);
+  });
+
+  // Test for showWomenExplanation values
+  it('should set showWomenExplanation to true and false accordingly', done => {
+    component.body.innovatonUse.actors = [
+      { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
+    ];
+    const actorItem = component.body.innovatonUse.actors[0];
+    component.validateYouth(0, true, actorItem);
+    setTimeout(() => {
+      expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(true);
+      setTimeout(() => {
+        expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
+        done();
+      }, 3100);
+    }, 500);
+  });
 });
