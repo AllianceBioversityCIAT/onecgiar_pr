@@ -43,7 +43,9 @@ describe('StepN1ImpactAreasComponent', () => {
     const mockResponse = { response: [{ name: 'Indicator 1', target: 'Target 1' }] };
     jest.spyOn(component.api.resultsSE, 'GET_AllglobalTarget').mockReturnValue(of(mockResponse));
     component.GET_AllClarisaImpactAreaIndicators();
-    expect(component.allImpactAreaIndicators).toEqual([{ name: 'Indicator 1', target: 'Target 1', full_name: '<strong>Indicator 1</strong> - Target 1' }]);
+    expect(component.allImpactAreaIndicators).toEqual([
+      { name: 'Indicator 1', target: 'Target 1', full_name: '<strong>Indicator 1</strong> - Target 1' }
+    ]);
   });
 
   it('should filter impactAreaIndicators by impactAreaID', () => {
@@ -78,5 +80,13 @@ describe('StepN1ImpactAreasComponent', () => {
     component.selectImpactArea(impactAreaItem);
     expect(component.impactAreasData[0].selected).toBe(false);
     expect(component.currentImpactAreaID).toBe(1);
+  });
+
+  it('should not select impactArea if readOnly', () => {
+    component.api.rolesSE.readOnly = true;
+    const impactAreaItem = { id: 1, selected: false };
+    component.selectImpactArea(impactAreaItem);
+    expect(component.impactAreasData[0].selected).toBe(false);
+    expect(component.currentImpactAreaID).toBe(null);
   });
 });
