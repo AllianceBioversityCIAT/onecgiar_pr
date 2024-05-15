@@ -143,4 +143,15 @@ describe('GlobalCompletenessStatusComponent', () => {
       expect(result).toEqual('Not provided');
     });
   });
+  describe('parseCheck', () => {
+    it('should return "Pending" when value is 0', () => {
+      const result = component.parseCheck(0);
+      expect(result).toEqual('Pending');
+    });
+
+    it('should return "Completed" when value is not 0', () => {
+      const result = component.parseCheck(1);
+      expect(result).toEqual('Completed');
+    });
+  });
 });
