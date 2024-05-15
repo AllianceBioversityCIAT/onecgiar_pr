@@ -14,9 +14,24 @@ import { environment } from '../../../../environments/environment';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  emailAccess = ['h.f.tobon@cgiar.org', 'admin@prms.pr', 'j.cadavid@cgiar.org', 'j.delgado@cgiar.org', 'd.casanas@cgiar.org', 'S.Galvez@cgiar.org', 'y.zuniga@cgiar.org', 'yecksin@gmail.com'];
+  emailAccess = [
+    'h.f.tobon@cgiar.org',
+    'admin@prms.pr',
+    'j.cadavid@cgiar.org',
+    'j.delgado@cgiar.org',
+    'd.casanas@cgiar.org',
+    'S.Galvez@cgiar.org',
+    'y.zuniga@cgiar.org',
+    'yecksin@gmail.com'
+  ];
 
-  constructor(public api: ApiService, public _navigationBarService: NavigationBarService, private rolesSE: RolesService, private dataControlSE: DataControlService, private authSE: AuthService) {}
+  constructor(
+    public api: ApiService,
+    public _navigationBarService: NavigationBarService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService,
+    public authSE: AuthService
+  ) {}
 
   ngOnInit(): void {
     window.addEventListener('scroll', e => {
