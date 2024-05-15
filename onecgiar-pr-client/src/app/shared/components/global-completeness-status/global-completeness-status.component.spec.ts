@@ -83,4 +83,42 @@ describe('GlobalCompletenessStatusComponent', () => {
     expect(getSpy).toHaveBeenCalled();
     expect(postSpy).toHaveBeenCalledWith([], []);
   });
+  it('should correctly map initiatives based on role and populate initiativesSelected', () => {
+    const mockInitiatives = [
+      { role: 'Lead', initiative_id: 1, full_name: 'Initiative 1' },
+      { role: 'Coordinator', initiative_id: 2, full_name: 'Initiative 2' },
+      { role: 'Other', initiative_id: 3, full_name: 'Initiative 3' }
+    ];
+
+    component.api.dataControlSE.myInitiativesList = mockInitiatives;
+
+    const result = component.mapMyInitiativesList();
+
+    expect(result).toEqual([1, 2]);
+    expect(component.initiativesSelected).toEqual([
+      { id: 1, full_name: 'Initiative 1' },
+      { id: 2, full_name: 'Initiative 2' }
+    ]);
+  });
+  it('should map selected initiatives and phases and call POST_reportSesultsCompleteness when onSelectInit is called', () => {
+    const mockInitiatives = [
+      { id: 1, full_name: 'Initiative 1' },
+      { id: 2, full_name: 'Initiative 2' }
+    ];
+    const mockPhases = [
+      { id: 1, full_name: 'Phase 1' },
+      { id: 2, full_name: 'Phase 2' }
+    ];
+    const mapSpy = jest.spyOn(component, 'mapMyInitiativesList').mockReturnValue([1, 2]);
+    const postSpy = jest.spyOn(component, 'POST_reportSesultsCompleteness');
+
+    component.initiativesSelected = mockInitiatives;
+    component.phasesSelected = mockPhases;
+    component.initMode = true;
+
+    component.onSelectInit();
+
+    expect(mapSpy).toHaveBeenCalled();
+    expect(postSpy).toHaveBeenCalledWith([1, 2], [1, 2], null);
+  });
 });
