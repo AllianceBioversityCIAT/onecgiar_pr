@@ -5,6 +5,8 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 
+jest.useFakeTimers();
+
 describe('MappedResultsModalComponent', () => {
   let component: MappedResultsModalComponent;
   let fixture: ComponentFixture<MappedResultsModalComponent>;
@@ -53,6 +55,9 @@ describe('MappedResultsModalComponent', () => {
 
   it('should set combine to true if columnAttr is "result_code"', () => {
     component.validateOrder('result_code');
+
+    jest.runAllTimers();
+
     expect(component.combine).toBe(true);
   });
 
