@@ -89,4 +89,67 @@ describe('StepTwoBasicInfoComponent', () => {
     component.onSavePreviuosNext('next');
     expect(apiServiceMock.resultsSE.PostStepTwoComentariesInnovationPrevius).toHaveBeenCalledWith(component.bodyStep2, 'next');
   });
+
+  it('should get innovation complementaries and update bodyStep2', () => {
+    const response = {
+      response: {
+        results: [
+          { result_by_innovation_package_id: '1', complementary_enablers_one: 'a;b', complementary_enablers_two: 'c;d' },
+          { result_by_innovation_package_id: '2', complementary_enablers_one: null, complementary_enablers_two: 'e;f' }
+        ]
+      }
+    };
+    apiServiceMock.resultsSE.getStepTwoComentariesInnovationId.mockReturnValue(of(response));
+    component.getInnovationComplementaries();
+    expect(component.bodyStep2.length).toBe(2);
+    expect(component.bodyStep2[0].complementary_innovation_enabler_types_one).toEqual(['a', 'b']);
+    expect(component.bodyStep2[0].complementary_innovation_enabler_types_two).toEqual(['c', 'd']);
+    expect(component.bodyStep2[1].complementary_innovation_enabler_types_one).toEqual([]);
+    expect(component.bodyStep2[1].complementary_innovation_enabler_types_two).toEqual(['e', 'f']);
+  });
+
+  it('should select one level and update complementary_innovation_enabler_types_two', () => {
+    component.bodyStep2 = [
+      {
+        complementary_innovation_enabler_types_one: ['1'],
+        complementary_innovation_enabler_types_two: []
+      } as InnovationComplementary
+    ];
+    const category = {
+      complementary_innovation_enabler_types_id: '1',
+      subCategories: [{ complementary_innovation_enabler_types_id: '2' }]
+    };
+    component.selectedOneLevel(category, 0, []);
+    expect(component.bodyStep2[0].complementary_innovation_enabler_types_two).toEqual(['2']);
+  });
+
+  it('should deselect one level and update complementary_innovation_enabler_types_two', () => {
+    component.bodyStep2 = [
+      {
+        complementary_innovation_enabler_types_one: ['1'],
+        complementary_innovation_enabler_types_two: ['2']
+      } as InnovationComplementary
+    ];
+    const category = {
+      complementary_innovation_enabler_types_id: '1',
+      subCategories: [{ complementary_innovation_enabler_types_id: '2' }]
+    };
+    component.bodyStep2[0].complementary_innovation_enabler_types_one = [];
+    component.selectedOneLevel(category, 0, []);
+    expect(component.bodyStep2[0].complementary_innovation_enabler_types_two).toEqual([]);
+  });
+
+  it('should select two and update complementary_innovation_enabler_types_one', () => {
+    component.bodyStep2 = [
+      {
+        complementary_innovation_enabler_types_one: [],
+        complementary_innovation_enabler_types_two: []
+      } as InnovationComplementary
+    ];
+    const category = {
+      complementary_innovation_enabler_types_id: '1'
+    };
+    component.selectedTwo(category, 0);
+    expect(component.bodyStep2[0].complementary_innovation_enabler_types_one).toEqual(['1']);
+  });
 });
