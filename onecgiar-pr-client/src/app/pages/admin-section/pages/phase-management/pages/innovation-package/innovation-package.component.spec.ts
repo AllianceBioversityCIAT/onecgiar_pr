@@ -68,4 +68,123 @@ describe('InnovationPackageComponent', () => {
     expect(mockResultsApiService.GET_tocPhases).toHaveBeenCalled();
     expect(mockApiService.dataControlSE.getCurrentIPSRPhase).toHaveBeenCalled();
   });
+  it('should save the phase', () => {
+    const mockPhase = {
+      id: 1,
+      phase_name: 'Phase 1',
+      phase_year: 2020,
+      toc_pahse_id: 2,
+      start_date: new Date(),
+      end_date: new Date(),
+      status: true,
+      previous_phase: null,
+      reporting_phase: 'Reporting Phase 1',
+      editing: false
+    };
+
+    const updateMainVariablesSpy = jest.spyOn(component, 'updateMainVariables');
+    const getAllPhasesSpy = jest.spyOn(component, 'getAllPhases');
+    const getNewPhasesSpy = jest.spyOn(mockPhasesService, 'getNewPhases');
+    const getCurrentIPSRPhaseSpy = jest.spyOn(mockApiService.dataControlSE, 'getCurrentIPSRPhase');
+
+    // Modify the code to return an observable
+    mockResultsApiService.PATCH_updatePhase.mockReturnValue(of({}));
+
+    component.savePhase(mockPhase);
+
+    expect(updateMainVariablesSpy).toHaveBeenCalledWith(mockPhase);
+    expect(mockResultsApiService.PATCH_updatePhase).toHaveBeenCalledWith(mockPhase.id, mockPhase);
+    expect(getAllPhasesSpy).toHaveBeenCalled();
+    expect(mockCustomizedAlertsFeService.show).toHaveBeenCalledWith({
+      id: 'manage-phase-save',
+      title: 'Phase saved',
+      status: 'success',
+      closeIn: 500
+    });
+    expect(getNewPhasesSpy).toHaveBeenCalled();
+    expect(getCurrentIPSRPhaseSpy).toHaveBeenCalled();
+  });
+
+  it('should update variables to save', () => {
+    const mockPhaseItem = {
+      phase_name: 'Phase 1',
+      phase_year: 2020,
+      toc_pahse_id: 2,
+      start_date: new Date(),
+      end_date: new Date(),
+      status: true,
+      previous_phase: null,
+      reporting_phase: 'Reporting Phase 1'
+    };
+
+    component.updateVariablesToSave(mockPhaseItem);
+
+    expect(mockPhaseItem).toEqual({
+      phase_name: 'Phase 1',
+      phase_year: 2020,
+      toc_pahse_id: 2,
+      start_date: new Date(),
+      end_date: new Date(),
+      status: true,
+      previous_phase: null,
+      reporting_phase: 'Reporting Phase 1',
+      phase_name_ts: 'Phase 1',
+      phase_year_ts: 2020,
+      toc_pahse_id_ts: 2,
+      start_date_ts: new Date(),
+      end_date_ts: new Date(),
+      status_ts: true,
+      previous_phase_ts: null,
+      reporting_phase_ts: 'Reporting Phase 1'
+    });
+  });
+
+  it('should create a phase', () => {
+    const mockPhase = {
+      id: 1,
+      phase_name: 'Phase 1',
+      phase_year: 2020,
+      toc_pahse_id: 2,
+      start_date: new Date(),
+      end_date: new Date(),
+      status: true,
+      previous_phase: null,
+      reporting_phase: 'Reporting Phase 1',
+      editing: false
+    };
+
+    const updateMainVariablesSpy = jest.spyOn(component, 'updateMainVariables');
+    const getAllPhasesSpy = jest.spyOn(component, 'getAllPhases');
+    const getNewPhasesSpy = jest.spyOn(mockPhasesService, 'getNewPhases');
+    const getCurrentIPSRPhaseSpy = jest.spyOn(mockApiService.dataControlSE, 'getCurrentIPSRPhase');
+
+    mockResultsApiService.POST_createPhase.mockReturnValue(of({}));
+
+    component.createPhase(mockPhase);
+
+    expect(updateMainVariablesSpy).toHaveBeenCalledWith(mockPhase);
+    expect(mockResultsApiService.POST_createPhase).toHaveBeenCalledWith(mockPhase);
+    expect(getAllPhasesSpy).toHaveBeenCalled();
+    expect(mockCustomizedAlertsFeService.show).toHaveBeenCalledWith({
+      id: 'manage-phase-save',
+      title: 'Phase created',
+      status: 'success',
+      closeIn: 500
+    });
+    expect(getNewPhasesSpy).toHaveBeenCalled();
+    expect(getCurrentIPSRPhaseSpy).toHaveBeenCalled();
+  });
+
+  it('should get Toc Phase Name', () => {
+    const mockTocPhaseList = [
+      { phase_id: 1, name: 'Phase 1', status: 'Open' },
+      { phase_id: 2, name: 'Phase 2', status: 'Closed' }
+    ];
+
+    component.tocPhaseList = mockTocPhaseList;
+
+    const result = component.getTocPhaseName(2);
+
+    expect(result).toEqual('Phase 2 - Closed');
+  });
 });
