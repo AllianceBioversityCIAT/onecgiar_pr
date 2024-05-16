@@ -15,7 +15,16 @@ import { MessageService } from 'primeng/api';
   providers: [MessageService]
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
-  constructor(private activatedRoute: ActivatedRoute, private messageSE: MessageService, public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, public saveButtonSE: SaveButtonService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService, private dataControlSE: DataControlService, private router: Router) {}
+  constructor(
+    private activatedRoute: ActivatedRoute,
+    private messageSE: MessageService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    public saveButtonSE: SaveButtonService,
+    private ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
+    private dataControlSE: DataControlService,
+    private router: Router
+  ) {}
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
@@ -35,7 +44,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     this.api.resultsSE.GET_resultIdToCode(this.ipsrDataControlSE.resultInnovationCode, this.ipsrDataControlSE.resultInnovationPhase).subscribe({
       next: ({ response }) => {
         this.ipsrDataControlSE.resultInnovationId = response;
-        callback();
+        callback?.();
       },
       error: err => {
         if (err.error.statusCode == 404) this.router.navigate([`/ipsr/list/innovation-list`]);

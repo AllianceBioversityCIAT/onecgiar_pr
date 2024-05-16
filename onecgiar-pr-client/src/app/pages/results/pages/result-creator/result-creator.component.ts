@@ -86,7 +86,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         callback(response);
       },
       err => {
-        callback();
+        callback?.();
       }
     );
   }
@@ -118,7 +118,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         console.error(err);
       },
       () => {
-        if (callback) callback();
+        callback?.();
       }
     );
   }

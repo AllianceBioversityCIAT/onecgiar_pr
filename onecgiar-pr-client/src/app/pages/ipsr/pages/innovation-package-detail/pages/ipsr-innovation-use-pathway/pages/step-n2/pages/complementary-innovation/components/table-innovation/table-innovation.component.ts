@@ -146,9 +146,7 @@ export class TableInnovationComponent {
             this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
           },
           complete: () => {
-            if (callback) {
-              callback();
-            }
+            callback?.();
           }
         });
       }
