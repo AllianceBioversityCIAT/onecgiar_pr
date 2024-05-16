@@ -1,5 +1,5 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { internationalizationData } from '../../data/internationalizationData';
+import { Component, Input } from '@angular/core';
+import { internationalizationData } from '../../data/internationalization-data';
 
 @Component({
   selector: 'app-page-alert',
@@ -9,9 +9,6 @@ import { internationalizationData } from '../../data/internationalizationData';
 export class PageAlertComponent {
   internationalizationData = internationalizationData;
   @Input() type: string;
-  constructor() {
-    //(this.type);
-  }
 
   get title() {
     switch (this.type) {

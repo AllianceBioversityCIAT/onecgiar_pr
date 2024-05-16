@@ -1,4 +1,4 @@
-import { internationalizationData } from './internationalizationData';
+import { internationalizationData } from './internationalization-data';
 
 describe('internationalizationData', () => {
   describe('reportNewResult', () => {
