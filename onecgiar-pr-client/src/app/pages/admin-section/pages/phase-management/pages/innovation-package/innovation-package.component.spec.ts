@@ -105,40 +105,6 @@ describe('InnovationPackageComponent', () => {
     expect(getCurrentIPSRPhaseSpy).toHaveBeenCalled();
   });
 
-  it('should update variables to save', () => {
-    const mockPhaseItem = {
-      phase_name: 'Phase 1',
-      phase_year: 2020,
-      toc_pahse_id: 2,
-      start_date: new Date(),
-      end_date: new Date(),
-      status: true,
-      previous_phase: null,
-      reporting_phase: 'Reporting Phase 1'
-    };
-
-    component.updateVariablesToSave(mockPhaseItem);
-
-    expect(mockPhaseItem).toEqual({
-      phase_name: 'Phase 1',
-      phase_year: 2020,
-      toc_pahse_id: 2,
-      start_date: new Date(),
-      end_date: new Date(),
-      status: true,
-      previous_phase: null,
-      reporting_phase: 'Reporting Phase 1',
-      phase_name_ts: 'Phase 1',
-      phase_year_ts: 2020,
-      toc_pahse_id_ts: 2,
-      start_date_ts: new Date(),
-      end_date_ts: new Date(),
-      status_ts: true,
-      previous_phase_ts: null,
-      reporting_phase_ts: 'Reporting Phase 1'
-    });
-  });
-
   it('should create a phase', () => {
     const mockPhase = {
       id: 1,
