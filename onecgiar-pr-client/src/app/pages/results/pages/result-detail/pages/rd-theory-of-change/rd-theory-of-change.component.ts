@@ -100,7 +100,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         console.error(err);
       },
       complete: () => {
-        callback && callback();
+        callback?.();
       }
     });
   }
