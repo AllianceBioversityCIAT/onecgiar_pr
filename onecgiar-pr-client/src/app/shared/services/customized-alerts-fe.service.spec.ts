@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { alertOptions, CustomizedAlertsFeService } from './customized-alerts-fe.service';
+import { AlertOptions, CustomizedAlertsFeService } from './customized-alerts-fe.service';
 
 describe('CustomizedAlertsFeService', () => {
   let service: CustomizedAlertsFeService;
@@ -14,7 +14,7 @@ describe('CustomizedAlertsFeService', () => {
   });
 
   it('should show alert', () => {
-    const alertOptions: alertOptions = {
+    const alertOptions: AlertOptions = {
       id: 'testId',
       title: 'Test Title',
       description: 'Test Description',
