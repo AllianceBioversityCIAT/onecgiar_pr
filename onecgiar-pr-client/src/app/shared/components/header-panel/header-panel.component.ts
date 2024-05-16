@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { internationalizationData } from '../../data/internationalizationData';
+import { internationalizationData } from '../../data/internationalization-data';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
@@ -13,7 +13,7 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
-  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE:GlobalLinksService) {}
+  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService) {}
   ngOnInit(): void {
     this.api.updateUserData(() => {});
   }

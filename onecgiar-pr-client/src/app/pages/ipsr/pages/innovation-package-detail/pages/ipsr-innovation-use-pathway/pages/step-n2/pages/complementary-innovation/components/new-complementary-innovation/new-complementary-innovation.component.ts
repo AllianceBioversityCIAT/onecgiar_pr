@@ -82,7 +82,7 @@ export class NewComplementaryInnovationComponent implements OnInit {
         console.error(error);
       },
       () => {
-        callback && callback();
+        callback?.();
       }
     );
     this.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();

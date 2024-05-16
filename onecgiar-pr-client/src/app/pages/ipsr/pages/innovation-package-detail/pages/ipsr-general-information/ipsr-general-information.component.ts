@@ -36,7 +36,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
     options.forEach(option => {
-      const found = this.ipsrGeneralInformationBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      const found = this.ipsrGeneralInformationBody.discontinued_options.find(
+        discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id
+      );
       if (found) {
         option.value = true;
         option.description = found?.description;
@@ -61,7 +63,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
       },
       complete: () => {
-        callback();
+        callback?.();
       }
     });
   }

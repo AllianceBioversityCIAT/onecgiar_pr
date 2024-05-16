@@ -25,7 +25,8 @@ export class PusherService {
 
   validaeFirstUserToEdit() {
     if (!this.presenceChannel?.members) return false;
-    const { members, myID } = this.presenceChannel?.members;
+    const { members, myID } = this.presenceChannel?.members || {};
+
     if (!Object.keys(members).length) return true;
 
     const membersList: any = [];
@@ -91,7 +92,6 @@ export class PusherService {
         endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-
     this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
     this.beforeRoute = PRRoute;
   }

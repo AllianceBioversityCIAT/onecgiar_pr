@@ -14,16 +14,6 @@ import { environment } from '../../../../environments/environment';
 })
 export class NavigationBarComponent implements OnInit {
   navigationOptions: PrRoute[] = routingApp;
-  emailAccess = [
-    'h.f.tobon@cgiar.org',
-    'admin@prms.pr',
-    'j.cadavid@cgiar.org',
-    'j.delgado@cgiar.org',
-    'd.casanas@cgiar.org',
-    'S.Galvez@cgiar.org',
-    'y.zuniga@cgiar.org',
-    'yecksin@gmail.com'
-  ];
 
   constructor(
     public api: ApiService,
@@ -44,18 +34,10 @@ export class NavigationBarComponent implements OnInit {
     });
   }
 
-  hasAccess() {
-    return !!this.emailAccess.find(email => email.toUpperCase() == this.authSE?.localStorageUser?.email.toUpperCase());
-  }
-
   validateAdminModuleAndRole(option) {
     if (option.onlytest && environment.production) return true;
-    // if (option?.path == 'ipsr' && !this.hasAccess()) return true;
     if (this.rolesSE.isAdmin) return false;
     if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
-    // if (option?.path == 'quality-assurance' && !this.rolesSE.isAdmin) return true;
-    // if (option?.path == 'type-one-report' && !this.rolesSE.isAdmin) return true;
-
     return false;
   }
 
