@@ -4,6 +4,7 @@ import { StepN1InnovatonUseComponent } from './step-n1-innovaton-use.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { NoDataTextComponent } from '../../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { of } from 'rxjs';
+import { Actor } from '../../model/Ipsr-step-1-body.model';
 
 describe('StepN1InnovatonUseComponent', () => {
   let component: StepN1InnovatonUseComponent;
@@ -189,7 +190,11 @@ describe('StepN1InnovatonUseComponent', () => {
   });
 
   it('should return a list of institution_sub_type_id from body.innovatonUse.organization', () => {
-    component.body.innovatonUse.organization = [{ institution_sub_type_id: 1 }, { institution_sub_type_id: 2 }, { institution_sub_type_id: 3 }] as any;
+    component.body.innovatonUse.organization = [
+      { institution_sub_type_id: 1 },
+      { institution_sub_type_id: 2 },
+      { institution_sub_type_id: 3 }
+    ] as any;
 
     const subTypes = component.getAllSubTypes;
 
@@ -299,12 +304,23 @@ describe('StepN1InnovatonUseComponent', () => {
       how_many: 20
     };
 
+    component.body.innovatonUse.actors = [
+      {
+        women_youth: 2,
+        previousWomen_youth: 2,
+        how_many: 0,
+        women_non_youth: null,
+        men_youth: 2,
+        men_non_youth: null
+      }
+    ] as Actor[];
+
     component.validateYouth(0, true, actorItem);
 
     expect(actorItem.women_youth).toBe(5);
     expect(actorItem.women).toBe(10);
-    expect(actorItem.showWomenExplanationwomen).toBe(true);
-    expect(actorItem.how_many).toBe(15);
+    expect(actorItem.showWomenExplanationwomen).toBe(false);
+    expect(actorItem.how_many).toBe(20);
   });
 
   it('should return narrativeActors description', () => {

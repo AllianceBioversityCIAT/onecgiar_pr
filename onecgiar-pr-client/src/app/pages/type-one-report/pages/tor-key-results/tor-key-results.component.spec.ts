@@ -55,10 +55,9 @@ describe('TorKeyResultsComponent', () => {
 
   it('should return the correct description', () => {
     const name = 'Initiative short name';
-    const expectedValue = `This section provides an overview of results reported by the CGIAR Initiative on <strong>${name}</strong>. These results align with the CGIAR Results Framework and <strong>${name}</strong> theory of change.
-  The following diagrams have been produced using quality assessed reported results and the information is a cumulative overview of quality assessed reported results from 2022 and 2023.<br>
-  Further information on these results is available through the <a class="open_route" href="https://www.cgiar.org/food-security-impact/new-results-dashboard/" target="_blank">CGIAR Results Dashboard</a>.
-  `;
+    const expectedValue = `This section provides an overview of results reported by the CGIAR Initiative on <strong>${name}</strong> These results align with the CGIAR Results Framework and <strong>${name}</strong> theory of change.
+  The following diagrams have been produced using quality assessed reported results in 2023 and, for certain indicator categories a trend overview of quality assessed results from 2022 and 2023 is presented.<br>
+  Further information on these results is available through the <a class="open_route" href="https://www.cgiar.org/food-security-impact/new-results-dashboard/" target="_blank">CGIAR Results Dashboard</a>.`;
 
     const result = component.keyResultsDesc(name);
 

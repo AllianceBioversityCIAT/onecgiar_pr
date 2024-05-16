@@ -24,7 +24,7 @@ export class UpdateInnovationPathwayDto {
   public is_not_diverse_justification!: string;
   public regions: regionsInterface[];
   public countries: countriesInterface[];
-  public scalig_ambition!: unknown;
+  public scalig_ambition?: ScaligAmbition;
 }
 
 export interface regionsInterface {
@@ -60,6 +60,11 @@ export interface innovatonUseInterface {
 interface institutionsInterface {
   institutions_id: number;
   deliveries?: number[];
+}
+
+interface ScaligAmbition {
+  title?: string;
+  body?: string;
 }
 
 export class UpdateComplementaryInnovationDto extends PartialType(

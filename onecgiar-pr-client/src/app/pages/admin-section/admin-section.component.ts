@@ -7,7 +7,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   templateUrl: './admin-section.component.html',
   styleUrls: ['./admin-section.component.scss']
 })
-export class AdminSectionComponent {
+export class AdminSectionComponent implements OnInit {
   sections = [
     { name: 'Completeness status', icon: 'check_circle', path: '/admin-module/completeness-status' },
     { name: 'User roles', icon: 'people', path: '/admin-module/user-report' },

@@ -1,75 +1,72 @@
 table,
 th,
 td {
-    border: 1px solid black;
+  border: 1px solid black;
 }
 
 table {
-    border-collapse: collapse;
+  border-collapse: collapse;
 }
 
 th {
-    padding: 10px;
-    // background-color: white;
+  padding: 10px;
 }
 
 td {
-    padding: 5px;
-    background-color: white;
+  padding: 5px;
+  background-color: white;
 }
 
 .table_title {
-    background-color: #5569DD !important;
-    color: white;
+  background-color: #5569dd !important;
+  color: white;
 }
 
 table {
-    width: 100%;
+  width: 100%;
 }
 
 .loader_info {
-    text-align: center;
+  text-align: center;
 }
 
 .flatFormat {
-    table {
-        width: auto !important;
-        font-family: Arial, Calibri, 'Trebuchet MS', sans-serif;
-        font-size: 14.5px !important;
-        // text-align: justify !important;
+  table {
+    width: auto !important;
+    font-family: Arial, Calibri, 'Trebuchet MS', sans-serif;
+    font-size: 14.5px !important;
 
-        .table_title {
-            color: black;
-            background-color: white !important;
-        }
+    .table_title {
+      color: black;
+      background-color: white !important;
     }
+  }
 }
 
 .copy_to_clipboard_button {
-    background-color: rgb(255, 255, 255);
-    color: rgb(80, 80, 80);
-    margin: 5px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 10px;
-    justify-content: start;
-    position: absolute;
-    top: 0;
-    right: 0;
-    cursor: pointer;
+  background-color: rgb(255, 255, 255);
+  color: rgb(80, 80, 80);
+  margin: 5px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  justify-content: start;
+  position: absolute;
+  top: 0;
+  right: 0;
+  cursor: pointer;
 
-    i {
-        font-size: 1.2em;
-    }
+  i {
+    font-size: 1.2em;
+  }
 }
 
 .box {
-    position: relative;
+  position: relative;
 }
 
 .distribution-left td:nth-child(1) {
-    font-weight: 700;
-    // background-color: red !important;
+  font-weight: 700;
 }

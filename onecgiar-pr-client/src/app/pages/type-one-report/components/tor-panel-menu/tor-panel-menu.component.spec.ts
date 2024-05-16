@@ -9,7 +9,7 @@ describe('TorPanelMenuComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         TorPanelMenuComponent,
         PrButtonComponent
       ],

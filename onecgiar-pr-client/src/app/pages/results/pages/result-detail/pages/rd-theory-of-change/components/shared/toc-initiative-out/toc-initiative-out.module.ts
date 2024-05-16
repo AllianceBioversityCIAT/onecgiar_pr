@@ -6,7 +6,6 @@ import { OutcomeLevelFilterPipe } from '../../../outcome-level-filter.pipe';
 import { TargetIndicatorComponent } from './target-indicator/target-indicator.component';
 import { ImpactAreaTargetsComponent } from './impact-area-targets/impact-area-targets.component';
 import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
-import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-outcome.component';
 import { TableModule } from 'primeng/table';
 import { RouterModule } from '@angular/router';
@@ -15,9 +14,20 @@ import { MultipleWPsContentComponent } from './multiple-wps/components/multiple-
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { MappedResultsModalComponent } from './multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
-  declarations: [TocInitiativeOutComponent, OutcomeLevelFilterPipe, TargetIndicatorComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent, MultipleWPsComponent, MultipleWPsContentComponent, MappedResultsModalComponent],
+  declarations: [
+    TocInitiativeOutComponent,
+    OutcomeLevelFilterPipe,
+    TargetIndicatorComponent,
+    ImpactAreaTargetsComponent,
+    SdgTargetsComponent,
+    ActionAreaOutcomeComponent,
+    MultipleWPsComponent,
+    MultipleWPsContentComponent,
+    MappedResultsModalComponent
+  ],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
   imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, TooltipModule, DialogModule]
 })

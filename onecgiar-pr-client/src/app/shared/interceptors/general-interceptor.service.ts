@@ -1,11 +1,11 @@
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, Observable, tap, throwError } from 'rxjs';
-import { environment } from 'src/environments/environment';
 import { AuthService } from '../services/api/auth.service';
 import { ApiService } from '../services/api/api.service';
 import { GreenChecksService } from '../services/global/green-checks.service';
-import { IpsrCompletenessStatusService } from 'src/app/pages/ipsr/services/ipsr-completeness-status.service';
+import { environment } from '../../../environments/environment';
+import { IpsrCompletenessStatusService } from '../../pages/ipsr/services/ipsr-completeness-status.service';
 
 @Injectable({
   providedIn: 'root'

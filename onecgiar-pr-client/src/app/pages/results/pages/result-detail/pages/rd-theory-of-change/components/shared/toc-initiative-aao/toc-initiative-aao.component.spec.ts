@@ -9,7 +9,7 @@ describe('TocInitiativeAaoComponent', () => {
   let component: TocInitiativeAaoComponent;
   let fixture: ComponentFixture<TocInitiativeAaoComponent>;
   let mockApiService: any;
-  let mockGET_resultActionAreaResponse =
+  const mockGET_resultActionAreaResponse =
   {
     consImpactTarget: [
       {

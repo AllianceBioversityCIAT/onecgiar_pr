@@ -52,7 +52,7 @@ export class LoginComponent implements OnDestroy, OnInit {
             document.getElementById('question').click();
             this.customAlertService.closeAction('loginAlert');
           });
-        console.log(err);
+        console.error(err);
         this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
       }
     );

@@ -49,8 +49,8 @@ export class IpsrGeneralInformationComponent implements OnInit {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
 
-  onSaveSection() {
-    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
+  onSaveSection(callback?) {
+    return this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
       next: resp => {
         this.api.GETInnovationPackageDetail();
         this.getSectionInformation();
@@ -59,6 +59,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
       error: err => {
         console.error(err);
         this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
+      },
+      complete: () => {
+        callback();
       }
     });
   }
@@ -84,9 +87,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition, health and food security tag guidance</strong> 
+    return `<strong>Nutrition, health and food security tag guidance</strong>
     <br>
-    
+
     There are two food security and nutrition targets for at systems level:
 
     <ul>
@@ -104,9 +107,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   environmentInformation() {
-    return `<strong>Environmental health and biodiversity tag guidance</strong> 
+    return `<strong>Environmental health and biodiversity tag guidance</strong>
     <br>
-    
+
     There are three environmental targets and one biodiversity target at systems level:
 
     <ul>
@@ -125,16 +128,16 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   povertyInformation() {
-    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong> 
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
     <br>
 
     There are two poverty reduction, livelihoods and jobs targets at systems level:
-    
+
     <ul>
       <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
       <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
     </ul>
-    
+
     Three scores are possible:
 
     <ul>
@@ -145,7 +148,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   genderInformation() {
-    return `<strong>Gender equality tag guidance</strong> 
+    return `<strong>Gender equality tag guidance</strong>
     <br/>
 
     There are two gender-related targets at systems level.

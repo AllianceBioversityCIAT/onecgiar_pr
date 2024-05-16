@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
-import { ApiService } from 'src/app/shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-n4',
@@ -26,7 +26,9 @@ export class StepN4Component implements OnInit {
         document.querySelector('.alert-event-3').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 

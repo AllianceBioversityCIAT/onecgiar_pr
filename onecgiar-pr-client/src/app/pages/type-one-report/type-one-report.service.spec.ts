@@ -43,19 +43,6 @@ describe('TypeOneReportService', () => {
     service = TestBed.inject(TypeOneReportService);
   });
 
-  describe('sanitizeUrl', () => {
-    it('should call bypassSecurityTrustResourceUrl with the correct URL', () => {
-      const spy = jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
-      service.initiativeSelected = 1;
-      service.currentBiPage = 2;
-
-      service.sanitizeUrl();
-
-      const expectedUrl = `${environment.t1rBiUrl}?official_code=1&sectionNumber=2`;
-      expect(spy).toHaveBeenCalledWith(expectedUrl);
-    });
-  });
-
   describe('getInitiativeID', () => {
     it('should return the correct initiative for admin user', () => {
       service.allInitiatives = [

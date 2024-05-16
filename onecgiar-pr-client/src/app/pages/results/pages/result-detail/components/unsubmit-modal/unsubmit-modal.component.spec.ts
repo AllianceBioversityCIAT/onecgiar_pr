@@ -31,7 +31,7 @@ describe('UnsubmitModalComponent', () => {
       }
     }
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         UnsubmitModalComponent,
         PrButtonComponent,
         PrTextareaComponent,
@@ -63,9 +63,9 @@ describe('UnsubmitModalComponent', () => {
   describe('cleanObject', () => {
     it('should clean comment property', () => {
       component.comment = 'Some comment';
-  
+
       component.cleanObject();
-  
+
       expect(component.comment).toBeNull();
     });
   });
@@ -76,13 +76,13 @@ describe('UnsubmitModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
-      
+
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
       expect(component.unsubmitModalSE.showModal).toBeFalsy();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'unsubmodal',
-        title: `Success`, 
+        title: `Success`,
         description: `The result has been unsubmitted.`,
         status: 'success',
       });
@@ -98,12 +98,12 @@ describe('UnsubmitModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
-      
+
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'unsubmodalerror',
-        title: `Error in unsubmitted`, 
+        title: `Error in unsubmitted`,
         description: '',
         status: 'error',
       });

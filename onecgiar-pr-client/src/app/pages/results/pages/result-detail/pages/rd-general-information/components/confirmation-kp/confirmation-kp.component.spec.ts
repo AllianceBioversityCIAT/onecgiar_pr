@@ -83,9 +83,9 @@ describe('ConfirmationKPComponent', () => {
       const mockError = new Error('Download error');
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_downloadPDF')
       .mockReturnValue(throwError(mockError));
-  
+
       component.downloadPDF();
-  
+
       expect(component.isDownloading).toBeFalsy();
     });
   });

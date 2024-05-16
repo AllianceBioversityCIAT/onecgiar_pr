@@ -27,7 +27,7 @@ describe('PanelMenuComponent', () => {
         GET_TypeByResultLevel: () => of({ response: [{ id: 3, result_type: [{ id: 3 }] }] }),
       }
     };
-    
+
     await TestBed.configureTestingModule({
       declarations: [
         PanelMenuComponent,
@@ -72,7 +72,7 @@ describe('PanelMenuComponent', () => {
   describe('green_checks_string()', () => {
     it('should return a stringified JSON representation of green_checks', () => {
       const result = component.green_checks_string;
-  
+
       expect(result).toEqual('{}');
     });
   });
@@ -87,7 +87,7 @@ describe('PanelMenuComponent', () => {
       const result = component.validateMember(mockInitiativesList);
       expect(result).toEqual(6);
     });
-  
+
     it('should return 1 when the current user role is not "Member"', () => {
       const mockInitiativesList = [
         { initiative_id: 1, role: 'Contributor' },

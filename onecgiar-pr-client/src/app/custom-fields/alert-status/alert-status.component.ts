@@ -10,5 +10,4 @@ export class AlertStatusComponent {
   @Input() title;
   @Input() description;
   @Input() inlineStyles?: string = ' ';
-  constructor() {}
 }

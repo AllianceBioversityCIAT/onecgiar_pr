@@ -35,7 +35,9 @@ export class PolicyChangeInfoComponent implements OnInit {
         document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 

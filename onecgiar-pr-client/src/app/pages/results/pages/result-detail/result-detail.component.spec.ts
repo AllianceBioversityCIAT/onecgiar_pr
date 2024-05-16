@@ -42,7 +42,7 @@ describe('ResultDetailComponent', () => {
   let mockResultLevelService:any;
   const mockGET_resultIdToCodeResponse = 1;
   const mockGET_versioningResultResponse = [];
-  
+
 
   beforeEach(async () => {
     mockApiService = {
@@ -94,7 +94,7 @@ describe('ResultDetailComponent', () => {
         PartnersRequestComponent,
         UnsubmitModalComponent,
         SubmissionModalComponent,
-        ResultTitleComponent, 
+        ResultTitleComponent,
         PhaseSwitcherComponent,
         PanelMenuComponent,
         PrButtonComponent,
@@ -171,7 +171,7 @@ describe('ResultDetailComponent', () => {
       const spyGET_versioningResult = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResult');
 
       await component.getData();
-  
+
       expect(mockDataControlService.currentResult).toBeNull();
       expect(mockApiService.resultsSE.currentResultCode).toBeNull();
       expect(mockApiService.resultsSE.currentResultPhase).toBeNull();
@@ -194,7 +194,7 @@ describe('ResultDetailComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(mockApiService.resultsSE.currentResultId).toBe(mockGET_resultIdToCodeResponse);
       expect(mockCurrentResultService.resultIdIsconverted).toBeTruthy();
-     
+
     });
 
     it('should resolves with null when GET_resultIdToCode call fails', async () => {
@@ -202,7 +202,7 @@ describe('ResultDetailComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode')
         .mockReturnValue(throwError(errorMessage));
       const promise = component.GET_resultIdToCode();
-    
+
       await expect(promise).resolves.toBeNull();
       expect(spy).toHaveBeenCalled();
     });

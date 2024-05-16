@@ -117,7 +117,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic;
   }
-  
+
   selectedLabelDescription() {
     if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
 

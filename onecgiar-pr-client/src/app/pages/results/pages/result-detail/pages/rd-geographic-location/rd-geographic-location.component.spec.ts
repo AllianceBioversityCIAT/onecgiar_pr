@@ -106,9 +106,9 @@ describe('RdGeographicLocationComponent', () => {
     it('should set geo_scope_id to GeoScopeEnum.COUNTRY if it is legacyCountries', () => {
       const mockResponse = { response: { geo_scope_id: 4 } };
       jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(of(mockResponse));
-  
+
       component.getSectionInformation();
-  
+
       expect(component.geographicLocationBody.geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
     });
   });
@@ -140,7 +140,7 @@ describe('RdGeographicLocationComponent', () => {
   describe('thereAnyRegionText()', () => {
     it('should return the correct text with UNM49 link', () => {
       const result = component.thereAnyRegionText();
-  
+
       const expectedText = `The list of regions below follows the <a href='${component.UNM49}' class="open_route" target='_blank'>UN (M.49)<a> standard`;
       expect(result).toBe(expectedText);
     });
@@ -149,7 +149,7 @@ describe('RdGeographicLocationComponent', () => {
   describe('thereAnycountriesText()', () => {
     it('should return the correct text with ISO3166 link', () => {
       const result = component.thereAnycountriesText();
-  
+
       const expectedText = `The list of countries below follows the <a href='${component.ISO3166}' class="open_route" target='_blank'>ISO 3166<a> standard`;
       expect(result).toBe(expectedText);
     });

@@ -25,33 +25,19 @@ export class PusherService {
   firstUser = false;
   secondUser = null;
   validaeFirstUserToEdit() {
-    //(this.presenceChannel?.members);
     if (!this.presenceChannel?.members) return false;
-    let { members, myID } = this.presenceChannel?.members;
+    const { members, myID } = this.presenceChannel?.members || {};
 
-    // if (this.firstUser) return true;
     if (!Object.keys(members).length) return true;
-    //(members)
 
-    let membersList: any = [];
+    const membersList: any = [];
 
     Object.keys(members).map(item => {
       const date = new Date(members[item]?.today);
-      // let initiativeRoles: any[] = [];
-      // initiativeRoles = members[item]?.initiativeRoles;
-
-      let generalRoles: any[] = [];
-      generalRoles = members[item]?.roles;
-
-      // TODO: Tener ene cuenta estado de la iniciativa
-      let oldDate = new Date('4000-05-31T20:40:34.081Z');
-      //(members)
 
       membersList.push({
         userId: item,
         date: date,
-        // initiativeRoles?.length ? (initiativeRoles[0]?.name !== 'Guest' ? date : oldDate) : generalRoles?.length ? (generalRoles[0]?.name == 'Admin' ? date : oldDate) : oldDate
-        // role: this._initiativesService.initiative.status == 'Approved' ? 'Guest' : initiativeRoles?.length ? initiativeRoles[0]?.name : generalRoles?.length ? (generalRoles[0]?.name == 'Admin' ? generalRoles[0]?.name : 'Guest') : 'Guest',
         name: members[item]?.name,
         nameinitials: this.textToinitials(members[item]?.name)
       });
@@ -67,20 +53,15 @@ export class PusherService {
     sortByDate(membersList);
     this.membersList = membersList;
     this.firstUser = membersList[0]?.userId == myID;
-    //(this.firstUser +' - '+this.secondUser)
     if (!this.firstUser) this.secondUser = true;
     if (this.firstUser && this.secondUser) {
-      let currentUrl = this.router.url;
-      //(currentUrl);
+      const currentUrl = this.router.url;
       this.router.navigateByUrl(`/result/result-detail/${this.api.resultsSE.currentResultId}`).then(() => {
         setTimeout(() => {
-          //('volver');
-          //(currentUrl);
           this.router.navigateByUrl(currentUrl);
         }, 1000);
       });
     }
-    //(membersList);
     return membersList[0]?.userId == myID;
   }
 
@@ -101,15 +82,10 @@ export class PusherService {
   }
 
   start(PRRoute: string, resultId) {
-    // const pusherBlocked = new PusherBlocked(OSTRoute);
-    // this.isTOC = pusherBlocked.blockedRoute();
-    // this.pusher.disconnect();
     if (this.beforeRoute) this.pusher.disconnect();
     if (this.beforeRoute) this.pusher.unsubscribe('presence-prms' + this.beforeRoute);
-    // if (pusherBlocked.blockedRoute()) return;
 
     PRRoute = PRRoute.split('/').join('').split('-').join('');
-    //(this.api.authSE.localStorageUser.id);
     this.pusher = new Pusher(environment.pusher.key, {
       cluster: environment.pusher.cluster,
       encrypted: true,
@@ -117,11 +93,7 @@ export class PusherService {
         endpoint: `${environment.apiBaseUrl}auth/signin/pusher/result/${resultId}/${this.api.authSE.localStorageUser.id}`
       }
     });
-    //('presence-prms' + PRRoute);
-
     this.presenceChannel = this.pusher.subscribe('presence-prms' + PRRoute);
     this.beforeRoute = PRRoute;
-    //(this.presenceChannel);
-    //(this.presenceChannel?.members);
   }
 }

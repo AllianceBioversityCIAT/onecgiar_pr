@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from 'src/app/shared/services/api/auth.service';
-import { environment } from 'src/environments/environment';
+import { AuthService } from '../../shared/services/api/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-pdf-reports',
@@ -75,13 +75,13 @@ class Report {
   get iframeRoute() {
     const { id: resultId } = this.activatedRoute.snapshot.paramMap.params || {};
 
-    const module = this.activatedRoute.snapshot._routerState.url.includes('ipsr') ? 'ipsr' : 'result';
+    const module = this.activatedRoute.snapshot._routerState?.url.includes('ipsr') ? 'ipsr' : 'result';
 
     return `${environment.apiBaseUrl}api/platform-report/${module}/${resultId}${this.qParamsObjectToqueryParams()}`;
   }
 
   qParamsObjectToqueryParams() {
-    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap.params);
+    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap?.params || {});
     if (!objectKeys.length) return '';
     let queryParamsText = '';
     const params = this.activatedRoute.snapshot.queryParamMap.params;

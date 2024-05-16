@@ -9,7 +9,6 @@ import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-tex
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { EvidencesBody } from './model/evidencesBody.model';
 
 jest.useFakeTimers();
 
@@ -19,12 +18,12 @@ describe('RdEvidencesComponent', () => {
   let mockApiService: any;
   let mockInnovationControlListService: any;
   let mockSaveButtonService: any;
-  let mockGET_evidencesResponse = {
+  const mockGET_evidencesResponse = {
     evidences: [],
     innovation_readiness_level_id: 1,
   };
-  let mockGET_loadFileInUploadSessionResponse = 'sampleUploadUrl';
-  let mockPUT_loadFileInUploadSessionResponse = {
+  const mockGET_loadFileInUploadSessionResponse = 'sampleUploadUrl';
+  const mockPUT_loadFileInUploadSessionResponse = {
     webUrl: 'webUrl',
     id: 'id',
     name: 'name',
@@ -225,7 +224,7 @@ describe('RdEvidencesComponent', () => {
       component.evidencesBody.evidences = mockEvidences;
       jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession')
         .mockRejectedValue('Error from POST_createUploadSession');
-      const consoleSpy = jest.spyOn(console, 'log');
+      const consoleSpy = jest.spyOn(console, 'error');
 
       await component.loadAllFiles();
 
@@ -344,6 +343,8 @@ describe('RdEvidencesComponent', () => {
         poverty_tag_level: '3',
         evidences: [
           { link: null, is_sharepoint: false, file: null },
+          { link: null, is_sharepoint: false, file: null },
+          { link: null, is_sharepoint: false, file: null },
         ],
       };
 
@@ -362,12 +363,14 @@ describe('RdEvidencesComponent', () => {
         poverty_tag_level: '3',
         evidences: [
           { link: null, is_sharepoint: true, file: null },
+          { link: null, is_sharepoint: true, file: null },
+          { link: null, is_sharepoint: true, file: null },
         ],
       };
 
       const result = component.validateCGSpaceLinks;
 
-      expect(result).toBeTruthy(); 
+      expect(result).toBeTruthy();
     });
 
     it('should return false if no evidence meets the conditions', () => {
@@ -379,7 +382,7 @@ describe('RdEvidencesComponent', () => {
         environmental_biodiversity_tag_level: '2',
         poverty_tag_level: '3',
         evidences: [
-          
+
         ],
       };
 

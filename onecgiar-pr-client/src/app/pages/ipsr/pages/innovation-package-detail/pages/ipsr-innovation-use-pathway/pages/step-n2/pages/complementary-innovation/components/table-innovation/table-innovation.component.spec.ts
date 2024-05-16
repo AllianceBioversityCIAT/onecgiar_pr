@@ -26,7 +26,16 @@ describe('TableInnovationComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [TableInnovationComponent, PrFieldHeaderComponent, PrInputComponent, PrTextareaComponent, PrRadioButtonComponent, PrButtonComponent, PrFieldValidationsComponent, YesOrNotByBooleanPipe],
+      declarations: [
+        TableInnovationComponent,
+        PrFieldHeaderComponent,
+        PrInputComponent,
+        PrTextareaComponent,
+        PrRadioButtonComponent,
+        PrButtonComponent,
+        PrFieldValidationsComponent,
+        YesOrNotByBooleanPipe
+      ],
       imports: [HttpClientTestingModule, FormsModule, DialogModule, TooltipModule, RadioButtonModule],
       providers: [{ provide: CustomizedAlertsFeService, useValue: mockCustomizedAlertsFeService }]
     }).compileComponents();
@@ -109,10 +118,11 @@ describe('TableInnovationComponent', () => {
     const alertFeSpy = jest.spyOn(mockCustomizedAlertsFeService, 'show');
     const deleteComplementary = jest.spyOn(component.api.resultsSE, 'DELETEcomplementaryinnovation').mockReturnValue(of({}));
     const emitSpy = jest.spyOn(component.saveedit, 'emit');
-    component.Ondelete(id);
-    expect(alertFeSpy).toHaveBeenCalled();
-    expect(deleteComplementary).toHaveBeenCalledWith(id);
-    expect(component.status).toBe(false);
-    expect(emitSpy).toHaveBeenCalledWith(true);
+    component.Ondelete(id, () => {
+      expect(alertFeSpy).toHaveBeenCalled();
+      expect(deleteComplementary).toHaveBeenCalledWith(id);
+      expect(component.status).toBe(false);
+      expect(emitSpy).toHaveBeenCalledWith(true);
+    });
   });
 });
