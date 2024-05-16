@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TorKrsOthersPrimaryImpactAreaComponent } from './tor-krs-others-primary-impact-area.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
   let component: TorKrsOthersPrimaryImpactAreaComponent;
@@ -8,9 +9,9 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ TorKrsOthersPrimaryImpactAreaComponent ]
-    })
-    .compileComponents();
+      declarations: [TorKrsOthersPrimaryImpactAreaComponent],
+      imports: [HttpClientModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TorKrsOthersPrimaryImpactAreaComponent);
     component = fixture.componentInstance;

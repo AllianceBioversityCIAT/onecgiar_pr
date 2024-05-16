@@ -132,7 +132,9 @@ export class DataControlService {
     let selects;
     try {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !field.value);
-      selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
+      selects = Array.prototype.slice
+        .call(htmlContainer.querySelectorAll('.pr-select.mandatory'))
+        .some((field: HTMLElement) => !field.classList.contains('complete'));
     } catch (error) {
       console.error(error);
     }

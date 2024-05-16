@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-interface alertOptions {
+interface AlertOptions {
   id?;
   title;
   description?: string;
@@ -15,7 +15,7 @@ export class CustomizedAlertsFsService {
   showed = false;
   constructor() {}
 
-  show(alertOptions: alertOptions) {
+  show(alertOptions: AlertOptions) {
     const { id, title, description = '', status, querySelector, position } = alertOptions;
     this.showed = true;
     let alert = document.getElementById(id);

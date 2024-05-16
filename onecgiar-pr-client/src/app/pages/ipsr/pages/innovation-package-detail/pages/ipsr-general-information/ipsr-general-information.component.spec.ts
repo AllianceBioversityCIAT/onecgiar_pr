@@ -108,7 +108,7 @@ describe('IpsrGeneralInformationComponent', () => {
       const spyGET_investmentDiscontinuedOptions = jest.spyOn(mockApiService.resultsSE, 'GET_investmentDiscontinuedOptions');
       const spyConvertChecklistToDiscontinuedOptions = jest.spyOn(component, 'convertChecklistToDiscontinuedOptions');
 
-      component.GET_investmentDiscontinuedOptions();
+      component.GET_investmentDiscontinuedOptions(1);
 
       expect(spyGET_investmentDiscontinuedOptions).toHaveBeenCalled();
       expect(spyConvertChecklistToDiscontinuedOptions).toHaveBeenCalledWith(mockGET_investmentDiscontinuedOptionsResponse);
@@ -140,16 +140,16 @@ describe('IpsrGeneralInformationComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
-      component.onSaveSection();
-
-      expect(spy).toHaveBeenCalled();
-      expect(getSectionInformationSpy).toHaveBeenCalled();
-      expect(showSuccessAlertSpy).toHaveBeenCalledWith({
-        id: 'save-button',
-        title: 'Section saved successfully',
-        description: '',
-        status: 'success',
-        closeIn: 500
+      component.onSaveSection(() => {
+        expect(spy).toHaveBeenCalled();
+        expect(getSectionInformationSpy).toHaveBeenCalled();
+        expect(showSuccessAlertSpy).toHaveBeenCalledWith({
+          id: 'save-button',
+          title: 'Section saved successfully',
+          description: '',
+          status: 'success',
+          closeIn: 500
+        });
       });
     });
     it('should call PATCHIpsrGeneralInfo and show error alert on onSaveSection error', () => {

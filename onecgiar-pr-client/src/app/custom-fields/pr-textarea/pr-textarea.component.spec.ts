@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrTextareaComponent } from './pr-textarea.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('PrTextareaComponent', () => {
   let component: PrTextareaComponent;
@@ -8,9 +9,9 @@ describe('PrTextareaComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrTextareaComponent ]
-    })
-    .compileComponents();
+      declarations: [PrTextareaComponent],
+      imports: [HttpClientModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrTextareaComponent);
     component = fixture.componentInstance;

@@ -53,7 +53,8 @@ export class RdGeneralInformationComponent implements OnInit {
     options.forEach(option => {
       const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
       if (found) {
-        (option.value = true), (option.description = found?.description);
+        option.value = true;
+        option.description = found?.description;
       }
     });
     this.generalInfoBody.discontinued_options = options;
