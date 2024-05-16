@@ -73,8 +73,8 @@ describe('TargetIndicatorComponent', () => {
   });
 
   it('should return the correct description object when calling descriptionWarningYear method', () => {
-    const dateFormat = '2022-01-01';
-    const year = 2022;
+    const dateFormat = '2022/01/01';
+    const year = 2023;
     const expectedDescription = {
       is_alert: false,
       description:
