@@ -4,6 +4,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { Validation } from './entities/validation.entity';
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
+import { env } from 'process';
 
 @Injectable()
 export class ResultsValidationModuleService {
@@ -240,7 +241,10 @@ export class ResultsValidationModuleService {
         await this._resultValidationRepository.validationResultExist(result.id);
 
       const phase = await this._resultValidationRepository.version();
-      if (phase.version != result.version_id) {
+      if (
+        phase.version != result.version_id &&
+        result.created_date < new Date(env.PREVIOUS_PHASE_DATE)
+      ) {
         const previousPhase =
           await this._resultValidationRepository.oldGreenCheckVersion(
             result.id,
@@ -266,6 +270,7 @@ export class ResultsValidationModuleService {
         );
       newValidation.general_information = vGeneral.validation;
       response.push(vGeneral);
+
       const vToc = await this._resultValidationRepository.tocValidation(
         result.id,
         result.result_level_id,
@@ -354,6 +359,7 @@ export class ResultsValidationModuleService {
           response.push(vSection77);
           break;
       }
+
       if (validation) {
         delete validation.results_id;
         await this._resultValidationRepository.update(
