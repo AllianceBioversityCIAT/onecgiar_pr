@@ -5,6 +5,7 @@ import { Validation } from './entities/validation.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 import { Evidence } from '../evidences/entities/evidence.entity';
+import { env } from 'process';
 
 @Injectable()
 export class resultValidationRepository
@@ -118,7 +119,7 @@ export class resultValidationRepository
 				and r.title <> ''
 			) ${
         resultType != 6
-          ? `and 
+          ? `and
 				(r.description is not null
 				and r.description <> '')`
           : ``
@@ -132,10 +133,10 @@ export class resultValidationRepository
 				and r.climate_change_tag_level_id <> ''
 			)
 			and (
-				if(r.result_type_id = 7, if(r.is_discontinued = 0 or r.is_replicated = 0, 
-				0, 
-				(select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas 
-				from results_investment_discontinued_options rido 
+				if(r.result_type_id = 7, if(r.is_discontinued = 0 or r.is_replicated = 0,
+				0,
+				(select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas
+				from results_investment_discontinued_options rido
 				where rido.is_active > 0 and rido.result_id = r.id)), 0) = 0
 			)
 			and (
@@ -150,7 +151,7 @@ export class resultValidationRepository
 				r.poverty_tag_level_id is not null
 				and r.poverty_tag_level_id <> ''
 			)
-			and (r.is_krs in (0, 1)) 
+			and (r.is_krs in (0, 1))
 			then true
 			else false
 		END as validation
@@ -158,13 +159,18 @@ export class resultValidationRepository
 		\`result\` r
 	WHERE
 		r.id = ?
-		and r.is_active > 0
-		and r.version_id = ${version};
+		AND r.is_active > 0
+		AND (
+		    r.version_id = ${version}
+				OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+		);
     `;
     try {
-      const shareResultRequest: GetValidationSectionDto[] =
+      const validationGeneralInformation: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
-      return shareResultRequest.length ? shareResultRequest[0] : undefined;
+      return validationGeneralInformation.length
+        ? validationGeneralInformation[0]
+        : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
@@ -202,7 +208,7 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-			) 
+			)
 		)
 		AND (
 			(
@@ -241,16 +247,16 @@ export class resultValidationRepository
           ? `
 					AND (
 						(SELECT COUNT(DISTINCT cgt.impactAreaId)
-						FROM results_impact_area_target riat 
-						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id 
+						FROM results_impact_area_target riat
+						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id
 						WHERE riat.result_id = r.id
 						AND riat.impact_area_target_id IS NULL
 						AND riat.is_active > 0) < 5
 					)
 					AND (
 						(SELECT COUNT(DISTINCT ciai.impact_area_id)
-						FROM results_impact_area_indicators riai 
-						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id 
+						FROM results_impact_area_indicators riai
+						INNER JOIN clarisa_impact_area_indicator ciai ON ciai.id = riai.impact_area_indicator_id
 						WHERE riai.result_id = r.id
 						AND riai.impact_area_indicator_id IS NULL
 						AND riai.is_active > 0) < 5
@@ -262,7 +268,7 @@ export class resultValidationRepository
 		(
 			SELECT
 				IFNULL(
-					SUM(IF(npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id <> '' AND 
+					SUM(IF(npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id <> '' AND
 						npp.grant_title IS NOT NULL AND npp.grant_title <> '' AND
 						npp.lead_center_id IS NOT NULL AND npp.lead_center_id <> '', 1, 0)),
 					0
@@ -283,8 +289,10 @@ export class resultValidationRepository
 		r.id = ?
 	AND
 		r.is_active > 0
-	AND
-		r.version_id = ${version};
+	AND (
+	    r.version_id = ${version}
+			OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+	);
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -362,7 +370,10 @@ export class resultValidationRepository
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
-		AND r.version_id = ${version};
+		AND (
+		    r.version_id = ${version}
+				OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+		);
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -383,7 +394,7 @@ export class resultValidationRepository
     const queryData = `
 	select
 		'geographic-location' as section_name,
-		case 
+		case
 			when r.geographic_scope_id in (1, 2) then (
 				(
 					if(
@@ -431,14 +442,14 @@ export class resultValidationRepository
 									and rc.is_active > 0
 							) > 0
 						)
-			when r.geographic_scope_id = 5 then (select if(count(*) - sum(temp.sub_counter) = 0, true, false) 
-													from (select if((select count(css.code) 
-										from clarisa_subnational_scopes css 
-										where css.country_iso_alpha_2 = cc.iso_alpha_2) > 0, count(rcs.result_country_subnational_id) > 0, true) as sub_counter  
+			when r.geographic_scope_id = 5 then (select if(count(*) - sum(temp.sub_counter) = 0, true, false)
+													from (select if((select count(css.code)
+										from clarisa_subnational_scopes css
+										where css.country_iso_alpha_2 = cc.iso_alpha_2) > 0, count(rcs.result_country_subnational_id) > 0, true) as sub_counter
 									from
 									result_country rc
-									left join clarisa_countries cc on cc.id = rc.country_id 
-									left join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id 
+									left join clarisa_countries cc on cc.id = rc.country_id
+									left join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id
 																				and rcs.is_active > 0
 								WHERE
 									rc.result_id = r.id
@@ -446,12 +457,15 @@ export class resultValidationRepository
 								GROUP by  rc.country_id, cc.name) temp)
 			when r.geographic_scope_id = 50 then true
 		end as validation
-	from
+	FROM
 		result r
 	WHERE
 		r.id = ?
-		and r.is_active > 0
-		and r.version_id = ${version};
+		AND r.is_active > 0
+		AND (
+		    r.version_id = ${version}
+				OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+		);
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -468,7 +482,7 @@ export class resultValidationRepository
 
   async linksResultsValidation(resultId: number) {
     const queryData = `
-	
+
     `;
     try {
       const shareResultRequest: GetValidationSectionDto[] =
@@ -689,7 +703,10 @@ export class resultValidationRepository
 		WHERE
 			r.id = ${resultId}
 			AND r.is_active > 0
-			AND r.version_id = ${version};
+			AND (
+			    r.version_id = ${version}
+					OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+			);
 	`;
 
       const level = await this.innoReadinessLevel(resultId);
@@ -716,12 +733,15 @@ export class resultValidationRepository
 				r.nutrition_tag_level_id,
 				r.environmental_biodiversity_tag_level_id,
 				r.poverty_tag_level_id
-			FROM 
+			FROM
 				result r
 			WHERE
 				r.id = ${resultId}
 				AND r.is_active > 0
-				AND r.version_id = ${version};
+				AND (
+				    r.version_id = ${version}
+						OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+				);
 		`;
 
         const dacResults = await this.dataSource.query(dacQuery);
@@ -1633,8 +1653,8 @@ export class resultValidationRepository
   		v.geographic_location *
   		v.links_to_results *
   		v.evidence as validation
-  	from validation v 
-	  inner join \`result\` r on r.id = v.results_id 
+  	from validation v
+	  inner join \`result\` r on r.id = v.results_id
 	  and r.is_active > 0
   		WHERE v.results_id = ?
 		  and v.is_active > 0;
@@ -1656,7 +1676,7 @@ export class resultValidationRepository
 
   async inactiveOldInserts(resultId: number) {
     const queryData = `
-		UPDATE validation 
+		UPDATE validation
 			set is_active = 0
 		WHERE results_id = ?;
     `;
@@ -1676,7 +1696,7 @@ export class resultValidationRepository
 
   async inactiveAllOldInserts() {
     const queryData = `
-		UPDATE validation 
+		UPDATE validation
 			set is_active = 0;
     `;
     try {
