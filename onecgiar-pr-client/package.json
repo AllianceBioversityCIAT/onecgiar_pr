@@ -62,6 +62,11 @@
     "setupFilesAfterEnv": [
       "<rootDir>/src/setup-jest.ts"
     ],
+    "coverageReporters": [
+      "text",
+      "cobertura",
+      "lcov"
+    ],
     "globalSetup": "jest-preset-angular/global-setup",
     "collectCoverage": true,
     "collectCoverageFrom": [

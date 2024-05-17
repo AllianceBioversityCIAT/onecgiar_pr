@@ -109,6 +109,11 @@
       "json",
       "ts"
     ],
+    "coverageReporters": [
+      "text",
+      "cobertura",
+      "lcov"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
