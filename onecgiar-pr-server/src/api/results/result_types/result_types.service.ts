@@ -73,7 +73,7 @@ export class ResultTypesService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 

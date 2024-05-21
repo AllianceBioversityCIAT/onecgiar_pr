@@ -265,7 +265,7 @@ export class ResultsService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
@@ -798,7 +798,7 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 

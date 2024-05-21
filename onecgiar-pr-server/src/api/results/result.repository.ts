@@ -390,7 +390,7 @@ export class ResultRepository
    * !reported_year revisar
    * @returns
    */
-  async AllResults(version = 1) {
+  async AllResults() {
     const queryData = `
     SELECT
     r.id,
@@ -431,12 +431,11 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
-    r.is_active > 0
-    and r.version_id = ?;
+    r.is_active > 0;
     `;
 
     try {
-      const results: any[] = await this.query(queryData, [version]);
+      const results: any[] = await this.query(queryData);
       return results;
     } catch (error) {
       throw {
