@@ -11,7 +11,13 @@
     </div>
 </div>
 
-<div class="search_input ipsr_searhc_input">
-    <i class="material-icons-round">search</i>
-    <input type="text" placeholder="Find result..." [(ngModel)]="this.ipsrListService.text_to_search">
+<div class="search">
+    <div class="search_input ipsr_searhc_input">
+        <i class="material-icons-round">search</i>
+        <input type="text" placeholder="Find result..." [(ngModel)]="this.ipsrListService.text_to_search">
+    </div>
+    
+    <div class="download_button_container">
+        <app-pr-button text="Download" (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)" [icon]="isLoadingReport ? 'loop' : 'file_download'" [rotating]="this.isLoadingReport" ></app-pr-button>
+    </div>
 </div>
