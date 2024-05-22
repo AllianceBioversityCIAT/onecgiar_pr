@@ -252,13 +252,13 @@ export class IpsrRepository
             r.is_replicated,
             r.is_discontinued,
             v.phase_name,
-            v.phase_year 
+            v.phase_year
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
-            INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
-            inner join \`version\` v on v.id = r.version_id 
+            INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+            inner join \`version\` v on v.id = r.version_id
         WHERE
             r.is_active = 1
             AND r.id = ?;
@@ -431,7 +431,7 @@ export class IpsrRepository
             rc.result_id,
             cc.iso_alpha_2
         FROM result_country rc
-            LEFT JOIN clarisa_countries cc ON cc.id = rc.country_id	
+            LEFT JOIN clarisa_countries cc ON cc.id = rc.country_id
         WHERE rc.result_id = ?
             AND rc.is_active = 1;
         `;
@@ -523,7 +523,7 @@ export class IpsrRepository
                 WHERE
                     ci.id = rbi.inititiative_id
             ) AS official_code,
-            rt.name AS result_type, 
+            rt.name AS result_type,
             r.result_level_id,
             (
                 SELECT
@@ -545,8 +545,8 @@ export class IpsrRepository
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
             LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
-            LEFT JOIN result_type rt ON rt.id = r.result_type_id 
-            INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+            LEFT JOIN result_type rt ON rt.id = r.result_type_id
+            INNER JOIN result_status rs ON rs.result_status_id = r.status_id
             INNER JOIN version v ON v.id = r.version_id
         WHERE
             r.is_active = 1
@@ -599,7 +599,7 @@ export class IpsrRepository
         	and rbip.is_active = true;
         `;
     try {
-      const results: getInnovationComInterface[] = await this.query(query, [
+      const results: GetInnovationComInterface[] = await this.query(query, [
         resultId,
       ]);
       return results;
@@ -616,9 +616,9 @@ export class IpsrRepository
     const innovationByIdQuery = `
         SELECT
             rbip.result_id
-        FROM 
+        FROM
             result_by_innovation_package rbip
-        WHERE 
+        WHERE
           rbip.result_innovation_package_id = ?;
         `;
 
@@ -627,15 +627,15 @@ export class IpsrRepository
             r.result_code,
             r.title,
             (
-                SELECT 
-                    ci.official_code 
-                FROM 
+                SELECT
+                    ci.official_code
+                FROM
                     clarisa_initiatives ci
-                WHERE ci.id = rbi.inititiative_id 
+                WHERE ci.id = rbi.inititiative_id
             ) AS official_code,
             r.version_id
         FROM
-            result r 
+            result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
         WHERE r.is_active = 1
             AND rbi.initiative_role_id = 1
@@ -665,92 +665,216 @@ export class IpsrRepository
   async getIpsrList(initDate: Date, lastDate: Date) {
     const ipsrListQuery = `
     SELECT
-        r.result_code AS 'Result Code',
-        v.phase_name as 'Reporting phase',
-        r.reported_year_id as 'Reporting year',
-        r.title as 'Result title',
+        r.result_code AS "Result Code",
+        v.phase_name AS "Reporting phase",
+        r.reported_year_id AS "Reporting year",
+        r.title AS "Result title",
         (
-            SELECT rt.name
-            FROM result_type rt
+            SELECT
+                rt.name
+            FROM
+                result_type rt
             WHERE
                 id = r.result_type_id
-        ) AS 'Result type',
+        ) AS "Result type",
         (
-            SELECT CONCAT(
-                    r2.result_code, ' - ', r2.title
+            SELECT
+                CONCAT(
+                    r2.result_code,
+                    " - ",
+                    r2.title
                 )
-            FROM result r2
+            FROM
+                result r2
             WHERE
                 r2.id = rbip.result_id
-        ) AS 'Core innovation',
+        ) AS "Core innovation",
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        IF(
+                            cgs.name IS NULL,
+                            "Not Provided",
+                            (
+                                IF(
+                                    cgs.id = 3,
+                                    CONCAT("National", '\n'),
+                                    CONCAT(cgs.name, '\n')
+                                )
+                            )
+                        ),
+                        IFNULL(
+                            (
+                                SELECT
+                                    CONCAT(
+                                        GROUP_CONCAT(
+                                            DISTINCT cr.name SEPARATOR ", "
+                                        ),
+                                        "\n"
+                                    )
+                                FROM
+                                    result_region rr
+                                    LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
+                                WHERE
+                                    rr.result_id = r.id
+                                    AND rr.is_active = 1
+                            ),
+                            ''
+                        ),
+                        IFNULL(
+                            (
+                                SELECT
+                                    IF(
+                                        r.geographic_scope_id = 5,
+                                        GROUP_CONCAT(csn.res SEPARATOR "\n"),
+                                        GROUP_CONCAT(csn.countries SEPARATOR ", ")
+                                    )
+                                FROM
+                                    (
+                                        SELECT
+                                            CONCAT_WS(
+                                                "",
+                                                cc3.name,
+                                                ": ",
+                                                "(",
+                                                IFNULL(
+                                                    GROUP_CONCAT(css.name SEPARATOR ", "),
+                                                    IF(
+                                                        (
+                                                            SELECT
+                                                                COUNT(css2.id)
+                                                            FROM
+                                                                clarisa_subnational_scopes css2
+                                                            where
+                                                                css2.country_iso_alpha_2 = cc3.iso_alpha_2
+                                                        ) > 0,
+                                                        "Not provided",
+                                                        "No sub-national levels available"
+                                                    )
+                                                ),
+                                                ")"
+                                            ) AS res,
+                                            cc3.name AS countries
+                                        FROM
+                                            result_country rc2
+                                            LEFT JOIN clarisa_countries cc3 ON cc3.id = rc2.country_id
+                                            LEFT JOIN result_country_subnational rcs ON rcs.result_country_id = rc2.result_country_id
+                                            AND rcs.is_active > 0
+                                            LEFT JOIN clarisa_subnational_scopes css ON css.code = rcs.clarisa_subnational_scope_code
+                                        WHERE
+                                            rc2.result_id = r.id
+                                            AND rc2.is_active = 1
+                                        GROUP BY
+                                            cc3.name,
+                                            prdb.cc3.iso_alpha_2
+                                    ) csn
+                            ),
+                            ''
+                        ) SEPARATOR '; '
+                    )
+                FROM
+                    clarisa_geographic_scope cgs
+                WHERE
+                    cgs.id = r.geographic_scope_id
+                GROUP BY
+                    cgs.id,
+                    cgs.name
+            ),
+            "Not provided"
+        ) AS "GeoFocus",
         (
-            SELECT CONCAT(
-                    u.first_name, ' ', u.last_name
+            SELECT
+                CONCAT(
+                    u.first_name,
+                    " ",
+                    u.last_name
                 )
-            FROM users u
+            FROM
+                users u
             WHERE
                 u.id = r.created_by
-        ) AS 'Submitter',
+        ) AS "Submitter",
         (
-            SELECT rs.status_name
-            FROM result_status rs
+            SELECT
+                rs.status_name
+            FROM
+                result_status rs
             WHERE
                 rs.result_status_id = r.status_id
-        ) AS 'Status',
+        ) AS "Status",
         (
             IFNULL(
                 (
-                    SELECT gtl.description
-                    FROM prdb.gender_tag_level gtl
+                    SELECT
+                        gtl.description
+                    FROM
+                        prdb.gender_tag_level gtl
                     WHERE
                         gtl.id = r.gender_tag_level_id
-                ), 'Not provided'
+                ),
+                "Not provided"
             )
-        ) AS 'Gender tag level',
+        ) AS "Gender tag level",
         (
             IFNULL(
                 (
-                    SELECT gtl.description
-                    FROM prdb.gender_tag_level gtl
+                    SELECT
+                        gtl.description
+                    FROM
+                        prdb.gender_tag_level gtl
                     WHERE
                         gtl.id = r.climate_change_tag_level_id
-                ), 'Not provided'
+                ),
+                "Not provided"
             )
-        ) AS 'Climate change tag level',
+        ) AS "Climate change tag level",
         (
             IFNULL(
                 (
-                    SELECT gtl.description
-                    FROM prdb.gender_tag_level gtl
+                    SELECT
+                        gtl.description
+                    FROM
+                        prdb.gender_tag_level gtl
                     WHERE
                         gtl.id = r.nutrition_tag_level_id
-                ), 'Not provided'
+                ),
+                "Not provided"
             )
-        ) AS 'Nutrition tag level',
+        ) AS "Nutrition tag level",
         (
             IFNULL(
                 (
-                    SELECT gtl.description
-                    FROM prdb.gender_tag_level gtl
+                    SELECT
+                        gtl.description
+                    FROM
+                        prdb.gender_tag_level gtl
                     WHERE
                         gtl.id = r.environmental_biodiversity_tag_level_id
-                ), 'Not provided'
+                ),
+                "Not provided"
             )
-        ) AS 'Environment and/or biodiversity Tag Level',
+        ) AS "Environment AND/or biodiversity Tag Level",
         (
             IFNULL(
                 (
-                    SELECT gtl.description
-                    FROM prdb.gender_tag_level gtl
+                    SELECT
+                        gtl.description
+                    FROM
+                        prdb.gender_tag_level gtl
                     WHERE
                         gtl.id = r.poverty_tag_level_id
-                ), 'Not provided'
+                ),
+                "Not provided"
             )
-        ) AS 'Poverty tag level',
-        DATE(r.created_date) AS 'Creation date',
+        ) AS "Poverty tag level",
+        DATE(r.created_date) AS "Creation date",
         (
-            SELECT CONCAT(
-                    ci.official_code, ' - ', ci.name
+            SELECT
+                CONCAT(
+                    ci.official_code,
+                    " - ",
+                    ci.name
                 )
             FROM
                 results_by_inititiative rbi
@@ -759,11 +883,14 @@ export class IpsrRepository
                 rbi.result_id = r.id
                 AND rbi.initiative_role_id = 1
                 AND rbi.is_active > 0
-        ) AS 'Lead initiative',
+        ) AS "Lead initiative",
         IFNULL(
             (
-                SELECT GROUP_CONCAT(
-                        ci.official_code, ' - ', ci.name SEPARATOR '\n'
+                SELECT
+                    GROUP_CONCAT(
+                        ci.official_code,
+                        " - ",
+                        ci.name SEPARATOR "\n"
                     )
                 FROM
                     results_by_inititiative rbi
@@ -772,45 +899,92 @@ export class IpsrRepository
                     rbi.result_id = r.id
                     AND rbi.initiative_role_id = 2
                     AND rbi.is_active > 0
-            ), 'Not provided'
-        ) AS 'Contributing initiative(s)',
+            ),
+            "Not provided"
+        ) AS "Contributing initiative(s)",
+        IFNULL((rip.scaling_ambition_blurb), "Not provided") AS "Scalling Ambition",
         IFNULL(
             (
-                SELECT cirl.level
+                SELECT
+                    GROUP_CONCAT(
+                        DISTINCT CONCAT(
+                            '• ',
+                            cs.short_name,
+                            ' (',
+                            (
+                                SELECT
+                                    GROUP_CONCAT(
+                                        DISTINCT cst2.sdg_target_code
+                                        ORDER BY
+                                            cst2.sdg_target_code SEPARATOR ', '
+                                    )
+                                FROM
+                                    clarisa_sdgs_targets cst2
+                                WHERE
+                                    cst2.usnd_code = cs.usnd_code
+                                    AND cst2.id IN (
+                                        SELECT
+                                            clarisa_sdg_target_id
+                                        FROM
+                                            result_ip_sdg_targets
+                                        WHERE
+                                            result_by_innovation_package_id = ris.result_by_innovation_package_id
+                                    )
+                            ),
+                            ')'
+                        )
+                        ORDER BY
+                            cs.usnd_code ASC SEPARATOR '\n'
+                    )
                 FROM
-                    clarisa_innovation_readiness_level cirl
+                    result_ip_sdg_targets ris
+                    LEFT JOIN clarisa_sdgs_targets cst ON cst.id = ris.clarisa_sdg_target_id
+                    LEFT JOIN clarisa_sdgs cs ON cs.usnd_code = cst.usnd_code
                 WHERE
-                    cirl.id = rip.readiness_level_evidence_based
-            ), 'Not provided'
-        ) AS 'Innovation readiness',
+                    ris.is_active > 0
+                    AND ris.result_by_innovation_package_id = rbip.result_by_innovation_package_id
+                GROUP BY
+                    ris.result_by_innovation_package_id
+            ),
+            "Not provided"
+        ) AS "Sustainable Development Goals (SDGs) targetted",
         IFNULL(
             (
-                SELECT ciul.level
-                FROM
-                    clarisa_innovation_use_levels ciul
-                WHERE
-                    ciul.id = rip.use_level_evidence_based
-            ), 'Not provided'
-        ) AS 'Innovation use',
+                NULL
+            ),
+            "Not provided"
+        ) AS "Scaling Readiness score",
+        IFNULL(
+            (
+                NULL    
+            ),
+            "Not provided"
+        ) AS "Scalability potential score",
         IF(
-            (v.phase_year > 2023), 
+            (v.phase_year > 2023),
             CONCAT(
-              '${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id
-            ), 
-            'Not applicable'
-        ) AS 'PDF Link'
+                "${env.FRONT_END_PDF_ENDPOINT}",
+                r.result_code,
+                ?,
+                "phase=",
+                r.version_id
+            ),
+            "Not applicable"
+        ) AS "Link to IPSR metadata PDF report"
     FROM
         result r
         LEFT JOIN version v ON r.version_id = v.id
         LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
         LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
         AND rbip.ipsr_role_id = 1
+        LEFT JOIN result_type rt ON rt.id = r.result_type_id
     WHERE
         r.is_active > 0
         AND r.result_type_id = 10
         AND r.created_date >= ?
         AND r.created_date <= ?
-    ORDER BY r.created_date DESC;
+    ORDER BY
+        r.created_date DESC
     `;
     try {
       const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
@@ -830,7 +1004,7 @@ export class IpsrRepository
   }
 }
 
-export class getInnovationComInterface {
+export class GetInnovationComInterface {
   public result_by_innovation_package_id: number;
   public result_id: number;
   public result_code: number;
@@ -843,8 +1017,8 @@ export class getInnovationComInterface {
   public is_active: boolean;
   public complementaryFunctions: ComplementaryFunctionsInterface[];
   public referenceMaterials: ReferenceMaterialsInterface[];
-  complementary_innovation_enabler_types_one: getEnablersType[];
-  complementary_innovation_enabler_types_two: getEnablersType[];
+  complementary_innovation_enabler_types_one: GetEnablersType[];
+  complementary_innovation_enabler_types_two: GetEnablersType[];
 }
 
 export interface ComplementaryFunctionsInterface {
@@ -854,7 +1028,7 @@ export interface ReferenceMaterialsInterface {
   link: string;
 }
 
-export class getEnablersType {
+export class GetEnablersType {
   complementary_innovation_enabler_types_id: string;
   group: string;
   type: string;

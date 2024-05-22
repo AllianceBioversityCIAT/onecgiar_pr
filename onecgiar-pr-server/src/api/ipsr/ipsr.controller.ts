@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   UseInterceptors,
+  HttpException,
 } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
