@@ -72,6 +72,20 @@ describe('TargetIndicatorComponent', () => {
     expect(description).toBe(expectedDescription);
   });
 
+  it('should return the correct description object when calling descriptionWarningYear method', () => {
+    const dateFormat = '2022/01/01';
+    const year = 2023;
+    const expectedDescription = {
+      is_alert: false,
+      description:
+        'You are reporting against an indicator that had a target in a following year. If you feel the TOC Result Framework is outdated please edit it. If the result framework is correct and you are reporting this result in advance, please go ahead.'
+    };
+
+    const description = component.descriptionWarningYear(dateFormat, year);
+
+    expect(description).toEqual(expectedDescription);
+  });
+
   it('should return the sum of a number and 1 when calling sumIndicator method', () => {
     const item = '5';
     const expectedSum = Number(item) + 1;

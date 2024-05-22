@@ -17,11 +17,11 @@ export class ExportTablesService {
         const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
         const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
         this.saveAsExcelFile(excelBuffer, fileName);
-        callback && callback();
+        callback?.();
       });
     } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Erorr generating file', status: 'error' });
-      callback && callback();
+      callback?.();
     }
   }
 
@@ -37,11 +37,11 @@ export class ExportTablesService {
         const workbook = { Sheets: { data: worksheet, 'TOC indicators by result': tocsheet }, SheetNames: ['data', 'TOC indicators by result'] };
         const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
         this.saveAsExcelFile(excelBuffer, fileName);
-        callback();
+        callback?.();
       });
     } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
-      callback();
+      callback?.();
     }
   }
 

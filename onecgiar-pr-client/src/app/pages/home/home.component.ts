@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { internationalizationData } from '../../shared/data/internationalizationData';
+import { internationalizationData } from '../../shared/data/internationalization-data';
 import { ApiService } from '../../shared/services/api/api.service';
 
 @Component({

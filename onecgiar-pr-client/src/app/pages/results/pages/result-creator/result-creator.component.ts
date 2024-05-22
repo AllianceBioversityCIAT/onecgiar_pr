@@ -1,5 +1,5 @@
 import { Component, DoCheck, OnInit } from '@angular/core';
-import { internationalizationData } from '../../../../shared/data/internationalizationData';
+import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
@@ -86,7 +86,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         callback(response);
       },
       err => {
-        callback();
+        callback?.();
       }
     );
   }
@@ -118,7 +118,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         console.error(err);
       },
       () => {
-        if (callback) callback();
+        callback?.();
       }
     );
   }

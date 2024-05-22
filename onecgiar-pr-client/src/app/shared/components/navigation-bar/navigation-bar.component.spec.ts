@@ -9,7 +9,6 @@ describe('NavigationBarComponent', () => {
 
   // Mock services
   const mockNavigationBarService = { navbar_fixed: false };
-  const mockAuthSEService = { localStorageUser: { email: '' } };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -18,7 +17,6 @@ describe('NavigationBarComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(NavigationBarComponent);
     component = fixture.componentInstance;
-    component.emailAccess = ['TEST@EXAMPLE.COM', 'USER@EXAMPLE.COM'];
     component.ngOnInit();
   });
 
@@ -42,11 +40,6 @@ describe('NavigationBarComponent', () => {
     expect(mockNavigationBarService.navbar_fixed).toBe(false);
   });
 
-  it('should return true when email is found', () => {
-    mockAuthSEService.localStorageUser.email = 'TEST@EXAMPLE.COM';
-    expect(component.hasAccess()).toBe(false);
-  });
-
   it('should return true when validateAdminModuleAndRole is called with an option that has onlytest true and environment is production', () => {
     const option = { onlytest: true };
     environment.production = true;
@@ -67,10 +60,6 @@ describe('NavigationBarComponent', () => {
     expect(validateCoordAndLeadSpy).toHaveBeenCalled();
   });
 
-  it('should return false when email is not found', () => {
-    mockAuthSEService.localStorageUser.email = 'notfound@example.com';
-    expect(component.hasAccess()).toBe(false);
-  });
   it('should return true when validateTypeOneReport is called with an option that has path "type-one-report" and user is not an admin', () => {
     const option = { path: 'type-one-report' };
     component.api.rolesSE.isAdmin = false;

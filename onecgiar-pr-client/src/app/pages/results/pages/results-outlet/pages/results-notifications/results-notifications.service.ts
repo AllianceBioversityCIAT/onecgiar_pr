@@ -60,7 +60,7 @@ export class ResultsNotificationsService {
         this.notificationLength = this.data.length;
       },
       err => console.error(err),
-      () => callback && callback()
+      () => callback?.()
     );
 
     this.api.resultsSE.GET_requestStatus().subscribe();

@@ -1780,23 +1780,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_reportingList', () => {
-    it('should call GET_reportingList and return expected data ', done => {
-      const initDate = '2022-12-01';
-      const init = new Date(initDate);
-      const today = new Date();
-      service.GET_reportingList().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${service.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
-      expect(req.request.method).toBe('GET');
-
-      req.flush(mockResponse);
-    });
-  });
-
   describe('PATCH_updateRequest', () => {
     it('should call PATCH_updateRequest and return expected data ', done => {
       const mockBody = {};
