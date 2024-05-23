@@ -3,6 +3,7 @@ import { IpsrListFilterService } from '../../services/ipsr-list-filter.service';
 import { IpsrListService } from '../../services/ipsr-list.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 @Component({
   selector: 'app-ipsr-list-filters',
   templateUrl: './ipsr-list-filters.component.html',
@@ -15,7 +16,8 @@ export class IpsrListFiltersComponent {
     public api: ApiService,
     public ipsrListService: IpsrListService,
     public ipsrListFilterSE: IpsrListFilterService,
-    public exportTablesSE: ExportTablesService
+    public exportTablesSE: ExportTablesService,
+    public ipsrDataControlSE: IpsrDataControlService
   ) {}
 
   onFilterSelectedInits() {

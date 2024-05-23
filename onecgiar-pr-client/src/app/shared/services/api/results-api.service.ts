@@ -475,11 +475,16 @@ export class ResultsApiService {
 
     const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr ? `${environment.apiBaseUrl}api/ipsr/get` : `${environment.apiBaseUrl}api/results/get/reporting`;
 
-    return this.http.post<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`, {
-      inits,
-      phases,
-      searchText
-    });
+
+    if(this.ipsrDataControlSE.inIpsr ){
+      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, {
+        inits,
+        phases,
+        searchText
+      });
+    }
+
+    return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
   }
 
   PATCH_updateRequest(body) {
