@@ -980,13 +980,29 @@ export class IpsrRepository
         ) AS "Sustainable Development Goals (SDGs) targetted",
         IFNULL(
             (
-                NULL
+                SELECT
+                    MIN(cirl.level * ciul.level) AS min_product
+                FROM
+                    result_by_innovation_package rbip2
+                    LEFT JOIN clarisa_innovation_readiness_level cirl ON cirl.id = rbip2.readiness_level_evidence_based
+                    LEFT JOIN clarisa_innovation_use_levels ciul ON ciul.id = rbip2.use_level_evidence_based
+                WHERE
+                    rbip2.is_active = 1
+                    AND rbip2.result_innovation_package_id = rip.result_innovation_package_id
             ),
             "Not provided"
         ) AS "Scaling Readiness score",
         IFNULL(
             (
-                NULL    
+                SELECT
+                    ROUND(AVG(cirl.level * ciul.level), 1) AS avg_sum
+                FROM
+                    result_by_innovation_package rbip2
+                    LEFT JOIN clarisa_innovation_readiness_level cirl ON cirl.id = rbip2.readiness_level_evidence_based
+                    LEFT JOIN clarisa_innovation_use_levels ciul ON ciul.id = rbip2.use_level_evidence_based
+                WHERE
+                    rbip2.is_active = 1
+                    AND rbip2.result_innovation_package_id = rip.result_innovation_package_id
             ),
             "Not provided"
         ) AS "Scalability potential score",
