@@ -4,7 +4,7 @@ import { env } from 'process';
 import { Result } from './api/results/entities/result.entity';
 import { ResultRepository } from './api/results/result.repository';
 import { HandlersError } from './shared/handlers/error.utils';
-import { TestModule } from './shared/test/orm-conection.module';
+import { OrmConfigTestModule } from './shared/test/orm-conection.module';
 import 'dotenv/config';
 
 describe('Unit test bootstrap', () => {
@@ -16,7 +16,7 @@ describe('Unit test bootstrap', () => {
     module = await Test.createTestingModule({
       controllers: [],
       providers: [ResultRepository, HandlersError],
-      imports: [TestModule],
+      imports: [OrmConfigTestModule],
     }).compile();
 
     resultRespository = module.get<ResultRepository>(

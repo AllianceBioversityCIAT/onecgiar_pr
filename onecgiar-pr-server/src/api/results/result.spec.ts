@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsService } from './results.service';
 import { ResultsModule } from './results.module';
-import { TestModule } from '../../shared/test/orm-conection.module';
+import { OrmConfigTestModule } from '../../shared/test/orm-conection.module';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
@@ -11,6 +11,9 @@ import { Result } from './entities/result.entity';
 import { HttpStatus } from '@nestjs/common';
 import { v4 } from 'uuid';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
+import { GeneralInformationDto } from './dto/general-information.dto';
+import { ReturnResponseDto } from '../../shared/handlers/error.utils';
+import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 
 describe('Result service unit test', () => {
   let module: TestingModule;
@@ -25,7 +28,7 @@ describe('Result service unit test', () => {
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [],
-      imports: [ResultsModule, TestModule],
+      imports: [ResultsModule, OrmConfigTestModule],
     }).compile();
 
     resultService = module.get<ResultsService>(ResultsService);
@@ -245,5 +248,107 @@ describe('Result service unit test', () => {
     const results = await resultService.findAll();
     expect(results.response).toBeDefined();
     expect(results.response[0].id).toBeDefined();
+  });
+
+  it('should return a result by id', async () => {
+    const resultId = 2;
+    const results = await resultService.findResultById(resultId);
+    expect(results.response).toBeDefined();
+    const resData = <Result>results.response;
+    expect(resData.id).toBe(resultId.toString());
+  });
+
+  it('should error when send an invalid id', async () => {
+    const resultId = -1;
+    const results = await resultService.findResultById(resultId);
+    expect(results.message).toBe('Results Not Found');
+    expect(results.status).toBe(HttpStatus.NOT_FOUND);
+  });
+
+  it('should return all results by role', async () => {
+    const results = await resultService.findAllByRole(userTest.id);
+    expect(results.response).toBeDefined();
+    expect(results.response[0].id).toBeDefined();
+  });
+
+  it('should error when not found result', async () => {
+    jest
+      .spyOn(resultService['_customResultRepository'], 'AllResultsByRoleUsers')
+      .mockResolvedValue(() => Promise.resolve([]));
+    const results = resultService.findAllByRole(-1);
+    expect((await results).message).toBe('Results Not Found');
+    expect((await results).status).toBe(HttpStatus.NOT_FOUND);
+  });
+
+  it('should return all results legacy new', async () => {
+    const title = 'Assessment of the pote';
+    const results = await resultService.findAllResultsLegacyNew(title);
+    expect(results.response).toBeDefined();
+    expect(results.response[0].id).toBeDefined();
+    expect(results.message).toBe('Successful response');
+    expect(results.status).toBe(HttpStatus.OK);
+  });
+
+  it('should error all when not found legacy result', async () => {
+    const title = 'Error title Test: -1';
+    const results = await resultService.findAllResultsLegacyNew(title);
+    expect(results.message).toBe('Results Not Found');
+    expect(results.status).toBe(HttpStatus.NOT_FOUND);
+  });
+
+  it('should return general information', async () => {
+    const resultId = 2;
+    const results = <ReturnResponseDto<GeneralInformationDto>>(
+      await resultService.getGeneralInformation(resultId)
+    );
+    expect(results.response).toBeDefined();
+    expect(results.response.result_id).toBe(resultId.toString());
+    expect(results.response.climate_change_tag_id).toBeDefined();
+    expect(results.response.is_krs).toBeDefined();
+    expect(typeof results.response.krs_url).toBe('string');
+    expect(typeof results.response.result_name).toBe('string');
+    expect(typeof results.response.result_description).toBe('string');
+    expect(results.message).toBe('Successful response');
+    expect((results as returnFormatService).status).toBe(HttpStatus.OK);
+  });
+
+  it('should error when not found general information', async () => {
+    const resultId = -1;
+    const results = await resultService.getGeneralInformation(resultId);
+    expect(results.message).toBe('Results Not Found');
+    expect((results as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+  });
+
+  it('should save a new geo scope', async () => {
+    const saveGeoScope: CreateResultGeoDto = {
+      countries: [{ id: 4 }, { id: 8 }],
+      has_countries: true,
+      regions: [{ id: 5 }, { id: 2 }],
+      has_regions: true,
+      result_id: 2,
+      geo_scope_id: 2,
+    };
+    const results: returnFormatService = await resultService.saveGeoScope(
+      saveGeoScope,
+      userTest,
+    );
+    expect(results.response).toBeDefined();
+    expect(results.response.result_id).toBe(saveGeoScope.result_id);
+    expect(results.response.geo_scope_id).toBe(saveGeoScope.geo_scope_id);
+    expect(results.message).toBe('Successful response');
+    expect(results.status).toBe(HttpStatus.OK);
+  });
+
+  it('should get a geo scope', async () => {
+    const resultId = 2;
+    const results: returnFormatService =
+      await resultService.getGeoScope(resultId);
+    expect(results.response).toBeDefined();
+    expect(results.response.regions).toBeDefined();
+    if (results.response.regions.length > 0) {
+      expect(results.response.regions[0].result_region_id).toBeDefined();
+    }
+    expect(results.message).toBe('Successful response');
+    expect(results.status).toBe(HttpStatus.OK);
   });
 });

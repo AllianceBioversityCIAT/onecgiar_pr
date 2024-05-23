@@ -7,6 +7,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
 import {
   HandlersError,
   ReturnResponse,
+  ReturnResponseDto,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
@@ -60,6 +61,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investm
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { isProduction } from '../../shared/utils/validation.utils';
+import { GeneralInformationDto } from './dto/general-information.dto';
 
 @Injectable()
 export class ResultsService {
@@ -1118,7 +1120,9 @@ export class ResultsService {
     }
   }
 
-  async getGeneralInformation(resultId: number) {
+  async getGeneralInformation(
+    resultId: number,
+  ): Promise<ReturnResponseDto<GeneralInformationDto> | returnErrorDto> {
     try {
       const result =
         await this._resultRepository.getResultAndLevelTypeById(resultId);

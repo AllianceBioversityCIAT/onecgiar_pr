@@ -36,4 +36,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   providers: [],
   exports: [TypeOrmModule],
 })
-export class TestModule {}
+export class OrmConfigTestModule {}

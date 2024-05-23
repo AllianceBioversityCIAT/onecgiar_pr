@@ -645,7 +645,7 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string, version = 1) {
+  async AllResultsLegacyNewByTitle(title: string) {
     const queryData = `
     (select 
       lr.legacy_id as id,
@@ -679,15 +679,13 @@ WHERE
                           and ci.active > 0
       inner join result_type rt on rt.id = r.result_type_id 
     where r.is_active > 0
-      and r.title like ?
-      and r.version_id = ?)
+      and r.title like ?)
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
         `%${title}%`,
-        version,
       ]);
       return results;
     } catch (error) {
