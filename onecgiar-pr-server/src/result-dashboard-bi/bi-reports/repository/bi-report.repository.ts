@@ -66,10 +66,6 @@ export class BiReportRepository extends Repository<BiReport> {
     if (report) {
       const barerTokenAzure = await this.getBarerTokenAzure();
       let tokenPowerBi;
-      console.log('get azure token');
-      console.log('token', barerTokenAzure.access_token);
-      console.log([{ id: report.dataset_id }]);
-      console.log([{ id: report.report_id }]);
       try {
         tokenPowerBi = await lastValueFrom(
           this._httpService
@@ -118,7 +114,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi(_subpageId?: number | string) {
+  async getReportsBi() {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -155,7 +151,6 @@ export class BiReportRepository extends Repository<BiReport> {
     if (report != null && report.length != 0) {
       let registerInToken = null;
       registerInToken = await this.getTokenPowerBi(report);
-      // console.log(registerInToken);
       if (registerInToken?.isError)
         throw new NotFoundException({ message: 'Error generating bi token' });
 
@@ -173,6 +168,23 @@ export class BiReportRepository extends Repository<BiReport> {
   async createNewRegisterBi(createBiReport: CreateBiReportDto) {
     const returnReportBi = this.save(createBiReport);
     return returnReportBi;
+  }
+
+  async getAllReports() {
+    const filterColumnNames =
+      '"id",f.id, "variablename",f.variablename,"scope",f.scope,"table",f.table,"column",f.column,"operator",f.operator,"param_type",f.param_type,"report_id",f.report_id';
+
+    const columnNames =
+      '"id", r.id, "report_name",r.report_name, "report_title",r.report_title, "report_description",r.report_description, "report_id",r.report_id, "dataset_id",r.dataset_id, "group_id",r.group_id, "is_active",r.is_active, "has_rls_security",r.has_rls_security, "report_order", r.report_order, "has_full_screen", r.has_full_screen';
+
+    return await this.query(
+      `SELECT JSON_OBJECT(${columnNames}) as report , JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) AS filters FROM bi_reports r
+      LEFT JOIN bi_filters f ON r.id = f.report_id 
+      WHERE r.is_active = 1 
+      GROUP BY r.id
+      ORDER BY r.report_order ASC;`,
+      [],
+    );
   }
 
   async getReportByName(report_name: string) {
