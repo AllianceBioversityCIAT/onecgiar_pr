@@ -121,6 +121,14 @@
       "/dist/",
       "/src/migrations/"
     ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 6,
+        "functions": 30,
+        "lines": 35,
+        "statements": 40
+      }
+    },
     "coverageReporters": [
       "text",
       "cobertura",
