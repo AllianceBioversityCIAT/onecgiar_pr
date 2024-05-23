@@ -4,6 +4,7 @@ import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { isProduction } from '../../shared/utils/validation.utils';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 
 @Injectable()
 export class IpsrService {
@@ -33,11 +34,7 @@ export class IpsrService {
       const result =
         await this._ipsrRespository.getResultInnovationDetail(resultId);
       if (!result) {
-        throw {
-          response: result,
-          message: 'The result was not found.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found.');
       }
 
       return {
@@ -55,11 +52,7 @@ export class IpsrService {
       const result =
         await this._ipsrRespository.getResultInnovationById(resultId);
       if (!result[0]) {
-        throw {
-          response: result,
-          message: 'The result was not found.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found.');
       }
 
       const discontinued_options =
@@ -87,12 +80,9 @@ export class IpsrService {
       const allResults = await this._ipsrRespository.getAllInnovationPackages();
 
       if (!allResults[0]) {
-        throw {
-          response: allResults,
-          message:
-            "At the moment we don't have any Innovation Packages results.",
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error(
+          "At the moment we don't have any Innovation Packages results.",
+        );
       }
 
       return {
@@ -105,19 +95,14 @@ export class IpsrService {
     }
   }
 
-  async getIpsrList(initDate: Date, lastDate: Date) {
+  async getIpsrList(excelReportDto: ExcelReportDto) {
     try {
-      const ipsrList = await this._ipsrRespository.getIpsrList(
-        initDate,
-        lastDate,
-      );
+      const ipsrList = await this._ipsrRespository.getIpsrList(excelReportDto);
 
       if (!ipsrList[0]) {
-        throw {
-          response: ipsrList,
-          message: 'No results found for the selected dates.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error(
+          'No results were found with the filters applied, the report is not generated.',
+        );
       }
 
       return {

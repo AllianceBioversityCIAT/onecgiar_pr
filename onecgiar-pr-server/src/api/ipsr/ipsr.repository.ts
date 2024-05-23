@@ -12,6 +12,7 @@ import {
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 import { env } from 'process';
+import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 
 @Injectable()
 export class IpsrRepository
@@ -662,7 +663,36 @@ export class IpsrRepository
     }
   }
 
-  async getIpsrList(initDate: Date, lastDate: Date) {
+  async getIpsrList(excelReportDto: ExcelReportDto) {
+    const { inits, phases, searchText } = excelReportDto;
+    const initIds = inits.map((init) => {
+      return init.id;
+    });
+    const phaseIds = phases.map((phase) => {
+      return phase.id;
+    });
+
+    const initClause =
+      initIds.length > 0
+        ? `AND r.id IN (
+           SELECT result_id
+           FROM results_by_inititiative
+           WHERE inititiative_id IN (${initIds.join(',')})
+             AND initiative_role_id = 1
+             AND is_active > 0
+         )`
+        : '';
+
+    const phaseClause =
+      phaseIds.length > 0 ? `AND r.version_id IN (${phaseIds.join(',')})` : '';
+
+    const searchClause = searchText
+      ? `AND (
+           r.result_code LIKE '%${searchText}%'
+           OR r.title LIKE '%${searchText}%'
+         )`
+      : '';
+
     const ipsrListQuery = `
     SELECT
         r.result_code AS "Result Code",
@@ -981,17 +1011,15 @@ export class IpsrRepository
     WHERE
         r.is_active > 0
         AND r.result_type_id = 10
-        AND r.created_date >= ?
-        AND r.created_date <= ?
+        ${initClause}
+        ${phaseClause}
+        ${searchClause}
     ORDER BY
         r.created_date DESC
     `;
+
     try {
-      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
-        '?',
-        initDate,
-        lastDate,
-      ]);
+      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, ['?']);
 
       return ipsrList;
     } catch (error) {
