@@ -4,7 +4,6 @@ import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
-import { NonPooledProject } from '../non-pooled-projects/entities/non-pooled-project.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
@@ -697,9 +696,9 @@ export class ResultsTocResultsService {
           [resultinit.toc_id, result_id],
         );
         if (!vesion_id.length || vesion_id[0].phase == null) {
-          version_id = vesion_id[0].phase;
-        } else {
           version_id = resultinit.toc_id;
+        } else {
+          version_id = vesion_id[0].phase;
         }
       }
       return {

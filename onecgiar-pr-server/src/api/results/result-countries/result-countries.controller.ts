@@ -1,22 +1,22 @@
-import { Controller, Post, Body, HttpException } from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
 import { ResultCountriesService } from './result-countries.service';
 import { CreateResultCountryDto } from './dto/create-result-country.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultCountriesController {
   constructor(
     private readonly resultCountriesService: ResultCountriesService,
   ) {}
 
   @Post('create')
-  async create(
+  create(
     @Body() createResultCountryDto: CreateResultCountryDto,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this.resultCountriesService.create(createResultCountryDto, user);
-    throw new HttpException({ message, response }, status);
+    return this.resultCountriesService.create(createResultCountryDto, user);
   }
 }

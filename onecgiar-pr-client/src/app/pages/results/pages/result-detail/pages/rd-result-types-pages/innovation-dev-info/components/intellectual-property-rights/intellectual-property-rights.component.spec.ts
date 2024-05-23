@@ -12,7 +12,7 @@ describe('IntellectualPropertyRightsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         IntellectualPropertyRightsComponent,
         PrRadioButtonComponent,
         PrFieldHeaderComponent
@@ -32,7 +32,7 @@ describe('IntellectualPropertyRightsComponent', () => {
   describe('ngOnInit()', () => {
     it('should initialize q1, q2, and q3 to null in ngOnInit', () => {
       component.ngOnInit();
-  
+
       expect(component.options.intellectual_property_rights.q1['value']).toBeNull();
       expect(component.options.intellectual_property_rights.q2['value']).toBeNull();
       expect(component.options.intellectual_property_rights.q3['value']).toBeNull();
@@ -47,30 +47,30 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.options.intellectual_property_rights.q2.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: []
         }
       ];
       component.options.intellectual_property_rights.q3.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: []
         }
       ];
-  
+
       component.clearIntellectualPropertyRights();
-  
+
       expect(component.options.intellectual_property_rights.q2['radioButtonValue']).toBeNull();
       expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBeNull();
     });
@@ -82,12 +82,12 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.options.intellectual_property_rights.q2.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: [],
         }
       ];
@@ -95,19 +95,19 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.options.intellectual_property_rights.q3.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: []
         }
       ];
       component.options.intellectual_property_rights.q3.options[0]['saved'] = true;
-  
+
       component.clearIntellectualPropertyRights();
-  
+
       expect(component.options.intellectual_property_rights.q2['radioButtonValue']).toBeNull();
       expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBeNull();
     });
@@ -117,18 +117,18 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.options.intellectual_property_rights.q3.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: []
         }
       ];
-  
+
       component.clearIntellectualPropertyRights();
-  
+
       expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBeNull();
     });
     it('should clear q3 when q2 is "35" and options has saved property', () => {
@@ -137,19 +137,19 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.options.intellectual_property_rights.q3.options = [
         {
           answer_boolean: true,
-          result_question_id: '1', 
-          question_text: '', 
-          result_type_id: 1, 
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
           parent_question_id: '1',
-          question_type_id: '1', 
-          question_level: '', 
+          question_type_id: '1',
+          question_level: '',
           subOptions: []
         }
       ];
       component.options.intellectual_property_rights.q3.options[0]['saved'] = true;
-  
+
       component.clearIntellectualPropertyRights();
-  
+
       expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBeNull();
     });
   });

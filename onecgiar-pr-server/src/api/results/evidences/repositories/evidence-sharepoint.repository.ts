@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 
 import { EvidenceSharepoint } from '../entities/evidence-sharepoint.entity';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
@@ -7,7 +7,6 @@ import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interf
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 

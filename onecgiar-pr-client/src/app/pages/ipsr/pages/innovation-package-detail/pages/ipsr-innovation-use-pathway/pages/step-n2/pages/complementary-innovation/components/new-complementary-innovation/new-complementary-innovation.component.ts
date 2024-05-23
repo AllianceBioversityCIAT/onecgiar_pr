@@ -56,7 +56,7 @@ export class NewComplementaryInnovationComponent implements OnInit {
     }
   }
 
-  onSave() {
+  onSave(callback?) {
     this.linksComplemntaryInnovation = this.linksComplemntaryInnovation.filter(element => element.link != '');
     this.bodyNewComplementaryInnovation.referenceMaterials = this.linksComplemntaryInnovation;
     this.bodyNewComplementaryInnovation.complementaryFunctions = this.selectedValues;
@@ -67,16 +67,24 @@ export class NewComplementaryInnovationComponent implements OnInit {
     this.linksComplemntaryInnovation = [{ link: '' }, { link: '' }, { link: '' }];
 
     let innovation;
-    this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe(resp => {
-      innovation = resp['response']['createResult'];
-      if (innovation['initiative_id'] < 10) {
-        innovation['initiative_official_code'] = 'INIT-0' + innovation['initiative_id'];
-      } else {
-        innovation['initiative_official_code'] = 'INIT-' + innovation['initiative_id'];
-      }
+    this.api.resultsSE.POSTNewCompletaryInnovation(this.bodyNewComplementaryInnovation).subscribe(
+      resp => {
+        innovation = resp['response']['createResult'];
+        if (innovation['initiative_id'] < 10) {
+          innovation['initiative_official_code'] = 'INIT-0' + innovation['initiative_id'];
+        } else {
+          innovation['initiative_official_code'] = 'INIT-' + innovation['initiative_id'];
+        }
 
-      this.createInnovationEvent.emit(innovation);
-    });
+        this.createInnovationEvent.emit(innovation);
+      },
+      error => {
+        console.error(error);
+      },
+      () => {
+        callback?.();
+      }
+    );
     this.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
     this.status = false;
     this.selectedValues = [];

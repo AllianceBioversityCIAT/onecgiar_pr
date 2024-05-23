@@ -1,14 +1,14 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaRegionsService } from './clarisa-regions.service';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaRegionsController {
   constructor(private readonly clarisaRegionsService: ClarisaRegionsService) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.clarisaRegionsService.findAllNoParent();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.clarisaRegionsService.findAllNoParent();
   }
 }

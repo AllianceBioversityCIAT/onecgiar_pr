@@ -6,13 +6,15 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsByInstitutionTypesService } from './results_by_institution_types.service';
 import { CreateResultsByInstitutionTypeDto } from './dto/create-results_by_institution_type.dto';
 import { UpdateResultsByInstitutionTypeDto } from './dto/update-results_by_institution_type.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('/')
+@UseInterceptors(ResponseInterceptor)
 export class ResultsByInstitutionTypesController {
   constructor(
     private readonly resultsByInstitutionTypesService: ResultsByInstitutionTypesService,
@@ -29,30 +31,24 @@ export class ResultsByInstitutionTypesController {
   }
 
   @Get('result/:id')
-  async findAll(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionTypesService.getGetInstitutionsTypeByResultId(
-        id,
-      );
-    throw new HttpException({ message, response }, status);
+  findAll(@Param('id') id: number) {
+    return this.resultsByInstitutionTypesService.getGetInstitutionsTypeByResultId(
+      id,
+    );
   }
 
   @Get('actors/result/:id')
-  async findAllActors(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionTypesService.getGetInstitutionsTypeActorsByResultId(
-        id,
-      );
-    throw new HttpException({ message, response }, status);
+  findAllActors(@Param('id') id: number) {
+    return this.resultsByInstitutionTypesService.getGetInstitutionsTypeActorsByResultId(
+      id,
+    );
   }
 
   @Get('partners/result/:id')
-  async findAllPartners(@Param('id') id: number) {
-    const { message, response, status } =
-      await this.resultsByInstitutionTypesService.getGetInstitutionsTypePartnersByResultId(
-        id,
-      );
-    throw new HttpException({ message, response }, status);
+  findAllPartners(@Param('id') id: number) {
+    return this.resultsByInstitutionTypesService.getGetInstitutionsTypePartnersByResultId(
+      id,
+    );
   }
 
   @Get(':id')

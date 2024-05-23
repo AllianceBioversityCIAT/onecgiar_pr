@@ -258,12 +258,14 @@ describe('StepN3Component', () => {
 
   it('should return the expected HTML string on goToStep', () => {
     component.ipsrDataControlSE = {
-      resultInnovationCode: '12345'
+      resultInnovationCode: '12345',
+      resultInnovationPhase: '1'
     } as any;
 
     const result = component.goToStep();
 
-    expect(result).toBe(`<li>In case you want to add one more complementary innovation/enabler/solution <a class='open_route' href='/ipsr/detail/12345/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2</a></li>
+    expect(result)
+      .toBe(`<li>In case you want to add one more complementary innovation/enabler/solution <a class='open_route' href='/ipsr/detail/12345/ipsr-innovation-use-pathway/step-2/complementary-innovation?phase=${component.ipsrDataControlSE.resultInnovationPhase}' target='_blank'> Go to step 2</a></li>
         <li><strong>YOUR READINESS AND USE SCORES IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a> AND <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`);
   });
 

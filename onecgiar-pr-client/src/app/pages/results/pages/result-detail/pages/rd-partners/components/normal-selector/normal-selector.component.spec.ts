@@ -64,7 +64,7 @@ describe('NormalSelectorComponent', () => {
   describe('getOnlyPartnerTypes()', () => {
     it('should initialize partnerUniqueTypes correctly', () => {
       component.getOnlyPartnerTypes();
-  
+
       expect(component.partnerUniqueTypes).toEqual(['name']);
     });
   });

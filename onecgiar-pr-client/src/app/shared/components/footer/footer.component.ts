@@ -11,14 +11,14 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 })
 export class FooterComponent {
   routes = [{ path: '/result/results-outlet/results-list' }, { path: '/result/result-detail/', floating: true }, { path: '/type-one-report', floating: true }, { path: '/ipsr/list/innovation-list' }, { path: '/ipsr/detail' }, { path: '/quality-assurance' }, { path: '/init-admin-module', floating: true }, { path: '/login', floatingFix: true }];
-  // { path: '/admin-module', floating: true },
   isFloating = false;
   isFloatingFix = false;
   isHover = false;
   license = environment.footerUrls.license;
-  constructor(private router: Router, public footerSE: FooterService, public globalLinksSE:GlobalLinksService) {}
+
+  constructor(public router: Router, public footerSE: FooterService, public globalLinksSE:GlobalLinksService) {}
+
   showIfRouteIsInList() {
-    // //(this.router.url);
     this.isFloating = false;
     for (const route of this.routes) {
       if (this.router.url.includes(route?.path)) {
@@ -29,6 +29,7 @@ export class FooterComponent {
     }
     return false;
   }
+
   onMouseEnter() {
     this.isHover = true;
   }

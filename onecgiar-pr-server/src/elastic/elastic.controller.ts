@@ -1,18 +1,20 @@
 import {
   Body,
   Controller,
-  HttpException,
   Post,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ElasticService } from './elastic.service';
 import rawbody from 'raw-body';
 import { ValidRoleGuard } from '../shared/guards/valid-role.guard';
 import { RoleEnum, RoleTypeEnum } from '../shared/constants/role-type.enum';
 import { Roles } from '../shared/decorators/roles.decorator';
+import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
 
 @Controller('elastic')
+@UseInterceptors(ResponseInterceptor)
 export class ElasticController {
   constructor(private readonly _elasticService: ElasticService) {}
 
@@ -29,17 +31,13 @@ export class ElasticController {
       bodyString = json;
     }
 
-    const { message, response, status } =
-      await this._elasticService.sendBulkOperationToElastic([bodyString]);
-    throw new HttpException({ message, response }, status);
+    return this._elasticService.sendBulkOperationToElastic([bodyString]);
   }
 
   @Post('reset')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
-  async resetElasticData() {
-    const { message, response, status } =
-      await this._elasticService.resetElasticData();
-    throw new HttpException({ message, response }, status);
+  resetElasticData() {
+    return this._elasticService.resetElasticData();
   }
 }

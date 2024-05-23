@@ -6,12 +6,10 @@ import { ClarisaCredentialsBiService } from 'src/result-dashboard-bi/clarisa-cre
 import { CredentialsClarisaBi } from '../dto/crendentials-clarisa.dto';
 import { lastValueFrom, map } from 'rxjs';
 import {
-  BodyPowerBiDTO,
   EmbedCredentialsDTO,
   ReportInformation,
 } from '../dto/embed-credentials.dto';
 import { CreateBiReportDto } from '../dto/create-bi-report.dto';
-import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
 import { GetBiSubpagesDto } from '../dto/get-bi-subpages.dto';
@@ -20,7 +18,6 @@ import { BiSubpagesRepository } from './bi-subpages.repository';
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
   private credentialsBi: CredentialsClarisaBi;
-  private barerTokenAzure: any;
   constructor(
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
@@ -44,18 +41,17 @@ export class BiReportRepository extends Repository<BiReport> {
       },
     };
     //Organice url azure
-    this.credentialsBi.azure_api_url =
-      await this.credentialsBi.azure_api_url.replace(
-        '{tenantID}',
-        this.credentialsBi.tenant_id,
-      );
+    this.credentialsBi.azure_api_url = this.credentialsBi.azure_api_url.replace(
+      '{tenantID}',
+      this.credentialsBi.tenant_id,
+    );
 
     //Bearer token
     let dataCredentials: any;
 
     try {
       dataCredentials = await lastValueFrom(
-        await this._httpService
+        this._httpService
           .post(`${this.credentialsBi.azure_api_url}`, params, config)
           .pipe(map((resp) => resp.data)),
       );

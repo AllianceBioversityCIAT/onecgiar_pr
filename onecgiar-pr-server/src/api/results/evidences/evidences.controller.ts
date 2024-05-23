@@ -6,22 +6,21 @@ import {
   Patch,
   Param,
   Delete,
-  Headers,
-  HttpException,
   UseInterceptors,
 } from '@nestjs/common';
 import { EvidencesService } from './evidences.service';
 import { CreateEvidenceDto } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { CreateUploadSessionDto } from './dto/create-upload-session.dto';
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class EvidencesController {
   constructor(
     private readonly evidencesService: EvidencesService,
@@ -29,10 +28,9 @@ export class EvidencesController {
   ) {}
 
   @Post('create/:resultId')
-  @UseInterceptors(FilesInterceptor('files'))
-  async create(
+  @UseInterceptors(ResponseInterceptor, FilesInterceptor('files'))
+  create(
     @Body() formDataJson: FormDataJson,
-    @Headers() auth: HeadersDto,
     @UserToken() user: TokenDto,
     @Param('resultId') resultId: number,
   ) {
@@ -41,12 +39,7 @@ export class EvidencesController {
     );
     createEvidenceDto.result_id = resultId;
 
-    const { message, response, status } = await this.evidencesService.create(
-      createEvidenceDto,
-      user,
-    );
-
-    throw new HttpException({ message, response }, status);
+    return this.evidencesService.create(createEvidenceDto, user);
   }
 
   @Post('createUploadSession')

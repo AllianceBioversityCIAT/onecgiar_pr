@@ -12,14 +12,29 @@ import { ReportNewResultButtonComponent } from './components/report-new-result-b
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ResultsListFilterPipeModule } from './pipes/results-list-filter-pipe.module';
-import { PdfIconModule } from 'src/app/shared/icon-components/pdf-icon/pdf-icon.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultsToUpdateModalModule } from './components/results-to-update-modal/results-to-update-modal.module';
-import { CustomSpinnerModule } from 'src/app/shared/components/custom-spinner/custom-spinner.module';
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
+import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
+import { CustomSpinnerModule } from '../../../../../../shared/components/custom-spinner/custom-spinner.module';
 
 @NgModule({
   declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
-  imports: [CommonModule, ResultsListRoutingModule, CustomSpinnerModule, TableModule, ButtonModule, MenuModule, ResultsToUpdateModalModule, ChangePhaseModalModule, RouterModule, FormsModule, CustomFieldsModule, ResultsListFilterPipeModule, PdfIconModule, TooltipModule]
+  imports: [
+    CommonModule,
+    ResultsListRoutingModule,
+    CustomSpinnerModule,
+    TableModule,
+    ButtonModule,
+    MenuModule,
+    ResultsToUpdateModalModule,
+    ChangePhaseModalModule,
+    RouterModule,
+    FormsModule,
+    CustomFieldsModule,
+    ResultsListFilterPipeModule,
+    PdfIconModule,
+    TooltipModule
+  ]
 })
 export class ResultsListModule {}

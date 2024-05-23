@@ -59,17 +59,31 @@ export class InnovationPackageCustomTableComponent {
   ];
 
   onDelete() {
-    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`, description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`, status: 'success', confirmText: 'Yes, delete' }, () => {
-      this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe({
-        next: resp => {
-          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`, description: ``, status: 'success' });
-          this.deleteEvent.emit();
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
-        }
-      });
-    });
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to delete the Innovation Package "${this.currentInnovationPackageToAction.title}"?`,
+        description: `If you delete this Innovation Package it will no longer be displayed in the list of Innovation Packages.`,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.api.resultsSE.DELETEInnovationPackage(this.currentInnovationPackageToAction.id).subscribe({
+          next: resp => {
+            this.api.alertsFe.show({
+              id: 'confirm-delete-result-su',
+              title: `The Innovation Package "${this.currentInnovationPackageToAction.title}" was deleted`,
+              description: ``,
+              status: 'success'
+            });
+            this.deleteEvent.emit();
+          },
+          error: err => {
+            this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete Innovation Package', description: '', status: 'error' });
+          }
+        });
+      }
+    );
   }
   onPressAction(result) {
     const onlyNumbers = result?.official_code.replace(/\D+/g, '');
@@ -80,6 +94,8 @@ export class InnovationPackageCustomTableComponent {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase.phaseYear && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase.phaseYear;
+    this.itemsWithDelete[1].visible =
+      this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase?.phaseYear &&
+      this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase?.phaseYear;
   }
 }

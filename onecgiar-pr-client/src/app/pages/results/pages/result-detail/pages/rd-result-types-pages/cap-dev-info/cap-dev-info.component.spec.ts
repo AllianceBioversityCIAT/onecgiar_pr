@@ -39,7 +39,7 @@ describe('CapDevInfoComponent', () => {
     }
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         CapDevInfoComponent,
         PrRadioButtonComponent,
         PrInputComponent,
@@ -117,9 +117,9 @@ describe('CapDevInfoComponent', () => {
   describe('clean_capdev_term_2()', () => {
     it('should set capdev_term_id_2 to null if capdev_term_id_1 is 3', () => {
       component.capdev_term_id_1 = 3;
-  
+
       component.clean_capdev_term_2();
-  
+
       expect(component.capdev_term_id_2).toBeNull();
     });
   });
@@ -127,7 +127,7 @@ describe('CapDevInfoComponent', () => {
   describe('length_of_training()', () => {
     it('should return HTML string with correct training information', () => {
       const result = component.length_of_training();
-  
+
       expect(result).toContain('<ul>');
       expect(result).toContain('<li>Long-term training refers to training that goes for 3 or more months.</li>');
       expect(result).toContain('<li>Short-term training refers to training that goes for less than 3 months.</li>');
@@ -139,9 +139,9 @@ describe('CapDevInfoComponent', () => {
   describe('length_of_training()', () => {
     it('should set capdev_term_id_1 to 3 if capdev_term_id is 3', () => {
       component.capDevInfoRoutingBody.capdev_term_id = 3;
-  
+
       component.get_capdev_term_id();
-  
+
       expect(component.capdev_term_id_1).toEqual(3);
       expect(component.capdev_term_id_2).toBeNull();
     });
@@ -168,7 +168,7 @@ describe('CapDevInfoComponent', () => {
   describe('cleanOrganizationsList()', () => {
     it('should set capDevInfoRoutingBody.institutions to []', () => {
       component.cleanOrganizationsList();
-  
+
       expect(component.capDevInfoRoutingBody.institutions).toEqual([]);
     });
   });
@@ -177,18 +177,18 @@ describe('CapDevInfoComponent', () => {
     it('should set capdev_term_id to capdev_term_id_2 if capdev_term_id_2 is defined', () => {
       component.capdev_term_id_1 = 3;
       component.capdev_term_id_2 = 2;
-  
+
       component.validate_capdev_term_id();
-  
+
       expect(component.capDevInfoRoutingBody.capdev_term_id).toEqual(2);
     });
 
     it('should set capdev_term_id to capdev_term_id_1 if capdev_term_id_2 is not defined', () => {
       component.capdev_term_id_1 = 4;
       component.capdev_term_id_2 = null;
-  
+
       component.validate_capdev_term_id();
-  
+
       expect(component.capDevInfoRoutingBody.capdev_term_id).toEqual(4);
     });
   });
@@ -196,12 +196,12 @@ describe('CapDevInfoComponent', () => {
   describe('validate_capdev_term_id()', () => {
     it('should call validate_capdev_term_id and cleanOrganizationsList when onSaveSection is called', () => {
       component.capDevInfoRoutingBody.is_attending_for_organization = false;
-  
+
       const validateCapDevTermIdSpy = jest.spyOn(component, 'validate_capdev_term_id');
       const cleanOrganizationsListSpy = jest.spyOn(component, 'cleanOrganizationsList');
       const PATCH_capacityDevelopentSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_capacityDevelopent');
 
-  
+
       component.onSaveSection();
 
       expect(validateCapDevTermIdSpy).toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('CapDevInfoComponent', () => {
     it('should return the correct description for delivery method', () => {
       const description = component.deliveryMethodDescription();
       const expectedDescription = `If you selected 'In person' or 'Blended', please ensure that you have the correct selections for <a href="http://localhost:4200/result/result-detail/${mockApiService.resultsSE.currentResultCode}/geographic-location?phase=${mockApiService.resultsSE.currentResultPhase}" class="open_route" target="_blank">section 4. Geographic Location</a>.`;
-  
+
       expect(description).toEqual(expectedDescription);
     });
   });

@@ -11,7 +11,7 @@ describe('ResultsInnovationOutputListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         ResultsInnovationOutputListComponent,
         FilterByTextPipe
       ],
@@ -88,7 +88,7 @@ describe('ResultsInnovationOutputListComponent', () => {
   describe('cleanSelected()', () => {
     it('should set selected property to false for all innovations', () => {
       const mockInnovations = [
-        { 
+        {
           result_id: '123',
           result_code: 'ABC',
           title: 'Title',

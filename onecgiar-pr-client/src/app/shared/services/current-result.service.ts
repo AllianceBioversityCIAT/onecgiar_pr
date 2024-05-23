@@ -10,7 +10,13 @@ import { Router } from '@angular/router';
 })
 export class CurrentResultService {
   resultIdIsconverted = false;
-  constructor(private resultLevelSE: ResultLevelService, private api: ApiService, private rolesSE: RolesService, private dataControlSE: DataControlService, private router: Router) {}
+  constructor(
+    private resultLevelSE: ResultLevelService,
+    private api: ApiService,
+    private rolesSE: RolesService,
+    private dataControlSE: DataControlService,
+    private router: Router
+  ) {}
 
   async GET_resultById() {
     await this.api.resultsSE.GET_resultById().subscribe(

@@ -132,8 +132,12 @@ export class DataControlService {
     let selects;
     try {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !field.value);
-      selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
-    } catch (error) {}
+      selects = Array.prototype.slice
+        .call(htmlContainer.querySelectorAll('.pr-select.mandatory'))
+        .some((field: HTMLElement) => !field.classList.contains('complete'));
+    } catch (error) {
+      console.error(error);
+    }
     return inputs || selects;
   }
 
@@ -160,7 +164,9 @@ export class DataControlService {
         if (tagValue && isIncomplete) this.fieldFeedbackList.push(tagValue);
         return isIncomplete;
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
     return Boolean(inputs) || Boolean(selects);
   }
 

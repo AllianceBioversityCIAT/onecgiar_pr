@@ -32,7 +32,7 @@ export class SimpleTableWithClipboardComponent {
     //   }
     // }
     setTimeout(() => {
-      let range = new Range();
+      const range = new Range();
       // s.removeRange(range);
 
       range.setStart(table, 0);

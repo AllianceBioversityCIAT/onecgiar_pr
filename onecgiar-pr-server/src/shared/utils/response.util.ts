@@ -1,4 +1,4 @@
-import { HttpStatus, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ReturnResponseDto } from '../handlers/error.utils';
 import { ObjectType } from 'typeorm';
 
@@ -11,10 +11,6 @@ export class ReturnResponseUtil {
 
     if (statusCode >= 400) {
       _logger.debug(message);
-      if (statusCode >= 500 || !statusCode || !message) {
-        message = `Internal Server Error`;
-        statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-      }
     }
     return {
       response: response,

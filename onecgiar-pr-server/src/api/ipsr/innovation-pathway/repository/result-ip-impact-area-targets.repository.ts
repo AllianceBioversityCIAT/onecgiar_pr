@@ -3,7 +3,10 @@ import { HandlersError } from 'src/shared/handlers/error.utils';
 import { DataSource } from 'typeorm';
 import { ResultIpImpactArea } from '../entities/result-ip-impact-area.entity';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
-import { ReplicableConfigInterface, ConfigCustomQueryInterface } from '../../../../shared/globalInterfaces/replicable.interface';
+import {
+  ReplicableConfigInterface,
+  ConfigCustomQueryInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
 
@@ -12,7 +15,6 @@ export class ResultIpImpactAreaRepository
   extends BaseRepository<ResultIpImpactArea>
   implements LogicalDelete<ResultIpImpactArea>
 {
-
   createQueries(
     config: ReplicableConfigInterface<ResultIpImpactArea>,
   ): ConfigCustomQueryInterface {
@@ -20,7 +22,9 @@ export class ResultIpImpactAreaRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -45,7 +49,9 @@ export class ResultIpImpactAreaRepository
           )
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,

@@ -22,7 +22,7 @@ jest.useFakeTimers();
 describe('EvidenceItemComponent', () => {
   let component: EvidenceItemComponent;
   let fixture: ComponentFixture<EvidenceItemComponent>;
-  let mockEvidences: EvidencesCreateInterface = {
+  const mockEvidences: EvidencesCreateInterface = {
     gender_related: false,
     youth_related: false,
     nutrition_related: false,
@@ -84,22 +84,22 @@ describe('EvidenceItemComponent', () => {
       const file = createFile('test.jpg', 500);
 
       const result = component.validateFileTypes(file);
-  
+
       expect(result).toBeTruthy();
     });
     it('should return false for an invalid file type', () => {
-      const file = createFile('test.txt', 500); 
-  
+      const file = createFile('test.txt', 500);
+
       const result = component.validateFileTypes(file);
-  
+
       expect(result).toBeFalsy();
     });
-  
+
     it('should return false for an invalid file type and exceeding the size limit', () => {
-      const file = createFile('test.txt', 2000); 
-  
+      const file = createFile('test.txt', 2000);
+
       const result = component.validateFileTypes(file);
-  
+
       expect(result).toBeFalsy();
     });
   });
@@ -109,7 +109,7 @@ describe('EvidenceItemComponent', () => {
       const spy = jest.spyOn(mockApiService.alertsFe, 'show')
 
       component.deleteItem();
-  
+
       expect(spy).toHaveBeenCalled();
     });
   });
@@ -180,7 +180,7 @@ describe('EvidenceItemComponent', () => {
       expect(component.incorrectFile).toBeTruthy();
 
       jest.runAllTimers();
-      
+
       expect(component.incorrectFile).toBeFalsy();
     });
   });
@@ -262,7 +262,7 @@ describe('EvidenceItemComponent', () => {
       const cleanSPSpy = jest.spyOn(component, 'cleanSP');
 
       component.cleanSource(false);
-      
+
       expect(cleanLinkSpy).not.toHaveBeenCalled();
       expect(cleanSPSpy).toHaveBeenCalled();
     });

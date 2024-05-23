@@ -15,47 +15,53 @@ export class ResultsNotificationsService {
     this.get_section_information();
   }
 
-  get_section_information() {
-    this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
-      if (!response) {
-        return;
-      }
-
-      const { requestData, requestPendingData } = response;
-
-      requestData.forEach(noti => {
-        const myInit = this.api.dataControlSE.myInitiativesList.find(init => init?.role === 'Member' && init.initiative_id === noti.approving_inititiative_id);
-
-        if (myInit) {
-          noti.readOnly = true;
-        }
-      });
-
-      const updateRequestPendingData = requestPendingData.map(item => {
-        if (item.request_status_id === 1) {
-          return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
-        }
-
-        return item;
-      });
-
-      this.data = [...requestData, ...updateRequestPendingData];
-
-      if (!this.api.rolesSE?.isAdmin) {
-        if (this.api.dataControlSE.myInitiativesList?.length === 0) {
-          this.data = [];
+  get_section_information(callback?) {
+    this.api.resultsSE.GET_allRequest().subscribe(
+      ({ response }) => {
+        if (!response) {
           return;
         }
 
-        this.data = this.data.filter(data => {
-          const isInitiativeOwner = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.owner_initiative_id);
-          const isInitiativeApprover = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.approving_inititiative_id);
-          return isInitiativeOwner || isInitiativeApprover;
-        });
-      }
+        const { requestData, requestPendingData } = response;
 
-      this.notificationLength = this.data.length;
-    });
+        requestData.forEach(noti => {
+          const myInit = this.api.dataControlSE.myInitiativesList.find(
+            init => init?.role === 'Member' && init.initiative_id === noti.approving_inititiative_id
+          );
+
+          if (myInit) {
+            noti.readOnly = true;
+          }
+        });
+
+        const updateRequestPendingData = requestPendingData.map(item => {
+          if (item.request_status_id === 1) {
+            return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
+          }
+
+          return item;
+        });
+
+        this.data = [...requestData, ...updateRequestPendingData];
+
+        if (!this.api.rolesSE?.isAdmin) {
+          if (this.api.dataControlSE.myInitiativesList?.length === 0) {
+            this.data = [];
+            return;
+          }
+
+          this.data = this.data.filter(data => {
+            const isInitiativeOwner = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.owner_initiative_id);
+            const isInitiativeApprover = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.approving_inititiative_id);
+            return isInitiativeOwner || isInitiativeApprover;
+          });
+        }
+
+        this.notificationLength = this.data.length;
+      },
+      err => console.error(err),
+      () => callback?.()
+    );
 
     this.api.resultsSE.GET_requestStatus().subscribe();
   }

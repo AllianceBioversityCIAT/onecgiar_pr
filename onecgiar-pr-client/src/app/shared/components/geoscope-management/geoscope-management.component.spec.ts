@@ -150,18 +150,18 @@ describe('GeoscopeManagementComponent', () => {
   describe('labelRadioButtons', () => {
     it('should return the correct label when the module is REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.REPORTING);
-      jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord'); 
-  
+      jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord');
+
       const label = component.labelRadioButtons;
-  
+
       expect(label).toBe(`What is the main geographic focus of the someWord?`);
       expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith(component.resultLevelSE.currentResultLevelName);
     });
     it('should return the correct label when the module is not REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.ALL);
-  
+
       const label = component.labelRadioButtons;
-  
+
       expect(label).toBe('Select country/ geoscope for which packaging and scaling readiness assessment will be conducted');
     });
   });
@@ -169,18 +169,18 @@ describe('GeoscopeManagementComponent', () => {
   describe('descriptionRadioButtons', () => {
     it('should return the correct description when the module is REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.REPORTING);
-      jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord'); 
-  
+      jest.spyOn(component.api.dataControlSE, 'getLastWord').mockReturnValue('someWord');
+
       const description = component.descriptionRadioButtons;
-  
+
       expect(description).toBe(`This should reflect where the <strong>someWord</strong> has taken place/contributed to benefit.`);
       expect(component.api.dataControlSE.getLastWord).toHaveBeenCalledWith(component.resultLevelSE.currentResultLevelName);
     });
     it('should return undefined when the module is not REPORTING', () => {
       component.internalModule = AppModuleEnum.getFromName(ModuleTypeEnum.ALL);
-  
+
       const description = component.descriptionRadioButtons;
-  
+
       expect(description).toBeUndefined();
     });
   });

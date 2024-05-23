@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
 import {
@@ -15,95 +15,71 @@ import {
 } from './dto/create-result-innovation-package.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultInnovationPackageController {
   constructor(
     private readonly resultInnovationPackageService: ResultInnovationPackageService,
   ) {}
 
   @Post('create-header')
-  async createHeader(
+  createHeader(
     @Body() createResultInnovationPackageDto: CreateResultInnovationPackageDto,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.createHeader(
-        createResultInnovationPackageDto,
-        user,
-      );
-
-    throw new HttpException({ message, response }, status);
+    return this.resultInnovationPackageService.createHeader(
+      createResultInnovationPackageDto,
+      user,
+    );
   }
 
   @Patch('general-information/:resultId')
-  async generalInformation(
+  generalInformation(
     @Param('resultId') resultId: number,
     @Body() updateGeneralInformationDto: UpdateGeneralInformationDto,
     @UserToken() user: TokenDto,
   ) {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.generalInformation(
-        resultId,
-        updateGeneralInformationDto,
-        user,
-      );
-
-    throw new HttpException({ message, response }, status);
+    return this.resultInnovationPackageService.generalInformation(
+      resultId,
+      updateGeneralInformationDto,
+      user,
+    );
   }
 
   @Get('active-backstopping')
-  async findActiveBackstopping() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findActiveBackstopping();
-    throw new HttpException({ message, response }, status);
+  findActiveBackstopping() {
+    return this.resultInnovationPackageService.findActiveBackstopping();
   }
 
   @Get('consensus-initiative-work-package')
-  async findConsensusInitiativeWorkPackage() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findConsensusInitiativeWorkPackage();
-    throw new HttpException({ message, response }, status);
+  findConsensusInitiativeWorkPackage() {
+    return this.resultInnovationPackageService.findConsensusInitiativeWorkPackage();
   }
 
   @Get('regional-integrated')
-  async findRegionalIntegrated() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findRegionalIntegrated();
-    throw new HttpException({ message, response }, status);
+  findRegionalIntegrated() {
+    return this.resultInnovationPackageService.findRegionalIntegrated();
   }
 
   @Get('regional-leadership')
-  async findRegionalLeadership() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findRegionalLeadership();
-    throw new HttpException({ message, response }, status);
+  findRegionalLeadership() {
+    return this.resultInnovationPackageService.findRegionalLeadership();
   }
 
   @Get('relevant-country')
-  async findRelevantCountry() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findRelevantCountry();
-
-    throw new HttpException({ message, response }, status);
+  findRelevantCountry() {
+    return this.resultInnovationPackageService.findRelevantCountry();
   }
 
   @Delete(':resultId')
-  async delete(
-    @Param('resultId') resultId: number,
-    @UserToken() user: TokenDto,
-  ) {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.delete(resultId, user);
-
-    throw new HttpException({ message, response }, status);
+  delete(@Param('resultId') resultId: number, @UserToken() user: TokenDto) {
+    return this.resultInnovationPackageService.delete(resultId, user);
   }
 
   @Get('unit-time')
-  async findUnitTime() {
-    const { message, response, status } =
-      await this.resultInnovationPackageService.findUnitTime();
-
-    throw new HttpException({ message, response }, status);
+  findUnitTime() {
+    return this.resultInnovationPackageService.findUnitTime();
   }
 }

@@ -1,16 +1,16 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { PartnerDeliveryTypeService } from './partner-delivery-type.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class PartnerDeliveryTypeController {
   constructor(
     private readonly partnerDeliveryTypeService: PartnerDeliveryTypeService,
   ) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.partnerDeliveryTypeService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.partnerDeliveryTypeService.findAll();
   }
 }

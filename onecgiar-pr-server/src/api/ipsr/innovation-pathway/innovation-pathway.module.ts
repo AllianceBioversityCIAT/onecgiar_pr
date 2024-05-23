@@ -117,7 +117,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
     UnitTimeRepository,
     TocResultsRepository,
     IpsrService,
-    ResultsInvestmentDiscontinuedOptionRepository
+    ResultsInvestmentDiscontinuedOptionRepository,
   ],
 })
 export class InnovationPathwayModule {}

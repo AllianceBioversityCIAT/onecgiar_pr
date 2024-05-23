@@ -1,22 +1,22 @@
-import { Controller, Get, Param, HttpException } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { ClarisaSecondOrderAdministrativeDivisionService } from './clarisa-second-order-administrative-division.service';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaSecondOrderAdministrativeDivisionController {
   constructor(
     private readonly clarisaSecondOrderAdministrativeDivisionService: ClarisaSecondOrderAdministrativeDivisionService,
   ) {}
 
   @Get('iso-alpha-2/:isoAlpha2/admin-code-1/:adminCode1')
-  async findAll(
+  findAll(
     @Param('isoAlpha2') isoAlpha2: string,
     @Param('adminCode1') adminCode1: string,
   ) {
-    const { response, message, status } =
-      await this.clarisaSecondOrderAdministrativeDivisionService.getIsoAlpha2AdminCode(
-        isoAlpha2,
-        adminCode1,
-      );
-    throw new HttpException({ message, response }, status);
+    return this.clarisaSecondOrderAdministrativeDivisionService.getIsoAlpha2AdminCode(
+      isoAlpha2,
+      adminCode1,
+    );
   }
 }

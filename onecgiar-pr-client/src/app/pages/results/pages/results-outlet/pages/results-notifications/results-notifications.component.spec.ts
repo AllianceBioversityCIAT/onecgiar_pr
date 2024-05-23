@@ -20,7 +20,7 @@ describe('ResultsNotificationsComponent', () => {
   let fixture: ComponentFixture<ResultsNotificationsComponent>;
   let mockApiService: any;
   let mockShareRequestModalService: any;
-  let mockGET_versioningResponse = [
+  const mockGET_versioningResponse = [
     {
       id: 1,
       status: {}

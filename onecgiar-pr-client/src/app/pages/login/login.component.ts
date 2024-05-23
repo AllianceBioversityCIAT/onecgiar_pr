@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { UserAuth } from '../../shared/interfaces/user.interface';
 import { Router } from '@angular/router';
-import { internationalizationData } from '../../shared/data/internationalizationData';
+import { internationalizationData } from '../../shared/data/internationalization-data';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 import { RolesService } from '../../shared/services/global/roles.service';
@@ -16,9 +16,15 @@ export class LoginComponent implements OnDestroy, OnInit {
   internationalizationData = internationalizationData;
   userLoginData = new UserAuth();
   successLogin = false;
-  constructor(private authService: AuthService, private customAlertService: CustomizedAlertsFeService, private router: Router, private rolesSE: RolesService, public footerSE: FooterService) {
+  constructor(
+    private authService: AuthService,
+    private customAlertService: CustomizedAlertsFeService,
+    private router: Router,
+    private rolesSE: RolesService,
+    public footerSE: FooterService
+  ) {
     this.authService.inLogin = true;
-    if (!!this.authService.localStorageUser) this.router.navigate(['/']);
+    if (this.authService.localStorageUser) this.router.navigate(['/']);
   }
 
   ngOnInit(): void {
@@ -48,11 +54,20 @@ export class LoginComponent implements OnDestroy, OnInit {
       err => {
         const statusCode = err?.error?.statusCode;
         if (statusCode == 404)
-          return this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: this.internationalizationData.login.alerts[statusCode], status: 'warning', confirmText: 'Contact us' }, () => {
-            document.getElementById('question').click();
-            this.customAlertService.closeAction('loginAlert');
-          });
-        console.log(err);
+          return this.customAlertService.show(
+            {
+              id: 'loginAlert',
+              title: 'Oops!',
+              description: this.internationalizationData.login.alerts[statusCode],
+              status: 'warning',
+              confirmText: 'Contact us'
+            },
+            () => {
+              document.getElementById('question').click();
+              this.customAlertService.closeAction('loginAlert');
+            }
+          );
+        console.error(err);
         this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
       }
     );

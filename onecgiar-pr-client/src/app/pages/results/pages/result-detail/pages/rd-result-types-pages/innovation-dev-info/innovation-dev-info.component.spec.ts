@@ -37,7 +37,7 @@ describe('InnovationDevInfoComponent', () => {
   let mockInnovationControlListService: any;
   let mockInnovationDevInfoUtilsService: any;
 
-  let mockGET_questionsInnovationDevelopmentResponse = {
+  const mockGET_questionsInnovationDevelopmentResponse = {
     innovation_team_diversity: {
       result_question_id: '',
       question_text: '',
@@ -179,7 +179,7 @@ describe('InnovationDevInfoComponent', () => {
 
   };
 
-  let mockGET_innovationDevResponse = {
+  const mockGET_innovationDevResponse = {
     innovatonUse: {
       organization: [],
       actors: [],

@@ -13,7 +13,7 @@ describe('MultipleWPsContentComponent', () => {
   let component: MultipleWPsContentComponent;
   let fixture: ComponentFixture<MultipleWPsContentComponent>;
   let mockApiService: any;
-  let mockResponse = {
+  const mockResponse = {
     informationIndicator: [{}],
     impactAreas: [
       {

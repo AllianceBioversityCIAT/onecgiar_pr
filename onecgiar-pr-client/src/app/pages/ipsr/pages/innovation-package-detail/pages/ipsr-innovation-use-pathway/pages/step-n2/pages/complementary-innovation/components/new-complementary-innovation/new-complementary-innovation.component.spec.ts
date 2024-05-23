@@ -20,7 +20,17 @@ describe('NewComplementaryInnovationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NewComplementaryInnovationComponent, PrFieldHeaderComponent, PrInputComponent, PrButtonComponent, PrFieldHeaderComponent, PrTextareaComponent, PrFieldValidationsComponent, PrRadioButtonComponent, YesOrNotByBooleanPipe],
+      declarations: [
+        NewComplementaryInnovationComponent,
+        PrFieldHeaderComponent,
+        PrInputComponent,
+        PrButtonComponent,
+        PrFieldHeaderComponent,
+        PrTextareaComponent,
+        PrFieldValidationsComponent,
+        PrRadioButtonComponent,
+        YesOrNotByBooleanPipe
+      ],
       imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule, RadioButtonModule]
     }).compileComponents();
 
@@ -53,16 +63,19 @@ describe('NewComplementaryInnovationComponent', () => {
   it('should filter out empty links and update bodyNewComplementaryInnovation when onSave is called', () => {
     component.linksComplemntaryInnovation = [{ link: 'https://example.com' }, { link: '' }, { link: 'https://example.org' }];
     component.selectedValues = [{ complementary_innovation_functions_id: 1 }, { complementary_innovation_functions_id: 2 }];
-    component.ipsrDataControlSE.detailData.inititiative_id = '123';
+    component.ipsrDataControlSE.detailData = { ...component.ipsrDataControlSE.detailData, inititiative_id: '123' };
     component.bodyNewComplementaryInnovation.other_funcions = undefined;
 
-    component.onSave();
-
-    expect(component.linksComplemntaryInnovation).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
-    expect(component.bodyNewComplementaryInnovation.referenceMaterials).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
-    expect(component.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([{ complementary_innovation_functions_id: 1 }, { complementary_innovation_functions_id: 2 }]);
-    expect(component.bodyNewComplementaryInnovation.initiative_id).toBe(123);
-    expect(component.bodyNewComplementaryInnovation.other_funcions).toBe('');
+    component.onSave(() => {
+      expect(component.linksComplemntaryInnovation).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
+      expect(component.bodyNewComplementaryInnovation.referenceMaterials).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
+      expect(component.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
+        { complementary_innovation_functions_id: 1 },
+        { complementary_innovation_functions_id: 2 }
+      ]);
+      expect(component.bodyNewComplementaryInnovation.initiative_id).toBe(123);
+      expect(component.bodyNewComplementaryInnovation.other_funcions).toBe('');
+    });
   });
 
   it('should emit createInnovationEvent with the response when onSave is called', () => {
@@ -74,11 +87,14 @@ describe('NewComplementaryInnovationComponent', () => {
       }
     };
     const emitSpy = jest.spyOn(component.createInnovationEvent, 'emit');
-    const apiResultsSEPostNewCompletaryInnovationSpy = jest.spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation').mockReturnValue(of(mockApiResponse));
+    const apiResultsSEPostNewCompletaryInnovationSpy = jest
+      .spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation')
+      .mockReturnValue(of(mockApiResponse));
 
-    component.onSave();
+    component.onSave(() => {
+      expect(apiResultsSEPostNewCompletaryInnovationSpy).toHaveBeenCalledWith(component.bodyNewComplementaryInnovation);
+    });
 
-    expect(apiResultsSEPostNewCompletaryInnovationSpy).toHaveBeenCalledWith(component.bodyNewComplementaryInnovation);
     expect(emitSpy).toHaveBeenCalledWith({ initiative_id: 1, initiative_official_code: 'INIT-01' });
   });
 

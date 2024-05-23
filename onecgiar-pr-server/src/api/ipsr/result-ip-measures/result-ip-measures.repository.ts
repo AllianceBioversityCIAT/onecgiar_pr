@@ -3,7 +3,10 @@ import { DataSource } from 'typeorm';
 import { ResultIpMeasure } from './entities/result-ip-measure.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
-import { ConfigCustomQueryInterface, ReplicableConfigInterface } from '../../../shared/globalInterfaces/replicable.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
 
@@ -12,7 +15,6 @@ export class ResultIpMeasureRepository
   extends BaseRepository<ResultIpMeasure>
   implements LogicalDelete<ResultIpMeasure>
 {
-
   createQueries(
     config: ReplicableConfigInterface<ResultIpMeasure>,
   ): ConfigCustomQueryInterface {
@@ -20,7 +22,9 @@ export class ResultIpMeasureRepository
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -49,7 +53,9 @@ export class ResultIpMeasureRepository
           )
       SELECT
           is_active,
-          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -71,7 +77,7 @@ export class ResultIpMeasureRepository
       WHERE
           result_id = ${config.new_result_id};
       `,
-    }
+    };
   }
 
   constructor(

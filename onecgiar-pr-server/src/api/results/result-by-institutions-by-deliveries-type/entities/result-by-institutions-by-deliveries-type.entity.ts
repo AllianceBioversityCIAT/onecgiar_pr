@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { PartnerDeliveryType } from '../../partner-delivery-type/entities/partner-delivery-type.entity';
 import { ResultsByInstitution } from '../../results_by_institutions/entities/results_by_institution.entity';
-import { Version } from '../../../versioning/entities/version.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 
 @Entity('result_by_institutions_by_deliveries_type')

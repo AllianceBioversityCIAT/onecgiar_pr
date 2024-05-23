@@ -190,7 +190,7 @@ describe('ShareRequestModalComponent', () => {
       expect(spy).toHaveBeenCalledWith(mockShareRequestModalService.shareRequestBody);
       expect(spyShow).toHaveBeenCalledWith({
         id: 'requesqshared',
-        title: `Request sent`, 
+        title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
         status: 'success',
       });
@@ -208,7 +208,7 @@ describe('ShareRequestModalComponent', () => {
       expect(spy).toHaveBeenCalledWith(mockShareRequestModalService.shareRequestBody);
       expect(spyShow).toHaveBeenCalledWith({
         id: 'requesqshared',
-        title: `Request sent`, 
+        title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
         status: 'success',
       });
@@ -234,7 +234,7 @@ describe('ShareRequestModalComponent', () => {
         status: 'error',
       });
       expect(component.requesting).toBeFalsy();
-      
+
     });
   });
 
@@ -270,12 +270,12 @@ describe('ShareRequestModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.acceptOrReject();
-      
+
       expect(component.requesting).toBeFalsy();
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'noti',
-        title: `Request sent`, 
+        title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
         status: 'success',
       });
@@ -287,12 +287,12 @@ describe('ShareRequestModalComponent', () => {
       const spygGet_section_information= jest.spyOn(mockResultsNotificationsService, 'get_section_information');
 
       component.acceptOrReject();
-      
+
       expect(component.requesting).toBeFalsy();
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'noti',
-        title: `Request sent`, 
+        title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
         status: 'success',
       });

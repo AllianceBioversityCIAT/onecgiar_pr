@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrMultiSelectComponent } from './pr-multi-select.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('PrMultiSelectComponent', () => {
   let component: PrMultiSelectComponent;
@@ -8,7 +9,8 @@ describe('PrMultiSelectComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PrMultiSelectComponent]
+      declarations: [PrMultiSelectComponent],
+      imports: [HttpClientModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrMultiSelectComponent);

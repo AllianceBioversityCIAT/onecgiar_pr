@@ -12,24 +12,11 @@ import { CentersService } from '../../../../../../../../shared/services/global/c
 export class IpsrNonPooledProjectsComponent {
   @Input() contributorsBody = new ContributorsBody();
   constructor(public institutionsSE: InstitutionsService, public api: ApiService, public centersSE: CentersService) {}
-  ngOnInit(): void {
-    // this.requestEvent();
-  }
+
   deleteEvidence(index) {
-    //(index);
     this.contributorsBody.contributing_np_projects.splice(index, 1);
   }
   addBilateralContribution() {
     this.contributorsBody.contributing_np_projects.push(new donorInterfaceToc());
-    //(this.theoryOfChangeBody.contributing_np_projects);
   }
-  // requestEvent() {
-  //   this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-  //     try {
-  //       document.querySelector('.alert-event').addEventListener('click', e => {
-  //         this.api.dataControlSE.showPartnersRequest = true;
-  //       });
-  //     } catch (error) {}
-  //   });
-  // }
 }

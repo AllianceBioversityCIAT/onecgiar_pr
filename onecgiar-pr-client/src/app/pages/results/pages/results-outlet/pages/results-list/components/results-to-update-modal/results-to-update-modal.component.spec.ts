@@ -13,7 +13,7 @@ describe('ResultsToUpdateModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         ResultsToUpdateModalComponent,
         ResultsToUpdateFilterPipe,
         PrFieldHeaderComponent
@@ -39,7 +39,7 @@ describe('ResultsToUpdateModalComponent', () => {
       };
 
       component.onPressAction(mockResult);
-  
+
       expect(component.api.resultsSE.currentResultId).toBe(1);
       expect(component.api.dataControlSE.currentResult).toBe(mockResult);
       expect(component.api.dataControlSE.chagePhaseModal).toBeTruthy();

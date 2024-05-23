@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SaveButtonComponent } from './save-button.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('SaveButtonComponent', () => {
   let component: SaveButtonComponent;
@@ -8,9 +9,9 @@ describe('SaveButtonComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ SaveButtonComponent ]
-    })
-    .compileComponents();
+      declarations: [SaveButtonComponent],
+      imports: [HttpClientModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SaveButtonComponent);
     component = fixture.componentInstance;

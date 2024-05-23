@@ -11,7 +11,7 @@ describe('GesiInnovationAssessmentComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         GesiInnovationAssessmentComponent,
         PrRadioButtonComponent,
         PrFieldHeaderComponent

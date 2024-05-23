@@ -3,14 +3,14 @@ import { ClarisaActionAreaOutcomeService } from './clarisa-action-area-outcome.s
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaActionAreaOutcomeController {
   constructor(
     private readonly clarisaActionAreaOutcomeService: ClarisaActionAreaOutcomeService,
   ) {}
 
   @Get('all')
-  @UseInterceptors(ResponseInterceptor)
-  async findAll() {
+  findAll() {
     return this.clarisaActionAreaOutcomeService.findAll();
   }
 }

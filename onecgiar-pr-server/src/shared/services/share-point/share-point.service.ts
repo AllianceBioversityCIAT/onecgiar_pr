@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { GlobalParameterCacheService } from '../cache/global-parameter-cache.service';
 import { EvidencesRepository } from '../../../api/results/evidences/evidences.repository';
 import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upload-session.dto';
+import { ReturnResponseUtil } from '../../utils/response.util';
 
 @Injectable()
 export class SharePointService {
@@ -32,10 +33,12 @@ export class SharePointService {
     const newFolderId = await this.createFileFolder(filePath);
     const driveId = await this.GPCacheSE.getParam('sp_drive_id');
     const fileExtension = fileName.split('.').pop();
-    const lastSharepointId =   await this._evidencesRepository.getLastSharepointId()
-    const finalFileName = `result-${pathInformation?.result_code}-Document-${pathInformation?.date_as_name}-${( Number(lastSharepointId) || 0) + count}.${fileExtension}`;
+    const lastSharepointId =
+      await this._evidencesRepository.getLastSharepointId();
+    const finalFileName = `result-${pathInformation?.result_code}-Document-${pathInformation?.date_as_name}-${
+      (Number(lastSharepointId) || 0) + count
+    }.${fileExtension}`;
     const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${finalFileName}:/createUploadSession`;
-
 
     try {
       const response = await this.httpService
@@ -50,10 +53,13 @@ export class SharePointService {
           },
         )
         .toPromise();
-      return { uploadUrl: response?.data?.uploadUrl };
+      return ReturnResponseUtil.format({
+        message: 'Upload session created',
+        response: response?.data?.uploadUrl,
+        statusCode: 200,
+      });
     } catch (error) {
-      console.log(error);
-      return error;
+      throw error;
     }
   }
 
