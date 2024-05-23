@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   MiddlewareConsumer,
   Module,
   NestModule,
@@ -120,7 +121,7 @@ import { ResultFoldersModule } from './result-folders/result-folders.module';
     OstMeliaStudiesModule,
     ResultsValidationModuleModule,
     SubmissionsModule,
-    AdminPanelModule,
+    forwardRef(() => AdminPanelModule),
     ResultActorsModule,
     ResultBudgetModule,
     ResultCountriesSubNationalModule,
