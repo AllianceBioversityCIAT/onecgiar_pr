@@ -468,10 +468,22 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  GET_reportingList(initDate: string = '2022-12-01') {
+  GET_reportingList(initDate: string = '2022-12-01', inits? , phases?, searchText? ) {
     const init = new Date(initDate);
     const today = new Date();
-    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
+
+    const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr ? `${environment.apiBaseUrl}api/ipsr/get` : `${environment.apiBaseUrl}api/results/get/reporting`;
+
+
+    if(this.ipsrDataControlSE.inIpsr ){
+      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, {
+        inits,
+        phases,
+        searchText
+      });
+    }
+
+    return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
   }
 
   PATCH_updateRequest(body) {

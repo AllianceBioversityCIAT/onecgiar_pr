@@ -5,9 +5,11 @@ import {
   Body,
   Param,
   UseInterceptors,
+  HttpException,
 } from '@nestjs/common';
 import { IpsrService } from './ipsr.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -32,5 +34,13 @@ export class IpsrController {
   @Get('innovation-package-detail/:resultId')
   findInnovationDetail(@Param('resultId') resultId: number) {
     return this.ipsrService.findInnovationDetail(resultId);
+  }
+
+  @Post('get/excel-report')
+  async getIpsrList(@Body() excelReportDto: ExcelReportDto) {
+    const { message, response, status } =
+      await this.ipsrService.getIpsrList(excelReportDto);
+
+    throw new HttpException({ message, response }, status);
   }
 }

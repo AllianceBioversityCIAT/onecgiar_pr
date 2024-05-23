@@ -34,7 +34,8 @@ export class PhasesService {
         this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => ({
           attr: item.phase_name,
           selected: item.status,
-          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`
+          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`,
+          id: item.id
         }));
         this.phasesSubject.next(this.phases.reporting);
       }

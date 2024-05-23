@@ -1780,6 +1780,40 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_reportingList', () => {
+    it('should call GET_reportingList, set correct dynamicBaseUrl and return expected data if is NOT inIPSR', done => {
+      const init = new Date('2022-12-01');
+      const today = new Date();
+      service.ipsrDataControlSE.inIpsr = false;
+
+      service.GET_reportingList().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_reportingList, set correct dynamicBaseUrl and return expected data if is inIPSR', done => {
+      const init = new Date('2022-12-01');
+      const today = new Date();
+      service.ipsrDataControlSE.inIpsr = true;
+
+      service.GET_reportingList().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/get/excel-report`);
+      expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
+    });
+  });
+
   describe('PATCH_updateRequest', () => {
     it('should call PATCH_updateRequest and return expected data ', done => {
       const mockBody = {};
