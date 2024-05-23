@@ -78,7 +78,7 @@ describe('IpsrListFiltersComponent', () => {
 
     component.onDownLoadTableAsExcel(inits, phases, searchText);
 
-    expect(exportTablesServiceSpy).toHaveBeenCalledWith([], 'IPSR_results_list');
+    expect(exportTablesServiceSpy).toHaveBeenCalledWith([], 'IPSR_results_list', undefined, undefined, true);
     expect(component.isLoadingReport).toBeFalsy();
     expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
   });
