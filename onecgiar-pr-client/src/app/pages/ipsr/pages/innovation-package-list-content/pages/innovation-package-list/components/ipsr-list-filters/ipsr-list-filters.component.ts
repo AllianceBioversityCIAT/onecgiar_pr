@@ -35,7 +35,7 @@ export class IpsrListFiltersComponent {
 
     this.api.resultsSE.GET_reportingList('2022-12-01', inits, phases, searchText).subscribe({
       next: ({ response }) => {
-        this.exportTablesSE.exportExcel(response.response, 'IPSR_results_list');
+        this.exportTablesSE.exportExcel(response.response, 'IPSR_results_list', undefined, undefined, true);
         this.isLoadingReport = false;
       },
       error: err => {
