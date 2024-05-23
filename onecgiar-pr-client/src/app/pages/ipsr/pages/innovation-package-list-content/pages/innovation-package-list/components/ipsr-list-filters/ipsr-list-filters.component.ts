@@ -30,7 +30,7 @@ export class IpsrListFiltersComponent {
     return this.ipsrListFilterSE.filters.general[1].options.filter(opt => opt.selected);
   }
 
-  onDownLoadTableAsExcel(inits: any[] = [], phases: any[] = [], searchText: string | null = null) {
+  onDownLoadTableAsExcel(inits: any[], phases: any[], searchText: string | null) {
     this.isLoadingReport = true;
 
     this.api.resultsSE.GET_reportingList('2022-12-01', inits, phases, searchText).subscribe({

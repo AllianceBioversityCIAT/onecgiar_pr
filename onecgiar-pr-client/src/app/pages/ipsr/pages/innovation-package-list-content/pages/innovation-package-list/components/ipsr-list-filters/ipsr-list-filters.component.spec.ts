@@ -9,7 +9,7 @@ import { IpsrListFilterService } from '../../services/ipsr-list-filter.service';
 import { IpsrListService } from '../../services/ipsr-list.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { InnovationPackageListFilterPipe } from '../innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
 
 describe('IpsrListFiltersComponent', () => {
@@ -74,17 +74,13 @@ describe('IpsrListFiltersComponent', () => {
     const searchText = 'example';
 
     const exportTablesServiceSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcel');
-    const apiServiceSpy = jest.spyOn(TestBed.inject(ApiService).resultsSE, 'GET_reportingList').mockReturnValue(
-      throwError(() => {
-        console.error('error');
-      })
-    );
+    const apiServiceSpy = jest.spyOn(TestBed.inject(ApiService).resultsSE, 'GET_reportingList').mockReturnValue(of({ response: { response: [] } }));
 
     component.onDownLoadTableAsExcel(inits, phases, searchText);
 
-    // expect(exportTablesServiceSpy).toHaveBeenCalledWith('example', 'IPSR_results_list');
+    expect(exportTablesServiceSpy).toHaveBeenCalledWith([], 'IPSR_results_list');
     expect(component.isLoadingReport).toBeFalsy();
-    // expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
+    expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
   });
 
   it('should log error and set isLoadingReport to false when onDownLoadTableAsExcel encounters an error', () => {
