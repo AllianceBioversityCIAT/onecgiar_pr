@@ -10,6 +10,7 @@ import { IpsrListService } from '../../services/ipsr-list.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { throwError } from 'rxjs';
+import { InnovationPackageListFilterPipe } from '../innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
 
 describe('IpsrListFiltersComponent', () => {
   let component: IpsrListFiltersComponent;
@@ -17,7 +18,7 @@ describe('IpsrListFiltersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [IpsrListFiltersComponent, PrButtonComponent],
+      declarations: [IpsrListFiltersComponent, PrButtonComponent, InnovationPackageListFilterPipe],
       imports: [HttpClientTestingModule, FormsModule, TooltipModule],
       providers: [IpsrListFilterService, IpsrListService, ExportTablesService, ApiService]
     }).compileComponents();
@@ -34,21 +35,37 @@ describe('IpsrListFiltersComponent', () => {
   it('should return selected inits when onFilterSelectedInits is called', () => {
     const selectedInits = [
       { selected: true, cleanAll: false },
-      { selected: false, cleanAll: true }
+      { selected: false, cleanAll: false },
+      { selected: false, cleanAll: false }
     ];
+    component.ipsrListFilterSE.filters.general[0].options = selectedInits;
 
     const result = component.onFilterSelectedInits();
 
     //corregir
+    expect(result.length).toEqual(1);
+  });
+
+  it('should return an empty array if all options are not selected or there is an option with cleanAll in true', () => {
+    const selectedInits = [
+      { selected: false, cleanAll: true },
+      { selected: false, cleanAll: false },
+      { selected: false, cleanAll: false }
+    ];
+    component.ipsrListFilterSE.filters.general[0].options = selectedInits;
+
+    const result = component.onFilterSelectedInits();
+
     expect(result).toEqual([]);
   });
 
   it('should return selected phases when onFilterSelectedPhases is called', () => {
-    const selectedPhases = [{ selected: true }, { selected: false }];
+    const selectedPhases = [{ selected: true }, { selected: true }, { selected: false }];
+    component.ipsrListFilterSE.filters.general[1].options = selectedPhases;
 
     const result = component.onFilterSelectedPhases();
     //corregir
-    expect(result).toEqual([]);
+    expect(result.length).toEqual(2);
   });
 
   it('should call exportExcel method and set isLoadingReport to false when onDownLoadTableAsExcel is called', () => {
