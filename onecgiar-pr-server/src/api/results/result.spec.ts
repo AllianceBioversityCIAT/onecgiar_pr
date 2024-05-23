@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsService } from './results.service';
 import { ResultsModule } from './results.module';
-import { OrmConfigTestModule } from '../../shared/test/orm-conection.module';
+import { OrmConfigTestModule } from '../../shared/test/orm-connection.module';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';

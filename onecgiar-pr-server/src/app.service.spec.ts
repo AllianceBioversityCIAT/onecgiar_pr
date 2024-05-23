@@ -4,7 +4,7 @@ import { env } from 'process';
 import { Result } from './api/results/entities/result.entity';
 import { ResultRepository } from './api/results/result.repository';
 import { HandlersError } from './shared/handlers/error.utils';
-import { OrmConfigTestModule } from './shared/test/orm-conection.module';
+import { OrmConfigTestModule } from './shared/test/orm-connection.module';
 import 'dotenv/config';
 
 describe('Unit test bootstrap', () => {
