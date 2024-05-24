@@ -1784,6 +1784,8 @@ describe('ResultsApiService', () => {
     it('should call GET_reportingList, set correct dynamicBaseUrl and return expected data if is NOT inIPSR', done => {
       const init = new Date('2022-12-01');
       const today = new Date();
+      today.setMilliseconds(0);
+
       service.ipsrDataControlSE.inIpsr = false;
 
       service.GET_reportingList().subscribe(response => {
@@ -1798,8 +1800,6 @@ describe('ResultsApiService', () => {
     });
 
     it('should call GET_reportingList, set correct dynamicBaseUrl and return expected data if is inIPSR', done => {
-      const init = new Date('2022-12-01');
-      const today = new Date();
       service.ipsrDataControlSE.inIpsr = true;
 
       service.GET_reportingList().subscribe(response => {

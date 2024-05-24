@@ -471,6 +471,7 @@ export class ResultsApiService {
   GET_reportingList(initDate: string = '2022-12-01', inits? , phases?, searchText? ) {
     const init = new Date(initDate);
     const today = new Date();
+    today.setMilliseconds(0);
 
     const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr ? `${environment.apiBaseUrl}api/ipsr/get` : `${environment.apiBaseUrl}api/results/get/reporting`;
 
