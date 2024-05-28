@@ -82,9 +82,7 @@ export class BiReportRepository extends Repository<BiReport> {
             )
             .pipe(map((resp) => resp.data)),
         );
-        console.log(tokenPowerBi.token);
       } catch (error) {
-        console.log(error);
         return { ...error, isError: true };
       }
 
