@@ -1,11 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultInitiativeBudget } from '../entities/result_initiative_budget.entity';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
@@ -86,7 +85,8 @@ export class ResultInitiativeBudgetRepository
                               and rbi2.result_id = r2.id 
         WHERE r2.id = ${config.new_result_id}
            and r.id = ${config.old_result_id}
-           and rbi.initiative_role_id = 1;`,
+           and rbi.initiative_role_id = 1
+           AND rbi.is_active > 0;`,
       returnQuery: `
            SELECT 
            rib.*

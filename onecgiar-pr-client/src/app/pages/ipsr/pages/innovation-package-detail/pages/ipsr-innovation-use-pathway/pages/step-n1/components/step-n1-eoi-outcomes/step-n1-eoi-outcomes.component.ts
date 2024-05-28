@@ -8,16 +8,16 @@ import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
   templateUrl: './step-n1-eoi-outcomes.component.html',
   styleUrls: ['./step-n1-eoi-outcomes.component.scss']
 })
-export class StepN1EoiOutcomesComponent {
+export class StepN1EoiOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   eoiList = [];
-  constructor(private tocApiSE: TocApiService, private ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(public tocApiSE: TocApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+
   ngOnInit(): void {
     this.GET_EOIList();
   }
 
   GET_EOIList() {
-    //(this.ipsrDataControlSE?.detailData?.inititiative_id);
     this.tocApiSE.GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe({
       next: ({ response }) => {
         this.eoiList = response;
@@ -26,14 +26,5 @@ export class StepN1EoiOutcomesComponent {
         console.error(err);
       }
     });
-    /*this.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 3).subscribe(
-      ({ response }) => {
-        //(response);
-        this.eoiList = response;
-      },
-      err => {
-        console.error(err);
-      }
-    );*/
   }
 }

@@ -1,14 +1,14 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { CapdevsTermsService } from './capdevs-terms.service';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class CapdevsTermsController {
   constructor(private readonly capdevsTermsService: CapdevsTermsService) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.capdevsTermsService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.capdevsTermsService.findAll();
   }
 }

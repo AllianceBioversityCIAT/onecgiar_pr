@@ -515,7 +515,7 @@ export class TypeOneReportRepository {
     WHERE
         r.is_krs = 1
         and r.is_active = 1
-        and r.status_id = 3
+        and r.status_id = 2
         and rbi.initiative_role_id = 1 
         and ci.id = ?
         ${phase ? `and r.version_id = ${phase}` : ''}

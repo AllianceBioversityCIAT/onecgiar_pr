@@ -3,18 +3,19 @@ import {
   Post,
   Body,
   Param,
-  HttpException,
-  UseFilters,
   HttpCode,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
-import { HttpExceptionFilter } from '../shared/handlers/error.exception';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
+import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 @Controller()
-@UseFilters(new HttpExceptionFilter())
+@ApiTags('auth')
+@UseInterceptors(ResponseInterceptor)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -24,13 +25,13 @@ export class AuthController {
   }
 
   @Post('/singin')
-  async singIn(@Body() userLogin: UserLoginDto) {
-    const { message, response, status } =
-      await this.authService.singIn(userLogin);
-    throw new HttpException({ message, response }, status);
+  @ApiSecurity('')
+  singIn(@Body() userLogin: UserLoginDto) {
+    return this.authService.singIn(userLogin);
   }
 
   @Post('/signin/pusher/result/:resultId/:userId')
+  @UseInterceptors()
   @HttpCode(200)
   async signInPusher(
     @Body() pusherAuthDot: PusherAuthDot,

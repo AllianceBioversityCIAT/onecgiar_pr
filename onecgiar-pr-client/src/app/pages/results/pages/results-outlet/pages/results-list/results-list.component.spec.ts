@@ -44,12 +44,14 @@ describe('ResultsListComponent', () => {
         currentResultId: 1
       },
       dataControlSE: {
+        getCurrentPhases: () => {},
+        reportingCurrentPhase: { phaseYear: 2024 },
         currentResult: {
           phase_year: 2023
         },
         myInitiativesList: [
           { id: 1, selected: false },
-          { id: 2, selected: false },
+          { id: 2, selected: false }
         ],
         showShareRequest: false,
         chagePhaseModal: false
@@ -58,7 +60,7 @@ describe('ResultsListComponent', () => {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
-      },
+      }
     };
 
     mockShareRequestModalService = {
@@ -67,7 +69,7 @@ describe('ResultsListComponent', () => {
 
     mockResultLevelService = {
       removeResultTypes: jest.fn()
-    }
+    };
 
     mockRetrieveModalService = {
       title: ''
@@ -92,19 +94,14 @@ describe('ResultsListComponent', () => {
         ResultsListFiltersComponent,
         ReportNewResultButtonComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        MenuModule,
-        TableModule,
-        DialogModule
-      ],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: RetrieveModalService, useValue: mockRetrieveModalService },
         { provide: ExportTablesService, useValue: mockExportTablesService },
-        { provide: ResultsListService, useValue: mockResultsListService },
+        { provide: ResultsListService, useValue: mockResultsListService }
       ]
     }).compileComponents();
 
@@ -118,20 +115,20 @@ describe('ResultsListComponent', () => {
 
   describe('Menu Items', () => {
     it('should set showShareRequest to true', () => {
-      component.items[0].command(); 
-  
+      component.items[0].command();
+
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set showShareRequest to true on command call of itemsWithDelete[0]', () => {
-      component.itemsWithDelete[0].command(); 
-  
+      component.itemsWithDelete[0].command();
+
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set chagePhaseModal to true on command call of itemsWithDelete[1]', () => {
-      component.itemsWithDelete[1].command(); 
-  
+      component.itemsWithDelete[1].command();
+
       expect(mockApiService.dataControlSE.chagePhaseModal).toBeTruthy();
     });
 
@@ -141,23 +138,10 @@ describe('ResultsListComponent', () => {
         scrollIntoView: jest.fn()
       });
 
-      component.itemsWithDelete[2].command(); 
+      component.itemsWithDelete[2].command();
       jest.runAllTimers();
-  
-      expect(spy).toHaveBeenCalled();
-    });
-  });
-
-  describe('ngOnInit()', () => {
-    it('should call updateResultsList and getAllPhases on ngOnInit', () => {
-      const spy = jest.spyOn(mockApiService, 'updateResultsList');
-      const spyGetAllPhases = jest.spyOn(component, 'getAllPhases');
-
-      component.ngOnInit();
 
       expect(spy).toHaveBeenCalled();
-      expect(spyGetAllPhases).toHaveBeenCalled();
-      expect(mockShareRequestModalService.inNotifications).toBeFalsy();
     });
   });
 
@@ -172,12 +156,13 @@ describe('ResultsListComponent', () => {
 
     it('should set combine based on the presence of sorting in the table', () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
       <div id="resultListTable"></div>`,
-        'text/html');
+        'text/html'
+      );
 
-      jest.spyOn(document, 'getElementById')
-        .mockImplementation((selector) => dom.getElementById(selector));
+      jest.spyOn(document, 'getElementById').mockImplementation(selector => dom.getElementById(selector));
 
       component.validateOrder('column');
 
@@ -225,7 +210,7 @@ describe('ResultsListComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult');
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-  
+
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
       });
@@ -239,10 +224,10 @@ describe('ResultsListComponent', () => {
     });
     it('should handle errors from PATCH_DeleteResult correctly', () => {
       const errorMessage = 'error message';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
       const consoleErrorSpy = jest.spyOn(console, 'error');
-  
+
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
       });
@@ -261,21 +246,10 @@ describe('ResultsListComponent', () => {
     });
   });
 
-  describe('getAllPhases()', () => {
-    it('should update currentPhase property on successful API call', () => {
-     const spy = jest.spyOn(mockApiService.resultsSE, 'GET_versioning');
-  
-      component.getAllPhases();
-  
-      expect(component.currentPhase).toEqual(2023);
-      expect(spy).toHaveBeenCalled();
-    });
-  });
-
   describe('ngOnDestroy()', () => {
     it('should set selected to true for each item in myInitiativesList', () => {
       component.ngOnDestroy();
-  
+
       expect(mockApiService.dataControlSE.myInitiativesList.every(item => item.selected)).toBeTruthy();
     });
   });

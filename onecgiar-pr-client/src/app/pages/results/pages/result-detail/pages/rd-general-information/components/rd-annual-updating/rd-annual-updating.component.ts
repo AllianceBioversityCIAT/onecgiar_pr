@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
@@ -7,7 +7,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   templateUrl: './rd-annual-updating.component.html',
   styleUrls: ['./rd-annual-updating.component.scss']
 })
-export class RdAnnualUpdatingComponent implements OnInit {
+export class RdAnnualUpdatingComponent {
   @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();
   discontinuedOptions = [];
   options = [
@@ -21,8 +21,6 @@ export class RdAnnualUpdatingComponent implements OnInit {
     }
   ];
   constructor(public api: ApiService) {}
-
-  ngOnInit(): void {}
 
   // Create a function that determines if this.generalInfoBody.discontinued_options some value is true if this.generalInfoBody.is_discontinued is true
   isDiscontinuedOptionsTrue() {

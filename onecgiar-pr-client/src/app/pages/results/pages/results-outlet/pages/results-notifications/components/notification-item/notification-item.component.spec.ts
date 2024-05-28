@@ -93,9 +93,9 @@ describe('NotificationItemComponent', () => {
         result_id: 'resultId',
         requester_initiative_id: 'reqInitId'
       };
-  
+
       component.mapAndAccept(notification);
-  
+
       expect(mockApiService.dataControlSE.currentResult.title).toBe('Title');
       expect(mockApiService.dataControlSE.currentResult.submitter).toBe('reqCode - reqName');
       expect(mockRetrieveModalService.title).toBe('Title');
@@ -122,9 +122,9 @@ describe('NotificationItemComponent', () => {
         result_id: 'resultId',
         requester_initiative_id: 'reqInitId'
       };
-      mockApiService.rolesSE.platformIsClosed = true; 
+      mockApiService.rolesSE.platformIsClosed = true;
       component.mapAndAccept(notification);
-  
+
       expect(mockApiService.dataControlSE.currentResult.title).toBe('Title');
       expect(mockApiService.dataControlSE.currentResult.submitter).toBe('appCode - appName');
     });
@@ -136,20 +136,23 @@ describe('NotificationItemComponent', () => {
         status: 1,
         request_status_id: 1,
       };
-  
+
       const result = component.isSubmitted;
-  
+
       expect(result).toBeTruthy();
     });
   });
 
   describe('resultUrl()', () => {
     it('should generate the correct result URL', () => {
-      const mockResultCode = 'ABC123';
-  
-      const result = component.resultUrl(mockResultCode);
-  
-      expect(result).toBe(`/result/result-detail/${mockResultCode}`);
+      const mockNotification = {
+        result_code: 'resultCode',
+        version_id:'1'
+      }
+
+      const result = component.resultUrl(mockNotification);
+
+      expect(result).toBe(`/result/result-detail/${mockNotification.result_code}/general-information?phase=${mockNotification.version_id}`);
     });
   });
 
@@ -159,7 +162,7 @@ describe('NotificationItemComponent', () => {
       const emitSpy = jest.spyOn(component.requestEvent, 'emit');
 
       component.acceptOrReject(true);
-  
+
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
         title: 'Request accepted',
@@ -173,7 +176,7 @@ describe('NotificationItemComponent', () => {
       const emitSpy = jest.spyOn(component.requestEvent, 'emit');
 
       component.acceptOrReject(false);
-  
+
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
         title: 'Request rejected',
@@ -187,7 +190,7 @@ describe('NotificationItemComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
 
       component.acceptOrReject(true);
-  
+
       expect(spy).not.toHaveBeenCalled();
     });
     it('should handle errors from PATCH_updateRequest correctly', async () => {
@@ -197,12 +200,12 @@ describe('NotificationItemComponent', () => {
       const emitSpy = jest.spyOn(component.requestEvent, 'emit');
 
       component.acceptOrReject(true);
-  
+
       expect(spy).toHaveBeenCalledWith({
         id: 'noti-error',
         title: 'Error when requesting ',
-        description: '', 
-        status: 'error' 
+        description: '',
+        status: 'error'
       });
       expect(component.requesting).toBeFalsy();
       expect(spyPATCH_updateRequest).toHaveBeenCalled();

@@ -10,7 +10,7 @@ describe('IpsrDetailTopMenuComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         IpsrDetailTopMenuComponent,
         IpsrGreenCheckComponent
       ],

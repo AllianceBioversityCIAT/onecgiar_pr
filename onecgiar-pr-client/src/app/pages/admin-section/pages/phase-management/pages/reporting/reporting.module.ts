@@ -10,16 +10,31 @@ import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
-import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
 import { ResultHistoryOfChangesModalModule } from '../../../completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
-import { FilterByTextModule } from 'src/app/shared/pipes/filter-by-text.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { CalendarModule } from 'primeng/calendar';
-import { OtherFunctionalitiesComponent } from '../../other-functionalities/other-functionalities.component';
-import { MassivePhaseShiftComponent } from '../../other-functionalities/components/massive-phase-shift/massive-phase-shift.component';
+import { OtherFunctionalitiesModule } from '../../other-functionalities/other-functionalities.module';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { FilterByTextModule } from '../../../../../../shared/pipes/filter-by-text.module';
 
 @NgModule({
-  declarations: [ReportingComponent, OtherFunctionalitiesComponent, MassivePhaseShiftComponent],
-  imports: [CommonModule, ReportingRoutingModule, DialogModule, ButtonModule, DropdownModule, TagModule, InputTextModule, TableModule, FormsModule, CustomFieldsModule, ResultHistoryOfChangesModalModule, FilterByTextModule, TooltipModule, CalendarModule]
+  declarations: [ReportingComponent],
+  imports: [
+    CommonModule,
+    ReportingRoutingModule,
+    OtherFunctionalitiesModule,
+    DialogModule,
+    ButtonModule,
+    DropdownModule,
+    TagModule,
+    InputTextModule,
+    TableModule,
+    FormsModule,
+    CustomFieldsModule,
+    ResultHistoryOfChangesModalModule,
+    FilterByTextModule,
+    TooltipModule,
+    CalendarModule
+  ]
 })
 export class ReportingModule {}

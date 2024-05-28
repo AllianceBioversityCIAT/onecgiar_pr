@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PartnersRequestBody } from './models/partnersRequestBody.model';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
@@ -11,7 +11,7 @@ import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ip
   templateUrl: './partners-request.component.html',
   styleUrls: ['./partners-request.component.scss']
 })
-export class PartnersRequestComponent {
+export class PartnersRequestComponent implements OnInit, DoCheck {
   partnersRequestBody = new PartnersRequestBody();
   requesting = false;
   form: FormGroup;

@@ -18,11 +18,11 @@ describe('InitAdminSectionComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [
-        InitAdminSectionComponent, 
+        InitAdminSectionComponent,
         DynamicPanelMenuComponent
       ],
       imports: [
-        HttpClientTestingModule, 
+        HttpClientTestingModule,
         TooltipModule,
         RouterTestingModule
       ],
@@ -42,9 +42,9 @@ describe('InitAdminSectionComponent', () => {
   describe('ngOnInit()', () => {
     it('should set the detailSectionTitle on ngOnInit', () => {
       const spyDetailSectionTitle = jest.spyOn(mockDataControlService, 'detailSectionTitle');
-  
+
       component.ngOnInit();
-  
+
       expect(spyDetailSectionTitle).toHaveBeenCalledWith('INIT Admin Module');
     });
   });

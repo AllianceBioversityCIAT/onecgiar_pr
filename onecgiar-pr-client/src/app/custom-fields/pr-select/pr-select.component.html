@@ -33,13 +33,16 @@
                 <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
                     <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
                         class="option" [style]="extraInformation?'height: 50px;':''"
-                        [ngClass]="{'disabled': (option?.disabled || option?.disabledd) === true, 'selected':option?.selected === true}"
+                        [ngClass]="{'disabled': (option?.disabled || option?.disabledd) === true, 'selected':option?.selected === true, 'labelGroup':option?.isLabel}"
                         (click)="this.disabled || (option?.disabled || option?.disabledd) ? null :onSelectOption(option);removeFocus(option)">
                         <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
                             srcset="">
+
                         <div class="label"
-                            [innerHtml]="((option?.disabled || option?.disabledd) ? disableOptionsText : '')+option[this.optionLabel]">
+                            [innerHtml]="!option?.isLabel ? (((option?.disabled || option?.disabledd) ? disableOptionsText : '')+option[this.optionLabel]): option[this.groupName]">
                         </div>
+
+
                         <div class="event"></div>
                     </div>
                     <div class="no-options-text" *ngIf="!optionsIntance?.length">There are no items available for this

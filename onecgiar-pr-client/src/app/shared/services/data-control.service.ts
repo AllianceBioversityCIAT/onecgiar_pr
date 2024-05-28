@@ -33,13 +33,40 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   showT1RSelectPhase?: boolean;
-  reportingCurrentPhase: any;
+  reportingCurrentPhase = { phaseName: null, phaseYear: null };
+  previousReportingPhase = { phaseName: null, phaseYear: null };
+  IPSRCurrentPhase = { phaseName: null, phaseYear: null };
+  previousIPSRPhase = { phaseName: null, phaseYear: null };
 
   constructor(private titleService: Title, public resultsSE: ResultsApiService) {}
 
   getCurrentPhases() {
     this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
-      this.reportingCurrentPhase = response[0]?.phase_year;
+      this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
+      this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
+
+      if (response[0]?.obj_previous_phase) {
+        this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
+        this.previousReportingPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
+      } else {
+        this.previousReportingPhase.phaseYear = null;
+        this.previousReportingPhase.phaseName = null;
+      }
+    });
+  }
+
+  getCurrentIPSRPhase() {
+    this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.IPSR).subscribe(({ response }) => {
+      this.IPSRCurrentPhase.phaseYear = response[0]?.phase_year;
+      this.IPSRCurrentPhase.phaseName = response[0]?.phase_name;
+
+      if (response[0]?.obj_previous_phase) {
+        this.previousIPSRPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
+        this.previousIPSRPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
+      } else {
+        this.previousIPSRPhase.phaseYear = null;
+        this.previousIPSRPhase.phaseName = null;
+      }
     });
   }
 
@@ -105,8 +132,12 @@ export class DataControlService {
     let selects;
     try {
       inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory input')).some(field => !field.value);
-      selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-select.mandatory')).some((field: HTMLElement) => !field.classList.contains('complete'));
-    } catch (error) {}
+      selects = Array.prototype.slice
+        .call(htmlContainer.querySelectorAll('.pr-select.mandatory'))
+        .some((field: HTMLElement) => !field.classList.contains('complete'));
+    } catch (error) {
+      console.error(error);
+    }
     return inputs || selects;
   }
 
@@ -133,7 +164,9 @@ export class DataControlService {
         if (tagValue && isIncomplete) this.fieldFeedbackList.push(tagValue);
         return isIncomplete;
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
     return Boolean(inputs) || Boolean(selects);
   }
 

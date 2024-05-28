@@ -8,7 +8,7 @@ export class CountInstitutionsTypesPipe implements PipeTransform {
     const objectCounter = {};
     const result = [];
     list.map(item => {
-      let count = () => {
+      const count = () => {
         if (!objectCounter[item?.institutions_type_id]?.count && !item.hasOwnProperty('institutions_id')) return 0;
         return typeof objectCounter[item?.institutions_type_id]?.count == 'number' ? objectCounter[item?.institutions_type_id]?.count + 1 : 1;
       };

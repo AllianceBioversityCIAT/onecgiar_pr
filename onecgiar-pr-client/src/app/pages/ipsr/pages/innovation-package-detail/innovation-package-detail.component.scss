@@ -1,67 +1,82 @@
 .innovation_packages_title {
-    padding-top: 20px;
-    padding-left: 100px;
-    padding-bottom: 20px !important;
-    padding-right: 100px;
-    display: flex;
+  width: 90%;
+  margin: 1rem auto 2rem auto;
 
-    .title {
-        padding: 5px 5px 5px 40px;
-        background-color: white;
-        box-shadow: 0px 0px 5px 5px #00000007;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        gap: 10px;
-        font-weight: 600;
-        color: var(--pr-color-secondary);
-    }
+  .title {
+    padding: 1rem;
+    background-color: white;
+    box-shadow: 0px 0px 5px 5px #00000007;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+    font-weight: 600;
+    color: var(--pr-color-secondary);
+  }
+}
+
+.title_container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
 }
 
 .section_container {
-    // margin-top: 10px;
-    overflow: hidden;
-    margin-bottom: 50px;
+  overflow: hidden;
+  margin-bottom: 50px;
 
-    .ipsr-detail-line {
-        background-color: var(--pr-color-primary);
-        width: 100%;
-        height: 2px;
-    }
+  .ipsr-detail-line {
+    background-color: var(--pr-color-primary);
+    width: 100%;
+    height: 2px;
+  }
 
-    .content {
-        position: relative;
-    }
+  .content {
+    position: relative;
+  }
 }
 
 .content {
-    min-height: calc(100vh - 200px);
-    padding: 30px 50px 0px 50px;
+  min-height: calc(100vh - 200px);
+  padding: 30px 50px 0px 50px;
 }
 
-
 .section_container_chips {
-    width: 95% !important;
-    position: relative;
-    border-top-left-radius: 0px !important;
-    border-top-right-radius: 0px !important;
+  width: 95% !important;
+  position: relative;
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
 
-    .metadata {
-        position: absolute;
-        top: 0;
-        right: 0;
-        margin-right: 20px;
-        display: flex;
-        gap: 10px;
-        font-size: .9em;
+  .metadata {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin-right: 20px;
+    display: flex;
+    gap: 10px;
+    font-size: 0.9em;
 
-        .item {
-            background-color: var(--pr-color-primary);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 0px 0px 10px 10px;
-        }
+    .item {
+      background-color: var(--pr-color-primary);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 0px 0px 10px 10px;
     }
+  }
+}
+
+@media only screen and (max-width: 1400px) {
+  .innovation_packages_title {
+    width: 97%;
+  }
+}
+
+@media only screen and (min-width: 1400px) {
+  .innovation_packages_title {
+    width: 90%;
+  }
 }

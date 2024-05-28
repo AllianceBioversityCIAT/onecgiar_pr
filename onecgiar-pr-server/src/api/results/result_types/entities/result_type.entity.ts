@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ResultQuestion } from '../../result-questions/entities/result-question.entity';
+import { InvestmentDiscontinuedOption } from '../../investment-discontinued-options/entities/investment-discontinued-option.entity';
 
 @Entity()
 export class ResultType {
@@ -20,8 +21,6 @@ export class ResultType {
   })
   description!: string;
 
-  @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
-  obj_result_type: ResultQuestion[];
   @Column({
     name: 'is_active',
     type: 'boolean',
@@ -29,4 +28,13 @@ export class ResultType {
     default: true,
   })
   isActive!: boolean;
+
+  @OneToMany(() => ResultQuestion, (rq) => rq.obj_result_type)
+  obj_result_type: ResultQuestion[];
+
+  @OneToMany(
+    () => InvestmentDiscontinuedOption,
+    (rq) => rq.result_type_discontinued,
+  )
+  obj_result_type_discontinued: InvestmentDiscontinuedOption[];
 }

@@ -69,7 +69,7 @@ export abstract class ReplicableRepository<T>
   }
 
   private validateConfigQuery(config: ConfigCustomQueryInterface): boolean {
-    for (let key in config) {
+    for (const key in config) {
       if (!config[key]?.length) {
         return false;
       }

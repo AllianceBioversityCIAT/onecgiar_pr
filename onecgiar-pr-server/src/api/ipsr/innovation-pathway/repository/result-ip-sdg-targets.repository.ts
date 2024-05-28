@@ -1,15 +1,84 @@
 import { Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ResultIpSdgTargets } from '../entities/result-ip-sdg-targets.entity';
 import { env } from 'process';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultIpSdgTargetRepository
-  extends Repository<ResultIpSdgTargets>
+  extends BaseRepository<ResultIpSdgTargets>
   implements LogicalDelete<ResultIpSdgTargets>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultIpSdgTargets>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          result_by_innovation_package_id,
+          clarisa_sdg_usnd_code,
+          clarisa_sdg_target_id
+      FROM
+          result_ip_sdg_targets
+      WHERE
+          result_by_innovation_package_id = ${config.old_ipsr_id}
+          AND is_active > 0;
+      `,
+      insertQuery: `
+      INSERT INTO
+          result_ip_sdg_targets (
+              is_active,
+              created_date,
+              last_updated_date,
+              created_by,
+              last_updated_by,
+              result_by_innovation_package_id,
+              clarisa_sdg_usnd_code,
+              clarisa_sdg_target_id
+          )
+      SELECT
+          is_active,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          ${config.new_ipsr_id} AS result_by_innovation_package_id,
+          clarisa_sdg_usnd_code,
+          clarisa_sdg_target_id
+      FROM
+          result_ip_sdg_targets
+      WHERE
+          result_by_innovation_package_id = ${config.old_ipsr_id}
+          AND is_active > 0;
+      `,
+      returnQuery: `
+      SELECT
+          result_ip_sdg_target_id
+      FROM
+          result_ip_sdg_targets
+      WHERE
+          result_by_innovation_package_id = ${config.new_ipsr_id}
+          AND is_active > 0;
+      `,
+    };
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,

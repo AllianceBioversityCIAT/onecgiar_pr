@@ -1,11 +1,11 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
   selector: 'app-pr-button',
   templateUrl: './pr-button.component.html',
   styleUrls: ['./pr-button.component.scss']
 })
-export class PrButtonComponent {
+export class PrButtonComponent implements OnInit {
   @Input() text: string;
   @Input() icon: string;
   @Input() reverse: boolean = false;

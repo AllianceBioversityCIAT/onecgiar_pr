@@ -1,5 +1,5 @@
 /* eslint-disable arrow-parens */
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Actor, IpsrStep1Body, Measure, Organization } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
@@ -8,13 +8,18 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   templateUrl: './step-n1-innovaton-use.component.html',
   styleUrls: ['./step-n1-innovaton-use.component.scss']
 })
-export class StepN1InnovatonUseComponent {
+export class StepN1InnovatonUseComponent implements OnInit {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   executeTimer = null;
   @Input() body = new IpsrStep1Body();
 
   constructor(public api: ApiService) {
+    this.GETAllActorsTypes();
+    this.GETInstitutionsTypeTree();
+  }
+
+  ngOnInit() {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
@@ -130,14 +135,12 @@ export class StepN1InnovatonUseComponent {
         this.body.innovatonUse.actors[i][genderYouth] = this.body.innovatonUse.actors[i].previousWomen_youth;
         this.body.innovatonUse.actors[i][gender] = this.body.innovatonUse.actors[i].previousWomen;
         this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = true;
-        const element: any = document.getElementById('removeFocus');
-        element.focus();
         this.calculateTotalField(actorItem);
         setTimeout(() => {
           this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
           this.calculateTotalField(actorItem);
         }, 3000);
-      }, 1000);
+      }, 500);
     } else {
       this.body.innovatonUse.actors[i].previousWomen = this.body.innovatonUse.actors[i][gender];
       this.body.innovatonUse.actors[i].previousWomen_youth = this.body.innovatonUse.actors[i][genderYouth];

@@ -21,7 +21,6 @@ import { BiSubpagesRepository } from './bi-subpages.repository';
 @Injectable()
 export class BiReportRepository extends Repository<BiReport> {
   private credentialsBi: CredentialsClarisaBi;
-  private barerTokenAzure: any;
   constructor(
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
@@ -46,18 +45,17 @@ export class BiReportRepository extends Repository<BiReport> {
       },
     };
     //Organice url azure
-    this.credentialsBi.azure_api_url =
-      await this.credentialsBi.azure_api_url.replace(
-        '{tenantID}',
-        this.credentialsBi.tenant_id,
-      );
+    this.credentialsBi.azure_api_url = this.credentialsBi.azure_api_url.replace(
+      '{tenantID}',
+      this.credentialsBi.tenant_id,
+    );
 
     //Bearer token
     let dataCredentials: any;
 
     try {
       dataCredentials = await lastValueFrom(
-        await this._httpService
+        this._httpService
           .post(`${this.credentialsBi.azure_api_url}`, params, config)
           .pipe(map((resp) => resp.data)),
       );
@@ -69,9 +67,9 @@ export class BiReportRepository extends Repository<BiReport> {
 
   async getTokenPowerBi(
     report_name?: string | number,
-    subpageId?: string | number,
+    subpage_id?: number | string,
   ) {
-    let reportsBi: BiReport[] = await this.getReportsBi(subpageId);
+    let reportsBi: BiReport[] = await this.getReportsBi(subpage_id);
     reportsBi = reportsBi.filter((report) =>
       typeof report_name === 'number'
         ? report.id == report_name
@@ -107,7 +105,7 @@ export class BiReportRepository extends Repository<BiReport> {
             .pipe(map((resp) => resp.data)),
         );
       } catch (error) {
-        return error;
+        return { ...error, isError: true };
       }
 
       const reportTokenBiDto = new TokenReportBiDto();
@@ -148,7 +146,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi(subpageId?: number | string) {
+  async getReportsBi(_subpageId?: number | string) {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -208,9 +206,8 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
-    const mainPage = await this.biSubpagesRepository.getReportSubPage(
-      getBiSubpagesDto,
-    );
+    const mainPage =
+      await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
 
     const { report_name, subpage_id } = getBiSubpagesDto;
     let reportsExist = null;
@@ -223,10 +220,10 @@ export class BiReportRepository extends Repository<BiReport> {
     }
 
     if (reportsExist != null && reportsExist.length != 0) {
-      const registerInToken = await this.getTokenPowerBi(
-        report_name,
-        subpage_id,
-      );
+      let registerInToken = null;
+      registerInToken = await this.getTokenPowerBi(report_name, subpage_id);
+      if (registerInToken?.isError)
+        throw new NotFoundException({ message: 'Error generating bi token' });
       const responseToken = await registerInToken['reportsInformation'].filter(
         (report) => report.name == report_name,
       );

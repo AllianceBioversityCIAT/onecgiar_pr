@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrYesOrNotComponent } from './pr-yes-or-not.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('PrYesOrNotComponent', () => {
   let component: PrYesOrNotComponent;
@@ -8,9 +9,9 @@ describe('PrYesOrNotComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ PrYesOrNotComponent ]
-    })
-    .compileComponents();
+      declarations: [PrYesOrNotComponent],
+      imports: [HttpClientModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PrYesOrNotComponent);
     component = fixture.componentInstance;

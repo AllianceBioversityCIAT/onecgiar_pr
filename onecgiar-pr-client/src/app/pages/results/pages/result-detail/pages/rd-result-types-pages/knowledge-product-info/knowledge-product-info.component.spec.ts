@@ -20,7 +20,7 @@ describe('KnowledgeProductInfoComponent', () => {
   let fixture: ComponentFixture<KnowledgeProductInfoComponent>;
   let mockApiService: any;
   let mockCustomizedAlertsFeService:any;
-  let mockGET_resultknowledgeProductsResponse = {
+  const mockGET_resultknowledgeProductsResponse = {
     melia_type_id: 1,
     is_melia: false,
     ost_melia_study_id: 1,
@@ -310,7 +310,7 @@ describe('KnowledgeProductInfoComponent', () => {
     it('should save section successfully', () => {
       const spyPATCH_knowledgeProductSection = jest.spyOn(mockApiService.resultsSE, 'PATCH_knowledgeProductSection');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
-     
+
       component.onSaveSection();
 
       expect(spyPATCH_knowledgeProductSection).toHaveBeenCalled();

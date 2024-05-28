@@ -13,7 +13,7 @@ describe('TocInitiativeOutComponent', () => {
   let component: TocInitiativeOutComponent;
   let fixture: ComponentFixture<TocInitiativeOutComponent>;
   let mockApiService: any;
-  let mockResponse = {
+  const mockResponse = {
     version_id: '123'
   }
 
@@ -26,7 +26,7 @@ describe('TocInitiativeOutComponent', () => {
     }
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         TocInitiativeOutComponent,
         YesOrNotByBooleanPipe,
         PrYesOrNotComponent,
@@ -62,18 +62,18 @@ describe('TocInitiativeOutComponent', () => {
       component.isIpsr = true;
       const officialCode = 'ABC';
       const shortName = 'name';
-  
+
       const result = component.getDescription(officialCode, shortName);
-  
+
       expect(result).toBe(`Is this result planned in the <strong>${officialCode} ${shortName}</strong> ToC?`);
     });
     it('should return correct description for non-IPSR', () => {
       component.isIpsr = false;
       const officialCode = 'XYZ';
       const shortName = 'name';
-  
+
       const result = component.getDescription(officialCode, shortName);
-  
+
       expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Does this result match a planned result in your Theory of Change?`);
     });
   });
@@ -81,9 +81,9 @@ describe('TocInitiativeOutComponent', () => {
   describe('headerDescription()', () => {
     it('should return correct header description', () => {
       const init = 'initiative';
-  
+
       const result = component.headerDescription(init);
-  
+
       expect(result).toContain(`At least 1 TOC result of ${init} should be provided.`);
       expect(result).toContain('In most cases a result should be mapped to a single WP for simplicity.');
       expect(result).toContain('In some cases, however, it may be necessary to map a result to two WPs.');
@@ -104,15 +104,15 @@ describe('TocInitiativeOutComponent', () => {
         showMultipleWPsContent: true
       };
       component.resultLevelId = 1;
-  
+
       component.clearTocResultId();
       jest.runAllTimers();
-  
+
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
       expect(component.initiative.result_toc_results[0]).toEqual(
         {
-          planned_result: true, 
-          toc_level_id: 1, 
+          planned_result: true,
+          toc_level_id: 1,
           toc_result_id: null
         }
       )
@@ -130,15 +130,15 @@ describe('TocInitiativeOutComponent', () => {
         showMultipleWPsContent: true
       };
       component.resultLevelId = 2;
-  
+
       component.clearTocResultId();
       jest.runAllTimers();
-  
+
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
       expect(component.initiative.result_toc_results[0]).toEqual(
         {
-          planned_result: true, 
-          toc_level_id: 2, 
+          planned_result: true,
+          toc_level_id: 2,
           toc_result_id: null
         }
       )
@@ -156,15 +156,15 @@ describe('TocInitiativeOutComponent', () => {
         showMultipleWPsContent: true
       };
       component.resultLevelId = 1;
-  
+
       component.clearTocResultId();
       jest.runAllTimers();
-  
+
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
       expect(component.initiative.result_toc_results[0]).toEqual(
         {
-          planned_result: false, 
-          toc_level_id: 3, 
+          planned_result: false,
+          toc_level_id: 3,
           toc_result_id: null
         }
       )
@@ -175,7 +175,7 @@ describe('TocInitiativeOutComponent', () => {
     it('should set fullInitiativeToc on successful get_vesrsionDashboard call', () => {
       component.isNotifications = false;
       const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard');
-  
+
       component.get_versionDashboard();
 
       expect(spy).toHaveBeenCalledWith(
@@ -187,9 +187,9 @@ describe('TocInitiativeOutComponent', () => {
     it('should do nothing if isNotifications is true', () => {
       component.isNotifications = true;
       const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard');
-  
+
       component.get_versionDashboard();
-  
+
       expect(spy).not.toHaveBeenCalled();
     });
     it('should handle error when get_vesrsionDashboard call fails', () => {

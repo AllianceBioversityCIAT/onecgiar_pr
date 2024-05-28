@@ -1,4 +1,3 @@
-/* eslint-disable arrow-parens */
 import { Component, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
@@ -30,7 +29,7 @@ export class StepN1InstitutionsComponent {
 
   onSelectDelivery(option, deliveryId) {
     if (this.rolesSE.readOnly) return;
-    if (option?.deliveries?.find((deliveryId: any) => deliveryId == 4) && deliveryId != 4) {
+    if (option?.deliveries?.find((optionDeliveryId: any) => optionDeliveryId == 4 && deliveryId != 4)) {
       const index = option?.deliveries?.indexOf(4) == undefined ? -1 : option?.deliveries?.indexOf(4);
       option?.deliveries.splice(index, 1);
     }

@@ -1,12 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultCountry } from './entities/result-country.entity';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
-  ReplicableInterface,
 } from '../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';

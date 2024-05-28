@@ -110,7 +110,7 @@ describe('ChangeResultTypeModalComponent', () => {
     it('should generate the correct disclaimer string', () => {
       component.body.result_name = 'result'
       const result = component.CGSpaceDesc();
-  
+
       expect(result).toContain('<strong>Disclaimer:</strong>');
       expect(result).toContain('result');
       expect(result).toContain('will be replace by the CGSpace title.');
@@ -366,12 +366,12 @@ describe('ChangeResultTypeModalComponent', () => {
   });
   it('should enable continue button when conditions are met', () => {
     component.isChagingType = false;
-    component.selectedResultType = { 
-      id: 5, 
+    component.selectedResultType = {
+      id: 5,
       description: 'description',
       name: 'name',
-      resultLevelId: 1, 
-      selected: false 
+      resultLevelId: 1,
+      selected: false
     };
     component.changeType.justification = 'Some Justification';
 
@@ -383,13 +383,13 @@ describe('ChangeResultTypeModalComponent', () => {
   describe('isContinueButtonDisabled()', () => {
 
     it('should change result type for Knowledge Product and show success alert on success when changeType.justification is not "Other"', () => {
-      component.changeType.justification = 'test'; 
+      component.changeType.justification = 'test';
       const postCreateWithHandleSpy = jest.spyOn(mockApiService.resultsSE, 'POST_createWithHandle')
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
       const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
       const spy = jest.spyOn(component,'onCloseModal');
       component.changeResultTypeKP();
-  
+
       expect(component.isChagingType).toBeFalsy();
       expect(postCreateWithHandleSpy).toHaveBeenCalled();
       expect(showSuccessAlertSpy).toHaveBeenCalled();
@@ -397,13 +397,13 @@ describe('ChangeResultTypeModalComponent', () => {
       expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/result/results-outlet/results-list');
     });
     it('should change result type for Knowledge Product and show success alert on success when changeType.justification = "Other"', () => {
-      component.changeType.justification = 'Other' 
+      component.changeType.justification = 'Other'
       const postCreateWithHandleSpy = jest.spyOn(mockApiService.resultsSE, 'POST_createWithHandle')
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
       const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
       const spy = jest.spyOn(component,'onCloseModal');
       component.changeResultTypeKP();
-  
+
       expect(component.isChagingType).toBeFalsy();
       expect(postCreateWithHandleSpy).toHaveBeenCalled();
       expect(showSuccessAlertSpy).toHaveBeenCalled();
@@ -414,9 +414,9 @@ describe('ChangeResultTypeModalComponent', () => {
       const postCreateWithHandleSpy = jest.spyOn(mockApiService.resultsSE, 'POST_createWithHandle')
         .mockReturnValue(throwError({ error: { message: 'Some error' } }));
       const showErrorAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
-  
+
       await component.changeResultTypeKP();
-  
+
       expect(component.isChagingType).toBeFalsy();
       expect(postCreateWithHandleSpy).toHaveBeenCalled();
       expect(showErrorAlertSpy).toHaveBeenCalledWith({ id: 'reportResultError', title: 'Error!', description: 'Some error', status: 'error' });
@@ -485,12 +485,12 @@ describe('ChangeResultTypeModalComponent', () => {
 
   describe('changeResultType', () => {
     it('should show confirmation modal on step 0 for result type 6', () => {
-      component.selectedResultType = { 
-        id: 6, 
-        resultLevelId: 2, 
-        name: 'name', 
-        description: 'description', 
-        selected: true 
+      component.selectedResultType = {
+        id: 6,
+        resultLevelId: 2,
+        name: 'name',
+        description: 'description',
+        selected: true
       };
       component.changeType.step = 0;
 
@@ -501,12 +501,12 @@ describe('ChangeResultTypeModalComponent', () => {
       expect(component.changeType.step).toBe(1);
     });
     it('should call changeResultTypeKP on step 1 for result type 6', () => {
-      component.selectedResultType = { 
-        id: 6, 
-        resultLevelId: 2, 
-        name: 'name', 
-        description: 'description', 
-        selected: true 
+      component.selectedResultType = {
+        id: 6,
+        resultLevelId: 2,
+        name: 'name',
+        description: 'description',
+        selected: true
       };
       component.changeType.step = 1;
       const changeResultTypeKPSpy = jest.spyOn(component, 'changeResultTypeKP');
@@ -516,30 +516,30 @@ describe('ChangeResultTypeModalComponent', () => {
       expect(changeResultTypeKPSpy).toHaveBeenCalled();
     });
     it('should do nothing for unknown result type', () => {
-      component.selectedResultType = { 
-        id: 6, 
-        resultLevelId: 2, 
-        name: 'name', 
-        description: 'description', 
-        selected: true 
+      component.selectedResultType = {
+        id: 6,
+        resultLevelId: 2,
+        name: 'name',
+        description: 'description',
+        selected: true
       };
       component.changeType.step = 3;
 
       const changeResultTypeKPSpy = jest.spyOn(component, 'changeResultTypeKP');
       const changeResultTypeOtherSpy = jest.spyOn(component, 'changeResultTypeOther');
-  
+
       component.changeResultType();
-  
+
       expect(changeResultTypeKPSpy).not.toHaveBeenCalled();
       expect(changeResultTypeOtherSpy).not.toHaveBeenCalled();
     });
     it('should call changeResultTypeOther for other result types', () => {
-      component.selectedResultType = { 
-        id: 1, 
-        resultLevelId: 2, 
-        name: 'name', 
-        description: 'description', 
-        selected: true 
+      component.selectedResultType = {
+        id: 1,
+        resultLevelId: 2,
+        name: 'name',
+        description: 'description',
+        selected: true
       };
       const changeResultTypeOtherSpy = jest.spyOn(component, 'changeResultTypeOther');
 
@@ -555,7 +555,7 @@ describe('ChangeResultTypeModalComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation')
 
       component.GET_mqapValidation();
-  
+
       expect(spy).toHaveBeenCalled();
       expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(component.cgSpaceHandle);
       expect(component.mqapJson).toEqual({ id: "789", title: 'Mock Title' });
@@ -572,9 +572,9 @@ describe('ChangeResultTypeModalComponent', () => {
       const mockError = { error: { message: 'Validation Error' } };
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation')
       .mockReturnValue(throwError(mockError));
-  
+
       component.GET_mqapValidation();
-      
+
       expect(spy).toHaveBeenCalled();
       expect(mockApiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(component.cgSpaceHandle);
       expect(component.cgSpaceTitle).toBe('');

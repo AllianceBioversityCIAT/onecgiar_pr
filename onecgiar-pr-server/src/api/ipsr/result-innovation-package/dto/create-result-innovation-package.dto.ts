@@ -1,5 +1,6 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+
 export class CreateResultInnovationPackageDto {
   public result_id: number;
   public initiative_id: number;
@@ -34,4 +35,6 @@ export class UpdateGeneralInformationDto {
   public evidence_poverty_tag?: string;
   public is_krs?: boolean;
   public krs_url?: string;
+  public is_discontinued!: boolean;
+  public discontinued_options!: any[];
 }

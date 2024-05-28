@@ -10,7 +10,6 @@ import { VersionsService } from '../../results/versions/versions.service';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { Version } from '../../versioning/entities/version.entity';
 import { ResultsComplementaryInnovationRepository } from '../results-complementary-innovations/repositories/results-complementary-innovation.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 import { SaveStepTwoThree } from './dto/save-step-three.dto';
@@ -447,6 +446,7 @@ export class InnovationPathwayStepThreeService {
         result_core_innovation: {
           core_result_code: core_innovation.result_code,
           core_title: core_innovation.title,
+          core_result_current_phase: core_innovation.version_id,
         },
       };
 
@@ -634,7 +634,10 @@ export class InnovationPathwayStepThreeService {
             is_active: el.is_active == undefined ? true : el.is_active,
             evidence_link: this.isNullData(el.evidence_link),
           });
-          if (useLevel?.obj_use_level_evidence_based.level === 0) {
+          if (
+            useLevel?.obj_use_level_evidence_based &&
+            useLevel.obj_use_level_evidence_based.level === 0
+          ) {
             await this._resultsIpInstitutionTypeRepository.update(ite.id, {
               last_updated_by: user.id,
               institution_types_id: null,

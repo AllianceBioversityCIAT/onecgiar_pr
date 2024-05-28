@@ -11,9 +11,8 @@ export class TypeOneReportService {
   ) {}
   async getFactSheetByInit(initId: number) {
     try {
-      const results = await this._typeOneReportRepository.getFactSheetByInit(
-        initId,
-      );
+      const results =
+        await this._typeOneReportRepository.getFactSheetByInit(initId);
 
       return this._returnResponse.format({
         message: 'Successful response',
@@ -42,4 +41,3 @@ export class TypeOneReportService {
     }
   }
 }
-

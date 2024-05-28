@@ -62,14 +62,18 @@ export class IpsrContributorsComponent implements OnInit {
         document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
     this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
       try {
         document.querySelector('.alert-event-2').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error(error);
+      }
     });
   }
 }

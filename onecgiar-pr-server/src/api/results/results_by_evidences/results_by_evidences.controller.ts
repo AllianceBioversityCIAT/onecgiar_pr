@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsByEvidencesService } from './results_by_evidences.service';
 import { CreateResultsByEvidenceDto } from './dto/create-results_by_evidence.dto';
 import { UpdateResultsByEvidenceDto } from './dto/update-results_by_evidence.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller('results-by-evidences')
+@UseInterceptors(ResponseInterceptor)
 export class ResultsByEvidencesController {
   constructor(
     private readonly resultsByEvidencesService: ResultsByEvidencesService,

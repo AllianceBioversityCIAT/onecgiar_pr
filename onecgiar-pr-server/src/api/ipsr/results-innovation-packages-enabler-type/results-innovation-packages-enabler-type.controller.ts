@@ -1,8 +1,17 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ResultsInnovationPackagesEnablerTypeService } from './results-innovation-packages-enabler-type.service';
 import { CreateResultsInnovationPackagesEnablerTypeDto } from './dto/create-results-innovation-packages-enabler-type.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsInnovationPackagesEnablerTypeController {
   constructor(
     private readonly resultsInnovationPackagesEnablerTypeService: ResultsInnovationPackagesEnablerTypeService,

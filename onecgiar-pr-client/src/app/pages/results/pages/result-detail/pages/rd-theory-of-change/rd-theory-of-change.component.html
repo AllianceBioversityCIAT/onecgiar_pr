@@ -12,7 +12,7 @@
     <div *ngIf="getConsumed">
         <app-pr-select class="segment_title_margin"
             [options]="this.theoryOfChangeBody.contributing_and_primary_initiative" label="Primary submitter"
-            optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an Initiative"
+            optionLabel="full_name" optionValue="id" placeholder="Select Initiative" description="Select an initiative or platform"
             [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
             [fieldDisabled]="!!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)">
         </app-pr-select>
@@ -27,16 +27,16 @@
     <app-alert-status
         description="<strong>Contribution to a reported result:</strong> Include those partners [OR Initiatives/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support."></app-alert-status>
 
-    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives"
+    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives or platforms"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
         optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         selectedOptionLabel="full_name" [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true"
-        placeholder="Select Initiative(s)">
+        placeholder="Select initiative(s) or platform(s)">
     </app-pr-multi-select>
 
     <app-pr-multi-select [options]="this.contributingInitiativesList"
         [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
-        selectedLabel="Contributing Initiatives" optionLabel="full_name" optionValue="id" [hideSelect]="true"
+        selectedLabel="Contributing Initiatives" nextSelectedLabel="or platforms" optionLabel="full_name" optionValue="id" [hideSelect]="true"
         (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
         (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
         [selectedPrimary]="this.theoryOfChangeBody.changePrimaryInit"
@@ -88,7 +88,7 @@
                 </app-pr-input>
                 <app-pr-select [options]="this.contributingCenterOptions" label="Lead/Contract Center"
                     optionLabel="name" optionValue="lead_center" placeholder="Select donor"
-                    (selectOptionEvent)="print()" [(ngModel)]="donor.lead_center"
+                     [(ngModel)]="donor.lead_center"
                     placeholder="Lead/Contract Center goes here...">
                 </app-pr-select>
             </div>

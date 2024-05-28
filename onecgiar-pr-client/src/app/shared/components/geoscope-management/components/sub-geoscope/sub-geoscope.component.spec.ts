@@ -82,8 +82,8 @@ describe('SubGeoscopeComponent', () => {
       component.ngOnInit();
 
       expect(mockResultsApiService.GET_subNationalByIsoAlpha2).toHaveBeenCalled();
-      expect(component.obj_country.sub_national).toEqual([{ 
-        code: '1', 
+      expect(component.obj_country.sub_national).toEqual([{
+        code: '1',
         formatedName: "<strong>No name available</strong> - <span class=\"select_item_description\">Other, Other2</span>",
         other_names: [{"name": "Other"}, {"name": "Other2"}]
       }]);

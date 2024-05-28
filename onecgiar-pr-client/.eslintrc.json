@@ -10,8 +10,8 @@
       },
       "extends": [
         "plugin:@angular-eslint/recommended",
-        "plugin:@angular-eslint/template/process-inline-templates",
-        "plugin:prettier/recommended"
+        "plugin:@angular-eslint/template/process-inline-templates"
+        // "plugin:prettier/recommended"
       ],
       "rules": {
         "@angular-eslint/component-selector": [
@@ -30,13 +30,14 @@
             "style": "camelCase"
           }
         ],
+        // "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
         // "no-unused-vars": "error",
-        "no-console": "error",
+        "no-console": ["error", { "allow": ["error"] }],
         "no-empty": "error",
-        "no-trailing-spaces":"error",
-        "camelcase":"warn",
-        "prefer-const":"error",
-        "arrow-parens":"error"
+        "no-trailing-spaces": "error",
+        // "camelcase":"warn",
+        "prefer-const": "error"
+        // "arrow-parens":"error"
       }
     }
   ]

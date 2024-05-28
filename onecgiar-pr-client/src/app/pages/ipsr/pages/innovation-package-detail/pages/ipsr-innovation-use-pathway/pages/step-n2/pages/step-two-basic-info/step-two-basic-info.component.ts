@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { IpsrDataControlService } from 'src/app/pages/ipsr/services/ipsr-data-control.service';
-import { ApiService } from 'src/app/shared/services/api/api.service';
-import { Route, Router } from '@angular/router';
+import { Router } from '@angular/router';
+import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
+import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
   selector: 'app-step-two-basic-info',
@@ -9,7 +9,6 @@ import { Route, Router } from '@angular/router';
   styleUrls: ['./step-two-basic-info.component.scss']
 })
 export class StepTwoBasicInfoComponent implements OnInit {
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
   informartion: any[] = [];
   selectOne: any[] = [];
   selectTow: any[] = [];
@@ -17,8 +16,11 @@ export class StepTwoBasicInfoComponent implements OnInit {
   update: boolean = false;
   allInformation = true;
   innovationCompletary: any = [];
-  bodyStep2: innovationComplementary[] = [];
+  bodyStep2: InnovationComplementary[] = [];
   init = false;
+
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+
   ngOnInit(): void {
     this.api.isStepTwoTwo = true;
     this.api.isStepTwoOne = false;
@@ -27,10 +29,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   onSaveSection() {
-    //(this.bodyStep2);
-    this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe(resp => {
-      //(resp);
-    });
+    this.api.resultsSE.PostStepTwoComentariesInnovation(this.bodyStep2).subscribe(resp => {});
   }
 
   convertCols() {
@@ -56,7 +55,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 
   goToStep() {
-    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation' target='_blank'> Go to step 2.1</a>`;
+    return `<a class='open_route' href='/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway/step-2/complementary-innovation?phase=${this.ipsrDataControlSE.resultInnovationPhase}' target='_blank'> Go to step 2.1</a>`;
   }
 
   selectedOneLevel(category, i, levels) {
@@ -80,8 +79,9 @@ export class StepTwoBasicInfoComponent implements OnInit {
       }, 500);
     }
   }
+
   selectedTwo(category, i) {
-    if (this.bodyStep2[i].complementary_innovation_enabler_types_one.includes(category['complementary_innovation_enabler_types_id']) == false) {
+    if (!this.bodyStep2[i].complementary_innovation_enabler_types_one.includes(category['complementary_innovation_enabler_types_id'])) {
       this.bodyStep2[i].complementary_innovation_enabler_types_one.push(category.complementary_innovation_enabler_types_id);
       this.update = false;
       setTimeout(() => {
@@ -93,22 +93,29 @@ export class StepTwoBasicInfoComponent implements OnInit {
   async onSavePreviuosNext(descrip) {
     if (this.api.rolesSE.readOnly) {
       if (this.api.isStepTwoTwo && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
 
       if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
       return;
     }
     this.api.resultsSE.PostStepTwoComentariesInnovationPrevius(this.bodyStep2, descrip).subscribe(resp => {
-      ////(resp);
       if (this.api.isStepTwoTwo && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
 
       if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation']);
+        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/complementary-innovation'], {
+          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
+        });
       }
     });
   }
@@ -126,7 +133,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
           complementary_enablers_two = respe['complementary_enablers_two'].split(';');
         }
 
-        const aux = new innovationComplementary();
+        const aux = new InnovationComplementary();
         aux.result_by_innovation_package_id = respe.result_by_innovation_package_id;
         if (complementary_enablers_one.length != 0) {
           aux.complementary_innovation_enabler_types_one = complementary_enablers_one;
@@ -150,7 +157,7 @@ export class StepTwoBasicInfoComponent implements OnInit {
   }
 }
 
-export class innovationComplementary {
+export class InnovationComplementary {
   result_by_innovation_package_id: string;
   complementary_innovation_enabler_types_one: any[] = new Array();
   complementary_innovation_enabler_types_two: any[] = new Array();

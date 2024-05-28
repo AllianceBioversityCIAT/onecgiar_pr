@@ -14,7 +14,7 @@ describe('InnovationUseInfoComponent', () => {
   let component: InnovationUseInfoComponent;
   let fixture: ComponentFixture<InnovationUseInfoComponent>;
   let mockApiService: any;
-  let mockGET_innovationUseResponse = {
+  const mockGET_innovationUseResponse = {
     innovatonUse: {
       actors: [],
       organization: [],
@@ -40,7 +40,7 @@ describe('InnovationUseInfoComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ 
+      declarations: [
         InnovationUseInfoComponent,
         InnovationUseFormComponent,
         SaveButtonComponent,
@@ -102,7 +102,7 @@ describe('InnovationUseInfoComponent', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
       const spyPATCH_innovationUse = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
-     
+
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();

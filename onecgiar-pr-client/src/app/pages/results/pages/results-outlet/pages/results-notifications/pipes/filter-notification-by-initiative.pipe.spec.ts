@@ -10,7 +10,7 @@ describe('FilterNotificationByInitiativePipe', () => {
   it('should return the original list if initiativeId is false', () => {
     const list = [{ shared_inititiative_id: '1' }, { shared_inititiative_id: '2' }];
 
-    const result = pipe.transform(list, '');
+    const result = pipe.transform(list, null);
 
     expect(result).toEqual(list);
   });
@@ -24,11 +24,7 @@ describe('FilterNotificationByInitiativePipe', () => {
   });
 
   it('should filter the list based on shared_inititiative_id', () => {
-    const list = [
-      { shared_inititiative_id: '1' },
-      { shared_inititiative_id: '2' },
-      { shared_inititiative_id: '1' }
-    ];
+    const list = [{ shared_inititiative_id: '1' }, { shared_inititiative_id: '2' }, { shared_inititiative_id: '1' }];
 
     const result = pipe.transform(list, '1');
 

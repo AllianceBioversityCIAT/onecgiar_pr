@@ -26,4 +26,3 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
   ],
 })
 export class ResultFoldersModule {}
-

@@ -1,55 +1,50 @@
 .first_text {
-    text-align: center;
-    padding: 0px 100px;
-    margin-top: 20px;
-    margin-bottom: 20px;
+  text-align: center;
+  padding: 0px 100px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .blurb {
-    margin-left: 5vw;
-    margin-right: 5vw;
-    padding: 30px 100px 15px 100px;
+  margin-left: 5vw;
+  margin-right: 5vw;
+  padding: 30px 100px 15px 100px;
 
-    .title {
-        text-align: center;
-        font-weight: 700;
-        font-size: 1.5em;
-        margin-bottom: 20px;
+  .title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.5em;
+    margin-bottom: 20px;
+  }
+
+  .text {
+    text-align: justify;
+    font-size: 1em;
+  }
+
+  .flex_right {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+
+    .copy_button {
+      background-color: white;
+      padding: 7px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: max-content;
+      align-self: flex-end;
+      cursor: pointer;
+      color: rgb(156, 156, 156);
+      gap: 10px;
+      transition: all ease-in-out 0.3s;
+
+      &:hover {
+        background-color: var(--pr-color-primary);
+        color: white;
+      }
     }
-
-    .text {
-        text-align: justify;
-        font-size: 1em;
-
-    }
-
-    .flex_right {
-        width: 100%;
-        display: flex;
-        justify-content: end;
-
-        .copy_button {
-            background-color: white;
-            padding: 7px 10px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: max-content;
-            align-self: flex-end;
-            cursor: pointer;
-            color: rgb(156, 156, 156);
-            gap: 10px;
-            transition: all ease-in-out .3s;
-
-            &:hover {
-                background-color: var(--pr-color-primary);
-                color: white;
-            }
-
-        }
-
-    }
-
-
+  }
 }

@@ -22,15 +22,15 @@ describe('InitGeneralResultsReportComponent', () => {
   let mockCustomizedAlertsService: any;
   let mockCustomizedAlertsFeService: any;
   let mockPhasesService: any;
-  let mockResultStatusList = [
+  const mockResultStatusList = [
     { status_id: 1, name: 'Status1', className: 'status1' },
     { status_id: 2, name: 'Status Name', className: 'status2' },
   ];
-  let mockInitiatives = [
+  const mockInitiatives = [
     { initiative_id: 1, name: 'Initiative 1' },
     { initiative_id: 2, name: 'Initiative 2' }
   ];
-  let mockPOST_reportSesultsCompletenessResponse = [
+  const mockPOST_reportSesultsCompletenessResponse = [
     {
       result_code: 1,
       result_title: 'Result 1',
@@ -43,7 +43,7 @@ describe('InitGeneralResultsReportComponent', () => {
       full_name_html: ''
     },
   ];
-  let mockPOST_excelFullReportResponse = {
+  const mockPOST_excelFullReportResponse = {
     fullReport: [{}],
     resultsAgaintsToc: [{}]
   }
@@ -274,7 +274,7 @@ describe('InitGeneralResultsReportComponent', () => {
       const result = component.parseCheck(0);
       expect(result).toBe('Pending');
     });
-  
+
     it('should return "Completed" for a value other than 0', () => {
       const result = component.parseCheck(1);
       expect(result).toBe('Completed');

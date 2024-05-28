@@ -22,65 +22,61 @@ describe('IpsrGeneralInformationComponent', () => {
   let mockApiService: any;
   let mockIpsrDataControlService: any;
   let mockScoreService: any;
-  let mockGETInnovationByResultIdResponse = {
+  const mockGETInnovationByResultIdResponse = {
     is_krs: ''
-  }
-  let mockPATCHIpsrGeneralInfoResponse = {}
+  };
+  const mockPATCHIpsrGeneralInfoResponse = {};
+
+  const mockGET_investmentDiscontinuedOptionsResponse: any = [
+    {
+      investment_discontinued_option_id: 1,
+      value: true,
+      is_active: false,
+      description: 'desc1'
+    }
+  ];
 
   beforeEach(async () => {
     mockApiService = {
       resultsSE: {
         GETInnovationByResultId: () => of({ response: mockGETInnovationByResultIdResponse }),
         PATCHIpsrGeneralInfo: () => of({ response: mockPATCHIpsrGeneralInfoResponse }),
+        GET_investmentDiscontinuedOptions: () => {
+          return of({ response: mockGET_investmentDiscontinuedOptionsResponse });
+        }
       },
       alertsFe: {
-        show: jest.fn(),
+        show: jest.fn()
       },
       dataControlSE: {
-        detailSectionTitle: jest.fn(),
-      },
+        detailSectionTitle: jest.fn()
+      }
     };
 
     mockIpsrDataControlService = {
-      resultInnovationId: 'mockInnovationId',
+      resultInnovationId: 'mockInnovationId'
     };
 
     mockScoreService = {};
 
-    
     await TestBed.configureTestingModule({
-      declarations: [ 
-        IpsrGeneralInformationComponent,
-        YesOrNotByBooleanPipe,
-        PrRadioButtonComponent,
-        PrYesOrNotComponent,
-        PrInputComponent,
-        PrFieldHeaderComponent,
-        PrTextareaComponent,
-        AlertStatusComponent,
-        PrFieldValidationsComponent,
-        SaveButtonComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      declarations: [IpsrGeneralInformationComponent, YesOrNotByBooleanPipe, PrRadioButtonComponent, PrYesOrNotComponent, PrInputComponent, PrFieldHeaderComponent, PrTextareaComponent, AlertStatusComponent, PrFieldValidationsComponent, SaveButtonComponent],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
-          useValue: mockApiService,
+          useValue: mockApiService
         },
         {
           provide: IpsrDataControlService,
-          useValue: mockIpsrDataControlService,
+          useValue: mockIpsrDataControlService
         },
         {
           provide: ScoreService,
-          useValue: mockScoreService,
-        },
-      ],
-    })
-    .compileComponents();
+          useValue: mockScoreService
+        }
+      ]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrGeneralInformationComponent);
     component = fixture.componentInstance;
@@ -99,11 +95,34 @@ describe('IpsrGeneralInformationComponent', () => {
 
   describe('getSectionInformation()', () => {
     it('should call GETInnovationByResultId and set ipsrGeneralInformationBody on getSectionInformation', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GETInnovationByResultId')
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GETInnovationByResultId');
       component.getSectionInformation();
-  
+
       expect(spy).toHaveBeenCalled();
       expect(component.ipsrGeneralInformationBody).toEqual(mockGETInnovationByResultIdResponse);
+    });
+  });
+
+  describe('GET_investmentDiscontinuedOptions', () => {
+    it('should call GET_investmentDiscontinuedOptions and convertChecklistToDiscontinuedOptions', () => {
+      const spyGET_investmentDiscontinuedOptions = jest.spyOn(mockApiService.resultsSE, 'GET_investmentDiscontinuedOptions');
+      const spyConvertChecklistToDiscontinuedOptions = jest.spyOn(component, 'convertChecklistToDiscontinuedOptions');
+
+      component.GET_investmentDiscontinuedOptions(1);
+
+      expect(spyGET_investmentDiscontinuedOptions).toHaveBeenCalled();
+      expect(spyConvertChecklistToDiscontinuedOptions).toHaveBeenCalledWith(mockGET_investmentDiscontinuedOptionsResponse);
+    });
+  });
+
+  describe('convertChecklistToDiscontinuedOptions', () => {
+    it('should call convertChecklistToDiscontinuedOptions and update generalInfoBody.discontinued_options', () => {
+      const spyConvertChecklistToDiscontinuedOptions = jest.spyOn(component, 'convertChecklistToDiscontinuedOptions');
+
+      component.convertChecklistToDiscontinuedOptions(mockGET_investmentDiscontinuedOptionsResponse);
+
+      expect(spyConvertChecklistToDiscontinuedOptions).toHaveBeenCalled();
+      expect(component.ipsrGeneralInformationBody.discontinued_options).toEqual(mockGET_investmentDiscontinuedOptionsResponse);
     });
   });
 
@@ -118,34 +137,34 @@ describe('IpsrGeneralInformationComponent', () => {
   describe('onSaveSection()', () => {
     it('should call PATCHIpsrGeneralInfo and show success alert on onSaveSection', () => {
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo')
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
-  
-      component.onSaveSection();
-      
-      expect(spy).toHaveBeenCalled();
-      expect(getSectionInformationSpy).toHaveBeenCalled();
-      expect(showSuccessAlertSpy).toHaveBeenCalledWith({
-        id: 'save-button',
-        title: 'Section saved successfully',
-        description: '',
-        status: 'success',
-        closeIn: 500,
+
+      component.onSaveSection(() => {
+        expect(spy).toHaveBeenCalled();
+        expect(getSectionInformationSpy).toHaveBeenCalled();
+        expect(showSuccessAlertSpy).toHaveBeenCalledWith({
+          id: 'save-button',
+          title: 'Section saved successfully',
+          description: '',
+          status: 'success',
+          closeIn: 500
+        });
       });
     });
     it('should call PATCHIpsrGeneralInfo and show error alert on onSaveSection error', () => {
       const mockError = new Error('Error');
       jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo').mockReturnValue(throwError({ error: mockError }));
       const showErrorAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
-  
+
       component.onSaveSection();
-  
+
       expect(showErrorAlertSpy).toHaveBeenCalledWith({
         id: 'save-button',
         title: 'There was an error saving the section',
         description: '',
         status: 'error',
-        closeIn: 500,
+        closeIn: 500
       });
     });
   });
@@ -184,5 +203,4 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(genderInformationString).toContain('<strong>Gender equality tag guidance</strong>');
     });
   });
-
 });

@@ -15,7 +15,7 @@ describe('ResultsListFilterService', () => {
       const initiatives = [{ name: 'Initiative 1', initiative_id: 1 }, { name: 'Initiative 2', initiative_id: 2 }];
       service.updateMyInitiatives(initiatives);
       const options = service.filters.general[0].options;
-  
+
       expect(options.length).toBe(initiatives.length + 2);
       expect(options[0].name).toBe('All results');
       expect(options[0].selected).toBeFalsy();
@@ -44,7 +44,7 @@ describe('ResultsListFilterService', () => {
         }
       ];
       const allResultsOption = service.filters.general[0].options[0];
-  
+
       service.onSelectChip(option);
 
       expect(option.selected).toBeTruthy();
@@ -111,9 +111,9 @@ describe('ResultsListFilterService', () => {
           ],
         },
       ];
-  
+
       service.cleanAllFilters(service.filters.general[0].options[1]);
-  
+
       expect(service.filters.general[0].options[1].selected).toBeFalsy();
       expect(service.filters.resultLevel[0].options[0].selected).toBeFalsy();
     });
@@ -143,7 +143,7 @@ describe('ResultsListFilterService', () => {
           ],
         },
       ];
-  
+
       service.cleanAllFilters(service.filters.general[0].options[0]);
 
       expect(service.filters.general[0].options[0].selected).toBeTruthy();
@@ -157,10 +157,10 @@ describe('ResultsListFilterService', () => {
         { id: 1, result_type: [{ id: 1, selected: true }, { id: 2, selected: false }] },
         { id: 2, result_type: [{ id: 3, selected: false }, { id: 4, selected: true }] },
       ];
-  
+
       service.setFiltersByResultLevelTypes(resultLevelTypes);
-  
-      expect(service.filters.resultLevel).toEqual(resultLevelTypes);     
+
+      expect(service.filters.resultLevel).toEqual(resultLevelTypes);
     });
   });
 });

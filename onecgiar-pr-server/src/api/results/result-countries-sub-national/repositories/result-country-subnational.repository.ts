@@ -1,14 +1,105 @@
 import { Injectable } from '@nestjs/common';
 import { ResultCountrySubnational } from '../entities/result-country-subnational.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import {
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
+} from '../../../../shared/globalInterfaces/replicable.interface';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 
 @Injectable()
 export class ResultCountrySubnationalRepository
-  extends Repository<ResultCountrySubnational>
+  extends BaseRepository<ResultCountrySubnational>
   implements LogicalDelete<ResultCountrySubnational>
 {
+  createQueries(
+    config: ReplicableConfigInterface<ResultCountrySubnational>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
+      SELECT
+          rcs.is_active,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          (
+            SELECT
+              rc.result_country_id
+            FROM
+              result_country rc2 		
+            WHERE
+              rc2.result_id = ${config.new_result_id}
+              AND rc2.country_id = rc.country_id
+          ) AS result_country_id,
+          rcs.clarisa_subnational_scope_code
+      FROM
+          result_country_subnational rcs
+          LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
+      WHERE 
+        rc.result_id = ${config.old_result_id}
+        AND rc.is_active = 1
+        AND rcs.is_active = 1;
+      `,
+      insertQuery: `
+      INSERT INTO
+        result_country_subnational (
+            is_active,
+            created_date,
+            last_updated_date,
+            created_by,
+            last_updated_by,
+            result_country_id,
+            clarisa_subnational_scope_code
+        )
+      SELECT
+          rcs.is_active,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS created_date,
+          ${predeterminedDateValidation(
+            config.predetermined_date,
+          )} AS last_updated_date,
+          ${config.user.id} AS created_by,
+          ${config.user.id} AS last_updated_by,
+          (
+            SELECT
+              rc2.result_country_id
+            FROM
+              result_country rc2 		
+            WHERE
+              rc2.result_id = ${config.new_result_id}
+              AND rc2.country_id = rc.country_id
+          ) AS result_country_id,
+          rcs.clarisa_subnational_scope_code
+      FROM
+          result_country_subnational rcs
+          LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
+      WHERE 
+        rc.result_id = ${config.old_result_id}
+        AND rc.is_active = 1
+        AND rcs.is_active = 1;
+      `,
+      returnQuery: `
+      SELECT
+          rcs.result_country_subnational_id
+      FROM
+          result_country_subnational rcs
+          LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
+      WHERE 
+        rc.result_id = ${config.new_result_id}
+        AND rc.is_active = 1;
+      `,
+    };
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,

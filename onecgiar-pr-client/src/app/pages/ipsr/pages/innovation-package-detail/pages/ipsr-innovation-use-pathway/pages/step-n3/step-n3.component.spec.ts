@@ -1,23 +1,363 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN3Component } from './step-n3.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { PrRadioButtonComponent } from '../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
+import { PrRangeLevelComponent } from '../../../../../../../../custom-fields/pr-range-level/pr-range-level.component';
+import { PrInputComponent } from '../../../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrTextareaComponent } from '../../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
+import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
+import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
+import { PrFieldValidationsComponent } from '../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
+import { of } from 'rxjs';
+import { Router } from '@angular/router';
 
 describe('StepN3Component', () => {
   let component: StepN3Component;
   let fixture: ComponentFixture<StepN3Component>;
+  let mockRouter: any;
 
   beforeEach(async () => {
+    mockRouter = {
+      navigate: jest.fn(),
+      navigateByUrl: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
-      declarations: [ StepN3Component ]
-    })
-    .compileComponents();
+      declarations: [StepN3Component, PrRadioButtonComponent, PrFieldHeaderComponent, PrRangeLevelComponent, PrInputComponent, PrTextareaComponent, SaveButtonComponent, PrButtonComponent, PrFieldValidationsComponent],
+      imports: [HttpClientTestingModule],
+      providers: [
+        {
+          provide: Router,
+          useValue: mockRouter
+        }
+      ]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(StepN3Component);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should call GETAllClarisaInnovationReadinessLevels, GETAllClarisaInnovationUseLevels, getSectionInformation, this.api.dataControlSE.detailSectionTitle with "Step 3" on ngOnInit', () => {
+    const GETAllClarisaInnovationReadinessLevelsSpy = jest.spyOn(component, 'GETAllClarisaInnovationReadinessLevels');
+    const GETAllClarisaInnovationUseLevelsSpy = jest.spyOn(component, 'GETAllClarisaInnovationUseLevels');
+    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+    const detailSectionTitleSpy = jest.spyOn(component.api.dataControlSE, 'detailSectionTitle');
+
+    component.ngOnInit();
+
+    expect(GETAllClarisaInnovationReadinessLevelsSpy).toHaveBeenCalled();
+    expect(GETAllClarisaInnovationUseLevelsSpy).toHaveBeenCalled();
+    expect(getSectionInformationSpy).toHaveBeenCalled();
+    expect(detailSectionTitleSpy).toHaveBeenCalledWith('Step 3');
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is true', () => {
+    const list = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const attr = 'id';
+    component.api.rolesSE.readOnly = true;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is false and item.is_active is true', () => {
+    const list = [{ is_active: true }, { is_active: true }, { is_active: true }];
+    const attr = 'is_active';
+    component.api.rolesSE.readOnly = false;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('should update the "open" property of response items based on the matching item in ipsrStep3Body', () => {
+    const response = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 1, open: false },
+        { result_by_innovation_package_id: 2, open: false },
+        { result_by_innovation_package_id: 3, open: false }
+      ]
+    };
+    component.ipsrStep3Body = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 1, open: true },
+        { result_by_innovation_package_id: 3, open: true }
+      ]
+    } as any;
+
+    component.openClosed(response);
+
+    expect(response.result_ip_result_complementary[0].open).toBe(true);
+    expect(response.result_ip_result_complementary[1].open).toBe(false);
+    expect(response.result_ip_result_complementary[2].open).toBe(true);
+  });
+
+  it('should not update the "open" property of response items if ipsrStep3Body is empty', () => {
+    const response = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 1, open: false },
+        { result_by_innovation_package_id: 2, open: false },
+        { result_by_innovation_package_id: 3, open: false }
+      ]
+    };
+    component.ipsrStep3Body = {
+      result_ip_result_complementary: []
+    } as any;
+
+    component.openClosed(response);
+
+    expect(response.result_ip_result_complementary[0].open).toBe(false);
+    expect(response.result_ip_result_complementary[1].open).toBe(false);
+    expect(response.result_ip_result_complementary[2].open).toBe(false);
+  });
+
+  it('should not update the "open" property of response items if there are no matching items in ipsrStep3Body', () => {
+    const response = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 1, open: false },
+        { result_by_innovation_package_id: 2, open: false },
+        { result_by_innovation_package_id: 3, open: false }
+      ]
+    };
+    component.ipsrStep3Body = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 4, open: true },
+        { result_by_innovation_package_id: 5, open: true }
+      ]
+    } as any;
+
+    component.openClosed(response);
+
+    expect(response.result_ip_result_complementary[0].open).toBe(false);
+    expect(response.result_ip_result_complementary[1].open).toBe(false);
+    expect(response.result_ip_result_complementary[2].open).toBe(false);
+  });
+
+  it('should return true if readiness_level_evidence_based_index is not 0 based on this.rangesOptions', () => {
+    component.rangesOptions = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const bodyItem = { readiness_level_evidence_based: 2 };
+    const updateRangeLevel1 = component.updateRangeLevel1(bodyItem);
+    expect(updateRangeLevel1).toBe(true);
+  });
+
+  it('should return false if readiness_level_evidence_based_index is 0 based on this.innovationUseList', () => {
+    component.innovationUseList = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const bodyItem = { use_level_evidence_based: 1 };
+    const updateRangeLevel2 = component.updateRangeLevel2(bodyItem);
+    expect(updateRangeLevel2).toBe(false);
+  });
+
+  it('should call GETInnovationPathwayByRiId and update ipsrStep3Body, convertOrganizations, result_core_innovation, and result_ip_expert_workshop_organized on getSectionInformation', () => {
+    const response = {
+      result_ip_result_complementary: [
+        { result_by_innovation_package_id: 1, open: false },
+        { result_by_innovation_package_id: 2, open: false },
+        { result_by_innovation_package_id: 3, open: false }
+      ],
+      innovatonUse: {
+        organization: [],
+        actors: []
+      },
+      result_ip_expert_workshop_organized: [],
+      result_core_innovation: null
+    };
+    const GETInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response }));
+    const openClosedSpy = jest.spyOn(component, 'openClosed');
+    const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations');
+
+    component.getSectionInformation();
+
+    expect(GETInnovationPathwayByRiIdSpy).toHaveBeenCalled();
+    expect(openClosedSpy).toHaveBeenCalledWith(response);
+    expect(convertOrganizationsSpy).toHaveBeenCalledWith(response.innovatonUse.organization);
+    expect(component.result_core_innovation).toBeNull();
+    expect(component.ipsrStep3Body.innovatonUse.actors.length).toBe(1);
+    expect(component.ipsrStep3Body.innovatonUse.organization.length).toBe(1);
+    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
+  });
+
+  it('should return true if innoUseLevel is 0 based on this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based', () => {
+    component.innovationUseList = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    component.ipsrStep3Body = { result_ip_result_core: { use_level_evidence_based: 1 } } as any;
+    const isOptionalUseLevel = component.isOptionalUseLevel();
+    expect(isOptionalUseLevel).toBe(true);
+  });
+
+  it('should return false if innoUseLevel is not 0 based on this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based', () => {
+    component.innovationUseList = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    component.ipsrStep3Body = { result_ip_result_core: { use_level_evidence_based: 2 } } as any;
+    const isOptionalUseLevel = component.isOptionalUseLevel();
+    expect(isOptionalUseLevel).toBe(false);
+  });
+
+  it('should call PATCHInnovationPathwayByRiId and getSectionInformation on onSaveSection', () => {
+    const PATCHInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiId').mockReturnValue(of({ response: {} }));
+    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+    const convertOrganizationsTosaveSpy = jest.spyOn(component, 'convertOrganizationsTosave');
+
+    component.onSaveSection();
+
+    expect(convertOrganizationsTosaveSpy).toHaveBeenCalled();
+    expect(PATCHInnovationPathwayByRiIdSpy).toHaveBeenCalled();
+    expect(getSectionInformationSpy).toHaveBeenCalled();
+  });
+
+  it('it should navigate to the previous page on onSaveSectionWithStep if readOnly is true and props is "previous"', () => {
+    component.api.rolesSE.readOnly = true;
+    component.ipsrDataControlSE.resultInnovationPhase = '1';
+    const navigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+    component.onSaveSectionWithStep('previous');
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/ipsr/detail/null/ipsr-innovation-use-pathway/step-2'], { queryParams: { phase: '1' } });
+  });
+
+  it('it should navigate to the next page on onSaveSectionWithStep if readOnly is true and props is "next"', () => {
+    component.api.rolesSE.readOnly = true;
+    component.ipsrDataControlSE.resultInnovationPhase = '1';
+    const navigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+    component.onSaveSectionWithStep('next');
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/ipsr/detail/null/ipsr-innovation-use-pathway/step-4'], { queryParams: { phase: '1' } });
+  });
+
+  it('it should call convertOrganizationsTosave, PATCHInnovationPathwayByRiIdNextPrevius, getSectionInformation, and navigate on onSaveSectionWithStep if readOnly is false', () => {
+    component.api.rolesSE.readOnly = false;
+    const convertOrganizationsTosaveSpy = jest.spyOn(component, 'convertOrganizationsTosave');
+    const PATCHInnovationPathwayByRiIdNextPreviusSpy = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius').mockReturnValue(of({}));
+    const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
+    const navigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
+
+    component.onSaveSectionWithStep('next');
+
+    expect(convertOrganizationsTosaveSpy).toHaveBeenCalled();
+    expect(PATCHInnovationPathwayByRiIdNextPreviusSpy).toHaveBeenCalled();
+    expect(getSectionInformationSpy).toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalled();
+  });
+
+  it('should call GETAllClarisaInnovationReadinessLevels on GETAllClarisaInnovationReadinessLevels', () => {
+    const GETAllClarisaInnovationReadinessLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationReadinessLevels').mockReturnValue(of({ response: {} }));
+
+    component.GETAllClarisaInnovationReadinessLevels();
+
+    expect(GETAllClarisaInnovationReadinessLevelsSpy).toHaveBeenCalled();
+  });
+
+  it('should call GETAllClarisaInnovationUseLevels on GETAllClarisaInnovationUseLevels', () => {
+    const GETAllClarisaInnovationUseLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationUseLevels').mockReturnValue(of({ response: {} }));
+
+    component.GETAllClarisaInnovationUseLevels();
+
+    expect(GETAllClarisaInnovationUseLevelsSpy).toHaveBeenCalled();
+  });
+
+  it('should return the expected HTML string on goToStep', () => {
+    component.ipsrDataControlSE = {
+      resultInnovationCode: '12345',
+      resultInnovationPhase: '1'
+    } as any;
+
+    const result = component.goToStep();
+
+    expect(result)
+      .toBe(`<li>In case you want to add one more complementary innovation/enabler/solution <a class='open_route' href='/ipsr/detail/12345/ipsr-innovation-use-pathway/step-2/complementary-innovation?phase=${component.ipsrDataControlSE.resultInnovationPhase}' target='_blank'> Go to step 2</a></li>
+        <li><strong>YOUR READINESS AND USE SCORES IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a> AND <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`);
+  });
+
+  it('should return the expected string on readinessLevelSelfAssessmentText', () => {
+    const result = component.readinessLevelSelfAssessmentText();
+    expect(result).toBe(`
+    <li><a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels</li>
+    <li><strong>YOUR READINESS SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>.</strong></li>
+    `);
+  });
+
+  it('should return the expected string on useLevelDelfAssessment', () => {
+    const result = component.useLevelDelfAssessment();
+    expect(result).toBe(`<li><a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank">Click here</a> to see all innovation use levels</li>
+    <li><strong>YOUR USE SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`);
+  });
+
+  it('should call map on convertOrganizations', () => {
+    const organizations = [
+      { id: 1, parent_institution_type_id: 1 },
+      { id: 2, parent_institution_type_id: 2 },
+      { id: 3, parent_institution_type_id: 3 }
+    ];
+    const mapSpy = jest.spyOn(organizations, 'map');
+
+    component.convertOrganizations(organizations);
+
+    expect(mapSpy).toHaveBeenCalled();
+  });
+
+  it('should call map on convertOrganizationsTosave', () => {
+    const organizations = [
+      { id: 1, institution_sub_type_id: 1 },
+      { id: 2, institution_sub_type_id: 2 },
+      { id: 3, institution_sub_type_id: 3 }
+    ];
+    component.ipsrStep3Body = {
+      innovatonUse: {
+        organization: organizations
+      }
+    } as any;
+    const mapSpy = jest.spyOn(organizations, 'forEach');
+
+    component.convertOrganizationsTosave();
+
+    expect(mapSpy).toHaveBeenCalled();
+  });
+
+  it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
+    component.ipsrStep3Body = {
+      result_innovation_package: {
+        is_expert_workshop_organized: true
+      }
+    } as any;
+    const result = component.cleanEvidence();
+    expect(result).toBeUndefined();
+  });
+
+  it('should set readiness_level_evidence_based and use_level_evidence_based  to null if is_expert_workshop_organized is false on cleanEvidence', () => {
+    component.ipsrStep3Body = {
+      result_innovation_package: {
+        is_expert_workshop_organized: false
+      }
+    } as any;
+    component.cleanEvidence();
+    expect(component.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based).toBeNull();
+    expect(component.ipsrStep3Body.result_innovation_package.use_level_evidence_based).toBeNull();
+  });
+
+  it('should return the expected url string on resultUrl', () => {
+    const url = component.resultUrl('12345', '1');
+    expect(url).toBe('/result/result-detail/12345/general-information?phase=1');
+  });
+
+  it('should return expected string on workshopDescription', () => {
+    const result = component.workshopDescription();
+    expect(result).toBe('A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>');
+  });
+
+  it('should add expert to result_ip_expert_workshop_organized when addExpert has been called', () => {
+    component.ipsrStep3Body = {
+      result_ip_expert_workshop_organized: []
+    } as any;
+    component.addExpert();
+    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
+  });
+
+  it('should remove the item at the given index from result_ip_expert_workshop_organized when delete has been called', () => {
+    component.ipsrStep3Body = {
+      result_ip_expert_workshop_organized: [{}, {}, {}]
+    } as any;
+    component.delete(1);
+    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(2);
   });
 });

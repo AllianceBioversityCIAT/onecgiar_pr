@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { HeaderPanelComponent } from './header-panel.component';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('HeaderPanelComponent', () => {
   let component: HeaderPanelComponent;
@@ -8,7 +9,8 @@ describe('HeaderPanelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HeaderPanelComponent]
+      declarations: [HeaderPanelComponent],
+      imports: [HttpClientModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HeaderPanelComponent);

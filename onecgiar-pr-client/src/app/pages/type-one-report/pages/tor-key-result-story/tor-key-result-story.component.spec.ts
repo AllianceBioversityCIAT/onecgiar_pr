@@ -18,6 +18,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { ToastModule } from 'primeng/toast';
+import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
 
 describe('TorKeyResultStoryComponent', () => {
   let component: TorKeyResultStoryComponent;
@@ -59,7 +60,7 @@ describe('TorKeyResultStoryComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [TorKeyResultStoryComponent, NoDataTextComponent, SaveButtonComponent, SimpleTableWithClipboardComponent, PrButtonComponent, TorKrsPrimaryImpactAreaSelectorComponent, PrSelectComponent, LabelNamePipe, ListFilterByTextAndAttrPipe, PrFieldHeaderComponent],
+      declarations: [TorKeyResultStoryComponent, NoDataTextComponent,AlertStatusComponent, SaveButtonComponent, SimpleTableWithClipboardComponent, PrButtonComponent, TorKrsPrimaryImpactAreaSelectorComponent, PrSelectComponent, LabelNamePipe, ListFilterByTextAndAttrPipe, PrFieldHeaderComponent],
       imports: [HttpClientTestingModule, TooltipModule, ScrollingModule, FormsModule, ToastModule],
       providers: [
         {
@@ -119,7 +120,7 @@ describe('TorKeyResultStoryComponent', () => {
     });
     it('should log error on PATCH_primaryImpactAreaKrs error', () => {
       const errorResponse = { status: 500, message: 'Internal Server Error' };
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_primaryImpactAreaKrs').mockReturnValue(throwError(errorResponse));
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_primaryImpactAreaKrs').mockReturnValue(throwError(()=>errorResponse));
       const spyGET_keyResultStoryInitiativeId = jest.spyOn(component, 'GET_keyResultStoryInitiativeId');
       const spyError = jest.spyOn(console, 'error');
 
@@ -141,16 +142,11 @@ describe('TorKeyResultStoryComponent', () => {
       expect(header).toEqual([{ attr: 'category' }, { attr: 'value' }]);
       expect(data[0].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].result_title);
       expect(data[0].id).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].result_code);
-      expect(data[1].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].primary_submitter);
-      expect(data[2].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contributing_initiative);
-      expect(data[3].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contributing_center);
-      expect(data[4].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contribution_external_partner);
+      expect(data[1].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contributing_initiative);
+      expect(data[2].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contributing_center);
+      expect(data[3].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].contribution_external_partner);
       const expectedGeoLocation = `<strong>Countries:</strong><br> ${mockGET_keyResultStoryInitiativeIdResponse[0].countries} <br><br><strong>Regions:</strong><br>${mockGET_keyResultStoryInitiativeIdResponse[0].regions}<br> `;
-      expect(data[5].value).toBe(expectedGeoLocation);
-      expect(data[6].value).toEqual(JSON.parse(mockGET_keyResultStoryInitiativeIdResponse[0].impact_areas));
-      expect(data[7].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].other_impact_areas);
-      expect(data[8].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].global_targets);
-      expect(data[9].value).toBe(mockGET_keyResultStoryInitiativeIdResponse[0].web_legacy);
+      expect(data[4].value).toBe(expectedGeoLocation);
     });
     it('should set default values when tableData properties are not provided', () => {
       const tableData = {
@@ -172,17 +168,12 @@ describe('TorKeyResultStoryComponent', () => {
 
       const data = component.tablesList[0].data;
 
-      expect(data[0].value).toBe('<div class="no-data-text-format">There are not result title data</div>');
+      expect(data[0].value).toBe('<div class="no-data-text-format">There is no result title data</div>');
       expect(data[0].id).toBe('');
-      expect(data[1].value).toBe('<div class="no-data-text-format">There are not primary submitter data</div>');
-      expect(data[2].value).toBe('<div class="no-data-text-format">There are not contributing Initiatives data</div>');
-      expect(data[3].value).toBe('<div class="no-data-text-format">There are not contributing centers data</div>');
-      expect(data[4].value).toBe('<div class="no-data-text-format">There are not contributing external partner(s) data</div>');
-      expect(data[5].value).toBe('<div class="no-data-text-format">There are not Geographic location data</div>');
-      expect(data[6].value).toBe('<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>');
-      expect(data[7].value).toBe('<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>');
-      expect(data[8].value).toBe('<div class="no-data-text-format">This result is not a impact reported in the PRMS Reporting Tool</div>');
-      expect(data[9].value).toBe('<div class="no-data-text-format">There are not web legacy data</div>');
+      expect(data[1].value).toBe('<div class="no-data-text-format">There are no contributing Initiatives data</div>');
+      expect(data[2].value).toBe('<div class="no-data-text-format">There are no contributing centers data</div>');
+      expect(data[3].value).toBe('<div class="no-data-text-format">There are no contributing external partner(s) data</div>');
+      expect(data[4].value).toBe('<div class="no-data-text-format">There is no Geographic location data</div>');
     });
     it('should set data to null when tableData is not provided', () => {
       component.tablesList = [];

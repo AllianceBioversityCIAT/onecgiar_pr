@@ -26,10 +26,11 @@ describe('InnovationPackageCreatorComponent', () => {
   const myInitiativesList = [{ id: 1, name: 'Initiative 1' }];
   const mockPOSTResultInnovationPackageResponse = {
     newInnovationHeader: {
-      result_code: 1
+      result_code: 1,
+      version_id: 1
     }
   };
-  let mockResponse = {
+  const mockResponse = {
     geographic_scope_id: 3,
     hasRegions: [{ id: '1' }],
     hasCountries: [{ id: '1' }],
@@ -168,7 +169,7 @@ describe('InnovationPackageCreatorComponent', () => {
     it('should return false for geo_scope_id 5 when sub_national length is not in the countries array', () => {
       component.innovationPackageCreatorBody.geo_scope_id = 5;
       component.innovationPackageCreatorBody.countries = [{ id: '1'}];
-      
+
       const result = component.areLists;
 
       expect(result).toBeFalsy();
@@ -177,7 +178,7 @@ describe('InnovationPackageCreatorComponent', () => {
       component.innovationPackageCreatorBody.geo_scope_id = 99;
 
       const result = component.areLists;
-      
+
       expect(result).toBeFalsy();
     });
   });
@@ -219,7 +220,9 @@ describe('InnovationPackageCreatorComponent', () => {
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalledWith(component.innovationPackageCreatorBody);
-      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(`/ipsr/detail/${mockPOSTResultInnovationPackageResponse.newInnovationHeader.result_code}`);
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith(
+        `/ipsr/detail/${mockPOSTResultInnovationPackageResponse.newInnovationHeader.result_code}/general-information?phase=${mockPOSTResultInnovationPackageResponse.newInnovationHeader.version_id}`
+      );
       expect(spyShow).toHaveBeenCalledWith({
         id: 'ipsr-creator',
         title: 'Innovation package created',
@@ -252,9 +255,9 @@ describe('InnovationPackageCreatorComponent', () => {
   describe('ngDoCheck', () => {
     it('should call checkMandatoryFields in ngDoCheck', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
-  
+
       component.ngDoCheck();
-  
+
       expect(spy).toHaveBeenCalledWith('.section_container');
     });
   });

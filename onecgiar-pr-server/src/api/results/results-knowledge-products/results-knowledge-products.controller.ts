@@ -6,55 +6,43 @@ import {
   Patch,
   Param,
   Query,
-  Headers,
-  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ResultsKnowledgeProductsService } from './results-knowledge-products.service';
-import { HeadersDto } from '../../../shared/globalInterfaces/headers.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto';
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { UserToken } from '../../../shared/decorators/user-token.decorator';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ResultsKnowledgeProductsController {
   constructor(
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
   @Post('create')
-  async create(
+  create(
     @Body() mqapMappedResponse: ResultsKnowledgeProductDto,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    return this._resultsKnowledgeProductsService.create(
+      mqapMappedResponse,
+      user,
     );
-
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.create(
-        mqapMappedResponse,
-        token,
-      );
-
-    throw new HttpException({ message, response }, status);
   }
 
   @Get('mqap')
-  async getFromMQAPByHandle(@Query('handle') handle: string) {
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.findOnCGSpace(handle, null);
-
-    throw new HttpException({ message, response }, status);
+  getFromMQAPByHandle(@Query('handle') handle: string) {
+    return this._resultsKnowledgeProductsService.findOnCGSpace(handle, null);
   }
 
   @Get('find/by-handle')
-  async findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
-        handle,
-      );
-
-    throw new HttpException({ message, response }, status);
+  findResultKnowledgeProductByHandle(@Query('handle') handle: string) {
+    return this._resultsKnowledgeProductsService.findResultKnowledgeProductByHandle(
+      handle,
+    );
   }
 
   @Get('get/:id')
@@ -70,33 +58,20 @@ export class ResultsKnowledgeProductsController {
   }
 
   @Patch('resync/:resultId')
-  async update(@Param('resultId') id: number, @Headers() auth: HeadersDto) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
-    );
-
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.syncAgain(id, token);
-
-    throw new HttpException({ message, response }, status);
+  update(@Param('resultId') id: number, @UserToken() user: TokenDto) {
+    return this._resultsKnowledgeProductsService.syncAgain(id, user);
   }
 
   @Patch('upsert/:resultId')
-  async remove(
+  remove(
     @Param('resultId') id: number,
-    @Headers() auth: HeadersDto,
+    @UserToken() user: TokenDto,
     @Body() sectionSevenData: ResultsKnowledgeProductSaveDto,
   ) {
-    const token: TokenDto = <TokenDto>(
-      JSON.parse(Buffer.from(auth.auth.split('.')[1], 'base64').toString())
+    return this._resultsKnowledgeProductsService.upsert(
+      id,
+      user,
+      sectionSevenData,
     );
-
-    const { message, response, status } =
-      await this._resultsKnowledgeProductsService.upsert(
-        id,
-        token,
-        sectionSevenData,
-      );
-    throw new HttpException({ message, response }, status);
   }
 }

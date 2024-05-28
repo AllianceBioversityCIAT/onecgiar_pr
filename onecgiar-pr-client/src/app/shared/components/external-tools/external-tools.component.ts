@@ -28,13 +28,15 @@ export class ExternalToolsComponent implements OnInit {
           gtag('config', environment.googleAnalyticsId, {
             page_path: event.url
           });
-        } catch (error) {}
+        } catch (error) {
+          console.error(error);
+        }
       }
     });
   }
 
   validateShowT1RSelectPhase(url: string): void {
     const lastPath = url.split('/').pop();
-    this.api.dataControlSE.showT1RSelectPhase =  lastPath === 'toc-diagrams';
+    this.api.dataControlSE.showT1RSelectPhase = lastPath === 'toc-diagrams';
   }
 }

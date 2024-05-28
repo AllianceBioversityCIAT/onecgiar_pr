@@ -6,11 +6,13 @@ import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
   templateUrl: './step-n3-complementary-innovations.component.html',
   styleUrls: ['./step-n3-complementary-innovations.component.scss']
 })
-export class StepN3ComplementaryInnovationsComponent {
+export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() rangesOptions: any[] = [];
   @Input() innovationUseList: any[] = [];
   @Input() body = new IpsrStep3Body();
   open = false;
+  rangeLevel1Required = true;
+  rangeLevel2Required = true;
 
   constructor() {}
 
@@ -31,15 +33,16 @@ export class StepN3ComplementaryInnovationsComponent {
     <li><strong>YOUR USE SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`;
   }
 
-  rangeLevel1Required = true;
   updateRangeLevel1(bodyItem) {
     const readiness_level_evidence_based_index = this.rangesOptions.findIndex(item => item.id == bodyItem['readiness_level_evidence_based']);
     this.rangeLevel1Required = readiness_level_evidence_based_index != 0;
+    return this.rangeLevel1Required;
   }
-  rangeLevel2Required = true;
+
   updateRangeLevel2(bodyItem) {
     const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
     this.rangeLevel2Required = use_level_evidence_based_index != 0;
+    return this.rangeLevel2Required;
   }
 
   allFieldsRequired(bodyItem) {
@@ -50,11 +53,6 @@ export class StepN3ComplementaryInnovationsComponent {
     const use_level_evidence_based_index = this.innovationUseList.findIndex(item => item.id == bodyItem['use_level_evidence_based']);
     if (readiness_level_evidence_based_index != 0) attrListTovalidate.push('readinees_evidence_link');
     if (use_level_evidence_based_index != 0) attrListTovalidate.push('use_evidence_link');
-    let oneEmpty = false;
-    attrListTovalidate.forEach((attr: any) => {
-      if (bodyItem[attr] === null || bodyItem[attr] === undefined || bodyItem[attr] === '') oneEmpty = true;
-    });
-    //(oneEmpty);
-    return !oneEmpty;
+    return attrListTovalidate.every((attr: any) => bodyItem[attr]);
   }
 }

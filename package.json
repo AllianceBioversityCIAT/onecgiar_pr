@@ -1,0 +1,19 @@
+{
+  "name": "onecgiar_pr",
+  "version": "1.0.0",
+  "description": ".",
+  "main": "index.js",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "husky": "^9.0.11"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "sh pre-commit"
+    }
+  }
+}

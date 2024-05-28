@@ -6,15 +6,24 @@ import { RdGeneralInformationComponent } from './rd-general-information.componen
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
 import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
-import { FeedbackValidationDirectiveModule } from 'src/app/shared/directives/feedback-validation-directive.module';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
+import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent],
-  imports: [CommonModule, RdGeneralInformationRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule, DialogModule, TableModule, PdfIconModule]
+  imports: [
+    CommonModule,
+    RdGeneralInformationRoutingModule,
+    CustomFieldsModule,
+    InstitutionsPipesModule,
+    FeedbackValidationDirectiveModule,
+    DialogModule,
+    TableModule,
+    PdfIconModule
+  ]
 })
 export class RdGeneralInformationModule {}

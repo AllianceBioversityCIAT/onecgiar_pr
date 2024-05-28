@@ -1,16 +1,16 @@
-import { Controller, Get, HttpException } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ClarisaPolicyTypesService } from './clarisa-policy-types.service';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ClarisaPolicyTypesController {
   constructor(
     private readonly clarisaPolicyTypesService: ClarisaPolicyTypesService,
   ) {}
 
   @Get('get/all')
-  async findAll() {
-    const { message, response, status } =
-      await this.clarisaPolicyTypesService.findAll();
-    throw new HttpException({ message, response }, status);
+  findAll() {
+    return this.clarisaPolicyTypesService.findAll();
   }
 }

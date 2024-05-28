@@ -1,60 +1,57 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from 'src/app/shared/services/api/auth.service';
-import { environment } from 'src/environments/environment';
+import { AuthService } from '../../shared/services/api/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-pdf-reports',
   templateUrl: './pdf-reports.component.html',
   styleUrls: ['./pdf-reports.component.scss']
 })
-export class PdfReportsComponent implements OnInit {
+export class PdfReportsComponent implements OnInit, OnDestroy {
   iframeLoaded = null;
   error = {
     type: null,
     message: null
   };
   report = new Report(this.activatedRoute, this.sanitizer);
+
   constructor(private authService: AuthService, private activatedRoute: ActivatedRoute, public sanitizer: DomSanitizer, public http: HttpClient) {}
 
   ngOnInit(): void {
     this.authService.inLogin = true;
     document.body.style.overflow = 'hidden';
     this.getPdfData();
-    // this.validateErrors({ message: 'hi', status: '404' });
   }
 
   getPdfData() {
     if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
     this.iframeLoaded = true;
-    //(this.report.iframeRoute);
-    this.http.get<any>(this.report.iframeRoute).subscribe(
-      resp => {
-        //(resp);
+    this.http.get<any>(this.report.iframeRoute).subscribe({
+      next: resp => {
         this.validateErrors(resp);
         this.iframeLoaded = false;
       },
-      err => {
+      error: err => {
         console.error(err);
         this.validateErrors(err);
         this.iframeLoaded = false;
       }
-    );
+    });
     return null;
   }
 
   validateErrors({ message, status }) {
     const statusText = String(status);
-    this.error.type = statusText[0] == '5' ? 'error' : statusText[0] == '4' ? 'warning' : null;
-    // switch (status) {
-    //   case '404':
-    //     return '';
-
-    //   default:
-    //     return '';
-    // }
+    if (statusText.startsWith('5')) {
+      this.error.type = 'error';
+    } else if (statusText.startsWith('4')) {
+      this.error.type = 'warning';
+    } else {
+      this.error.type = null;
+    }
   }
 
   ngOnDestroy(): void {
@@ -76,11 +73,15 @@ class Report {
   }
 
   get iframeRoute() {
-    return `${environment.apiBaseUrl}api/platform-report/result/${this.activatedRoute.snapshot.paramMap.get('id')}${this.qParamsObjectToqueryParams()}`;
+    const { id: resultId } = this.activatedRoute.snapshot.paramMap.params || {};
+
+    const module = this.activatedRoute.snapshot._routerState?.url.includes('ipsr') ? 'ipsr' : 'result';
+
+    return `${environment.apiBaseUrl}api/platform-report/${module}/${resultId}${this.qParamsObjectToqueryParams()}`;
   }
 
   qParamsObjectToqueryParams() {
-    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap.params);
+    const objectKeys = Object.keys(this.activatedRoute.snapshot.queryParamMap?.params || {});
     if (!objectKeys.length) return '';
     let queryParamsText = '';
     const params = this.activatedRoute.snapshot.queryParamMap.params;

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-interface alertOptions {
+export interface AlertOptions {
   id;
   title;
   description?: string;
@@ -21,7 +21,7 @@ export class CustomizedAlertsFeService {
     this.statusIcons['information'] = 'priority_high';
   }
 
-  show(alertOptions: alertOptions, callback?) {
+  show(alertOptions: AlertOptions, callback?) {
     const { id, title, description = '', closeIn, status, confirmText } = alertOptions;
     // this.showed = true;
     let alert = document.getElementById(id);

@@ -1,0 +1,41 @@
+.ipsr_annual_updating-container {
+  padding: 40px 0 20px 0;
+
+  .ipsr_annual_updating {
+    box-shadow: 0px 0px 5px 5px #00000012;
+    border-radius: 10px;
+    padding: 30px;
+
+    .ipsr_annual_updating-title {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 20px;
+
+      strong {
+        font-size: 2rem;
+        font-weight: 600;
+      }
+
+      .ipsr_annual_updating-header {
+        margin-top: -12px;
+      }
+    }
+
+    .ipsr_annual_updating-discontinued_options {
+      padding-left: 50px;
+      padding-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .ipsr_annual_updating-discontinued_option {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        height: 40px;
+      }
+    }
+  }
+}
