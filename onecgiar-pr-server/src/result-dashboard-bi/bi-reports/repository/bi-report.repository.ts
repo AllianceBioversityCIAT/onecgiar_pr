@@ -62,7 +62,6 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenPowerBi(report: any) {
-    console.log('getTokenPowerBi');
     if (report) {
       const barerTokenAzure = await this.getBarerTokenAzure();
       let tokenPowerBi;
@@ -83,9 +82,7 @@ export class BiReportRepository extends Repository<BiReport> {
             )
             .pipe(map((resp) => resp.data)),
         );
-        console.log(tokenPowerBi.token);
       } catch (error) {
-        console.log(error);
         return { ...error, isError: true };
       }
 
