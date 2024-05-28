@@ -18,10 +18,7 @@ export class BiReportsService {
 
   async findAll() {
     try {
-      const response = await this.biReportRepository.find({
-        order: { report_order: 'ASC' },
-        where: { is_active: true },
-      });
+      const response = await this.biReportRepository.getAllReports();
 
       return this._returnResponse.format({
         message: 'Reports found',
