@@ -390,7 +390,7 @@ export class ResultRepository
    * !reported_year revisar
    * @returns
    */
-  async AllResults(version = 1) {
+  async AllResults() {
     const queryData = `
     SELECT
     r.id,
@@ -431,12 +431,11 @@ FROM
     inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
 WHERE
-    r.is_active > 0
-    and r.version_id = ?;
+    r.is_active > 0;
     `;
 
     try {
-      const results: any[] = await this.query(queryData, [version]);
+      const results: any[] = await this.query(queryData);
       return results;
     } catch (error) {
       throw {
@@ -646,7 +645,7 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string, version = 1) {
+  async AllResultsLegacyNewByTitle(title: string) {
     const queryData = `
     (select 
       lr.legacy_id as id,
@@ -680,15 +679,13 @@ WHERE
                           and ci.active > 0
       inner join result_type rt on rt.id = r.result_type_id 
     where r.is_active > 0
-      and r.title like ?
-      and r.version_id = ?)
+      and r.title like ?)
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
         `%${title}%`,
-        version,
       ]);
       return results;
     } catch (error) {

@@ -11,8 +11,10 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 @Controller()
+@ApiTags('auth')
 @UseInterceptors(ResponseInterceptor)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -23,6 +25,7 @@ export class AuthController {
   }
 
   @Post('/singin')
+  @ApiSecurity('')
   singIn(@Body() userLogin: UserLoginDto) {
     return this.authService.singIn(userLogin);
   }

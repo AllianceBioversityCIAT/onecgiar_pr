@@ -16,8 +16,10 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller()
+@ApiTags('results')
 @UseInterceptors(ResponseInterceptor)
 export class ResultsController {
   constructor(private readonly resultsService: ResultsService) {}

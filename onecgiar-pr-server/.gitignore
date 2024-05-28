@@ -42,7 +42,3 @@ lerna-debug.log*
 
 #aws_secret_access_key
 .aws
-
-src/config/*
-
-package-lock.json
