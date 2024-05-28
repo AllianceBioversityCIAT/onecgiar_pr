@@ -62,7 +62,6 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenPowerBi(report: any) {
-    console.log('getTokenPowerBi');
     if (report) {
       const barerTokenAzure = await this.getBarerTokenAzure();
       let tokenPowerBi;
