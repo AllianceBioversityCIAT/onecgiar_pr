@@ -75,9 +75,18 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (this.api.rolesSE.isAdmin) {
+      this.unSelectInits();
+    } else {
+      this.api.updateUserData(() => {});
+    }
     this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
+  }
+
+  unSelectInits() {
+    this.api.dataControlSE.myInitiativesList.map(item => (item.selected = false));
   }
 
   onPressAction(result) {
