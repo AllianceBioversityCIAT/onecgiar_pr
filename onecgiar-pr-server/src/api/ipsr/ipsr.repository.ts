@@ -688,9 +688,13 @@ export class IpsrRepository
 
     const searchClause = searchText
       ? `AND (
-           r.result_code LIKE '%${searchText}%'
-           OR r.title LIKE '%${searchText}%'
-         )`
+            r.result_code LIKE '%${searchText}%'
+            OR r.title LIKE '%${searchText}%'
+            OR ci.official_code LIKE '%${searchText}%'
+            OR rs.status_name LIKE '%${searchText}%'
+            OR v.phase_year LIKE '%${searchText}%'
+            OR v.phase_name LIKE '%${searchText}%'
+        )`
       : '';
 
     const ipsrListQuery = `
@@ -748,8 +752,8 @@ export class IpsrRepository
                             (
                                 IF(
                                     cgs.id = 3,
-                                    CONCAT("National", '\n'),
-                                    CONCAT(cgs.name, '\n')
+                                    CONCAT("Country(ies)", ': '),
+                                    CONCAT(cgs.name, '')
                                 )
                             )
                         ),
@@ -757,6 +761,7 @@ export class IpsrRepository
                             (
                                 SELECT
                                     CONCAT(
+                                        ": ",
                                         GROUP_CONCAT(
                                             DISTINCT cr.name SEPARATOR ", "
                                         ),
@@ -776,7 +781,7 @@ export class IpsrRepository
                                 SELECT
                                     IF(
                                         r.geographic_scope_id = 5,
-                                        GROUP_CONCAT(csn.res SEPARATOR "\n"),
+                                        GROUP_CONCAT(": ", csn.res SEPARATOR "\n"),
                                         GROUP_CONCAT(csn.countries SEPARATOR ", ")
                                     )
                                 FROM
@@ -844,14 +849,7 @@ export class IpsrRepository
             WHERE
                 u.id = r.created_by
         ) AS "Submitter",
-        (
-            SELECT
-                rs.status_name
-            FROM
-                result_status rs
-            WHERE
-                rs.result_status_id = r.status_id
-        ) AS "Status",
+        rs.status_name AS "Status",
         (
             IFNULL(
                 (
@@ -918,21 +916,7 @@ export class IpsrRepository
             )
         ) AS "Poverty tag level",
         DATE_FORMAT(r.created_date, '%Y-%m-%d') AS "Creation date",
-        (
-            SELECT
-                CONCAT(
-                    ci.official_code,
-                    " - ",
-                    ci.name
-                )
-            FROM
-                results_by_inititiative rbi
-                LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
-            WHERE
-                rbi.result_id = r.id
-                AND rbi.initiative_role_id = 1
-                AND rbi.is_active > 0
-        ) AS "Lead initiative",
+        CONCAT(ci.official_code, " - ", ci.name) AS "Lead initiative",
         IFNULL(
             (
                 SELECT
@@ -1025,8 +1009,7 @@ export class IpsrRepository
             ),
             "Not provided"
         ) AS "Scalability potential score",
-        IF(
-            (v.phase_year > 2023),
+        IFNULL(
             CONCAT(
                 "${env.FRONT_END_PDF_ENDPOINT_IPSR}",
                 r.result_code,
@@ -1043,9 +1026,14 @@ export class IpsrRepository
         LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = rip.result_innovation_package_id
         AND rbip.ipsr_role_id = 1
         LEFT JOIN result_type rt ON rt.id = r.result_type_id
+        LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+        LEFT JOIN result_status rs ON rs.result_status_id = r.status_id
     WHERE
         r.is_active > 0
         AND r.result_type_id = 10
+        AND rbi.initiative_role_id = 1
+        AND rbi.is_active > 0
         ${initClause}
         ${phaseClause}
         ${searchClause}
