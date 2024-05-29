@@ -458,15 +458,6 @@ describe('ResultCreatorComponent', () => {
     });
   });
 
-  describe('validateKnowledgeProductFields()', () => {
-    it('should call validateKnowledgeProductFields', () => {
-      const spy = jest.spyOn(component, 'validateKnowledgeProductFields');
-      component.validateKnowledgeProductFields();
-
-      expect(spy).toHaveBeenCalled();
-    });
-  });
-
   describe('ngDoCheck()', () => {
     it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
@@ -479,6 +470,7 @@ describe('ResultCreatorComponent', () => {
 
   describe('GET_mqapValidation()', () => {
     it('should call GET_mqapValidation', () => {
+      component.resultLevelSE.resultBody.handler = 'https://cgspace.cgiar.org/handle/10568/139504';
       jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation');
       const showSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
@@ -494,6 +486,7 @@ describe('ResultCreatorComponent', () => {
       });
     });
     it('should show error message if GET_mqapValidation call fails', () => {
+      component.resultLevelSE.resultBody.handler = 'https://cgspace.cgiar.org/handle/10568/139504';
       jest.spyOn(mockApiService.resultsSE, 'GET_mqapValidation').mockReturnValue(throwError({ error: { message: 'Test error message' } }));
       const showSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
@@ -507,6 +500,25 @@ describe('ResultCreatorComponent', () => {
         description: 'Test error message',
         status: 'error'
       });
+    });
+    it('should set mqapUrlError information if handler is not a valid URL', () => {
+      component.resultLevelSE.resultBody.handler = 'invalidURL';
+
+      component.GET_mqapValidation();
+
+      expect(component.validating).toBe(false);
+      expect(component.mqapUrlError.status).toBeTruthy();
+      expect(component.mqapUrlError.message).toBe('Please ensure that the handle is from the CGSpace repository and not other CGIAR repositories.');
+    });
+
+    it('should return mqapUrlError information if handler is empty', () => {
+      component.resultLevelSE.resultBody.handler = '';
+
+      component.GET_mqapValidation();
+
+      expect(component.validating).toBe(false);
+      expect(component.mqapUrlError.status).toBeTruthy();
+      expect(component.mqapUrlError.message).toBe('Please enter a valid handle.');
     });
   });
 });
