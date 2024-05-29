@@ -11,12 +11,21 @@ import { IpsrDataControlService } from '../../../../services/ipsr-data-control.s
   styleUrls: ['./innovation-package-list.component.scss']
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
-  constructor(public api: ApiService, public phaseServices: PhasesService, public ipsrDataControlSE: IpsrDataControlService, public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
+  constructor(
+    public api: ApiService,
+    public phaseServices: PhasesService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public ipsrListService: IpsrListService,
+    public ipsrListFilterSE: IpsrListFilterService
+  ) {}
 
   ngOnInit(): void {
     if (this.api.rolesSE.isAdmin) {
       this.deselectInits();
+    } else {
+      this.api.updateUserData(() => {});
     }
+
     this.GETAllInnovationPackages();
     this.api.dataControlSE.getCurrentIPSRPhase();
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));

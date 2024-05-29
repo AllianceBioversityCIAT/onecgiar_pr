@@ -711,14 +711,33 @@ export class IpsrRepository
             SELECT
                 CONCAT(
                     r2.result_code,
-                    " - ",
+                    ' - ',
                     r2.title
                 )
             FROM
                 result r2
             WHERE
                 r2.id = rbip.result_id
+                AND rbip.ipsr_role_id = 1
+                AND rbip.is_active > 0
         ) AS "Core innovation",
+        (
+            SELECT
+                CONCAT(
+                    '${env.RESULTS_URL}',
+                    r2.result_code,
+                    '/general-information',
+                    ?,
+                    'phase=',
+                    r2.version_id
+                )
+            FROM
+                result r2
+            WHERE
+                r2.id = rbip.result_id
+                AND rbip.ipsr_role_id = 1
+                AND rbip.is_active > 0
+        ) AS "Link - Core innovation",
         IFNULL(
             (
                 SELECT
@@ -898,7 +917,7 @@ export class IpsrRepository
                 "Not provided"
             )
         ) AS "Poverty tag level",
-        DATE(r.created_date) AS "Creation date",
+        DATE_FORMAT(r.created_date, '%Y-%m-%d') AS "Creation date",
         (
             SELECT
                 CONCAT(
@@ -1009,7 +1028,7 @@ export class IpsrRepository
         IF(
             (v.phase_year > 2023),
             CONCAT(
-                "${env.FRONT_END_PDF_ENDPOINT}",
+                "${env.FRONT_END_PDF_ENDPOINT_IPSR}",
                 r.result_code,
                 ?,
                 "phase=",
@@ -1031,11 +1050,14 @@ export class IpsrRepository
         ${phaseClause}
         ${searchClause}
     ORDER BY
-        r.created_date DESC
+        r.created_date DESC;
     `;
 
     try {
-      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, ['?']);
+      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
+        '?',
+        '?',
+      ]);
 
       return ipsrList;
     } catch (error) {

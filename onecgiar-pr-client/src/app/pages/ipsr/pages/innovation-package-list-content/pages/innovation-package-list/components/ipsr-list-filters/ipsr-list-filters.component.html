@@ -6,7 +6,8 @@
                 [ngClass]="{'chip_selected': option.selected,'disabled':option.name=='2023' || option.name=='2024'}"
                 (click)="this.ipsrListFilterSE.onSelectChip(option); this.ipsrListFilterSE.cleanAllFilters(option)"
                 *ngFor="let option of filter?.options">
-                {{option.name}}</div>
+                {{option.name}}
+            </div>
         </div>
     </div>
 </div>
