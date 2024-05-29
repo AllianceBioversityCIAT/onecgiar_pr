@@ -1028,7 +1028,7 @@ export class IpsrRepository
         IF(
             (v.phase_year > 2023),
             CONCAT(
-                "${env.FRONT_END_PDF_ENDPOINT}",
+                "${env.FRONT_END_PDF_ENDPOINT_IPSR}",
                 r.result_code,
                 ?,
                 "phase=",
