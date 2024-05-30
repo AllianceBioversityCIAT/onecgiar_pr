@@ -699,10 +699,10 @@ export class IpsrRepository
 
     const ipsrListQuery = `
     SELECT
-        r.result_code AS "Result Code",
-        v.phase_name AS "Reporting phase",
-        r.reported_year_id AS "Reporting year",
-        r.title AS "Result title",
+        r.result_code AS resul_code,
+        v.phase_name AS phase_name,
+        r.reported_year_id AS reporting_year,
+        r.title AS result_title,
         (
             SELECT
                 rt.name
@@ -710,7 +710,7 @@ export class IpsrRepository
                 result_type rt
             WHERE
                 id = r.result_type_id
-        ) AS "Result type",
+        ) AS result_type,
         (
             SELECT
                 CONCAT(
@@ -724,7 +724,7 @@ export class IpsrRepository
                 r2.id = rbip.result_id
                 AND rbip.ipsr_role_id = 1
                 AND rbip.is_active > 0
-        ) AS "Core innovation",
+        ) AS core_innovation,
         (
             SELECT
                 CONCAT(
@@ -741,7 +741,7 @@ export class IpsrRepository
                 r2.id = rbip.result_id
                 AND rbip.ipsr_role_id = 1
                 AND rbip.is_active > 0
-        ) AS "Link - Core innovation",
+        ) AS link_core_innovation,
         IFNULL(
             (
                 SELECT
@@ -836,7 +836,7 @@ export class IpsrRepository
                     cgs.name
             ),
             "Not provided"
-        ) AS "GeoFocus",
+        ) AS geo_focus,
         (
             SELECT
                 CONCAT(
@@ -848,8 +848,8 @@ export class IpsrRepository
                 users u
             WHERE
                 u.id = r.created_by
-        ) AS "Submitter",
-        rs.status_name AS "Status",
+        ) AS submitted_by,
+        rs.status_name AS status,
         (
             IFNULL(
                 (
@@ -862,7 +862,7 @@ export class IpsrRepository
                 ),
                 "Not provided"
             )
-        ) AS "Gender tag level",
+        ) AS gender_tag_level,
         (
             IFNULL(
                 (
@@ -875,7 +875,7 @@ export class IpsrRepository
                 ),
                 "Not provided"
             )
-        ) AS "Climate change tag level",
+        ) AS climate_change_tag_level,
         (
             IFNULL(
                 (
@@ -888,7 +888,7 @@ export class IpsrRepository
                 ),
                 "Not provided"
             )
-        ) AS "Nutrition tag level",
+        ) AS nutrition_tag_level,
         (
             IFNULL(
                 (
@@ -901,7 +901,7 @@ export class IpsrRepository
                 ),
                 "Not provided"
             )
-        ) AS "Environment AND/or biodiversity Tag Level",
+        ) AS environmental_biodiversity_tag_level,
         (
             IFNULL(
                 (
@@ -914,9 +914,9 @@ export class IpsrRepository
                 ),
                 "Not provided"
             )
-        ) AS "Poverty tag level",
-        DATE_FORMAT(r.created_date, '%Y-%m-%d') AS "Creation date",
-        CONCAT(ci.official_code, " - ", ci.name) AS "Lead initiative",
+        ) AS poverty_tag_level,
+        DATE_FORMAT(r.created_date, '%Y-%m-%d') AS creation_date,
+        CONCAT(ci.official_code, " - ", ci.name) AS lead_initiative,
         IFNULL(
             (
                 SELECT
@@ -934,8 +934,8 @@ export class IpsrRepository
                     AND rbi.is_active > 0
             ),
             "Not provided"
-        ) AS "Contributing initiative(s)",
-        IFNULL((rip.scaling_ambition_blurb), "Not provided") AS "Scalling Ambition",
+        ) AS contributing_initiatives,
+        IFNULL((rip.scaling_ambition_blurb), "Not provided") AS scaling_ambition,
         IFNULL(
             (
                 SELECT
@@ -980,7 +980,7 @@ export class IpsrRepository
                     ris.result_by_innovation_package_id
             ),
             "Not provided"
-        ) AS "Sustainable Development Goals (SDGs) targetted",
+        ) AS sdg_targets,
         IFNULL(
             (
                 SELECT
@@ -994,7 +994,7 @@ export class IpsrRepository
                     AND rbip2.result_innovation_package_id = rip.result_innovation_package_id
             ),
             "Not provided"
-        ) AS "Scaling Readiness score",
+        ) AS scalability_potential_score_min,
         IFNULL(
             (
                 SELECT
@@ -1008,7 +1008,7 @@ export class IpsrRepository
                     AND rbip2.result_innovation_package_id = rip.result_innovation_package_id
             ),
             "Not provided"
-        ) AS "Scalability potential score",
+        ) AS scalability_potential_score_avg,
         IFNULL(
             CONCAT(
                 "${env.FRONT_END_PDF_ENDPOINT_IPSR}",
@@ -1018,7 +1018,7 @@ export class IpsrRepository
                 r.version_id
             ),
             "Not applicable"
-        ) AS "Link to IPSR metadata PDF report"
+        ) AS link_to_pdf
     FROM
         result r
         LEFT JOIN version v ON r.version_id = v.id
