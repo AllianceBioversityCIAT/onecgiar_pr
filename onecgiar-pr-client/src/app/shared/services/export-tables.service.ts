@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
+
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 interface Wscols {
   wpx: number;
@@ -21,6 +22,72 @@ export class ExportTablesService {
       });
     } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Erorr generating file', status: 'error' });
+      callback?.();
+    }
+  }
+
+  exportExcelIpsr(list: any[], fileName: string, wscols?: any[], callback?: () => void, isIPSR = false) {
+    try {
+      import('exceljs').then(async ExcelJS => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('data');
+
+        if (wscols) {
+          worksheet.columns = wscols;
+        }
+        list.forEach(data => {
+          worksheet.addRow(data);
+        });
+
+        worksheet.getRow(1).height = 30;
+
+        worksheet.getRow(1).eachCell(cell => {
+          cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: '5568DD' }
+          };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber > 1) {
+            row.eachCell(cell => {
+              cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
+              cell.font = { size: 14 };
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+            });
+
+            if (rowNumber % 2 === 0) {
+              row.eachCell(cell => {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: 'ECEFFB' }
+                };
+              });
+            }
+          }
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        this.saveAsExcelFile(buffer, fileName, isIPSR);
+        callback?.();
+      });
+    } catch (error) {
+      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
       callback?.();
     }
   }

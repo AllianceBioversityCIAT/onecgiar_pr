@@ -21,6 +21,7 @@
     <div class="download_button_container">
         <app-pr-button 
         *ngIf="(this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : this.ipsrListService.text_to_search).length > 0"
+        tooltipText="Download excel report"
         text="Download" (click)="onDownLoadTableAsExcel(onFilterSelectedInits(), onFilterSelectedPhases(), this.ipsrListService.text_to_search)" [icon]="isLoadingReport ? 'loop' : 'file_download'" [rotating]="this.isLoadingReport" ></app-pr-button>
     </div>
 </div>
