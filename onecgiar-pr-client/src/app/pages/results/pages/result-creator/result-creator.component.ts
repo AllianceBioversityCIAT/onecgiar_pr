@@ -247,7 +247,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     if (!isValid) {
       this.mqapUrlError = {
         status: true,
-        message: 'Please ensure that the handle is from the CGSpace repository and not other CGIAR repositories.'
+        message:
+          'Please ensure that the handle is from the <a href="https://cgspace.cgiar.org/home" target="_blank" rel="noopener noreferrer">CGSpace repository</a> and not other CGIAR repositories.'
       };
       this.validating = false;
       return;

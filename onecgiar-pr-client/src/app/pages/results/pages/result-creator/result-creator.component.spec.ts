@@ -508,7 +508,9 @@ describe('ResultCreatorComponent', () => {
 
       expect(component.validating).toBe(false);
       expect(component.mqapUrlError.status).toBeTruthy();
-      expect(component.mqapUrlError.message).toBe('Please ensure that the handle is from the CGSpace repository and not other CGIAR repositories.');
+      expect(component.mqapUrlError.message).toBe(
+        'Please ensure that the handle is from the <a href="https://cgspace.cgiar.org/home" target="_blank" rel="noopener noreferrer">CGSpace repository</a> and not other CGIAR repositories.'
+      );
     });
 
     it('should return mqapUrlError information if handler is empty', () => {
