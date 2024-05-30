@@ -72,13 +72,66 @@ describe('IpsrListFiltersComponent', () => {
     const inits = [{ selected: true }, { selected: false }];
     const phases = [{ selected: true }, { selected: false }];
     const searchText = 'example';
+    const resultsListMapped = [
+      {
+        climate_change_tag_level: 'Climate change tag level',
+        contributing_initiatives: 'Contributing initiative(s)',
+        core_innovation: 'Core innovation',
+        creation_date: 'Creation date',
+        environmental_biodiversity_tag_level: 'Environment AND/or biodiversity tag Level',
+        gender_tag_level: 'Gender tag level',
+        geo_focus: 'Geofocus',
+        lead_initiative: 'Lead initiative',
+        link_core_innovation: 'Link - core innovation',
+        link_to_pdf: 'Link to IPSR metadata PDF report',
+        nutrition_tag_level: 'Nutrition tag level',
+        phase_name: 'Reporting phase',
+        poverty_tag_level: 'Poverty tag level',
+        reporting_year: 'Reporting year',
+        resul_code: 'Result code',
+        result_title: 'Result title',
+        result_type: 'Result type',
+        scalability_potential_score_avg: 'Scalability potential score',
+        scalability_potential_score_min: 'Scaling Readiness score',
+        scaling_ambition: 'Scaling ambition',
+        sdg_targets: 'Sustainable Development Goals (SDGs) targetted',
+        status: 'Status',
+        submitted_by: 'Submitter'
+      }
+    ];
+
+    const wscols = [
+      { wpx: 65 },
+      { wpx: 86 },
+      { wpx: 80 },
+      { wpx: 700 },
+      { wpx: 160 },
+      { wpx: 300 },
+      { wpx: 430 },
+      { wpx: 300 },
+      { wpx: 150 },
+      { wpx: 65 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 100 },
+      { wpx: 75 },
+      { wpx: 558 },
+      { wpx: 161 },
+      { wpx: 300 },
+      { wpx: 300 },
+      { wpx: 125 },
+      { wpx: 135 },
+      { wpx: 331 }
+    ];
 
     const exportTablesServiceSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcel');
     const apiServiceSpy = jest.spyOn(TestBed.inject(ApiService).resultsSE, 'GET_reportingList').mockReturnValue(of({ response: { response: [] } }));
 
     component.onDownLoadTableAsExcel(inits, phases, searchText);
 
-    expect(exportTablesServiceSpy).toHaveBeenCalledWith([], 'IPSR_results_list', undefined, undefined, true);
+    expect(exportTablesServiceSpy).toHaveBeenCalledWith(resultsListMapped, 'IPSR_results_list', wscols, undefined, true);
     expect(component.isLoadingReport).toBeFalsy();
     expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
   });
