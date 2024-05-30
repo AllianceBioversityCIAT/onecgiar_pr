@@ -699,7 +699,7 @@ export class IpsrRepository
 
     const ipsrListQuery = `
     SELECT
-        r.result_code AS resul_code,
+        r.result_code AS result_code,
         v.phase_name AS phase_name,
         r.reported_year_id AS reporting_year,
         r.title AS result_title,
