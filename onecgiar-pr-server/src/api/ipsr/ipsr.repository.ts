@@ -752,8 +752,8 @@ export class IpsrRepository
                             (
                                 IF(
                                     cgs.id = 3,
-                                    CONCAT("Country(ies)", ': '),
-                                    CONCAT(cgs.name, '')
+                                    CONCAT("National", ': '),
+                                    IF((cgs.name = 'Global'), CONCAT( cgs.name, '\n'), CONCAT( cgs.name, ': '))
                                 )
                             )
                         ),
@@ -761,7 +761,6 @@ export class IpsrRepository
                             (
                                 SELECT
                                     CONCAT(
-                                        ": ",
                                         GROUP_CONCAT(
                                             DISTINCT cr.name SEPARATOR ", "
                                         ),
@@ -781,7 +780,7 @@ export class IpsrRepository
                                 SELECT
                                     IF(
                                         r.geographic_scope_id = 5,
-                                        GROUP_CONCAT(": ", csn.res SEPARATOR "\n"),
+                                        GROUP_CONCAT("\n", csn.res SEPARATOR "\n"),
                                         GROUP_CONCAT(csn.countries SEPARATOR ", ")
                                     )
                                 FROM
