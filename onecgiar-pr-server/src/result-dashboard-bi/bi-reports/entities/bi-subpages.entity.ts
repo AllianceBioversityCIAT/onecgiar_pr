@@ -14,14 +14,6 @@ export class BiSubpages extends BaseEntity {
   id: number;
 
   @Column({
-    name: 'report_name',
-    type: 'varchar',
-    length: 30,
-    nullable: true,
-  })
-  report_name: string;
-
-  @Column({
     name: 'section_number',
     type: 'text',
     nullable: false,
