@@ -130,8 +130,7 @@ export class BiReportRepository extends Repository<BiReport> {
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
     let filterList = [];
-    const mainPage =
-      await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
+    let mainPage = null;
 
     const { report_name } = getBiSubpagesDto;
     let report = null;
@@ -141,6 +140,10 @@ export class BiReportRepository extends Repository<BiReport> {
       report = await this.getReportByName(report_name);
       report = report.pop();
       filterList = await this.getFiltersByReportId(report.id);
+      mainPage = await this.biSubpagesRepository.getSubPageByReportId(
+        report.id,
+        getBiSubpagesDto.subpage_id,
+      );
     } catch (error) {
       console.error(error);
     }
