@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BiFilters } from './bi-filters.entity';
+import { BiSubpages } from './bi-subpages.entity';
 
 @Entity('bi_reports')
 export class BiReport {
@@ -81,6 +82,10 @@ export class BiReport {
     default: null,
   })
   report_order: number;
+
   @OneToMany(() => BiFilters, (biFilters) => biFilters.biReport_obj)
   biFilter_array: BiFilters[];
+
+  @OneToMany(() => BiSubpages, (biSubpages) => biSubpages.biReport_obj)
+  biSubPages_array: BiSubpages[];
 }
