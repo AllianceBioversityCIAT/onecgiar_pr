@@ -177,9 +177,16 @@ export class BiReportRepository extends Repository<BiReport> {
     const columnNames =
       '"id", r.id, "report_name",r.report_name, "report_title",r.report_title, "report_description",r.report_description, "report_id",r.report_id, "dataset_id",r.dataset_id, "group_id",r.group_id, "is_active",r.is_active, "has_rls_security",r.has_rls_security, "report_order", r.report_order, "has_full_screen", r.has_full_screen';
 
+    const subpageColumnNames =
+      '"id",bs.id,"section_number",bs.section_number,"page_displayName", bs.page_displayName, "page_name", bs.page_name, "report_id", bs.report_id';
+
     return await this.query(
-      `SELECT JSON_OBJECT(${columnNames}) as report , JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) AS filters FROM bi_reports r
+      `SELECT JSON_OBJECT(${columnNames}) as report, 
+      JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) AS filters, 
+      JSON_ARRAYAGG(IF (bs.id IS null,null,JSON_OBJECT(${subpageColumnNames}))) AS subpages
+      FROM bi_reports r
       LEFT JOIN bi_filters f ON r.id = f.report_id 
+      LEFT JOIN bi_subpages bs ON r.id = bs.report_id 
       WHERE r.is_active = 1 
       GROUP BY r.id
       ORDER BY r.report_order ASC;`,
