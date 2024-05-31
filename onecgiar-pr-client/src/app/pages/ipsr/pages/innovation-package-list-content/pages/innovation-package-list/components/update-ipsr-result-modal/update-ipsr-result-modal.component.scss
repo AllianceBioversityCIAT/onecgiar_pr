@@ -21,6 +21,13 @@
   color: white;
   padding: 10px 20px;
   border-bottom-right-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  i {
+    cursor: pointer;
+  }
 }
 
 .ipsr_modal_noDataText {

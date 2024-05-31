@@ -52,7 +52,7 @@
           </div>
         </div>
 
-        <p *ngIf="isKnowledgeProduct && mqapUrlError.status" style="color: red; margin: 0;">{{mqapUrlError.message}}</p>
+        <div *ngIf="isKnowledgeProduct && mqapUrlError.status" class="error__link" [innerHTML]="mqapUrlError.message"></div>
 
         <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''"
