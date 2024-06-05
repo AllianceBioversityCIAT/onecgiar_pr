@@ -6,15 +6,12 @@ import { ClarisaCredentialsBiService } from 'src/result-dashboard-bi/clarisa-cre
 import { CredentialsClarisaBi } from '../dto/crendentials-clarisa.dto';
 import { lastValueFrom, map } from 'rxjs';
 import {
-  BodyPowerBiDTO,
   EmbedCredentialsDTO,
   ReportInformation,
 } from '../dto/embed-credentials.dto';
 import { CreateBiReportDto } from '../dto/create-bi-report.dto';
-import { TokenBiReport } from '../entities/token-bi-reports.entity';
 import { TokenReportBiDto } from '../dto/create-token-bi-report.dto';
 import { NotFoundException } from '@nestjs/common';
-import { TokenBiReportRepository } from './token-bi-reports.repository';
 import { GetBiSubpagesDto } from '../dto/get-bi-subpages.dto';
 import { BiSubpagesRepository } from './bi-subpages.repository';
 
@@ -25,7 +22,6 @@ export class BiReportRepository extends Repository<BiReport> {
     private dataSource: DataSource,
     private readonly _httpService: HttpService,
     private _servicesClarisaCredentials: ClarisaCredentialsBiService,
-    private tokenBireports: TokenBiReportRepository,
     private biSubpagesRepository: BiSubpagesRepository,
   ) {
     super(BiReport, dataSource.createEntityManager());
@@ -65,43 +61,25 @@ export class BiReportRepository extends Repository<BiReport> {
     return dataCredentials;
   }
 
-  async getTokenPowerBi(
-    report_name?: string | number,
-    subpage_id?: number | string,
-  ) {
-    let reportsBi: BiReport[] = await this.getReportsBi(subpage_id);
-    reportsBi = reportsBi.filter((report) =>
-      typeof report_name === 'number'
-        ? report.id == report_name
-        : report.report_name == report_name,
-    );
-    if (reportsBi.length > 0) {
-      const datasets: BodyPowerBiDTO[] = [];
-      const reportsId: BodyPowerBiDTO[] = [];
-
+  async getTokenPowerBi(report: any) {
+    if (report) {
       const barerTokenAzure = await this.getBarerTokenAzure();
-      reportsBi.forEach((resp) => {
-        const auxIdReportBi: BodyPowerBiDTO = new BodyPowerBiDTO();
-        const auxIdDataSetsBi: BodyPowerBiDTO = new BodyPowerBiDTO();
-        auxIdReportBi.id = resp.report_id;
-        reportsId.push(auxIdReportBi);
-        auxIdDataSetsBi.id = resp.dataset_id;
-        datasets.push(auxIdDataSetsBi);
-      });
-
-      const bodyRequestPowerBi = {
-        datasets: datasets,
-        reports: reportsId,
-      };
       let tokenPowerBi;
       try {
         tokenPowerBi = await lastValueFrom(
           this._httpService
-            .post(`${this.credentialsBi.api_token_url}`, bodyRequestPowerBi, {
-              headers: {
-                Authorization: `Bearer ${barerTokenAzure.access_token}`,
+            .post(
+              `${this.credentialsBi.api_token_url}`,
+              {
+                datasets: [{ id: report.dataset_id }],
+                reports: [{ id: report.report_id }],
               },
-            })
+              {
+                headers: {
+                  Authorization: `Bearer ${barerTokenAzure.access_token}`,
+                },
+              },
+            )
             .pipe(map((resp) => resp.data)),
         );
       } catch (error) {
@@ -112,30 +90,17 @@ export class BiReportRepository extends Repository<BiReport> {
       reportTokenBiDto.token_bi = tokenPowerBi.token;
       reportTokenBiDto.expiration_toke_id = tokenPowerBi.expiration;
       reportTokenBiDto.is_active = true;
-      await this.tokenBireports.save(reportTokenBiDto);
-
       const informationEmbedBi: EmbedCredentialsDTO = new EmbedCredentialsDTO();
       informationEmbedBi.embed_token = tokenPowerBi.token;
-      const auxReportsInfo: ReportInformation[] = [];
-      reportsBi.forEach((resp) => {
-        const reportsInfo: ReportInformation = new ReportInformation();
-        reportsInfo.id = resp.id;
-        reportsInfo.resport_id = resp.report_id;
-        reportsInfo.name = resp.report_name;
-        reportsInfo.description = resp.report_description;
-        reportsInfo.title = resp.report_title;
-        reportsInfo.order = resp.report_order;
-        reportsInfo.hasFullScreen = resp.has_full_screen;
-        reportsInfo.embed_url =
-          this.credentialsBi.embed_url_base +
-          resp.report_id +
-          '&groupId=' +
-          resp.group_id +
-          '&config=' +
-          this.credentialsBi.config_id;
-        auxReportsInfo.push(reportsInfo);
-      });
-      informationEmbedBi.reportsInformation = auxReportsInfo;
+      const reportsInfo: ReportInformation = report;
+      reportsInfo.embed_url =
+        this.credentialsBi.embed_url_base +
+        report.report_id +
+        '&groupId=' +
+        report.group_id +
+        '&config=' +
+        this.credentialsBi.config_id;
+      informationEmbedBi.report = reportsInfo;
 
       return informationEmbedBi;
     }
@@ -146,7 +111,7 @@ export class BiReportRepository extends Repository<BiReport> {
     };
   }
 
-  async getReportsBi(_subpageId?: number | string) {
+  async getReportsBi() {
     const getResportBi: BiReport[] = await this.find({
       where: {
         is_active: true,
@@ -157,81 +122,43 @@ export class BiReportRepository extends Repository<BiReport> {
   }
 
   async getTokenAndReportById(id: number) {
-    this.credentialsBi =
-      await this._servicesClarisaCredentials.getCredentialsBi();
-    const tokensReports: TokenBiReport[] = await this.tokenBireports.query(
-      `select * from token_report_bi trb order by id desc limit 1;`,
-    );
-    const today = new Date();
-    const reportsExist = await this.findOneBy({ id, is_active: true });
-    if (reportsExist != null) {
-      if (
-        tokensReports.length <= 0 ||
-        Date.parse(tokensReports[0].expiration_toke_id.toString()) <
-          Date.parse(today.toString())
-      ) {
-        const registerInToken = await this.getTokenPowerBi(Number(id));
-        const responseToken = await registerInToken[
-          'reportsInformation'
-        ].filter((report) => report.id == id);
-        return {
-          token: registerInToken['embed_token'],
-          report: responseToken[0],
-        };
-      } else {
-        const reportsInfo: ReportInformation = new ReportInformation();
-        reportsInfo.id = reportsExist.id;
-        reportsInfo.resport_id = reportsExist.report_id;
-        reportsInfo.name = reportsExist.report_name;
-        reportsInfo.description = reportsExist.report_description;
-        reportsInfo.order = reportsExist.report_order;
-        reportsInfo.embed_url =
-          this.credentialsBi.embed_url_base +
-          reportsExist.report_id +
-          '&groupId=' +
-          reportsExist.group_id +
-          '&config=' +
-          this.credentialsBi.config_id;
-
-        return {
-          token: tokensReports[0].token_bi,
-          report: reportsInfo,
-        };
-      }
-    } else {
-      return {
-        error: 'This Report not exists',
-      };
-    }
+    return {
+      token: id,
+      report: {},
+    };
   }
 
   async getTokenAndReportByName(getBiSubpagesDto: GetBiSubpagesDto) {
-    const mainPage =
-      await this.biSubpagesRepository.getReportSubPage(getBiSubpagesDto);
+    let filterList = [];
+    let mainPage = null;
 
-    const { report_name, subpage_id } = getBiSubpagesDto;
-    let reportsExist = null;
+    const { report_name } = getBiSubpagesDto;
+    let report = null;
     try {
       this.credentialsBi =
         await this._servicesClarisaCredentials.getCredentialsBi();
-      reportsExist = await this.getReportByName(report_name);
+      report = await this.getReportByName(report_name);
+      report = report.pop();
+      filterList = await this.getFiltersByReportId(report.id);
+      mainPage = await this.biSubpagesRepository.getSubPageByReportId(
+        report.id,
+        getBiSubpagesDto.subpage_id,
+      );
     } catch (error) {
       console.error(error);
     }
 
-    if (reportsExist != null && reportsExist.length != 0) {
+    if (report != null && report.length != 0) {
       let registerInToken = null;
-      registerInToken = await this.getTokenPowerBi(report_name, subpage_id);
+      registerInToken = await this.getTokenPowerBi(report);
       if (registerInToken?.isError)
         throw new NotFoundException({ message: 'Error generating bi token' });
-      const responseToken = await registerInToken['reportsInformation'].filter(
-        (report) => report.name == report_name,
-      );
 
       return {
-        token: registerInToken['embed_token'],
+        token: registerInToken.embed_token,
         azureValidation: registerInToken ? 1 : 0,
-        report: { ...responseToken[0], mainPage },
+        filters: filterList,
+        report: { ...registerInToken.report, mainPage },
       };
     } else {
       throw new NotFoundException({ message: 'This report does not exist' });
@@ -243,10 +170,41 @@ export class BiReportRepository extends Repository<BiReport> {
     return returnReportBi;
   }
 
+  async getAllReports() {
+    const filterColumnNames =
+      '"id",f.id, "variablename",f.variablename,"scope",f.scope,"table",f.table,"column",f.column,"operator",f.operator,"param_type",f.param_type,"report_id",f.report_id';
+
+    const columnNames =
+      '"id", r.id, "report_name",r.report_name, "report_title",r.report_title, "report_description",r.report_description, "report_id",r.report_id, "dataset_id",r.dataset_id, "group_id",r.group_id, "is_active",r.is_active, "has_rls_security",r.has_rls_security, "report_order", r.report_order, "has_full_screen", r.has_full_screen';
+
+    const subpageColumnNames =
+      '"id",bs.id,"section_number",bs.section_number,"page_displayName", bs.page_displayName, "page_name", bs.page_name, "report_id", bs.report_id';
+
+    return await this.query(
+      `SELECT JSON_OBJECT(${columnNames}) as report, 
+      JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) AS filters, 
+      JSON_ARRAYAGG(IF (bs.id IS null,null,JSON_OBJECT(${subpageColumnNames}))) AS subpages
+      FROM bi_reports r
+      LEFT JOIN bi_filters f ON r.id = f.report_id 
+      LEFT JOIN bi_subpages bs ON r.id = bs.report_id 
+      WHERE r.is_active = 1 
+      GROUP BY r.id
+      ORDER BY r.report_order ASC;`,
+      [],
+    );
+  }
+
   async getReportByName(report_name: string) {
     return await this.query(
       `select * from bi_reports br WHERE br.report_name = ? and is_active = 1`,
       [report_name],
+    );
+  }
+
+  async getFiltersByReportId(report_id: number) {
+    return await this.query(
+      `select * from bi_filters bf WHERE bf.report_id = ?`,
+      [report_id],
     );
   }
 }

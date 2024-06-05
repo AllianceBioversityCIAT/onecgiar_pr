@@ -17,7 +17,7 @@
     
     <app-innovation-package-custom-table (deleteEvent)="this.GETAllInnovationPackages()" 
     [tableData]="this.ipsrDataControlSE.ipsrResultList | innovationPackageListFilter : this.ipsrListService.text_to_search "
-    [total]="this.ipsrDataControlSE.ipsrResultList?.length"></app-innovation-package-custom-table>
+    [total]="this.totalResults"></app-innovation-package-custom-table>
 </div>
 
 <app-update-ipsr-result-modal></app-update-ipsr-result-modal>

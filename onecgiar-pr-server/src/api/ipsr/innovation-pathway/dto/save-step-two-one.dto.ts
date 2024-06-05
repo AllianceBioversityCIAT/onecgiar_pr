@@ -1,4 +1,4 @@
-import { getInnovationComInterface } from '../../ipsr.repository';
+import { GetInnovationComInterface } from '../../ipsr.repository';
 export class SaveStepTwoOne {
-  public complementaryInovatins: getInnovationComInterface[];
+  public complementaryInovatins: GetInnovationComInterface[];
 }

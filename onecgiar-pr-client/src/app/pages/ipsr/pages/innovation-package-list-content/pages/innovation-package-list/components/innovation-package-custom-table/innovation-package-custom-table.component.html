@@ -1,7 +1,7 @@
 <div class="table">
     <p-table sortField="result_code" [sortOrder]="-1" [value]="this.tableData" responsiveLayout="scroll"
         [paginator]="(this.tableData)?.length" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm"
-        selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
+        selectionMode="single" [rowsPerPageOptions]="[10,50,100]" [first]="this.ipsrListService.text_to_search && 0">
         <ng-template pTemplate="header">
             <tr>
                 <th id="result_code" pSortableColumn="result_code" style="text-align: center;">

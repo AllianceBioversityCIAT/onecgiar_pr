@@ -33,7 +33,16 @@ export class IpsrListFilterService {
 
   onSelectChip(option: any) {
     option.selected = !option.selected;
-    if (option.name != 'All results') this.filters.general[0].options[0].selected = false;
+
+    if (option.name !== 'All results') {
+      this.filters.general[0].options[0].selected = false;
+    } else {
+      this.filters.general[0].options.map(opt => {
+        opt.selected = false;
+      });
+      option.selected = true;
+    }
+
     this.filterJoin++;
   }
 

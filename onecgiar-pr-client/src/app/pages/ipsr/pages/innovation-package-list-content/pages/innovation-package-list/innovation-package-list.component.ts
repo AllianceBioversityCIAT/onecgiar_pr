@@ -11,12 +11,23 @@ import { IpsrDataControlService } from '../../../../services/ipsr-data-control.s
   styleUrls: ['./innovation-package-list.component.scss']
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
-  constructor(public api: ApiService, public phaseServices: PhasesService, public ipsrDataControlSE: IpsrDataControlService, public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}
+  totalResults: number = 0;
+
+  constructor(
+    public api: ApiService,
+    public phaseServices: PhasesService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public ipsrListService: IpsrListService,
+    public ipsrListFilterSE: IpsrListFilterService
+  ) {}
 
   ngOnInit(): void {
     if (this.api.rolesSE.isAdmin) {
       this.deselectInits();
+    } else {
+      this.api.updateUserData(() => {});
     }
+
     this.GETAllInnovationPackages();
     this.api.dataControlSE.getCurrentIPSRPhase();
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
@@ -25,6 +36,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
   GETAllInnovationPackages() {
     this.api.resultsSE.GETAllInnovationPackages().subscribe(({ response }) => {
       this.ipsrDataControlSE.ipsrResultList = response;
+      this.totalResults = response.filter((thing, index, self) => self.findIndex(t => t.result_code === thing.result_code) === index).length;
 
       this.ipsrDataControlSE.ipsrResultList.map((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;

@@ -1,17 +1,17 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { BiReport } from './bi-report.entity';
 
 @Entity('bi_subpages')
 export class BiSubpages extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
-
-  @Column({
-    name: 'report_name',
-    type: 'varchar',
-    length: 30,
-    nullable: true,
-  })
-  report_name: string;
 
   @Column({
     name: 'section_number',
@@ -21,16 +21,26 @@ export class BiSubpages extends BaseEntity {
   section_number: string;
 
   @Column({
-    name: 'section_name',
+    name: 'page_displayName',
     type: 'text',
     nullable: false,
   })
-  section_name: string;
+  page_displayName: string;
 
   @Column({
-    name: 'section_name_code',
+    name: 'page_name',
     type: 'text',
     nullable: false,
   })
-  section_name_code: string;
+  page_name: string;
+
+  @Column({
+    name: 'report_id',
+    type: 'int',
+    nullable: true,
+  })
+  report_id: number;
+  @ManyToOne(() => BiReport, (biReport) => biReport.biSubPages_array)
+  @JoinColumn({ name: 'report_id' })
+  biReport_obj: BiReport;
 }

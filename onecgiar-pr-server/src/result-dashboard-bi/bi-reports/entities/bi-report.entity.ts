@@ -1,11 +1,13 @@
-import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BiFilters } from './bi-filters.entity';
+import { BiSubpages } from './bi-subpages.entity';
 
 @Entity('bi_reports')
 export class BiReport {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @PrimaryColumn({
+  @Column({
     name: 'report_name',
     type: 'varchar',
     length: 30,
@@ -23,7 +25,7 @@ export class BiReport {
   @Column({
     name: 'report_description',
     type: 'varchar',
-    length: 140,
+    length: 2000,
     nullable: true,
   })
   report_description: string;
@@ -80,4 +82,10 @@ export class BiReport {
     default: null,
   })
   report_order: number;
+
+  @OneToMany(() => BiFilters, (biFilters) => biFilters.biReport_obj)
+  biFilter_array: BiFilters[];
+
+  @OneToMany(() => BiSubpages, (biSubpages) => biSubpages.biReport_obj)
+  biSubPages_array: BiSubpages[];
 }
