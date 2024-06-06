@@ -35,8 +35,21 @@ export class ExportTablesService {
         if (wscols) {
           worksheet.columns = wscols;
         }
+
         list.forEach(data => {
-          worksheet.addRow(data);
+          const row = worksheet.addRow(data);
+
+          row.getCell(7).value = {
+            text: data.link_core_innovation,
+            hyperlink: data.link_core_innovation,
+            tooltip: data.link_core_innovation
+          };
+
+          row.getCell(23).value = {
+            text: data.link_to_pdf,
+            hyperlink: data.link_to_pdf,
+            tooltip: data.link_to_pdf
+          };
         });
 
         worksheet.getRow(1).height = 30;
@@ -59,9 +72,13 @@ export class ExportTablesService {
 
         worksheet.eachRow((row, rowNumber) => {
           if (rowNumber > 1) {
-            row.eachCell(cell => {
+            row.eachCell((cell, colNumber) => {
               cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
-              cell.font = { size: 14 };
+              cell.font = {
+                size: 14,
+                color: colNumber === 7 || colNumber === 23 ? { argb: '0000FF' } : { argb: '000000' },
+                underline: !!(colNumber === 7 || colNumber === 23)
+              };
               cell.border = {
                 top: { style: 'thin' },
                 left: { style: 'thin' },
@@ -112,7 +129,7 @@ export class ExportTablesService {
     }
   }
 
-  private saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false): void {
+  saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false): void {
     const EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
     const EXCEL_EXTENSION = '.xlsx';
     const data: Blob = new Blob([buffer], {
