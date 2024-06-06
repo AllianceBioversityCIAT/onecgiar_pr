@@ -40,6 +40,20 @@ a {
   text-decoration: none;
 }
 
+.error__link {
+  color: red;
+  margin: 0;
+
+  a {
+    color: red;
+    font-weight: 600;
+
+    &:hover {
+      color: #a70505;
+    }
+  }
+}
+
 .no-margin-top {
   margin-top: 0px !important;
 }
@@ -124,7 +138,7 @@ a {
 }
 
 .in-qa-tag {
-  background-color: #FFC84F;
+  background-color: #ffc84f;
   color: rgb(61, 61, 61);
   margin-top: 2px;
   margin-bottom: 2px;
@@ -142,19 +156,17 @@ a {
   font-style: italic;
   font-weight: 500;
   border-radius: 3px;
-
 }
 
 .completeness-state {
   @extend .label-status-styles;
   padding: 0px 10px;
   font-size: 0.8em;
-
 }
 
 .result-list-state {
   @extend .label-status-styles;
-  font-size: .9rem;
+  font-size: 0.9rem;
   padding: 3px 10px;
 }
 

@@ -34,6 +34,11 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   allPhases = [];
   cgiarEntityTypes = [];
   currentResultType = '';
+  mqapUrlError = {
+    status: false,
+    message: ''
+  };
+
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
 
   ngOnInit(): void {
@@ -78,23 +83,23 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   GET_cgiarEntityTypes(callback) {
-    this.api.resultsSE.GET_cgiarEntityTypes().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_cgiarEntityTypes().subscribe({
+      next: ({ response }) => {
         response.forEach(element => {
           element.isLabel = true;
         });
         callback(response);
       },
-      err => {
+      error: err => {
         callback?.();
       }
-    );
+    });
   }
 
   GET_AllInitiatives(callback?) {
     if (!this.api.rolesSE.isAdmin) return;
-    this.api.resultsSE.GET_AllInitiatives().subscribe(
-      ({ response }) => {
+    this.api.resultsSE.GET_AllInitiatives().subscribe({
+      next: ({ response }) => {
         this.GET_cgiarEntityTypes(entityTypesResponse => {
           this.cgiarEntityTypes = entityTypesResponse;
           this.allInitiatives = response;
@@ -114,13 +119,13 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           this.allInitiatives = resultList;
         });
       },
-      err => {
+      error: err => {
         console.error(err);
       },
-      () => {
+      complete: () => {
         callback?.();
       }
-    );
+    });
   }
 
   get isKnowledgeProduct() {
@@ -219,14 +224,41 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     return false;
   }
 
-  validateKnowledgeProductFields() {}
-
   ngDoCheck(): void {
     this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
   }
 
   GET_mqapValidation() {
     this.validating = true;
+
+    if (!this.resultLevelSE.resultBody.handler) {
+      this.mqapUrlError = {
+        status: true,
+        message: 'Please enter a valid handle.'
+      };
+      this.validating = false;
+      return;
+    }
+
+    const regex = /^https:\/\/(cgspace\.cgiar\.org\/(handle\/)?|hdl\.handle\.net\/)10568\/\d+$/;
+
+    const isValid = regex.test(this.resultLevelSE.resultBody.handler);
+
+    if (!isValid) {
+      this.mqapUrlError = {
+        status: true,
+        message:
+          'Please ensure that the handle is from the <a href="https://cgspace.cgiar.org/home" target="_blank" rel="noopener noreferrer">CGSpace repository</a> and not other CGIAR repositories.'
+      };
+      this.validating = false;
+      return;
+    }
+
+    this.mqapUrlError = {
+      status: false,
+      message: ''
+    };
+
     this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe({
       next: resp => {
         this.mqapJson = resp.response;

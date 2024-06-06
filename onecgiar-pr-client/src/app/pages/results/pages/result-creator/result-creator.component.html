@@ -45,13 +45,15 @@
           <app-pr-input *ngIf="isKnowledgeProduct" [isStatic]="true" placeholder="Handle..." label="CGSpace link"
             type="text" [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
-
           <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct"
-            [ngClass]="{'globalDisabled': validating}">
-            <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
+          [ngClass]="{'globalDisabled': validating}">
+          <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
               [rotating]="validating"></app-pr-button>
           </div>
         </div>
+
+        <div *ngIf="isKnowledgeProduct && mqapUrlError.status" class="error__link" [innerHTML]="mqapUrlError.message"></div>
+
         <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''"
           label="Title" type="text" [maxWords]="30" [required]="resultLevelSE.resultBody.result_type_id != 6"

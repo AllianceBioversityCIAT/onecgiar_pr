@@ -2,7 +2,12 @@
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
 
-    <div class="ipsr_modal_title">Update an Innovation Package result</div>
+    <div class="ipsr_modal_title">
+        Update an Innovation Package result
+        <i class="material-icons-round modal_close_icon" (click)="this.ipsrDataControlSE.ipsrUpdateResultModal = false">
+            close
+        </i>
+    </div>
 
     <div class="modal_container">
         <div class="ipsr_modal_description">

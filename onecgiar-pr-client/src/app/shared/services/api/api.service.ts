@@ -47,6 +47,7 @@ export class ApiService {
       },
       err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesLoaded = true;
       }
     );

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { BiSubpages } from '../entities/bi-subpages.entity';
-import { GetBiSubpagesDto } from '../dto/get-bi-subpages.dto';
 
 @Injectable()
 export class BiSubpagesRepository extends Repository<BiSubpages> {
@@ -9,19 +8,19 @@ export class BiSubpagesRepository extends Repository<BiSubpages> {
     super(BiSubpages, dataSource.createEntityManager());
   }
 
-  async getReportSubPage(getBiSubpagesDto: GetBiSubpagesDto) {
+  async getSubPageByReportId(report_id: number, subpage_id: string | number) {
     try {
-      if (!getBiSubpagesDto.report_name || !getBiSubpagesDto.subpage_id)
+      if (!report_id || !subpage_id)
         return 'A parameter is missing to make the query.';
 
       const biSubpage = await this.query(
-        `select section_name_code from bi_subpages bs WHERE bs.report_name = ? and bs.section_number = ?`,
-        [getBiSubpagesDto.report_name, getBiSubpagesDto.subpage_id],
+        `select page_name from bi_subpages bs WHERE bs.report_id = ? and bs.section_number = ?`,
+        [report_id, subpage_id],
       );
 
-      const { section_name_code } = biSubpage.shift() ?? {};
+      const { page_name } = biSubpage.shift() ?? {};
 
-      return section_name_code || 'Record not found';
+      return page_name || 'Record not found';
     } catch (error) {
       console.error(error);
       return error.message;

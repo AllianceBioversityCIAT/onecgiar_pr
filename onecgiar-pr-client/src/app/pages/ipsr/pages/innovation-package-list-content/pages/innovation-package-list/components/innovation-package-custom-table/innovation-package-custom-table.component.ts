@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { IpsrListService } from '../../services/ipsr-list.service';
 
 @Component({
   selector: 'app-innovation-package-custom-table',
@@ -22,7 +23,7 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
-  constructor(public api: ApiService, public retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, public retrieveModalSE: RetrieveModalService, public ipsrListService: IpsrListService) {}
 
   items: MenuItem[] = [
     {
