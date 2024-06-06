@@ -196,7 +196,8 @@ describe('ExportTablesService', () => {
 
       service.saveAsExcelFile(buffer, fileName, isIPSR);
 
-      const expectedFileName = fileName + '_' + now.getTime() + '.xlsx';
+      const time = new Date().getTime().toString().slice(0, -1) + '0';
+      const expectedFileName = fileName + '_' + time + '.xlsx';
 
       expect(FileSaver.saveAs).toHaveBeenCalledWith(
         new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' }),

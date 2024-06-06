@@ -163,6 +163,7 @@ export class ExportTablesService {
       return;
     }
 
-    FileSaver.saveAs(data, fileName + '_' + new Date().getTime() + EXCEL_EXTENSION);
+    const time = new Date().getTime().toString().slice(0, -1) + '0';
+    FileSaver.saveAs(data, fileName + '_' + time + EXCEL_EXTENSION);
   }
 }
