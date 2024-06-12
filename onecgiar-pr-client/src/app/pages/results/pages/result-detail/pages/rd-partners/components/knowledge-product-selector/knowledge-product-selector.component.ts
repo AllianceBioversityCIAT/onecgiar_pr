@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdPartnersService } from '../../rd-partners.service';
@@ -17,12 +17,23 @@ export class KnowledgeProductSelectorComponent {
 
   alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rdPartnersSE: RdPartnersService, public rolesSE: RolesService) {}
+  constructor(
+    public api: ApiService,
+    public institutionsSE: InstitutionsService,
+    public rdPartnersSE: RdPartnersService,
+    public rolesSE: RolesService
+  ) {}
 
   institutions_institutions_type_name(partner) {
-    //('institutions_institutions_type_name');
     const insts = this.institutionsSE.institutionsList;
     const institutionFinded = insts.find(institution => institution.institutions_id == partner.user_matched_institution.institutions_id);
     partner.user_matched_institution.institutions_type_name = institutionFinded?.institutions_type_name;
+  }
+
+  generateDescription(partner) {
+    const confidenceLevel = partner.confidence_level;
+    return `The confidence level for the predicted match is <span class="confidenceLevel">${
+      confidenceLevel ?? 90
+    }%</span>. Feel free to select a different partner only if necessary.`;
   }
 }

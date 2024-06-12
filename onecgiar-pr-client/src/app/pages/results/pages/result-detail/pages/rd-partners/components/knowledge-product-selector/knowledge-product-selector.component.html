@@ -1,75 +1,107 @@
-<app-alert-status [description]="alertStatusMessage">
-</app-alert-status>
+<app-alert-status [description]="alertStatusMessage"> </app-alert-status>
+
 <app-alert-status
-    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+  description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
 </app-alert-status>
 
-<app-alert-status *ngIf="!this.api.rolesSE.readOnly"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+<app-alert-status
+  *ngIf="!this.api.rolesSE.readOnly"
+  description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
 </app-alert-status>
 
-<div class="local_grid">
-    <div>
-        <div class="column_title">
-            Author affiliations
-        </div>
-        <div class="pr_description">
-            Please match each author affiliation with a CLARISA partner.
-        </div>
-
-    </div>
-    <div class="column_title">
-        CLARISA Partners
-    </div>
-
+<div class="header">
+  <h1 class="header_title">Author affiliations</h1>
+  <p class="header_subTitle">Please match each author affiliation with a CLARISA partner.</p>
 </div>
 
-<div class="partners_map">
-    <div class="partner_map" *ngFor="let partner of this.rdPartnersSE.partnersBody.mqap_institutions">
-        <div>
-            {{partner.intitution_name}}
-        </div>
-        <div>
-            <!-- <app-pr-select class="segment_title_margin" [options]="this.institutionsService.institutionsTypesList"
-            label="Type" optionLabel="institutions_type_name" optionValue="institutions_type_id"
-            [(ngModel)]="this.partnersRequestBody.institutionTypeCode" placeholder="Select type">
-        </app-pr-select> -->
-            <div style="padding-bottom: 10px;">
-                <!-- TODO -->
-                <app-pr-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
-                    label="Partner" optionLabel="full_name" optionValue="institutions_id" placeholder="Select partner"
-                    (selectOptionEvent)="institutions_institutions_type_name(partner);this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1"
-                    [(ngModel)]="partner.user_matched_institution.institutions_id">
-                </app-pr-select>
-            </div>
+<div class="partners">
+  <div class="partner_item" *ngFor="let partner of this.rdPartnersSE.partnersBody.mqap_institutions; let index = index">
+    <div class="partner_item_header">
+      <div class="partner_item_header-circle"></div>
 
-
-            <div class="chips_container  custom_scroll partners_selected">
-
-                <div class="pr_chip_selected">
-
-                    <div class="type"> <strong>Institution type:</strong>
-                        {{partner.user_matched_institution.institutions_type_name}}
-                    </div>
-                    <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
-                        <div class="delivery"
-                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,1) : true"
-                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,1)}"
-                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,1)">
-                            Scaling</div>
-                        <div class="delivery"
-                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,2) : true"
-                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,2)}"
-                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,2)">
-                            Demand</div>
-                        <div class="delivery"
-                            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,3) : true"
-                            [ngClass]="{'active': this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries,3)}"
-                            (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution,3)">
-                            Innovation</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <h1 class="partner_item_header-name">
+        <span class="partner_item_header-prename"> CGSpace author affiliation: </span>
+        {{ partner.intitution_name }}
+      </h1>
     </div>
+
+    <div class="partner_item_content">
+      <div class="partner_item_content-line" [ngStyle]="{ 'background-color': index % 2 === 0 ? '#2196f3' : '#d9d9d9' }"></div>
+
+      <div class="partner_item_content_predicted" [ngStyle]="{ 'background-color': index % 2 === 0 ? '#2196f3' : '#5569dd' }">
+        <p class="partner_item_content-predicted-text">
+          {{ index % 2 === 0 ? 'Predicted by M-QAP AI' : 'Manual match' }}
+        </p>
+        <i class="material-icons-round" style="color: white; font-size: 14px">{{ index % 2 === 0 ? 'auto_awesome' : 'ads_click' }}</i>
+      </div>
+
+      <div style="width: 100%">
+        <app-pr-select
+          descInlineStyles="background-color: #fefeff; box-shadow:none; padding: 0; margin-bottom: 8px;"
+          labelDescInlineStyles="margin-top: 0;"
+          [options]="this.institutionsSE.institutionsWithoutCentersList"
+          [required]="true"
+          label="CLARISA partner"
+          [showDescriptionLabel]="false"
+          [description]="generateDescription(partner)"
+          optionLabel="full_name"
+          optionValue="institutions_id"
+          placeholder="Select partner"
+          (selectOptionEvent)="institutions_institutions_type_name(partner); this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1"
+          [(ngModel)]="partner.user_matched_institution.institutions_id">
+        </app-pr-select>
+
+        <div class="partner_item_content-footer" style="margin-top: 10px">
+          <div class="type">
+            Institution type:
+            <span class="type-type">
+              {{ partner.user_matched_institution.institutions_type_name ?? 'No partner selected' }}
+            </span>
+          </div>
+
+          <div class="type">
+            Website:
+            <span class="type-link"> test.com </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips_container partners_selected">
+        <div class="pr_chip_selected" style="background-color: white !important; padding: 0 !important">
+          <div class="type">Partner role:</div>
+
+          <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 1) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 1) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 1)">
+              Scaling
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 2) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 2) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 2)">
+              Demand
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 3) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 3) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 3)">
+              Innovation
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 4) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 4) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 4)">
+              Other
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
