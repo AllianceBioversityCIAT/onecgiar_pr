@@ -544,7 +544,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}results-by-institutions/partners/result/${service.currentResultId}`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}results-by-institutions/result/${service.currentResultId}`);
       expect(req.request.method).toBe('GET');
       expect(spy).toHaveBeenCalled();
 
