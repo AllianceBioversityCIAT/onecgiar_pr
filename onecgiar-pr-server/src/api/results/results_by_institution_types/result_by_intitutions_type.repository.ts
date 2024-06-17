@@ -320,7 +320,7 @@ export class ResultByIntitutionsTypeRepository
     }
   }
 
-  async updateIstitutionsType(
+  async updateInstitutionsType(
     resultId: number,
     institutionsArray: institutionsTypeInterface[],
     isActor: boolean,

@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -40,7 +41,11 @@ export class ResultsKnowledgeProductInstitution {
   })
   confidant: number;
 
-  @Column({ nullable: true })
+  @Column({
+    nullable: true,
+    type: 'bigint',
+    name: 'results_by_institutions_id',
+  })
   results_by_institutions_id: number;
 
   //audit fields
@@ -97,13 +102,9 @@ export class ResultsKnowledgeProductInstitution {
   })
   predicted_institution_object: ClarisaInstitution;
 
-  @ManyToOne(
+  @OneToMany(
     () => ResultsByInstitution,
-    (r) => r.result_knowledge_product_institution_array,
-    { nullable: true },
+    (rkpi) => rkpi.result_kp_mqap_institution_obj,
   )
-  @JoinColumn({
-    name: 'results_by_institutions_id',
-  })
-  results_by_institutions_object: ResultsByInstitution;
+  result_by_institution_array: ResultsByInstitution[];
 }

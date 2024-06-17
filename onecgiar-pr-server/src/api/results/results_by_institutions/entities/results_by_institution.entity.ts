@@ -14,6 +14,7 @@ import { InstitutionRole } from '../../institution_roles/entities/institution_ro
 import { ClarisaInstitution } from '../../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsKnowledgeProductInstitution } from '../../results-knowledge-products/entities/results-knowledge-product-institution.entity';
 import { ResultInstitutionsBudget } from '../../result_budget/entities/result_institutions_budget.entity';
+import { ResultByInstitutionsByDeliveriesType } from '../../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 
 @Entity()
 export class ResultsByInstitution {
@@ -29,12 +30,6 @@ export class ResultsByInstitution {
   })
   result_id: number;
 
-  @ManyToOne(() => Result, (r) => r.id, { nullable: false })
-  @JoinColumn({
-    name: 'result_id',
-  })
-  obj_result: Result;
-
   @Column({
     name: 'institutions_id',
     type: 'int',
@@ -42,22 +37,12 @@ export class ResultsByInstitution {
   })
   institutions_id: number;
 
-  @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
-  @JoinColumn({
-    name: 'institutions_id',
-  })
-  obj_institutions: ClarisaInstitution;
-
   @Column({
     name: 'institution_roles_id',
     type: 'bigint',
     nullable: false,
   })
   institution_roles_id: number;
-
-  @ManyToOne(() => InstitutionRole, (i) => i.id, { nullable: false })
-  @JoinColumn({ name: 'institution_roles_id' })
-  obj_institution_roles: InstitutionRole;
 
   @Column({
     name: 'is_active',
@@ -67,11 +52,21 @@ export class ResultsByInstitution {
   })
   is_active!: boolean;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: false })
-  @JoinColumn({
-    name: 'created_by',
+  @Column({
+    name: 'is_predicted',
+    type: 'boolean',
+    nullable: false,
+    default: false,
   })
-  created_by: number;
+  is_predicted!: boolean;
+
+  @Column({
+    name: 'result_kp_mqap_institution_id',
+    type: 'bigint',
+    nullable: true,
+    default: null,
+  })
+  result_kp_mqap_institution_id: number;
 
   @CreateDateColumn({
     name: 'created_date',
@@ -79,6 +74,28 @@ export class ResultsByInstitution {
     nullable: false,
   })
   created_date!: Date;
+
+  @ManyToOne(() => Result, (r) => r.id, { nullable: false })
+  @JoinColumn({
+    name: 'result_id',
+  })
+  obj_result: Result;
+
+  @ManyToOne(() => InstitutionRole, (i) => i.id, { nullable: false })
+  @JoinColumn({ name: 'institution_roles_id' })
+  obj_institution_roles: InstitutionRole;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: false })
+  @JoinColumn({
+    name: 'created_by',
+  })
+  created_by: number;
+
+  @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
+  @JoinColumn({
+    name: 'institutions_id',
+  })
+  obj_institutions: ClarisaInstitution;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
@@ -93,12 +110,21 @@ export class ResultsByInstitution {
   })
   last_updated_date!: Date;
 
-  //object relations
-  @OneToMany(
+  @ManyToOne(
     () => ResultsKnowledgeProductInstitution,
-    (rkpi) => rkpi.results_by_institutions_object,
+    (r) => r.result_by_institution_array,
+    { nullable: true },
   )
-  result_knowledge_product_institution_array: ResultsKnowledgeProductInstitution[];
+  @JoinColumn({
+    name: 'result_kp_mqap_institution_id',
+  })
+  result_kp_mqap_institution_obj: ResultsKnowledgeProductInstitution;
+
+  @OneToMany(
+    () => ResultByInstitutionsByDeliveriesType,
+    (rib) => rib.obj_result_by_institution,
+  )
+  delivery: ResultByInstitutionsByDeliveriesType[];
 
   @OneToMany(
     () => ResultInstitutionsBudget,

@@ -594,7 +594,7 @@ export class ResultsService {
       }
 
       const institutions =
-        await this._resultByIntitutionsRepository.updateIstitutions(
+        await this._resultByIntitutionsRepository.updateInstitutions(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions,
           user.id,
@@ -630,7 +630,7 @@ export class ResultsService {
         await this._resultByIntitutionsRepository.save(saveInstitutions);
 
       const institutionsType =
-        await this._resultByIntitutionsTypeRepository.updateIstitutionsType(
+        await this._resultByIntitutionsTypeRepository.updateInstitutionsType(
           resultGeneralInformation.result_id,
           resultGeneralInformation.institutions_type,
           true,

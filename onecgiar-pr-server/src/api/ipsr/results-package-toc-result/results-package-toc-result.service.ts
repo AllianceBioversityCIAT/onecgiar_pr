@@ -249,7 +249,7 @@ export class ResultsPackageTocResultService {
       // * Save Institutions
       if (crtr?.institutions.length) {
         const { institutions: inst } = crtr;
-        await this._resultByIntitutionsRepository.updateIstitutions(
+        await this._resultByIntitutionsRepository.updateInstitutions(
           rip.id,
           inst,
           user.id,
@@ -289,7 +289,7 @@ export class ResultsPackageTocResultService {
           }
         }
       } else {
-        await this._resultByIntitutionsRepository.updateIstitutions(
+        await this._resultByIntitutionsRepository.updateInstitutions(
           rip.id,
           [],
           user.id,
