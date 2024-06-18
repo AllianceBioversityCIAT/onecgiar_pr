@@ -108,21 +108,29 @@ export class ResultsByInstitutionsService {
         };
       }
 
-      let institutions = await this._resultByIntitutionsRepository.find({
+      let institutions: any = [];
+      institutions = await this._resultByIntitutionsRepository.find({
         where: {
           result_id: id,
           is_active: true,
           institution_roles_id: InstitutionRoleEnum.PARTNER,
         },
-        relations: ['delivery'],
+        relations: ['delivery', 'obj_institutions.obj_institution_type_code'],
       });
 
       institutions = institutions.map((institution) => ({
         ...institution,
         delivery: institution.delivery.filter((delivery) => delivery.is_active),
+        obj_institutions: {
+          name: institution.obj_institutions.name,
+          website_link: institution.obj_institutions.website_link,
+          obj_institution_type_code: {
+            name: institution.obj_institutions.obj_institution_type_code.name,
+          },
+        },
       }));
 
-      let mqap_institutions: ResultsByInstitution[] = [];
+      let mqap_institutions: any = [];
 
       if (knowledgeProduct) {
         mqap_institutions = await this._resultByIntitutionsRepository.find({
@@ -134,7 +142,11 @@ export class ResultsByInstitutionsService {
             is_predicted: Not(IsNull()),
             result_kp_mqap_institution_id: Not(IsNull()),
           },
-          relations: ['result_kp_mqap_institution_obj', 'delivery'],
+          relations: [
+            'result_kp_mqap_institution_obj',
+            'delivery',
+            'obj_institutions.obj_institution_type_code',
+          ],
         });
 
         mqap_institutions = mqap_institutions.map((institution) => ({
@@ -142,6 +154,13 @@ export class ResultsByInstitutionsService {
           delivery: institution.delivery.filter(
             (delivery) => delivery.is_active,
           ),
+          obj_institutions: {
+            name: institution.obj_institutions.name,
+            website_link: institution.obj_institutions.website_link,
+            obj_institution_type_code: {
+              name: institution.obj_institutions.obj_institution_type_code.name,
+            },
+          },
         }));
       }
 
