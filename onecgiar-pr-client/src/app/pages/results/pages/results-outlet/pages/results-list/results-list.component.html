@@ -1,32 +1,53 @@
 <div class="local_container">
   <div class="action_buttons">
     <app-report-new-result-button> </app-report-new-result-button>
-    <app-pr-button text="Update result" icon="moving" [reverse]="true"
-      (click)="this.api.dataControlSE.updateResultModal = true;"></app-pr-button>
+    <app-pr-button text="Update result" icon="moving" [reverse]="true" (click)="this.api.dataControlSE.updateResultModal = true"></app-pr-button>
   </div>
-  <br>
+  <br />
+  <app-alert-status
+    description="To enable the result to enter the QA process, an <strong>impact level result</strong> should be reported <strong>as MELIA</strong>. Please contact your Science Group MELIA focal point (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place) to ensure the impact story is included at the appropriate level of reporting."></app-alert-status>
+  <app-alert-status
+    description="For any <strong>AA level results</strong> not already included as part of EoI outcomes, please contact your Science Group MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place)"></app-alert-status>
   <app-results-list-filters></app-results-list-filters>
 </div>
 
 <div class="download_button_container">
-  <app-pr-button text="Download" (click)="onDownLoadTableAsExcel()" [rotating]="this.gettingReport"
+  <app-pr-button
+    text="Download"
+    (click)="onDownLoadTableAsExcel()"
+    [rotating]="this.gettingReport"
     [icon]="this.gettingReport ? 'loop' : 'file_download'"></app-pr-button>
 </div>
 
 <div class="table">
-  <p-table id="resultListTable" #table sortField="result_code" [sortOrder]="-1"
-    [value]="this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search : this.combine:this.api.resultsListFilterSE.filterJoin"
-    [paginator]="(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length"
-    responsiveLayout="scroll" [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
-    [first]="this.resultsListService.text_to_search && 0" [rowsPerPageOptions]="[10, 50, 100]">
+  <p-table
+    id="resultListTable"
+    #table
+    sortField="result_code"
+    [sortOrder]="-1"
+    [value]="
+      this.api.dataControlSE.resultsList
+        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+    "
+    [paginator]="
+      (
+        this.api.dataControlSE.resultsList
+        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+      )?.length
+    "
+    responsiveLayout="scroll"
+    [rows]="10"
+    styleClass="p-datatable-gridlines p-datatable-sm"
+    selectionMode="single"
+    [first]="this.resultsListService.text_to_search && 0"
+    [rowsPerPageOptions]="[10, 50, 100]">
     <ng-template pTemplate="header">
       <tr>
         <th (click)="validateOrder('result_code')" pSortableColumn="result_code" id="result_code">
           <p-sortIcon field="result_code"></p-sortIcon>
           Result code
         </th>
-        <th (click)="validateOrder(column.attr)" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder"
-          id="{{column.attr}}">
+        <th (click)="validateOrder(column.attr)" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder" id="{{ column.attr }}">
           <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
         </th>
         <th id="pdf">PDF</th>
@@ -37,30 +58,38 @@
     <ng-template pTemplate="body" let-result>
       <tr>
         <td>
-          {{result?.result_code}}
+          {{ result?.result_code }}
         </td>
 
-        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}" style="max-width: 440px;">
+        <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}" style="max-width: 440px">
           <ng-container *ngFor="let subResult of result['results']">
-            <a class="{{ subResult.class }}" [routerLink]="'/result/result-detail/' + subResult?.result_code"
+            <a
+              class="{{ subResult.class }}"
+              [routerLink]="'/result/result-detail/' + subResult?.result_code"
               [queryParams]="{ phase: subResult?.version_id }">
-              <div class="point" [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
+              <div
+                class="point"
+                [style.background]="'var(--pr-color-result-level-' + subResult?.result_level_id + ')'"
                 *ngIf="subResult.attr === 'result_type'"></div>
               <div class="new_tag" *ngIf="i == 0 && subResult.is_new && !subResult.legacy_id">New</div>
               <div class="new_tag pre" *ngIf="i == 0 && subResult.legacy_id">Pre 2022</div>
-              <div [pTooltip]="subResult.inQA ? 'This result is being QAed':''"
-                [ngClass]="{'center_flex_100':  column.center}"
-                [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date : 'YYYY-MM-dd')">
-              </div>
+              <div
+                [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
+                [ngClass]="{ center_flex_100: column.center }"
+                [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date : 'YYYY-MM-dd')"></div>
             </a>
           </ng-container>
         </td>
 
         <td>
           <div class="subResults">
-            <a pTooltip="Click to view the pdf" tooltipPosition="bottom" *ngFor="let subResult of result['results']"
-              [href]="'/reports/result-details/' + subResult?.result_code +'?phase='+subResult?.version_id"
-              target="_blank" rel="noopener noreferrer">
+            <a
+              pTooltip="Click to view the pdf"
+              tooltipPosition="bottom"
+              *ngFor="let subResult of result['results']"
+              [href]="'/reports/result-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
+              target="_blank"
+              rel="noopener noreferrer">
               <app-pdf-icon></app-pdf-icon>
             </a>
           </div>
@@ -77,25 +106,40 @@
     </ng-template>
   </p-table>
 
-  <div class="total"
-    *ngIf="(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search : this.combine: this.api.resultsListFilterSE.filterJoin)?.length">
-    Total: {{ (this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :
-    this.combine: this.api.resultsListFilterSE.filterJoin)?.length }}/{{ this.api.dataControlSE.resultsList?.length }}
+  <div
+    class="total"
+    *ngIf="
+      (
+        this.api.dataControlSE.resultsList
+        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+      )?.length
+    ">
+    Total:
+    {{
+      (
+        this.api.dataControlSE.resultsList
+        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+      )?.length
+    }}/{{ this.api.dataControlSE.resultsList?.length }}
   </div>
 
-  <div class="noDataText"
-    *ngIf="!(this.api.dataControlSE.resultsList | resultsListFilter : this.resultsListService.text_to_search :  this.combine:this.api.resultsListFilterSE.filterJoin)?.length">
+  <div
+    class="noDataText"
+    *ngIf="
+      !(
+        this.api.dataControlSE.resultsList
+        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+      )?.length
+    ">
     There are no results for the selected filters.
   </div>
 
   <app-custom-spinner
     *ngIf="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner"
-    [text]="this.resultsListService.showLoadingResultSpinner?'Loading results':'Deleting result'"></app-custom-spinner>
+    [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
 </div>
 
-<p-menu #menu [popup]="true"
-  [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items">
-</p-menu>
+<p-menu #menu [popup]="true" [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items"> </p-menu>
 
 <app-results-to-update-modal></app-results-to-update-modal>
 <app-change-phase-modal></app-change-phase-modal>
