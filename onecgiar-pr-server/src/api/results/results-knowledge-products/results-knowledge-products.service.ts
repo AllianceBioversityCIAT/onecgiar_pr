@@ -247,11 +247,103 @@ export class ResultsKnowledgeProductsService {
       await this._resultsKnowledgeProductAuthorRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
-      updatedKnowledgeProduct.result_knowledge_product_institution_array =
-        await this._resultsKnowledgeProductInstitutionRepository.save(
-          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-            [],
-        );
+
+      if (
+        updatedKnowledgeProduct.result_knowledge_product_institution_array
+          .length > 0
+      ) {
+        const globalParameter = await this._globalParameterRepository.findOne({
+          where: { name: 'kp_mqap_institutions_confidence' },
+          select: ['value'],
+        });
+
+        if (!globalParameter) {
+          throw new Error(
+            "Global parameter 'kp_mqap_institutions_confidence' not found",
+          );
+        }
+
+        const confidenceThreshold = +globalParameter.value;
+
+        const existingInstitutions =
+          await this._resultsKnowledgeProductInstitutionRepository.find({
+            where: {
+              is_active: true,
+              result_knowledge_product_id:
+                resultKnowledgeProduct.result_knowledge_product_id,
+            },
+          });
+
+        const updatedInstitutionIds =
+          updatedKnowledgeProduct.result_knowledge_product_institution_array.map(
+            (institution) => institution.predicted_institution_id,
+          );
+
+        for (const existingInstitution of existingInstitutions) {
+          if (
+            !updatedInstitutionIds.includes(
+              existingInstitution.predicted_institution_id,
+            )
+          ) {
+            await this._resultsKnowledgeProductInstitutionRepository.update(
+              {
+                result_kp_mqap_institution_id:
+                  existingInstitution.result_kp_mqap_institution_id,
+              },
+              { is_active: false, last_updated_by: user.id },
+            );
+
+            await this._resultByInstitutionRepository.update(
+              {
+                result_kp_mqap_institution_id:
+                  existingInstitution.result_kp_mqap_institution_id,
+              },
+              { is_active: false, last_updated_by: user.id },
+            );
+          }
+        }
+
+        for (const institution of updatedKnowledgeProduct.result_knowledge_product_institution_array) {
+          const insExist =
+            await this._resultsKnowledgeProductInstitutionRepository.findOne({
+              where: {
+                result_knowledge_product_id:
+                  resultKnowledgeProduct.result_knowledge_product_id,
+                predicted_institution_id: institution.predicted_institution_id,
+                is_active: true,
+              },
+            });
+
+          if (!insExist) {
+            try {
+              const savedInstitution =
+                await this._resultsKnowledgeProductInstitutionRepository.save(
+                  institution,
+                );
+
+              const institutionData = {
+                result_id: resultId,
+                institutions_id: institution.predicted_institution_id,
+                institution_roles_id:
+                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+                is_predicted: institution.confidant >= confidenceThreshold,
+                result_kp_mqap_institution_id:
+                  savedInstitution.result_kp_mqap_institution_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+              };
+
+              await this._resultByInstitutionRepository.save(institutionData);
+            } catch (error) {
+              console.error(
+                'Error saving institution or result by institution:',
+                error,
+              );
+            }
+          }
+        }
+      }
+
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
       );
@@ -859,6 +951,18 @@ export class ResultsKnowledgeProductsService {
                 institution_roles_id:
                   InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
                 is_predicted: true,
+                result_kp_mqap_institution_id:
+                  savedInstitution.result_kp_mqap_institution_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            } else {
+              await this._resultByInstitutionRepository.save({
+                result_id: newResult.id,
+                institutions_id: institution.predicted_institution_id,
+                institution_roles_id:
+                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+                is_predicted: false,
                 result_kp_mqap_institution_id:
                   savedInstitution.result_kp_mqap_institution_id,
                 created_by: user.id,
