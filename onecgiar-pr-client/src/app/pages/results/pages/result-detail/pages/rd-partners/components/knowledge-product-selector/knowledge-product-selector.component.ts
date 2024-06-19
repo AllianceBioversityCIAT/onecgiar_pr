@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnChanges } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdPartnersService } from '../../rd-partners.service';
@@ -26,14 +26,13 @@ export class KnowledgeProductSelectorComponent {
 
   institutions_institutions_type_name(partner) {
     const insts = this.institutionsSE.institutionsList;
-    const institutionFinded = insts.find(institution => institution.institutions_id == partner.user_matched_institution.institutions_id);
-    partner.user_matched_institution.institutions_type_name = institutionFinded?.institutions_type_name;
+
+    const institutionFinded = insts.find(institution => institution.institutions_id == partner.institutions_id);
+    partner.obj_institutions.obj_institution_type_code.name = institutionFinded?.institutions_type_name;
   }
 
   generateDescription(partner) {
-    const confidenceLevel = partner.confidence_level;
-    return `The confidence level for the predicted match is <span class="confidenceLevel">${
-      confidenceLevel ?? 90
-    }%</span>. Feel free to select a different partner only if necessary.`;
+    const confidenceLevel = partner.result_kp_mqap_institution_obj.confidant;
+    return `The confidence level for the predicted match is <span class="confidenceLevel">${confidenceLevel}%</span>. Feel free to select a different partner only if necessary.`;
   }
 }

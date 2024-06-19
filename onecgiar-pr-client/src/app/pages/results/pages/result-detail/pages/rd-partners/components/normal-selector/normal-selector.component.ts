@@ -26,7 +26,7 @@ export class NormalSelectorComponent {
     this.disableOptions = [];
 
     if (this.rdPartnersSE?.partnersBody?.mqap_institutions) {
-      this.disableOptions = this.rdPartnersSE.partnersBody.mqap_institutions.map(element => element?.user_matched_institution);
+      this.disableOptions = this.rdPartnersSE.partnersBody.mqap_institutions.map(element => element);
     }
   }
 

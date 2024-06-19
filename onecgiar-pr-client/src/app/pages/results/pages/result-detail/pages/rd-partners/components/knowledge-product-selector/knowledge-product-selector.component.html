@@ -21,18 +21,18 @@
 
       <h1 class="partner_item_header-name">
         <span class="partner_item_header-prename"> CGSpace author affiliation: </span>
-        {{ partner.intitution_name }}
+        {{ partner.result_kp_mqap_institution_obj.intitution_name }}
       </h1>
     </div>
 
     <div class="partner_item_content">
-      <div class="partner_item_content-line" [ngStyle]="{ 'background-color': index % 2 === 0 ? '#2196f3' : '#d9d9d9' }"></div>
+      <div class="partner_item_content-line" [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : '#d9d9d9' }"></div>
 
-      <div class="partner_item_content_predicted" [ngStyle]="{ 'background-color': index % 2 === 0 ? '#2196f3' : '#5569dd' }">
+      <div class="partner_item_content_predicted" [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : '#5569dd' }">
         <p class="partner_item_content-predicted-text">
-          {{ index % 2 === 0 ? 'Predicted by M-QAP AI' : 'Manual match' }}
+          {{ partner.is_predicted ? 'Predicted by M-QAP AI' : 'Manual match' }}
         </p>
-        <i class="material-icons-round" style="color: white; font-size: 14px">{{ index % 2 === 0 ? 'auto_awesome' : 'ads_click' }}</i>
+        <i class="material-icons-round" style="color: white; font-size: 14px">{{ partner.is_predicted ? 'auto_awesome' : 'ads_click' }}</i>
       </div>
 
       <div style="width: 100%">
@@ -48,20 +48,20 @@
           optionValue="institutions_id"
           placeholder="Select partner"
           (selectOptionEvent)="institutions_institutions_type_name(partner); this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1"
-          [(ngModel)]="partner.user_matched_institution.institutions_id">
+          [(ngModel)]="partner.institutions_id">
         </app-pr-select>
 
         <div class="partner_item_content-footer" style="margin-top: 10px">
           <div class="type">
             Institution type:
             <span class="type-type">
-              {{ partner.user_matched_institution.institutions_type_name ?? 'No partner selected' }}
+              {{ partner.obj_institutions.obj_institution_type_code.name ?? 'No partner selected' }}
             </span>
           </div>
 
           <div class="type">
             Website:
-            <span class="type-link"> test.com </span>
+            <span class="type-link">{{partner.obj_institutions.website_link }}</span>
           </div>
         </div>
       </div>
@@ -73,30 +73,30 @@
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 1) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 1) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 1)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 1) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 1) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner, 1)">
               Scaling
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 2) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 2) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 2)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 2) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 2) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner, 2)">
               Demand
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 3) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 3) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 3)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 3) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 3) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner, 3)">
               Innovation
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 4) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner.user_matched_institution.deliveries, 4) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner.user_matched_institution, 4)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 4) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 4) }"
+              (click)="this.rdPartnersSE.onSelectDelivery(partner, 4)">
               Other
             </div>
           </div>

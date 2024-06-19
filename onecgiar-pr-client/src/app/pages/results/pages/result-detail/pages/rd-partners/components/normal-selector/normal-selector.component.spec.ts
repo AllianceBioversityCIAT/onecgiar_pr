@@ -57,7 +57,11 @@ describe('NormalSelectorComponent', () => {
     it('should initialize disableOptions correctly', () => {
       component.getDisableOptions();
 
-      expect(component.disableOptions).toEqual(['inst1']);
+      expect(component.disableOptions).toEqual([
+        {
+          "user_matched_institution": "inst1",
+        }
+      ]);
     });
   });
 
