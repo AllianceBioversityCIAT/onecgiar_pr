@@ -73,30 +73,30 @@
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 1) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 1) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner, 1)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 1)">
               Scaling
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 2) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 2) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner, 2)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 2)">
               Demand
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 3) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 3) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner, 3)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 3)">
               Innovation
             </div>
             <div
               class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 4) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelection(partner?.delivery, 4) }"
-              (click)="this.rdPartnersSE.onSelectDelivery(partner, 4)">
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 4)">
               Other
             </div>
           </div>

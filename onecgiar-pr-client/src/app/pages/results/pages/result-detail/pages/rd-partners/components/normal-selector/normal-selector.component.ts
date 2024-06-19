@@ -20,7 +20,14 @@ export class NormalSelectorComponent {
 
   partnerUniqueTypes = [];
 
-  constructor(public api: ApiService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, public institutionsSE: InstitutionsService, public greenChecksSE: GreenChecksService, public dataControlSE: DataControlService) {}
+  constructor(
+    public api: ApiService,
+    public rolesSE: RolesService,
+    public rdPartnersSE: RdPartnersService,
+    public institutionsSE: InstitutionsService,
+    public greenChecksSE: GreenChecksService,
+    public dataControlSE: DataControlService
+  ) {}
 
   getDisableOptions() {
     this.disableOptions = [];
@@ -31,7 +38,7 @@ export class NormalSelectorComponent {
   }
 
   getOnlyPartnerTypes() {
-    const partnerTypes = this.rdPartnersSE.partnersBody.institutions.map(element => element?.institutions_type_name);
+    const partnerTypes = this.rdPartnersSE.partnersBody.institutions.map(element => element?.obj_institutions.obj_institution_type_code.name);
     this.partnerUniqueTypes = Array.from(new Set(partnerTypes));
   }
 }

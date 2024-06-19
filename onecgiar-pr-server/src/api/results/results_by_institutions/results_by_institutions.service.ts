@@ -127,7 +127,7 @@ export class ResultsByInstitutionsService {
           name: institution.obj_institutions.name,
           website_link: institution.obj_institutions.website_link,
           obj_institution_type_code: {
-            id: institution.obj_institutions.obj_institution_type_code.id,
+            id: institution.obj_institutions.obj_institution_type_code.code,
             name: institution.obj_institutions.obj_institution_type_code.name,
           },
         },

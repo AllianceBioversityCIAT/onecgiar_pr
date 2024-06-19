@@ -1,4 +1,4 @@
-import { Component, OnChanges } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdPartnersService } from '../../rd-partners.service';
@@ -28,7 +28,12 @@ export class KnowledgeProductSelectorComponent {
     const insts = this.institutionsSE.institutionsList;
 
     const institutionFinded = insts.find(institution => institution.institutions_id == partner.institutions_id);
+
+    // if (institutionFinded.institutions_id !== partner.institutions_id) {
+    //   partner.is_predicted = false;
+    // }
     partner.obj_institutions.obj_institution_type_code.name = institutionFinded?.institutions_type_name;
+    partner.obj_institutions.website_link = institutionFinded?.website_link;
   }
 
   generateDescription(partner) {
