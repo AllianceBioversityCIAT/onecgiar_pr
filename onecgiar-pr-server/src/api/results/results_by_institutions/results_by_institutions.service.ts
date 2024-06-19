@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { IsNull, Not } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -352,35 +352,32 @@ export class ResultsByInstitutionsService {
     institutionId: number,
     userId: number,
   ) {
-    if (!deliveries) return;
-
-    for (const delivery of deliveries) {
-      const existingDelivery =
-        await this._resultByInstitutionsByDeliveriesTypeRepository.findOne({
-          where: {
-            result_by_institution_id: institutionId,
-            partner_delivery_type_id: delivery.partner_delivery_type_id,
-            is_active: true,
-          },
+    if (institutionId) {
+      const deliveriesToDelete =
+        await this._resultByInstitutionsByDeliveriesTypeRepository.find({
+          where: { result_by_institution_id: institutionId, is_active: true },
         });
-
-      if (existingDelivery) {
+      if (deliveriesToDelete.length > 0) {
+        const idsToDelete = deliveriesToDelete.map((delivery) => delivery.id);
         await this._resultByInstitutionsByDeliveriesTypeRepository.update(
-          { id: existingDelivery.id },
-          {
-            is_active: delivery.is_active,
-            last_updated_by: userId,
-          },
+          { id: In(idsToDelete) },
+          { is_active: false, last_updated_by: userId },
         );
-      } else {
-        await this._resultByInstitutionsByDeliveriesTypeRepository.save({
-          result_by_institution_id: institutionId,
-          partner_delivery_type_id: delivery.partner_delivery_type_id,
-          created_by: userId,
-          last_updated_by: userId,
-          is_active: true,
-        });
       }
+    }
+
+    if (deliveries.length > 0) {
+      const deliveriesToSave = deliveries.map((delivery) => ({
+        result_by_institution_id: institutionId,
+        partner_delivery_type_id: delivery.partner_delivery_type_id,
+        created_by: userId,
+        last_updated_by: userId,
+        is_active: true,
+      }));
+
+      await this._resultByInstitutionsByDeliveriesTypeRepository.save(
+        deliveriesToSave,
+      );
     }
   }
 
