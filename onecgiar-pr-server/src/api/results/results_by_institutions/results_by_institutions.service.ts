@@ -15,6 +15,7 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -28,6 +29,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _globalParameterRepository: GlobalParameterRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -315,6 +317,18 @@ export class ResultsByInstitutionsService {
     institution: ResultsByInstitution,
     userId: number,
   ) {
+    const globalParameter = await this._globalParameterRepository.findOne({
+      where: { name: 'kp_mqap_institutions_confidence' },
+      select: ['value'],
+    });
+
+    if (!globalParameter) {
+      throw new Error(
+        "Global parameter 'kp_mqap_institutions_confidence' not found",
+      );
+    }
+
+    const confidenceThreshold = +globalParameter.value;
     await this._resultByIntitutionsRepository.update(
       { id },
       {
@@ -323,7 +337,10 @@ export class ResultsByInstitutionsService {
         institutions_id: institution.institutions_id,
         is_predicted:
           institution.institutions_id ===
-          institution.result_kp_mqap_institution_obj.predicted_institution_id
+            institution.result_kp_mqap_institution_obj
+              .predicted_institution_id &&
+          institution.result_kp_mqap_institution_obj.confidant >=
+            confidenceThreshold
             ? true
             : false,
       },
