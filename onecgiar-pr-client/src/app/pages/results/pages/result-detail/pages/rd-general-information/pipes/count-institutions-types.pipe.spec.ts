@@ -9,8 +9,12 @@ describe('CountInstitutionsTypesPipe', () => {
   it('should transform the list correctly', () => {
     const list = [
       {
-        institutions_type_id: 1,
-        institutions_type_name: 'Type1'
+        obj_institutions: {
+          obj_institution_type_code: {
+            id: 1,
+            name: 'Type1'
+          }
+        }
       }
     ];
 
@@ -20,34 +24,46 @@ describe('CountInstitutionsTypesPipe', () => {
       {
         count_name: 'Type1 (0)',
         count: 0
-      },
+      }
     ]);
   });
 
   it('should handle the if condition correctly', () => {
     const list = [
       {
-        institutions_type_id: 1,
-        institutions_type_name: 'Type1',
+        obj_institutions: {
+          obj_institution_type_code: {
+            id: 1,
+            name: 'Type1'
+          }
+        },
         institutions_id: 1
       },
       {
-        institutions_type_id: 2,
-        institutions_type_name: 'Type2',
+        obj_institutions: {
+          obj_institution_type_code: {
+            id: 2,
+            name: 'Type2'
+          }
+        },
         institutions_id: 2
       },
       {
-        institutions_type_id: 1,
-        institutions_type_name: 'Type1',
+        obj_institutions: {
+          obj_institution_type_code: {
+            id: 1,
+            name: 'Type1'
+          }
+        },
         institutions_id: 1
-      },
+      }
     ];
 
     const result = pipe.transform(list, 1);
 
     expect(result).toEqual([
       { count_name: 'Type1 (2)', count: 2 },
-      { count_name: 'Type2 (1)', count: 1 },
+      { count_name: 'Type2 (1)', count: 1 }
     ]);
   });
 });

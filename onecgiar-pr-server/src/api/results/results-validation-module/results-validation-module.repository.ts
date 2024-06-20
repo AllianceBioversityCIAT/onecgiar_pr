@@ -372,7 +372,7 @@ export class resultValidationRepository
 		AND r.is_active > 0
 		AND (
 		    r.version_id = ${version}
-				OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
+			OR r.created_date > ${env.PREVIOUS_PHASE_DATE}
 		);
     `;
     try {
