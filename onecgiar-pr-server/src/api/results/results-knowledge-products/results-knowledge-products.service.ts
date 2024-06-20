@@ -944,25 +944,15 @@ export class ResultsKnowledgeProductsService {
                 institution,
               );
 
-            if (institution.confidant >= confidenceThreshold) {
+            if (!savedInstitution.predicted_institution_object.clarisa_center) {
+              const isPredicted = institution.confidant >= confidenceThreshold;
+
               await this._resultByInstitutionRepository.save({
                 result_id: newResult.id,
-                institutions_id: institution.predicted_institution_id,
+                institutions_id: savedInstitution.predicted_institution_id,
                 institution_roles_id:
                   InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: true,
-                result_kp_mqap_institution_id:
-                  savedInstitution.result_kp_mqap_institution_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              });
-            } else {
-              await this._resultByInstitutionRepository.save({
-                result_id: newResult.id,
-                institutions_id: institution.predicted_institution_id,
-                institution_roles_id:
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: false,
+                is_predicted: isPredicted,
                 result_kp_mqap_institution_id:
                   savedInstitution.result_kp_mqap_institution_id,
                 created_by: user.id,
