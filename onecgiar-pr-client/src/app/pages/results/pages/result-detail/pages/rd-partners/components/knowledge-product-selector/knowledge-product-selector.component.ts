@@ -29,9 +29,6 @@ export class KnowledgeProductSelectorComponent {
 
     const institutionFinded = insts.find(institution => institution.institutions_id == partner.institutions_id);
 
-    // if (institutionFinded.institutions_id !== partner.institutions_id) {
-    //   partner.is_predicted = false;
-    // }
     partner.obj_institutions.obj_institution_type_code.name = institutionFinded?.institutions_type_name;
     partner.obj_institutions.website_link = institutionFinded?.website_link;
   }

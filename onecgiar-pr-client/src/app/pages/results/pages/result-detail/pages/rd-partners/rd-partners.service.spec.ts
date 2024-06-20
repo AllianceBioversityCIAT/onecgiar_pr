@@ -166,47 +166,50 @@ describe('RdPartnersService', () => {
   });
 
   describe('onSelectDeliveryPartners', () => {
-    it('should do nothing if readOnly is true', () => {
-      const option = { delivery: [{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }, { partner_delivery_type_id: 3 }] };
-      const deliveryId = 1;
-
-      service.onSelectDeliveryPartners(option, deliveryId);
-
-      expect(option.delivery).toEqual([{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }, { partner_delivery_type_id: 3 }]);
+    it('should return if readOnly is true', () => {
+      service.api.rolesSE.readOnly = true;
+      const option = { delivery: [] };
+      service.onSelectDeliveryPartners(option, 4);
+      expect(option.delivery).toEqual([]);
     });
 
-    it('should set option.delivery to an array with the partner_delivery_type_id equal to 4 if deliveryId is 4 and index is less than 0', () => {
-      mockApiService.rolesSE.readOnly = false;
-      const option = { delivery: [{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }, { partner_delivery_type_id: 3 }] };
-      const deliveryId = 4;
+    it('should add deliveryId 4 if not present', () => {
+      service.api.rolesSE.readOnly = false;
+      const option = { delivery: [] };
+      service.onSelectDeliveryPartners(option, 4);
+      expect(option.delivery).toEqual([{ partner_delivery_type_id: 4 }]);
+    });
 
-      service.onSelectDeliveryPartners(option, deliveryId);
+    it('should remove deliveryId 4 if already present', () => {
+      service.api.rolesSE.readOnly = false;
+      const option = { delivery: [{ partner_delivery_type_id: 4 }] };
+      service.onSelectDeliveryPartners(option, 4);
+      expect(option.delivery).toEqual([]);
+    });
 
+    it('should remove deliveryId 4 if adding a different deliveryId', () => {
+      service.api.rolesSE.readOnly = false;
+      const option = { delivery: [{ partner_delivery_type_id: 4 }] };
+      service.onSelectDeliveryPartners(option, 2);
       expect(option.delivery).toEqual([
         {
-          partner_delivery_type_id: 4
+          partner_delivery_type_id: 2
         }
       ]);
     });
 
-    it('should push deliveryId to option.delivery if index is less than 0', () => {
-      mockApiService.rolesSE.readOnly = false;
+    it('should add a new deliveryId if it is not present and not 4', () => {
+      service.api.rolesSE.readOnly = false;
       const option = { delivery: [] };
-      const deliveryId = 4;
-
-      service.onSelectDeliveryPartners(option, deliveryId);
-
-      expect(option.delivery).toEqual([{ partner_delivery_type_id: 4 }]);
+      service.onSelectDeliveryPartners(option, 2);
+      expect(option.delivery).toEqual([{ partner_delivery_type_id: 2 }]);
     });
 
-    it('should remove deliveryId from option.delivery if index is greater than 0', () => {
-      mockApiService.rolesSE.readOnly = false;
-      const option = { delivery: [{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 2 }, { partner_delivery_type_id: 3 }] };
-      const deliveryId = 2;
-
-      service.onSelectDeliveryPartners(option, deliveryId);
-
-      expect(option.delivery).toEqual([{ partner_delivery_type_id: 1 }, { partner_delivery_type_id: 3 }]);
+    it('should remove deliveryId if it is already present and not 4', () => {
+      service.api.rolesSE.readOnly = false;
+      const option = { delivery: [{ partner_delivery_type_id: 2 }] };
+      service.onSelectDeliveryPartners(option, 2);
+      expect(option.delivery).toEqual([]);
     });
   });
 

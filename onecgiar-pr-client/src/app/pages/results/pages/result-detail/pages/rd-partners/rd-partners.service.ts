@@ -11,7 +11,7 @@ export class RdPartnersService {
   toggle = 0;
   centers: centerInterfacesToc[] = [];
 
-  constructor(private api: ApiService) {}
+  constructor(public api: ApiService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
     if (!(typeof deliveries == 'object')) return false;
@@ -40,11 +40,26 @@ export class RdPartnersService {
   onSelectDeliveryPartners(option, deliveryId) {
     if (this.api.rolesSE.readOnly) return;
 
-    const index = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id == deliveryId);
+    const index = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === deliveryId);
 
-    if (deliveryId == 4 && index < 0) option.delivery = [];
-    if (index < 0) option.delivery.push({ partner_delivery_type_id: deliveryId });
-    else option.delivery.splice(index, 1);
+    if (deliveryId == 4) {
+      if (index < 0) {
+        option.delivery = [{ partner_delivery_type_id: deliveryId }];
+      } else {
+        option.delivery.splice(index, 1);
+      }
+    } else {
+      const indexOption4 = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === 4);
+      if (indexOption4 >= 0) {
+        option.delivery.splice(indexOption4, 1);
+      }
+
+      if (index < 0) {
+        option.delivery.push({ partner_delivery_type_id: deliveryId });
+      } else {
+        option.delivery.splice(index, 1);
+      }
+    }
   }
 
   removePartner(index) {
