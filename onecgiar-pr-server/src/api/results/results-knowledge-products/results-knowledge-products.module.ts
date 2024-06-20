@@ -50,6 +50,7 @@ import { DynamodbLogsModule } from '../../../connection/dynamodb-logs/dynamodb-l
 import { ResultsInvestmentDiscontinuedOptionsModule } from '../results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recover-data.module';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recov
     ResultsCenterRepository,
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
+    GlobalParameterRepository,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,
@@ -138,6 +140,7 @@ import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recov
     ResultsCenterRepository,
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
+    GlobalParameterRepository,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

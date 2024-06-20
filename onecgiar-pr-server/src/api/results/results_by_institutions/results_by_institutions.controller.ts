@@ -5,12 +5,10 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UseInterceptors,
 } from '@nestjs/common';
 import { ResultsByInstitutionsService } from './results_by_institutions.service';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
-import { UpdateResultsByInstitutionDto } from './dto/update-results_by_institution.dto';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
@@ -60,21 +58,5 @@ export class ResultsByInstitutionsController {
       updatePartners,
       user,
     );
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateResultsByInstitutionDto: UpdateResultsByInstitutionDto,
-  ) {
-    return this.resultsByInstitutionsService.update(
-      +id,
-      updateResultsByInstitutionDto,
-    );
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.resultsByInstitutionsService.remove(+id);
   }
 }
