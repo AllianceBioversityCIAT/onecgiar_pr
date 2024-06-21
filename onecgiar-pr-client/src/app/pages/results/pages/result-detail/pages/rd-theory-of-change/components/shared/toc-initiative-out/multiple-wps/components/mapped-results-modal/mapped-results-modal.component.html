@@ -11,7 +11,7 @@
 
     <div>
       <div *ngIf="!this.mappedResultService.isTarget" style="margin: 12px 0 25px 0; font-size: 14px;">
-        <div class="label" [innerHtml]="activeTab?.wpinformation?.wpTitle">
+        <div class="label" [innerHtml]="activeTab?.wpinformation?.wpTitle" *ngIf="activeTab?.wpinformation?.wpTitle !== '<strong>undefined</strong>'">
         </div>
       </div>
 
