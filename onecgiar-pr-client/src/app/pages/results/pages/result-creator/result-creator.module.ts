@@ -11,10 +11,20 @@ import { SimilarResultsPipe } from './components/similar-results/pipes/similar-r
 import { MenuModule } from 'primeng/menu';
 import { RetrieveModalModule } from '../result-detail/components/retrieve-modal/retrieve-modal.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
+import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
-  imports: [CommonModule, ResultCreatorRoutingModule, CustomFieldsModule, FormsModule, MenuModule, RetrieveModalModule, AlertGlobalInfoModule],
+  imports: [
+    CommonModule,
+    ResultCreatorRoutingModule,
+    TooltipModule,
+    CustomFieldsModule,
+    FormsModule,
+    MenuModule,
+    RetrieveModalModule,
+    AlertGlobalInfoModule
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ResultCreatorModule {}
