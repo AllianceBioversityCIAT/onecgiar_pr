@@ -3,7 +3,7 @@ import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import { create as createPDF } from 'pdf-creator-node';
 //import Handlebars from 'handlebars';
-import { readFileSync, ReadStream } from 'fs';
+import { ReadStream } from 'fs';
 import {
   HandlersError,
   returnErrorDto,
@@ -11,7 +11,6 @@ import {
 import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
-import { join } from 'path';
 
 @Injectable()
 export class PlatformReportService {
@@ -303,14 +302,9 @@ export class PlatformReportService {
         },
       };
 
-      const bitmap = readFileSync(
-        join(__dirname, '../../shared/templates/cover-PDF.png'),
-      );
-      const logo = bitmap.toString('base64');
-
       const document = {
         html: report.template_object.template,
-        data: { ...data, logo: logo },
+        data: { ...data },
         type: 'stream',
       };
 
