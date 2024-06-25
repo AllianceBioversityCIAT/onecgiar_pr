@@ -55,13 +55,14 @@
           <div class="type">
             Institution type:
             <span class="type-type">
-              {{ partner.obj_institutions.obj_institution_type_code.name ?? 'No partner selected' }}
+              {{ partner?.obj_institutions?.obj_institution_type_code?.name ?? 'No partner selected' }}
             </span>
           </div>
 
           <div class="type">
             Website:
-            <span class="type-link">{{partner.obj_institutions.website_link }}</span>
+            <span class="type-link" *ngIf="partner?.obj_institutions?.website_link">{{partner?.obj_institutions?.website_link }}</span>
+            <span *ngIf="!partner?.obj_institutions?.website_link" style="font-weight: 500;">Not available</span>
           </div>
         </div>
       </div>
