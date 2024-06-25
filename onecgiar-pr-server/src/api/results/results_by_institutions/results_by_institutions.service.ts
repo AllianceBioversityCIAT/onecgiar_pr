@@ -152,19 +152,27 @@ export class ResultsByInstitutionsService {
           ],
         });
 
-        mqap_institutions = mqap_institutions.map((institution) => ({
-          ...institution,
-          delivery: institution.delivery.filter(
-            (delivery) => delivery.is_active,
-          ),
-          obj_institutions: {
-            name: institution.obj_institutions.name,
-            website_link: institution.obj_institutions.website_link,
-            obj_institution_type_code: {
-              name: institution.obj_institutions.obj_institution_type_code.name,
-            },
-          },
-        }));
+        mqap_institutions = mqap_institutions.map((institution) => {
+          const mappedInstitution = {
+            ...institution,
+            delivery: institution.delivery.filter(
+              (delivery) => delivery.is_active,
+            ),
+          };
+
+          if (institution.obj_institutions) {
+            mappedInstitution.obj_institutions = {
+              name: institution.obj_institutions.name,
+              website_link: institution.obj_institutions.website_link,
+              obj_institution_type_code: {
+                name: institution.obj_institutions.obj_institution_type_code
+                  .name,
+              },
+            };
+          }
+
+          return mappedInstitution;
+        });
       }
 
       return {
