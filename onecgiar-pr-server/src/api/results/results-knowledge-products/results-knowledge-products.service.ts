@@ -323,7 +323,10 @@ export class ResultsKnowledgeProductsService {
 
               const institutionData = {
                 result_id: resultId,
-                institutions_id: institution.predicted_institution_id,
+                institutions_id:
+                  institution.confidant >= confidenceThreshold
+                    ? institution.predicted_institution_id
+                    : null,
                 institution_roles_id:
                   InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
                 is_predicted: institution.confidant >= confidenceThreshold,
@@ -335,9 +338,8 @@ export class ResultsKnowledgeProductsService {
 
               await this._resultByInstitutionRepository.save(institutionData);
             } catch (error) {
-              console.error(
-                'Error saving institution or result by institution:',
-                error,
+              throw new Error(
+                `Error saving institution or result by institution: ${error}`,
               );
             }
           }
@@ -912,7 +914,7 @@ export class ResultsKnowledgeProductsService {
 
       await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
 
-      //updating relations
+      // * Updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
       );
@@ -949,7 +951,9 @@ export class ResultsKnowledgeProductsService {
 
               await this._resultByInstitutionRepository.save({
                 result_id: newResult.id,
-                institutions_id: savedInstitution.predicted_institution_id,
+                institutions_id: isPredicted
+                  ? institution.predicted_institution_id
+                  : null,
                 institution_roles_id:
                   InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
                 is_predicted: isPredicted,
@@ -960,9 +964,8 @@ export class ResultsKnowledgeProductsService {
               });
             }
           } catch (error) {
-            console.error(
-              'Error saving institution or result by institution:',
-              error,
+            throw new Error(
+              `Error saving institution or result by institution: ${error}`,
             );
           }
         }
@@ -975,7 +978,7 @@ export class ResultsKnowledgeProductsService {
         newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
       );
 
-      //geolocation
+      // * Geolocation
       await this.updateCountries(
         newKnowledgeProduct,
         resultsKnowledgeProductDto,
@@ -996,17 +999,6 @@ export class ResultsKnowledgeProductsService {
         newResult.result_region_array ?? [],
       );
 
-      /*const fairBaseline = new KnowledgeProductFairBaseline();
-
-      fairBaseline.findable = newKnowledgeProduct.findable;
-      fairBaseline.accesible = newKnowledgeProduct.accesible;
-      fairBaseline.interoperable = newKnowledgeProduct.interoperable;
-      fairBaseline.reusable = newKnowledgeProduct.reusable;
-      fairBaseline.created_by = newKnowledgeProduct.created_by;
-      fairBaseline.knowledge_product_id =
-        newKnowledgeProduct.result_knowledge_product_id;
-
-      await this._knowledgeProductFairBaselineRepository.save(fairBaseline);*/
       await this.updateFair(
         newKnowledgeProduct,
         resultsKnowledgeProductDto,
@@ -1028,7 +1020,7 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      //updating general result tables
+      // * Updating general result tables
       await this._resultRepository.update(
         { id: newResult.id },
         {
@@ -1037,9 +1029,7 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      //TODO: update geoscope table
-
-      //adding link to this knowledge product to existing evidences
+      // * Adding link to this knowledge product to existing evidences
       this._evidenceRepository
         .findBy({ link: Like(resultsKnowledgeProductDto.handle) })
         .then((re) => {
@@ -1058,7 +1048,7 @@ export class ResultsKnowledgeProductsService {
         })
         .catch((error) => this._handlersError.returnErrorRes({ error }));
 
-      //creating own evidence linking it to itself
+      // * Creating own evidence linking it to itself
       this._evidenceRepository.save({
         link: `https://hdl.handle.net/${resultsKnowledgeProductDto.handle}`,
         result_id: newResult.id,
