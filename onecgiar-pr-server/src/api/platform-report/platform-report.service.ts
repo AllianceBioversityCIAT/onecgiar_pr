@@ -3,7 +3,7 @@ import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import { create as createPDF } from 'pdf-creator-node';
 //import Handlebars from 'handlebars';
-import { ReadStream } from 'fs';
+import { readFileSync, ReadStream } from 'fs';
 import {
   HandlersError,
   returnErrorDto,
@@ -11,6 +11,7 @@ import {
 import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
+import { join } from 'path';
 
 @Injectable()
 export class PlatformReportService {
@@ -302,9 +303,41 @@ export class PlatformReportService {
         },
       };
 
+      const bitmapMarkerClimate = readFileSync(
+        join(__dirname, '../../shared/templates/DAC-Marker-Climate.png'),
+      );
+      const markerClimate = bitmapMarkerClimate.toString('base64');
+
+      const bitmapMarkerNutri = readFileSync(
+        join(__dirname, '../../shared/templates/DAC-Marker-Nutrition.png'),
+      );
+      const markerNutri = bitmapMarkerNutri.toString('base64');
+
+      const bitmapMarkerPoverty = readFileSync(
+        join(__dirname, '../../shared/templates/DAC-Marker-Poverty.png'),
+      );
+      const markerPoverty = bitmapMarkerPoverty.toString('base64');
+
+      const bitmapMarkerGender = readFileSync(
+        join(__dirname, '../../shared/templates/DAC-Marker-Gender.png'),
+      );
+      const markerGender = bitmapMarkerGender.toString('base64');
+
+      const bitmapMarkerEnvironment = readFileSync(
+        join(__dirname, '../../shared/templates/DAC-Marker-Environment.png'),
+      );
+      const markerEnvironment = bitmapMarkerEnvironment.toString('base64');
+
       const document = {
         html: report.template_object.template,
-        data: { ...data },
+        data: {
+          ...data,
+          markerClimateImg: markerClimate,
+          markerNutriImg: markerNutri,
+          markerGenderImg: markerGender,
+          markerEnvironmentImg: markerEnvironment,
+          markerPovertyImg: markerPoverty,
+        },
         type: 'stream',
       };
 
