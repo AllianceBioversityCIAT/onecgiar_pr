@@ -1,11 +1,11 @@
 <app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
 </app-alert-status>
-<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
-    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
-</app-alert-status>
 <div class="column_title" *ngIf="dataControlSE.isKnowledgeProduct">
     Additional partners
 </div>
+<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
+    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
+</app-alert-status>
 <div [ngSwitch]="this.rolesSE.readOnly">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
