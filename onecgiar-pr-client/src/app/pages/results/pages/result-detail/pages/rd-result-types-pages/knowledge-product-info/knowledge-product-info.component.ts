@@ -22,7 +22,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
   ostMeliaStudies = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   fair_data: Array<{ key: string; value: FairSpecificData }>;
-  fairGuideline = 'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
+  fairGuideline =
+    'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
 
   constructor(public api: ApiService, public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
@@ -37,7 +38,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.sectionData.isMeliaProduct = response.is_melia;
       this.sectionData.ostMeliaId = response.ost_melia_study_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
-      if (!this.sectionData.isMeliaProduct) this.sectionData.isMeliaProduct = false;
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
