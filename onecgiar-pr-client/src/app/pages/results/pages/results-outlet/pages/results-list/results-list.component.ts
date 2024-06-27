@@ -63,24 +63,13 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   @ViewChild('table') table: Table;
 
-  constructor(
-    public resultsNotificationsSE: ResultsNotificationsService,
-    public api: ApiService,
-    public resultsListService: ResultsListService,
-    private ResultLevelSE: ResultLevelService,
-    private exportTablesSE: ExportTablesService,
-    private shareRequestModalSE: ShareRequestModalService,
-    private retrieveModalSE: RetrieveModalService,
-    public phasesService: PhasesService
-  ) {}
+  constructor(public resultsNotificationsSE: ResultsNotificationsService, public api: ApiService, public resultsListService: ResultsListService, private ResultLevelSE: ResultLevelService, private exportTablesSE: ExportTablesService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService, public phasesService: PhasesService) {}
 
   validateOrder(columnAttr) {
     setTimeout(() => {
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
-      this.combine =
-        !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length &&
-        !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
       return null;
     }, 100);
   }
@@ -105,9 +94,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    this.itemsWithDelete[1].visible =
-      this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
-      this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
+    this.itemsWithDelete[1].visible = this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear && this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
   }
 
   onDownLoadTableAsExcel() {
@@ -125,38 +112,24 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   }
 
   onDeleteREsult() {
-    this.api.alertsFe.show(
-      {
-        id: 'confirm-delete-result',
-        title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`,
-        description: `If you delete this result it will no longer be displayed in the list of results.`,
-        status: 'success',
-        confirmText: 'Yes, delete'
-      },
-      () => {
-        this.resultsListService.showDeletingResultSpinner = true;
-        setTimeout(() => {
-          document.getElementById('custom-spinner').scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-        this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe({
-          next: resp => {
-            this.api.alertsFe.show({
-              id: 'confirm-delete-result-su',
-              title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`,
-              description: ``,
-              status: 'success'
-            });
-            this.api.updateResultsList();
-            this.resultsListService.showDeletingResultSpinner = false;
-          },
-          error: err => {
-            console.error(err);
-            this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
-            this.resultsListService.showDeletingResultSpinner = false;
-          }
-        });
-      }
-    );
+    this.api.alertsFe.show({ id: 'confirm-delete-result', title: `Are you sure you want to delete the result "${this.api.dataControlSE?.currentResult?.title}"?`, description: `If you delete this result it will no longer be displayed in the list of results.`, status: 'success', confirmText: 'Yes, delete' }, () => {
+      this.resultsListService.showDeletingResultSpinner = true;
+      setTimeout(() => {
+        document.getElementById('custom-spinner').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      this.api.resultsSE.PATCH_DeleteResult(this.api.dataControlSE.currentResult.id).subscribe({
+        next: resp => {
+          this.api.alertsFe.show({ id: 'confirm-delete-result-su', title: `The result "${this.api.dataControlSE?.currentResult?.title}" was deleted`, description: ``, status: 'success' });
+          this.api.updateResultsList();
+          this.resultsListService.showDeletingResultSpinner = false;
+        },
+        error: err => {
+          console.error(err);
+          this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+          this.resultsListService.showDeletingResultSpinner = false;
+        }
+      });
+    });
   }
 
   ngOnDestroy(): void {
