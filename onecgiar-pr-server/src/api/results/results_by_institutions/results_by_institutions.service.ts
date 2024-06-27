@@ -150,6 +150,7 @@ export class ResultsByInstitutionsService {
             'delivery',
             'obj_institutions.obj_institution_type_code',
           ],
+          order: { is_predicted: 'ASC' },
         });
 
         mqap_institutions = mqap_institutions.map((institution) => {
