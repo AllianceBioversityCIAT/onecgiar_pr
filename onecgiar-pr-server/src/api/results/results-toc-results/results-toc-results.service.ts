@@ -359,10 +359,6 @@ export class ResultsTocResultsService {
     return (!planned_result && outcome_id) || (planned_result && toc_result_id);
   }
 
-  findAll() {
-    return `This action returns all resultsTocResults`;
-  }
-
   async getTocByResult(resultId: number) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
