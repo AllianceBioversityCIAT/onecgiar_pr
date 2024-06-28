@@ -988,9 +988,7 @@ export class ResultsTocResultRepository
                     FROM
                         prdb.version v1
                     WHERE
-                      v1.phase_name LIKE '%Reporting%' 
-                      AND v1.is_active = 1 
-                      AND v1.status = 1
+                      v1.id = ${resultInfo[0].version_id}
                 );
             `;
           const queryTargetInfoData = await this.query(queryTargetInfo, [
@@ -1261,9 +1259,7 @@ export class ResultsTocResultRepository
                         FROM
                           prdb.version v1
                         WHERE
-                          v1.phase_name LIKE '%Reporting%'
-                          AND v1.is_active = 1
-                          AND v1.status = 1
+                          v1.id = ${resultInfo[0].version_id}
                     );
                 `;
                 const queryTargetInfoData = await this.query(queryTargetInfo, [
@@ -1448,9 +1444,7 @@ export class ResultsTocResultRepository
                 FROM
                   prdb.version v1
                 WHERE
-                  v1.phase_name LIKE '%Reporting%'
-                  AND v1.is_active = 1
-                  AND v1.status = 1
+                  v1.id = ${resultInfo[0].version_id}
             );
           `;
           const queryTargetInfoData = await this.query(queryTargetInfo, [
