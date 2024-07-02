@@ -208,6 +208,7 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
+				AND toc_result_id IS NOT NULL
 			)
 		)
 		AND (
@@ -216,6 +217,7 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
+				AND rtr.toc_result_id IS NOT NULL
 				AND rtr.is_active > 0
 			) = 1
 		)
