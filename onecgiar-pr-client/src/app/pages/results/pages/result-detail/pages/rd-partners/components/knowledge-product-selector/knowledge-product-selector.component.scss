@@ -100,6 +100,10 @@
         display: grid;
         grid-template-columns: 2fr 1fr;
         gap: 5px;
+
+        @media (max-width: 1230px) {
+          grid-template-columns: 1fr;
+        }
       }
     }
   }
@@ -131,6 +135,16 @@
       gap: 8px;
       margin-top: 10px;
 
+      @media (max-width: 1250px) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      @media (max-width: 1024px) {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
       .delivery {
         padding: 7px 14px;
         background-color: white;
@@ -139,6 +153,7 @@
         cursor: pointer;
         border-radius: 15px;
         font-weight: 500;
+        text-align: center;
       }
 
       .delivery.active {
