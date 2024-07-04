@@ -12,6 +12,7 @@ import { ClarisaActionAreaOutcome } from '../../../../clarisa/clarisa-action-are
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaActionArea } from '../../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';
+import { TocLevel } from '../../../../toc/toc-level/entities/toc-level.entity';
 
 @Entity('results_toc_result')
 export class ResultsTocResult {
@@ -122,6 +123,19 @@ export class ResultsTocResult {
     nullable: true,
   })
   toc_progressive_narrative: string;
+
+  @Column({
+    name: 'toc_level_id',
+    type: 'int',
+    nullable: true,
+  })
+  toc_level_id: number;
+
+  @ManyToOne(() => TocLevel, (tl) => tl.toc_level_id, { nullable: true })
+  @JoinColumn({
+    name: 'toc_level_id',
+  })
+  toc_level: TocLevel;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
