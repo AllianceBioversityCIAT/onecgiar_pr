@@ -329,7 +329,7 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      tr.result_type as toc_level_id
+      IFNULL(rtr.toc_level_id, tr.result_type) as toc_level_id
     FROM
       results_toc_result rtr	
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
