@@ -759,7 +759,11 @@ export class ResultsTocResultsService {
         } else {
           RtR = null;
         }
-
+        const saveResultTocResult =
+          this.validPermissionToSaveResultTocId<number>(
+            toc.toc_level_id,
+            toc.toc_result_id,
+          );
         if (RtR) {
           if (result.result_level_id == 2) {
             RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
@@ -774,7 +778,8 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.update(
             RtR.result_toc_result_id,
             {
-              toc_result_id: toc.toc_result_id,
+              toc_result_id: saveResultTocResult,
+              toc_level_id: toc.toc_level_id,
               action_area_outcome_id: toc.action_area_outcome_id,
               last_updated_by: user.id,
               planned_result:
@@ -786,7 +791,8 @@ export class ResultsTocResultsService {
         } else if (toc) {
           await this._resultsTocResultRepository.save({
             initiative_ids: toc?.initiative_id,
-            toc_result_id: toc?.toc_result_id,
+            toc_result_id: saveResultTocResult,
+            toc_level_id: toc.toc_level_id,
             created_by: user.id,
             last_updated_by: user.id,
             result_id: result.id,
