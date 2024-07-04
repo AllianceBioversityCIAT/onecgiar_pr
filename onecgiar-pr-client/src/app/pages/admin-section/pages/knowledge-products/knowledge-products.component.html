@@ -1,0 +1,34 @@
+<div class="local_container section_container">
+  <header class="kp_header">
+    <i class="material-icons-round" style="font-size: 30px">auto_stories</i>
+    <h1 class="kp_header--title">Knowledge Products Management</h1>
+  </header>
+
+  <p class="kp--desc">Welcome to the management panel for Knowledge Products.</p>
+
+  <div class="kp_content">
+    <h2 class="kp_content--title">Partners Matching</h2>
+
+    <div class="kp_content_item">
+      <h3 class="kp_content_item--title">Confidence level baseline</h3>
+      <p class="kp_content_item--desc">
+        This is the minimum confidence level number that the PRMS should consider to accept an M-QAP prediction of the CLARISA partner based on the
+        author affiliation coming from CGSpace.
+      </p>
+      <p-inputNumber [(ngModel)]="confidence_level" [inputStyle]="{ width: '55px' }" [min]="0" [max]="100" suffix="%"></p-inputNumber>
+    </div>
+
+    <div class="kp_content_item">
+      <h3 class="kp_content_item--title">Partners matching report</h3>
+      <p class="kp_content_item--desc">
+        This report includes all the partner matchings made in the Knowledge Products, encompassing both the predicted matchings and the manually
+        selected ones.
+      </p>
+      <app-pr-button
+        text="Export data"
+        (click)="onDownLoadTableAsExcel()"
+        [rotating]="this.isLoading"
+        [icon]="this.isLoading ? 'loop' : 'file_download'"></app-pr-button>
+    </div>
+  </div>
+</div>

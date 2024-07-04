@@ -27,6 +27,7 @@ export const adminModuleRouting: PrRoute[] = [
   { prName: 'Completeness status', path: 'completeness-status', loadChildren: () => import('../../pages/admin-section/pages/completeness-status/completeness-status.module').then(m => m.CompletenessStatusModule) },
   { prName: 'User report', path: 'user-report', loadChildren: () => import('../../pages/admin-section/pages/user-report/user-report.module').then(m => m.UserReportModule) },
   { prName: 'Phase management', path: 'phase-management', loadChildren: () => import('../../pages/admin-section/pages/phase-management/phase-management.module').then(m => m.PhaseManagementModule) },
+  { prName: 'Knowledge Products', path: 'knowledge-products', loadChildren: () => import('../../pages/admin-section/pages/knowledge-products/knowledge-products.module').then(m => m.KnowledgeProductsModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 
