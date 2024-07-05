@@ -13,23 +13,23 @@
       [extraInformation]="true"
       (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
     </app-pr-select>
-
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
-        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList"
+        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | filterOutcomeLevelByBoolean : initiative.planned_result"
         label="Outcome level"
         [editable]="editable"
-        [disabled]="(resultLevelId === 1 ? true : !activeTab?.planned_result) || !editable"
+        [disabled]="resultLevelId === 1 || !editable"
         optionLabel="name"
         optionValue="toc_level_id"
         placeholder="Select outcome level"
         [(ngModel)]="activeTab.toc_level_id"
+        [required]="this.api.dataControlSE.currentResult?.appliesforTOCMWfilter ? initiative.planned_result : true"
         (ngModelChange)="indicatorView = false">
       </app-pr-select>
     </div>
 
     <app-pr-select
-      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id !== 3"
+      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id == 2"
       [options]="outcomeList"
       label="Outcome"
       [editable]="editable"
@@ -54,6 +54,11 @@
       [(ngModel)]="activeTab.toc_result_id"
       (ngModelChange)="getIndicator(); validateSelectedOptionEOI()">
     </app-pr-select>
+
+    <app-alert-status
+      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 4"
+      description="For any AA level results not already included as part of EoI outcomes, please contact your Science Group MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place).">
+    </app-alert-status>
   </div>
 
   <hr class="divider-20" />

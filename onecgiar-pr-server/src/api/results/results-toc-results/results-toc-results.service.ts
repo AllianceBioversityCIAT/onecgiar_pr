@@ -22,6 +22,7 @@ import { ResultsTocResultIndicatorsRepository } from './repositories/results-toc
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { Not } from 'typeorm';
+import { TocLevelEnum } from '../../../shared/constants/toc-level.enum';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -414,10 +415,10 @@ export class ResultsTocResultsService {
         }
         resTocRes[0]['toc_level_id'] =
           resTocRes[0]['planned_result'] != null &&
-          resTocRes[0]['planned_result'] == 0
+          resTocRes[0]['planned_result'] == 0 &&
+          resTocRes[0]['toc_level_id'] !== TocLevelEnum.ACTION_AREA_OUTCOME
             ? 3
             : resTocRes[0]['toc_level_id'];
-
         for (const init of conInit) {
           result_toc_results =
             await this._resultsTocResultRepository.getRTRPrimary(
@@ -427,7 +428,10 @@ export class ResultsTocResultsService {
               [init.id],
             );
           result_toc_results.forEach((el) => {
-            if (el['planned_result'] === false) {
+            if (
+              el['planned_result'] === false &&
+              el['toc_level_id'] !== TocLevelEnum.ACTION_AREA_OUTCOME
+            ) {
               el['toc_level_id'] = 3;
             }
           });
@@ -758,7 +762,11 @@ export class ResultsTocResultsService {
         } else {
           RtR = null;
         }
-
+        const saveResultTocResult =
+          this.validPermissionToSaveResultTocId<number>(
+            toc.toc_level_id,
+            toc.toc_result_id,
+          );
         if (RtR) {
           if (result.result_level_id == 2) {
             RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
@@ -773,7 +781,8 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.update(
             RtR.result_toc_result_id,
             {
-              toc_result_id: toc.toc_result_id,
+              toc_result_id: saveResultTocResult,
+              toc_level_id: toc.toc_level_id,
               action_area_outcome_id: toc.action_area_outcome_id,
               last_updated_by: user.id,
               planned_result:
@@ -785,7 +794,8 @@ export class ResultsTocResultsService {
         } else if (toc) {
           await this._resultsTocResultRepository.save({
             initiative_ids: toc?.initiative_id,
-            toc_result_id: toc?.toc_result_id,
+            toc_result_id: saveResultTocResult,
+            toc_level_id: toc.toc_level_id,
             created_by: user.id,
             last_updated_by: user.id,
             result_id: result.id,
@@ -852,11 +862,17 @@ export class ResultsTocResultsService {
             );
 
             if (RtR) {
+              const saveResultTocResult =
+                this.validPermissionToSaveResultTocId<number>(
+                  rtrc.toc_level_id,
+                  rtrc.toc_result_id,
+                );
               await this._resultsTocResultRepository.update(
                 RtR.result_toc_result_id,
                 {
-                  toc_result_id: rtrc?.toc_result_id,
+                  toc_result_id: saveResultTocResult,
                   action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+                  toc_level_id: rtrc?.toc_level_id,
                   toc_progressive_narrative:
                     rtrc?.toc_progressive_narrative || null,
                   planned_result: contributor?.planned_result,
@@ -871,20 +887,25 @@ export class ResultsTocResultsService {
               newRtR.results_id = result.id;
               newRtR.initiative_id = contributor?.initiative_id || null;
               newRtR.is_active = true;
+              newRtR.toc_level_id = rtrc?.toc_level_id;
               if (result.result_level_id == 2) {
                 newRtR.action_area_outcome_id =
                   rtrc?.action_area_outcome_id || null;
               } else {
-                newRtR.toc_result_id = rtrc?.toc_result_id || null;
+                newRtR.toc_result_id =
+                  this.validPermissionToSaveResultTocId<number>(
+                    newRtR.toc_level_id,
+                    newRtR.toc_result_id,
+                  );
               }
               newRtR.planned_result = contributor?.planned_result || null;
               newRtR.toc_progressive_narrative =
                 rtrc?.toc_progressive_narrative || null;
               RtRArray.push(newRtR);
-
               await this._resultsTocResultRepository.save({
                 initiative_ids: newRtR.initiative_id,
                 toc_result_id: newRtR.toc_result_id,
+                toc_level_id: newRtR.toc_level_id,
                 created_by: newRtR.created_by,
                 last_updated_by: newRtR.last_updated_by,
                 result_id: newRtR.results_id,
@@ -900,5 +921,10 @@ export class ResultsTocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  validPermissionToSaveResultTocId<T>(tocLevelId: TocLevelEnum, data: T): T {
+    if (TocLevelEnum.ACTION_AREA_OUTCOME === tocLevelId) return null;
+    return data ?? null;
   }
 }

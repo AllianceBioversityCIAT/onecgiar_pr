@@ -15,6 +15,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { MappedResultsModalComponent } from './multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../shared/directives/feedback-validation-directive.module';
+import { FilterOutcomeLevelByBooleanPipe } from './multiple-wps/components/multiple-wps-content/pipes/filter-outcome-level-by-boolean.pipe';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../../sh
     ActionAreaOutcomeComponent,
     MultipleWPsComponent,
     MultipleWPsContentComponent,
-    MappedResultsModalComponent
+    MappedResultsModalComponent,
+    FilterOutcomeLevelByBooleanPipe
   ],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
   imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, TooltipModule, DialogModule]

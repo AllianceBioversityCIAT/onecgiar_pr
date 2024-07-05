@@ -21,7 +21,24 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(private titleService: Title, public endpointsSE: EndpointsService, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService, public globalVariablesSE: GlobalVariablesService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    private titleService: Title,
+    public endpointsSE: EndpointsService,
+    public resultsListSE: ResultsListService,
+    public resultsSE: ResultsApiService,
+    public alertsFs: CustomizedAlertsFsService,
+    private qaSE: QualityAssuranceService,
+    public authSE: AuthService,
+    public alertsFe: CustomizedAlertsFeService,
+    public dataControlSE: DataControlService,
+    public resultsListFilterSE: ResultsListFilterService,
+    public wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public tocApiSE: TocApiService,
+    public ipsrListFilterService: IpsrListFilterService,
+    public globalVariablesSE: GlobalVariablesService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
   isStepTwoTwo: boolean = false;
   isStepTwoOne: boolean = false;
 
@@ -56,6 +73,7 @@ export class ApiService {
       response.official_code = response?.initiative_official_code;
       this.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
+
       const is_phase_open = response?.is_phase_open;
 
       switch (is_phase_open) {

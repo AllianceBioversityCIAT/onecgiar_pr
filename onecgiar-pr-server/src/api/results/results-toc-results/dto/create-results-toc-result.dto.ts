@@ -63,6 +63,7 @@ interface resultToResultInterfaceToc {
   results_id: number;
   planned_result?: boolean;
   initiative_id: number;
+  toc_level_id?: number;
   indicators?: any[];
   impactAreasTargets?: any[];
   sdgTargest?: any[];
