@@ -44,6 +44,7 @@ export interface CurrentResult {
   submitter_id?: any;
   crp?: any;
   role_id?: any;
+  appliesforTOCMWfilter?: boolean;
   // ?: string | number;
   // ?: string | number;
   // ?: string | number;

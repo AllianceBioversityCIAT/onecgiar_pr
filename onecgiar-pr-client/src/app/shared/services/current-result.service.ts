@@ -21,17 +21,14 @@ export class CurrentResultService {
   async GET_resultById() {
     await this.api.resultsSE.GET_resultById().subscribe(
       ({ response }) => {
-        //('GET_resultById');
-        //(response);
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
-        //(response);
         this.dataControlSE.currentResult = response;
-        // (this.dataControlSE.currentResult);
+        const { result_type_id } = this.dataControlSE.currentResult || {};
+        this.dataControlSE.currentResult.appliesforTOCMWfilter = result_type_id === 1 || result_type_id === 2 || result_type_id === 8;
 
-        // ({ is_discontinued: response.is_discontinued });
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:
