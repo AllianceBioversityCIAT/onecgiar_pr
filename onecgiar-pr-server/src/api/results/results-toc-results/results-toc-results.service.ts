@@ -415,10 +415,10 @@ export class ResultsTocResultsService {
         }
         resTocRes[0]['toc_level_id'] =
           resTocRes[0]['planned_result'] != null &&
-          resTocRes[0]['planned_result'] == 0
+          resTocRes[0]['planned_result'] == 0 &&
+          resTocRes[0]['toc_level_id'] !== TocLevelEnum.ACTION_AREA_OUTCOME
             ? 3
             : resTocRes[0]['toc_level_id'];
-
         for (const init of conInit) {
           result_toc_results =
             await this._resultsTocResultRepository.getRTRPrimary(
@@ -428,7 +428,10 @@ export class ResultsTocResultsService {
               [init.id],
             );
           result_toc_results.forEach((el) => {
-            if (el['planned_result'] === false) {
+            if (
+              el['planned_result'] === false &&
+              el['toc_level_id'] !== TocLevelEnum.ACTION_AREA_OUTCOME
+            ) {
               el['toc_level_id'] = 3;
             }
           });
