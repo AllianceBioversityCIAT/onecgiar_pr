@@ -15,7 +15,7 @@
     </app-pr-select>
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
-        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | filterOutcomeLevelByBoolean : initiative.planned_result === false"
+        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | filterOutcomeLevelByBoolean : initiative.planned_result"
         label="Outcome level"
         [editable]="editable"
         [disabled]="resultLevelId === 1 || !editable"
