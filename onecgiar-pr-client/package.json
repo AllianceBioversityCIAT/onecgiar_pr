@@ -79,6 +79,7 @@
       "!./src/app/**/models/*.ts",
       "!./src/app/**/routing-data-ipsr.ts",
       "!./src/app/**/routing-data.ts",
+      "!./src/app/**/pusher-blocked-routes.ts",
       "!./src/app/custom-fields/**/*"
     ],
     "testPathIgnorePatterns": [
