@@ -69,4 +69,18 @@ describe('FilterOutcomeLevelByBooleanPipe', () => {
       }
     ]);
   });
+  it('should return list with toc_level_id 3 if yes is true and appliesforTOCMWfilter is true', () => {
+    expect(pipe.transform(list, true)).toEqual([
+      {
+        toc_level_id: 2,
+        name: 'Work package Outcome',
+        description: ''
+      },
+      {
+        toc_level_id: 3,
+        name: 'End of Initiative Outcome',
+        description: ''
+      }
+    ]);
+  });
 });
