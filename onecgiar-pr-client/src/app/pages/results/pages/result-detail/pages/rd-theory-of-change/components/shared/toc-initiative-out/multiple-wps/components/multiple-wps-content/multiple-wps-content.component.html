@@ -44,6 +44,7 @@
 
     <app-pr-select
       *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
+      [required]="this.api.dataControlSE.currentResult?.appliesforTOCMWfilter ? initiative.planned_result : true"
       [options]="eoiList"
       label="Outcome"
       [editable]="editable"
