@@ -10,7 +10,7 @@ import { ResultLevelService } from '../../services/result-level.service';
 export class ResultLevelButtonsComponent {
   alertList = [
     'To enable the result to enter the QA process, an impact level result should be reported as MELIA. Please contact your Science Group MELIA focal point (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place) to ensure the impact story is included at the appropriate level of reporting.',
-    'For any AA level results not already included as part of EoI outcomes, please contact your Science Group MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place)'
+    'In case you have an AA outcome to report, please reach out to your MELIA Focal Point for guidance on how to report, contact your Science Group MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place.'
   ];
   @Input() currentResultType: any;
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
