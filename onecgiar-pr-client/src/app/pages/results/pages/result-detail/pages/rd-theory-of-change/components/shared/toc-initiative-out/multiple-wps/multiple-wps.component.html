@@ -2,34 +2,49 @@
   <div class="tabs-container">
     <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
       <div *ngFor="let tab of initiative?.result_toc_results; let i = index">
-        <div class="tab" [ngClass]="{'active': tab.uniqueId === activeTab.uniqueId}">
+        <div class="tab" [ngClass]="{ active: tab.uniqueId === activeTab.uniqueId }">
           <div class="tab-content" (click)="onActiveTab(tab)">
-            <i class="material-icons-round {{ completnessStatusValidation(tab)? 'valid' : 'invalid' }}"
-              style="font-size: 20px;">
-              check_circle
-            </i>
+            <i class="material-icons-round {{ completnessStatusValidation(tab) ? 'valid' : 'invalid' }}" style="font-size: 20px"> check_circle </i>
             <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
           </div>
-          <i *ngIf="initiative?.result_toc_results.length !== 1" (click)="onDeleteTab(tab, i + 1)"
-            pTooltip="Delete TOC contributio" tooltipPosition="top"
-            class="material-icons-round close_icon tab-delete-button-item">backspace</i>
+          <i
+            *ngIf="initiative?.result_toc_results.length !== 1"
+            (click)="onDeleteTab(tab, i + 1)"
+            pTooltip="Delete TOC contributio"
+            tooltipPosition="top"
+            class="material-icons-round close_icon tab-delete-button-item"
+            >backspace</i
+          >
         </div>
       </div>
     </div>
-    <div class="tab-add-button" (click)="onAddTab()"
+    <div
+      class="tab-add-button"
+      (click)="onAddTab()"
       *ngIf="initiative?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId) && editable">
-      <i class=" material-icons-round close_icon tab-add-button-item"
-        style="font-size: 16px; color: var(--pr-color-primary);" pTooltip="Add other TOC result">
+      <i
+        class="material-icons-round close_icon tab-add-button-item"
+        style="font-size: 16px; color: var(--pr-color-primary)"
+        pTooltip="Add other TOC result">
         add
       </i>
     </div>
   </div>
 
   <div class="multiple-wps-container">
-    <app-multiple-wps-content [editable]="editable" [activeTab]="activeTab" [resultLevelId]="resultLevelId"
-      [isIpsr]="isIpsr" [showMultipleWPsContent]="showMultipleWPsContent" [outcomeList]="outcomeList"
-      [eoiList]="eoiList" [outputList]="outputList" [allTabsCreated]="this.initiative?.result_toc_results"
-      [selectedOptionsOutput]="selectedOptionsOutput" [selectedOptionsOutcome]="selectedOptionsOutcome"
+    <app-multiple-wps-content
+      [editable]="editable"
+      [initiative]="initiative"
+      [activeTab]="activeTab"
+      [resultLevelId]="resultLevelId"
+      [isIpsr]="isIpsr"
+      [showMultipleWPsContent]="showMultipleWPsContent"
+      [outcomeList]="outcomeList"
+      [eoiList]="eoiList"
+      [outputList]="outputList"
+      [allTabsCreated]="this.initiative?.result_toc_results"
+      [selectedOptionsOutput]="selectedOptionsOutput"
+      [selectedOptionsOutcome]="selectedOptionsOutcome"
       [selectedOptionsEOI]="selectedOptionsEOI"></app-multiple-wps-content>
   </div>
 </div>

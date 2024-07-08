@@ -16,10 +16,9 @@
 
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
-        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList"
+        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | filterOutcomeLevelByBoolean : initiative.planned_result"
         label="Outcome level"
         [editable]="editable"
-        [disabled]="(resultLevelId === 1 ? true : !activeTab?.planned_result) || !editable"
         optionLabel="name"
         optionValue="toc_level_id"
         placeholder="Select outcome level"
@@ -77,5 +76,4 @@
   </div>
 </div>
 
-<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"
-></app-mapped-results-modal>
+<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>
