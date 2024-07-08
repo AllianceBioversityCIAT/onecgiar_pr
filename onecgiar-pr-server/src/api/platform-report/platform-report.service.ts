@@ -93,7 +93,7 @@ export class PlatformReportService {
       const optionsIPSR = {
         format: 'A3',
         orientation: 'portrait',
-        timeout: '100000',
+        timeout: '300000',
         header: {
           height: '40mm',
         },
@@ -199,7 +199,7 @@ export class PlatformReportService {
       const optionsReporting = {
         format: 'A3',
         orientation: 'portrait',
-        timeout: '100000',
+        timeout: '300000',
         header: {
           height: '40mm',
         },
