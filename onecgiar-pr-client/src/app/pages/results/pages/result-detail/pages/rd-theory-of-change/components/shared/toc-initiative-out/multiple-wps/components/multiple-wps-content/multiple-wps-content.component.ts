@@ -62,15 +62,15 @@ export class MultipleWPsContentComponent implements OnChanges {
           ...item,
           full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`
         }));
+
+        const getText = (actionAreaId: number) => {
+          if (actionAreaId === 1) return '<strong>Systems Transformation</strong>';
+          if (actionAreaId === 2) return '<strong>Resilient Agrifood Systems</strong>';
+          return '<strong>Genetic Innovation</strong>';
+        };
         this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
           ...item,
-          full_name: `${
-            item.actionAreaId === 1
-              ? '<strong>Systems Transformation</strong>'
-              : item.actionAreaId === 2
-              ? '<strong>Resilient Agrifood Systems</strong>'
-              : '<strong>Genetic Innovation</strong>'
-          } (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
+          full_name: `${getText(item.actionAreaId)} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
         }));
         this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
         this.activeTab.wpinformation = response?.wpinformation;
