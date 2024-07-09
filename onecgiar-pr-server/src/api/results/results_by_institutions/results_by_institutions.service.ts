@@ -350,9 +350,7 @@ export class ResultsByInstitutionsService {
             institution.result_kp_mqap_institution_obj
               .predicted_institution_id &&
           institution.result_kp_mqap_institution_obj.confidant >=
-            confidenceThreshold
-            ? true
-            : false,
+            confidenceThreshold,
       },
     );
   }
