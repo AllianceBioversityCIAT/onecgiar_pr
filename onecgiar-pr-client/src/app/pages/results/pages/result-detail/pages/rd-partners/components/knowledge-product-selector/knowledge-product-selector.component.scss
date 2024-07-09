@@ -146,6 +146,7 @@
       }
 
       .delivery {
+        font-family: 'Poppins', sans-serif;
         padding: 7px 14px;
         background-color: white;
         color: var(--pr-color-primary);
@@ -154,6 +155,7 @@
         border-radius: 15px;
         font-weight: 500;
         text-align: center;
+        font-size: 12px;
       }
 
       .delivery.active {
