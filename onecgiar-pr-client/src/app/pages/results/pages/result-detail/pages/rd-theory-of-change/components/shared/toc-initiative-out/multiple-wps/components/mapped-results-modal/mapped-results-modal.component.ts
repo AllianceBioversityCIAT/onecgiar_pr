@@ -9,6 +9,7 @@ import { MappedResultsModalServiceService } from './mapped-results-modal-service
 export class MappedResultsModalComponent {
   @Input() activeTab?: any = {};
   @Input() outputList?: any = null;
+  @Input() resultLevelId?: number | string = 0;
   combine = true;
 
   constructor(public mappedResultService: MappedResultsModalServiceService) {}
@@ -21,7 +22,7 @@ export class MappedResultsModalComponent {
     if (this.mappedResultService.isTarget) {
       return 'Target contributions';
     } else {
-      return 'Results mapped to the same TOC Output';
+      return `Results mapped to the same TOC ${this.activeTab?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'}`;
     }
   }
 

@@ -32,11 +32,6 @@ export class ResultsTocResultsController {
     );
   }
 
-  @Get()
-  findAll() {
-    return this.resultsTocResultsService.findAll();
-  }
-
   @Get('get/result/:resultId')
   finTocByResult(@Param('resultId') resultId: number) {
     return this.resultsTocResultsService.getTocByResult(resultId);
