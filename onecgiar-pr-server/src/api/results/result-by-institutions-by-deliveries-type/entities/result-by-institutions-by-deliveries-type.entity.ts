@@ -36,7 +36,9 @@ export class ResultByInstitutionsByDeliveriesType {
   })
   result_by_institution_id: number;
 
-  @ManyToOne(() => ResultsByInstitution, (ri) => ri.id, { nullable: false })
+  @ManyToOne(() => ResultsByInstitution, (ri) => ri.delivery, {
+    nullable: false,
+  })
   @JoinColumn({
     name: 'result_by_institution_id',
   })

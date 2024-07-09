@@ -449,8 +449,6 @@ export class ResultsKnowledgeProductMapper {
       institutionDto.possible_matched_institution_id =
         i.predicted_institution_id;
       institutionDto.source_name = i.intitution_name;
-      institutionDto.user_matched_institution_id =
-        i.results_by_institutions_object?.institutions_id;
 
       return institutionDto;
     });

@@ -11,7 +11,7 @@ export class RdPartnersService {
   toggle = 0;
   centers: centerInterfacesToc[] = [];
 
-  constructor(private api: ApiService) {}
+  constructor(public api: ApiService) {}
 
   validateDeliverySelection(deliveries, deliveryId) {
     if (!(typeof deliveries == 'object')) return false;
@@ -31,6 +31,37 @@ export class RdPartnersService {
     index < 0 ? option?.deliveries.push(deliveryId) : option?.deliveries.splice(index, 1);
   }
 
+  validateDeliverySelectionPartners(deliveries, deliveryId) {
+    if (typeof deliveries !== 'object') return false;
+
+    return deliveries.find(delivery => delivery.partner_delivery_type_id == deliveryId);
+  }
+
+  onSelectDeliveryPartners(option, deliveryId) {
+    if (this.api.rolesSE.readOnly) return;
+
+    const index = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === deliveryId);
+
+    if (deliveryId == 4) {
+      if (index < 0) {
+        option.delivery = [{ partner_delivery_type_id: deliveryId }];
+      } else {
+        option.delivery.splice(index, 1);
+      }
+    } else {
+      const indexOption4 = option.delivery.findIndex(delivery => delivery.partner_delivery_type_id === 4);
+      if (indexOption4 >= 0) {
+        option.delivery.splice(indexOption4, 1);
+      }
+
+      if (index < 0) {
+        option.delivery.push({ partner_delivery_type_id: deliveryId });
+      } else {
+        option.delivery.splice(index, 1);
+      }
+    }
+  }
+
   removePartner(index) {
     this.partnersBody.institutions.splice(index, 1);
     this.toggle++;
@@ -39,9 +70,7 @@ export class RdPartnersService {
   getSectionInformation(no_applicable_partner?) {
     this.api.resultsSE.GET_partnersSection().subscribe({
       next: ({ response }) => {
-        //(response);
         this.partnersBody = response;
-        if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       },
       error: err => {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;

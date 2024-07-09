@@ -189,14 +189,6 @@ export class ResultsApiService {
 
   GET_partnersSection() {
     return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
-      map(resp => {
-        if (resp?.response?.mqap_institutions) {
-          resp?.response?.mqap_institutions.map(resp => {
-            if (!resp?.user_matched_institution?.deliveries?.length) resp.user_matched_institution.deliveries = [3];
-          });
-        }
-        return resp;
-      }),
       this.saveButtonSE.isGettingSectionPipe()
     );
   }
