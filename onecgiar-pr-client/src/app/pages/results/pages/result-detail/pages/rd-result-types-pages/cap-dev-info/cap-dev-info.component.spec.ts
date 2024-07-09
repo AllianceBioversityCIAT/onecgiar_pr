@@ -13,6 +13,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { environment } from '../../../../../../../../environments/environment';
 
 describe('CapDevInfoComponent', () => {
   let component: CapDevInfoComponent;
@@ -213,7 +214,7 @@ describe('CapDevInfoComponent', () => {
   describe('validate_capdev_term_id()', () => {
     it('should return the correct description for delivery method', () => {
       const description = component.deliveryMethodDescription();
-      const expectedDescription = `If you selected 'In person' or 'Blended', please ensure that you have the correct selections for <a href="http://localhost:4200/result/result-detail/${mockApiService.resultsSE.currentResultCode}/geographic-location?phase=${mockApiService.resultsSE.currentResultPhase}" class="open_route" target="_blank">section 4. Geographic Location</a>.`;
+      const expectedDescription = `If you selected 'In person' or 'Blended', please ensure that you have the correct selections for <a href="${environment.frontBaseUrl}result/result-detail/${mockApiService.resultsSE.currentResultCode}/geographic-location?phase=${mockApiService.resultsSE.currentResultPhase}" class="open_route" target="_blank">section 4. Geographic Location</a>.`;
 
       expect(description).toEqual(expectedDescription);
     });
