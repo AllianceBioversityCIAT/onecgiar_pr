@@ -61,51 +61,53 @@
 
           <div class="type">
             Website:
-            <a *ngIf="partner?.obj_institutions?.website_link" class="type-link" [href]="partner?.obj_institutions?.website_link"
-            target="_blank" rel="noopener noreferrer">{{partner?.obj_institutions?.website_link}}</a>
-            <span *ngIf="!partner?.obj_institutions?.website_link" style="font-weight: 500;">Not available</span>
+            <a
+              *ngIf="partner?.obj_institutions?.website_link"
+              class="type-link"
+              [href]="partner?.obj_institutions?.website_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ partner?.obj_institutions?.website_link }}</a
+            >
+            <span *ngIf="!partner?.obj_institutions?.website_link" style="font-weight: 500">Not available</span>
           </div>
         </div>
       </div>
 
       <div class="chips_container partners_selected">
-        <div appFeedbackValidation labelText="Partner role"
-            [isComplete]="partner?.delivery.length > 0">
-        </div>
+        <div appFeedbackValidation labelText="Partner role" [isComplete]="partner?.delivery.length > 0"></div>
         <div class="pr_chip_selected" style="background-color: white !important; padding: 0 !important">
-          <div class="type">
-            Partner role: <span style="color: #f00;">*</span>
-          </div>
+          <div class="type">Partner role: <span style="color: #f00">*</span></div>
 
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
-            <div
+            <button
               class="delivery"
               *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) : true"
               [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) }"
               (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 1)">
               Scaling
-            </div>
-            <div
+            </button>
+            <button
               class="delivery"
               *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) : true"
               [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) }"
               (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 2)">
               Demand
-            </div>
-            <div
+            </button>
+            <button
               class="delivery"
               *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) : true"
               [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) }"
               (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 3)">
               Innovation
-            </div>
-            <div
+            </button>
+            <button
               class="delivery"
               *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) : true"
               [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) }"
               (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 4)">
               Other
-            </div>
+            </button>
           </div>
         </div>
       </div>
