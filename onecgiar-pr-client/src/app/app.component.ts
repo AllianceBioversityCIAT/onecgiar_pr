@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import Hotjar from '@hotjar/browser';
 import { AuthService } from './shared/services/api/auth.service';
 import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
@@ -15,6 +16,7 @@ export class AppComponent implements OnInit {
   isProduction = environment.production;
   constructor(public AuthService: AuthService, public rolesSE: RolesService, public api: ApiService, public footerSE: FooterService) {}
   ngOnInit(): void {
+    Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
     setTimeout(() => {
       if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
