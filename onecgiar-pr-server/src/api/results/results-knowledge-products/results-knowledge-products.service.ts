@@ -47,6 +47,7 @@ import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { InstitutionRoleEnum } from '../results_by_institutions/entities/institution_role.enum';
+import { FilterDto } from './dto/filter.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -809,8 +810,8 @@ export class ResultsKnowledgeProductsService {
       );
     }
 
-    const individualItems = details.map((e) =>
-      e.split('is not valid')?.[0]?.trim(),
+    const individualItems = details.map(
+      (e) => e.split('is not valid')?.[0]?.trim(),
     );
     const itemString = StringUtils.join(individualItems, ', ', ', and ');
 
@@ -1721,6 +1722,23 @@ export class ResultsKnowledgeProductsService {
         response: data,
         message:
           'The data for the knowledge products have been retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getMQAPMatchesList(filterDto: FilterDto) {
+    try {
+      const data =
+        await this._resultsKnowledgeProductRepository.getMQAPMatchesList(
+          filterDto,
+        );
+
+      return {
+        response: data,
+        message: 'The MQAP matches have been retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {

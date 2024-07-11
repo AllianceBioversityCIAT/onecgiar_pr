@@ -9,6 +9,7 @@ import {
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { FilterDto } from '../dto/filter.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsRepository
@@ -226,5 +227,32 @@ export class ResultsKnowledgeProductsRepository
         debug: true,
       });
     }
+  }
+
+  getMQAPMatchesList(filterDto: FilterDto) {
+    const query = `
+      select r.result_code, concat('https://hdl.handle.net/', rkp.handle) kp_handle, 
+      if(rbi.id is null, "This Knowledge Product does not have partners recorded in CGSpace", rkmi.intitution_name) author_affiliation,
+      if(rbi.id is null, "<Not provided>", if(ci.id is null, "<Not reviewed>", ci.id)) partner_id, 
+      if(rbi.id is null, "<Not provided>", if(ci.id is null, "<Not reviewed>", ci.name)) partner_name, 
+      if(rbi.is_predicted = 1, "Prediction", "Manual matching") matching_type,
+      if(rbi.is_predicted <> 1 or rbi.id is null, "<Not applicable>", rkmi.confidant) confidence_level, 
+      if(rbi.id is null, "<Not applicable>", if(rbi.is_predicted <> 1 or rbi.id is null, "No", if(rkmi.predicted_institution_id = rbi.institutions_id, "No", "Yes"))) is_correction
+      from results_knowledge_product rkp
+      right join result r on rkp.results_id = r.id and r.is_active = 1
+      left join results_by_institution rbi on rbi.result_id = r.id and rbi.is_active
+      left join clarisa_institutions ci on rbi.institutions_id = ci.id
+      left join results_kp_mqap_institutions rkmi on rbi.result_kp_mqap_institution_id = rkmi.result_kp_mqap_institution_id and rkmi.is_active = 1
+      where rkp.is_active = 1 and r.version_id = ?;
+    `;
+    return this.query(query, [filterDto.phase_id])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: ResultsKnowledgeProductsRepository.name,
+          debug: true,
+        }),
+      );
   }
 }
