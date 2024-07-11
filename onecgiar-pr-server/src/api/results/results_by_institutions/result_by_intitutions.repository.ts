@@ -173,7 +173,8 @@ export class ResultByIntitutionsRepository
     select 
     	rbi.id,
     	rbi.institutions_id,
-    	rbi.institution_roles_id
+    	rbi.institution_roles_id,
+      rbi.is_predicted
     from results_by_institution rbi 
     where rbi.result_id = ?
     	and rbi.is_active > 0;
@@ -392,7 +393,7 @@ export class ResultByIntitutionsRepository
     }
   }
 
-  async updateIstitutions(
+  async updateInstitutions(
     resultId: number,
     institutionsArray: institutionsInterface[],
     userId: number,
@@ -535,7 +536,7 @@ export class ResultByIntitutionsRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
-        error: `updateIstitutions ${error}`,
+        error: `updateInstitutions ${error}`,
         debug: true,
       });
     }
@@ -644,7 +645,7 @@ export class ResultByIntitutionsRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByIntitutionsRepository.name,
-        error: `updateIstitutions ${error}`,
+        error: `updateInstitutions ${error}`,
         debug: true,
       });
     }

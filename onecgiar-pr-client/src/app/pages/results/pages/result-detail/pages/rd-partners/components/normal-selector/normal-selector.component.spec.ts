@@ -16,16 +16,19 @@ describe('NormalSelectorComponent', () => {
   beforeEach(async () => {
     mockRdPartnersService = {
       partnersBody: {
-        mqap_institutions: [
-          { user_matched_institution: 'inst1' }
-        ],
+        mqap_institutions: [{ user_matched_institution: 'inst1' }],
         institutions: [
           {
-            institutions_type_name: 'name'
+            obj_institutions: {
+              obj_institution_type_code: {
+                id: 1,
+                name: 'name'
+              }
+            },
           }
         ]
       }
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -57,7 +60,11 @@ describe('NormalSelectorComponent', () => {
     it('should initialize disableOptions correctly', () => {
       component.getDisableOptions();
 
-      expect(component.disableOptions).toEqual(['inst1']);
+      expect(component.disableOptions).toEqual([
+        {
+          "user_matched_institution": "inst1",
+        }
+      ]);
     });
   });
 

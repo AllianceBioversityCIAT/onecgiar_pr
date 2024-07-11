@@ -56,15 +56,17 @@ describe('KnowledgeProductSelectorComponent', () => {
   describe('institutions_institutions_type_name()', () => {
     it('should set institutions_type_name in institutions_institutions_type_name method', () => {
       const partner = {
-        user_matched_institution: {
-          institutions_id: 5 ,
-          institutions_type_name: ''
+        institutions_id: 5,
+        obj_institutions: {
+          obj_institution_type_code: {
+            name: ''
+          }
         }
       };
 
       component.institutions_institutions_type_name(partner);
 
-      expect(partner.user_matched_institution.institutions_type_name).toEqual('Type 1');
+      expect(partner.obj_institutions.obj_institution_type_code.name).toEqual('Type 1');
     });
   });
 });

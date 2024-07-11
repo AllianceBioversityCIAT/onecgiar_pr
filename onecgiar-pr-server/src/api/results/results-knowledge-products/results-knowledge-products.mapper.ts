@@ -30,7 +30,12 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
     //knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
-    knowledgeProductDto.handle = mqapResponseDto?.handle;
+    const hasQuery = (mqapResponseDto?.Handle ?? '').indexOf('?');
+    const linkSplit = (mqapResponseDto?.Handle ?? '')
+      .slice(0, hasQuery != -1 ? hasQuery : mqapResponseDto?.Handle.length)
+      .split('/');
+    const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+    knowledgeProductDto.handle = handleId;
     //knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
     knowledgeProductDto.is_melia = null; //null, as this field is mapped by the user
     knowledgeProductDto.licence = mqapResponseDto?.Rights;
@@ -449,8 +454,6 @@ export class ResultsKnowledgeProductMapper {
       institutionDto.possible_matched_institution_id =
         i.predicted_institution_id;
       institutionDto.source_name = i.intitution_name;
-      institutionDto.user_matched_institution_id =
-        i.results_by_institutions_object?.institutions_id;
 
       return institutionDto;
     });
