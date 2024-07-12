@@ -49,8 +49,18 @@ describe('MappedResultsModalComponent', () => {
 
   it('should return the correct dynamic modal title when isTarget is false', () => {
     component.mappedResultService.isTarget = false;
+    component.activeTab.planned_result = true;
+    component.resultLevelId = 1;
     const modalTitle = component.dynamicModalTitle();
     expect(modalTitle).toBe('Results mapped to the same TOC Output');
+  });
+
+  it('should return the correct dynamic modal title when isTarget is false', () => {
+    component.mappedResultService.isTarget = false;
+    component.activeTab.planned_result = false;
+    component.resultLevelId = 1;
+    const modalTitle = component.dynamicModalTitle();
+    expect(modalTitle).toBe('Results mapped to the same TOC Outcome');
   });
 
   it('should set combine to true if columnAttr is "result_code"', () => {

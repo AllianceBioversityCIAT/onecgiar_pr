@@ -1,73 +1,79 @@
 <div class="container">
   <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
-    <app-pr-select *ngIf="activeTab?.planned_result && resultLevelId === 1" [options]="outputList" label="Output"
-      optionLabel="extraInformation" optionValue="toc_result_id" [disabled]="!editable" [editable]="editable"
-      placeholder="Select output" [(ngModel)]="activeTab.toc_result_id" [extraInformation]="true"
-      (ngModelChange)="getIndicator();validateSelectedOptionOutPut()">
+    <app-pr-select
+      *ngIf="activeTab?.planned_result && resultLevelId === 1"
+      [options]="outputList"
+      label="Output"
+      optionLabel="extraInformation"
+      optionValue="toc_result_id"
+      [disabled]="!editable"
+      [editable]="editable"
+      placeholder="Select output"
+      [(ngModel)]="activeTab.toc_result_id"
+      [extraInformation]="true"
+      (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
     </app-pr-select>
 
-    <div style="max-width: 250px;" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
-      <app-pr-select [options]="tocInitiativeOutcomeListsSE.outcomeLevelList" label="Outcome level"
-        [editable]="editable" [disabled]="(resultLevelId === 1 ? true : !activeTab?.planned_result) || !editable"
-        optionLabel="name" optionValue="toc_level_id" placeholder="Select outcome level"
-        [(ngModel)]="activeTab.toc_level_id" (ngModelChange)="indicatorView = false">
+    <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
+      <app-pr-select
+        [options]="tocInitiativeOutcomeListsSE.outcomeLevelList | filterOutcomeLevelByBoolean : initiative.planned_result"
+        label="Outcome level"
+        [editable]="editable"
+        optionLabel="name"
+        optionValue="toc_level_id"
+        placeholder="Select outcome level"
+        [(ngModel)]="activeTab.toc_level_id"
+        (ngModelChange)="indicatorView = false">
       </app-pr-select>
     </div>
 
-    <app-pr-select *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id !== 3"
-      [options]="outcomeList" label="Outcome" [editable]="editable"
-      [disabled]="(resultLevelId === 1 && false) || !editable" optionLabel="extraInformation" [extraInformation]="true"
-      optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator();validateSelectedOptionOutCome()">
+    <app-pr-select
+      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id !== 3"
+      [options]="outcomeList"
+      label="Outcome"
+      [editable]="editable"
+      [disabled]="(resultLevelId === 1 && false) || !editable"
+      optionLabel="extraInformation"
+      [extraInformation]="true"
+      optionValue="toc_result_id"
+      placeholder="Select outcome"
+      [(ngModel)]="activeTab.toc_result_id"
+      (ngModelChange)="getIndicator(); validateSelectedOptionOutCome()">
     </app-pr-select>
 
-    <app-pr-select *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
-      [options]="eoiList" label="Outcome" [editable]="editable" [disabled]="(resultLevelId === 1 && false) || !editable"
-      optionLabel="title" optionValue="toc_result_id" placeholder="Select outcome" [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator();validateSelectedOptionEOI()">
+    <app-pr-select
+      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
+      [options]="eoiList"
+      label="Outcome"
+      [editable]="editable"
+      [disabled]="(resultLevelId === 1 && false) || !editable"
+      optionLabel="title"
+      optionValue="toc_result_id"
+      placeholder="Select outcome"
+      [(ngModel)]="activeTab.toc_result_id"
+      (ngModelChange)="getIndicator(); validateSelectedOptionEOI()">
     </app-pr-select>
   </div>
 
-  <hr class="divider-20">
+  <hr class="divider-20" />
 
   <div *ngIf="indicatorView && showMultipleWPsContent && activeTab?.toc_result_id">
     <ng-container *ngIf="activeTab?.planned_result && resultLevelId === 1">
-      <app-alert-status description="The selected ToC element does not have any indicators associated with it."
+      <app-alert-status
+        description="The selected ToC element does not have any indicators associated with it."
         *ngIf="activeTab?.indicators?.length === 0"></app-alert-status>
-
-      <app-pr-field-header [label]="narrativeTypeResult()" [required]="false" *ngIf="activeTab?.indicators?.length > 0">
-      </app-pr-field-header>
-
-      <app-target-indicator [initiative]="indicator" *ngFor="let indicator of activeTab?.indicators"
-        [resultLevelId]="resultLevelId">
-      </app-target-indicator>
     </ng-container>
 
-    <!-- <div *ngIf="!isIpsr">
-      <app-pr-yes-or-not
-        label="Do you want to review relations with AA Outcomes, IA, SDG and related Targets defined in your TOC for this result?"
-        [(ngModel)]="activeTab.is_sdg_action_impact">
-      </app-pr-yes-or-not>
-
-      <div *ngIf="activeTab.is_sdg_action_impact">
-        <app-action-area-outcome [body]="activeTab?.actionAreaOutcome">
-        </app-action-area-outcome>
-
-        <app-impact-area-targets [body]="activeTab?.impactAreasTargets" [impactAreaRequid]="true">
-        </app-impact-area-targets>
-
-        <app-sdg-targets [body]="activeTab?.sdgTargest" [sdgRequid]="true">
-        </app-sdg-targets>
-      </div>
-    </div> -->
-
-    <app-pr-textarea [label]="dynamicProgressLabel()" [required]="false" placeholder="Enter text" [rows]="3"
-      [(ngModel)]="activeTab.toc_progressive_narrative" [maxWords]="150" *ngIf="showNarrative()">
+    <app-pr-textarea
+      [label]="dynamicProgressLabel()"
+      [required]="false"
+      placeholder="Enter text"
+      [rows]="3"
+      [(ngModel)]="activeTab.toc_progressive_narrative"
+      [maxWords]="150"
+      *ngIf="showNarrative()">
     </app-pr-textarea>
-
-    <app-pr-button icon="featured_play_list" [text]="dynamicMappedResultButtonText()"
-      (clickEvent)="openMappedResultsModal()" *ngIf="activeTab?.wpinformation?.wp_info.length"></app-pr-button>
   </div>
 </div>
 
-<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList"></app-mapped-results-modal>
+<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>

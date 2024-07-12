@@ -240,7 +240,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       return;
     }
 
-    const regex = /^https:\/\/(cgspace\.cgiar\.org\/(handle\/)?|hdl\.handle\.net\/)10568\/\d+$/;
+    const regex = /^https:\/\/(?:cgspace\.cgiar\.org\/items\/[0-9a-f-]{36}|hdl\.handle\.net\/10568\/\d+|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
 
     const isValid = regex.test(this.resultLevelSE.resultBody.handler);
 

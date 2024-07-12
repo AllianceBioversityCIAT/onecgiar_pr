@@ -514,33 +514,10 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_partnersSection', () => {
-    it('should call GET_partnersSection, map response correctly and should call isGettingSectionPipe', done => {
-      mockResponse = {
-        response: {
-          mqap_institutions: [
-            {
-              user_matched_institution: {
-                deliveries: null
-              }
-            }
-          ]
-        }
-      };
-
+    it('should call GET_partnersSection and should call isGettingSectionPipe', done => {
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
-
       service.GET_partnersSection().subscribe(response => {
-        expect(response).toEqual({
-          response: {
-            mqap_institutions: [
-              {
-                user_matched_institution: {
-                  deliveries: [3]
-                }
-              }
-            ]
-          }
-        });
+        expect(response).toEqual(mockResponse);
         done();
       });
 

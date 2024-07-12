@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { In, IsNull, Not } from 'typeorm';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
-import { UpdateResultsByInstitutionDto } from './dto/update-results_by_institution.dto';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsByInstitution } from './entities/results_by_institution.entity';
@@ -13,9 +13,9 @@ import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
-import { MQAPInstitutionDto } from './dto/mqap-institutions.dto';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -29,6 +29,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _globalParameterRepository: GlobalParameterRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -84,16 +85,6 @@ export class ResultsByInstitutionsService {
   async getGetInstitutionsPartnersByResultId(id: number) {
     try {
       const result = await this._resultRepository.getResultById(id);
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOne({
-          where: {
-            results_id: id,
-          },
-          relations: {
-            result_knowledge_product_institution_array: true,
-          },
-        });
-
       if (!result?.id) {
         throw {
           response: id,
@@ -102,8 +93,14 @@ export class ResultsByInstitutionsService {
         };
       }
 
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: { results_id: id },
+          relations: { result_knowledge_product_institution_array: true },
+        });
+
       if (
-        result.result_type_id == 6 &&
+        result.result_type_id === 6 &&
         !knowledgeProduct?.result_knowledge_product_id
       ) {
         throw {
@@ -113,65 +110,76 @@ export class ResultsByInstitutionsService {
         };
       }
 
-      const institutions =
-        await this._resultByIntitutionsRepository.getResultByInstitutionPartnersFull(
-          id,
-          knowledgeProduct
-            ? [
-                InstitutionRoleEnum.PARTNER,
-                InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-              ]
-            : [InstitutionRoleEnum.PARTNER],
-        );
+      let institutions: any = [];
+      institutions = await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: id,
+          is_active: true,
+          institution_roles_id: InstitutionRoleEnum.PARTNER,
+        },
+        relations: ['delivery', 'obj_institutions.obj_institution_type_code'],
+      });
 
-      if (institutions.length) {
-        const institutionsId: number[] = institutions.map((el) => el.id);
-        const delivery =
-          await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
-            institutionsId,
-          );
-        institutions.map((inst) => {
-          inst['deliveries'] = delivery
-            .filter((dl) => dl.result_by_institution_id == inst.id)
-            .map((res) => res.partner_delivery_type_id);
-        });
-      }
+      institutions = institutions.map((institution) => ({
+        ...institution,
+        delivery: institution.delivery.filter((delivery) => delivery.is_active),
+        obj_institutions: {
+          name: institution.obj_institutions.name,
+          website_link: institution.obj_institutions.website_link,
+          obj_institution_type_code: {
+            id: institution.obj_institutions.obj_institution_type_code.code,
+            name: institution.obj_institutions.obj_institution_type_code.name,
+          },
+        },
+      }));
 
-      let mqap_institutions: MQAPInstitutionDto[] = null;
+      let mqap_institutions: any = [];
 
       if (knowledgeProduct) {
-        mqap_institutions =
-          knowledgeProduct.result_knowledge_product_institution_array
-            .filter((rkpi) => rkpi.is_active)
-            .map((rkpi) => {
-              const mqapInstitution: MQAPInstitutionDto =
-                new MQAPInstitutionDto();
+        mqap_institutions = await this._resultByIntitutionsRepository.find({
+          where: {
+            result_id: result.id,
+            is_active: true,
+            institution_roles_id:
+              InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+            is_predicted: Not(IsNull()),
+            result_kp_mqap_institution_id: Not(IsNull()),
+          },
+          relations: [
+            'result_kp_mqap_institution_obj',
+            'delivery',
+            'obj_institutions.obj_institution_type_code',
+          ],
+          order: { is_predicted: 'ASC' },
+        });
 
-              mqapInstitution.confidant = rkpi.confidant;
-              mqapInstitution.intitution_name = rkpi.intitution_name;
-              mqapInstitution.predicted_institution_id =
-                rkpi.predicted_institution_id;
-              mqapInstitution.result_kp_mqap_institution_id =
-                rkpi.result_kp_mqap_institution_id;
-              mqapInstitution.user_matched_institution =
-                institutions.find(
-                  (i) => i.id === rkpi.results_by_institutions_id,
-                ) || this.getEmptyResultByInstitution();
+        mqap_institutions = mqap_institutions.map((institution) => {
+          const mappedInstitution = {
+            ...institution,
+            delivery: institution.delivery.filter(
+              (delivery) => delivery.is_active,
+            ),
+          };
 
-              return mqapInstitution;
-            });
+          if (institution.obj_institutions) {
+            mappedInstitution.obj_institutions = {
+              name: institution.obj_institutions.name,
+              website_link: institution.obj_institutions.website_link,
+              obj_institution_type_code: {
+                name: institution.obj_institutions.obj_institution_type_code
+                  .name,
+              },
+            };
+          }
+
+          return mappedInstitution;
+        });
       }
 
       return {
         response: {
-          no_applicable_partner: result.no_applicable_partner ? true : false,
-          institutions: knowledgeProduct
-            ? institutions.filter(
-                (i) =>
-                  i.institution_roles_id ==
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-              )
-            : institutions,
+          no_applicable_partner: !!result.no_applicable_partner,
+          institutions,
           mqap_institutions,
         },
         message: 'Successful response',
@@ -227,191 +235,56 @@ export class ResultsByInstitutionsService {
           results_id: incomingResult.id,
         });
 
-      if (knowledgeProduct) {
-        if (data.mqap_institutions?.length) {
-          //here we filter out from the additional contributors the mqap manual mappings
-          data.institutions = data.institutions.filter(
-            (i) =>
-              !data.mqap_institutions
-                .filter(
-                  (mqap) => mqap.user_matched_institution?.institutions_id,
-                )
-                .find(
-                  (mqap) =>
-                    mqap.user_matched_institution.institutions_id ==
-                    i.institutions_id,
-                ),
-          );
-        }
-
-        /*
-          in case we have additional contributors, we need to merge them with the 
-          mqap manually mapped institutions
-        */
-        const additionalContributors = (data.institutions ?? []).map((i) => {
-          i['institution_roles_id'] =
-            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
-          return i;
-        });
-
-        const partners = data.mqap_institutions
-          .filter((ma) => ma.user_matched_institution?.institutions_id)
-          .map((ma) => {
-            const institution = ma.user_matched_institution;
-            institution['institution_mqap_id'] =
-              ma.result_kp_mqap_institution_id;
-            return institution;
-          });
-
-        await this._resultByIntitutionsRepository.updateIstitutions(
-          data.result_id,
-          additionalContributors,
+      if (knowledgeProduct && data.mqap_institutions?.length) {
+        await this.handleMqapInstitutions(
+          data.mqap_institutions,
+          incomingResult.id,
           user.id,
-          data?.no_applicable_partner,
-          [InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS],
         );
-        data.institutions = data?.no_applicable_partner
-          ? partners
-          : [...additionalContributors, ...partners];
       }
 
-      const result =
-        await this._resultByIntitutionsRepository.updateIstitutions(
-          data.result_id,
+      await this._resultRepository.update(incomingResult.id, {
+        no_applicable_partner: data.no_applicable_partner,
+      });
+      if (data.no_applicable_partner === true) {
+        const partnersToInactive =
+          await this._resultByIntitutionsRepository.find({
+            where: {
+              result_id: incomingResult.id,
+              institution_roles_id: InstitutionRoleEnum.PARTNER,
+              is_active: true,
+            },
+          });
+
+        for (const partner of partnersToInactive) {
+          await this._resultByIntitutionsRepository.update(
+            {
+              id: +partner.id,
+            },
+            {
+              is_active: false,
+            },
+          );
+
+          await this._resultByInstitutionsByDeliveriesTypeRepository.update(
+            { result_by_institution_id: partner.id },
+            { is_active: false },
+          );
+        }
+      } else {
+        await this.handleInstitutions(
           data.institutions,
+          data.result_id,
           user.id,
-          data?.no_applicable_partner,
-          [InstitutionRoleEnum.PARTNER],
         );
-
-      incomingResult.no_applicable_partner = data.no_applicable_partner;
-      await this._resultRepository.save(incomingResult);
-      for (let index = 0; index < data.institutions.length; index++) {
-        const incomingInstitution = data.institutions[index];
-        const isInstitutions =
-          await this._resultByIntitutionsRepository.getResultByInstitutionExists(
-            data.result_id,
-            incomingInstitution.institutions_id,
-            incomingInstitution?.institution_roles_id ??
-              InstitutionRoleEnum.PARTNER,
-          );
-        if (!isInstitutions) {
-          const institutionsNew: ResultsByInstitution =
-            new ResultsByInstitution();
-          institutionsNew.created_by = user.id;
-          institutionsNew.institution_roles_id =
-            incomingInstitution['institution_roles_id'] ??
-            InstitutionRoleEnum.PARTNER;
-          institutionsNew.institutions_id = incomingInstitution.institutions_id;
-          institutionsNew.last_updated_by = user.id;
-          institutionsNew.result_id = data.result_id;
-          institutionsNew.is_active = true;
-          const responseInstitution =
-            await this._resultByIntitutionsRepository.save(institutionsNew);
-
-          await this._resultInstitutionsBudgetRepository.save({
-            result_institution_id: institutionsNew.id,
-            created_by: user.id,
-            last_updated_by: user.id,
-          });
-
-          if (knowledgeProduct) {
-            const kpInstitution =
-              await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
-                {
-                  result_kp_mqap_institution_id:
-                    incomingInstitution.institution_mqap_id ?? 0,
-                },
-              );
-
-            if (kpInstitution) {
-              this._resultsKnowledgeProductInstitutionRepository.update(
-                {
-                  result_kp_mqap_institution_id:
-                    incomingInstitution.institution_mqap_id,
-                },
-                { results_by_institutions_id: responseInstitution.id },
-              );
-            }
-          }
-
-          const delivery = incomingInstitution.deliveries;
-          if (delivery) {
-            const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
-              [];
-            for (let i = 0; i < delivery.length; i++) {
-              const newInstitutionsDeliveries =
-                new ResultByInstitutionsByDeliveriesType();
-              newInstitutionsDeliveries.result_by_institution_id =
-                responseInstitution.id;
-              newInstitutionsDeliveries.partner_delivery_type_id = delivery[i];
-              newInstitutionsDeliveries.last_updated_by = user.id;
-              newInstitutionsDeliveries.created_by = user.id;
-              InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-            }
-            await this._resultByInstitutionsByDeliveriesTypeRepository.save(
-              InstitutionsDeliveriesArray,
-            );
-          }
-        } else {
-          if (knowledgeProduct) {
-            const kpInstitution =
-              await this._resultsKnowledgeProductInstitutionRepository.findOneBy(
-                {
-                  result_kp_mqap_institution_id:
-                    incomingInstitution.institution_mqap_id ?? 0,
-                },
-              );
-
-            if (kpInstitution) {
-              this._resultsKnowledgeProductInstitutionRepository.update(
-                {
-                  result_kp_mqap_institution_id:
-                    incomingInstitution.institution_mqap_id,
-                },
-                { results_by_institutions_id: isInstitutions.id },
-              );
-            }
-          }
-          const delivery = incomingInstitution.deliveries;
-          await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
-            isInstitutions.id,
-            incomingInstitution.deliveries,
-            user.id,
-          );
-          const InstitutionsDeliveriesArray: ResultByInstitutionsByDeliveriesType[] =
-            [];
-          if (delivery) {
-            for (let i = 0; i < delivery.length; i++) {
-              const exist =
-                await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByTypeAndResultByInstitution(
-                  isInstitutions.id,
-                  incomingInstitution.deliveries[i],
-                );
-              if (!exist) {
-                const newInstitutionsDeliveries =
-                  new ResultByInstitutionsByDeliveriesType();
-                newInstitutionsDeliveries.result_by_institution_id =
-                  isInstitutions.id;
-                newInstitutionsDeliveries.partner_delivery_type_id =
-                  delivery[i];
-                newInstitutionsDeliveries.last_updated_by = user.id;
-                newInstitutionsDeliveries.created_by = user.id;
-                InstitutionsDeliveriesArray.push(newInstitutionsDeliveries);
-              }
-            }
-            await this._resultByInstitutionsByDeliveriesTypeRepository.save(
-              InstitutionsDeliveriesArray,
-            );
-          }
-        }
       }
 
+      const getInstitutions = await this.getGetInstitutionsPartnersByResultId(
+        data.result_id,
+      );
       return {
-        response: {
-          result,
-        },
-        message: 'Successfully update partners',
+        response: getInstitutions.response,
+        message: 'Successfully updated partners',
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -419,22 +292,156 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  findAll() {
-    return `This action returns all resultsByInstitutions`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} resultsByInstitution`;
-  }
-
-  update(
-    id: number,
-    updateResultsByInstitutionDto: UpdateResultsByInstitutionDto,
+  private async handleMqapInstitutions(
+    mqapInstitutions: ResultsByInstitution[],
+    resultId: number,
+    userId: number,
   ) {
-    return `This action updates a #${id} resultsByInstitution ${updateResultsByInstitutionDto}`;
+    for (const institution of mqapInstitutions) {
+      const mqapInstitutionExist =
+        await this._resultByIntitutionsRepository.findOneBy({
+          result_id: resultId,
+          institution_roles_id:
+            InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+          result_kp_mqap_institution_id:
+            institution.result_kp_mqap_institution_id,
+        });
+
+      if (mqapInstitutionExist) {
+        await this.updateMqapInstitution(
+          mqapInstitutionExist.id,
+          institution,
+          userId,
+        );
+        await this.handleDeliveries(
+          institution.delivery,
+          institution.id,
+          userId,
+        );
+      }
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} resultsByInstitution`;
+  private async updateMqapInstitution(
+    id: number,
+    institution: ResultsByInstitution,
+    userId: number,
+  ) {
+    const globalParameter = await this._globalParameterRepository.findOne({
+      where: { name: 'kp_mqap_institutions_confidence' },
+      select: ['value'],
+    });
+
+    if (!globalParameter) {
+      throw new Error(
+        "Global parameter 'kp_mqap_institutions_confidence' not found",
+      );
+    }
+
+    const confidenceThreshold = +globalParameter.value;
+    await this._resultByIntitutionsRepository.update(
+      { id },
+      {
+        last_updated_by: userId,
+        is_active: institution.is_active,
+        institutions_id: institution.institutions_id,
+        is_predicted:
+          institution.institutions_id ===
+            institution.result_kp_mqap_institution_obj
+              .predicted_institution_id &&
+          institution.result_kp_mqap_institution_obj.confidant >=
+            confidenceThreshold,
+      },
+    );
+  }
+
+  private async handleDeliveries(
+    deliveries: ResultByInstitutionsByDeliveriesType[],
+    institutionId: number,
+    userId: number,
+  ) {
+    if (institutionId) {
+      const deliveriesToDelete =
+        await this._resultByInstitutionsByDeliveriesTypeRepository.find({
+          where: { result_by_institution_id: institutionId, is_active: true },
+        });
+      if (deliveriesToDelete.length > 0) {
+        const idsToDelete = deliveriesToDelete.map((delivery) => delivery.id);
+        await this._resultByInstitutionsByDeliveriesTypeRepository.update(
+          { id: In(idsToDelete) },
+          { is_active: false, last_updated_by: userId },
+        );
+      }
+    }
+
+    if (deliveries.length > 0) {
+      const deliveriesToSave = deliveries.map((delivery) => ({
+        result_by_institution_id: institutionId,
+        partner_delivery_type_id: delivery.partner_delivery_type_id,
+        created_by: userId,
+        last_updated_by: userId,
+        is_active: true,
+      }));
+
+      await this._resultByInstitutionsByDeliveriesTypeRepository.save(
+        deliveriesToSave,
+      );
+    }
+  }
+
+  private async handleInstitutions(
+    institutions: ResultsByInstitution[],
+    resultId: number,
+    userId: number,
+  ) {
+    for (const institution of institutions) {
+      const isInstitutions = await this._resultByIntitutionsRepository.findOne({
+        where: {
+          result_id: resultId,
+          institutions_id: institution.institutions_id,
+          institution_roles_id: InstitutionRoleEnum.PARTNER,
+          is_active: true,
+        },
+      });
+
+      if (!isInstitutions) {
+        const newInstitution = await this._resultByIntitutionsRepository.save({
+          created_by: userId,
+          institution_roles_id:
+            institution.institution_roles_id ?? InstitutionRoleEnum.PARTNER,
+          institutions_id: institution.institutions_id,
+          last_updated_by: userId,
+          result_id: resultId,
+          is_active: true,
+        });
+
+        await this._resultInstitutionsBudgetRepository.save({
+          result_institution_id: newInstitution.id,
+          created_by: userId,
+          last_updated_by: userId,
+        });
+
+        await this.handleDeliveries(
+          institution.delivery,
+          newInstitution.id,
+          userId,
+        );
+      } else {
+        await this._resultByIntitutionsRepository.update(
+          { id: isInstitutions.id },
+          {
+            is_active: institution.is_active,
+            last_updated_by: userId,
+            institutions_id: institution.institutions_id,
+          },
+        );
+
+        await this.handleDeliveries(
+          institution.delivery,
+          isInstitutions.id,
+          userId,
+        );
+      }
+    }
   }
 }

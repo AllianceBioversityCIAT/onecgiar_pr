@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { TocInitiativeOutcomeListsService } from '../../../../../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of-changes-services.service';
@@ -15,7 +15,7 @@ export class MultipleWPsContentComponent implements OnChanges {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
-
+  @Input() initiative: any;
   @Input() allTabsCreated = [];
   @Input() outcomeList = [];
   @Input() outputList = [];
@@ -27,11 +27,19 @@ export class MultipleWPsContentComponent implements OnChanges {
 
   indicatorView = false;
 
-  constructor(public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService, public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, public mappedResultService: MappedResultsModalServiceService) {}
+  constructor(
+    public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService,
+    public api: ApiService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    public mappedResultService: MappedResultsModalServiceService
+  ) {}
 
   ngOnChanges() {
     if (this.showMultipleWPsContent) {
-      if ((this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) || (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)) {
+      if (
+        (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||
+        (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)
+      ) {
         if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
           this.getIndicator();
         }
@@ -46,12 +54,29 @@ export class MultipleWPsContentComponent implements OnChanges {
     this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
       next: ({ response }) => {
         this.activeTab.indicators = response?.informationIndicator;
-        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({ ...item, full_name: `<strong>${item.name}</strong> - ${item.target}` }));
-        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({ ...item, full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}` }));
-        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({ ...item, full_name: `${item.actionAreaId === 1 ? '<strong>Systems Transformation</strong>' : item.actionAreaId === 2 ? '<strong>Resilient Agrifood Systems</strong>' : '<strong>Genetic Innovation</strong>'} (${item.outcomeSMOcode}) - ${item.outcomeStatement}` }));
+        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({
+          ...item,
+          full_name: `<strong>${item.name}</strong> - ${item.target}`
+        }));
+        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({
+          ...item,
+          full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`
+        }));
+
+        const getText = (actionAreaId: number) => {
+          if (actionAreaId === 1) return '<strong>Systems Transformation</strong>';
+          if (actionAreaId === 2) return '<strong>Resilient Agrifood Systems</strong>';
+          return '<strong>Genetic Innovation</strong>';
+        };
+        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
+          ...item,
+          full_name: `${getText(item.actionAreaId)} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
+        }));
         this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
         this.activeTab.wpinformation = response?.wpinformation;
-        this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>` : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
+        this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym
+          ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>`
+          : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
 
         setTimeout(() => {
           this.indicatorView = true;
@@ -92,7 +117,9 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   validateSelectedOptionOutPut(tab?: any) {
-    const selectedOption = tab ? this.outputList.find(item => item.toc_result_id === tab.toc_result_id) : this.outputList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab
+      ? this.outputList.find(item => item.toc_result_id === tab.toc_result_id)
+      : this.outputList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
@@ -102,14 +129,18 @@ export class MultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsOutput.push(selectedOption);
 
     this.outputList = this.outputList.map(item => {
-      const finded = this.selectedOptionsOutput.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
+      const finded = this.selectedOptionsOutput.find(
+        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+      );
       item.disabledd = !!finded;
       return item;
     });
   }
 
   validateSelectedOptionOutCome(tab?: any) {
-    const selectedOption = tab ? this.outcomeList.find(item => item.toc_result_id === tab.toc_result_id) : this.outcomeList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab
+      ? this.outcomeList.find(item => item.toc_result_id === tab.toc_result_id)
+      : this.outcomeList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
@@ -119,14 +150,18 @@ export class MultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsOutcome.push(selectedOption);
 
     this.outcomeList = this.outcomeList.map(item => {
-      const finded = this.selectedOptionsOutcome.find(option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id);
+      const finded = this.selectedOptionsOutcome.find(
+        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+      );
       item.disabledd = !!finded;
       return item;
     });
   }
 
   validateSelectedOptionEOI(tab?: any) {
-    const selectedOption = tab ? this.eoiList.find(item => item.toc_result_id === tab.toc_result_id) : this.eoiList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+    const selectedOption = tab
+      ? this.eoiList.find(item => item.toc_result_id === tab.toc_result_id)
+      : this.eoiList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 

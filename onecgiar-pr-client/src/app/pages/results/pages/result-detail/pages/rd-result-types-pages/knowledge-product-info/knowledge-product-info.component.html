@@ -10,6 +10,31 @@
         description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
     </app-alert-status>
 
+    <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null">
+    </div>
+
+    <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
+    </app-pr-yes-or-not>
+
+    <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
+
+        <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null">
+        </div>
+
+        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true"
+            [(ngModel)]="this.sectionData.ostSubmitted">
+        </app-pr-yes-or-not>
+        <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
+            placeholder="Select MELIA type" [required]="true" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
+            *ngIf="this.sectionData.ostSubmitted === false">
+        </app-pr-select>
+        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from those included in OST Section 6.3"
+            optionLabel="melia_study_title" optionValue="melia_id"
+            placeholder="Select MELIA from those included in OST Section 6.3" [required]="true"
+            [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
+        </app-pr-select>
+    </div>
+
     <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
     </app-pr-input>
     <div class="auto_fit_container">
@@ -106,31 +131,7 @@
             </div>
         </div>
     </div>
-    
-    <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null">
-    </div>
 
-    <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
-    </app-pr-yes-or-not>
-    
-    <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
-        
-        <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null">
-        </div>
-        
-        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true"
-            [(ngModel)]="this.sectionData.ostSubmitted">
-        </app-pr-yes-or-not>
-        <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
-            placeholder="Select MELIA type" [required]="true" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
-            *ngIf="this.sectionData.ostSubmitted === false">
-        </app-pr-select>
-        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from those included in OST Section 6.3"
-            optionLabel="melia_study_title" optionValue="melia_id"
-            placeholder="Select MELIA from those included in OST Section 6.3" [required]="true"
-            [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
-        </app-pr-select>
-    </div>
     <ng-template #notAvailable>
         <div class="read-only">Not Available</div>
     </ng-template>
