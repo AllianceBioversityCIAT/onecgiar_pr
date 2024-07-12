@@ -15,7 +15,16 @@
         This is the minimum confidence level number that the PRMS should consider to accept an M-QAP prediction of the CLARISA partner based on the
         author affiliation coming from CGSpace.
       </p>
-      <p-inputNumber [(ngModel)]="confidence_level" [inputStyle]="{ width: '55px' }" [min]="0" [max]="100" suffix="%"></p-inputNumber>
+      <div class="kp_content_item--input">
+        <p-inputNumber [(ngModel)]="confidence_level" [inputStyle]="{ width: '55px' }" [min]="0" [max]="100" suffix="%"></p-inputNumber>
+        <app-pr-button
+          text="Update"
+          (click)="onUpdateConfidenceLevel()"
+          [rotating]="this.isLoadingConfidence"
+          [verticalMargin]="0"
+          [ngClass]="{ globalDisabled: this.isLoadingConfidence || this.confidence_level === this.previous_confidence_level }"
+          [icon]="this.isLoadingConfidence ? 'loop' : ''"></app-pr-button>
+      </div>
     </div>
 
     <div class="kp_content_item">
