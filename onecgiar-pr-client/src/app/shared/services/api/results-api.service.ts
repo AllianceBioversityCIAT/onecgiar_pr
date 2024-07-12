@@ -479,6 +479,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
   }
 
+  POST_AdminKPExcelReport(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/get/excel-report`, body);
+  }
+
+  PUT_updateAdminKPConfidenceLevel(body) {
+    return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
+  }
+
   PATCH_updateRequest(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
   }
