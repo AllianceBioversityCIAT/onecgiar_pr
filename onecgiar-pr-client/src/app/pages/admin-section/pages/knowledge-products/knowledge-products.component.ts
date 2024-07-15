@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { GlobalVariablesService } from '../../../../shared/services/global-variables.service';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-knowledge-products',
@@ -14,7 +15,12 @@ export class KnowledgeProductsComponent implements OnInit {
   isLoading: boolean = false;
   isLoadingConfidence: boolean = false;
 
-  constructor(public api: ApiService, public exportTablesSE: ExportTablesService, public globalVariablesSE: GlobalVariablesService) {}
+  constructor(
+    private messageService: MessageService,
+    public api: ApiService,
+    public exportTablesSE: ExportTablesService,
+    public globalVariablesSE: GlobalVariablesService
+  ) {}
 
   ngOnInit(): void {
     this.confidence_level = Number(this.globalVariablesSE.get.kp_mqap_institutions_confidence);
@@ -41,10 +47,12 @@ export class KnowledgeProductsComponent implements OnInit {
           this.confidence_level = response.value;
           this.previous_confidence_level = response.value;
           this.globalVariablesSE.get.kp_mqap_institutions_confidence = response.value;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Confidence level updated' });
         },
         error: err => {
           console.error(err);
           this.isLoadingConfidence = false;
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error updating confidence level' });
         }
       });
   }

@@ -8,6 +8,7 @@ import { GlobalVariablesService } from '../../../../shared/services/global-varia
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { MessageService } from 'primeng/api';
 
 describe('KnowledgeProductsComponent', () => {
   let component: KnowledgeProductsComponent;
@@ -18,7 +19,7 @@ describe('KnowledgeProductsComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [KnowledgeProductsComponent, PrButtonComponent, PrInputComponent],
       imports: [HttpClientTestingModule, InputNumberModule],
-      providers: [GlobalVariablesService, ExportTablesService, ApiService]
+      providers: [GlobalVariablesService, ExportTablesService, ApiService, MessageService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(KnowledgeProductsComponent);
