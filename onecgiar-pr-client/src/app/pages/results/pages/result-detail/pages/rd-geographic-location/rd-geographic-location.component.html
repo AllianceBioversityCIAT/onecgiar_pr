@@ -1,22 +1,18 @@
 <app-detail-section-title sectionName="Geographic location"></app-detail-section-title>
 
 <div class="detail_container">
-    <div id="alert"></div>
+  <div id="alert"></div>
 
-    <app-alert-status
-        description="Select the geographic location/s where this result is taking place. Please be as specific as possible and remember to include locations related to any non-pooled project contributing to this result. Please be as specific as possible and do not forget to include the locations coming from any Bilateral contributing to this result.">
-    </app-alert-status>
+  <app-alert-status description="Select the geographic location/s where this result is taking place."> </app-alert-status>
 
-    <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
-        description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
-    </app-alert-status>
+  <app-alert-status
+    *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+    description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+  </app-alert-status>
 
-    <!-- <h1>{{this.geographicLocationBody.scope_id}}</h1> -->
-    <app-geoscope-management 
-        [body]="this.geographicLocationBody" 
-        module="reporting">
-    </app-geoscope-management>
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"
-    *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+  <!-- <h1>{{this.geographicLocationBody.scope_id}}</h1> -->
+  <app-geoscope-management [body]="this.geographicLocationBody" module="reporting"> </app-geoscope-management>
+  <app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
-<app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+  <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+</div>
