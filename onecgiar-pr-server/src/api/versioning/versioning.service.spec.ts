@@ -73,6 +73,7 @@ import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip
 import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
+import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -130,6 +131,7 @@ describe('VersioningService', () => {
         EvidencesService,
         ShareResultRequestRepository,
         ResultCountrySubnationalRepository,
+        ResultAnswerRepository,
         NonPooledProjectBudgetRepository,
         ResultInstitutionsBudgetRepository,
         ResultActorRepository,

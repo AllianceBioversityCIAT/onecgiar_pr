@@ -130,7 +130,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
-    ResultAnswerRepository
+    ResultAnswerRepository,
   ],
   exports: [
     EvidencesService,
