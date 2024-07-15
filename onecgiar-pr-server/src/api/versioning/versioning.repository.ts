@@ -84,7 +84,7 @@ export class VersionRepository extends Repository<Version> {
       });
   }
 
-  $_getAllInovationDevToReplicate(
+  async $_getAllInovationDevToReplicate(
     phase: Version,
     result_type = 7,
   ): Promise<Result[]> {
@@ -98,11 +98,10 @@ export class VersionRepository extends Repository<Version> {
     				and r2.version_id = ?) rv on rv.result_code = r.result_code 
     where r.result_type_id = ${result_type}
     and r.version_id = ?
-    and r.status_id = 2
     and r.is_active > 0
     and rv.result_code is null;
       `;
-    return this.query(queryData, [phase.id, phase.obj_previous_phase.id])
+    return await this.query(queryData, [phase.id, phase.obj_previous_phase.id])
       .then((res) => {
         return res;
       })
