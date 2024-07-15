@@ -62,6 +62,7 @@ import { ResultActorRepository } from '../results/result-actors/repositories/res
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 
 @Injectable()
 export class VersioningService {
@@ -115,6 +116,7 @@ export class VersioningService {
     private readonly _resultIpResultsActorsRepository: ResultsIpActorRepository,
     private readonly _resultsIpResultMeasuresRespository: ResultsByIpInnovationUseMeasureRepository,
     private readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -287,10 +289,9 @@ export class VersioningService {
             manager,
             config,
           );
-          await this._resultInitiativeBudgetRepository.replicate(
-            manager,
-            config,
-          );
+          await this._resultAnswerRepository.replicate(manager, config);
+          await this._resultActorRepository.replicate(manager, config);
+          await this._resultIpMeasureRepository.replicate(manager, config);
           break;
       }
       await this._nonPooledProjectRepository.replicate(manager, config);
@@ -301,6 +302,12 @@ export class VersioningService {
         config,
       );
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+      await this._resultInstitutionsBudgetRepository.replicate(manager, config);
+      await this._resultInitiativeBudgetRepository.replicate(manager, config);
+      await this._resultNonPooledProjectBudgetRepository.replicate(
+        manager,
+        config,
+      );
       await this._resultCountryRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);

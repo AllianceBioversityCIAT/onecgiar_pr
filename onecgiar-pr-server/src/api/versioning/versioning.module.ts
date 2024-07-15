@@ -65,6 +65,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
+import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -129,6 +130,7 @@ import { ResultsTocResultIndicatorsService } from '../results/results-toc-result
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
+    ResultAnswerRepository
   ],
   exports: [
     EvidencesService,

@@ -66,6 +66,7 @@ import { ResultInstitutionsBudgetRepository } from '../../api/results/result_bud
 import { NonPooledProjectBudgetRepository } from '../../api/results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsTocResultIndicatorsService } from '../../api/results/results-toc-results/results-toc-result-indicators.service';
+import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -130,6 +131,7 @@ import { ResultsTocResultIndicatorsService } from '../../api/results/results-toc
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
+    ResultAnswerRepository
   ],
   imports: [
     SharePointModule,
