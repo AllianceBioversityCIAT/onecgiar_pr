@@ -41,7 +41,8 @@ export class ResultsInnovationsDevRepository
       rid.innovation_nature_id,
       rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
-      rid.innovation_pdf
+      rid.innovation_pdf,
+      rid.innovation_user_to_be_determined
       from results_innovations_dev rid where rid.results_id = ${
         config.old_result_id
       } and rid.is_active > 0
@@ -66,7 +67,8 @@ export class ResultsInnovationsDevRepository
       innovation_nature_id,
       innovation_readiness_level_id,
       innovation_acknowledgement,
-      innovation_pdf
+      innovation_pdf,
+      innovation_user_to_be_determined
       )
       select 
       rid.short_title,
@@ -88,7 +90,8 @@ export class ResultsInnovationsDevRepository
       rid.innovation_nature_id,
       rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
-      rid.innovation_pdf
+      rid.innovation_pdf,
+      rid.innovation_user_to_be_determined
       from results_innovations_dev rid where rid.results_id = ${
         config.old_result_id
       } and rid.is_active > 0`,

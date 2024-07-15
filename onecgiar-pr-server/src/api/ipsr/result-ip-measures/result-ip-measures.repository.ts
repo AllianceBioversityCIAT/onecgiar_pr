@@ -47,8 +47,12 @@ export class ResultIpMeasureRepository
               created_by,
               last_updated_by,
               unit_of_measure,
-              result_ip_id,
               quantity,
+              ${
+                config.new_ipsr_id
+                  ? 'result_ip_id,'
+                  : ''
+              }
               result_id
           )
       SELECT
@@ -60,8 +64,12 @@ export class ResultIpMeasureRepository
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           unit_of_measure,
-          ${config.new_result_id} AS result_ip_id,
           quantity,
+          ${
+            config.new_ipsr_id
+              ? `${config.new_ipsr_id} AS result_ip_id,`
+              : ''
+          }
           ${config.new_result_id} AS result_id
       FROM
           result_ip_measure
