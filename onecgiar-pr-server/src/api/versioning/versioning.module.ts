@@ -126,7 +126,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
-    ResultAnswerRepository
+    ResultAnswerRepository,
   ],
   exports: [
     EvidencesService,
