@@ -34,8 +34,9 @@ export class NonPooledProjectBudgetRepository
             FROM
               non_pooled_project npp2
             WHERE
-              npp2.center_grant_id = npp.center_grant_id
+              npp2.grant_title = npp.grant_title
               AND npp2.results_id = ${config.new_result_id}
+              AND npp2.is_active = 1
           ) AS non_pooled_projetct_id,
           nppb.is_determined,
           nppb.in_kind,
@@ -79,12 +80,13 @@ export class NonPooledProjectBudgetRepository
       FROM
           non_pooled_projetct_budget nppb
           LEFT JOIN non_pooled_project npp ON npp.id = nppb.non_pooled_projetct_id
-          LEFT JOIN non_pooled_project npp2 ON npp2.center_grant_id = npp.center_grant_id
+          LEFT JOIN non_pooled_project npp2 ON npp2.grant_title = npp.grant_title
           AND npp2.results_id = ${config.new_result_id}
       WHERE 
         npp.results_id = ${config.old_result_id}
         AND npp.is_active = 1
-        AND nppb.is_active = 1;
+        AND nppb.is_active = 1
+        AND npp2.is_active = 1;
       `,
       returnQuery: `
       SELECT
