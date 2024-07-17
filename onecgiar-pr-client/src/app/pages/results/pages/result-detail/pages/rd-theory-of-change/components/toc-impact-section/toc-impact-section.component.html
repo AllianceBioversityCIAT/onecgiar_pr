@@ -1,11 +1,10 @@
-<app-pr-field-header label="Theory of Change" description="For impact results, mapping to ToC does not apply."
-    [required]="false">
+<app-pr-field-header label="Theory of Change" description="For impact results, mapping to ToC does not apply." [required]="false">
 </app-pr-field-header>
 
-<div *ngFor="let item of this.contributing_initiatives">
+<!-- <div *ngFor="let item of this.contributing_initiatives">
     <app-pr-yes-or-not [label]="getLabel(item.full_name)" [(ngModel)]="isFalse" [readOnly]="true" [editable]="false">
     </app-pr-yes-or-not>
-</div>
+</div> -->
 
-<!-- <app-impact-area-targets [impactAreaRequid]="true" [body]="impacts"></app-impact-area-targets>
-<app-sdg-targets [sdgRequid]="true" [body]="sdg"></app-sdg-targets> -->
+<app-impact-area-targets [impactAreaRequid]="true" [body]="impacts"></app-impact-area-targets>
+<app-sdg-targets [sdgRequid]="true" [body]="sdg"></app-sdg-targets>

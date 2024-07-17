@@ -7,19 +7,15 @@
   <div class="segmet_title">Impact/Action Area level</div>
   <div class="all_results_level_Container">
     <a
-      (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)"
-      [pTooltip]="alertList[i]"
-      tooltipStyleClass="custom-tooltip"
-      tooltipPosition="top"
       class="resultLevel shadow-1"
-      style="background-color: #fafafa"
-      [ngClass]="{ selected: resultLevel?.selected, local_disable: true }"
+      [ngClass]="{ selected: resultLevel?.selected }"
       [hidden]="i >= 2"
-      *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index">
-      <div class="name" [style.background]="'#666'">
+      *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index"
+      (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
+      <div class="name" [style.background]="'var(--pr-color-result-level-' + resultLevel?.id + ')'">
         {{ resultLevel.name }}
       </div>
-      <div class="description" style="color: #888">{{ resultLevel.description }}</div>
+      <div class="description">{{ resultLevel.description }}</div>
     </a>
   </div>
 </div>

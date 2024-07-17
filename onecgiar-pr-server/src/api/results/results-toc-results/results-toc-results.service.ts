@@ -335,7 +335,7 @@ export class ResultsTocResultsService {
             await this._resultsTocResultRepository.saveActionAreaOutcomeResult(
               result_id,
               resultAction?.action,
-              resultAction?.init,
+              initSubmitter?.initiative_id,
             );
           }
         }
