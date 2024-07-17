@@ -89,18 +89,25 @@ export class VersionRepository extends Repository<Version> {
     result_type = 7,
   ): Promise<Result[]> {
     const queryData = `
-    select *
-    from \`result\` r 
-    left join (select r2.result_code 
-    			from \`result\` r2 
-    			where r2.result_type_id = ${result_type} 
-    				and r2.is_active > 0 
-    				and r2.version_id = ?) rv on rv.result_code = r.result_code 
-    where r.result_type_id = ${result_type}
-    and r.version_id = ?
-    and r.status_id = 2
-    and r.is_active > 0
-    and rv.result_code is null;
+    SELECT
+        r.*
+    FROM
+        result r
+        LEFT JOIN (
+            SELECT
+                r2.result_code
+            FROM
+                result r2
+            WHERE
+                r2.result_type_id = ${result_type}
+                AND r2.is_active > 0
+                AND r2.version_id = ?
+        ) rv ON rv.result_code = r.result_code
+    WHERE
+        r.result_type_id = ${result_type}
+        AND r.version_id = ?
+        AND r.is_active > 0
+        AND rv.result_code IS NULL;
       `;
     return this.query(queryData, [phase.id, phase.obj_previous_phase.id])
       .then((res) => {
@@ -116,7 +123,7 @@ export class VersionRepository extends Repository<Version> {
     result_type = 10,
   ): Promise<Result[]> {
     const queryData = `
-    select *
+    select r.*
     from \`result\` r 
     left join (select r2.result_code 
     			from \`result\` r2 

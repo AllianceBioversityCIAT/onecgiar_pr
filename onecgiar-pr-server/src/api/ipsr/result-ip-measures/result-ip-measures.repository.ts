@@ -18,13 +18,15 @@ export class ResultIpMeasureRepository
   createQueries(
     config: ReplicableConfigInterface<ResultIpMeasure>,
   ): ConfigCustomQueryInterface {
+    const resultIpIdValue = config.new_ipsr_id
+      ? `${config.new_result_id} AS result_ip_id,`
+      : `NULL AS result_ip_id,`;
+
     return {
       findQuery: `
       SELECT
           is_active,
-          ${predeterminedDateValidation(
-            config.predetermined_date,
-          )} AS created_date,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -47,21 +49,19 @@ export class ResultIpMeasureRepository
               created_by,
               last_updated_by,
               unit_of_measure,
-              result_ip_id,
               quantity,
+              result_ip_id,
               result_id
           )
       SELECT
           is_active,
-          ${predeterminedDateValidation(
-            config.predetermined_date,
-          )} AS created_date,
+          ${predeterminedDateValidation(config.predetermined_date)} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           unit_of_measure,
-          ${config.new_result_id} AS result_ip_id,
           quantity,
+          ${resultIpIdValue}
           ${config.new_result_id} AS result_id
       FROM
           result_ip_measure
