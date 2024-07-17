@@ -23,6 +23,8 @@ export class ImpactAreaTargetsComponent implements OnInit {
 
   ngOnInit(): void {
     this.GET_AllClarisaImpactAreaIndicators();
+    this.impactAreasData[0].selected = true;
+    this.currentImpactAreaID = this.impactAreasData[0].id;
   }
 
   GET_AllClarisaImpactAreaIndicators() {

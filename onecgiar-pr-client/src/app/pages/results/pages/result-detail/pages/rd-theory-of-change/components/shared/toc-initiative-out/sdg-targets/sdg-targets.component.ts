@@ -31,6 +31,8 @@ export class SdgTargetsComponent implements OnInit {
           sdg.short_name = sdg.sdg.short_name;
           sdg.sdgList.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
         });
+        this.sdgTargetLis[0].selected = true;
+        this.currentsdgID = this.sdgTargetLis[0].sdgId;
       },
       error: err => {
         console.error(err);
