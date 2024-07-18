@@ -1,7 +1,6 @@
 .local_container {
   margin-top: 30px;
   margin-bottom: 50px;
-  overflow: hidden;
   width: 95% !important;
   padding: 40px 50px;
 
@@ -61,6 +60,14 @@
         font-weight: 400;
         margin: 0;
         color: #808080;
+      }
+
+      .kp_content_item_export {
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-end;
+        gap: 1rem;
+        margin-top: 10px;
       }
 
       .kp_content_item--input {

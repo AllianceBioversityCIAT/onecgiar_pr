@@ -33,11 +33,29 @@
         This report includes all the partner matchings made in the Knowledge Products, encompassing both the predicted matchings and the manually
         selected ones.
       </p>
-      <app-pr-button
-        text="Export data"
-        (click)="onDownLoadTableAsExcel()"
-        [rotating]="this.isLoading"
-        [icon]="this.isLoading ? 'loop' : 'file_download'"></app-pr-button>
+
+      <div class="kp_content_item_export">
+        <app-pr-select
+          label="Select a reporting phase"
+          [options]="this.phaseList"
+          [isStatic]="true"
+          [required]="false"
+          optionLabel="phase_name_status"
+          optionValue="id"
+          placeholder="Select phase"
+          labelDescInlineStyles="font-size: 12px; margin-top: 0;"
+          [style]="{ width: '245px' }"
+          [(ngModel)]="phaseFilter">
+        </app-pr-select>
+
+        <app-pr-button
+          text="Export data"
+          (click)="onDownLoadTableAsExcel()"
+          [rotating]="this.isLoading"
+          [verticalMargin]="0"
+          [ngClass]="{ globalDisabled: this.isLoading || !this.phaseFilter }"
+          [icon]="this.isLoading ? 'loop' : 'file_download'"></app-pr-button>
+      </div>
     </div>
   </div>
 </div>

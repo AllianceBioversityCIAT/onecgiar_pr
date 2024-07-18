@@ -3,6 +3,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { GlobalVariablesService } from '../../../../shared/services/global-variables.service';
 import { MessageService } from 'primeng/api';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
   selector: 'app-knowledge-products',
@@ -14,6 +15,8 @@ export class KnowledgeProductsComponent implements OnInit {
   previous_confidence_level: number;
   isLoading: boolean = false;
   isLoadingConfidence: boolean = false;
+  phaseList = [];
+  phaseFilter = null;
 
   constructor(
     private messageService: MessageService,
@@ -25,7 +28,14 @@ export class KnowledgeProductsComponent implements OnInit {
   ngOnInit(): void {
     this.confidence_level = Number(this.globalVariablesSE.get.kp_mqap_institutions_confidence);
     this.previous_confidence_level = Number(this.globalVariablesSE.get.kp_mqap_institutions_confidence);
-    this.api.dataControlSE.getCurrentPhases();
+    this.getAllPhases();
+  }
+
+  getAllPhases() {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+      this.phaseList = response;
+      this.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
+    });
   }
 
   onUpdateConfidenceLevel() {
@@ -59,10 +69,11 @@ export class KnowledgeProductsComponent implements OnInit {
 
   onDownLoadTableAsExcel() {
     this.isLoading = true;
+    const phase = this.phaseList.find(phase => phase.id === this.phaseFilter);
 
     this.api.resultsSE
       .POST_AdminKPExcelReport({
-        phase_id: this.api.dataControlSE.reportingCurrentPhase.phaseId
+        phase_id: this.phaseFilter
       })
       .subscribe({
         next: ({ response }) => {
@@ -76,7 +87,7 @@ export class KnowledgeProductsComponent implements OnInit {
             { header: 'Confidence level', key: 'confidence_level', width: 20 },
             { header: 'Is a correction', key: 'is_correction', width: 20 }
           ];
-          this.exportTablesSE.exportExcelAdminKP(response, `KPs_${this.api.dataControlSE.reportingCurrentPhase.phaseYear}_Partner_Matching`, wscols);
+          this.exportTablesSE.exportExcelAdminKP(response, `KPs_${phase.phase_year}_Partner_Matching`, wscols);
           this.isLoading = false;
         },
         error: err => {
