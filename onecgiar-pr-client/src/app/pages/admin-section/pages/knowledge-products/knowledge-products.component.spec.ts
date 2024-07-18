@@ -9,6 +9,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { MessageService } from 'primeng/api';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 describe('KnowledgeProductsComponent', () => {
   let component: KnowledgeProductsComponent;
@@ -32,13 +33,28 @@ describe('KnowledgeProductsComponent', () => {
   });
 
   describe('ngOnInit', () => {
-    it('should set confidence_level and previous_confidence_level to the value of kp_mqap_institutions_confidence', () => {
+    it('should set confidence_level and previous_confidence_level to the value of kp_mqap_institutions_confidence and call getAllPhases()', () => {
       globalVariablesService.get.kp_mqap_institutions_confidence = '10';
+      const getAllPhasesSpy = jest.spyOn(component, 'getAllPhases');
 
       component.ngOnInit();
 
       expect(component.confidence_level).toEqual(10);
       expect(component.previous_confidence_level).toEqual(10);
+      expect(getAllPhasesSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getAllPhases', () => {
+    it('should set phaseList and phaseFilter to the response value of GET_versioning', () => {
+      const response = [{ id: '2024', phase_year: '2024', status: true }];
+      const get_versioningSpy = jest.spyOn(component.api.resultsSE, 'GET_versioning').mockReturnValue(of({ response }));
+
+      component.getAllPhases();
+
+      expect(component.phaseList).toEqual(response);
+      expect(component.phaseFilter).toEqual('2024');
+      expect(get_versioningSpy).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING);
     });
   });
 
@@ -104,15 +120,16 @@ describe('KnowledgeProductsComponent', () => {
         { header: 'Is a correction', key: 'is_correction', width: 20 }
       ];
 
+      component.phaseList = [{ id: '2024', phase_year: '2024', status: true }];
+      component.phaseFilter = '2024';
       const exportTablesServiceSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcelAdminKP');
       const apiServiceSpy = jest.spyOn(TestBed.inject(ApiService).resultsSE, 'POST_AdminKPExcelReport').mockReturnValue(of({ response: [] }));
-      component.api.dataControlSE.reportingCurrentPhase.phaseYear = '2024';
 
       component.onDownLoadTableAsExcel();
 
       expect(exportTablesServiceSpy).toHaveBeenCalledWith([], `KPs_2024_Partner_Matching`, wscols);
       expect(component.isLoading).toBeFalsy();
-      expect(apiServiceSpy).toHaveBeenCalledWith({ phase_id: null });
+      expect(apiServiceSpy).toHaveBeenCalledWith({ phase_id: '2024' });
     });
 
     it('should log error and set isLoadingReport to false when onDownLoadTableAsExcel encounters an error', () => {
