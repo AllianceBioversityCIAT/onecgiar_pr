@@ -236,8 +236,8 @@ export class ResultsKnowledgeProductsRepository
       if(rbi.id is null, "<Not provided>", if(ci.id is null, "<Not reviewed>", ci.id)) partner_id, 
       if(rbi.id is null, "<Not provided>", if(ci.id is null, "<Not reviewed>", ci.name)) partner_name, 
       if(rbi.is_predicted = 1, "Prediction", "Manual matching") matching_type,
-      if(rbi.is_predicted <> 1 or rbi.id is null, "<Not applicable>", rkmi.confidant) confidence_level, 
-      if(rbi.id is null, "<Not applicable>", if(rbi.is_predicted <> 1 or rbi.id is null, "No", if(rkmi.predicted_institution_id = rbi.institutions_id, "No", "Yes"))) is_correction
+      if(rbi.is_predicted <> 1 or rbi.id is null, "<Not applicable>", rkmi.confidant) confidence_level,
+      if(rbi.id is null, "<Not applicable>", if(rbi.institutions_id is null, "No", if(rkmi.predicted_institution_id = rbi.institutions_id, "No", "Yes"))) is_correction
       from results_knowledge_product rkp
       right join result r on rkp.results_id = r.id and r.is_active = 1
       left join results_by_institution rbi on rbi.result_id = r.id and rbi.is_active
