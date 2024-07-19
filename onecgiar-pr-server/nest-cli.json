@@ -2,11 +2,12 @@
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
-  "compilerOptions": {    
+  "compilerOptions": {
     "assets": [
       {
         "include": "**/templates/*",
-        "watchAssets": true
+        "watchAssets": true,
+        "outDir": "dist/shared/templates"
       }
     ],
     "watchAssets": true
