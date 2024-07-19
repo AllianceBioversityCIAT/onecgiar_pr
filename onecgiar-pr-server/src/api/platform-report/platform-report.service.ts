@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
-import { create as createPDF } from 'pdf-creator-node';
-//import Handlebars from 'handlebars';
-import { ReadStream } from 'fs';
 import {
   HandlersError,
   returnErrorDto,
@@ -11,6 +8,7 @@ import {
 import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
+import axios from 'axios';
 
 @Injectable()
 export class PlatformReportService {
@@ -239,32 +237,32 @@ export class PlatformReportService {
               `,
           },
         },
-        childProcessOptions: {
-          env: {
-            OPENSSL_CONF: '/dev/null',
+      };
+
+      const authData = {
+        username: env.CLA_MICROSERVICE_USER,
+        password: env.CLA_MICROSERVICE_PASSWORD,
+      };
+
+      const authHeader = JSON.stringify(authData);
+
+      const microserviceUrl = env.MS_URL;
+      const pdf = await axios.post(
+        microserviceUrl,
+        {
+          templateData: report.template_object.template,
+          data: data,
+          options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
+        },
+        {
+          responseType: 'arraybuffer',
+          headers: {
+            auth: authHeader,
           },
         },
-      };
+      );
 
-      const document = {
-        html: report.template_object.template,
-        data: data,
-        type: 'stream',
-      };
-
-      const pdf: ReadStream = await createPDF(
-        document,
-        Number(report.id) === 1 ? optionsReporting : optionsIPSR,
-      )
-        .then((res: ReadStream) => {
-          return res;
-        })
-        .catch((_error) => {
-          this._logger.error(_error);
-          return null;
-        });
-
-      return { pdf, filename_date: data.generation_date_filename };
+      return { pdf: pdf.data, filename_date: data.generation_date_filename };
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
