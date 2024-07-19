@@ -59,7 +59,7 @@ export class resultValidationRepository
 		v.geographic_location,
 		v.links_to_results,
 		v.evidence
-	from
+	FROM
 		validation v
 	WHERE
 		v.results_id = ${resultId}
@@ -86,9 +86,9 @@ export class resultValidationRepository
 	FROM
 		version v
 	WHERE
-		v.phase_year = 2023
-		AND v.phase_name LIKE '%Reporting%'
+		v.phase_name LIKE '%Reporting%'
 		AND v.is_active > 0
+		AND v.status = 1
 	LIMIT 1;
   	`;
     try {
