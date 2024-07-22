@@ -16,7 +16,7 @@
       </div>
     </div>
     
-    <p-message *ngIf="this.validateCGLink()" [style]="{ width : '100%' }" severity="info" text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
+    <p-message @fadeInOut *ngIf="this.validateCGLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="info" text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
     <ng-template #upload_file>
 
       <app-pr-radio-button [options]="this.isPubilcFileOptions" optionLabel="name" optionValue="id"

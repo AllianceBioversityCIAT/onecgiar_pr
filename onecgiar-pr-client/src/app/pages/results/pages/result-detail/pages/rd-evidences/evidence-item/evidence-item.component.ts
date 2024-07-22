@@ -2,11 +2,23 @@ import { Component, Input, EventEmitter, Output } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 
 @Component({
   selector: 'app-evidence-item',
   templateUrl: './evidence-item.component.html',
-  styleUrls: ['./evidence-item.component.scss']
+  styleUrls: ['./evidence-item.component.scss'],
+  animations: [
+    trigger('fadeInOut', [
+      state(
+        'void',
+        style({
+          opacity: 0
+        })
+      ),
+      transition('void <=> *', [animate('250ms ease-in-out')])
+    ])
+  ]
 })
 export class EvidenceItemComponent {
   @Input() evidence: EvidencesCreateInterface;
