@@ -10,13 +10,13 @@
     <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
       <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
         [disabled]="this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
-
         <div appFeedbackValidation
-              labelText="Invalid URL provided."
-              [isComplete]="this.evidence.link ? isInvalidLink(this.evidence.link) : true">
-        </div>
+        labelText="Invalid URL provided."
+        [isComplete]="this.evidence.link ? isInvalidLink(this.evidence.link) : true">
+      </div>
     </div>
-
+    
+    <p-message @fadeInOut *ngIf="this.validateCGLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="info" text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
     <ng-template #upload_file>
 
       <app-pr-radio-button [options]="this.isPubilcFileOptions" optionLabel="name" optionValue="id"

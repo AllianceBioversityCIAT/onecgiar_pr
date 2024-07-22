@@ -66,6 +66,8 @@ import { ResultInstitutionsBudgetRepository } from '../results/result_budget/rep
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { MQAPModule } from '../m-qap/m-qap.module';
+import { MQAPService } from '../m-qap/m-qap.service';
 
 @Module({
   controllers: [VersioningController],
@@ -131,6 +133,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
     ResultAnswerRepository,
+    MQAPService,
   ],
   exports: [
     EvidencesService,
@@ -170,9 +173,11 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     EvidenceSharepointRepository,
     ShareResultRequestRepository,
     IpsrRepository,
+    MQAPService,
   ],
   imports: [
     SharePointModule,
+    MQAPModule,
     forwardRef(() => ResultInnovationPackageModule),
     forwardRef(() => InnovationPathwayModule),
   ],

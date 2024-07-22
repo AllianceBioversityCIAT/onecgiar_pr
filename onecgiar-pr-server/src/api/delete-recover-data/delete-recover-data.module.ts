@@ -92,6 +92,7 @@ import { ResultCountriesSubNationalRepository } from '../results/result-countrie
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
+import { MQAPService } from '../m-qap/m-qap.service';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -183,6 +184,7 @@ import { ResultsTocResultIndicatorsService } from '../results/results-toc-result
     KnowledgeProductFairBaselineRepository,
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
+    MQAPService,
   ],
   imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [
