@@ -47,6 +47,7 @@ import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { InstitutionRoleEnum } from '../results_by_institutions/entities/institution_role.enum';
+import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -634,7 +635,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const mqapResponse: MQAPResultDto =
-        await this._mqapService.getDataFromCGSpaceHandle(handle);
+        await this._mqapService.getDataFromCGSpaceHandle(
+          MQAPBodyDto.fromHandle(handle),
+        );
 
       if (!mqapResponse) {
         throw {
@@ -809,8 +812,8 @@ export class ResultsKnowledgeProductsService {
       );
     }
 
-    const individualItems = details.map((e) =>
-      e.split('is not valid')?.[0]?.trim(),
+    const individualItems = details.map(
+      (e) => e.split('is not valid')?.[0]?.trim(),
     );
     const itemString = StringUtils.join(individualItems, ', ', ', and ');
 

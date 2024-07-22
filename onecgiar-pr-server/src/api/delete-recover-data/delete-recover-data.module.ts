@@ -91,6 +91,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { MQAPService } from '../m-qap/m-qap.service';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -181,6 +182,7 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
     ResultCountriesSubNationalRepository,
     KnowledgeProductFairBaselineRepository,
     ResultCountrySubnationalRepository,
+    MQAPService,
   ],
   imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [
