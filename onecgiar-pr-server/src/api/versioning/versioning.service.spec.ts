@@ -74,6 +74,8 @@ import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-instituti
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { MQAPService } from '../m-qap/m-qap.service';
+import { MQAPModule } from '../m-qap/m-qap.module';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -150,6 +152,7 @@ describe('VersioningService', () => {
         ResultsIpInstitutionTypeRepository,
         ResultTypeRepository,
         ResultsTocResultIndicatorsService,
+        MQAPService,
         {
           provide: GlobalParameterCacheService,
           useValue: {
@@ -236,7 +239,7 @@ describe('VersioningService', () => {
           },
         },
       ],
-      imports: [HttpModule],
+      imports: [HttpModule, MQAPModule],
     }).compile();
 
     service = module.get<VersioningService>(VersioningService);
