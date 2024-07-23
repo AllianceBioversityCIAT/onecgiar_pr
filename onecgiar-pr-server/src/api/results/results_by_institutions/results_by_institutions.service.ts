@@ -117,7 +117,10 @@ export class ResultsByInstitutionsService {
           is_active: true,
           institution_roles_id: InstitutionRoleEnum.PARTNER,
         },
-        relations: ['delivery', 'obj_institutions.obj_institution_type_code'],
+        relations: {
+          delivery: true,
+          obj_institutions: { obj_institution_type_code: true },
+        },
       });
 
       institutions = institutions.map((institution) => ({
@@ -145,11 +148,11 @@ export class ResultsByInstitutionsService {
             is_predicted: Not(IsNull()),
             result_kp_mqap_institution_id: Not(IsNull()),
           },
-          relations: [
-            'result_kp_mqap_institution_obj',
-            'delivery',
-            'obj_institutions.obj_institution_type_code',
-          ],
+          relations: {
+            result_kp_mqap_institution_object: true,
+            delivery: true,
+            obj_institutions: { obj_institution_type_code: true },
+          },
           order: { is_predicted: 'ASC' },
         });
 
@@ -188,21 +191,6 @@ export class ResultsByInstitutionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-  }
-
-  private getEmptyResultByInstitution(): ResultsByInstitution {
-    const resultByInstitution = new ResultsByInstitution();
-
-    resultByInstitution['id'] = null;
-    resultByInstitution['institutions_id'] = null;
-    resultByInstitution['institutions_name'] = null;
-    resultByInstitution['institutions_acronym'] = null;
-    resultByInstitution['institution_roles_id'] = null;
-    resultByInstitution['institutions_type_id'] = null;
-    resultByInstitution['institutions_type_name'] = null;
-    resultByInstitution['deliveries'] = [];
-
-    return resultByInstitution;
   }
 
   async savePartnersInstitutionsByResult(
@@ -347,9 +335,9 @@ export class ResultsByInstitutionsService {
         institutions_id: institution.institutions_id,
         is_predicted:
           institution.institutions_id ===
-            institution.result_kp_mqap_institution_obj
+            institution.result_kp_mqap_institution_object
               .predicted_institution_id &&
-          institution.result_kp_mqap_institution_obj.confidant >=
+          institution.result_kp_mqap_institution_object.confidant >=
             confidenceThreshold,
       },
     );

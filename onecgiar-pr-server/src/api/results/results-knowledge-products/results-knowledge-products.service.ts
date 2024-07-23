@@ -46,7 +46,6 @@ import { isProduction } from '../../../shared/utils/validation.utils';
 import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
-import { InstitutionRoleEnum } from '../results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -56,6 +55,9 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_institution_array: {
         predicted_institution_object: {
           clarisa_center: true,
+        },
+        result_by_institution_object: {
+          obj_institutions: true,
         },
       },
       result_knowledge_product_metadata_array: true,
@@ -133,6 +135,19 @@ export class ResultsKnowledgeProductsService {
         }
       }
 
+      const globalParameter = await this._globalParameterRepository.findOne({
+        where: { name: 'kp_mqap_institutions_confidence' },
+        select: ['value'],
+      });
+
+      if (!globalParameter) {
+        throw new Error(
+          "Global parameter 'kp_mqap_institutions_confidence' not found",
+        );
+      }
+
+      const confidenceThreshold = +globalParameter.value;
+
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
         resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
@@ -180,6 +195,7 @@ export class ResultsKnowledgeProductsService {
       this._resultsKnowledgeProductMapper.patchInstitutions(
         updatedKnowledgeProduct,
         newMetadata,
+        confidenceThreshold,
         true,
       );
 
@@ -248,103 +264,21 @@ export class ResultsKnowledgeProductsService {
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
 
-      if (
-        updatedKnowledgeProduct.result_knowledge_product_institution_array
-          .length > 0
-      ) {
-        const globalParameter = await this._globalParameterRepository.findOne({
-          where: { name: 'kp_mqap_institutions_confidence' },
-          select: ['value'],
-        });
+      //TODO rbi && rkpi save
 
-        if (!globalParameter) {
-          throw new Error(
-            "Global parameter 'kp_mqap_institutions_confidence' not found",
-          );
-        }
+      updatedKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+            [],
+        );
 
-        const confidenceThreshold = +globalParameter.value;
-
-        const existingInstitutions =
-          await this._resultsKnowledgeProductInstitutionRepository.find({
-            where: {
-              is_active: true,
-              result_knowledge_product_id:
-                resultKnowledgeProduct.result_knowledge_product_id,
-            },
-          });
-
-        const updatedInstitutionIds =
-          updatedKnowledgeProduct.result_knowledge_product_institution_array.map(
-            (institution) => institution.predicted_institution_id,
-          );
-
-        for (const existingInstitution of existingInstitutions) {
-          if (
-            !updatedInstitutionIds.includes(
-              existingInstitution.predicted_institution_id,
-            )
-          ) {
-            await this._resultsKnowledgeProductInstitutionRepository.update(
-              {
-                result_kp_mqap_institution_id:
-                  existingInstitution.result_kp_mqap_institution_id,
-              },
-              { is_active: false, last_updated_by: user.id },
-            );
-
-            await this._resultByInstitutionRepository.update(
-              {
-                result_kp_mqap_institution_id:
-                  existingInstitution.result_kp_mqap_institution_id,
-              },
-              { is_active: false, last_updated_by: user.id },
-            );
-          }
-        }
-
-        for (const institution of updatedKnowledgeProduct.result_knowledge_product_institution_array) {
-          const insExist =
-            await this._resultsKnowledgeProductInstitutionRepository.findOne({
-              where: {
-                result_knowledge_product_id:
-                  resultKnowledgeProduct.result_knowledge_product_id,
-                predicted_institution_id: institution.predicted_institution_id,
-                is_active: true,
-              },
-            });
-
-          if (!insExist) {
-            try {
-              const savedInstitution =
-                await this._resultsKnowledgeProductInstitutionRepository.save(
-                  institution,
-                );
-
-              const institutionData = {
-                result_id: resultId,
-                institutions_id:
-                  institution.confidant >= confidenceThreshold
-                    ? institution.predicted_institution_id
-                    : null,
-                institution_roles_id:
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: institution.confidant >= confidenceThreshold,
-                result_kp_mqap_institution_id:
-                  savedInstitution.result_kp_mqap_institution_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              };
-
-              await this._resultByInstitutionRepository.save(institutionData);
-            } catch (error) {
-              throw new Error(
-                `Error saving institution or result by institution: ${error}`,
-              );
-            }
-          }
-        }
-      }
+      const resultByInstitutions =
+        updatedKnowledgeProduct.result_knowledge_product_institution_array.map(
+          (rkpi) => rkpi.result_by_institution_object,
+        );
+      await this._resultByInstitutionRepository.save(
+        resultByInstitutions ?? [],
+      );
 
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
@@ -809,8 +743,8 @@ export class ResultsKnowledgeProductsService {
       );
     }
 
-    const individualItems = details.map((e) =>
-      e.split('is not valid')?.[0]?.trim(),
+    const individualItems = details.map(
+      (e) => e.split('is not valid')?.[0]?.trim(),
     );
     const itemString = StringUtils.join(individualItems, ', ', ', and ');
 
@@ -849,6 +783,19 @@ export class ResultsKnowledgeProductsService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const globalParameter = await this._globalParameterRepository.findOne({
+        where: { name: 'kp_mqap_institutions_confidence' },
+        select: ['value'],
+      });
+
+      if (!globalParameter) {
+        throw new Error(
+          "Global parameter 'kp_mqap_institutions_confidence' not found",
+        );
+      }
+
+      const confidenceThreshold = +globalParameter.value;
 
       let newResult: Result = null;
 
@@ -910,6 +857,7 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.populateKPRelations(
           newKnowledgeProduct,
           resultsKnowledgeProductDto,
+          confidenceThreshold,
         );
 
       await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
@@ -922,54 +870,25 @@ export class ResultsKnowledgeProductsService {
         newKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
 
-      if (
-        newKnowledgeProduct.result_knowledge_product_institution_array.length >
-        0
-      ) {
-        const globalParameter = await this._globalParameterRepository.findOne({
-          where: { name: 'kp_mqap_institutions_confidence' },
-          select: ['value'],
-        });
+      // TODO rbi && rkpi save
 
-        if (!globalParameter) {
-          throw new Error(
-            "Global parameter 'kp_mqap_institutions_confidence' not found",
-          );
-        }
+      newKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+        );
 
-        const confidenceThreshold = +globalParameter.value;
-
-        for (const institution of newKnowledgeProduct.result_knowledge_product_institution_array) {
-          try {
-            const savedInstitution =
-              await this._resultsKnowledgeProductInstitutionRepository.save(
-                institution,
-              );
-
-            if (!savedInstitution.predicted_institution_object.clarisa_center) {
-              const isPredicted = institution.confidant >= confidenceThreshold;
-
-              await this._resultByInstitutionRepository.save({
-                result_id: newResult.id,
-                institutions_id: isPredicted
-                  ? institution.predicted_institution_id
-                  : null,
-                institution_roles_id:
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: isPredicted,
-                result_kp_mqap_institution_id:
-                  savedInstitution.result_kp_mqap_institution_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              });
-            }
-          } catch (error) {
-            throw new Error(
-              `Error saving institution or result by institution: ${error}`,
-            );
-          }
-        }
-      }
+      const resultByInstitutions =
+        newKnowledgeProduct.result_knowledge_product_institution_array.map(
+          (rkpi) => {
+            rkpi.result_by_institution_object &&
+              (rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id);
+            return rkpi.result_by_institution_object;
+          },
+        );
+      await this._resultByInstitutionRepository.save(
+        resultByInstitutions ?? [],
+      );
 
       await this._resultsKnowledgeProductKeywordRepository.save(
         newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
