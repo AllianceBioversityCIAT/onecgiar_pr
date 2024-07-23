@@ -52,7 +52,7 @@ export class EvidencesController {
   }
 
   @Get('get/:resultId')
-  finEvidenceByResult(@Param('resultId') resultId: number) {
+  findEvidenceByResult(@Param('resultId') resultId: number) {
     return this.evidencesService.findAll(resultId);
   }
 

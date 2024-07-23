@@ -64,6 +64,8 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { MQAPModule } from '../m-qap/m-qap.module';
+import { MQAPService } from '../m-qap/m-qap.service';
 
 @Module({
   controllers: [VersioningController],
@@ -127,6 +129,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultAnswerRepository,
+    MQAPService,
   ],
   exports: [
     EvidencesService,
@@ -165,9 +168,11 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
     EvidenceSharepointRepository,
     ShareResultRequestRepository,
     IpsrRepository,
+    MQAPService,
   ],
   imports: [
     SharePointModule,
+    MQAPModule,
     forwardRef(() => ResultInnovationPackageModule),
     forwardRef(() => InnovationPathwayModule),
   ],

@@ -28,20 +28,20 @@ describe('EvidenceItemComponent', () => {
     nutrition_related: false,
     environmental_biodiversity_related: false,
     poverty_related: false
-  }
+  };
   let mockApiService: any;
-  let mockDataControlService:any;
+  let mockDataControlService: any;
 
   beforeEach(async () => {
     mockApiService = {
       alertsFe: {
         show: jest.fn()
       }
-    }
+    };
 
     mockDataControlService = {
       isKnowledgeProduct: true
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -54,14 +54,7 @@ describe('EvidenceItemComponent', () => {
         YesOrNotByBooleanPipe,
         PrFieldValidationsComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        InputTextareaModule,
-        RadioButtonModule,
-        CheckboxModule,
-        ReactiveFormsModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, InputTextareaModule, RadioButtonModule, CheckboxModule, ReactiveFormsModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -70,13 +63,39 @@ describe('EvidenceItemComponent', () => {
         {
           provide: DataControlService,
           useValue: mockDataControlService
-        },
+        }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(EvidenceItemComponent);
     component = fixture.componentInstance;
     component.evidence = mockEvidences;
+  });
+
+  describe('validateCGLink', () => {
+    it('should return true for a valid legacy link', () => {
+      component.evidence.link = 'https://cgspace.cgiar.org/handle/10568/12423';
+
+      const result = component.validateCGLink();
+
+      expect(result).toBeTruthy();
+    });
+
+    it('should return true for a valid new link', () => {
+      component.evidence.link = 'https://cgspace.cgiar.org/items/b36d43aa-9dfe-4cac-a09f-e1bfab3ecd49';
+
+      const result = component.validateCGLink();
+
+      expect(result).toBeTruthy();
+    });
+
+    it('should return false for an invalid link', () => {
+      component.evidence.link = 'https://example.com';
+
+      const result = component.validateCGLink();
+
+      expect(result).toBeFalsy();
+    });
   });
 
   describe('validateFileTypes', () => {
@@ -106,7 +125,7 @@ describe('EvidenceItemComponent', () => {
 
   describe('deleteItem', () => {
     it('should show confirmation alert when deleteItem is called', () => {
-      const spy = jest.spyOn(mockApiService.alertsFe, 'show')
+      const spy = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.deleteItem();
 
@@ -118,10 +137,8 @@ describe('EvidenceItemComponent', () => {
     it('should set evidence properties when a valid file is selected', () => {
       const mockEvent = {
         target: {
-          files: [
-            createFile('test.jpg', 500)
-          ],
-        },
+          files: [createFile('test.jpg', 500)]
+        }
       };
 
       component.onFileSelected(mockEvent);
@@ -134,10 +151,8 @@ describe('EvidenceItemComponent', () => {
     it('should set incorrectFile to true when an invalid file is selected', () => {
       const mockEvent = {
         target: {
-          files: [
-            createFile('test.txt', 500)
-          ],
-        },
+          files: [createFile('test.txt', 500)]
+        }
       };
 
       component.onFileSelected(mockEvent);
@@ -152,10 +167,8 @@ describe('EvidenceItemComponent', () => {
         preventDefault: jest.fn(),
         stopPropagation: jest.fn(),
         dataTransfer: {
-          files: [
-            createFile('test.jpg', 500)
-          ],
-        },
+          files: [createFile('test.jpg', 500)]
+        }
       };
       component.onFileDropped(mockEvent);
 
@@ -169,9 +182,7 @@ describe('EvidenceItemComponent', () => {
         preventDefault: jest.fn(),
         stopPropagation: jest.fn(),
         dataTransfer: {
-          files: [
-            createFile('test.txt', 500)
-          ],
+          files: [createFile('test.txt', 500)]
         }
       };
 
@@ -189,7 +200,7 @@ describe('EvidenceItemComponent', () => {
     it('should prevent default and stop propagation', () => {
       const mockEvent = {
         preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
+        stopPropagation: jest.fn()
       };
       const spyPreventDefault = jest.spyOn(mockEvent, 'preventDefault');
       const spyStopPropagation = jest.spyOn(mockEvent, 'stopPropagation');
@@ -205,7 +216,7 @@ describe('EvidenceItemComponent', () => {
     it('should prevent default and stop propagation', () => {
       const mockEvent = {
         preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
+        stopPropagation: jest.fn()
       };
       const spyPreventDefault = jest.spyOn(mockEvent, 'preventDefault');
       const spyStopPropagation = jest.spyOn(mockEvent, 'stopPropagation');

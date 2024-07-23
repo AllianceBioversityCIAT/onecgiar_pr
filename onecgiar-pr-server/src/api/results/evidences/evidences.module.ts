@@ -18,8 +18,11 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../../shared/handlers/error.utils';
+import { MQAPModule } from '../../m-qap/m-qap.module';
+import { MQAPService } from '../../m-qap/m-qap.service';
 
 @Module({
+  imports: [AuthModule, SharePointModule, MQAPModule],
   controllers: [EvidencesController],
   providers: [
     EvidencesService,
@@ -30,9 +33,9 @@ import {
     ResultsKnowledgeProductsRepository,
     ReturnResponse,
     ResultsInnovationsDevRepository,
+    MQAPService,
   ],
-  imports: [AuthModule, SharePointModule],
-  exports: [EvidencesRepository],
+  exports: [EvidencesRepository, MQAPService],
 })
 export class EvidencesModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
