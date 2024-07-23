@@ -18,6 +18,8 @@ import { GlobalParameterCacheService } from '../../../shared/services/cache/glob
 import { SharePointService } from '../../../shared/services/share-point/share-point.service';
 import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint.repository';
 import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
+import { MQAPService } from '../../m-qap/m-qap.service';
+import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 
 @Injectable()
 export class EvidencesService {
@@ -31,6 +33,7 @@ export class EvidencesService {
     private readonly _globalParameterCacheService: GlobalParameterCacheService,
     private readonly _sharePointService: SharePointService,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
+    private readonly _mqapService: MQAPService,
   ) {}
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -70,6 +73,8 @@ export class EvidencesService {
               false,
               1,
             );
+
+          evidence.link = await this.getHandleFromRegularLink(evidence.link);
 
           const newEvidence = new Evidence();
           if (!eExists) {
@@ -164,10 +169,10 @@ export class EvidencesService {
           true,
           1,
         );
-        const long: number =
+        const supplementaryLenght: number =
           supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
         const newsEvidencesArray: Evidence[] = [];
-        for (let index = 0; index < long; index++) {
+        for (let index = 0; index < supplementaryLenght; index++) {
           const supplementary = supplementaryArray[index];
           const eExists =
             await this._evidencesRepository.getEvidencesByResultIdAndLink(
@@ -176,6 +181,11 @@ export class EvidencesService {
               true,
               1,
             );
+
+          supplementary.link = await this.getHandleFromRegularLink(
+            supplementary.link,
+          );
+
           if (!eExists) {
             const newEvidnece = new Evidence();
             newEvidnece.created_by = user.id;
@@ -201,6 +211,23 @@ export class EvidencesService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private async getHandleFromRegularLink(evidence: string): Promise<string> {
+    const isCGLink = evidence?.includes('cgspace');
+
+    if (isCGLink) {
+      const mqapParameters: MQAPBodyDto =
+        MQAPBodyDto.toOnlyGetCGSpaceData(evidence);
+      const cgspaceData =
+        await this._mqapService.getDataFromCGSpaceHandle(mqapParameters);
+
+      if (cgspaceData.Handle) {
+        return cgspaceData.Handle;
+      }
+    }
+
+    return evidence;
   }
 
   async saveSPData(evidence: EvidencesCreateInterface, newEvidenceId) {

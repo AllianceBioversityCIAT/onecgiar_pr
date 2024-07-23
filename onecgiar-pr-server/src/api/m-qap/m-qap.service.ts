@@ -4,6 +4,7 @@ import { env } from 'process';
 import { lastValueFrom, map } from 'rxjs';
 import { MQAPResultDto } from './dtos/m-qap.dto';
 import { AxiosRequestConfig } from 'axios';
+import { MQAPBodyDto } from './dtos/m-qap-body.dto';
 
 @Injectable()
 export class MQAPService {
@@ -12,18 +13,17 @@ export class MQAPService {
   constructor(private readonly _httpService: HttpService) {}
 
   public async getDataFromCGSpaceHandle(
-    handle: string,
+    body: MQAPBodyDto,
   ): Promise<MQAPResultDto> {
     try {
-      const queryParams: AxiosRequestConfig = {
+      const requestConfig: AxiosRequestConfig = {
         params: {
           apiKey: env.MQAP_KEY,
-          link: handle,
         },
       };
       return lastValueFrom(
         this._httpService
-          .get(`${this._mqapUrl}`, queryParams)
+          .post(`${this._mqapUrl}`, body, requestConfig)
           .pipe(map((resp) => resp.data))
           .pipe(
             map((resp) => {
@@ -33,7 +33,7 @@ export class MQAPService {
           ),
       ).catch((error) => {
         this._logger.error(
-          `${error} (for Handle ${handle}): ${JSON.stringify(
+          `${error} (for Handle ${body.link}): ${JSON.stringify(
             error.response?.data,
           )}`,
         );

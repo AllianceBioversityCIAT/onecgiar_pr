@@ -46,6 +46,7 @@ import { isProduction } from '../../../shared/utils/validation.utils';
 import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -568,7 +569,9 @@ export class ResultsKnowledgeProductsService {
       }
 
       const mqapResponse: MQAPResultDto =
-        await this._mqapService.getDataFromCGSpaceHandle(handle);
+        await this._mqapService.getDataFromCGSpaceHandle(
+          MQAPBodyDto.fromHandle(handle),
+        );
 
       if (!mqapResponse) {
         throw {

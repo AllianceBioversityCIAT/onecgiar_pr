@@ -7,9 +7,10 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageModule } from 'primeng/message';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TooltipModule]
+  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TooltipModule, MessageModule]
 })
 export class RdEvidencesModule {}
