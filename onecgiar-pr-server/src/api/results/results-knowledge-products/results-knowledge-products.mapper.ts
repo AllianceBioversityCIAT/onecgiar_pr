@@ -637,8 +637,7 @@ export class ResultsKnowledgeProductMapper {
         resultInstitution.institutions_id = isPredicted
           ? kpInstitution.predicted_institution_id
           : null;
-        resultInstitution.institution_roles_id =
-          InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS;
+        resultInstitution.institution_roles_id = InstitutionRoleEnum.PARTNER;
         resultInstitution.is_predicted = isPredicted;
 
         if (!knowledgeProduct.last_updated_by) {

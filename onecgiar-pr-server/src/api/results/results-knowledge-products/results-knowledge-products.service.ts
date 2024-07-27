@@ -1044,6 +1044,8 @@ export class ResultsKnowledgeProductsService {
         cgi.predicted_institution_object.clarisa_center
       ) {
         cgi.is_active = false;
+        cgi.result_by_institution_object &&
+          (cgi.result_by_institution_object.is_active = false);
       }
 
       //if the center has not been mapped already, we will create a new db record
