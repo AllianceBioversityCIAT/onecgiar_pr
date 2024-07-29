@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdPartnersService } from '../../rd-partners.service';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
+import { UnmappedMQAPInstitutionDto } from '../../models/partnersBody';
 
 @Component({
   selector: 'app-knowledge-product-selector',
@@ -33,8 +34,8 @@ export class KnowledgeProductSelectorComponent {
     partner.obj_institutions.website_link = institutionFinded?.website_link;
   }
 
-  generateDescription(partner) {
-    const confidenceLevel = partner.result_kp_mqap_institution_obj.confidant;
+  generateDescription(partner: UnmappedMQAPInstitutionDto) {
+    const confidenceLevel = partner.result_kp_mqap_institution_object.confidant;
 
     if (partner.is_predicted) {
       return `The confidence level for the predicted match is <span class="confidenceLevel">${confidenceLevel}%</span>. Feel free to select a different partner only if necessary.`;
