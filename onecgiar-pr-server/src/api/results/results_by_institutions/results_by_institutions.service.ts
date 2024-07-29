@@ -429,6 +429,7 @@ export class ResultsByInstitutionsService {
           ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
           : InstitutionRoleEnum.PARTNER;
         toAdd.delivery = a.delivery;
+        toAdd['isNew'] = true;
         return toAdd;
       });
 
@@ -456,9 +457,11 @@ export class ResultsByInstitutionsService {
     //handling deliveries from added and updated result_by_institutions
     for (const toUpdateDeliveries of toUpdate.concat(added)) {
       await this.handleDeliveries(
-        toUpdateDeliveries.delivery,
-        oldInstitutions.find((i) => i.id === toUpdateDeliveries.id)?.delivery ??
-          [],
+        toUpdateDeliveries['isNew']
+          ? toUpdateDeliveries.delivery
+          : incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
+              ?.delivery ?? [],
+        toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
         toUpdateDeliveries.id,
         userId,
       );
