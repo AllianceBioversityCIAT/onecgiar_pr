@@ -237,13 +237,14 @@ export class ResultsKnowledgeProductsRepository
       if(rbi.id is null, "<Not provided>", if(ci.id is null, "<Not reviewed>", ci.name)) partner_name, 
       if(rbi.is_predicted = 1, "Prediction", "Manual matching") matching_type,
       if(rbi.is_predicted <> 1 or rbi.id is null, "<Not applicable>", rkmi.confidant) confidence_level,
-      if(rbi.id is null, "<Not applicable>", if(rbi.institutions_id is null, "No", if(rkmi.predicted_institution_id = rbi.institutions_id, "No", "Yes"))) is_correction
+      if(rbi.id is null, "<Not applicable>", if(rbi.institutions_id is null or v.phase_year < 2024, "No", if(rkmi.predicted_institution_id = rbi.institutions_id, "No", "Yes"))) is_correction
       from results_knowledge_product rkp
       right join result r on rkp.results_id = r.id and r.is_active = 1
-      left join results_by_institution rbi on rbi.result_id = r.id and rbi.is_active
+      left join results_by_institution rbi on rbi.result_id = r.id and rbi.is_active and rbi.institution_roles_id = 2
       left join clarisa_institutions ci on rbi.institutions_id = ci.id
       left join results_kp_mqap_institutions rkmi on rbi.result_kp_mqap_institution_id = rkmi.result_kp_mqap_institution_id and rkmi.is_active = 1
-      where rkp.is_active = 1 and r.version_id = ?;
+      left join version v on r.version_id = v.id and v.is_active
+      where rkp.is_active = 1 and v.id in (?);
     `;
     return this.query(query, [filterDto.phase_id])
       .then((res) => res)
