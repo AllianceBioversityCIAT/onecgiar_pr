@@ -109,15 +109,20 @@ export class InitGeneralResultsReportComponent implements OnInit {
       this.requestCounter = 0;
 
       const uniqueResultIdsSet = new Set(resultsSelected.map((item: { results_id: number }) => item.results_id));
+      let errorOnDataExport = false;
 
       for (const resultId of uniqueResultIdsSet) {
         const resultExported = await this.POST_excelFullReportPromise(resultId);
         if (!resultExported) {
+          errorOnDataExport = true;
           break;
         }
       }
 
-      this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+      if (!errorOnDataExport) {
+        this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+      }
+
       this.requesting = false;
     }
   }
