@@ -21,7 +21,12 @@ export class InitGeneralResultsReportComponent implements OnInit {
   reportingPhases: any[] = [];
   phasesSelected = [];
   resultStatusList = [];
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    private exportTablesSE: ExportTablesService,
+    private customAlertService: CustomizedAlertsFeService,
+    private phasesSE: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.getAll();
@@ -96,41 +101,46 @@ export class InitGeneralResultsReportComponent implements OnInit {
   dataToExport = [];
   tocToExport = [];
 
-  async exportExcel(resultsRelected) {
-    this.dataToExport = [];
-    this.tocToExport = [];
-    this.requesting = true;
-    this.requestCounter = 0;
+  async exportExcel(resultsSelected: { results_id: number }[]) {
+    if (resultsSelected.length) {
+      this.dataToExport = [];
+      this.tocToExport = [];
+      this.requesting = true;
+      this.requestCounter = 0;
 
-    const list = [];
-    const uniqueResultIdsSet = new Set(resultsRelected.map((item: any) => item.results_id));
-    const uniqueResultIds = [...uniqueResultIdsSet];
-    uniqueResultIds?.forEach(element => {
-      list.push(element);
-    });
+      const uniqueResultIdsSet = new Set(resultsSelected.map((item: { results_id: number }) => item.results_id));
 
-    for (const [key, result] of list.entries()) {
-      await this.POST_excelFullReportPromise(result, key);
+      for (const resultId of uniqueResultIdsSet) {
+        const resultExported = await this.POST_excelFullReportPromise(resultId);
+        if (!resultExported) {
+          break;
+        }
+      }
+
+      this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+      this.requesting = false;
     }
-
-    this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
-    this.requesting = false;
   }
 
-  POST_excelFullReportPromise(result, key) {
+  POST_excelFullReportPromise(result: number) {
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.POST_excelFullReport([result]).subscribe(
-        ({ response }) => {
+      this.api.resultsSE.POST_excelFullReport([result]).subscribe({
+        next: ({ response }) => {
           this.requestCounter++;
           if (response?.fullReport?.length) this.dataToExport.push(...response.fullReport);
           if (response?.resultsAgaintsToc?.length) this.tocToExport.push(...response.resultsAgaintsToc);
-          resolve(null);
+          resolve('Fine');
         },
-        err => {
-          this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+        error: err => {
+          this.customAlertService.show({
+            id: 'loginAlert',
+            title: 'Oops!',
+            description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.',
+            status: 'error'
+          });
           resolve(null);
         }
-      );
+      });
     });
   }
 
