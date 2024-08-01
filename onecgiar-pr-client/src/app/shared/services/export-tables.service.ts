@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
+import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 interface Wscols {
   wpx: number;
@@ -136,7 +137,7 @@ export class ExportTablesService {
         this.formatWorksheet(worksheet);
         this.formatWorksheet(tocSheet);
 
-        const buffer = workbook.xlsx.writeBuffer();
+        const buffer = await workbook.xlsx.writeBuffer();
         this.saveAsExcelFile(buffer, fileName);
         callback?.();
       });
@@ -146,7 +147,7 @@ export class ExportTablesService {
     }
   }
 
-  private formatWorksheet(worksheet: any) {
+  private formatWorksheet(worksheet: ExcelJS.Worksheet) {
     worksheet.getRow(1).height = 20;
 
     worksheet.getRow(1).eachCell(cell => {
