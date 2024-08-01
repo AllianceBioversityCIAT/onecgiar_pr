@@ -121,7 +121,6 @@ export class InitGeneralResultsReportComponent implements OnInit {
     const wscolsResults = this.generateColumns(this.dataToExport);
     const wscolsToc = this.generateColumns(this.tocToExport);
 
-    console.log(this.dataToExport);
     this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', wscolsResults, this.tocToExport, wscolsToc);
     this.requesting = false;
   }
