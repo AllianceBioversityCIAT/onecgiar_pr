@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
-
+import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 interface Wscols {
   wpx: number;
@@ -109,24 +109,85 @@ export class ExportTablesService {
     }
   }
 
-  exportMultipleSheetsExcel(list: any[], fileName: string, wscols?: Wscols[], tocToExport?: any[], callback?) {
+  async exportMultipleSheetsExcel(list: any[], fileName: string, wscolsResults?: any[], tocToExport?: any[], wscolsToc?: any[], callback?) {
     try {
-      import('xlsx').then(xlsx => {
-        const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
-        const tocsheet = xlsx.utils.json_to_sheet(tocToExport, { skipHeader: Boolean(wscols?.length) });
-        if (wscols) {
-          worksheet['!cols'] = wscols as any;
-          tocsheet['!cols'] = wscols as any;
-        }
-        const workbook = { Sheets: { data: worksheet, 'TOC indicators by result': tocsheet }, SheetNames: ['data', 'TOC indicators by result'] };
-        const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-        this.saveAsExcelFile(excelBuffer, fileName);
-        callback?.();
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('data');
+      const tocSheet = workbook.addWorksheet('TOC indicators by result');
+
+      if (wscolsResults) {
+        worksheet.columns = wscolsResults;
+      }
+
+      if (wscolsToc) {
+        tocSheet.columns = wscolsToc;
+      }
+
+      list.forEach(data => {
+        const rowValues = wscolsResults.map(col => data[col.key] ?? 'Not provided');
+        worksheet.addRow(rowValues);
       });
+
+      tocToExport?.forEach(data => {
+        const rowValues = wscolsToc.map(col => data[col.key] ?? 'Not provided');
+        tocSheet.addRow(rowValues);
+      });
+
+      this.formatWorksheet(worksheet);
+      this.formatWorksheet(tocSheet);
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      this.saveAsExcelFile(buffer, fileName);
+      callback?.();
     } catch (error) {
-      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
+      console.error('Error generating file', error);
       callback?.();
     }
+  }
+
+  private formatWorksheet(worksheet: ExcelJS.Worksheet) {
+    worksheet.getRow(1).height = 30;
+
+    worksheet.getRow(1).eachCell(cell => {
+      cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '5568DD' }
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
+          cell.font = { size: 14, color: { argb: '000000' } };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        if (rowNumber % 2 === 0) {
+          row.eachCell(cell => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'ECEFFB' }
+            };
+          });
+        }
+      }
+    });
   }
 
   saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false): void {

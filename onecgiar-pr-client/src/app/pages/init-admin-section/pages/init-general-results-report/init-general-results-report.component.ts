@@ -21,7 +21,12 @@ export class InitGeneralResultsReportComponent implements OnInit {
   reportingPhases: any[] = [];
   phasesSelected = [];
   resultStatusList = [];
-  constructor(public api: ApiService, private exportTablesSE: ExportTablesService, private customAlertService: CustomizedAlertsFeService, private phasesSE: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    private exportTablesSE: ExportTablesService,
+    private customAlertService: CustomizedAlertsFeService,
+    private phasesSE: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.getAll();
@@ -113,7 +118,11 @@ export class InitGeneralResultsReportComponent implements OnInit {
       await this.POST_excelFullReportPromise(result, key);
     }
 
-    this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+    const wscolsResults = this.generateColumns(this.dataToExport);
+    const wscolsToc = this.generateColumns(this.tocToExport);
+
+    console.log(this.dataToExport);
+    this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', wscolsResults, this.tocToExport, wscolsToc);
     this.requesting = false;
   }
 
@@ -127,11 +136,29 @@ export class InitGeneralResultsReportComponent implements OnInit {
           resolve(null);
         },
         err => {
-          this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.', status: 'error' });
+          this.customAlertService.show({
+            id: 'loginAlert',
+            title: 'Oops!',
+            description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.',
+            status: 'error'
+          });
           resolve(null);
         }
       );
     });
+  }
+
+  private generateColumns(data: any[]): any[] {
+    if (data.length === 0) {
+      return [];
+    }
+
+    const keys = Object.keys(data[0]);
+    return keys.map(key => ({
+      header: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      key: key,
+      width: 24
+    }));
   }
 
   onRemoveinit(e) {}
