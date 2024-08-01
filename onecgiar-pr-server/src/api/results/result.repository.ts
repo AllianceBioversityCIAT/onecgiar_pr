@@ -1139,6 +1139,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
+    (
+      SELECT
+        CONCAT(
+          u.last_name,
+          ', ',
+          u.first_name
+        )
+      FROM 
+        users u
+      WHERE
+        u.id = r.created_by
+    ) AS "Created by",
     rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
@@ -1462,6 +1474,18 @@ left join clarisa_regions cr
     ) AS "PDF Link",
     rl.name as "Result Level",
     rt.name as "Result Type",
+    (
+      SELECT
+        CONCAT(
+          u.last_name,
+          ', ',
+          u.first_name
+        )
+      FROM 
+        users u
+      WHERE
+        u.id = r.created_by
+    ) AS "Created by",
     rs.status_name as "Status",
     r.title as "Result Title",
     r.description as "Result Description",
