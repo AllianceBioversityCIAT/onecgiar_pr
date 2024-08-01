@@ -1290,9 +1290,9 @@ export class ResultsService {
     }
   }
 
-  async reportingList(initDate: Date, endDate: Date) {
+  async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     try {
-      const result = await this._resultRepository.reportingResultList(
+      const result = await this._resultRepository.getResultDataForBasicReport(
         initDate,
         endDate,
       );

@@ -547,92 +547,82 @@ WHERE
     }
   }
 
-  async reportingResultList(initDate: Date, endDate: Date) {
+  async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code as \`Result code\`,
-      version.phase_name as \`Reporting phase\`,
-    	r.reported_year_id as \`Reporting year\`,
-    	r.title as \`Result title\`,
-    	CONCAT(rl.name, ' - ', rt.name) as \`Result type\`,
-      if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as \`Is Key Result Story\`,
-      (Select gtl2.description from gender_tag_level gtl2 where id = r.gender_tag_level_id) as \`Gender tag\`, 
-      (Select gtl2.description from gender_tag_level gtl2 where id = r.climate_change_tag_level_id) as \`Climate tag\`,
-      (Select gtl2.description from gender_tag_level gtl2 where id = r.nutrition_tag_level_id) as \`Nutrition Tag Level\`, 
-      (Select gtl2.description from gender_tag_level gtl2 where id = r.environmental_biodiversity_tag_level_id) as \`Environment and/or biodiversity Tag Level\`,
-      (Select gtl2.description from gender_tag_level gtl2 where id = r.poverty_tag_level_id) as \`Poverty Tag Level\`,
-    	ci.official_code as \`Submitter\` ,
-    	rs.status_name as \`Status\`,
-    	DATE_FORMAT(r.created_date, "%Y-%m-%d") as \`Creation date\`,
-    	wp.id as \`Work package id\`,
-    	wp.name as \`Work package title\`,
-    	rtr.toc_result_id as \`Toc result id\`,
-    	tr.result_title as \`ToC result\`,
-    	rtr.action_area_outcome_id as \`Action area outcome id\`,
-    	caao.outcomeStatement as \`Action area outcome name\`,
-    	GROUP_CONCAT(CONCAT('[', cc.code, ': ', ci2.acronym, ' - ', ci2.name, ']') SEPARATOR ', ') as \`Centers\`,
-      GROUP_CONCAT(DISTINCT cin2.official_code SEPARATOR ', ') as \`Contributing Initiatives\`,
-      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code,?, 'phase=',r.version_id) as \`PDF Link\`
-    from
-    	\`result\` r
-    inner join result_type rt on
-    	rt.id = r.result_type_id
-    inner join result_level rl on
-    	rl.id = r.result_level_id
-    inner join results_by_inititiative rbi on
-    	rbi.result_id = r.id
-    	and rbi.initiative_role_id = 1
-    	and rbi.is_active > 0
-    left join results_by_inititiative rbi2 on
-    	rbi2.result_id = r.id
-    	and rbi2.initiative_role_id = 2
-    	and rbi2.is_active > 0
-    inner join clarisa_initiatives ci on
-    	ci.id = rbi.inititiative_id
-    left join clarisa_initiatives cin2 on
-    	cin2.id = rbi2.inititiative_id
-    left join results_toc_result rtr on
-    	rtr.results_id = r.id
-    	and rtr.initiative_id = rbi.inititiative_id
-    	and rtr.is_active > 0
-    left join results_center rc on
-    	rc.result_id = r.id
-    	and rc.is_active > 0
-    left join clarisa_center cc on
-    	cc.code = rc.center_id
-    left join clarisa_institutions ci2 on
-    	ci2.id = cc.institutionId
-      and ci2.is_active > 0
-    left join ${env.DB_TOC}.toc_results tr on
-      tr.id = rtr.toc_result_id
-    left join clarisa_action_area_outcome caao ON
-    	caao.id = rtr.action_area_outcome_id
-    left join ${env.DB_TOC}.work_packages wp on
-      wp.id = tr.work_packages_id 
-    	and wp.active > 0
+      r.result_code as "Result code",
+      version.phase_name as "Reporting phase",
+      r.reported_year_id as "Reporting year",
+      r.title as "Result title",
+      CONCAT(rl.name, ' - ', rt.name) as "Result type",
+      if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "Is Key Result Story",
+      (
+        Select gtl_gender.description 
+        from gender_tag_level gtl_gender 
+        where gtl_gender.id = r.gender_tag_level_id
+      ) as "Gender tag", 
+      (
+        Select gtl_climate.description 
+        from gender_tag_level gtl_climate
+        where gtl_climate.id = r.climate_change_tag_level_id
+      ) as "Climate tag",
+      (
+        Select gtl_nutrition.description 
+        from gender_tag_level gtl_nutrition 
+        where gtl_nutrition.id = r.nutrition_tag_level_id
+      ) as "Nutrition Tag Level", 
+      (
+        Select gtl_environment.description 
+        from gender_tag_level gtl_environment 
+        where gtl_environment.id = r.environmental_biodiversity_tag_level_id
+      ) as "Environment and/or biodiversity Tag Level",
+      (
+        Select gtl_poverty.description 
+        from gender_tag_level gtl_poverty 
+        where gtl_poverty.id = r.poverty_tag_level_id
+      ) as "Poverty Tag Level",
+      ci_main.official_code as "Submitter",
+      rs.status_name as "Status",
+      DATE_FORMAT(r.created_date, "%Y-%m-%d") as "Creation date",
+      wp.id as "Work package id",
+      wp.name as "Work package title",
+      rtr.toc_result_id as "Toc result id",
+      tr.result_title as "ToC result",
+      (
+        select group_concat(distinct concat(caa_q1.id, ' - ', caa_q1.name) separator '\n') 
+        from ${env.DB_TOC}.toc_results_action_area_results traar_q1
+        left JOIN ${env.DB_TOC}.toc_action_area_results taar_q1 
+          ON taar_q1.toc_result_id = traar_q1.toc_action_area_results_id_toc and taar_q1.is_active
+        right join clarisa_action_area caa_q1 on taar_q1.action_areas_id = caa_q1.id
+        where traar_q1.toc_results_id = tr.toc_result_id and traar_q1.is_active
+      ) as "Action Area(s)",
+      GROUP_CONCAT(CONCAT('[', cc.code, ': ', c_inst.acronym, ' - ', c_inst.name, ']') SEPARATOR ', ') as "Center(s)",
+      GROUP_CONCAT(DISTINCT ci_contributor.official_code SEPARATOR ', ') as "Contributing Initiative(s)",
+      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id) as "PDF Link"
+    from result r
+    inner join result_type rt on rt.id = r.result_type_id
+    inner join result_level rl on rl.id = r.result_level_id
+    inner join results_by_inititiative rbi_main on rbi_main.result_id = r.id 
+      and rbi_main.initiative_role_id = 1 and rbi_main.is_active > 0
+    left join results_by_inititiative rbi_contributor on rbi_contributor.result_id = r.id 
+      and rbi_contributor.initiative_role_id = 2 and rbi_contributor.is_active > 0
+    inner join clarisa_initiatives ci_main on ci_main.id = rbi_main.inititiative_id
+    left join clarisa_initiatives ci_contributor on ci_contributor.id = rbi_contributor.inititiative_id
+    left join results_toc_result rtr on rtr.results_id = r.id 
+      and rtr.initiative_id = rbi_main.inititiative_id and rtr.is_active > 0
+    left join ${env.DB_TOC}.toc_results tr on rtr.toc_result_id = tr.id and tr.is_active
+    left join clarisa_action_area_outcome caao ON caao.id = rtr.action_area_outcome_id
+    left join ${env.DB_TOC}.work_packages wp on wp.id = tr.work_packages_id and wp.active > 0
+    left join results_center rc on rc.result_id = r.id and rc.is_active > 0
+    left join clarisa_center cc on cc.code = rc.center_id
+    left join clarisa_institutions c_inst on c_inst.id = cc.institutionId and c_inst.is_active > 0
     INNER JOIN result_status rs ON rs.result_status_id = r.status_id
-    inner join version on version.id = r.version_id 
-    WHERE
-    	r.created_date >= ?
-    	and r.created_date <= ?
-      and r.is_active > 0
-      and r.result_type_id not in (10,11)
-    GROUP by
-      r.id,
-      r.reported_year_id,
-      r.title,
-      rl.name,
-      rt.name,
-      ci.official_code,
-      rs.status_name,
-      r.created_date,
-      wp.id,
-      wp.name,
-      rtr.toc_result_id,
-      tr.result_title,
-      rtr.action_area_outcome_id,
-      caao.outcomeStatement
-    order by r.created_date DESC;`;
+    inner join version on version.id = r.version_id WHERE r.created_date >= ? and r.created_date <= ? 
+      and r.is_active > 0 and r.result_type_id not in (10,11)
+    GROUP by r.id, r.reported_year_id, r.title, rl.name, rt.name, ci_main.official_code, rs.status_name, r.created_date,
+      wp.id, wp.name, rtr.toc_result_id, tr.result_title, rtr.action_area_outcome_id, caao.outcomeStatement
+    order by r.created_date DESC;
+    `;
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
       return results;
@@ -1302,7 +1292,7 @@ left join clarisa_regions cr
  /* GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ') as "Results from previous portfolio", */
  (SELECT GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ')
   FROM linked_result lr2
- WHERE lr2.origin_result_id = 28
+ WHERE lr2.origin_result_id = r.id
     and lr2.linked_results_id is NULL 
     and lr2.is_active > 0
     and lr2.legacy_link is not NULL) as "Results from previous portfolio",
