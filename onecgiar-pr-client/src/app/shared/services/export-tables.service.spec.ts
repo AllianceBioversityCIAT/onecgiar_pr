@@ -130,7 +130,7 @@ describe('ExportTablesService', () => {
       const wscols = [{ wpx: 100 }];
       const tocToExport = ['tocData1', 'tocData2'];
 
-      await service.exportMultipleSheetsExcel(list, fileName, wscols, tocToExport, () => {
+      await service.exportMultipleSheetsExcel(list, fileName, wscols, tocToExport, wscols, () => {
         expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
         expect(FileSaver.saveAs).toHaveBeenCalled();
       });
@@ -141,7 +141,7 @@ describe('ExportTablesService', () => {
       const fileName = 'testFile';
       const tocToExport = ['tocData1', 'tocData2'];
 
-      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, () => {
+      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, undefined,() => {
         expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
         expect(FileSaver.saveAs).toHaveBeenCalled();
       });

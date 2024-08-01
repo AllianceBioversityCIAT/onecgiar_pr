@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
-import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 interface Wscols {
   wpx: number;
@@ -178,42 +177,44 @@ export class ExportTablesService {
 
   async exportMultipleSheetsExcel(list: any[], fileName: string, wscolsResults?: any[], tocToExport?: any[], wscolsToc?: any[], callback?) {
     try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('data');
-      const tocSheet = workbook.addWorksheet('TOC indicators by result');
+      import('exceljs').then(async ExcelJS => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('data');
+        const tocSheet = workbook.addWorksheet('TOC indicators by result');
 
-      if (wscolsResults) {
-        worksheet.columns = wscolsResults;
-      }
+        if (wscolsResults) {
+          worksheet.columns = wscolsResults;
+        }
 
-      if (wscolsToc) {
-        tocSheet.columns = wscolsToc;
-      }
+        if (wscolsToc) {
+          tocSheet.columns = wscolsToc;
+        }
 
-      list.forEach(data => {
-        const rowValues = wscolsResults.map(col => data[col.key] ?? 'Not provided');
-        worksheet.addRow(rowValues);
+        list.forEach(data => {
+          const rowValues = wscolsResults.map(col => data[col.key] ?? 'Not provided');
+          worksheet.addRow(rowValues);
+        });
+
+        tocToExport?.forEach(data => {
+          const rowValues = wscolsToc.map(col => data[col.key] ?? 'Not provided');
+          tocSheet.addRow(rowValues);
+        });
+
+        this.formatWorksheet(worksheet);
+        this.formatWorksheet(tocSheet);
+
+        const buffer = workbook.xlsx.writeBuffer();
+        this.saveAsExcelFile(buffer, fileName);
+        callback?.();
       });
-
-      tocToExport?.forEach(data => {
-        const rowValues = wscolsToc.map(col => data[col.key] ?? 'Not provided');
-        tocSheet.addRow(rowValues);
-      });
-
-      this.formatWorksheet(worksheet);
-      this.formatWorksheet(tocSheet);
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      this.saveAsExcelFile(buffer, fileName);
-      callback?.();
     } catch (error) {
       console.error('Error generating file', error);
       callback?.();
     }
   }
 
-  private formatWorksheet(worksheet: ExcelJS.Worksheet) {
-    worksheet.getRow(1).height = 30;
+  private formatWorksheet(worksheet: any) {
+    worksheet.getRow(1).height = 20;
 
     worksheet.getRow(1).eachCell(cell => {
       cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
