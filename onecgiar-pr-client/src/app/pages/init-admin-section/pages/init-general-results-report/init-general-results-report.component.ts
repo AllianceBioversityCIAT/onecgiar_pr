@@ -122,11 +122,12 @@ export class InitGeneralResultsReportComponent implements OnInit {
       if (!errorOnDataExport) {
         const wscolsResults = this.generateColumns(this.dataToExport);
         const wscolsToc = this.generateColumns(this.tocToExport);
-    
+
         this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', wscolsResults, this.tocToExport, wscolsToc);
       }
 
-    this.requesting = false;
+      this.requesting = false;
+    }
   }
 
   POST_excelFullReportPromise(result: number) {
