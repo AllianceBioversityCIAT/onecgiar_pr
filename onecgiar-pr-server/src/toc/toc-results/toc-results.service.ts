@@ -4,7 +4,7 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './toc-results.repository';
-import { isProduction } from '../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class TocResultsService {
@@ -35,7 +35,10 @@ export class TocResultsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 

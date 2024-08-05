@@ -3,7 +3,7 @@ import { GlobalParameterRepository } from './repositories/global-parameter.repos
 import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { isProduction } from '../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class GlobalParameterService {
@@ -28,7 +28,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -44,7 +47,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -66,7 +72,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -80,7 +89,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }
