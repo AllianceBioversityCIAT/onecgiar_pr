@@ -1246,7 +1246,7 @@ left join clarisa_regions cr
      GROUP BY cc3.name, prdb.cc3.iso_alpha_2) csn) as "Countries",
     -- section 5
     GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
-    (SELECT GROUP_CONCAT(DISTINCT lr2.legacy_link separator ', ')
+    (SELECT GROUP_CONCAT(DISTINCT lr2.legacy_link separator '\n')
       FROM linked_result lr2
       WHERE lr2.origin_result_id = r.id
       and lr2.linked_results_id is NULL 
