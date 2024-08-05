@@ -149,11 +149,11 @@ export class ResultsController {
   }
 
   @Get('get/reporting/list/date/:initDate/:lastDate')
-  getReportingList(
+  getResultDataForBasicReport(
     @Param('initDate') initDate: Date,
     @Param('lastDate') lastDate: Date,
   ) {
-    return this.resultsService.reportingList(initDate, lastDate);
+    return this.resultsService.getResultDataForBasicReport(initDate, lastDate);
   }
 
   @Post('create/version/:resultId')

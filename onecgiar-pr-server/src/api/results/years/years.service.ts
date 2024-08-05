@@ -8,7 +8,7 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../../shared/handlers/error.utils';
-import { isProduction } from '../../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
 @Injectable()
 export class YearsService {
@@ -143,7 +143,10 @@ export class YearsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }
