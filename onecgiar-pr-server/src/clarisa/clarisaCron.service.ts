@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ClarisaTaskService } from './clarisatask.service';
+import { EnvironmentExtractor } from '../shared/utils/environment-extractor';
 
 @Injectable()
 export class ClarisaCronsService {
@@ -8,12 +9,16 @@ export class ClarisaCronsService {
 
   constructor(private readonly _clarisaTaskService: ClarisaTaskService) {}
 
-  @Cron(CronExpression.EVERY_8_HOURS)
+  @Cron(CronExpression.EVERY_8_HOURS, {
+    disabled: EnvironmentExtractor.isLocal(),
+  })
   handleCron() {
     this._clarisaTaskService.clarisaBootstrap();
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_HOUR, {
+    disabled: EnvironmentExtractor.isLocal(),
+  })
   importantHandleCron() {
     this._clarisaTaskService.clarisaBootstrapImportantData();
   }

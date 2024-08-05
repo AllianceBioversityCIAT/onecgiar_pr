@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { isProduction } from '../shared/utils/validation.utils';
 import { getUserSupportId } from '../shared/utils/prms-user-support.util';
 import { env } from 'process';
+import { EnvironmentExtractor } from '../shared/utils/environment-extractor';
 
 export class InsertResultFolders1701962575579 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    if (isProduction()) {
+    if (EnvironmentExtractor.isProduction()) {
       await queryRunner.query(`insert into result_folders (folder_link, phase_id, folder_type_id, created_by) 
         values ('https://cgiar.sharepoint.com/:f:/s/PRMSProject/EuPp7t1onn1JtAAT2q_xjJEB0N5JmBOkIZsWArFxvxQnJw?e=EpEwMd', 1, 1, ${getUserSupportId(
           env.SUPPORT_USER,

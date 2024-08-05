@@ -60,8 +60,8 @@ import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
-import { isProduction } from '../../shared/utils/validation.utils';
 import { GeneralInformationDto } from './dto/general-information.dto';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class ResultsService {
@@ -1329,7 +1329,10 @@ export class ResultsService {
         response: result,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -1363,7 +1366,10 @@ export class ResultsService {
         response: centers,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }

@@ -2,9 +2,9 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { IpsrRepository } from './ipsr.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { isProduction } from '../../shared/utils/validation.utils';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class IpsrService {
@@ -25,7 +25,10 @@ export class IpsrService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
