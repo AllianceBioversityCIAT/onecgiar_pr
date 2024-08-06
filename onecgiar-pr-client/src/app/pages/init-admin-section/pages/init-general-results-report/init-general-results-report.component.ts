@@ -101,21 +101,29 @@ export class InitGeneralResultsReportComponent implements OnInit {
   dataToExport = [];
   tocToExport = [];
 
-  async exportExcel(resultsRelected) {
-    this.dataToExport = [];
-    this.tocToExport = [];
-    this.requesting = true;
-    this.requestCounter = 0;
+  async exportExcel(resultsSelected: { results_id: number }[]) {
+    if (resultsSelected.length) {
+      this.dataToExport = [];
+      this.tocToExport = [];
+      this.requesting = true;
+      this.requestCounter = 0;
 
-    const list = [];
-    const uniqueResultIdsSet = new Set(resultsRelected.map((item: any) => item.results_id));
-    const uniqueResultIds = [...uniqueResultIdsSet];
-    uniqueResultIds?.forEach(element => {
-      list.push(element);
-    });
+      const uniqueResultIdsSet = new Set(resultsSelected.map((item: { results_id: number }) => item.results_id));
+      let errorOnDataExport = false;
 
-    for (const [key, result] of list.entries()) {
-      await this.POST_excelFullReportPromise(result, key);
+      for (const resultId of uniqueResultIdsSet) {
+        const resultExported = await this.POST_excelFullReportPromise(resultId);
+        if (!resultExported) {
+          errorOnDataExport = true;
+          break;
+        }
+      }
+
+      if (!errorOnDataExport) {
+        this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+      }
+
+      this.requesting = false;
     }
 
     const wscolsResults = this.generateColumns(this.dataToExport);
@@ -125,16 +133,16 @@ export class InitGeneralResultsReportComponent implements OnInit {
     this.requesting = false;
   }
 
-  POST_excelFullReportPromise(result, key) {
+  POST_excelFullReportPromise(result: number) {
     return new Promise((resolve, reject) => {
-      this.api.resultsSE.POST_excelFullReport([result]).subscribe(
-        ({ response }) => {
+      this.api.resultsSE.POST_excelFullReport([result]).subscribe({
+        next: ({ response }) => {
           this.requestCounter++;
           if (response?.fullReport?.length) this.dataToExport.push(...response.fullReport);
           if (response?.resultsAgaintsToc?.length) this.tocToExport.push(...response.resultsAgaintsToc);
-          resolve(null);
+          resolve('Fine');
         },
-        err => {
+        error: err => {
           this.customAlertService.show({
             id: 'loginAlert',
             title: 'Oops!',
@@ -143,7 +151,7 @@ export class InitGeneralResultsReportComponent implements OnInit {
           });
           resolve(null);
         }
-      );
+      });
     });
   }
 
