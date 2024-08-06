@@ -1,5 +1,3 @@
-import { env } from 'process';
-
 export const validationAttr = (obj: any, BASE: any) => {
   const keys = Object.keys(BASE);
   for (const iterator of keys) {
@@ -12,9 +10,4 @@ export const validationAttr = (obj: any, BASE: any) => {
     }
   }
   return true;
-};
-
-export const isProduction = () => {
-  const pv = env?.IS_PRODUCTION?.toLocaleLowerCase();
-  return pv == 'true' || pv == '1' ? true : false;
 };

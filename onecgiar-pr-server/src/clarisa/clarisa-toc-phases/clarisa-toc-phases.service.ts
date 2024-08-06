@@ -1,7 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { ClarisaTocPhaseRepository } from './clarisa-toc-phases.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { isProduction } from '../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class ClarisaTocPhasesService {
@@ -19,7 +19,10 @@ export class ClarisaTocPhasesService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }

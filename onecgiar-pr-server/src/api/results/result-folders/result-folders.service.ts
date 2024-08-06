@@ -9,7 +9,7 @@ import { CreateResultFolderTypeDto } from './dto/create-result-folder-type.dto';
 import { ResultFolderType } from './entities/result-folder-type.entity';
 import { ResultFolderTypeData } from '../../../shared/constants/result-folder-type.enum';
 import { ActiveElementData } from '../../../shared/constants/active-element.enum';
-import { isProduction } from '../../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
 @Injectable()
 export class ResultFoldersService {
@@ -36,7 +36,10 @@ export class ResultFoldersService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -56,7 +59,10 @@ export class ResultFoldersService {
         statusCode: HttpStatus.CREATED,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -96,7 +102,10 @@ export class ResultFoldersService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -122,7 +131,10 @@ export class ResultFoldersService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }

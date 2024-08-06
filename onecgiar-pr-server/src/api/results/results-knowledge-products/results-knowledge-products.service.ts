@@ -42,11 +42,11 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultsService } from '../results.service';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
-import { isProduction } from '../../../shared/utils/validation.utils';
 import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
+import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
@@ -1626,7 +1626,10 @@ export class ResultsKnowledgeProductsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
