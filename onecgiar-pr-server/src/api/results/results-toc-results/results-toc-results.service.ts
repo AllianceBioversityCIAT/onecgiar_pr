@@ -55,7 +55,6 @@ export class ResultsTocResultsService {
         result_id,
         contributing_center,
         contributing_initiatives,
-        pending_contributing_initiatives,
         impactsTarge,
         sdgTargets,
         bodyActionArea,
@@ -96,18 +95,22 @@ export class ResultsTocResultsService {
       }
 
       if (
-        contributing_initiatives?.length ||
-        pending_contributing_initiatives?.length
+        contributing_initiatives?.accepted_contributing_initiatives?.length ||
+        contributing_initiatives?.pending_contributing_initiatives?.length
       ) {
-        initiativeArray = contributing_initiatives.map((el) => el.id);
+        initiativeArray =
+          contributing_initiatives?.accepted_contributing_initiatives.map(
+            (el) => el.id,
+          );
         if (initSubmitter.initiative_id) {
           initiativeArray = initiativeArray.filter(
             (init) => init !== initSubmitter.initiative_id,
           );
         }
-        initiativeArrayPnd = pending_contributing_initiatives.map(
-          (pend) => pend.id,
-        );
+        initiativeArrayPnd =
+          contributing_initiatives?.pending_contributing_initiatives.map(
+            (pend) => pend.id,
+          );
         await this._resultByInitiativesRepository.updateResultByInitiative(
           result_id,
           [...initiativeArray],
@@ -117,7 +120,7 @@ export class ResultsTocResultsService {
         );
         const dataRequst: CreateTocShareResult = {
           isToc: true,
-          initiativeShareId: initiativeArray,
+          initiativeShareId: initiativeArrayPnd,
           action_area_outcome_id: null,
           planned_result: null,
           toc_result_id: null,
@@ -136,9 +139,10 @@ export class ResultsTocResultsService {
           [],
         );
       }
-      const cancelRequest = pending_contributing_initiatives?.filter(
-        (e) => e.is_active == false,
-      );
+      const cancelRequest =
+        contributing_initiatives?.pending_contributing_initiatives?.filter(
+          (e) => e.is_active == false,
+        );
       if (cancelRequest?.length) {
         await this._shareResultRequestRepository.cancelRequest(
           cancelRequest.map((e) => e.share_result_request_id),
@@ -278,11 +282,14 @@ export class ResultsTocResultsService {
           sdgTargets,
         );
       } else {
-        initiativeArrayRtr = contributing_initiatives.map(
-          (initiative) => initiative.id,
-        );
+        initiativeArrayRtr =
+          contributing_initiatives?.accepted_contributing_initiatives.map(
+            (initiative) => initiative.id,
+          );
         initiativeArrayRtr = initiativeArrayRtr.concat(
-          pending_contributing_initiatives.map((pending) => pending.id),
+          contributing_initiatives?.pending_contributing_initiatives.map(
+            (pending) => pending.id,
+          ),
         );
         await this._resultsTocResultRepository.updateResultByInitiative(
           result_id,
@@ -366,16 +373,23 @@ export class ResultsTocResultsService {
         await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
         );
-      const conInit =
-        await this._resultByInitiativesRepository.getContributorInitiativeByResult(
-          resultId,
-        );
       const conAndPriInit =
         await this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         );
-      const conPending =
-        await this._resultByInitiativesRepository.getPendingInit(resultId);
+
+      const [conInit, conPending] = await Promise.all([
+        this._resultByInitiativesRepository.getContributorInitiativeByResult(
+          resultId,
+        ),
+        this._resultByInitiativesRepository.getPendingInit(resultId),
+      ]);
+
+      const contributingInitiatives = {
+        accepted_contributing_initiatives: conInit,
+        pending_contributing_initiatives: conPending,
+      };
+
       const npProject =
         await this._nonPooledProjectRepository.getAllNPProjectByResultId(
           resultId,
@@ -387,6 +401,7 @@ export class ResultsTocResultsService {
         );
       const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
+
       let resTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
@@ -456,6 +471,15 @@ export class ResultsTocResultsService {
             });
           });
         }
+        conPending.forEach((pending) => {
+          individualResponses.push({
+            planned_result: null,
+            initiative_id: pending.id,
+            official_code: pending.official_code,
+            short_name: pending.short_name,
+            result_toc_results: [],
+          });
+        });
       } else if (result.result_level_id == 2) {
         resTocRes =
           await this._resultsTocResultRepository.getRTRPrimaryActionArea(
@@ -524,9 +548,10 @@ export class ResultsTocResultsService {
 
       return {
         response: {
-          contributing_initiatives: conInit,
+          // contributing_initiatives: conInit,
+          // pending_contributing_initiatives: conPending,
+          contributing_initiatives: contributingInitiatives,
           contributing_and_primary_initiative: conAndPriInit,
-          pending_contributing_initiatives: conPending,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: {

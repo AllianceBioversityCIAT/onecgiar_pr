@@ -217,6 +217,7 @@ export class ShareResultRequestService {
                 planned_result: rtr?.planned_result,
                 action_area_outcome_id: toc?.action_area_outcome_id,
                 is_active: true,
+                toc_progressive_narrative: toc?.toc_progressive_narrative,
               });
             }
           }
@@ -265,6 +266,7 @@ export class ShareResultRequestService {
                 result_id: result.id,
                 planned_result: rtr?.planned_result,
                 action_area_outcome_id: toc?.action_area_outcome_id,
+                toc_progressive_narrative: toc?.toc_progressive_narrative,
                 is_active: true,
               });
             }
