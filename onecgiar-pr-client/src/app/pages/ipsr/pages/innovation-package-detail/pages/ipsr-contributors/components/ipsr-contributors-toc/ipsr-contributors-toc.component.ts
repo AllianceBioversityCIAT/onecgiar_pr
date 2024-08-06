@@ -10,7 +10,9 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 })
 export class IpsrContributorsTocComponent implements OnInit {
   @Input() contributorsBody = new ContributorsBody();
+  @Input() disabledOptions = [];
   contributingInitiativesList = [];
+
   constructor(public api: ApiService, public rolesSE: RolesService) {}
 
   ngOnInit(): void {
@@ -29,5 +31,9 @@ export class IpsrContributorsTocComponent implements OnInit {
 
   toggleActiveContributor(item) {
     item.is_active = !item.is_active;
+  }
+
+  onRemoveContribuiting(index) {
+    this.contributorsBody.contributingInitiativeNew.splice(index, 1);
   }
 }

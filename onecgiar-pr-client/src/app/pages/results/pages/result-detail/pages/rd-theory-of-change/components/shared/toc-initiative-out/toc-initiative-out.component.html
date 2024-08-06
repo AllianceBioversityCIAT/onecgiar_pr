@@ -1,23 +1,45 @@
-<div appFeedbackValidation labelText="Does this result match a planned result in your Theory of Change?"
-        [isComplete]="this.initiative.planned_result !== null">
-    </div>
+<div
+  appFeedbackValidation
+  labelText="Does this result match a planned result in your Theory of Change?"
+  [isComplete]="this.initiative.planned_result !== null"></div>
 
-<div class="editable_field" [ngClass]="{'global-editable': this.editable}">
-    <app-pr-yes-or-not [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
-        [(ngModel)]="this.initiative.planned_result" (selectOptionEvent)="clearTocResultId()"
-        [description]="this.headerDescription(this.initiative.official_code)" [readOnly]="!editable"
-        [editable]="editable" [hideDescription]="this.initiative.planned_result === null">
-    </app-pr-yes-or-not>
+<div class="editable_field" [ngClass]="{ 'global-editable': this.editable }">
+  <app-pr-yes-or-not
+    [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
+    [(ngModel)]="this.initiative.planned_result"
+    (selectOptionEvent)="clearTocResultId()"
+    [description]="this.headerDescription(this.initiative.official_code)"
+    [readOnly]="!editable"
+    [editable]="editable"
+    [required]="!(!this.initiative.result_toc_results.length && isContributor)"
+    [hideDescription]="this.initiative.planned_result === null"
+    [hideOptions]="initiative?.result_toc_results.length === 0">
+  </app-pr-yes-or-not>
 
-    <a [href]="this.api.dataControlSE.tocUrl+this.fullInitiativeToc" target="_blank" class="toc_button"
-        *ngIf="!isNotifications">
-        <span>See ToC</span>
-        <img src="assets/icons/toc_icon.png" alt="">
-    </a>
+  <a
+    [href]="this.api.dataControlSE.tocUrl + this.fullInitiativeToc"
+    target="_blank"
+    class="toc_button"
+    *ngIf="!isNotifications && !!this.initiative.result_toc_results.length">
+    <span>See ToC</span>
+    <img src="assets/icons/toc_icon.png" alt="" />
+  </a>
 </div>
 
+<div *ngIf="!this.initiative.result_toc_results.length && (isContributor || isIpsr)" class="pr-message">
+  <i class="material-icons-round" style="font-size: 20px; color: #fba237">info</i>
+  <p>
+    <b> {{ initiative?.official_code }} {{ initiative.short_name }} </b>
+    has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+  </p>
+</div>
 
-<app-multiple-wps [editable]="editable" [initiative]="initiative" [resultLevelId]="resultLevelId" [isIpsr]="isIpsr"
-    [isContributor]="isContributor" [isNotifications]="isNotifications"
-    [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"
-    *ngIf="this.initiative.planned_result !== null"></app-multiple-wps>
+<app-multiple-wps
+  [editable]="editable"
+  [initiative]="initiative"
+  [resultLevelId]="resultLevelId"
+  [isIpsr]="isIpsr"
+  [isContributor]="isContributor"
+  [isNotifications]="isNotifications"
+  [showMultipleWPsContent]="this.initiative.showMultipleWPsContent"
+  *ngIf="this.initiative.planned_result !== null"></app-multiple-wps>

@@ -11,6 +11,7 @@ import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/r
 })
 export class IpsrContributorsComponent implements OnInit {
   contributorsBody = new ContributorsBody();
+  disabledOptions = [];
 
   constructor(public api: ApiService, public rolesSE: RolesService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
 
@@ -24,25 +25,32 @@ export class IpsrContributorsComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETContributorsByIpsrResultId().subscribe(({ response }) => {
       this.contributorsBody = response;
-      this.contributorsBody.contributors_result_toc_result.forEach(item => (item.planned_result = Boolean(item.planned_result)));
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
       this.theoryOfChangesServices.theoryOfChangeBody = this.contributorsBody;
 
       if (this.contributorsBody?.result_toc_result?.result_toc_results !== null) {
         this.theoryOfChangesServices.result_toc_result = this.contributorsBody?.result_toc_result;
-        this.theoryOfChangesServices.result_toc_result.planned_result = this.contributorsBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
+        this.theoryOfChangesServices.result_toc_result.planned_result =
+          this.contributorsBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
         this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
       }
 
       if (this.contributorsBody?.contributors_result_toc_result !== null) {
         this.theoryOfChangesServices.contributors_result_toc_result = this.contributorsBody?.contributors_result_toc_result;
         this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
-          tab.planned_result = tab.result_toc_results[0].planned_result ?? null;
+          tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
           tab.index = index;
           tab.showMultipleWPsContent = true;
         });
       }
+
+      this.disabledOptions = [
+        ...(this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+        ...(this.contributorsBody?.contributing_initiatives.pending_contributing_initiatives || [])
+      ];
+
+      this.contributorsBody.contributingInitiativeNew = [];
     });
   }
 
@@ -51,7 +59,18 @@ export class IpsrContributorsComponent implements OnInit {
 
     this.contributorsBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
 
-    this.api.resultsSE.PATCHContributorsByIpsrResultId(this.contributorsBody).subscribe(({ response }) => {
+    const sendedData = {
+      ...this.contributorsBody,
+      contributing_initiatives: {
+        ...this.contributorsBody.contributing_initiatives,
+        pending_contributing_initiatives: [
+          ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives,
+          ...this.contributorsBody.contributingInitiativeNew
+        ]
+      }
+    };
+
+    this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData).subscribe(({ response }) => {
       this.getSectionInformation();
     });
   }

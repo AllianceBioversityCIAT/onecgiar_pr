@@ -309,7 +309,12 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        resp?.response?.contributing_initiatives?.accepted_contributing_initiatives.map(
+          initiative =>
+            (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
+              initiative?.initiative_name
+            }`)
+        );
         return resp;
       }),
       this.saveButtonSE.isGettingSectionPipe()
@@ -595,7 +600,12 @@ export class ResultsApiService {
   GETContributorsByIpsrResultId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        resp?.response?.contributing_initiatives?.accepted_contributing_initiatives.map(
+          initiative =>
+            (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
+              initiative?.initiative_name
+            }`)
+        );
         return resp;
       }),
       this.saveButtonSE.isGettingSectionPipe()
