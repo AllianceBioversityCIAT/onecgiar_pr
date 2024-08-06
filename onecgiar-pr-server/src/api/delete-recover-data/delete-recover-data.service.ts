@@ -506,7 +506,7 @@ export class DeleteRecoverDataService {
 
       if (returnMigration.statusCode >= 300) {
         throw this._returnResponse.format({
-          message: `The data at the time of migrating had an error`,
+          message: `The data at the time of the migration had an error`,
           response: result.result_code,
           statusCode: HttpStatus.OK,
         });
