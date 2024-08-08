@@ -157,6 +157,9 @@ export class ResultToResultInterfaceToc {
 
   @ApiProperty()
   toc_progressive_narrative: string;
+
+  @ApiProperty()
+  toc_level_id: number;
 }
 
 export class ShareResultRequestInterface {
