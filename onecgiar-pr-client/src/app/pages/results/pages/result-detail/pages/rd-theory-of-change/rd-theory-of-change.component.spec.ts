@@ -64,13 +64,22 @@ describe('RdTheoryOfChangeComponent', () => {
       }
     ],
     contributing_center: [{ primary: false }, { primary: false }],
-    contributing_initiatives: [
-      {
-        id: 1,
-        short_name: 'name',
-        official_code: 'code'
-      }
-    ]
+    contributing_initiatives: {
+      accepted_contributing_initiatives: [
+        {
+          id: 1,
+          short_name: 'name accepted',
+          official_code: 'code-accepted'
+        }
+      ],
+      pending_contributing_initiatives: [
+        {
+          id: 1,
+          short_name: 'name pending',
+          official_code: 'code-pending'
+        }
+      ]
+    }
   };
 
   beforeEach(async () => {

@@ -1,24 +1,42 @@
 .editable_field {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 }
 
-.in-construction{
-    padding: 20px;
-    border: 1px solid #ffb3009a;
-    box-shadow: 0px 0px 10px 0px #f999001a;
-    position: relative;
-    .img-construction{
-        position: absolute;
-        top: -15px;
-        right: -15px;
-        width: 50px;
-        height: 50px;
-        border-radius: 150px;
-        box-shadow: 0px 0px 10px 0px rgba(249, 153, 0, 0.368627451);
-        background: white;
-        padding: 10px;
-    }
+.in-construction {
+  padding: 20px;
+  border: 1px solid #ffb3009a;
+  box-shadow: 0px 0px 10px 0px #f999001a;
+  position: relative;
+
+  .img-construction {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 150px;
+    box-shadow: 0px 0px 10px 0px rgba(249, 153, 0, 0.368627451);
+    background: white;
+    padding: 10px;
+  }
+}
+
+.pr-message {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #ffe7ca;
+  padding: 10px 15px;
+  border-radius: 5px;
+  color: #774100;
+  margin-top: 1rem;
+  margin-bottom: 30px;
+
+  p {
+    margin: 0;
+  }
 }
