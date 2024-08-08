@@ -1,4 +1,5 @@
 <div
+  *ngIf="!(!this.initiative.result_toc_results.length && (isContributor || isIpsr))"
   appFeedbackValidation
   labelText="Does this result match a planned result in your Theory of Change?"
   [isComplete]="this.initiative.planned_result !== null"></div>
