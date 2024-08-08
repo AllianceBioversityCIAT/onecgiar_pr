@@ -1,20 +1,5 @@
 <app-pr-field-header label="Lead and Contributing Initiatives" [required]="false"></app-pr-field-header>
 
-<app-pr-field-header label="Theory of Change" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
-
-<div *ngIf="this.contributorsBody?.result_toc_result?.initiative_id">
-  <app-toc-initiative-out
-    [initiative]="this.contributorsBody.result_toc_result"
-    [isIpsr]="true"
-    [editable]="
-      !this.api.rolesSE.platformIsClosed &&
-      (this.rolesSE.validateInitiative(this.contributorsBody.result_toc_result?.initiative_id) || this.rolesSE.isAdmin) &&
-      !this.api.dataControlSE?.currentResult?.status
-    "
-    [resultLevelId]="2">
-  </app-toc-initiative-out>
-</div>
-
 <div class="dropdown-50p">
   <app-pr-multi-select
     [options]="this.getcontributingInitiativesList"
@@ -77,6 +62,21 @@
 <br />
 <hr class="divider-20" />
 
+<app-pr-field-header label="Theory of Change" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+<div *ngIf="this.contributorsBody?.result_toc_result?.initiative_id">
+  <app-toc-initiative-out
+    [initiative]="this.contributorsBody.result_toc_result"
+    [isIpsr]="true"
+    [editable]="
+      !this.api.rolesSE.platformIsClosed &&
+      (this.rolesSE.validateInitiative(this.contributorsBody.result_toc_result?.initiative_id) || this.rolesSE.isAdmin) &&
+      !this.api.dataControlSE?.currentResult?.status
+    "
+    [resultLevelId]="2">
+  </app-toc-initiative-out>
+</div>
+
 <app-pr-field-header
   label="Other contributors"
   [required]="false"
@@ -98,24 +98,5 @@
     [isContributor]="true">
   </app-toc-initiative-out>
 </div>
-
-<!-- <div class="chips_container">
-  <div
-    class="pr_chip_selected pending"
-    *ngFor="let item of this.contributorsBody?.contributing_initiatives.pending_contributing_initiatives; let i = index">
-    <div
-      class="name"
-      [ngClass]="{ text_inactive: !item.is_active }"
-      [innerHtml]="'<strong>' + item.official_code + '</strong> ' + item.initiative_name"></div>
-    <i
-      *ngIf="!this.rolesSE.readOnly"
-      class="material-icons-round"
-      [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
-      (click)="toggleActiveContributor(item)">
-      {{ item.is_active ? 'backspace' : 'undo' }}
-    </i>
-  </div>
-</div> -->
-<!-- </div> -->
 
 <hr class="divider-20" />

@@ -84,6 +84,31 @@ describe('TocInitiativeOutComponent', () => {
 
       expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Does this result match a planned result in your Theory of Change?`);
     });
+
+    it('should return correct description for non-IPSR when initiative.result_toc_results is empty and isContributor is true', () => {
+      component.isIpsr = false;
+      component.isContributor = true;
+      const officialCode = 'XYZ';
+      const shortName = 'name';
+      component.initiative = {
+        result_toc_results: []
+      };
+      const result = component.getDescription(officialCode, shortName);
+
+      expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Pending confirmation`);
+    });
+
+    it('should return correct description for non-IPSR when initiative.result_toc_results is empty and isIpsr is true', () => {
+      component.isIpsr = true;
+      const officialCode = 'XYZ';
+      const shortName = 'name';
+      component.initiative = {
+        result_toc_results: []
+      };
+      const result = component.getDescription(officialCode, shortName);
+
+      expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Pending confirmation`);
+    });
   });
 
   describe('headerDescription()', () => {

@@ -1074,6 +1074,13 @@ describe('ResultsApiService', () => {
                   initiative_name: 'Initiative 1',
                   full_name: 'IC1 - <strong>Init1</strong> - Initiative 1'
                 }
+              ],
+              pending_contributing_initiatives: [
+                {
+                  official_code: 'IC1',
+                  short_name: 'Init1',
+                  initiative_name: 'Initiative 1'
+                }
               ]
             }
           }
@@ -1116,7 +1123,8 @@ describe('ResultsApiService', () => {
               accepted_contributing_initiatives: [
                 {
                   official_code: 'IC1',
-                  initiative_name: 'Initiative 1'
+                  initiative_name: 'Initiative 1',
+                  full_name: 'IC1 - <strong></strong> - Initiative 1'
                 }
               ],
               pending_contributing_initiatives: [
@@ -2334,7 +2342,8 @@ describe('ResultsApiService', () => {
                 {
                   official_code: '123',
                   short_name: 'SN',
-                  initiative_name: 'Initiative Name'
+                  initiative_name: 'Initiative Name',
+                  full_name: '123 - <strong>SN</strong> - Initiative Name'
                 }
               ],
               pending_contributing_initiatives: [
@@ -2392,8 +2401,7 @@ describe('ResultsApiService', () => {
               pending_contributing_initiatives: [
                 {
                   official_code: '123',
-                  initiative_name: 'Initiative Name',
-                  full_name: '123 - <strong></strong> - Initiative Name'
+                  initiative_name: 'Initiative Name'
                 }
               ]
             }
