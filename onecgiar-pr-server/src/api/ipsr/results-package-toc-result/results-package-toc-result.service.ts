@@ -106,10 +106,6 @@ export class ResultsPackageTocResultService {
         crtr?.contributing_initiatives?.pending_contributing_initiatives.length
       ) {
         const { contributing_initiatives: ci } = crtr;
-        console.log(
-          '🚀 ~ ResultsPackageTocResultService ~ create ~ ci:',
-          ci?.pending_contributing_initiatives,
-        );
         const dataRequest: CreateTocShareResult = {
           isToc: true,
           initiativeShareId: ci?.pending_contributing_initiatives.map(
