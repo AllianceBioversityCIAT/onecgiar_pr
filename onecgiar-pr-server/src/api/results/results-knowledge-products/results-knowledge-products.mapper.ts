@@ -615,6 +615,7 @@ export class ResultsKnowledgeProductMapper {
 
       if (
         !upsert ||
+        !kpInstitution ||
         (kpInstitution.result_kp_mqap_institution_id &&
           !kpInstitution.result_by_institution_object) ||
         (kpInstitution.result_kp_mqap_institution_id &&
@@ -639,6 +640,7 @@ export class ResultsKnowledgeProductMapper {
           : null;
         resultInstitution.institution_roles_id = InstitutionRoleEnum.PARTNER;
         resultInstitution.is_predicted = isPredicted;
+        resultInstitution.is_active = true;
 
         if (!knowledgeProduct.last_updated_by) {
           kpInstitution.created_by = knowledgeProduct.created_by;
@@ -648,6 +650,9 @@ export class ResultsKnowledgeProductMapper {
             kpInstitution.created_by = knowledgeProduct.created_by;
             resultInstitution.created_by = knowledgeProduct.created_by;
           } else {
+            if (!resultInstitution.id) {
+              resultInstitution.created_by = knowledgeProduct.last_updated_by;
+            }
             kpInstitution.last_updated_by = knowledgeProduct.last_updated_by;
             resultInstitution.last_updated_by =
               knowledgeProduct.last_updated_by;
@@ -666,11 +671,19 @@ export class ResultsKnowledgeProductMapper {
     (knowledgeProduct.result_knowledge_product_institution_array ?? []).forEach(
       (oi) => {
         if (!oi['matched']) {
-          oi.result_by_institution_object.is_active = false;
+          if (oi.result_by_institution_object) {
+            oi.result_by_institution_object.is_active = false;
+          }
+
           oi.is_active = false;
 
           institutions.push(oi);
         } else {
+          oi.is_active = true;
+          if (oi.result_by_institution_object) {
+            oi.result_by_institution_object.is_active = true;
+          }
+
           delete oi['matched'];
         }
       },

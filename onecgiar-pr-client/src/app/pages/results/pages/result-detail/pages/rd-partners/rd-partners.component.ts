@@ -19,7 +19,13 @@ export class RdPartnersComponent implements OnInit {
 
   alertStatusMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public rdPartnersSE: RdPartnersService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(
+    public api: ApiService,
+    public institutionsSE: InstitutionsService,
+    public rolesSE: RolesService,
+    public rdPartnersSE: RdPartnersService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
@@ -52,6 +58,7 @@ export class RdPartnersComponent implements OnInit {
       () => {
         this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
           this.rdPartnersSE.getSectionInformation();
+          this.rdPartnersSE.getCenterInformation();
         });
       }
     );
