@@ -11,7 +11,7 @@ import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
-import { ApiHeader, ApiHeaders, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Results Toc Results')
 @ApiHeader({
