@@ -24,7 +24,7 @@ describe('InitGeneralResultsReportComponent', () => {
   let mockPhasesService: any;
   const mockResultStatusList = [
     { status_id: 1, name: 'Status1', className: 'status1' },
-    { status_id: 2, name: 'Status Name', className: 'status2' },
+    { status_id: 2, name: 'Status Name', className: 'status2' }
   ];
   const mockInitiatives = [
     { initiative_id: 1, name: 'Initiative 1' },
@@ -41,12 +41,12 @@ describe('InitGeneralResultsReportComponent', () => {
       name: 'name',
       className: 'class',
       full_name_html: ''
-    },
+    }
   ];
   const mockPOST_excelFullReportResponse = {
     fullReport: [{}],
     resultsAgaintsToc: [{}]
-  }
+  };
 
   beforeEach(async () => {
     mockApiService = {
@@ -70,19 +70,15 @@ describe('InitGeneralResultsReportComponent', () => {
     };
 
     mockPhasesService = {
-      getPhasesObservable: () => of([
-        { id: 1, status: 'open' },
-      ]),
+      getPhasesObservable: () => of([{ id: 1, status: 'open' }]),
       phases: {
-        reporting: [
-          { id: 1, status: 'open' },
-        ]
+        reporting: [{ id: 1, status: 'open' }]
       }
     };
 
     mockCustomizedAlertsFeService = {
       show: jest.fn()
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -93,20 +89,15 @@ describe('InitGeneralResultsReportComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        ScrollingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ExportTablesService, useValue: mockExportTablesService },
         { provide: CustomizedAlertsFeService, useValue: mockCustomizedAlertsService },
         { provide: PhasesService, useValue: mockPhasesService },
-        { provide: CustomizedAlertsFeService, useValue: mockCustomizedAlertsFeService },
+        { provide: CustomizedAlertsFeService, useValue: mockCustomizedAlertsFeService }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(InitGeneralResultsReportComponent);
     component = fixture.componentInstance;
@@ -144,9 +135,7 @@ describe('InitGeneralResultsReportComponent', () => {
       expect(component.reportingPhases).toEqual([{ id: 1, status: 'open' }]);
     });
     it('should call autoSelectOpenPhases when phasesSE.phases.reporting.length is true', () => {
-      mockPhasesService.phases.reporting = [
-        { id: 1, status: 'open' }
-      ];
+      mockPhasesService.phases.reporting = [{ id: 1, status: 'open' }];
 
       component.getPhases();
 
@@ -196,7 +185,8 @@ describe('InitGeneralResultsReportComponent', () => {
 
   describe('openFolderText', () => {
     it('should generate the correct folder text', () => {
-      const expectedText = 'In this <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/Ev8QdqJv6vtPmcRvE4QLnDUB17Hke9nHOUneI1AZCI5KHg?e=5He46N"  class="open_route" target="_blank">folder</a>, you will find the latest reports that contains all the results reported in the tool. Please make sure to check the date of each report to ensure that you are always downloading the most recent version.';
+      const expectedText =
+        'In this <a href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/Ev8QdqJv6vtPmcRvE4QLnDUB17Hke9nHOUneI1AZCI5KHg?e=5He46N"  class="open_route" target="_blank">folder</a>, you will find the latest reports that contains all the results reported in the tool. Please make sure to check the date of each report to ensure that you are always downloading the most recent version.';
 
       const result = component.openFolderText();
 
@@ -213,11 +203,36 @@ describe('InitGeneralResultsReportComponent', () => {
       expect(component.resultsList[0].full_name_html).toContain('completeness-');
       expect(component.resultsList[0].full_name_html).toContain('Result code: (1)');
       expect(component.resultsList[0].full_name_html).toContain('Indicator category: (Category 1)');
-      expect(component.resultsList[0].full_name_html).toEqual('<div class=\"completeness-undefined completeness-state\">undefined</div> <strong>Result code: (1)</strong> - Result 1  - <strong>Official code: (code)</strong> - <strong>Indicator category: (Category 1)</strong>');
+      expect(component.resultsList[0].full_name_html).toEqual(
+        '<div class="completeness-undefined completeness-state">undefined</div> <strong>Result code: (1)</strong> - Result 1  - <strong>Official code: (code)</strong> - <strong>Indicator category: (Category 1)</strong>'
+      );
     });
   });
 
   describe('exportExcel', () => {
+    it('should not call POST_excelFullReportPromise nor exportMultipleSheetsExcel if resultsSelected is empty', async () => {
+      const spyPostExcelFullReportPromise = jest.spyOn(component, 'POST_excelFullReportPromise');
+      const spyExportMultipleSheetsExcel = jest.spyOn(mockExportTablesService, 'exportMultipleSheetsExcel');
+
+      await component.exportExcel([]);
+
+      expect(spyPostExcelFullReportPromise).not.toHaveBeenCalled();
+      expect(spyExportMultipleSheetsExcel).not.toHaveBeenCalled();
+
+      expect(component.requesting).toBeFalsy();
+    });
+    it('should not call exportMultipleSheetsExcel if there is an issue when exporting the data of a result', async () => {
+      component.resultsList = [{ results_id: 1 }];
+      jest.spyOn(mockApiService.resultsSE, 'POST_excelFullReport').mockReturnValue(throwError(null));
+      const spyExportMultipleSheetsExcel = jest.spyOn(mockExportTablesService, 'exportMultipleSheetsExcel');
+      const spyShow = jest.spyOn(mockCustomizedAlertsFeService, 'show');
+
+      await component.exportExcel(component.resultsList);
+
+      expect(spyExportMultipleSheetsExcel).not.toHaveBeenCalled();
+      expect(spyShow).toHaveBeenCalled();
+      expect(component.requesting).toBeFalsy();
+    });
     it('should call POST_excelFullReportPromise and exportMultipleSheetsExcel', async () => {
       component.resultsList = [{ results_id: 1 }];
       const spyPostExcelFullReportPromise = jest.spyOn(component, 'POST_excelFullReportPromise');
@@ -225,8 +240,8 @@ describe('InitGeneralResultsReportComponent', () => {
 
       await component.exportExcel(component.resultsList);
 
-      expect(spyPostExcelFullReportPromise).toHaveBeenCalledWith(1, 0);
-      expect(spyExportMultipleSheetsExcel).toHaveBeenCalledWith([{}], 'results_list', null, [{}]);
+      expect(spyPostExcelFullReportPromise).toHaveBeenCalledWith(1);
+      expect(spyExportMultipleSheetsExcel).toHaveBeenCalledWith([{}], 'results_list', [], [{}], []);
       expect(component.requesting).toBeFalsy();
     });
   });
@@ -235,7 +250,7 @@ describe('InitGeneralResultsReportComponent', () => {
     it('should call POST_excelFullReport and resolve promise', async () => {
       const spyPostExcelFullReport = jest.spyOn(mockApiService.resultsSE, 'POST_excelFullReport');
 
-      await component.POST_excelFullReportPromise(1, 0);
+      await component.POST_excelFullReportPromise(1);
 
       expect(spyPostExcelFullReport).toHaveBeenCalledWith([1]);
       expect(component.dataToExport).toEqual([{}]);
@@ -243,11 +258,10 @@ describe('InitGeneralResultsReportComponent', () => {
       expect(component.requestCounter).toBe(1);
     });
     it('should handle POST_excelFullReport API error', async () => {
-      jest.spyOn(mockApiService.resultsSE, 'POST_excelFullReport')
-        .mockReturnValue(throwError({}));
+      jest.spyOn(mockApiService.resultsSE, 'POST_excelFullReport').mockReturnValue(throwError(null));
       const spy = jest.spyOn(mockCustomizedAlertsFeService, 'show');
 
-      await component.POST_excelFullReportPromise(1, 0);
+      await component.POST_excelFullReportPromise(1);
 
       expect(spy).toHaveBeenCalledWith({
         id: 'loginAlert',

@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ReturnResponse } from '../../../shared/handlers/error.utils';
 import { ResultCountrySubnationalRepository } from './repositories/result-country-subnational.repository';
-import { env } from 'process';
+import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
 @Injectable()
 export class ResultCountrySubnationalService {
@@ -20,7 +20,10 @@ export class ResultCountrySubnationalService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -36,7 +39,10 @@ export class ResultCountrySubnationalService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }

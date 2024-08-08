@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ReturnResponse } from 'src/shared/handlers/error.utils';
 import { TypeOneReportRepository } from './type-one-report.repository';
-import { isProduction } from '../../shared/utils/validation.utils';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class TypeOneReportService {
@@ -20,7 +20,10 @@ export class TypeOneReportService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -37,7 +40,10 @@ export class TypeOneReportService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 }
