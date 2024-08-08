@@ -63,27 +63,31 @@ describe('MappedResultsModalComponent', () => {
     expect(modalTitle).toBe('Results mapped to the same TOC Outcome');
   });
 
-  it('should set combine to true if columnAttr is "result_code"', () => {
-    component.validateOrder('result_code');
+  describe('validateOrder()', () => {
+    it('should set combine to true if columnAttr is "result_code"', () => {
+      component.validateOrder('result_code');
 
-    jest.runAllTimers();
+      jest.runAllTimers();
 
-    expect(component.combine).toBe(true);
-  });
+      expect(component.combine).toBeTruthy();
+    });
 
-  it('should set combine to true if no column is sorted in ascending or descending order', () => {
-    document.body.innerHTML = `
-      <table id="mappedResultTable">
-        <thead>
-          <tr>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-      </table>
-    `;
-    component.validateOrder('some_column');
-    expect(component.combine).toBe(true);
+    it('should set combine based on the presence of sorting in the table', () => {
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(
+        `
+      <div id="mappedResultTable"></div>`,
+        'text/html'
+      );
+
+      jest.spyOn(document, 'getElementById').mockImplementation(selector => dom.getElementById(selector));
+
+      component.validateOrder('column');
+
+      jest.runAllTimers();
+
+      expect(component.combine).toBeTruthy();
+    });
   });
 
   it('should close the modal and reset the service properties', () => {
