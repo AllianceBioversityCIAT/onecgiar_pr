@@ -59,7 +59,7 @@ export class ResultInstitutionsBudget extends BaseEntity {
 
   @ManyToOne(
     () => ResultsByInstitution,
-    (rbi) => rbi.obj_result_institution_array,
+    (rbi) => rbi.result_institution_budget_array,
   )
   @JoinColumn({
     name: 'result_institution_id',

@@ -25,6 +25,7 @@ import { ResultIpExpertWorkshopOrganized } from '../../ipsr/innovation-pathway/e
 import { ResultStatus } from '../result-status/entities/result-status.entity';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
+import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
 
 @Entity()
 export class Result {
@@ -358,6 +359,9 @@ export class Result {
 
   @OneToMany(() => ResultActor, (rc) => rc.obj_result)
   obj_result_actor: ResultActor[];
+
+  @OneToMany(() => ResultsByInstitution, (rbi) => rbi.obj_result)
+  result_by_institution_array: ResultsByInstitution[];
 
   @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_result)
   obj_result_by_initiatives: ResultsByInititiative[];
