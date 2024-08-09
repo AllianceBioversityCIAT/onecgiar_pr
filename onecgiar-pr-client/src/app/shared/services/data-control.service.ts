@@ -33,8 +33,8 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   showT1RSelectPhase?: boolean;
-  reportingCurrentPhase = { phaseName: null, phaseYear: null };
-  previousReportingPhase = { phaseName: null, phaseYear: null };
+  reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null };
+  previousReportingPhase = { phaseName: null, phaseYear: null, phaseId: null };
   IPSRCurrentPhase = { phaseName: null, phaseYear: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
 
@@ -44,13 +44,16 @@ export class DataControlService {
     this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
       this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
       this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
+      this.reportingCurrentPhase.phaseId = response[0]?.id;
 
       if (response[0]?.obj_previous_phase) {
         this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
         this.previousReportingPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
+        this.previousReportingPhase.phaseId = response[0]?.obj_previous_phase.id;
       } else {
         this.previousReportingPhase.phaseYear = null;
         this.previousReportingPhase.phaseName = null;
+        this.previousReportingPhase.phaseId = null;
       }
     });
   }
