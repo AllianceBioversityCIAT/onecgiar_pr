@@ -106,14 +106,14 @@ export class GlobalParameterService {
     user: TokenDto,
   ) {
     const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
-    if (isAdmin?.is_admin == false) {
+    if (!isAdmin?.is_admin) {
       return this._returnResponse.format({
         message: 'You do not have permission to perform this action',
         statusCode: HttpStatus.FORBIDDEN,
       });
     }
 
-    if (!updateGlobalParameterDto || !updateGlobalParameterDto.name) {
+    if (!updateGlobalParameterDto?.name) {
       return this._returnResponse.format({
         message: 'Invalid data',
         statusCode: HttpStatus.BAD_REQUEST,
