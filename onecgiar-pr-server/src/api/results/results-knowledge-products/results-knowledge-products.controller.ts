@@ -14,6 +14,7 @@ import { ResultsKnowledgeProductDto } from './dto/results-knowledge-product.dto'
 import { ResultsKnowledgeProductSaveDto } from './dto/results-knowledge-product-save.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { FilterDto } from './dto/filter.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -73,5 +74,10 @@ export class ResultsKnowledgeProductsController {
       user,
       sectionSevenData,
     );
+  }
+
+  @Post('get/excel-report')
+  async getMQAPMatchesList(@Body() filterDto: FilterDto) {
+    return this._resultsKnowledgeProductsService.getMQAPMatchesList(filterDto);
   }
 }

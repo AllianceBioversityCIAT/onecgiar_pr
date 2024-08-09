@@ -45,6 +45,7 @@ import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recov
 import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { FilterDto } from './dto/filter.dto';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
@@ -1667,6 +1668,23 @@ export class ResultsKnowledgeProductsService {
         response: data,
         message:
           'The data for the knowledge products have been retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getMQAPMatchesList(filterDto: FilterDto) {
+    try {
+      const data =
+        await this._resultsKnowledgeProductRepository.getMQAPMatchesList(
+          filterDto,
+        );
+
+      return {
+        response: data,
+        message: 'The MQAP matches have been retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {
