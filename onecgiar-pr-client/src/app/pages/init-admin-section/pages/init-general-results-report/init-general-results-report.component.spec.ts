@@ -241,7 +241,7 @@ describe('InitGeneralResultsReportComponent', () => {
       await component.exportExcel(component.resultsList);
 
       expect(spyPostExcelFullReportPromise).toHaveBeenCalledWith(1);
-      expect(spyExportMultipleSheetsExcel).toHaveBeenCalledWith([{}], 'results_list', null, [{}]);
+      expect(spyExportMultipleSheetsExcel).toHaveBeenCalledWith([{}], 'results_list', [], [{}], []);
       expect(component.requesting).toBeFalsy();
     });
   });

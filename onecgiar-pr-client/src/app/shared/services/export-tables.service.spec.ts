@@ -125,25 +125,24 @@ describe('ExportTablesService', () => {
 
   describe('exportMultipleSheetsExcel', () => {
     it('should export multiple sheets excel with wscols', async () => {
-      const list = ['data1', 'data2'];
+      const list = [{ data: 'data1' }, { data: 'data2' }];
       const fileName = 'testFile';
       const wscols = [{ wpx: 100 }];
-      const tocToExport = ['tocData1', 'tocData2'];
+      const tocToExport = [{ data: 'tocData1' }, { data: 'tocData2' }];
 
-      await service.exportMultipleSheetsExcel(list, fileName, wscols, tocToExport, () => {
-        expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
+      await service.exportMultipleSheetsExcel(list, fileName, wscols, tocToExport, wscols, () => {
+        expect(ExcelJS.Workbook).toHaveBeenCalled();
         expect(FileSaver.saveAs).toHaveBeenCalled();
       });
     });
 
     it('should export multiple sheets excel without wscols', async () => {
-      const list = ['data1', 'data2'];
+      const list = [{ data: 'data1' }, { data: 'data2' }];
       const fileName = 'testFile';
-      const tocToExport = ['tocData1', 'tocData2'];
+      const tocToExport = [{ data: 'tocData1' }, { data: 'tocData2' }];
 
-      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, () => {
-        expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
-        expect(FileSaver.saveAs).toHaveBeenCalled();
+      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, undefined, () => {
+        expect(ExcelJS.Workbook).toHaveBeenCalled();
       });
     });
   });

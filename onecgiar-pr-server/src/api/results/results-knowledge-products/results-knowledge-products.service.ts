@@ -45,7 +45,6 @@ import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recov
 import { StringUtils } from '../../../shared/utils/string.utils';
 import { ResultByIntitutionsRepository } from '../results_by_institutions/result_by_intitutions.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
-import { InstitutionRoleEnum } from '../results_by_institutions/entities/institution_role.enum';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
 import { EnvironmentExtractor } from '../../../shared/utils/environment-extractor';
 
@@ -57,6 +56,9 @@ export class ResultsKnowledgeProductsService {
       result_knowledge_product_institution_array: {
         predicted_institution_object: {
           clarisa_center: true,
+        },
+        result_by_institution_object: {
+          obj_institutions: true,
         },
       },
       result_knowledge_product_metadata_array: true,
@@ -134,6 +136,19 @@ export class ResultsKnowledgeProductsService {
         }
       }
 
+      const globalParameter = await this._globalParameterRepository.findOne({
+        where: { name: 'kp_mqap_institutions_confidence' },
+        select: ['value'],
+      });
+
+      if (!globalParameter) {
+        throw new Error(
+          "Global parameter 'kp_mqap_institutions_confidence' not found",
+        );
+      }
+
+      const confidenceThreshold = +globalParameter.value;
+
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
         resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
@@ -181,6 +196,7 @@ export class ResultsKnowledgeProductsService {
       this._resultsKnowledgeProductMapper.patchInstitutions(
         updatedKnowledgeProduct,
         newMetadata,
+        confidenceThreshold,
         true,
       );
 
@@ -249,103 +265,26 @@ export class ResultsKnowledgeProductsService {
         updatedKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
 
-      if (
+      // rbi && rkpi save
+
+      updatedKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+            [],
+        );
+
+      const resultByInstitutions =
         updatedKnowledgeProduct.result_knowledge_product_institution_array
-          .length > 0
-      ) {
-        const globalParameter = await this._globalParameterRepository.findOne({
-          where: { name: 'kp_mqap_institutions_confidence' },
-          select: ['value'],
-        });
-
-        if (!globalParameter) {
-          throw new Error(
-            "Global parameter 'kp_mqap_institutions_confidence' not found",
-          );
-        }
-
-        const confidenceThreshold = +globalParameter.value;
-
-        const existingInstitutions =
-          await this._resultsKnowledgeProductInstitutionRepository.find({
-            where: {
-              is_active: true,
-              result_knowledge_product_id:
-                resultKnowledgeProduct.result_knowledge_product_id,
-            },
-          });
-
-        const updatedInstitutionIds =
-          updatedKnowledgeProduct.result_knowledge_product_institution_array.map(
-            (institution) => institution.predicted_institution_id,
-          );
-
-        for (const existingInstitution of existingInstitutions) {
-          if (
-            !updatedInstitutionIds.includes(
-              existingInstitution.predicted_institution_id,
-            )
-          ) {
-            await this._resultsKnowledgeProductInstitutionRepository.update(
-              {
-                result_kp_mqap_institution_id:
-                  existingInstitution.result_kp_mqap_institution_id,
-              },
-              { is_active: false, last_updated_by: user.id },
-            );
-
-            await this._resultByInstitutionRepository.update(
-              {
-                result_kp_mqap_institution_id:
-                  existingInstitution.result_kp_mqap_institution_id,
-              },
-              { is_active: false, last_updated_by: user.id },
-            );
-          }
-        }
-
-        for (const institution of updatedKnowledgeProduct.result_knowledge_product_institution_array) {
-          const insExist =
-            await this._resultsKnowledgeProductInstitutionRepository.findOne({
-              where: {
-                result_knowledge_product_id:
-                  resultKnowledgeProduct.result_knowledge_product_id,
-                predicted_institution_id: institution.predicted_institution_id,
-                is_active: true,
-              },
-            });
-
-          if (!insExist) {
-            try {
-              const savedInstitution =
-                await this._resultsKnowledgeProductInstitutionRepository.save(
-                  institution,
-                );
-
-              const institutionData = {
-                result_id: resultId,
-                institutions_id:
-                  institution.confidant >= confidenceThreshold
-                    ? institution.predicted_institution_id
-                    : null,
-                institution_roles_id:
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: institution.confidant >= confidenceThreshold,
-                result_kp_mqap_institution_id:
-                  savedInstitution.result_kp_mqap_institution_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              };
-
-              await this._resultByInstitutionRepository.save(institutionData);
-            } catch (error) {
-              throw new Error(
-                `Error saving institution or result by institution: ${error}`,
-              );
-            }
-          }
-        }
-      }
+          .map((rkpi) => {
+            rkpi.result_by_institution_object &&
+              (rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id);
+            return rkpi.result_by_institution_object;
+          })
+          .filter((rbi) => rbi);
+      await this._resultByInstitutionRepository.save(
+        resultByInstitutions ?? [],
+      );
 
       await this._resultsKnowledgeProductKeywordRepository.save(
         updatedKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
@@ -853,6 +792,19 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      const globalParameter = await this._globalParameterRepository.findOne({
+        where: { name: 'kp_mqap_institutions_confidence' },
+        select: ['value'],
+      });
+
+      if (!globalParameter) {
+        throw new Error(
+          "Global parameter 'kp_mqap_institutions_confidence' not found",
+        );
+      }
+
+      const confidenceThreshold = +globalParameter.value;
+
       let newResult: Result = null;
 
       if (!resultsKnowledgeProductDto.id) {
@@ -913,6 +865,7 @@ export class ResultsKnowledgeProductsService {
         this._resultsKnowledgeProductMapper.populateKPRelations(
           newKnowledgeProduct,
           resultsKnowledgeProductDto,
+          confidenceThreshold,
         );
 
       await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
@@ -925,54 +878,24 @@ export class ResultsKnowledgeProductsService {
         newKnowledgeProduct.result_knowledge_product_author_array ?? [],
       );
 
-      if (
-        newKnowledgeProduct.result_knowledge_product_institution_array.length >
-        0
-      ) {
-        const globalParameter = await this._globalParameterRepository.findOne({
-          where: { name: 'kp_mqap_institutions_confidence' },
-          select: ['value'],
-        });
+      // rbi && rkpi save
+      newKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+        );
 
-        if (!globalParameter) {
-          throw new Error(
-            "Global parameter 'kp_mqap_institutions_confidence' not found",
-          );
-        }
-
-        const confidenceThreshold = +globalParameter.value;
-
-        for (const institution of newKnowledgeProduct.result_knowledge_product_institution_array) {
-          try {
-            const savedInstitution =
-              await this._resultsKnowledgeProductInstitutionRepository.save(
-                institution,
-              );
-
-            if (!savedInstitution.predicted_institution_object.clarisa_center) {
-              const isPredicted = institution.confidant >= confidenceThreshold;
-
-              await this._resultByInstitutionRepository.save({
-                result_id: newResult.id,
-                institutions_id: isPredicted
-                  ? institution.predicted_institution_id
-                  : null,
-                institution_roles_id:
-                  InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
-                is_predicted: isPredicted,
-                result_kp_mqap_institution_id:
-                  savedInstitution.result_kp_mqap_institution_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              });
-            }
-          } catch (error) {
-            throw new Error(
-              `Error saving institution or result by institution: ${error}`,
-            );
-          }
-        }
-      }
+      const resultByInstitutions =
+        newKnowledgeProduct.result_knowledge_product_institution_array.map(
+          (rkpi) => {
+            rkpi.result_by_institution_object &&
+              (rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id);
+            return rkpi.result_by_institution_object;
+          },
+        );
+      await this._resultByInstitutionRepository.save(
+        resultByInstitutions ?? [],
+      );
 
       await this._resultsKnowledgeProductKeywordRepository.save(
         newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
@@ -1085,34 +1008,36 @@ export class ResultsKnowledgeProductsService {
       },
     });
 
-    /*if the kp is new, we need to load the institution corresponding to the 
-    id returned by cgspace in order to execute the next step*/
-    if (!upsert) {
-      const possibleCgInstitutionIds = (
-        knowledgeProduct.result_knowledge_product_institution_array ?? []
+    /* we need to load the institution corresponding to the 
+    id returned by cgspace in order to execute the next step,
+    for incoming institutions*/
+    const possibleCgInstitutionIds = (
+      knowledgeProduct.result_knowledge_product_institution_array ?? []
+    )
+      .filter(
+        (cgi) =>
+          cgi.predicted_institution_id && !cgi.predicted_institution_object,
       )
-        .filter((cgi) => cgi.predicted_institution_id)
-        .map((cgi) => cgi.predicted_institution_id);
-      const possibleCgInstitutions =
-        await this._clarisaInstitutionRepository.find({
-          where: {
-            id: In(possibleCgInstitutionIds),
-          },
-          relations: { clarisa_center: true },
-        });
-
-      knowledgeProduct.result_knowledge_product_institution_array = (
-        knowledgeProduct.result_knowledge_product_institution_array ?? []
-      ).map((cgi) => {
-        const possibleCgInstitution = possibleCgInstitutions.find(
-          (pci) => pci.id == cgi.predicted_institution_id,
-        );
-        if (possibleCgInstitution) {
-          cgi.predicted_institution_object = possibleCgInstitution;
-        }
-        return cgi;
+      .map((cgi) => cgi.predicted_institution_id);
+    const possibleCgInstitutions =
+      await this._clarisaInstitutionRepository.find({
+        where: {
+          id: In(possibleCgInstitutionIds),
+        },
+        relations: { clarisa_center: true },
       });
-    }
+
+    knowledgeProduct.result_knowledge_product_institution_array = (
+      knowledgeProduct.result_knowledge_product_institution_array ?? []
+    ).map((cgi) => {
+      const possibleCgInstitution = possibleCgInstitutions.find(
+        (pci) => pci.id == cgi.predicted_institution_id,
+      );
+      if (possibleCgInstitution) {
+        cgi.predicted_institution_object = possibleCgInstitution;
+      }
+      return cgi;
+    });
 
     let newSectionTwoCenters: ResultsCenter[] = [];
 
@@ -1121,31 +1046,39 @@ export class ResultsKnowledgeProductsService {
     ).map((cgi) => {
       //if m-qap >97% certain of the institution match AND the institution is a center
       if (
+        cgi.is_active &&
         cgi.confidant > 97 &&
         cgi.predicted_institution_object.clarisa_center
       ) {
         cgi.is_active = false;
-      }
+        cgi.last_updated_by = knowledgeProduct.last_updated_by;
+        if (cgi.result_by_institution_object) {
+          cgi.result_by_institution_object.is_active = false;
+          cgi.result_by_institution_object.last_updated_by =
+            knowledgeProduct.last_updated_by;
+          cgi['removed'] = true;
+        }
 
-      //if the center has not been mapped already, we will create a new db record
-      if (
-        !sectionTwoCenters.find(
-          (stc) =>
-            stc.clarisa_center_object.institutionId ==
-            cgi.predicted_institution_id,
-        ) &&
-        cgi.predicted_institution_object.clarisa_center
-      ) {
-        const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
-        newSectionTwoCenter.center_id =
-          cgi.predicted_institution_object.clarisa_center.code;
-        newSectionTwoCenter.is_primary = false;
-        newSectionTwoCenter.result_id = knowledgeProduct.results_id;
-        newSectionTwoCenter.created_by =
-          knowledgeProduct.last_updated_by || knowledgeProduct.created_by;
-        newSectionTwoCenter.from_cgspace = true;
+        //if the center has not been mapped already, we will create a new db record
+        if (
+          !sectionTwoCenters.find(
+            (stc) =>
+              stc.clarisa_center_object.institutionId ==
+              cgi.predicted_institution_id,
+          ) &&
+          cgi.predicted_institution_object.clarisa_center
+        ) {
+          const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
+          newSectionTwoCenter.center_id =
+            cgi.predicted_institution_object.clarisa_center.code;
+          newSectionTwoCenter.is_primary = false;
+          newSectionTwoCenter.result_id = knowledgeProduct.results_id;
+          newSectionTwoCenter.created_by =
+            knowledgeProduct.last_updated_by || knowledgeProduct.created_by;
+          newSectionTwoCenter.from_cgspace = true;
 
-        newSectionTwoCenters.push(newSectionTwoCenter);
+          newSectionTwoCenters.push(newSectionTwoCenter);
+        }
       }
 
       return cgi;
@@ -1169,6 +1102,13 @@ export class ResultsKnowledgeProductsService {
       ...newSectionTwoCenters,
       ...sectionTwoCenters,
     ]);
+
+    const modifiedPartners = (
+      knowledgeProduct.result_knowledge_product_institution_array ?? []
+    )
+      .filter((cgi) => cgi.result_by_institution_object && cgi['removed'])
+      .map((cgi) => cgi.result_by_institution_object);
+    await this._resultByInstitutionRepository.save(modifiedPartners);
 
     knowledgeProduct.result_knowledge_product_institution_array =
       updatedCgInstitutions;

@@ -120,11 +120,14 @@ export class InitGeneralResultsReportComponent implements OnInit {
       }
 
       if (!errorOnDataExport) {
-        this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', null, this.tocToExport);
+        const wscolsResults = this.generateColumns(this.dataToExport);
+        const wscolsToc = this.generateColumns(this.tocToExport);
+        this.exportTablesSE.exportMultipleSheetsExcel(this.dataToExport, 'results_list', wscolsResults, this.tocToExport, wscolsToc);
       }
 
       this.requesting = false;
     }
+
   }
 
   POST_excelFullReportPromise(result: number) {
@@ -147,6 +150,19 @@ export class InitGeneralResultsReportComponent implements OnInit {
         }
       });
     });
+  }
+
+  private generateColumns(data: any[]): any[] {
+    if (data.length === 0) {
+      return [];
+    }
+
+    const keys = Object.keys(data[0]);
+    return keys.map(key => ({
+      header: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      key: key,
+      width: 24
+    }));
   }
 
   onRemoveinit(e) {}

@@ -15,6 +15,8 @@ import { ResultsKnowledgeProductMetadata } from './entities/results-knowledge-pr
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
 import { FairSpecificData, FullFairData } from './dto/fair-data.dto';
 import { StringContentComparator } from '../../../shared/utils/string-content-comparator';
+import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
+import { InstitutionRoleEnum } from '../results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class ResultsKnowledgeProductMapper {
@@ -23,27 +25,23 @@ export class ResultsKnowledgeProductMapper {
   ): ResultsKnowledgeProductDto {
     let knowledgeProductDto = new ResultsKnowledgeProductDto();
 
-    //knowledgeProductDto.accessible = mqapResponseDto?.FAIR?.score?.A;
     knowledgeProductDto.commodity = (mqapResponseDto?.Commodities ?? []).join(
       '; ',
     );
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
-    //knowledgeProductDto.findable = mqapResponseDto?.FAIR?.score?.F;
     const hasQuery = (mqapResponseDto?.Handle ?? '').indexOf('?');
     const linkSplit = (mqapResponseDto?.Handle ?? '')
       .slice(0, hasQuery != -1 ? hasQuery : mqapResponseDto?.Handle.length)
       .split('/');
     const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
     knowledgeProductDto.handle = handleId;
-    //knowledgeProductDto.interoperable = mqapResponseDto?.FAIR?.score?.I;
     knowledgeProductDto.is_melia = null; //null, as this field is mapped by the user
     knowledgeProductDto.licence = mqapResponseDto?.Rights;
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.ost_melia_study_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
-    //knowledgeProductDto.reusable = mqapResponseDto?.FAIR?.score?.R;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
       .map((f) => f.name)
       .join('; ');
@@ -52,22 +50,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.cgspace_countries = this.getAsArray(
       mqapResponseDto?.['Country ISO code'],
     );
-    /*if (typeof mqapResponseDto?.['Region of the research'] === 'string') {
-      knowledgeProductDto.cgspace_regions =
-        mqapResponseDto?.['Region of the research'];
-    } else {
-      knowledgeProductDto.cgspace_regions = (
-        mqapResponseDto?.['Region of the research'] ?? []
-      ).join('; ');
-    }*/
-
-    /*if ((knowledgeProductDto.cgspace_countries ?? '').length < 1) {
-      knowledgeProductDto.cgspace_countries = null;
-    }*/
-
-    /*if ((knowledgeProductDto.cgspace_regions ?? '').length < 1) {
-      knowledgeProductDto.cgspace_regions = null;
-    }*/
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
@@ -181,7 +163,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
-    //knowledgeProductDto.cgspace_countries = this.getAsArray(dto?.Countries);
 
     const geoLocation = this.getAsArray(dto?.['Geographic location']);
     const isGlobal = geoLocation.find((r) => r.clarisa_id === 1);
@@ -373,16 +354,12 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProductDto.id = entity.result_knowledge_product_id;
 
-    //knowledgeProductDto.accessible = entity.accesible;
     knowledgeProductDto.commodity = entity.comodity;
     knowledgeProductDto.description = entity.description;
-    //knowledgeProductDto.findable = entity.findable;
     knowledgeProductDto.handle = entity.handle;
-    //knowledgeProductDto.interoperable = entity.interoperable;
     knowledgeProductDto.licence = entity.licence;
     knowledgeProductDto.title = entity.name;
     knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
-    //knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
     knowledgeProductDto.is_melia = entity.is_melia;
@@ -392,8 +369,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
     knowledgeProductDto.cgspace_phase_year =
       entity?.result_object?.obj_version?.cgspace_year;
-    //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
-    //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {
@@ -457,8 +432,6 @@ export class ResultsKnowledgeProductMapper {
 
       return institutionDto;
     });
-
-    //knowledgeProductDto.cgspace_countries = null;
 
     const regions = entity.result_object?.result_region_array;
     knowledgeProductDto.clarisa_regions = (regions ?? []).map(
@@ -566,21 +539,13 @@ export class ResultsKnowledgeProductMapper {
     userId: number,
     resultId: number,
   ): ResultsKnowledgeProduct {
-    //knowledgeProduct.accesible = dto.accessible;
     knowledgeProduct.comodity = dto.commodity;
     knowledgeProduct.description = dto.description;
     knowledgeProduct.doi = dto.doi;
-    //knowledgeProduct.findable = dto.findable;
     knowledgeProduct.handle = dto.handle;
-    //knowledgeProduct.interoperable = dto.interoperable;
-    //knowledgeProduct.is_melia = null;
     knowledgeProduct.knowledge_product_type = dto.type;
     knowledgeProduct.licence = dto.licence;
-    //knowledgeProduct.melia_previous_submitted = null;
-    //knowledgeProduct.melia_type_id = null;
-    //knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
-    //knowledgeProduct.reusable = dto.reusable;
     knowledgeProduct.sponsors = dto.sponsor;
 
     if (!knowledgeProduct.result_knowledge_product_id) {
@@ -591,21 +556,19 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProduct.results_id = resultId;
 
-    //knowledgeProduct.cgspace_countries = dto.cgspace_countries;
-    //knowledgeProduct.cgspace_regions = dto.cgspace_regions;
-
     return knowledgeProduct;
   }
 
   populateKPRelations(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
+    confidenceThreshold: number,
   ): ResultsKnowledgeProduct {
     this.patchAuthors(knowledgeProduct, dto);
     this.patchKeywords(knowledgeProduct, dto);
     this.patchMetadata(knowledgeProduct, dto);
     this.patchAltmetricData(knowledgeProduct, dto);
-    this.patchInstitutions(knowledgeProduct, dto);
+    this.patchInstitutions(knowledgeProduct, dto, confidenceThreshold);
     this.patchRegions(knowledgeProduct, dto);
 
     return knowledgeProduct;
@@ -614,50 +577,95 @@ export class ResultsKnowledgeProductMapper {
   public patchInstitutions(
     knowledgeProduct: ResultsKnowledgeProduct,
     dto: ResultsKnowledgeProductDto,
+    confidenceThreshold: number,
     upsert = false,
   ) {
     const institutions = (dto.institutions ?? []).map((i) => {
-      let institution: ResultsKnowledgeProductInstitution;
+      let kpInstitution: ResultsKnowledgeProductInstitution;
       if (upsert) {
-        institution = (
+        kpInstitution = (
           knowledgeProduct.result_knowledge_product_institution_array ?? []
-        ).find((oi) => oi.intitution_name == i.source_name);
-        if (institution) {
-          institution['matched'] = true;
+        ).find(
+          (oi) =>
+            StringContentComparator.contentCompare(
+              oi.intitution_name,
+              i.source_name,
+            ) === 0,
+        );
+        if (kpInstitution) {
+          kpInstitution['matched'] = true;
         }
       }
 
-      institution ??= new ResultsKnowledgeProductInstitution();
+      if (
+        !upsert ||
+        !kpInstitution ||
+        (kpInstitution.result_kp_mqap_institution_id &&
+          !kpInstitution.result_by_institution_object) ||
+        (kpInstitution.result_kp_mqap_institution_id &&
+          kpInstitution.result_by_institution_object &&
+          !kpInstitution.result_by_institution_object.institutions_id)
+      ) {
+        kpInstitution ??= new ResultsKnowledgeProductInstitution();
 
-      institution.intitution_name = i.source_name;
-      institution.confidant = i.confidence_percentage;
-      institution.predicted_institution_id = i.possible_matched_institution_id;
+        kpInstitution.intitution_name = i.source_name;
+        kpInstitution.confidant = i.confidence_percentage;
+        kpInstitution.predicted_institution_id =
+          i.possible_matched_institution_id;
 
-      if (!knowledgeProduct.last_updated_by) {
-        institution.created_by = knowledgeProduct.created_by;
-      } else {
-        if (!institution.result_kp_mqap_institution_id) {
-          institution.created_by = knowledgeProduct.created_by;
+        const isPredicted = kpInstitution.confidant >= confidenceThreshold;
+        const resultInstitution =
+          kpInstitution.result_by_institution_object ??
+          new ResultsByInstitution();
+
+        resultInstitution.result_id = knowledgeProduct.results_id;
+        resultInstitution.institutions_id = isPredicted
+          ? kpInstitution.predicted_institution_id
+          : null;
+        resultInstitution.institution_roles_id = InstitutionRoleEnum.PARTNER;
+        resultInstitution.is_predicted = isPredicted;
+        resultInstitution.is_active = true;
+
+        if (
+          !knowledgeProduct.last_updated_by ||
+          !kpInstitution.result_kp_mqap_institution_id
+        ) {
+          kpInstitution.created_by = knowledgeProduct.created_by;
+          resultInstitution.created_by = knowledgeProduct.created_by;
         } else {
-          institution.last_updated_by = knowledgeProduct.last_updated_by;
+          if (!resultInstitution.id) {
+            resultInstitution.created_by = knowledgeProduct.last_updated_by;
+          }
+
+          kpInstitution.last_updated_by = knowledgeProduct.last_updated_by;
+          resultInstitution.last_updated_by = knowledgeProduct.last_updated_by;
         }
+
+        kpInstitution.result_by_institution_object = resultInstitution;
+
+        kpInstitution.result_knowledge_product_id =
+          knowledgeProduct.result_knowledge_product_id;
       }
 
-      institution.result_knowledge_product_id =
-        knowledgeProduct.result_knowledge_product_id;
-
-      return institution;
+      return kpInstitution;
     });
 
     (knowledgeProduct.result_knowledge_product_institution_array ?? []).forEach(
       (oi) => {
         if (!oi['matched']) {
-          if (!oi.results_by_institutions_id) {
-            oi.is_active = false;
+          if (oi.result_by_institution_object) {
+            oi.result_by_institution_object.is_active = false;
           }
+
+          oi.is_active = false;
 
           institutions.push(oi);
         } else {
+          oi.is_active = true;
+          if (oi.result_by_institution_object) {
+            oi.result_by_institution_object.is_active = true;
+          }
+
           delete oi['matched'];
         }
       },
