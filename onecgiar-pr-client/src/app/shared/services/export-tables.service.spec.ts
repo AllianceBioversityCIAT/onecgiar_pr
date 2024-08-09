@@ -141,7 +141,7 @@ describe('ExportTablesService', () => {
       const fileName = 'testFile';
       const tocToExport = ['tocData1', 'tocData2'];
 
-      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, undefined,() => {
+      await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, undefined, () => {
         expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
         expect(FileSaver.saveAs).toHaveBeenCalled();
       });
