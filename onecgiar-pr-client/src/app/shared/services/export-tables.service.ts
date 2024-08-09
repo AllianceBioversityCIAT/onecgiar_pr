@@ -52,52 +52,7 @@ export class ExportTablesService {
           };
         });
 
-        worksheet.getRow(1).height = 30;
-
-        worksheet.getRow(1).eachCell(cell => {
-          cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: '5568DD' }
-          };
-          cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-        });
-
-        worksheet.eachRow((row, rowNumber) => {
-          if (rowNumber > 1) {
-            row.eachCell((cell, colNumber) => {
-              cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
-              cell.font = {
-                size: 14,
-                color: colNumber === 7 || colNumber === 23 ? { argb: '0000FF' } : { argb: '000000' },
-                underline: !!(colNumber === 7 || colNumber === 23)
-              };
-              cell.border = {
-                top: { style: 'thin' },
-                left: { style: 'thin' },
-                bottom: { style: 'thin' },
-                right: { style: 'thin' }
-              };
-            });
-
-            if (rowNumber % 2 === 0) {
-              row.eachCell(cell => {
-                cell.fill = {
-                  type: 'pattern',
-                  pattern: 'solid',
-                  fgColor: { argb: 'ECEFFB' }
-                };
-              });
-            }
-          }
-        });
+        this.formatWorksheet(worksheet);
 
         const buffer = await workbook.xlsx.writeBuffer();
         this.saveAsExcelFile(buffer, fileName, isIPSR);
