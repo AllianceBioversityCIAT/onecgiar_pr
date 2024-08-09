@@ -163,7 +163,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.clarisa_regions = regions
       .filter((r) => r)
       .map((r) => r.clarisa_id);
-    //knowledgeProductDto.cgspace_countries = this.getAsArray(dto?.Countries);
 
     const geoLocation = this.getAsArray(dto?.['Geographic location']);
     const isGlobal = geoLocation.find((r) => r.clarisa_id === 1);
@@ -355,16 +354,12 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProductDto.id = entity.result_knowledge_product_id;
 
-    //knowledgeProductDto.accessible = entity.accesible;
     knowledgeProductDto.commodity = entity.comodity;
     knowledgeProductDto.description = entity.description;
-    //knowledgeProductDto.findable = entity.findable;
     knowledgeProductDto.handle = entity.handle;
-    //knowledgeProductDto.interoperable = entity.interoperable;
     knowledgeProductDto.licence = entity.licence;
     knowledgeProductDto.title = entity.name;
     knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
-    //knowledgeProductDto.reusable = entity.reusable;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
     knowledgeProductDto.is_melia = entity.is_melia;
@@ -374,8 +369,6 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
     knowledgeProductDto.cgspace_phase_year =
       entity?.result_object?.obj_version?.cgspace_year;
-    //knowledgeProductDto.cgspace_countries = entity.cgspace_countries;
-    //knowledgeProductDto.cgspace_regions = entity.cgspace_regions;
 
     const authors = entity.result_knowledge_product_author_array;
     knowledgeProductDto.authors = (authors ?? []).map((a) => {
@@ -439,8 +432,6 @@ export class ResultsKnowledgeProductMapper {
 
       return institutionDto;
     });
-
-    //knowledgeProductDto.cgspace_countries = null;
 
     const regions = entity.result_object?.result_region_array;
     knowledgeProductDto.clarisa_regions = (regions ?? []).map(
@@ -552,12 +543,8 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.description = dto.description;
     knowledgeProduct.doi = dto.doi;
     knowledgeProduct.handle = dto.handle;
-    //knowledgeProduct.is_melia = null;
     knowledgeProduct.knowledge_product_type = dto.type;
     knowledgeProduct.licence = dto.licence;
-    //knowledgeProduct.melia_previous_submitted = null;
-    //knowledgeProduct.melia_type_id = null;
-    //knowledgeProduct.ost_melia_study_id = null;
     knowledgeProduct.name = dto.title;
     knowledgeProduct.sponsors = dto.sponsor;
 
@@ -568,9 +555,6 @@ export class ResultsKnowledgeProductMapper {
     }
 
     knowledgeProduct.results_id = resultId;
-
-    //knowledgeProduct.cgspace_countries = dto.cgspace_countries;
-    //knowledgeProduct.cgspace_regions = dto.cgspace_regions;
 
     return knowledgeProduct;
   }
