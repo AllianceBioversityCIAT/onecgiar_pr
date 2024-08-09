@@ -6,6 +6,11 @@
   position: relative;
   overflow: hidden;
 
+  .cgspace-link-message {
+    width : 100%;
+    text-align: start;
+  }
+
   .evidence_fields {
     margin-top: 26px;
 
@@ -112,6 +117,7 @@
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 10px;
+    margin-bottom: 12px;
   }
 
   .checkboxes {

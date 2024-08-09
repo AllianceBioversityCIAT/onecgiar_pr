@@ -2,8 +2,8 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
 import { BiReportRepository } from './repository/bi-report.repository';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { env } from 'process';
 import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
 export class BiReportsService {
@@ -26,7 +26,10 @@ export class BiReportsService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !env.IS_PRODUCTION);
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 

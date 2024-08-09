@@ -41,6 +41,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() groupName: string = '';
   @Input() descInlineStyles?: string = '';
   @Input() labelDescInlineStyles?: string = '';
+  @Input() optionsInlineStyles?: string = '';
   @Input() showDescriptionLabel?: boolean = false;
   @Output() selectOptionEvent = new EventEmitter();
   private _optionsIntance: any[];

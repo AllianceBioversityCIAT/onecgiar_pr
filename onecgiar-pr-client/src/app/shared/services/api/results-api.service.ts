@@ -152,14 +152,21 @@ export class ResultsApiService {
   GET_allInstitutions() {
     return this.http.get<any>(`${this.apiBaseUrl}get/institutions/all`).pipe(
       map(resp => {
-        resp.response.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name} - ${institution?.headquarter_name}`));
+        resp.response.map(
+          institution =>
+            (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${
+              institution?.institutions_acronym ? ' - ' : ''
+            } ${institution?.institutions_name} - ${institution?.headquarter_name}`)
+        );
         return resp;
       })
     );
   }
 
   GET_generalInformationByResultId() {
-    return this.http.get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_generalInformation(body: GeneralInfoBody) {
@@ -180,17 +187,21 @@ export class ResultsApiService {
   }
 
   PATCH_partnersSection(body: PartnersBody) {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCH_knowledgeProductSection(body: KnowledgeProductSaveDto) {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/upsert/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}results-knowledge-products/upsert/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_partnersSection() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`).pipe(
-      this.saveButtonSE.isGettingSectionPipe()
-    );
+    return this.http
+      .get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GET_AllPrmsGeographicScope() {
@@ -206,7 +217,12 @@ export class ResultsApiService {
   }
 
   POST_partnerRequest(body: PartnersRequestBody) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/clarisa/partner-request/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body);
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}api/clarisa/partner-request/${
+        this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
+      }`,
+      body
+    );
   }
 
   GET_AllCLARISACountries() {
@@ -234,7 +250,9 @@ export class ResultsApiService {
   GET_AllWithoutResults() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        resp.response.map(
+          initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`)
+        );
         return resp;
       })
     );
@@ -253,7 +271,9 @@ export class ResultsApiService {
   }
 
   POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean) {
-    return this.http.post<any>(`${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .post<any>(`${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_evidences() {
@@ -270,7 +290,13 @@ export class ResultsApiService {
   }
 
   PUT_loadFileInUploadSession(file: File, link) {
-    const options = { headers: new HttpHeaders({ 'Content-Type': 'application/octet-stream', 'Content-Range': `bytes 0-${file.size - 1}/${file.size}`, eampleee: 'asasas' }) };
+    const options = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/octet-stream',
+        'Content-Range': `bytes 0-${file.size - 1}/${file.size}`,
+        eampleee: 'asasas'
+      })
+    };
     return firstValueFrom(this.http.put<any>(link, file, options));
   }
 
@@ -291,11 +317,15 @@ export class ResultsApiService {
   }
 
   GET_resultknowledgeProducts() {
-    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_resyncKnowledgeProducts() {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}results-knowledge-products/resync/${this.currentResultId}`, null)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   POST_createWithHandle(body) {
@@ -309,7 +339,12 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        resp?.response?.contributing_initiatives.map(
+          initiative =>
+            (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
+              initiative?.initiative_name
+            }`)
+        );
         return resp;
       }),
       this.saveButtonSE.isGettingSectionPipe()
@@ -322,13 +357,21 @@ export class ResultsApiService {
 
   Get_indicator(id_toc, init) {
     if (this.currentResultId == null) {
-      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+      return this.http
+        .get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.ipsrDataControlSE.resultInnovationId}/initiative/${init}`)
+        .pipe(this.saveButtonSE.isGettingSectionPipe());
     } else {
-      return this.http.get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+      return this.http
+        .get<any>(`${this.apiBaseUrl}toc/get/indicator/${id_toc}/result/${this.currentResultId}/initiative/${init}`)
+        .pipe(this.saveButtonSE.isGettingSectionPipe());
     }
   }
   get_vesrsionDashboard(id_toc, init) {
-    return this.http.get<any>(`${this.apiBaseUrl}toc/get/version/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+    return this.http.get<any>(
+      `${this.apiBaseUrl}toc/get/version/${
+        this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
+      }/initiative/${init}/resultToc/${id_toc}`
+    );
   }
 
   GET_resultActionArea(resultId, initiative) {
@@ -336,22 +379,33 @@ export class ResultsApiService {
   }
 
   PATCH_innovationUse(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}summary/innovation-use/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_innovationUse() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_capacityDevelopent(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}summary/capacity-developent/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}summary/capacity-developent/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_capacityDevelopent() {
     return this.http.get<any>(`${this.apiBaseUrl}summary/capacity-developent/get/result/${this.currentResultId}`).pipe(
       this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
-        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
+        resp?.response?.institutions?.map(
+          institution =>
+            (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${
+              institution?.institutions_acronym ? ' - ' : ''
+            } ${institution?.institutions_name}`)
+        );
         return resp;
       })
     );
@@ -370,7 +424,9 @@ export class ResultsApiService {
       map(resp => {
         //(resp);
         resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));
-        resp?.response.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`));
+        resp?.response.map(
+          initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`)
+        );
         return resp;
       })
     );
@@ -379,7 +435,10 @@ export class ResultsApiService {
   GET_clarisaInnovationType() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
       map(resp => {
-        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+        resp?.response.map(
+          innovation =>
+            (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`)
+        );
         return resp;
       })
     );
@@ -388,7 +447,10 @@ export class ResultsApiService {
   GET_clarisaInnovationCharacteristics() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-characteristics/get/all`).pipe(
       map(resp => {
-        resp?.response.map(innovation => (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`));
+        resp?.response.map(
+          innovation =>
+            (innovation.extraInformation = `<strong>${innovation.name}</strong> <br> <div class="select_item_description">${innovation.definition}</div>`)
+        );
         return resp;
       })
     );
@@ -399,15 +461,21 @@ export class ResultsApiService {
   }
 
   PATCH_innovationDev(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}summary/innovation-dev/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}summary/innovation-dev/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_innovationDev() {
-    return this.http.get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCH_policyChanges(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.apiBaseUrl}summary/policy-changes/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_policyChangesQuestions() {
@@ -418,7 +486,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}summary/policy-changes/get/result/${this.currentResultId}`).pipe(
       this.saveButtonSE.isGettingSectionPipe(),
       map((resp: any) => {
-        resp?.response?.institutions?.map(institution => (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${institution?.institutions_acronym ? ' - ' : ''} ${institution?.institutions_name}`));
+        resp?.response?.institutions?.map(
+          institution =>
+            (institution.full_name = `(Id:${institution?.institutions_id}) <strong>${institution?.institutions_acronym || ''}</strong> ${
+              institution?.institutions_acronym ? ' - ' : ''
+            } ${institution?.institutions_name}`)
+        );
         return resp;
       })
     );
@@ -461,15 +534,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  GET_reportingList(initDate: string = '2022-12-01', inits? , phases?, searchText? ) {
+  GET_reportingList(initDate: string = '2022-12-01', inits?, phases?, searchText?) {
     const init = new Date(initDate);
     const today = new Date();
     today.setMilliseconds(0);
 
-    const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr ? `${environment.apiBaseUrl}api/ipsr/get` : `${environment.apiBaseUrl}api/results/get/reporting`;
+    const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr
+      ? `${environment.apiBaseUrl}api/ipsr/get`
+      : `${environment.apiBaseUrl}api/results/get/reporting`;
 
-
-    if(this.ipsrDataControlSE.inIpsr ){
+    if (this.ipsrDataControlSE.inIpsr) {
       return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, {
         inits,
         phases,
@@ -478,6 +552,14 @@ export class ResultsApiService {
     }
 
     return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
+  }
+
+  POST_AdminKPExcelReport(body) {
+    return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/get/excel-report`, body);
+  }
+
+  PUT_updateAdminKPConfidenceLevel(body) {
+    return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
   PATCH_updateRequest(body) {
@@ -548,7 +630,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}get/transform/${resultCode}?phase=${phase}`);
   }
 
-  POST_excelFullReport(resultIds: any[]) {
+  POST_excelFullReport(resultIds: number[]) {
     return this.http.post<any>(`${this.apiBaseUrl}admin-panel/report/results/excel-full-report`, { resultIds });
   }
 
@@ -577,11 +659,16 @@ export class ResultsApiService {
   }
 
   GET_downloadPDF(resultCode, resultPhase) {
-    return this.http.get(`${environment.apiBaseUrl}api/platform-report/result/${resultCode}?phase=${resultPhase}&downloadable=true`, { responseType: 'blob', observe: 'response' });
+    return this.http.get(`${environment.apiBaseUrl}api/platform-report/result/${resultCode}?phase=${resultPhase}&downloadable=true`, {
+      responseType: 'blob',
+      observe: 'response'
+    });
   }
 
   POSTResultInnovationPackage(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body).pipe(this.saveButtonSE.isCreatingPipe());
+    return this.http
+      .post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/create-header`, body)
+      .pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GETAllInnovationPackages() {
@@ -589,13 +676,20 @@ export class ResultsApiService {
   }
 
   PATCHIpsrGeneralInfo(body, resulId) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body).pipe(this.saveButtonSE.isCreatingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body)
+      .pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GETContributorsByIpsrResultId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${initiative?.initiative_name}`));
+        resp?.response?.contributing_initiatives.map(
+          initiative =>
+            (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
+              initiative?.initiative_name
+            }`)
+        );
         return resp;
       }),
       this.saveButtonSE.isGettingSectionPipe()
@@ -603,7 +697,9 @@ export class ResultsApiService {
   }
 
   PATCHContributorsByIpsrResultId(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETInnovationPackageDetail() {
@@ -611,15 +707,21 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayByStepOneResultId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get-step-one/${this.ipsrDataControlSE.resultInnovationId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHInnovationPathwayByStepOneResultId(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHInnovationPathwayByStepOneResultIdNextStep(body, descrip) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-one/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   GETAllClarisaActionAreasOutcomes() {
@@ -642,7 +744,9 @@ export class ResultsApiService {
     return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/${resultId}`);
   }
   GETinnovationpathwayStepTwo() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovations`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GETInnovationPathwayStepTwoInnovationSelect() {
@@ -670,15 +774,21 @@ export class ResultsApiService {
   }
 
   PATCHComplementaryInnovation(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHComplementaryInnovationPrevious(body, descrip) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-two/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   GETComplementaryById(idInnovationPackages) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovation/${idInnovationPackages}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/complementary-innovation/${idInnovationPackages}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GETComplementataryInnovationFunctions() {
@@ -686,19 +796,30 @@ export class ResultsApiService {
   }
 
   POSTNewCompletaryInnovation(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .post<any>(
+        `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`,
+        body
+      )
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETInnovationPathwayByRiId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-three/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-three/${this.ipsrDataControlSE.resultInnovationId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHInnovationPathwayByRiId(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHInnovationPathwayByRiIdNextPrevius(body, descrip) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-three/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   GETAllClarisaInnovationReadinessLevels() {
@@ -710,15 +831,21 @@ export class ResultsApiService {
   }
 
   GETInnovationPathwayStepFourByRiId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHInnovationPathwayStepFourByRiId(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHInnovationPathwayStepFourByRiIdPrevious(body, descrip) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   GETAllResultsInnovationPackageUnitTime() {
@@ -726,7 +853,10 @@ export class ResultsApiService {
   }
 
   PATCHInnovationPathwayStep4Partners(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${this.ipsrDataControlSE.resultInnovationId}`, body);
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/partners/${this.ipsrDataControlSE.resultInnovationId}`,
+      body
+    );
   }
 
   PATCHInnovationPathwayStep4BilateralsnonPooledProjects(idNonPoolen, body) {
@@ -734,43 +864,64 @@ export class ResultsApiService {
   }
 
   PATCHInnovationPathwayStep4Bilaterals(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`,
+      body
+    );
   }
 
   getCompletenessStatus(): Observable<any> {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`);
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`
+    );
   }
 
   getSubNationalLevelOne(isoAlpha) {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}clarisa/first-order-administrative-division/iso-alpha-2/${isoAlpha}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   getSubNationalLevelTwo(isoAlpha, adminCode) {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}clarisa/second-order-administrative-division/iso-alpha-2/${isoAlpha}/admin-code-1/${adminCode}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHsubmissionsSubmitIpsr(comment) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/submit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, { comment });
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/submit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, {
+      comment
+    });
   }
 
   PATCHSubmissionsUnsubmitIpsr(comment) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, { comment });
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/submissions/unsubmit-ipsr/${this.ipsrDataControlSE.resultInnovationId}`, {
+      comment
+    });
   }
 
   getStepTwoComentariesInnovation() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PostStepTwoComentariesInnovation(body) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PostStepTwoComentariesInnovationPrevius(body, descrip) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body).pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
+    return this.http
+      .post<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/createInnovationEnablers`, body)
+      .pipe(this.saveButtonSE.isSavingPipeNextStep(descrip));
   }
 
   getStepTwoComentariesInnovationId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${this.ipsrDataControlSE.resultInnovationId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+    return this.http
+      .get<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-packages-enabler-type/${this.ipsrDataControlSE.resultInnovationId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   getAssessedDuringExpertWorkshop() {
@@ -778,7 +929,9 @@ export class ResultsApiService {
   }
 
   PATCHcomplementaryinnovation(body, idResult) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/updated/complementary-innovation/${idResult}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/updated/complementary-innovation/${idResult}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   DELETEcomplementaryinnovation(idResult) {
@@ -827,11 +980,18 @@ export class ResultsApiService {
   }
 
   GET_versioningResult() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/result/${this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/versioning/result/${
+        this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
+      }`
+    );
   }
 
   PATCH_versioningAnnually(replicateIPSR = false) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate/${replicateIPSR ? 'innovation-package' : 'result'}`, {});
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}api/versioning/execute/annual/replicate/${replicateIPSR ? 'innovation-package' : 'result'}`,
+      {}
+    );
   }
 
   GET_numberOfResultsByResultType(statusId, resultTypeId) {

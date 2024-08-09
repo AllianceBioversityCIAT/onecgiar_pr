@@ -4,7 +4,7 @@ export class PartnersBody {
   public institutions: InstitutionsInterface[] = [];
 }
 
-class InstitutionsInterface {
+export class InstitutionsInterface {
   id: string;
   result_id: string;
   institutions_id: number;
@@ -45,7 +45,7 @@ export class UnmappedMQAPInstitutionDto {
   created_date: string;
   last_updated_date: string;
   institutions_type_name: string;
-  result_kp_mqap_institution_obj: {
+  result_kp_mqap_institution_object: {
     result_kp_mqap_institution_id: string;
     result_knowledge_product_id: string;
     intitution_name: string;

@@ -1,5 +1,4 @@
 import { DataControlService } from './data-control.service';
-import { jest } from '@jest/globals';
 
 jest.useFakeTimers();
 
@@ -12,8 +11,108 @@ describe('DataControlService', () => {
     titleServiceMock = {
       setTitle: jest.fn()
     };
-    resultsSE = {};
+    resultsSE = {
+      GET_versioning: jest.fn()
+    };
     service = new DataControlService(titleServiceMock, resultsSE); // Add the missing argument here
+  });
+
+  describe('getCurrentPhases', () => {
+    it('should set the current and previous reporting phases', () => {
+      const response = [
+        {
+          phase_year: '2021',
+          phase_name: 'Test Phase',
+          id: 1,
+          obj_previous_phase: {
+            phase_year: '2020',
+            phase_name: 'Previous Phase',
+            id: 2
+          }
+        }
+      ];
+      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+
+      service.getCurrentPhases();
+
+      expect(spy).toHaveBeenCalled();
+      expect(service.reportingCurrentPhase).toEqual({
+        phaseYear: '2021',
+        phaseName: 'Test Phase',
+        phaseId: 1
+      });
+      expect(service.previousReportingPhase).toEqual({
+        phaseYear: '2020',
+        phaseName: 'Previous Phase',
+        phaseId: 2
+      });
+    });
+
+    it('should set the previous reporting phase to null if there is no previous phase', () => {
+      const response = [
+        {
+          phase_year: '2021',
+          phase_name: 'Test Phase',
+          id: 1
+        }
+      ];
+      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+
+      service.getCurrentPhases();
+
+      expect(spy).toHaveBeenCalled();
+      expect(service.previousReportingPhase).toEqual({
+        phaseYear: null,
+        phaseName: null,
+        phaseId: null
+      });
+    });
+  });
+
+  describe('getCurrentIPSRPhase', () => {
+    it('should set the current and previous IPSR phases', () => {
+      const response = [
+        {
+          phase_year: '2021',
+          phase_name: 'Test Phase',
+          obj_previous_phase: {
+            phase_year: '2020',
+            phase_name: 'Previous Phase'
+          }
+        }
+      ];
+      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+
+      service.getCurrentIPSRPhase();
+
+      expect(spy).toHaveBeenCalled();
+      expect(service.IPSRCurrentPhase).toEqual({
+        phaseYear: '2021',
+        phaseName: 'Test Phase'
+      });
+      expect(service.previousIPSRPhase).toEqual({
+        phaseYear: '2020',
+        phaseName: 'Previous Phase'
+      });
+    });
+
+    it('should set the previous IPSR phase to null if there is no previous phase', () => {
+      const response = [
+        {
+          phase_year: '2021',
+          phase_name: 'Test Phase'
+        }
+      ];
+      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+
+      service.getCurrentIPSRPhase();
+
+      expect(spy).toHaveBeenCalled();
+      expect(service.previousIPSRPhase).toEqual({
+        phaseYear: null,
+        phaseName: null
+      });
+    });
   });
 
   describe('validateBody', () => {

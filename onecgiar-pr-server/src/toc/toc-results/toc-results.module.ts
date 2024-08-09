@@ -64,6 +64,8 @@ import { ResultActorRepository } from '../../api/results/result-actors/repositor
 import { ResultInstitutionsBudgetRepository } from '../../api/results/result_budget/repositories/result_institutions_budget.repository';
 import { NonPooledProjectBudgetRepository } from '../../api/results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
+import { MQAPModule } from '../../api/m-qap/m-qap.module';
 
 @Module({
   controllers: [TocResultsController],
@@ -126,9 +128,11 @@ import { ResultCountrySubnationalRepository } from '../../api/results/result-cou
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
+    ResultAnswerRepository,
   ],
   imports: [
     SharePointModule,
+    MQAPModule,
     forwardRef(() => VersioningModule),
     forwardRef(() => ResultInnovationPackageModule),
     forwardRef(() => InnovationPathwayModule),

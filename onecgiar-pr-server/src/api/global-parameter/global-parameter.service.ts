@@ -3,10 +3,10 @@ import { GlobalParameterRepository } from './repositories/global-parameter.repos
 import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { isProduction } from '../../shared/utils/validation.utils';
-import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { UpdateGlobalParameterDto } from './dto/update-global-parameter.dto';
+import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { UpdateGlobalParameterDto } from './dto/update-global-parameter.dto';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class GlobalParameterService {
@@ -33,7 +33,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -49,7 +52,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -71,7 +77,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -85,7 +94,10 @@ export class GlobalParameterService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      return this._returnResponse.format(error, !isProduction());
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
     }
   }
 
@@ -130,7 +142,10 @@ export class GlobalParameterService {
         });
       })
       .catch((error) => {
-        return this._returnResponse.format(error, !isProduction());
+        return this._returnResponse.format(
+          error,
+          !EnvironmentExtractor.isProduction(),
+        );
       });
   }
 }
