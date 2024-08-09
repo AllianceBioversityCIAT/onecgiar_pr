@@ -80,7 +80,7 @@ describe('ExportTablesService', () => {
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
       const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();
 
-      await service.exportExcelIpsr(
+      service.exportExcelIpsr(
         list,
         fileName,
         wscols,
