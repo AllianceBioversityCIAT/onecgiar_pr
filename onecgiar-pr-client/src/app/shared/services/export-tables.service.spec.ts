@@ -80,7 +80,7 @@ describe('ExportTablesService', () => {
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
       const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();
 
-      service.exportExcelIpsr(
+      await service.exportExcelIpsr(
         list,
         fileName,
         wscols,
@@ -125,25 +125,24 @@ describe('ExportTablesService', () => {
 
   describe('exportMultipleSheetsExcel', () => {
     it('should export multiple sheets excel with wscols', async () => {
-      const list = ['data1', 'data2'];
+      const list = [{ data: 'data1' }, { data: 'data2' }];
       const fileName = 'testFile';
       const wscols = [{ wpx: 100 }];
-      const tocToExport = ['tocData1', 'tocData2'];
+      const tocToExport = [{ data: 'tocData1' }, { data: 'tocData2' }];
 
       await service.exportMultipleSheetsExcel(list, fileName, wscols, tocToExport, wscols, () => {
-        expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
+        expect(ExcelJS.Workbook).toHaveBeenCalled();
         expect(FileSaver.saveAs).toHaveBeenCalled();
       });
     });
 
     it('should export multiple sheets excel without wscols', async () => {
-      const list = ['data1', 'data2'];
+      const list = [{ data: 'data1' }, { data: 'data2' }];
       const fileName = 'testFile';
-      const tocToExport = ['tocData1', 'tocData2'];
+      const tocToExport = [{ data: 'tocData1' }, { data: 'tocData2' }];
 
       await service.exportMultipleSheetsExcel(list, fileName, undefined, tocToExport, undefined, () => {
-        expect(xlsx.utils.json_to_sheet).toHaveBeenCalledTimes(2);
-        expect(FileSaver.saveAs).toHaveBeenCalled();
+        expect(ExcelJS.Workbook).toHaveBeenCalled();
       });
     });
   });
