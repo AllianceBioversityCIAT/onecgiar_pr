@@ -373,7 +373,6 @@ export class ResultsByInstitutionsService {
       if (added.length) {
         added.forEach((delivery) => {
           delivery.result_by_institution_id = rbiId;
-          delivery.partner_delivery_type_id = delivery.partner_delivery_type_id;
           delivery.created_by = userId;
           delivery.last_updated_by = userId;
           delivery.is_active = true;
