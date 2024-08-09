@@ -642,21 +642,19 @@ export class ResultsKnowledgeProductMapper {
         resultInstitution.is_predicted = isPredicted;
         resultInstitution.is_active = true;
 
-        if (!knowledgeProduct.last_updated_by) {
+        if (
+          !knowledgeProduct.last_updated_by ||
+          !kpInstitution.result_kp_mqap_institution_id
+        ) {
           kpInstitution.created_by = knowledgeProduct.created_by;
           resultInstitution.created_by = knowledgeProduct.created_by;
         } else {
-          if (!kpInstitution.result_kp_mqap_institution_id) {
-            kpInstitution.created_by = knowledgeProduct.created_by;
-            resultInstitution.created_by = knowledgeProduct.created_by;
-          } else {
-            if (!resultInstitution.id) {
-              resultInstitution.created_by = knowledgeProduct.last_updated_by;
-            }
-            kpInstitution.last_updated_by = knowledgeProduct.last_updated_by;
-            resultInstitution.last_updated_by =
-              knowledgeProduct.last_updated_by;
+          if (!resultInstitution.id) {
+            resultInstitution.created_by = knowledgeProduct.last_updated_by;
           }
+
+          kpInstitution.last_updated_by = knowledgeProduct.last_updated_by;
+          resultInstitution.last_updated_by = knowledgeProduct.last_updated_by;
         }
 
         kpInstitution.result_by_institution_object = resultInstitution;
