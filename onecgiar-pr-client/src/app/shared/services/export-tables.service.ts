@@ -66,7 +66,7 @@ export class ExportTablesService {
 
   async exportMultipleSheetsExcel(list: any[], fileName: string, wscolsResults?: any[], tocToExport?: any[], wscolsToc?: any[], callback?) {
     try {
-      import('exceljs').then(async ExcelJS => {
+      await import('exceljs').then(async ExcelJS => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
         const tocSheet = workbook.addWorksheet('TOC indicators by result');
