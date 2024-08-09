@@ -37,7 +37,7 @@ export class KnowledgeProductSelectorComponent {
   generateDescription(partner: UnmappedMQAPInstitutionDto) {
     const confidenceLevel = partner.result_kp_mqap_institution_object.confidant;
 
-    if (confidenceLevel > 90) {
+    if (partner.is_predicted) {
       return `The confidence level for the predicted match is <span class="confidenceLevel">${confidenceLevel}%</span>. Feel free to select a different partner only if necessary.`;
     } else {
       return `We couldn't find a matching partner for this author affiliation. Please check the partners list or <a class='open_route alert-event'>request</a> to add it if needed.`;
