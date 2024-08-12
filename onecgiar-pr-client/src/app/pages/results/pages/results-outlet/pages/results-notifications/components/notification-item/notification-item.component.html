@@ -38,6 +38,7 @@
             ? 'This result has been Quality Assessed and no additional contributors can be added.'
             : ''
         "
+        tooltipStyleClass="tooltip-w-300"
         *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
 
       <app-pr-button
@@ -52,6 +53,7 @@
             ? 'This result has been Quality Assessed and no additional contributors can be added.'
             : ''
         "
+        tooltipStyleClass="tooltip-w-300"
         *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
 
       <app-pr-button
