@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -22,6 +23,52 @@ export class ResultsByInstitution {
     type: 'bigint',
   })
   id!: number;
+
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: false,
+    default: true,
+  })
+  is_active!: boolean;
+
+  @Column({
+    name: 'is_predicted',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  is_predicted!: boolean;
+
+  // audit fields
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: false })
+  @JoinColumn({
+    name: 'created_by',
+  })
+  created_by: number;
+
+  @CreateDateColumn({
+    name: 'created_date',
+    type: 'timestamp',
+    nullable: false,
+  })
+  created_date!: Date;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'last_updated_by',
+  })
+  last_updated_by!: number;
+
+  @UpdateDateColumn({
+    name: 'last_updated_date',
+    nullable: true,
+    type: 'timestamp',
+  })
+  last_updated_date!: Date;
+
+  // relations
 
   @Column({
     name: 'result_id',
@@ -45,22 +92,6 @@ export class ResultsByInstitution {
   institution_roles_id: number;
 
   @Column({
-    name: 'is_active',
-    type: 'boolean',
-    nullable: false,
-    default: true,
-  })
-  is_active!: boolean;
-
-  @Column({
-    name: 'is_predicted',
-    type: 'boolean',
-    nullable: false,
-    default: false,
-  })
-  is_predicted!: boolean;
-
-  @Column({
     name: 'result_kp_mqap_institution_id',
     type: 'bigint',
     nullable: true,
@@ -68,14 +99,9 @@ export class ResultsByInstitution {
   })
   result_kp_mqap_institution_id: number;
 
-  @CreateDateColumn({
-    name: 'created_date',
-    type: 'timestamp',
-    nullable: false,
-  })
-  created_date!: Date;
+  // relation objects
 
-  @ManyToOne(() => Result, (r) => r.id, { nullable: false })
+  @ManyToOne(() => Result, (r) => r.result_by_institution_array)
   @JoinColumn({
     name: 'result_id',
   })
@@ -85,40 +111,21 @@ export class ResultsByInstitution {
   @JoinColumn({ name: 'institution_roles_id' })
   obj_institution_roles: InstitutionRole;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: false })
-  @JoinColumn({
-    name: 'created_by',
-  })
-  created_by: number;
-
   @ManyToOne(() => ClarisaInstitution, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'institutions_id',
   })
   obj_institutions: ClarisaInstitution;
 
-  @ManyToOne(() => User, (u) => u.id, { nullable: true })
-  @JoinColumn({
-    name: 'last_updated_by',
-  })
-  last_updated_by!: number;
-
-  @UpdateDateColumn({
-    name: 'last_updated_date',
-    nullable: true,
-    type: 'timestamp',
-  })
-  last_updated_date!: Date;
-
-  @ManyToOne(
+  @OneToOne(
     () => ResultsKnowledgeProductInstitution,
-    (r) => r.result_by_institution_array,
+    (rkpi) => rkpi.result_by_institution_object,
     { nullable: true },
   )
   @JoinColumn({
     name: 'result_kp_mqap_institution_id',
   })
-  result_kp_mqap_institution_obj: ResultsKnowledgeProductInstitution;
+  result_kp_mqap_institution_object: ResultsKnowledgeProductInstitution;
 
   @OneToMany(
     () => ResultByInstitutionsByDeliveriesType,
@@ -130,5 +137,5 @@ export class ResultsByInstitution {
     () => ResultInstitutionsBudget,
     (rib) => rib.obj_result_institution,
   )
-  obj_result_institution_array: ResultInstitutionsBudget[];
+  result_institution_budget_array: ResultInstitutionsBudget[];
 }

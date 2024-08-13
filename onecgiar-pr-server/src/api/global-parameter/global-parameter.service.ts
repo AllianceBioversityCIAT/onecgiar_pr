@@ -4,6 +4,9 @@ import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { UpdateGlobalParameterDto } from './dto/update-global-parameter.dto';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class GlobalParameterService {
@@ -12,9 +15,11 @@ export class GlobalParameterService {
     'value',
     'description',
   ] as FindOptionsSelect<GlobalParameter>;
+
   constructor(
     private readonly _globalParameterRepository: GlobalParameterRepository,
     private readonly _returnResponse: ReturnResponse,
+    private readonly _roleByUseRepository: RoleByUserRepository,
   ) {}
 
   async findAll() {
@@ -94,5 +99,53 @@ export class GlobalParameterService {
         !EnvironmentExtractor.isProduction(),
       );
     }
+  }
+
+  async updateGlobalParameter(
+    updateGlobalParameterDto: UpdateGlobalParameterDto,
+    user: TokenDto,
+  ) {
+    const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
+    if (!isAdmin?.is_admin) {
+      return this._returnResponse.format({
+        message: 'You do not have permission to perform this action',
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (!updateGlobalParameterDto?.name) {
+      return this._returnResponse.format({
+        message: 'Invalid data',
+        statusCode: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    const parameterToUpdate = await this._globalParameterRepository.findOne({
+      where: { name: updateGlobalParameterDto.name },
+    });
+    if (!parameterToUpdate) {
+      return this._returnResponse.format({
+        message: 'Global parameter not found',
+        statusCode: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    parameterToUpdate.value = updateGlobalParameterDto.value;
+
+    return this._globalParameterRepository
+      .save(parameterToUpdate)
+      .then((response) => {
+        return this._returnResponse.format({
+          message: 'Global parameter updated',
+          response,
+          statusCode: HttpStatus.OK,
+        });
+      })
+      .catch((error) => {
+        return this._returnResponse.format(
+          error,
+          !EnvironmentExtractor.isProduction(),
+        );
+      });
   }
 }

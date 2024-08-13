@@ -14,4 +14,6 @@ export interface GlobalVariables {
   show_global_info?: boolean;
   global_info_message?: string;
   t1r_default_phase?: string;
+  kp_mqap_institutions_confidence?: string;
+  p_pdf_url?: string;
 }
