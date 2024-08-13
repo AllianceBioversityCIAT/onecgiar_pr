@@ -1,6 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClarisaCgiarEntityType } from '../../clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
+import { UserNotificationSetting } from '../../../api/user_notification_settings/entities/user_notification_setting.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -64,4 +65,10 @@ export class ClarisaInitiative {
     name: 'cgiar_entity_type_id',
   })
   obj_cgiar_entity_type?: ClarisaCgiarEntityType;
+
+  @OneToMany(
+    () => UserNotificationSetting,
+    (notificationSetting) => notificationSetting.obj_clarisa_initiatives,
+  )
+  obj_user_notification_setting?: UserNotificationSetting[];
 }
