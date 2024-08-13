@@ -534,6 +534,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
+  GET_userNotificationSettingsByInitiativeId(initiativeId) {
+    return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/${initiativeId}`);
+  }
+
+  PATCH_userNotificationSettingsByInitiativeId(body) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}user-notification-settings/update`, body);
+  }
+
   GET_reportingList(initDate: string = '2022-12-01', inits?, phases?, searchText?) {
     const init = new Date(initDate);
     const today = new Date();
