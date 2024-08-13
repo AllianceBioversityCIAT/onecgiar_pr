@@ -14,6 +14,9 @@ import { of } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
+import { RouterTestingModule } from '@angular/router/testing';
+import { PrInputComponent } from '../../../../../../custom-fields/pr-input/pr-input.component';
+import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 
 describe('ResultsNotificationsComponent', () => {
   let component: ResultsNotificationsComponent;
@@ -25,7 +28,7 @@ describe('ResultsNotificationsComponent', () => {
       id: 1,
       status: {}
     }
-  ]
+  ];
 
   beforeEach(async () => {
     mockApiService = {
@@ -33,12 +36,15 @@ describe('ResultsNotificationsComponent', () => {
         GET_AllInitiatives: () => of({ response: [] }),
         GET_versioning: () => of({ response: mockGET_versioningResponse }),
         GET_allRequest: () => of({ response: [] }),
-        GET_requestStatus: () => of({ response: [] }),
+        GET_requestStatus: () => of({ response: [] })
       },
       rolesSE: {
         isAdmin: true
       },
-      updateUserData: jest.fn()
+      updateUserData: jest.fn(),
+      dataControlSE: {
+        myInitiativesList: of({ response: [] })
+      }
     };
 
     mockShareRequestModalService = {
@@ -54,13 +60,11 @@ describe('ResultsNotificationsComponent', () => {
         NoDataTextComponent,
         LabelNamePipe,
         ListFilterByTextAndAttrPipe,
-        PrFieldHeaderComponent
+        PrFieldHeaderComponent,
+        PrInputComponent,
+        PrFieldValidationsComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule,
-        ScrollingModule
-      ],
+      imports: [HttpClientTestingModule, RouterTestingModule, FormsModule, ScrollingModule],
       providers: [
         {
           provide: ApiService,
@@ -125,10 +129,10 @@ describe('ResultsNotificationsComponent', () => {
           disabled: false,
           id: 1,
           selected: false,
-          status: {},
-        },
+          status: {}
+        }
       ]);
-      expect(component.phaseFilter).toEqual(1)
+      expect(component.phaseFilter).toEqual(1);
     });
   });
 });
