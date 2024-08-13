@@ -3,10 +3,10 @@ import { GlobalParameterRepository } from './repositories/global-parameter.repos
 import { FindOptionsSelect } from 'typeorm';
 import { GlobalParameter } from './entities/global-parameter.entity';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
-import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { UpdateGlobalParameterDto } from './dto/update-global-parameter.dto';
-import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { UpdateGlobalParameterDto } from './dto/update-global-parameter.dto';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class GlobalParameterService {
@@ -106,14 +106,14 @@ export class GlobalParameterService {
     user: TokenDto,
   ) {
     const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
-    if (isAdmin?.is_admin == false) {
+    if (!isAdmin?.is_admin) {
       return this._returnResponse.format({
         message: 'You do not have permission to perform this action',
         statusCode: HttpStatus.FORBIDDEN,
       });
     }
 
-    if (!updateGlobalParameterDto || !updateGlobalParameterDto.name) {
+    if (!updateGlobalParameterDto?.name) {
       return this._returnResponse.format({
         message: 'Invalid data',
         statusCode: HttpStatus.BAD_REQUEST,
