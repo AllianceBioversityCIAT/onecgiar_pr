@@ -20,6 +20,7 @@ export class PrButtonComponent implements OnInit {
   @Input() disabled: boolean = false;
   @Input() tooltipText: string = '';
   @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
+  @Input() tooltipStyleClass: string = '';
   @Output() clickEvent = new EventEmitter<any>();
 
   png_icons = ['excel_white'];

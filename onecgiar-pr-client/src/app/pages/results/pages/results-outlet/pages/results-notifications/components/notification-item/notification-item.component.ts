@@ -19,13 +19,30 @@ export class NotificationItemComponent {
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   mapAndAccept(notification) {
-    const { title, approving_inititiative_id, owner_initiative_id, approving_official_code, approving_short_name, requester_official_code, requester_short_name, result_type_name, result_level_id, result_id, requester_initiative_id } = notification;
+    if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {
+      return null;
+    }
+
+    const {
+      title,
+      approving_inititiative_id,
+      owner_initiative_id,
+      approving_official_code,
+      approving_short_name,
+      requester_official_code,
+      requester_short_name,
+      result_type_name,
+      result_level_id,
+      result_id,
+      requester_initiative_id
+    } = notification;
 
     this.api.dataControlSE.currentResult.title = title;
 
-    this.api.dataControlSE.currentResult.submitter = approving_inititiative_id === owner_initiative_id ? `${approving_official_code} - ${approving_short_name}` : `${requester_official_code} - ${requester_short_name}`;
-
-    if (this.api.rolesSE.platformIsClosed) return;
+    this.api.dataControlSE.currentResult.submitter =
+      approving_inititiative_id === owner_initiative_id
+        ? `${approving_official_code} - ${approving_short_name}`
+        : `${requester_official_code} - ${requester_short_name}`;
 
     this.retrieveModalSE.title = title;
     this.retrieveModalSE.requester_initiative_id = requester_initiative_id;
@@ -62,8 +79,8 @@ export class NotificationItemComponent {
     this.api.dataControlSE.showShareRequest = true;
   }
 
-  get isSubmitted() {
-    return this.notification?.status == 1 && this.notification?.request_status_id == 1;
+  get isQAed() {
+    return this.notification?.status_id == 2 && this.notification?.request_status_id == 1;
   }
 
   resultUrl(notification) {
@@ -71,7 +88,10 @@ export class NotificationItemComponent {
   }
 
   acceptOrReject(response) {
-    if (this.api.rolesSE.platformIsClosed) return;
+    if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {
+      return;
+    }
+
     const body = { result_request: this.notification, request_status_id: response ? 2 : 3, bodyNewTheoryOfChanges: [] };
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
