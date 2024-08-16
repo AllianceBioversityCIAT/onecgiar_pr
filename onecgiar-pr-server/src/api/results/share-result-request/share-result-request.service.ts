@@ -7,11 +7,18 @@ import { ShareResultRequest } from './entities/share-result-request.entity';
 import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { VersionsService } from '../versions/versions.service';
 import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
+import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
+import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
+import { In, Not } from 'typeorm';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
+import { env } from 'process';
+import Handlebars from 'handlebars';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -20,10 +27,13 @@ export class ShareResultRequestService {
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
-    private readonly _versionsService: VersionsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly _clarisaInitiativeRepository: ClarisaInitiativesRepository,
+    private readonly _templateRepository: TemplateRepository,
+    private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
   ) {}
 
   async resultRequest(
@@ -32,57 +42,28 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      const result: { initiative_id: number } = { initiative_id: null };
-      const res = await this._resultByInitiativesRepository.find({
-        where: { result_id: resultId, initiative_role_id: 1, is_active: true },
-      });
+      const initiativeId = await this.getOwnerInitiativeId(resultId);
 
-      result['initiative_id'] = res.length ? res[0]?.['initiative_id'] : null;
-      let saveData = [];
-      if (createTocShareResult?.initiativeShareId?.length) {
-        const { initiativeShareId } = createTocShareResult;
-        const saredInit: ShareResultRequest[] = [];
-        for (let index = 0; index < initiativeShareId.length; index++) {
-          const shareInitId = initiativeShareId[index];
-          const initExist =
-            await this._resultByInitiativesRepository.getContributorInitiativeByResultAndInit(
-              resultId,
-              shareInitId,
-            );
-          const requestExist =
-            await this._shareResultRequestRepository.shareResultRequestExists(
-              resultId,
-              result.initiative_id,
-              shareInitId,
-            );
-          if (
-            !requestExist &&
-            !(requestExist?.request_status_id == 1) &&
-            !initExist?.is_active
-          ) {
-            const newShare = new ShareResultRequest();
-            newShare.result_id = resultId;
-            newShare.request_status_id = 1;
-            newShare.owner_initiative_id = result.initiative_id;
-            newShare.requester_initiative_id = createTocShareResult?.isToc
-              ? result.initiative_id
-              : shareInitId;
-            newShare.shared_inititiative_id = shareInitId;
-            newShare.approving_inititiative_id = createTocShareResult?.isToc
-              ? shareInitId
-              : result.initiative_id;
-            if (!createTocShareResult?.isToc) {
-              newShare.action_area_outcome_id =
-                createTocShareResult?.action_area_outcome_id;
-              newShare.toc_result_id = createTocShareResult?.toc_result_id;
-            }
-            newShare.requested_by = user.id;
-            newShare.planned_result = createTocShareResult.planned_result;
-            saredInit.push(newShare);
-          }
-        }
-        saveData = await this._shareResultRequestRepository.save(saredInit);
+      if (!createTocShareResult?.initiativeShareId?.length) {
+        return this.createNoInitiativeResponse();
       }
+
+      const shareInitRequests = await this.createShareResultRequests(
+        createTocShareResult,
+        resultId,
+        initiativeId,
+        user,
+      );
+
+      const saveData =
+        await this._shareResultRequestRepository.save(shareInitRequests);
+
+      await this.sendEmailsForShareRequests(
+        shareInitRequests,
+        user,
+        resultId,
+        createTocShareResult.email_template,
+      );
 
       return {
         response: saveData,
@@ -91,6 +72,192 @@ export class ShareResultRequestService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async getOwnerInitiativeId(resultId: number): Promise<number | null> {
+    const res = await this._resultByInitiativesRepository.find({
+      where: { result_id: resultId, initiative_role_id: 1, is_active: true },
+    });
+    return res.length ? res[0]?.initiative_id : null;
+  }
+
+  private createNoInitiativeResponse() {
+    return {
+      response: [],
+      message: 'No initiatives to share were provided',
+      status: HttpStatus.CREATED,
+    };
+  }
+
+  private async createShareResultRequests(
+    createTocShareResult: CreateTocShareResult,
+    resultId: number,
+    initiativeId: number | null,
+    user: TokenDto,
+  ): Promise<ShareResultRequest[]> {
+    const shareInitRequests: ShareResultRequest[] = [];
+
+    for (const shareInitId of createTocShareResult.initiativeShareId) {
+      const [initExist, requestExist] = await Promise.all([
+        this._resultByInitiativesRepository.getContributorInitiativeByResultAndInit(
+          resultId,
+          shareInitId,
+        ),
+        this._shareResultRequestRepository.shareResultRequestExists(
+          resultId,
+          initiativeId,
+          shareInitId,
+        ),
+      ]);
+
+      if (
+        !requestExist &&
+        !(requestExist?.request_status_id === 1) &&
+        !initExist?.is_active
+      ) {
+        const newShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        shareInitRequests.push(newShare);
+      }
+    }
+
+    return shareInitRequests;
+  }
+
+  private buildShareResultRequest(
+    createTocShareResult: CreateTocShareResult,
+    resultId: number,
+    initiativeId: number | null,
+    shareInitId: number,
+    user: TokenDto,
+  ): ShareResultRequest {
+    const newShare = new ShareResultRequest();
+    newShare.result_id = resultId;
+    newShare.request_status_id = 1;
+    newShare.owner_initiative_id = initiativeId;
+    newShare.requester_initiative_id = createTocShareResult?.isToc
+      ? initiativeId
+      : shareInitId;
+    newShare.shared_inititiative_id = shareInitId;
+    newShare.approving_inititiative_id = createTocShareResult?.isToc
+      ? shareInitId
+      : initiativeId;
+
+    if (!createTocShareResult?.isToc) {
+      newShare.action_area_outcome_id =
+        createTocShareResult?.action_area_outcome_id;
+      newShare.toc_result_id = createTocShareResult?.toc_result_id;
+    }
+
+    newShare.requested_by = user.id;
+    newShare.planned_result = createTocShareResult.planned_result;
+
+    return newShare;
+  }
+
+  private async sendEmailsForShareRequests(
+    shareInitRequests: ShareResultRequest[],
+    user: TokenDto,
+    resultId: number,
+    templateName: string,
+  ) {
+    for (const request of shareInitRequests) {
+      const [initOwner, result, initContributing, initMembers] =
+        await Promise.all([
+          this._clarisaInitiativeRepository.findOne({
+            where: { id: request.owner_initiative_id },
+          }),
+          this._resultRepository.findOne({ where: { id: resultId } }),
+          this._clarisaInitiativeRepository.findOne({
+            where: { id: request.shared_inititiative_id },
+          }),
+          this._roleByUserRepository.find({
+            where: {
+              initiative_id: request.shared_inititiative_id,
+              role: In([3, 4, 5]),
+              active: true,
+            },
+            relations: ['obj_user'],
+          }),
+        ]);
+
+      const subject = `[PRMS] Result Contributing: ${initOwner.official_code} confirmation required for contribution to Result ${result.result_code}`;
+      const users = initMembers.map((m) => m.obj_user.id);
+
+      const userEnable = await this._userNotificationSettingsRepository.find({
+        where: {
+          user_id: In(users),
+          email_notifications_contributing_request_enabled: true,
+        },
+        relations: ['obj_user'],
+      });
+
+      const to = userEnable.map((u) => u.obj_user.email);
+
+      const template = await this._templateRepository.findOne({
+        where: { name: templateName },
+        select: ['template'],
+      });
+
+      if (!template || !template.template) {
+        throw new Error(`Template with name ${templateName} not found`);
+      }
+
+      const handle = Handlebars.compile(template.template);
+
+      const emailData = this.buildEmailData(templateName, {
+        initContributing,
+        user,
+        initOwner,
+        result,
+      });
+
+      const email: ConfigMessageDto = {
+        from: { email: 'xkeco@gmail.com', name: 'PRMS' },
+        emailBody: {
+          subject,
+          to,
+          cc: [user.email],
+          message: {
+            text: 'Contribution request',
+            socketFile: handle(emailData),
+          },
+        },
+      };
+
+      await this._emailNotificationManagementService.sendEmail(email);
+    }
+  }
+
+  private buildEmailData(templateName: string, data: any) {
+    switch (templateName) {
+      case 'email_template_contribution':
+        return {
+          initContributingName: data.initContributing.name,
+          requesterName: data.user.first_name + ' ' + data.user.last_name,
+          initOwner: data.initOwner.official_code + ' ' + data.initOwner.name,
+          urlNotification: env.RESULTS_URL,
+          result: data.result.result_code + ' - ' + data.result.title,
+        };
+
+      case 'email_template_request_as_contribution':
+        return {
+          initOwnerName: data.initOwner.name,
+          user: data.user.first_name + ' ' + data.user.last_name,
+          initContributing: data.initContributing.name,
+          result: data.result.result_code + ' - ' + data.result.title,
+        };
+
+      default:
+        throw new Error(
+          `No email data configuration found for template ${templateName}`,
+        );
     }
   }
 
@@ -139,6 +306,10 @@ export class ShareResultRequestService {
     createShareResultsRequestDto: CreateShareResultRequestDto,
     user: TokenDto,
   ) {
+    console.log(
+      '🚀 ~ ShareResultRequestService ~ createShareResultsRequestDto:',
+      createShareResultsRequestDto,
+    );
     try {
       const { result_request: rr, result_toc_result: rtr } =
         createShareResultsRequestDto;

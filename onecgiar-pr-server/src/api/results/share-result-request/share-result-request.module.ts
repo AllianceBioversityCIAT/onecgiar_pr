@@ -19,6 +19,10 @@ import { ResultsSdgTargetRepository } from '../results-toc-results/results-sdg-t
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/result-toc-result-target-indicator.repository';
+import { EmailNotificationManagementModule } from '../../email-notification-management/email-notification-management.module';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -40,7 +44,11 @@ import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/resu
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    TemplateRepository,
+    ClarisaInitiativesRepository,
+    UserNotificationSettingRepository
   ],
   exports: [ShareResultRequestRepository],
+  imports: [EmailNotificationManagementModule],
 })
 export class ShareResultRequestModule {}

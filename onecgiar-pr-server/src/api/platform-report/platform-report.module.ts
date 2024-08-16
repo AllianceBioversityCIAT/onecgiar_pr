@@ -6,8 +6,9 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
-import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { ResultRepository } from '../results/result.repository';
+import { TemplateRepository } from './repositories/template.repository';
 
 @Module({
   controllers: [PlatformReportController],
@@ -17,6 +18,7 @@ import { ResultRepository } from '../results/result.repository';
     PlatformReportRepository,
     ReturnResponse,
     ResultRepository,
+    TemplateRepository,
   ],
 })
 export class PlatformReportModule {
