@@ -1,12 +1,10 @@
 <div class="partnersindex">
-    <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-toc>
+  <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
 
-    <app-ipsr-non-pooled-projects [contributorsBody]="this.contributorsBody"></app-ipsr-non-pooled-projects>
-    <app-ipsr-contributors-non-cgiar-partners
-        [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
+  <app-ipsr-non-pooled-projects [contributorsBody]="this.contributorsBody"></app-ipsr-non-pooled-projects>
+  <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
 </div>
 
 <app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()">
-</app-save-button>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()"> </app-save-button>
