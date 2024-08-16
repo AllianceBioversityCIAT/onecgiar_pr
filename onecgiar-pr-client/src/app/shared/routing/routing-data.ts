@@ -44,7 +44,7 @@ export const initadminModuleRouting: PrRoute[] = [
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
-  { prName: 'Notifications', path: 'results-notifications', redirectTo: 'results-notifications/updates', pathMatch: 'full' },
+  { prName: 'Notifications', path: 'results-notifications', redirectTo: 'results-notifications/requests', pathMatch: 'full' },
   { prName: 'Notifications', path: 'results-notifications', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
   { prName: '', path: 'results-list', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-list/results-list.module').then(m => m.ResultsListModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }

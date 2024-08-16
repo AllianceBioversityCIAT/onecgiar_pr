@@ -104,7 +104,12 @@ export class ShareRequestModalComponent implements OnInit {
   }
 
   acceptOrReject() {
-    const body = { result_request: this.api.dataControlSE.currentNotification, result_toc_result: this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
+    const body = {
+      result_request: this.api.dataControlSE.currentNotification,
+      result_toc_result: this.shareRequestModalSE.shareRequestBody,
+      request_status_id: 2,
+      email_template: 'email_template_request_as_contribution'
+    };
 
     this.requesting = true;
 

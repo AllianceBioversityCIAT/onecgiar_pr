@@ -4,6 +4,7 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-header-panel',
@@ -13,7 +14,9 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
-  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService) {}
+
+  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService, private router: Router) {}
+
   ngOnInit(): void {
     this.api.updateUserData(() => {});
   }
@@ -27,5 +30,9 @@ export class HeaderPanelComponent implements OnInit {
     const url = this.globalLinksSE.links.url_platform_information;
 
     window.open(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
+  }
+
+  goToNotifications() {
+    this.router.navigate(['result/results-outlet/results-notifications/requests']);
   }
 }

@@ -2,45 +2,49 @@
   <div class="logo" routerLink="/">
     <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
     <div class="title">
-      <!-- <div class="first-text">{{this.internationalizationData.global.platformName}}</div> -->
-      <div class="second-text">{{this.internationalizationData.global.platformName}}</div>
+      <div class="second-text">{{ this.internationalizationData.global.platformName }}</div>
     </div>
   </div>
+
   <div class="information">
     <div class="admin_module" *ngIf="this.api?.rolesSE?.isAdmin">
       <a class="admin_module_btn" routerLink="/admin-module/">
         Admin module
-        <i class="material-icons-round">
-          navigate_next
-        </i>
+        <i class="material-icons-round"> navigate_next </i>
       </a>
-
     </div>
+
     <div class="user_tag">
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
-      <div class="admin_tag" *ngIf="this.api?.rolesSE?.isAdmin">
-        Admin
-      </div>
+      <div class="admin_tag" *ngIf="this.api?.rolesSE?.isAdmin">Admin</div>
     </div>
+
     <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
       <div class="title">My Initiatives:</div>
       <div class="items custom_scroll">
         <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
-          <div class="init">{{item?.official_code}}</div>
-          <div class="role">{{item?.role}}</div>
+          <div class="init">{{ item?.official_code }}</div>
+          <div class="role">{{ item?.role }}</div>
         </div>
       </div>
     </div>
+
+    <div (click)="goToNotifications()" class="info_icon">
+      <i class="material-icons-round" pBadge value="2" severity="danger">notifications</i>
+    </div>
+
     <div (click)="openInfoLink()">
       <i class="material-icons-round info_icon">info</i>
     </div>
-    <div (click)="this.api.authSE.logout();this.api.clearAll();">
+
+    <div (click)="this.api.authSE.logout(); this.api.clearAll()">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>
 </div>
 
-<app-tawk *ngIf="this.api.authSE.localStorageUser?.user_name &&  this.api.authSE.localStorageUser?.email && !inLocal"
-  [user]="{username: this.api.authSE.localStorageUser.user_name, email:this.api.authSE.localStorageUser.email}">
+<app-tawk
+  *ngIf="this.api.authSE.localStorageUser?.user_name && this.api.authSE.localStorageUser?.email && !inLocal"
+  [user]="{ username: this.api.authSE.localStorageUser.user_name, email: this.api.authSE.localStorageUser.email }">
 </app-tawk>
