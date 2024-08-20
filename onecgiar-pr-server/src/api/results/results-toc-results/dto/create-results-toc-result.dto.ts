@@ -45,6 +45,9 @@ export class CreateResultsTocResultDto {
 
   @ApiProperty()
   changePrimaryInit: number;
+
+  @ApiProperty({ required: false })
+  email_template?: string;
 }
 
 export class ContributorResultTocResult {

@@ -8,20 +8,22 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { VersionsService } from '../versions/versions.service';
-import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
-import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
-import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { Not } from 'typeorm';
+import { In, Not } from 'typeorm';
+import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
+import Handlebars from 'handlebars';
+import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -31,18 +33,18 @@ export class ResultsTocResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _versionsService: VersionsService,
-    private readonly _userRepository: UserRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
-    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly _templateRepository: TemplateRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
   ) {}
 
   async create(
@@ -59,6 +61,7 @@ export class ResultsTocResultsService {
         sdgTargets,
         bodyActionArea,
         changePrimaryInit,
+        email_template,
       } = createResultsTocResultDto;
 
       let initSubmitter: any =
@@ -111,19 +114,32 @@ export class ResultsTocResultsService {
           contributing_initiatives?.pending_contributing_initiatives.map(
             (pend) => pend.id,
           );
-        await this._resultByInitiativesRepository.updateResultByInitiative(
-          result_id,
-          [...initiativeArray],
-          user.id,
-          false,
-          initiativeArrayPnd,
-        );
+
+        const contributingInit =
+          await this._resultByInitiativesRepository.updateResultByInitiative(
+            result_id,
+            [...initiativeArray],
+            user.id,
+            false,
+            initiativeArrayPnd,
+          );
+
+        if (contributingInit.length > 0) {
+          await this.sendEmailNotification(
+            contributingInit,
+            result_id,
+            initSubmitter.initiative_id,
+            user,
+          );
+        }
+
         const dataRequst: CreateTocShareResult = {
           isToc: true,
           initiativeShareId: initiativeArrayPnd,
           action_area_outcome_id: null,
           planned_result: null,
           toc_result_id: null,
+          email_template,
         };
         await this._shareResultRequestService.resultRequest(
           dataRequst,
@@ -131,13 +147,23 @@ export class ResultsTocResultsService {
           user,
         );
       } else {
-        await this._resultByInitiativesRepository.updateResultByInitiative(
-          result_id,
-          [],
-          user.id,
-          false,
-          [],
-        );
+        const contributingInit =
+          await this._resultByInitiativesRepository.updateResultByInitiative(
+            result_id,
+            [],
+            user.id,
+            false,
+            [],
+          );
+
+        if (contributingInit.length > 0) {
+          await this.sendEmailNotification(
+            contributingInit,
+            result_id,
+            initSubmitter.initiative_id,
+            user,
+          );
+        }
       }
       const cancelRequest =
         contributing_initiatives?.pending_contributing_initiatives?.filter(
@@ -924,6 +950,75 @@ export class ResultsTocResultsService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async sendEmailNotification(
+    contributingInit: number[],
+    result_id: number,
+    initSubmitter: number,
+    user: TokenDto,
+  ) {
+    for (const init of contributingInit) {
+      const [initOwner, result, initContributing, initMembers] =
+        await Promise.all([
+          this._clarisaInitiatives.findOne({
+            where: { id: initSubmitter },
+          }),
+          this._resultRepository.findOne({ where: { id: result_id } }),
+          this._clarisaInitiatives.findOne({
+            where: { id: init },
+          }),
+          this._roleByUserRepository.find({
+            where: {
+              initiative_id: init,
+              role: In([3, 4, 5]),
+              active: true,
+            },
+            relations: ['obj_user'],
+          }),
+        ]);
+      const users = initMembers.map((m) => m.obj_user.id);
+
+      const userEnable = await this._userNotificationSettingsRepository.find({
+        where: {
+          user_id: In(users),
+          email_notifications_contributing_request_enabled: true,
+          initiative_id: init,
+        },
+        relations: ['obj_user'],
+      });
+
+      const to = userEnable.map((u) => u.obj_user.email);
+
+      const template = await this._templateRepository.findOne({
+        where: { name: 'email_template_removed_contribution' },
+      });
+
+      const emailData = this._emailNotificationManagementService.buildEmailData(
+        template.name,
+        {
+          initContributing,
+          result,
+          initOwner,
+        },
+      );
+
+      const handle = Handlebars.compile(template.template);
+
+      const email: ConfigMessageDto = {
+        from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },
+        emailBody: {
+          subject: emailData.subject,
+          to,
+          cc: [user.email, 'j.delgado@cgiar.org', 'k.collazos@cgiar.org'],
+          message: {
+            text: 'Contributing Initiative Removed from a Result',
+            socketFile: handle(emailData),
+          },
+        },
+      };
+      await this._emailNotificationManagementService.sendEmail(email);
     }
   }
 }

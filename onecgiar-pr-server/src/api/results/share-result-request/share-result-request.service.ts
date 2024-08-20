@@ -13,7 +13,7 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
 import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
-import { In, Not } from 'typeorm';
+import { In } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
@@ -113,7 +113,7 @@ export class ShareResultRequestService {
 
       if (
         !requestExist &&
-        !(requestExist?.request_status_id === 1) &&
+        requestExist?.request_status_id !== 1 &&
         !initExist?.is_active
       ) {
         const newShare = this.buildShareResultRequest(
@@ -165,7 +165,7 @@ export class ShareResultRequestService {
     shareInitRequests: ShareResultRequest[],
     user: TokenDto,
     resultId: number,
-    templateName: string,
+    emailTemplate: string,
   ) {
     for (const request of shareInitRequests) {
       const [initOwner, result, initContributing, initMembers] =
@@ -187,13 +187,13 @@ export class ShareResultRequestService {
           }),
         ]);
 
-      const subject = `[PRMS] Result Contributing: ${initOwner.official_code} confirmation required for contribution to Result ${result.result_code}`;
       const users = initMembers.map((m) => m.obj_user.id);
 
       const userEnable = await this._userNotificationSettingsRepository.find({
         where: {
           user_id: In(users),
           email_notifications_contributing_request_enabled: true,
+          initiative_id: request.shared_inititiative_id,
         },
         relations: ['obj_user'],
       });
@@ -201,17 +201,16 @@ export class ShareResultRequestService {
       const to = userEnable.map((u) => u.obj_user.email);
 
       const template = await this._templateRepository.findOne({
-        where: { name: templateName },
-        select: ['template'],
+        where: { name: emailTemplate },
       });
 
-      if (!template || !template.template) {
-        throw new Error(`Template with name ${templateName} not found`);
+      if (!template?.template) {
+        throw new Error(`Template with name ${template.template} not found`);
       }
 
       const handle = Handlebars.compile(template.template);
 
-      const emailData = this.buildEmailData(templateName, {
+      const emailData = this._emailNotificationManagementService.buildEmailData(template.name, {
         initContributing,
         user,
         initOwner,
@@ -219,11 +218,11 @@ export class ShareResultRequestService {
       });
 
       const email: ConfigMessageDto = {
-        from: { email: 'xkeco@gmail.com', name: 'PRMS' },
+        from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },
         emailBody: {
-          subject,
+          subject: emailData.subject,
           to,
-          cc: [user.email],
+          cc: [user.email, 'j.delgado@cgiar.org', 'k.collazos@cgiar.org'],
           message: {
             text: 'Contribution request',
             socketFile: handle(emailData),
@@ -232,32 +231,6 @@ export class ShareResultRequestService {
       };
 
       await this._emailNotificationManagementService.sendEmail(email);
-    }
-  }
-
-  private buildEmailData(templateName: string, data: any) {
-    switch (templateName) {
-      case 'email_template_contribution':
-        return {
-          initContributingName: data.initContributing.name,
-          requesterName: data.user.first_name + ' ' + data.user.last_name,
-          initOwner: data.initOwner.official_code + ' ' + data.initOwner.name,
-          urlNotification: env.RESULTS_URL,
-          result: data.result.result_code + ' - ' + data.result.title,
-        };
-
-      case 'email_template_request_as_contribution':
-        return {
-          initOwnerName: data.initOwner.name,
-          user: data.user.first_name + ' ' + data.user.last_name,
-          initContributing: data.initContributing.name,
-          result: data.result.result_code + ' - ' + data.result.title,
-        };
-
-      default:
-        throw new Error(
-          `No email data configuration found for template ${templateName}`,
-        );
     }
   }
 
@@ -306,10 +279,6 @@ export class ShareResultRequestService {
     createShareResultsRequestDto: CreateShareResultRequestDto,
     user: TokenDto,
   ) {
-    console.log(
-      '🚀 ~ ShareResultRequestService ~ createShareResultsRequestDto:',
-      createShareResultsRequestDto,
-    );
     try {
       const { result_request: rr, result_toc_result: rtr } =
         createShareResultsRequestDto;
@@ -325,15 +294,15 @@ export class ShareResultRequestService {
       });
 
       if (!res.obj_version.status) {
-        throw {
-          response: res.obj_version,
-          message: 'The version is closed',
+        return {
+          response: {},
+          message: 'The result is not active',
           status: HttpStatus.BAD_REQUEST,
         };
       }
 
       if (!rr?.share_result_request_id) {
-        throw {
+        return {
           response: {},
           message: 'No valid share_result_request_id found',
           status: HttpStatus.BAD_REQUEST,

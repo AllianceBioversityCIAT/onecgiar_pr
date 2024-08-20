@@ -50,7 +50,7 @@ export class ShareRequestModalComponent implements OnInit {
 
   onRequest() {
     this.requesting = true;
-    this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe({
+    this.api.resultsSE.POST_createRequest({...this.shareRequestModalSE.shareRequestBody, email_template: 'email_template_request_as_contribution'}).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
 
@@ -108,7 +108,6 @@ export class ShareRequestModalComponent implements OnInit {
       result_request: this.api.dataControlSE.currentNotification,
       result_toc_result: this.shareRequestModalSE.shareRequestBody,
       request_status_id: 2,
-      email_template: 'email_template_request_as_contribution'
     };
 
     this.requesting = true;
