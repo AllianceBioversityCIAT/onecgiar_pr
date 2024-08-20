@@ -434,9 +434,17 @@ describe('RdTheoryOfChangeComponent', () => {
     it('should remove the contributing initiative by index', () => {
       component.contributingInitiativeNew = ['initiative1', 'initiative2', 'initiative3'];
 
-      component.onRemoveContribuiting(1);
+      component.onRemoveContribuiting(1, false);
 
       expect(component.contributingInitiativeNew).toEqual(['initiative1', 'initiative3']);
+    });
+
+    it('should remove the contributing initiative by index from accepted_contributing_initiatives', () => {
+      component.theoryOfChangeBody.contributing_initiatives.accepted_contributing_initiatives = ['initiative1', 'initiative2', 'initiative3'];
+
+      component.onRemoveContribuiting(1, true);
+
+      expect(component.theoryOfChangeBody.contributing_initiatives.accepted_contributing_initiatives).toEqual(['initiative1', 'initiative3']);
     });
   });
 

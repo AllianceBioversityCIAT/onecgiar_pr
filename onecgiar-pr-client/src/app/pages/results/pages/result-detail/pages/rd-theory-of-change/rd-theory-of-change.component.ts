@@ -204,8 +204,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
     );
   }
 
-  onRemoveContribuiting(index) {
-    this.contributingInitiativeNew.splice(index, 1);
+  onRemoveContribuiting(index, isAcceptedArray: boolean) {
+    if (isAcceptedArray) {
+      this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    } else {
+      this.contributingInitiativeNew.splice(index, 1);
+    }
   }
 
   addBilateralContribution() {
