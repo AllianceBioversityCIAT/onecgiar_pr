@@ -62,7 +62,7 @@
           *ngIf="!this.api.rolesSE.readOnly"
           class="material-icons-round"
           [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
-          (click)="onRemoveContribuiting(i)">
+          (click)="onRemoveContribuiting(i, true)">
           {{ item.is_active ? 'backspace' : 'undo' }}
         </i>
       </div>
@@ -75,7 +75,7 @@
           *ngIf="!this.api.rolesSE.readOnly"
           class="material-icons-round"
           [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
-          (click)="onRemoveContribuiting(i)">
+          (click)="onRemoveContribuiting(i, false)">
           {{ item.is_active ? 'backspace' : 'undo' }}
         </i>
       </div>
