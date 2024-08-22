@@ -28,7 +28,6 @@
       display: flex;
       align-items: center;
 
-      // justify-content: center;
       .first-text {
         font-weight: 300;
       }
@@ -83,9 +82,6 @@
       .icon {
         color: white;
       }
-
-      .title {
-      }
     }
 
     .my_initiatives {
@@ -136,6 +132,55 @@
         }
       }
     }
+  }
+}
+
+.overlay_panel {
+  border-radius: 5px;
+  background-color: #fff;
+  width: 340px;
+  box-shadow: 4px 4px 10px 4px #00000040;
+  margin-top: 10px;
+
+  .overlay_panel_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.5rem 0 1.5rem;
+
+    .overlay_panel_title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0;
+    }
+  }
+
+  .overlay_panel_body {
+    padding: 10px 1.5rem 1.5rem 1.5rem;
+
+    .no_notifications {
+      font-weight: 500;
+      margin: 0;
+      text-wrap: pretty;
+    }
+
+    .overlay_panel_footer {
+      text-align: center;
+
+      .see_all_notifications {
+        cursor: pointer;
+        font-weight: 400;
+        color: var(--pr-color-primary);
+        margin: 0;
+      }
+    }
+  }
+
+  .overlay_panel_separator {
+    width: 100%;
+    height: 1px;
+    background-color: #dddddd;
+    margin: 10px 0;
   }
 }
 

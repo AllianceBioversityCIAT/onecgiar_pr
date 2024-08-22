@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <div (click)="goToNotifications()" class="info_icon">
+    <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
       <i class="material-icons-round" pBadge value="2" severity="danger">notifications</i>
     </div>
 
@@ -43,6 +43,28 @@
     </div>
   </div>
 </div>
+
+<sat-popover #popover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close">
+  <div class="overlay_panel">
+    <div class="overlay_panel_header">
+      <h1 class="overlay_panel_title">Notifications</h1>
+    </div>
+
+    <div class="overlay_panel_separator"></div>
+
+    <div class="overlay_panel_body">
+      <p class="no_notifications">
+        You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
+      </p>
+
+      <div class="overlay_panel_separator" style="margin: 15px 0"></div>
+
+      <div class="overlay_panel_footer">
+        <p class="see_all_notifications" (click)="goToNotifications(); popover.toggle()">See all the notifications</p>
+      </div>
+    </div>
+  </div>
+</sat-popover>
 
 <app-tawk
   *ngIf="this.api.authSE.localStorageUser?.user_name && this.api.authSE.localStorageUser?.email && !inLocal"
