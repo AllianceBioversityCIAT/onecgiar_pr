@@ -31,7 +31,7 @@
     </div>
 
     <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round" pBadge value="2" severity="danger">notifications</i>
+      <i class="material-icons-round" pBadge value="3" severity="danger">notifications</i>
     </div>
 
     <div (click)="openInfoLink()">
@@ -50,18 +50,24 @@
       <h1 class="overlay_panel_title">Notifications</h1>
     </div>
 
-    <div class="overlay_panel_separator"></div>
+    <div class="overlay_panel_separator" [ngStyle]="{ 'margin-bottom': this.mockNotifications.length > 0 && '0' }"></div>
 
-    <div class="overlay_panel_body">
-      <p class="no_notifications">
-        You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
-      </p>
+    <p class="no_notifications" *ngIf="this.mockNotifications.length === 0">
+      You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
+    </p>
 
-      <div class="overlay_panel_separator" style="margin: 15px 0"></div>
-
-      <div class="overlay_panel_footer">
-        <p class="see_all_notifications" (click)="goToNotifications(); popover.toggle()">See all the notifications</p>
+    <div class="notifications_list" *ngIf="this.mockNotifications.length > 0">
+      <div class="notification" *ngFor="let notification of this.mockNotifications">
+        <div class="init">{{ notification.init }}</div>
+        <div class="message" [innerHTML]="notification.message"></div>
+        <div class="date">{{ notification.date | appFormatTimeAgo }}</div>
       </div>
+    </div>
+
+    <div class="overlay_panel_separator" *ngIf="this.mockNotifications.length === 0"></div>
+
+    <div class="overlay_panel_footer" [ngStyle]="{ 'padding-top': this.mockNotifications.length > 0 && '15px' }">
+      <p class="see_all_notifications" (click)="goToNotifications(); popover.toggle()">See all the notifications</p>
     </div>
   </div>
 </sat-popover>

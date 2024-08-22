@@ -20,8 +20,9 @@ import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
+import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
 @NgModule({
-  declarations: [AppComponent, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent],
+  declarations: [AppComponent, NavigationBarComponent, HeaderPanelComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, TawkComponent, GoogleAnalyticsComponent, FormatTimeAgoPipe],
   imports: [BrowserModule, AppRoutingModule, BrowserAnimationsModule, HttpClientModule, CustomFieldsModule, ShareRequestModalModule, YmzListStructureItemModule, ChangePhaseModalModule, FooterModule, DialogModule, BadgeModule, SatPopoverModule],
   providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
   bootstrap: [AppComponent]
