@@ -21,7 +21,7 @@ export class RdTheoryOfChangesServicesService {
   constructor(public api: ApiService) {}
 
   get_versionDashboard(initiative) {
-    this.api.resultsSE.get_vesrsionDashboard(initiative.toc_result_id, initiative.initiative_id).subscribe({
+    this.api.resultsSE.get_vesrsionDashboard(initiative.initiative_id).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },

@@ -752,8 +752,8 @@ export class ResultsKnowledgeProductsService {
       );
     }
 
-    const individualItems = details.map(
-      (e) => e.split('is not valid')?.[0]?.trim(),
+    const individualItems = details.map((e) =>
+      e.split('is not valid')?.[0]?.trim(),
     );
     const itemString = StringUtils.join(individualItems, ', ', ', and ');
 
