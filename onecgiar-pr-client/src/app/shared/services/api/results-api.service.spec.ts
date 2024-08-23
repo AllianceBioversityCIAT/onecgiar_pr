@@ -1167,16 +1167,15 @@ describe('ResultsApiService', () => {
 
   describe('get_vesrsionDashboard', () => {
     it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr exists', done => {
-      const id_toc = 'id_toc';
       const init = 'init';
       service.ipsrDataControlSE.inIpsr = 1;
-      service.get_vesrsionDashboard(id_toc, init).subscribe(response => {
+      service.get_vesrsionDashboard(init).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
       const req = httpMock.expectOne(
-        `${service.apiBaseUrl}toc/get/version/${service.ipsrDataControlSE.resultInnovationId}/initiative/${init}/resultToc/${id_toc}`
+        `${service.apiBaseUrl}toc/get/version/${service.ipsrDataControlSE.resultInnovationId}/initiative/${init}/resultToc`
       );
       expect(req.request.method).toBe('GET');
 
@@ -1184,14 +1183,13 @@ describe('ResultsApiService', () => {
     });
 
     it('should call get_vesrsionDashboard and return expected data when ipsrDataControlSE.inIpsr does not exist', done => {
-      const id_toc = 'id_toc';
       const init = 'init';
-      service.get_vesrsionDashboard(id_toc, init).subscribe(response => {
+      service.get_vesrsionDashboard(init).subscribe(response => {
         expect(response).toEqual(mockResponse);
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}toc/get/version/${service.currentResultId}/initiative/${init}/resultToc/${id_toc}`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}toc/get/version/${service.currentResultId}/initiative/${init}/resultToc`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);

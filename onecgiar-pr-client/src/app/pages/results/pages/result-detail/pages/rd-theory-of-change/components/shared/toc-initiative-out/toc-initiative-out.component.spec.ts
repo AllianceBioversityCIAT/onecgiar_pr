@@ -179,7 +179,6 @@ describe('TocInitiativeOutComponent', () => {
       component.get_versionDashboard();
 
       expect(spy).toHaveBeenCalledWith(
-        component.initiative?.result_toc_results[0]?.toc_result_id,
         component.initiative?.result_toc_results[0]?.initiative_id
       );
       expect(component.fullInitiativeToc).toBe(mockResponse.version_id);
