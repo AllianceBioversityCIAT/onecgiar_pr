@@ -31,7 +31,10 @@
     </div>
 
     <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round" pBadge value="3" severity="danger">notifications</i>
+      <i class="material-icons-round" *ngIf="this.mockNotifications.length === 0">notifications</i>
+      <i class="material-icons-round" pBadge [value]="notificationBadgeLength()" severity="danger" *ngIf="this.mockNotifications.length > 0">
+        notifications
+      </i>
     </div>
 
     <div (click)="openInfoLink()">
