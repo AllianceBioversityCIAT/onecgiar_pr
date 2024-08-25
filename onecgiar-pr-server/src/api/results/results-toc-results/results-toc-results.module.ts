@@ -66,11 +66,9 @@ import { UserNotificationSettingRepository } from '../../user_notification_setti
     ResultsTocTargetIndicatorRepository,
     ClarisaInitiativesRepository,
     TemplateRepository,
-    UserNotificationSettingRepository
+    UserNotificationSettingRepository,
   ],
   exports: [ResultsTocResultRepository, ResultsTocResultsService],
-  imports: [
-    EmailNotificationManagementModule
-  ],
+  imports: [EmailNotificationManagementModule],
 })
 export class ResultsTocResultsModule {}

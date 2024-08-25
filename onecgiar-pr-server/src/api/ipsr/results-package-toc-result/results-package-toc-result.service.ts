@@ -107,13 +107,10 @@ export class ResultsPackageTocResultService {
       ) {
         const { contributing_initiatives: ci } = crtr;
         const dataRequest: CreateTocShareResult = {
-          isToc: true,
+          isToc: false,
           initiativeShareId: ci?.pending_contributing_initiatives.map(
             (el) => el.id,
           ),
-          action_area_outcome_id: null,
-          planned_result: null,
-          toc_result_id: null,
         };
         await this._shareResultRequestService.resultRequest(
           dataRequest,
@@ -234,7 +231,7 @@ export class ResultsPackageTocResultService {
 
       // * Save Contributors ResultTocResult
       await this._resultTocResultService.saveResultTocResultContributor(
-        crtr,
+        crtr.contributors_result_toc_result,
         user,
         rip,
         crtr.result_id,

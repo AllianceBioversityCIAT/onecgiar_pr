@@ -83,8 +83,6 @@ export class ResultsTocResultsController {
     @Param('initiativeId') initiativeId: number,
     @Param('resultTocId') _resultTocId: number,
   ) {
-    //TODO: I cannot delete that value but I can accommodate it as an internal value,
-    //since the url would have to be modified and that would have to be modified from the front as well
     return this.resultsTocResultsService.getVersionId(resultId, initiativeId);
   }
 }

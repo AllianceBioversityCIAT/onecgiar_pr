@@ -527,7 +527,7 @@ export class ResultsApiService {
   }
 
   POST_createRequest(body) {
-    return this.http.post<any>(`${this.apiBaseUrl}request/create/map-to-toc`, body);
+    return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
   }
 
   GET_allRequest() {

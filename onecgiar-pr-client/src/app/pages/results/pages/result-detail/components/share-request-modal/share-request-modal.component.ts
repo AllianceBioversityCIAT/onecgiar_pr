@@ -61,8 +61,8 @@ export class ShareRequestModalComponent implements OnInit {
 
     const sendBody = {
       result_id: this.api?.dataControlSE?.currentResult?.id,
-      initiativeOwner: this.api?.dataControlSE?.currentResult?.submitter_id,
-      inititiveContributor: this.shareRequestModalSE.shareRequestBody.initiative_id,
+      initiativeShareId: [this.shareRequestModalSE.shareRequestBody.initiative_id],
+      isToc: true,
       contributors_result_toc_result: [
         {
           planned_result: true,

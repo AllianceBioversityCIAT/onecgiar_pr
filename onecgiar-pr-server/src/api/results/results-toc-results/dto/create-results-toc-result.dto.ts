@@ -17,7 +17,7 @@ export class CreateResultsTocResultDto {
   contributing_center?: CenterInterfaceToc[];
 
   @ApiProperty()
-  result_toc_result: {
+  result_toc_result?: {
     planned_result: boolean;
     result_toc_results: ResultToResultInterfaceToc[];
   };
@@ -44,7 +44,7 @@ export class CreateResultsTocResultDto {
   bodyActionArea?: any[];
 
   @ApiProperty()
-  changePrimaryInit: number;
+  changePrimaryInit?: number;
 
   @ApiProperty({ required: false })
   email_template?: string;

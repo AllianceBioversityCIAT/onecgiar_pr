@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
@@ -13,12 +13,12 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
 import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
-import { In } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
-import { env } from 'process';
 import Handlebars from 'handlebars';
+import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -34,6 +34,8 @@ export class ShareResultRequestService {
     private readonly _clarisaInitiativeRepository: ClarisaInitiativesRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
+    @Inject(forwardRef(() => ResultsTocResultsService))
+    private readonly _resultsTocResultService: ResultsTocResultsService,
   ) {}
 
   async resultRequest(
@@ -124,6 +126,16 @@ export class ShareResultRequestService {
           user,
         );
         shareInitRequests.push(newShare);
+
+        if (createTocShareResult.isToc) {
+          await this._resultsTocResultService.saveResultTocResultContributor(
+            createTocShareResult.contributors_result_toc_result,
+            user,
+            resultId,
+            resultId,
+            initiativeId,
+          );
+        }
       }
     }
 
@@ -149,14 +161,7 @@ export class ShareResultRequestService {
       ? shareInitId
       : initiativeId;
 
-    if (!createTocShareResult?.isToc) {
-      newShare.action_area_outcome_id =
-        createTocShareResult?.action_area_outcome_id;
-      newShare.toc_result_id = createTocShareResult?.toc_result_id;
-    }
-
     newShare.requested_by = user.id;
-    newShare.planned_result = createTocShareResult.planned_result;
 
     return newShare;
   }
@@ -210,12 +215,15 @@ export class ShareResultRequestService {
 
       const handle = Handlebars.compile(template.template);
 
-      const emailData = this._emailNotificationManagementService.buildEmailData(template.name, {
-        initContributing,
-        user,
-        initOwner,
-        result,
-      });
+      const emailData = this._emailNotificationManagementService.buildEmailData(
+        template.name,
+        {
+          initContributing,
+          user,
+          initOwner,
+          result,
+        },
+      );
 
       const email: ConfigMessageDto = {
         from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },

@@ -64,8 +64,6 @@ import { UserNotificationSettingRepository } from '../../user_notification_setti
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
-    ReturnResponse,
-    ResultsTocResultRepository,
     ClarisaInitiativesRepository,
     TemplateRepository,
     UserNotificationSettingRepository
