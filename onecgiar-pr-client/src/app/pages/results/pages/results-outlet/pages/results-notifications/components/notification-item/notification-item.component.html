@@ -1,68 +1,88 @@
-<div [ngSwitch]="notification?.request_status_id" class="noti_container">
-  <i class="material-icons-round direction_icon" [style]="'rotate:' + (this.comes ? '130deg' : '320deg')"> arrow_right_alt </i>
-  <div *ngSwitchCase="1">
-    <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
-      Request from {{ notification?.requester_official_code }} to add {{ notification?.approving_official_code }} as a contributor to the result:
+<div [ngSwitch]="notification?.request_status_id" class="notification">
+  <div class="notification_header">
+    <div class="notification_header_item">
+      <p class="notification_header_item_text">Init-04</p>
     </div>
 
-    <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-      {{ notification?.requester_official_code }} requests to be added as a contributor to the result:
+    <div class="notification_header_item">
+      <p class="notification_header_item_text"><b> From </b> INIT-14 <b> to </b> INIT-17</p>
+    </div>
+  </div>
+
+  <div *ngSwitchCase="1" class="notification_content">
+    <div class="notification_content_body">
+      <div>
+        Jane Cole from INIT-10 has requested to include INIT-04 as a contributor to result 1050 - Manhat, a participant in the F2R-CWANA
+        Agritech4Morocco Innovation Challenge 2022, was one named in the UAE government's "Future 100" list for 2023
+      </div>
+
+      <!-- <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
+        Request from {{ notification?.requester_official_code }} to add {{ notification?.approving_official_code }} as a contributor to the result:
+      </div>
+
+      <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
+        {{ notification?.requester_official_code }} requests to be added as a contributor to the result:
+      </div>
+
+      <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
+        <strong>({{ notification?.requester_official_code }})</strong> - {{ notification?.result_type_name }} -
+
+        <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
+          (Result code: {{ notification?.result_code }}) {{ notification?.title }}
+        </a>
+      </div>
+
+      <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
+        <strong>({{ notification?.approving_official_code }})</strong> - {{ notification?.result_type_name }} -
+
+        <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
+          (Result code: {{ notification?.result_code }}) {{ notification?.title }}
+        </a>
+      </div> -->
     </div>
 
-    <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
-      <strong>({{ notification?.requester_official_code }})</strong> - {{ notification?.result_type_name }} -
+    <div class="notification_content_actions">
+      <div class="notification_content_actions_buttons">
+        <app-pr-button
+          text="Map and accept"
+          colorType="success"
+          (click)="mapAndAccept(notification)"
+          [rotating]="this.requesting"
+          [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
+          [icon]="this.requesting ? 'loop' : ''"
+          [tooltipText]="
+            this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
+              ? 'This result has been Quality Assessed and no additional contributors can be added.'
+              : ''
+          "
+          tooltipStyleClass="tooltip-w-300"
+          *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
 
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
-    </div>
+        <app-pr-button
+          text="Accept"
+          colorType="success"
+          (click)="acceptOrReject(true)"
+          [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
+          [rotating]="this.requesting"
+          [icon]="this.requesting ? 'loop' : ''"
+          [tooltipText]="
+            this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
+              ? 'This result has been Quality Assessed and no additional contributors can be added.'
+              : ''
+          "
+          tooltipStyleClass="tooltip-w-300"
+          *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
 
-    <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-      <strong>({{ notification?.approving_official_code }})</strong> - {{ notification?.result_type_name }} -
+        <app-pr-button
+          text="Reject"
+          colorType="danger"
+          (click)="acceptOrReject(false)"
+          [rotating]="this.requesting"
+          [icon]="this.requesting ? 'loop' : ''"
+          [ngClass]="{ globalDisabled: this.requesting || this.api.rolesSE.platformIsClosed || !this.notification?.version_status }"></app-pr-button>
+      </div>
 
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
-    </div>
-
-    <div class="buttons">
-      <app-pr-button
-        text="Map and accept"
-        colorType="success"
-        (click)="mapAndAccept(notification)"
-        [rotating]="this.requesting"
-        [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
-        [icon]="this.requesting ? 'loop' : ''"
-        [tooltipText]="
-          this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
-            ? 'This result has been Quality Assessed and no additional contributors can be added.'
-            : ''
-        "
-        tooltipStyleClass="tooltip-w-300"
-        *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
-
-      <app-pr-button
-        text="Accept"
-        colorType="success"
-        (click)="acceptOrReject(true)"
-        [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
-        [rotating]="this.requesting"
-        [icon]="this.requesting ? 'loop' : ''"
-        [tooltipText]="
-          this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
-            ? 'This result has been Quality Assessed and no additional contributors can be added.'
-            : ''
-        "
-        tooltipStyleClass="tooltip-w-300"
-        *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
-
-      <app-pr-button
-        text="Reject"
-        colorType="danger"
-        (click)="acceptOrReject(false)"
-        [rotating]="this.requesting"
-        [icon]="this.requesting ? 'loop' : ''"
-        [ngClass]="{ globalDisabled: this.requesting || this.api.rolesSE.platformIsClosed || !this.notification?.version_status }"></app-pr-button>
+      <div class="notification_content_actions_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
     </div>
   </div>
 

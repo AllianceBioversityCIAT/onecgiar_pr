@@ -1,0 +1,32 @@
+h1,
+p {
+  margin: 0;
+}
+
+.requests {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  height: 600px;
+
+  .requests_header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+
+    .requests_header_item {
+      font-weight: 500;
+      padding: 5px 15px;
+      border-radius: 10px;
+      background-color: #d9d9d9;
+      color: #2a2e45;
+    }
+  }
+}
+
+.active {
+  background-color: #2a2e45 !important;
+  color: #fff !important;
+}

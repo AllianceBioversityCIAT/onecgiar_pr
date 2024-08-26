@@ -1,51 +1,96 @@
-.noti_container {
-    position: relative;
-    padding: 20px 30px;
-    background-color: var(--pr-color-primary-2);
+p {
+  margin: 0;
+}
 
-    .title {
-        font-size: 1.2em;
+.notification {
+  padding: 20px 30px;
+  background-color: #eef0fc;
+
+  .notification_header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+
+    .notification_header_item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2px 15px;
+      border: 1px solid #5569dd;
+      border-radius: 10px;
+      background: #cfd5f6;
+      color: #5569dd;
+
+      .notification_header_item_text {
+        font-weight: 500;
+        font-size: 13px;
+      }
     }
+  }
 
-    .sub_title {
-        margin-bottom: 10px;
-    }
+  .notification_content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
 
-    .direction_icon {
-        position: absolute;
-        left: 0;
-        top: 0;
-        rotate: 45deg;
-        margin-left: 5px;
-        margin-top: 5px;
-    }
+    .notification_content_actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
 
-    .text_icon {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .buttons {
+      .notification_content_actions_buttons {
         display: flex;
         gap: 10px;
-    }
+      }
 
-    .pending {
-        color: gray;
+      .notification_content_actions_date {
+        color: #76716a;
+      }
     }
+  }
 
-    .accepted {
-        color: green;
-    }
+  .title {
+    font-size: 1.2em;
+  }
 
-    .rejected {
-        color: rgb(219, 50, 28);
-    }
+  .sub_title {
+    margin-bottom: 10px;
+  }
+
+  .direction_icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    rotate: 45deg;
+    margin-left: 5px;
+    margin-top: 5px;
+  }
+
+  .text_icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pending {
+    color: gray;
+  }
+
+  .accepted {
+    color: green;
+  }
+
+  .rejected {
+    color: rgb(219, 50, 28);
+  }
 }
 
 .result_submitted_text {
-    color: rgb(238, 71, 71);
-    font-weight: 700px;
-    font-size: 1em !important;
+  color: rgb(238, 71, 71);
+  font-weight: 700px;
+  font-size: 1em !important;
 }
