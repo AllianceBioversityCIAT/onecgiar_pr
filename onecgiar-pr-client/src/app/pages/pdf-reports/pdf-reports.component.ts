@@ -16,6 +16,7 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
     type: null,
     message: null
   };
+  pdfUrl = null;
   report = new Report(this.activatedRoute, this.sanitizer);
 
   constructor(private authService: AuthService, private activatedRoute: ActivatedRoute, public sanitizer: DomSanitizer, public http: HttpClient) {}
@@ -31,6 +32,7 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
     this.iframeLoaded = true;
     this.http.get<any>(this.report.iframeRoute).subscribe({
       next: resp => {
+        this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(resp.pdf);
         this.validateErrors(resp);
         this.iframeLoaded = false;
       },

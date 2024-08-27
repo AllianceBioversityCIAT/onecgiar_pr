@@ -21,7 +21,7 @@ export class PlatformReportController {
     @Param('code') code: string,
     @Query() query: { phase: string; downloadable: boolean },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile | returnErrorDto> {
+  ): Promise<{ pdf: string; fileName: string } | returnErrorDto> {
     code = code?.trim();
     query.phase = query.phase?.trim();
     let result =
@@ -31,21 +31,7 @@ export class PlatformReportController {
         PlatformReportEnum.FULL_RESULT_REPORT,
       );
 
-    if (result?.['message']) {
-      return <returnErrorDto>result;
-    }
-    result = <{ pdf: ReadStream; filename_date: any }>result;
-
-    const contentDisposition = `${
-      query.downloadable ?? false ? 'attachment;' : ''
-    }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
-
-    res.set({
-      'Content-Disposition': contentDisposition,
-      'Access-Control-Expose-Headers': 'Content-Disposition',
-    });
-
-    return new StreamableFile(result.pdf, { type: 'application/pdf' });
+    return result;
   }
 
   @Get('/ipsr/:code')
@@ -53,7 +39,7 @@ export class PlatformReportController {
     @Param('code') code: string,
     @Query() query: { phase: string; downloadable: boolean },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile | returnErrorDto> {
+  ): Promise<{ pdf: string; fileName: string } | returnErrorDto> {
     code = code?.trim();
     query.phase = query.phase?.trim();
     let result =
@@ -63,20 +49,6 @@ export class PlatformReportController {
         PlatformReportEnum.FULL_IPSR_REPORT,
       );
 
-    if (result?.['message']) {
-      return <returnErrorDto>result;
-    }
-    result = <{ pdf: ReadStream; filename_date: any }>result;
-
-    const contentDisposition = `${
-      query.downloadable ?? false ? 'attachment;' : ''
-    }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
-
-    res.set({
-      'Content-Disposition': contentDisposition,
-      'Access-Control-Expose-Headers': 'Content-Disposition',
-    });
-
-    return new StreamableFile(result.pdf, { type: 'application/pdf' });
+    return result;
   }
 }
