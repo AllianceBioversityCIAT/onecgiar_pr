@@ -16,6 +16,9 @@ p {
   }
 
   .requests_container_content_item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     width: 100%;
   }
 }

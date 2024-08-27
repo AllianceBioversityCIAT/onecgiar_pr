@@ -4,14 +4,16 @@ p {
 
 .notification {
   padding: 20px 30px;
-  background-color: #eef0fc;
+  background-color: #f2f2f2;
+  border: 1px solid #808080;
+  border-radius: 10px;
 
   .notification_header {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 
     .notification_header_item {
       display: flex;
@@ -25,7 +27,7 @@ p {
 
       .notification_header_item_text {
         font-weight: 500;
-        font-size: 13px;
+        font-size: 12px;
       }
     }
   }
@@ -34,23 +36,49 @@ p {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 40px;
+    gap: 20px;
 
     .notification_content_actions {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: flex-end;
+      gap: 10px;
+
+      .notification_content_actions_status {
+        text-align: center;
+        font-size: 13px;
+        padding: 5px 20px;
+        border-left: 1px solid var(--pr-color-primary);
+        border-right: 1px solid var(--pr-color-primary);
+        border-radius: 10px;
+      }
 
       .notification_content_actions_buttons {
         display: flex;
+        justify-content: center;
+        align-items: center;
         gap: 10px;
-      }
-
-      .notification_content_actions_date {
-        color: #76716a;
+        // margin: 12px 0;
       }
     }
+
+    .notification_content_body {
+      .notification_content_body_text {
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .notification_date {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    color: #76716a;
+    margin-top: 5px;
+    font-size: 12px;
   }
 
   .title {
