@@ -33,9 +33,14 @@ export class PlatformReportService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.client.connect();
-      this._logger.log('Successfully connected to RabbitMQ Reports MicroService');
+      this._logger.log(
+        'Successfully connected to RabbitMQ Reports MicroService',
+      );
     } catch (error) {
-      this._logger.error('Failed to connect to RabbitMQ Reports MicroService', error);
+      this._logger.error(
+        'Failed to connect to RabbitMQ Reports MicroService',
+        error,
+      );
     }
   }
 
@@ -250,7 +255,7 @@ export class PlatformReportService implements OnModuleInit {
         },
       };
 
-      let fileName =
+      const fileName =
         'PRMS-Result-' +
         data.result_code +
         '_' +
@@ -282,7 +287,7 @@ export class PlatformReportService implements OnModuleInit {
   async fetchPDF(bucketName: string, fileName: string): Promise<any> {
     try {
       const response = await axios.post<ValidationResponse>(
-        env.MS_FM_URL + 'validation',
+        env.MS_FM_URL,
         { bucketName, key: fileName },
         {
           headers: { auth: this.authHeaderMs4 },
@@ -302,10 +307,6 @@ export class PlatformReportService implements OnModuleInit {
       this._logger.error('Error fetching PDF:', error);
     }
   }
-}
-interface FetchPDFResult {
-  pdf: string;
-  fileName: string;
 }
 
 interface ValidationResponse {
