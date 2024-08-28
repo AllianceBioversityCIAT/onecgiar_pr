@@ -271,8 +271,8 @@ export class PlatformReportService implements OnModuleInit {
         credentials: this.authHeaderMs2,
       };
 
-      const result = this.client.emit({ cmd: 'generate' }, info);
-      this._logger.log('PDF generation result on queue:', result);
+      this.client.emit({ cmd: 'generate' }, info);
+      this._logger.log('PDF generation result on queue:', info.fileName);
 
       try {
         return await this.fetchPDF(info.bucketName, info.fileName);
@@ -286,6 +286,7 @@ export class PlatformReportService implements OnModuleInit {
 
   async fetchPDF(bucketName: string, fileName: string): Promise<any> {
     try {
+      this._logger.verbose(`Fetching PDF from File Management: ${fileName} in ${bucketName} bucket S3`);
       const response = await axios.post<ValidationResponse>(
         env.MS_FM_URL,
         { bucketName, key: fileName },
