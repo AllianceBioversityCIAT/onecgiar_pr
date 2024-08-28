@@ -76,12 +76,10 @@ export class ResultsTocResultsController {
     );
   }
 
-  @ApiOperation({ summary: 'Get Version Dashboard' })
-  @Get('get/version/:resultId/initiative/:initiativeId/resultToc/:resultTocId')
+  @Get('get/version/:resultId/initiative/:initiativeId/resultToc')
   findVersionDashBoard(
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
-    @Param('resultTocId') _resultTocId: number,
   ) {
     return this.resultsTocResultsService.getVersionId(resultId, initiativeId);
   }

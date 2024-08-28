@@ -721,7 +721,7 @@ export class ResultsTocResultsService {
       if (resultinit.toc_id) {
         const vesion_id = await this._resultsTocResultRepository.query(
           `SELECT
-            DISTINCT tr.phase
+            DISTINCT tr.version_id
           FROM
             Integration_information.toc_results tr
           WHERE
@@ -742,7 +742,7 @@ export class ResultsTocResultsService {
         if (!vesion_id.length || vesion_id[0].phase == null) {
           version_id = resultinit.toc_id;
         } else {
-          version_id = vesion_id[0].phase;
+          version_id = vesion_id[0].version_id;
         }
       }
       return {

@@ -9,8 +9,25 @@ import {
 import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { ResultRepository } from '../results/result.repository';
 import { TemplateRepository } from './repositories/template.repository';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { env } from 'process';
 
 @Module({
+  imports: [
+    ClientsModule.register([
+      {
+        name: 'REPORT_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [env.RABBITMQ_URL],
+          queue: env.REPORT_QUEUE,
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+    ]),
+  ],
   controllers: [PlatformReportController],
   providers: [
     PlatformReportService,

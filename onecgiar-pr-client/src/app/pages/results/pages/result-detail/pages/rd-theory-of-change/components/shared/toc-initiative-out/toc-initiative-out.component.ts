@@ -45,7 +45,14 @@ export class TocInitiativeOutComponent implements OnInit {
   clearTocResultId() {
     this.initiative.showMultipleWPsContent = false;
 
-    const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+    let tocLevelId;
+    if (!this.initiative.planned_result) {
+      tocLevelId = 3;
+    } else if (this.resultLevelId === 1) {
+      tocLevelId = 1;
+    } else {
+      tocLevelId = 2;
+    }
 
     this.initiative.result_toc_results.forEach(element => {
       element.toc_level_id = tocLevelId;
@@ -61,15 +68,13 @@ export class TocInitiativeOutComponent implements OnInit {
   get_versionDashboard() {
     if (this.isNotifications) return;
 
-    this.api.resultsSE
-      .get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.toc_result_id, this.initiative?.result_toc_results[0]?.initiative_id)
-      .subscribe({
-        next: ({ response }) => {
-          this.fullInitiativeToc = response?.version_id;
-        },
-        error: err => {
-          console.error(err);
-        }
-      });
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.initiative_id).subscribe({
+      next: ({ response }) => {
+        this.fullInitiativeToc = response?.version_id;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
   }
 }
