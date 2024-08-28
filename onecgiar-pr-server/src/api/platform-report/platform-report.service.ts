@@ -286,7 +286,9 @@ export class PlatformReportService implements OnModuleInit {
 
   async fetchPDF(bucketName: string, fileName: string): Promise<any> {
     try {
-      this._logger.verbose(`Fetching PDF from File Management: ${fileName} in ${bucketName} bucket S3`);
+      this._logger.verbose(
+        `Fetching PDF from File Management: ${fileName} in ${bucketName} bucket S3`,
+      );
       const response = await axios.post<ValidationResponse>(
         env.MS_FM_URL,
         { bucketName, key: fileName },
