@@ -39,7 +39,7 @@ import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recove
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
 import { SharePointModule } from './shared/services/share-point/share-point.module';
 import { UserNotificationSettingsModule } from './api/user_notification_settings/user_notification_settings.module';
-import { EmailNotificationManagementModule } from './api/email-notification-management/email-notification-management.module';
+import { EmailNotificationManagementModule } from './shared/email-notification-management/email-notification-management.module';
 
 @Module({
   imports: [

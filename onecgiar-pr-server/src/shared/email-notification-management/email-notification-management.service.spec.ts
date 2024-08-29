@@ -9,7 +9,9 @@ describe('EmailNotificationManagementService', () => {
       providers: [EmailNotificationManagementService],
     }).compile();
 
-    service = module.get<EmailNotificationManagementService>(EmailNotificationManagementService);
+    service = module.get<EmailNotificationManagementService>(
+      EmailNotificationManagementService,
+    );
   });
 
   it('should be defined', () => {

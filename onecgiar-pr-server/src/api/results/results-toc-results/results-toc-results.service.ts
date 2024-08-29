@@ -21,12 +21,12 @@ import { ShareResultRequestRepository } from '../share-result-request/share-resu
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { In, Not } from 'typeorm';
-import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
-import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
+import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
+import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -859,7 +859,6 @@ export class ResultsTocResultsService {
     result_id: number,
     initSubmitter: number,
   ) {
-    // const { contributors_result_toc_result } = createResultsTocResultDto;
     try {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
       if (createResultsTocResultDto) {
@@ -919,7 +918,7 @@ export class ResultsTocResultsService {
               const newRtR = new ResultsTocResult();
               newRtR.created_by = user.id;
               newRtR.planned_result = contributor?.planned_result;
-              newRtR.results_id = result.id;
+              newRtR.results_id = result_id;
               newRtR.initiative_id = contributor?.initiative_id || null;
               newRtR.is_active = true;
               if (result.result_level_id == 2) {

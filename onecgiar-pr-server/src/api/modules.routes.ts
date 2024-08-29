@@ -61,5 +61,5 @@ export const ModulesRoutes: Routes = [
   {
     path: 'user-notification-settings',
     module: UserNotificationSettingsModule,
-  }
+  },
 ];

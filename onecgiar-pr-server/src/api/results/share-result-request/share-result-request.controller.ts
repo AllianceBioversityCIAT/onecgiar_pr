@@ -56,23 +56,35 @@ export class ShareResultRequestController {
     );
   }
 
+  @Get('get/received')
   @ApiOperation({ summary: 'Get all share result requests by user' })
   @ApiResponse({
     status: 200,
     description: 'List of all share result requests by user.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @Get('get/all')
   @UseInterceptors(ResponseInterceptor)
-  findAll(@UserToken() user: TokenDto) {
-    return this.shareResultRequestService.getResultRequestByUser(user);
+  findReceived(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.getReceivedResultRequest(user);
   }
 
+  @Get('get/sent')
+  @ApiOperation({ summary: 'Get all share result requests by user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all share result requests by user.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @UseInterceptors(ResponseInterceptor)
+  findSent(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.getSentResultRequest(user);
+  }
+
+  @Patch('update')
   @ApiOperation({ summary: 'Update a share result request' })
   @ApiBody({ type: CreateShareResultRequestDto })
   @ApiResponse({ status: 200, description: 'Request successfully updated.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
-  @Patch('update')
   updateRequest(
     @UserToken() user: TokenDto,
     @Body() createShareResultsRequestDto: CreateShareResultRequestDto,

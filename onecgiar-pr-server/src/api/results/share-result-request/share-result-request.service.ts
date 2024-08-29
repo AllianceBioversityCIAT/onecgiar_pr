@@ -11,14 +11,14 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
-import { EmailNotificationManagementService } from '../../email-notification-management/email-notification-management.service';
-import { ConfigMessageDto } from '../../email-notification-management/dto/send-email.dto';
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
+import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
+import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -113,6 +113,11 @@ export class ShareResultRequestService {
         ),
       ]);
 
+      console.log(
+        !requestExist,
+        requestExist?.request_status_id !== 1,
+        !initExist?.is_active,
+      );
       if (
         !requestExist &&
         requestExist?.request_status_id !== 1 &&
@@ -127,7 +132,9 @@ export class ShareResultRequestService {
         );
         shareInitRequests.push(newShare);
 
-        if (createTocShareResult.isToc) {
+        if (createTocShareResult.isToc === true) {
+          console.log('shi');
+
           await this._resultsTocResultService.saveResultTocResultContributor(
             createTocShareResult.contributors_result_toc_result,
             user,
@@ -160,6 +167,7 @@ export class ShareResultRequestService {
     newShare.approving_inititiative_id = createTocShareResult?.isToc
       ? shareInitId
       : initiativeId;
+    newShare.is_map_to_toc = createTocShareResult?.isToc ? true : false;
 
     newShare.requested_by = user.id;
 
@@ -238,28 +246,578 @@ export class ShareResultRequestService {
         },
       };
 
-      await this._emailNotificationManagementService.sendEmail(email);
+      this._emailNotificationManagementService.sendEmail(email);
     }
   }
 
-  async getResultRequestByUser(user: TokenDto) {
+  async getReceivedResultRequest(user: TokenDto) {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
 
-      const requestData =
-        await this._shareResultRequestRepository.getRequestByUser(
-          user.id,
-          role,
+      const inits = await this._roleByUserRepository.find({
+        where: {
+          user: user.id,
+          active: true,
+          initiative_id: Not(IsNull()),
+        },
+      });
+
+      const wherePendingConditionSharing: any = {
+        request_status_id: 1,
+        is_active: true,
+        obj_result: {
+          is_active: true,
+        },
+      };
+
+      const wherePendingConditionOwner: any = {
+        request_status_id: 1,
+        is_active: true,
+        is_map_to_toc: true,
+        obj_result: {
+          is_active: true,
+        },
+      };
+
+      const whereDoneCondition: any = {
+        request_status_id: In([2, 3]),
+        is_active: true,
+        obj_result: {
+          is_active: true,
+        },
+      };
+
+      if (role !== 1) {
+        wherePendingConditionSharing.shared_inititiative_id = In(
+          inits.map((i) => i.initiative_id),
         );
-      const requestPendingData =
-        await this._shareResultRequestRepository.getPendingByUser(
-          user.id,
-          role,
+
+        wherePendingConditionOwner.owner_initiative_id = In(
+          inits.map((i) => i.initiative_id),
         );
+
+        whereDoneCondition.shared_inititiative_id = In(
+          inits.map((i) => i.initiative_id),
+        );
+      }
+
+      const receivedContributionsPendingOwner =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: wherePendingConditionOwner,
+        });
+
+      const receivedContributionsPendingShared =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: wherePendingConditionSharing,
+        });
+
+      const receivedContributionsDone =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: whereDoneCondition,
+        });
+
       return {
         response: {
-          requestData,
-          requestPendingData,
+          receivedContributionsPending: [
+            ...receivedContributionsPendingOwner,
+            ...receivedContributionsPendingShared,
+          ],
+          receivedContributionsDone,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getSentResultRequest(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+
+      const inits = await this._roleByUserRepository.find({
+        where: {
+          user: user.id,
+          active: true,
+          initiative_id: Not(IsNull()),
+        },
+      });
+
+      const wherePendingConditionSharing: any = {
+        request_status_id: 1,
+        is_active: true,
+        requested_by: user.id,
+        obj_result: {
+          is_active: true,
+        },
+      };
+
+      const wherePendingConditionOwner: any = {
+        request_status_id: 1,
+        is_active: true,
+        is_map_to_toc: true,
+        requested_by: user.id,
+        obj_result: {
+          is_active: true,
+        },
+      };
+
+      const whereDoneCondition: any = {
+        request_status_id: In([2, 3]),
+        requested_by: user.id,
+        is_active: true,
+        obj_result: {
+          obj_results_toc_result: {
+            is_active: true,
+          },
+        },
+      };
+
+      if (role !== 1) {
+        wherePendingConditionSharing.owner_initiative_id = In(
+          inits.map((i) => i.initiative_id),
+        );
+
+        wherePendingConditionOwner.owner_initiative_id = In(
+          inits.map((i) => i.initiative_id),
+        );
+
+        whereDoneCondition.owner_initiative_id = In(
+          inits.map((i) => i.initiative_id),
+        );
+      }
+
+      const sentContributionsPendingOwner =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: wherePendingConditionOwner,
+        });
+
+      const sentContributionsPendingShared =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: wherePendingConditionSharing,
+        });
+
+      const sentContributionsDone =
+        await this._shareResultRequestRepository.find({
+          select: {
+            share_result_request_id: true,
+            result_id: true,
+            requested_date: true,
+            aprovaed_date: true,
+            request_status_id: true,
+            is_map_to_toc: true,
+            obj_request_status: {
+              request_status_id: true,
+              name: true,
+            },
+            obj_result: {
+              result_code: true,
+              title: true,
+              status_id: true,
+              obj_version: {
+                id: true,
+                status: true,
+                phase_name: true,
+              },
+              obj_result_type: {
+                id: true,
+                name: true,
+              },
+              obj_result_level: {
+                id: true,
+                name: true,
+              },
+              obj_results_toc_result: {
+                result_toc_result_id: true,
+                initiative_id: true,
+                is_active: true,
+              },
+            },
+            obj_requested_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_approved_by: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+            obj_owner_initiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+            obj_shared_inititiative: {
+              id: true,
+              official_code: true,
+              name: true,
+            },
+          },
+          relations: {
+            obj_request_status: true,
+            obj_result: {
+              obj_version: true,
+              obj_result_type: true,
+              obj_result_level: true,
+              obj_results_toc_result: true,
+            },
+            obj_requested_by: true,
+            obj_approved_by: true,
+            obj_owner_initiative: true,
+            obj_shared_inititiative: true,
+          },
+          where: whereDoneCondition,
+        });
+
+      return {
+        response: {
+          sentContributionsPending: [
+            ...sentContributionsPendingOwner,
+            ...sentContributionsPendingShared,
+          ],
+          sentContributionsDone,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -317,16 +875,27 @@ export class ShareResultRequestService {
         };
       }
 
-      rr.approved_by = user.id;
-      rr.aprovaed_date = new Date();
-      rr.request_status_id = createShareResultsRequestDto.request_status_id;
-      const requestData = await this._shareResultRequestRepository.save({
-        ...rr,
-        last_updated_by: user.id,
+      await this._shareResultRequestRepository.update(
+        rr.share_result_request_id,
+        {
+          approved_by: user.id,
+          aprovaed_date: new Date(),
+          request_status_id: createShareResultsRequestDto.request_status_id,
+        },
+      );
+
+      const findShare = await this._shareResultRequestRepository.findOne({
+        where: {
+          share_result_request_id: rr.share_result_request_id,
+        },
       });
 
-      const { shared_inititiative_id, result_id, request_status_id } =
-        requestData;
+      const {
+        shared_inititiative_id,
+        result_id,
+        request_status_id,
+        is_map_to_toc,
+      } = findShare;
 
       if (request_status_id == 2) {
         const exists =
@@ -353,28 +922,30 @@ export class ShareResultRequestService {
             last_updated_by: user.id,
           });
 
-          // * Map multiple WPs to the same initiative
-          for (const toc of rtr.result_toc_results) {
-            if (toc) {
-              await this._resultsTocResultRepository.save({
-                initiative_ids: shared_inititiative_id,
-                toc_result_id: toc?.toc_result_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-                result_id: result.id,
-                planned_result: rtr?.planned_result,
-                action_area_outcome_id: toc?.action_area_outcome_id,
-                is_active: true,
-                toc_progressive_narrative: toc?.toc_progressive_narrative,
-              });
+          if (!is_map_to_toc) {
+            // * Map multiple WPs to the same initiative
+            for (const toc of rtr.result_toc_results) {
+              if (toc) {
+                await this._resultsTocResultRepository.save({
+                  initiative_ids: shared_inititiative_id,
+                  toc_result_id: toc?.toc_result_id,
+                  created_by: user.id,
+                  last_updated_by: user.id,
+                  result_id: result.id,
+                  planned_result: rtr?.planned_result,
+                  action_area_outcome_id: toc?.action_area_outcome_id,
+                  is_active: true,
+                  toc_progressive_narrative: toc?.toc_progressive_narrative,
+                });
+              }
             }
-          }
 
-          if (rtr?.result_toc_results?.length) {
-            await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
-              createShareResultsRequestDto,
-              result_id,
-            );
+            if (rtr?.result_toc_results?.length) {
+              await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+                createShareResultsRequestDto,
+                result_id,
+              );
+            }
           }
         } else {
           const result = await this._resultRepository.getResultById(result_id);

@@ -27,7 +27,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
     }
   }
 
-  async sendEmail(configMessageDto: ConfigMessageDto) {
+  sendEmail(configMessageDto: ConfigMessageDto) {
     const payload = {
       auth: this.authHeaderMs1,
       data: configMessageDto,
@@ -60,7 +60,10 @@ export class EmailNotificationManagementService implements OnModuleInit {
         return {
           subject: `PRMS Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code}`,
           initContributingName: data.initContributing.name,
-          initContributing: data.initContributing.official_code + ' ' + data.initContributing.name,
+          initContributing:
+            data.initContributing.official_code +
+            ' ' +
+            data.initContributing.name,
           result: data.result.result_code + ' - ' + data.result.title,
           initOwner: data.initOwner.official_code + ' ' + data.initOwner.name,
         };
