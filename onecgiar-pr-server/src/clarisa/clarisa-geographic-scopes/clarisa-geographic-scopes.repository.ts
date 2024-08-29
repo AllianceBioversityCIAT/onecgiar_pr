@@ -44,7 +44,7 @@ export class ClarisaGeographicScopeRepository extends Repository<ClarisaGeograph
     }
   }
   async getAllPRMSScopes(dataDefault: number[] = [1, 2, 3]) {
-    dataDefault ? dataDefault : [1, 2, 3];
+    dataDefault = dataDefault ?? [1, 2, 3];
     const queryData = `
     select 
     cgs.id,

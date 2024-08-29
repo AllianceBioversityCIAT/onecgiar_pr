@@ -196,8 +196,8 @@ export class VersioningService {
           is_active: true,
         },
       });
-      return !res;
-    } catch (error) {
+      return res ? false : true;
+    } catch (_error) {
       return false;
     }
   }

@@ -458,8 +458,8 @@ export class ResultsByInstitutionsService {
       await this.handleDeliveries(
         toUpdateDeliveries['isNew']
           ? toUpdateDeliveries.delivery
-          : incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
-              ?.delivery ?? [],
+          : (incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
+              ?.delivery ?? []),
         toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
         toUpdateDeliveries.id,
         userId,

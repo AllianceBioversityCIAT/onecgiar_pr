@@ -64,7 +64,7 @@ export class JwtMiddleware implements NestMiddleware {
       );
       res.setHeader('auth', newToken);
       next();
-    } catch (error) {
+    } catch (_error) {
       throw new HttpException(
         {
           message: 'Invalid token',

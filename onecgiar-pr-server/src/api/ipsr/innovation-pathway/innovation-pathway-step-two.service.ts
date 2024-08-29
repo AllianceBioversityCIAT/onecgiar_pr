@@ -453,7 +453,7 @@ export class InnovationPathwayStepTwoService {
 
   async updateComplementaryInnovation(
     complementaryInnovationId: number,
-    User: TokenDto,
+    user: TokenDto,
     updateComplementaryInnovationDto: UpdateComplementaryInnovationDto,
   ) {
     try {
@@ -508,7 +508,7 @@ export class InnovationPathwayStepTwoService {
       await this._resultRepository.update(findResult.id, {
         title,
         description,
-        last_updated_by: User.id,
+        last_updated_by: user.id,
       });
 
       await this._resultComplementaryInnovation.update(
@@ -518,7 +518,7 @@ export class InnovationPathwayStepTwoService {
           other_funcions,
           projects_organizations_working_on_innovation,
           specify_projects_organizations,
-          last_updated_by: User.id,
+          last_updated_by: user.id,
         },
       );
 
@@ -537,9 +537,8 @@ export class InnovationPathwayStepTwoService {
             ecf.complementary_innovation_function_id,
         );
         if (!isFound) {
-          ecf.results_complementary_innovations_function_id;
           ecf.is_active = false;
-          ecf.last_updated_by = User.id;
+          ecf.last_updated_by = user.id;
           updateCF.push(
             await this._resultComplementaryInnovationFunctions.save(ecf),
           );
@@ -566,8 +565,8 @@ export class InnovationPathwayStepTwoService {
               findComplementaryInnovation.result_complementary_innovation_id;
             newCF.complementary_innovation_function_id =
               cf.complementary_innovation_functions_id;
-            newCF.created_by = User.id;
-            newCF.last_updated_by = User.id;
+            newCF.created_by = user.id;
+            newCF.last_updated_by = user.id;
             saveCF.push(
               await this._resultComplementaryInnovationFunctions.save(newCF),
             );
@@ -600,7 +599,7 @@ export class InnovationPathwayStepTwoService {
         if (!isFound) {
           await this._evidence.update(e.id, {
             is_active: 0,
-            last_updated_by: User.id,
+            last_updated_by: user.id,
           });
         }
       }
@@ -621,8 +620,8 @@ export class InnovationPathwayStepTwoService {
             newMaterial.result_id = complementaryInnovationId;
             newMaterial.link = entity.link;
             newMaterial.evidence_type_id = 4;
-            newMaterial.created_by = User.id;
-            newMaterial.last_updated_by = User.id;
+            newMaterial.created_by = user.id;
+            newMaterial.last_updated_by = user.id;
             newMaterial.creation_date = new Date();
             newMaterial.last_updated_date = new Date();
             saveEvidence.push(await this._evidence.save(newMaterial));
