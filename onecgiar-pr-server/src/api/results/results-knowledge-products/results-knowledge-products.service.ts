@@ -277,9 +277,10 @@ export class ResultsKnowledgeProductsService {
       const resultByInstitutions =
         updatedKnowledgeProduct.result_knowledge_product_institution_array
           .map((rkpi) => {
-            rkpi.result_by_institution_object &&
-              (rkpi.result_by_institution_object.result_kp_mqap_institution_id =
-                rkpi.result_kp_mqap_institution_id);
+            if (rkpi.result_by_institution_object) {
+              rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id;
+            }
             return rkpi.result_by_institution_object;
           })
           .filter((rbi) => rbi);
@@ -752,8 +753,8 @@ export class ResultsKnowledgeProductsService {
       );
     }
 
-    const individualItems = details.map(
-      (e) => e.split('is not valid')?.[0]?.trim(),
+    const individualItems = details.map((e) =>
+      e.split('is not valid')?.[0]?.trim(),
     );
     const itemString = StringUtils.join(individualItems, ', ', ', and ');
 
@@ -888,9 +889,10 @@ export class ResultsKnowledgeProductsService {
       const resultByInstitutions =
         newKnowledgeProduct.result_knowledge_product_institution_array.map(
           (rkpi) => {
-            rkpi.result_by_institution_object &&
-              (rkpi.result_by_institution_object.result_kp_mqap_institution_id =
-                rkpi.result_kp_mqap_institution_id);
+            if (rkpi.result_by_institution_object) {
+              rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id;
+            }
             return rkpi.result_by_institution_object;
           },
         );

@@ -312,7 +312,7 @@ export class DeleteRecoverDataService {
             { is_active: true },
             { is_active: false },
           );
-        } catch (error) {
+        } catch (_error) {
           this._logger.warn(
             `the elastic removal failed for the result #${resultData.id}`,
           );
@@ -442,7 +442,7 @@ export class DeleteRecoverDataService {
               );
 
             await this._elasticService.sendBulkOperationToElastic(elasticJson);
-          } catch (error) {
+          } catch (_error) {
             this._logger.warn(
               `the elastic removal failed for the result #${resultToUpdate.id}`,
             );

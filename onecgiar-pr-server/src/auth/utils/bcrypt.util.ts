@@ -6,7 +6,7 @@ export class BcryptPasswordEncoder {
   public matches(hashedPassword: string, incomingPassword: any): boolean {
     try {
       return bcrypt.compareSync(incomingPassword, hashedPassword);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

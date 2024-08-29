@@ -37,7 +37,7 @@ export class PlatformReportController {
     result = <{ pdf: ReadStream; filename_date: any }>result;
 
     const contentDisposition = `${
-      query.downloadable ?? false ? 'attachment;' : ''
+      (query.downloadable ?? false) ? 'attachment;' : ''
     }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
 
     res.set({
@@ -69,7 +69,7 @@ export class PlatformReportController {
     result = <{ pdf: ReadStream; filename_date: any }>result;
 
     const contentDisposition = `${
-      query.downloadable ?? false ? 'attachment;' : ''
+      (query.downloadable ?? false) ? 'attachment;' : ''
     }filename="PRMS-Result-${code}_${result.filename_date}.pdf"`;
 
     res.set({
