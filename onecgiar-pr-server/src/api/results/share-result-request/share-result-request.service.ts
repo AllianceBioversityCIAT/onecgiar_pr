@@ -1011,4 +1011,32 @@ export class ShareResultRequestService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async getResultRequestByUser(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+
+      const requestData =
+        await this._shareResultRequestRepository.getRequestByUser(
+          user.id,
+          role,
+        );
+      const requestPendingData =
+        await this._shareResultRequestRepository.getPendingByUser(
+          user.id,
+          role,
+        );
+
+      return {
+        response: {
+          requestData,
+          requestPendingData,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 }

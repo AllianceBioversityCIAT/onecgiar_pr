@@ -80,6 +80,18 @@ export class ShareResultRequestController {
     return this.shareResultRequestService.getSentResultRequest(user);
   }
 
+  @Get('get/all')
+  @ApiOperation({ summary: 'Get all share result requests by user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all share result requests by user.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @UseInterceptors(ResponseInterceptor)
+  findAll(@UserToken() user: TokenDto) {
+    return this.shareResultRequestService.getResultRequestByUser(user);
+  }
+
   @Patch('update')
   @ApiOperation({ summary: 'Update a share result request' })
   @ApiBody({ type: CreateShareResultRequestDto })
