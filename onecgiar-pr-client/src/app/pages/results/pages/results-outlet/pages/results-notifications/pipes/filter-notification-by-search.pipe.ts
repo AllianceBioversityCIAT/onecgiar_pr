@@ -10,7 +10,7 @@ export class FilterNotificationBySearchPipe implements PipeTransform {
     }
 
     list.forEach(item => {
-      item.joinAll = `${item?.obj_result?.result_code} - ${item?.obj_result?.title}`;
+      item.joinAll = `${item?.obj_result?.result_code} - ${item?.obj_result?.title} - ${item?.obj_shared_inititiative?.official_code} - ${item?.obj_owner_initiative?.official_code}`;
     });
 
     return list.filter(item => item.joinAll.toUpperCase().indexOf(searchFilter?.toUpperCase()) > -1);
