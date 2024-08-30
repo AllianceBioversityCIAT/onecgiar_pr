@@ -27,6 +27,7 @@ import { UserNotificationSettingRepository } from '../../user_notification_setti
 import Handlebars from 'handlebars';
 import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
+import { env } from 'process';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -1006,11 +1007,11 @@ export class ResultsTocResultsService {
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },
+        from: { email: env.EMAIL_SENDER, name: '[PRMS]' },
         emailBody: {
           subject: emailData.subject,
           to,
-          cc: [user.email, 'j.delgado@cgiar.org', 'k.collazos@cgiar.org'],
+          cc: [user.email],
           message: {
             text: 'Contributing Initiative Removed from a Result',
             socketFile: handle(emailData),
