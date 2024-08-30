@@ -3,22 +3,38 @@ p {
   margin: 0;
 }
 
-.requests_container {
+.received_container {
   display: flex;
   flex-direction: column;
   gap: 20px;
   width: 100%;
 
-  .requests_container_header_title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-
-  .requests_container_content_item {
+  .received_container_content {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    width: 100%;
+
+    .received_container_header_title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .received_container_content_item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .received_container_content_empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100px;
+      font-size: 16px;
+      font-weight: 600;
+      background-color: #f5f6fb;
+      border-bottom: 1px solid #808080;
+    }
   }
 }

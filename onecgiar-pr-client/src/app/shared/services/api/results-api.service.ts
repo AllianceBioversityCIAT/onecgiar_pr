@@ -531,7 +531,11 @@ export class ResultsApiService {
   }
 
   GET_allRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/received`);
+  }
+
+  GET_sentRequest() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
   }
 
   GET_userNotificationSettingsByInitiativeId(initiativeId) {

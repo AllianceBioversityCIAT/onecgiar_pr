@@ -54,7 +54,7 @@ describe('ResultsNotificationsService', () => {
   describe('get_section_information()', () => {
     it('should update data for get_section_information', () => {
       service.get_section_information(() => {
-        expect(service.data).toEqual([
+        expect(service.receivedData).toEqual([
           {
             approving_inititiative_id: 1,
             result_type_id: 10,
@@ -73,7 +73,7 @@ describe('ResultsNotificationsService', () => {
     it('should update data for get_section_information when item.request_status_id is not 1', () => {
       mockGET_allRequestResponse.requestPendingData[0].request_status_id = 2;
       service.get_section_information(() => {
-        expect(service.data).toEqual([
+        expect(service.receivedData).toEqual([
           {
             approving_inititiative_id: 1,
             result_type_id: 10,
@@ -93,7 +93,7 @@ describe('ResultsNotificationsService', () => {
 
       service.get_section_information(() => {
         expect(spy).toHaveBeenCalled();
-        expect(service.data).toEqual([]);
+        expect(service.receivedData).toEqual([]);
       });
     });
   });

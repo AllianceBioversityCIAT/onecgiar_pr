@@ -1782,7 +1782,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/all`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);

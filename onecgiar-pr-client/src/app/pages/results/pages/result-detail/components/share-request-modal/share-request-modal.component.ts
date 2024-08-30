@@ -18,11 +18,7 @@ export class ShareRequestModalComponent implements OnInit {
   allInitiatives = [];
   showForm = true;
   showTocOut = true;
-  disabledOptions = [
-    {
-      initiative_id: 10
-    }
-  ];
+  disabledOptions = [{ initiative_id: 10 }];
 
   constructor(
     public retrieveModalSE: RetrieveModalService,

@@ -3,7 +3,7 @@ p {
 }
 
 .notification {
-  padding: 20px 30px;
+  padding: 0 30px 20px 30px;
   background-color: #f2f2f2;
   border: 1px solid #808080;
   border-radius: 10px;
@@ -21,7 +21,8 @@ p {
       align-items: center;
       padding: 2px 15px;
       border: 1px solid #5569dd;
-      border-radius: 10px;
+      border-radius: 0 0 10px 10px;
+      border-top: none;
       background: #cfd5f6;
       color: #5569dd;
 
@@ -59,7 +60,15 @@ p {
         justify-content: center;
         align-items: center;
         gap: 10px;
-        // margin: 12px 0;
+      }
+
+      .notification_content_actions_sent {
+        color: #666;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        font-weight: 500;
       }
     }
 

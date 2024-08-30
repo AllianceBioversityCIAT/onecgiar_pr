@@ -1,2 +1,78 @@
-<p>sent-requests works!</p>
-,
+<div class="sent_container">
+  <div class="sent_container_content">
+    <h1 class="sent_container_header_title">Pending</h1>
+
+    <div
+      class="sent_container_content_item"
+      *ngIf="
+        (
+          this.resultsNotificationsSE?.sentData.sentContributionsPending
+          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        ).length > 0
+      ">
+      <app-notification-item
+        *ngFor="
+          let notification of this.resultsNotificationsSE?.sentData.sentContributionsPending
+            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        "
+        [notification]="notification"
+        [isSent]="true"
+        (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
+    </div>
+
+    <div
+      class="sent_container_content_empty"
+      *ngIf="
+        !(
+          this.resultsNotificationsSE?.sentData.sentContributionsPending
+          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        ).length
+      ">
+      You have no pending notifications related with the search.
+    </div>
+  </div>
+
+  <div class="sent_container_content">
+    <h1 class="sent_container_header_title">Done</h1>
+
+    <div
+      class="sent_container_content_item"
+      *ngIf="
+        (
+          this.resultsNotificationsSE?.sentData.sentContributionsDone
+          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        ).length > 0
+      ">
+      <app-notification-item
+        *ngFor="
+          let notification of this.resultsNotificationsSE?.sentData.sentContributionsDone
+            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        "
+        [notification]="notification"
+        [isSent]="true"></app-notification-item>
+    </div>
+
+    <div
+      class="sent_container_content_empty"
+      *ngIf="
+        !(
+          this.resultsNotificationsSE?.sentData.sentContributionsDone
+          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
+          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
+          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
+        ).length
+      ">
+      You have no done notifications related with the search.
+    </div>
+  </div>
+</div>
