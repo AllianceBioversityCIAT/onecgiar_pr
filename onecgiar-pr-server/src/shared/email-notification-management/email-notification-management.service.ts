@@ -9,8 +9,8 @@ export class EmailNotificationManagementService implements OnModuleInit {
     EmailNotificationManagementService.name,
   );
   private authHeaderMs1 = {
-    username: env.CLA_MICROSERVICE1_USER,
-    password: env.CLA_MICROSERVICE1_PASSWORD,
+    username: env.MS_NOTIFICATION_USER,
+    password: env.MS_NOTIFICATION_PASSWORD,
   };
 
   constructor(@Inject('EMAIL_SERVICE') private readonly _client: ClientProxy) {}

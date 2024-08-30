@@ -19,6 +19,7 @@ import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
 import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
+import { env } from 'process';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -227,11 +228,11 @@ export class ShareResultRequestService {
       );
 
       const email: ConfigMessageDto = {
-        from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },
+        from: { email: env.EMAIL_SENDER, name: '[PRMS]' },
         emailBody: {
           subject: emailData.subject,
           to,
-          cc: [user.email, 'j.delgado@cgiar.org', 'k.collazos@cgiar.org'],
+          cc: [user.email],
           message: {
             text: 'Contribution request',
             socketFile: handle(emailData),
