@@ -1,36 +1,30 @@
 import { Pipe, PipeTransform } from '@angular/core';
-
+import { formatDistanceToNowStrict, parseISO, subHours } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 @Pipe({
   name: 'appFormatTimeAgo'
 })
 export class FormatTimeAgoPipe implements PipeTransform {
-  transform(value: Date | string | number): string {
-    const date = new Date(value);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  transform(value: string | number | Date, serverTimezone: number = 0): string {
+    let date: Date;
 
-    if (diffInSeconds < 60) {
-      // less than a minute
-      return `${diffInSeconds} seconds ago`;
-    } else if (diffInSeconds < 3600) {
-      // less than an hour
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} minutes ago`;
-    } else if (diffInSeconds < 86400) {
-      // less than a day
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} hours ago`;
-    } else if (diffInSeconds < 2592000) {
-      // less than a month
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} days ago`;
-    } else if (diffInSeconds < 31536000) {
-      // less than a year
-      const months = Math.floor(diffInSeconds / 2592000);
-      return `${months} months ago`;
+    if (typeof value === 'string') {
+      date = parseISO(value);
+    } else if (value instanceof Date) {
+      date = value;
     } else {
-      const years = Math.floor(diffInSeconds / 31536000);
-      return `${years} years ago`;
+      date = new Date(value);
     }
+
+    // Adjust for server timezone if not UTC
+    if (serverTimezone !== 0) {
+      date = subHours(date, serverTimezone);
+    }
+
+    const localTimezoneOffset = new Date().getTimezoneOffset() / 60;
+
+    const localDate = subHours(date, localTimezoneOffset);
+
+    return `${formatDistanceToNowStrict(localDate, { addSuffix: false, locale: enUS })} ago`;
   }
 }
