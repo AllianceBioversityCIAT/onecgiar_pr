@@ -530,6 +530,10 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
   }
 
+  GET_requestIPSR() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+  }
+
   GET_allRequest() {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/received`);
   }
@@ -576,10 +580,6 @@ export class ResultsApiService {
 
   PATCH_updateRequest(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
-  }
-
-  GET_requestStatus() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
   }
 
   POST_updateRequest(body) {

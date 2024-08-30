@@ -32,12 +32,14 @@ export class NotificationItemComponent {
       return null;
     }
 
-    const { result_id, obj_result, obj_shared_inititiative, obj_requested_by } = notification;
+    const { result_id, obj_result, obj_shared_inititiative, obj_owner_initiative } = notification;
 
     this.api.dataControlSE.currentResult = {
       ...this.api.dataControlSE.currentResult,
       title: obj_result?.title,
-      submitter: `${obj_requested_by?.first_name} - ${obj_requested_by?.last_name}`
+      submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
+      result_level_id: obj_result?.obj_result_level?.id,
+      result_type: obj_result?.obj_result_type?.name
     };
 
     this.retrieveModalSE = {
@@ -48,17 +50,6 @@ export class NotificationItemComponent {
 
     this.api.resultsSE.currentResultId = result_id;
 
-    if (!this.api.dataControlSE.currentResult.result_level_id) {
-      this.api.dataControlSE.currentResult = {
-        result_level_id: obj_result?.obj_result_level?.id
-      };
-    } else {
-      this.api.dataControlSE.currentResult.result_level_id = obj_result?.obj_result_level?.id;
-    }
-
-    if (!this.api.dataControlSE.currentResult) this.api.dataControlSE.currentResult = {};
-
-    this.api.dataControlSE.currentResult.result_type = obj_result?.obj_result_type?.name;
     this.api.dataControlSE.currentNotification = notification;
 
     this.shareRequestModalSE.shareRequestBody = {

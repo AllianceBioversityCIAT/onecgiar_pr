@@ -77,12 +77,10 @@ export class ResultsNotificationsService {
       error: err => console.error(err),
       complete: () => callback?.()
     });
-
-    this.api.resultsSE.GET_requestStatus().subscribe();
   }
 
   get_section_innovation_packages() {
-    this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
+    this.api.resultsSE.GET_requestIPSR().subscribe(({ response }) => {
       if (!response) {
         return;
       }
@@ -112,8 +110,6 @@ export class ResultsNotificationsService {
 
       this.dataIPSR = [...requestData, ...updateRequestPendingData];
     });
-
-    this.api.resultsSE.GET_requestStatus().subscribe();
   }
 
   resetNotificationInformation() {
