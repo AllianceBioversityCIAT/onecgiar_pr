@@ -113,11 +113,6 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      console.log(
-        !requestExist,
-        requestExist?.request_status_id !== 1,
-        !initExist?.is_active,
-      );
       if (
         !requestExist &&
         requestExist?.request_status_id !== 1 &&
@@ -133,8 +128,6 @@ export class ShareResultRequestService {
         shareInitRequests.push(newShare);
 
         if (createTocShareResult.isToc === true) {
-          console.log('shi');
-
           await this._resultsTocResultService.saveResultTocResultContributor(
             createTocShareResult.contributors_result_toc_result,
             user,
