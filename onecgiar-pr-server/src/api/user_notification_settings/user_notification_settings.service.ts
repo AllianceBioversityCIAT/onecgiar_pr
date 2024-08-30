@@ -178,6 +178,10 @@ export class UserNotificationSettingsService {
             is_active: true,
           },
         });
+      console.log(
+        '🚀 ~ UserNotificationSettingsService ~ userNotificationSettings:',
+        userNotificationSettings,
+      );
 
       if (!userNotificationSettings) {
         const newUserNotificationSettings = new UserNotificationSetting();
@@ -200,12 +204,8 @@ export class UserNotificationSettingsService {
             id: userNotificationSettings.id,
           },
           {
-            email_notifications_contributing_request_enabled:
-              email_notifications_contributing_request_enabled ||
-              userNotificationSettings.email_notifications_contributing_request_enabled,
-            email_notifications_updates_enabled:
-              email_notifications_updates_enabled ||
-              userNotificationSettings.email_notifications_updates_enabled,
+            email_notifications_contributing_request_enabled,
+            email_notifications_updates_enabled,
             last_updated_by: user.id,
           },
         );

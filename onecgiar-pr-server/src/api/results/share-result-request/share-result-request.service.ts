@@ -520,12 +520,23 @@ export class ShareResultRequestService {
           where: whereDoneCondition,
         });
 
+      const combinedPendingResults = [
+        ...receivedContributionsPendingOwner,
+        ...receivedContributionsPendingShared,
+      ];
+
+      const distinctPendingResults = Array.from(
+        new Map(
+          combinedPendingResults.map((item) => [
+            item.share_result_request_id,
+            item,
+          ]),
+        ).values(),
+      );
+
       return {
         response: {
-          receivedContributionsPending: [
-            ...receivedContributionsPendingOwner,
-            ...receivedContributionsPendingShared,
-          ],
+          receivedContributionsPending: distinctPendingResults,
           receivedContributionsDone,
         },
         message: 'Successful response',
@@ -811,12 +822,23 @@ export class ShareResultRequestService {
           where: whereDoneCondition,
         });
 
+      const combinedPendingResults = [
+        ...sentContributionsPendingOwner,
+        ...sentContributionsPendingShared,
+      ];
+
+      const distinctPendingResults = Array.from(
+        new Map(
+          combinedPendingResults.map((item) => [
+            item.share_result_request_id,
+            item,
+          ]),
+        ).values(),
+      );
+
       return {
         response: {
-          sentContributionsPending: [
-            ...sentContributionsPendingOwner,
-            ...sentContributionsPendingShared,
-          ],
+          sentContributionsPending: distinctPendingResults,
           sentContributionsDone,
         },
         message: 'Successful response',

@@ -12,7 +12,7 @@ import { env } from 'process';
         transport: Transport.RMQ,
         options: {
           urls: [env.RABBITMQ_URL],
-          queue: 'cgiar_ms_test_mailer_queue',
+          queue: env.EMAIL_QUEUE,
           queueOptions: {
             durable: true,
           },
