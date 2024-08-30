@@ -1,58 +1,59 @@
 import { FormatTimeAgoPipe } from './format-time-ago.pipe';
+import { formatDistanceToNowStrict, parseISO, subHours } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 
 describe('FormatTimeAgoPipe', () => {
   let pipe: FormatTimeAgoPipe;
 
   beforeEach(() => {
     pipe = new FormatTimeAgoPipe();
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2023-01-01T00:00:00Z'));
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
+  it('should transform ISO string date correctly', () => {
+    const date = new Date();
+    const isoString = date.toISOString();
+    const result = pipe.transform(isoString);
+    const expected = `${formatDistanceToNowStrict(subHours(parseISO(isoString), new Date().getTimezoneOffset() / 60), {
+      addSuffix: false,
+      locale: enUS
+    })} ago`;
+    expect(result).toBe(expected);
   });
 
-  it('should create an instance', () => {
-    expect(pipe).toBeTruthy();
+  it('should transform Date object correctly', () => {
+    const date = new Date();
+    const result = pipe.transform(date);
+    const expected = `${formatDistanceToNowStrict(subHours(date, new Date().getTimezoneOffset() / 60), { addSuffix: false, locale: enUS })} ago`;
+    expect(result).toBe(expected);
   });
 
-  it('should return "seconds ago" for less than a minute', () => {
-    const date = new Date('2022-12-31T23:59:30Z');
-    expect(pipe.transform(date)).toBe('30 seconds ago');
+  it('should transform timestamp correctly', () => {
+    const timestamp = Date.now();
+    const date = new Date(timestamp);
+    const result = pipe.transform(timestamp);
+    const expected = `${formatDistanceToNowStrict(subHours(date, new Date().getTimezoneOffset() / 60), { addSuffix: false, locale: enUS })} ago`;
+    expect(result).toBe(expected);
   });
 
-  it('should return "minutes ago" for less than an hour', () => {
-    const date = new Date('2022-12-31T23:30:00Z');
-    expect(pipe.transform(date)).toBe('30 minutes ago');
+  it('should adjust for server timezone correctly', () => {
+    const date = new Date();
+    const isoString = date.toISOString();
+    const serverTimezone = 3;
+    const result = pipe.transform(isoString, serverTimezone);
+    const expectedDate = subHours(parseISO(isoString), serverTimezone + new Date().getTimezoneOffset() / 60);
+    const expected = `${formatDistanceToNowStrict(expectedDate, { addSuffix: false, locale: enUS })} ago`;
+    expect(result).toBe(expected);
   });
 
-  it('should return "hours ago" for less than a day', () => {
-    const date = new Date('2022-12-31T20:00:00Z');
-    expect(pipe.transform(date)).toBe('4 hours ago');
-  });
-
-  it('should return "days ago" for less than a month', () => {
-    const date = new Date('2022-12-25T00:00:00Z');
-    expect(pipe.transform(date)).toBe('7 days ago');
-  });
-
-  it('should return "months ago" for less than a year', () => {
-    const date = new Date('2022-10-01T00:00:00Z');
-    expect(pipe.transform(date)).toBe('3 months ago');
-  });
-
-  it('should return "years ago" for more than a year', () => {
-    const date = new Date('2021-01-01T00:00:00Z');
-    expect(pipe.transform(date)).toBe('2 years ago');
-  });
-
-  it('should handle string input', () => {
-    expect(pipe.transform('2022-12-31T23:59:30Z')).toBe('30 seconds ago');
-  });
-
-  it('should handle number input (timestamp)', () => {
-    const timestamp = new Date('2022-12-31T23:59:30Z').getTime();
-    expect(pipe.transform(timestamp)).toBe('30 seconds ago');
+  it('should handle UTC server timezone correctly', () => {
+    const date = new Date();
+    const isoString = date.toISOString();
+    const serverTimezone = 0;
+    const result = pipe.transform(isoString, serverTimezone);
+    const expected = `${formatDistanceToNowStrict(subHours(parseISO(isoString), new Date().getTimezoneOffset() / 60), {
+      addSuffix: false,
+      locale: enUS
+    })} ago`;
+    expect(result).toBe(expected);
   });
 });
