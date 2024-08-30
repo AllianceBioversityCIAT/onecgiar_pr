@@ -15,12 +15,12 @@ import { ClientProxy } from '@nestjs/microservices';
 export class PlatformReportService implements OnModuleInit {
   private readonly _logger: Logger = new Logger(PlatformReportService.name);
   private authHeaderMs2 = JSON.stringify({
-    username: env.CLA_MICROSERVICE2_USER,
-    password: env.CLA_MICROSERVICE2_PASSWORD,
+    username: env.MS_REPORTS_USER,
+    password: env.MS_REPORTS_PASSWORD,
   });
   private authHeaderMs4 = JSON.stringify({
-    username: env.CLA_MICROSERVICE4_USER,
-    password: env.CLA_MICROSERVICE4_PASSWORD,
+    username: env.MS_FILE_MANAGEMENT_USER,
+    password: env.MS_FILE_MANAGEMENT_PASSWORD,
   });
 
   public constructor(
