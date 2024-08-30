@@ -14,14 +14,41 @@ describe('FilterNotificationBySearchPipe', () => {
 
   it('should filter the list based on the search filter', () => {
     const list = [
-      { obj_result: { result_code: '001', title: 'Title One' } },
-      { obj_result: { result_code: '002', title: 'Title Two' } },
-      { obj_result: { result_code: '003', title: 'Another Title' } }
+      {
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' }
+      },
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' }
+      },
+      {
+        obj_result: { result_code: '003', title: 'Another Title' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' }
+      }
     ];
     const expected = [
-      { obj_result: { result_code: '001', title: 'Title One' }, joinAll: '001 - Title One' },
-      { obj_result: { result_code: '002', title: 'Title Two' }, joinAll: '002 - Title Two' },
-      { obj_result: { result_code: '003', title: 'Another Title' }, joinAll: '003 - Another Title' }
+      {
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        joinAll: '001 - Title One - 01 - 02'
+      },
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        joinAll: '002 - Title Two - 01 - 02'
+      },
+      {
+        obj_result: { result_code: '003', title: 'Another Title' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        joinAll: '003 - Another Title - 01 - 02'
+      }
     ];
     expect(pipe.transform(list, 'Title')).toEqual(expected);
   });
@@ -32,13 +59,31 @@ describe('FilterNotificationBySearchPipe', () => {
   });
 
   it('should perform a case-insensitive search', () => {
-    const list = [{ obj_result: { result_code: '001', title: 'Title One' } }, { obj_result: { result_code: '002', title: 'Title Two' } }];
+    const list = [
+      {
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' }
+      },
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' }
+      }
+    ];
     const expected = [
       {
         obj_result: { result_code: '001', title: 'Title One' },
-        joinAll: '001 - Title One'
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        joinAll: '001 - Title One - 01 - 02'
       },
-      { obj_result: { result_code: '002', title: 'Title Two' }, joinAll: '002 - Title Two' }
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        joinAll: '002 - Title Two - 01 - 02'
+      }
     ];
     expect(pipe.transform(list, 'title')).toEqual(expected);
   });

@@ -131,7 +131,9 @@ describe('NotificationItemComponent', () => {
       expect(mockApiService.dataControlSE.currentResult.title).toBe(
         'Understanding behaviour change in relation to agroecological transition: A novel approach'
       );
-      expect(mockApiService.dataControlSE.currentResult.submitter).toBe('John - Doe');
+      expect(mockApiService.dataControlSE.currentResult.submitter).toBe(
+        'INIT-31 - Transformational Agroecology across Food, Land, and Water systems'
+      );
       expect(mockApiService.resultsSE.currentResultId).toBe('7774');
       expect(mockApiService.dataControlSE.currentResult.result_level_id).toBe(4);
       expect(mockApiService.dataControlSE.currentResult.result_type).toBe('Innovation development');
@@ -177,7 +179,9 @@ describe('NotificationItemComponent', () => {
 
       component.mapAndAccept(notification);
 
-      expect(mockApiService.dataControlSE.currentResult.submitter).toBe('John - Doe');
+      expect(mockApiService.dataControlSE.currentResult.submitter).toBe(
+        'INIT-31 - Transformational Agroecology across Food, Land, and Water systems'
+      );
     });
   });
 

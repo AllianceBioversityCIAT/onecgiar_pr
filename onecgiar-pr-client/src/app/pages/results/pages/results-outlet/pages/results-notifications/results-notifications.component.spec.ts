@@ -78,7 +78,6 @@ describe('ResultsNotificationsComponent', () => {
     component.ngOnInit();
 
     expect(component.phaseList).toEqual([]);
-    expect(component.myInitiatives).toEqual([]);
     expect(shareRequestModalServiceMock.inNotifications).toBe(true);
     expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
     expect(resultsNotificationsServiceMock.get_sent_notifications).toHaveBeenCalled();

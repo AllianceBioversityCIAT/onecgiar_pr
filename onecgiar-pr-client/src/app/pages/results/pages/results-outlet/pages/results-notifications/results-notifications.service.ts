@@ -21,6 +21,8 @@ export class ResultsNotificationsService {
   initiativeIdFilter = null;
   searchFilter = null;
 
+  hideInitFilter = true;
+
   constructor(private api: ApiService) {
     this.get_section_information();
   }
@@ -121,10 +123,17 @@ export class ResultsNotificationsService {
       sentContributionsPending: [],
       sentContributionsDone: []
     };
+    this.phaseFilter = null;
+    this.resetFilters();
   }
 
-  resetQueryParams() {
+  resetFilters() {
+    this.hideInitFilter = false;
     this.initiativeIdFilter = null;
     this.searchFilter = null;
+
+    setTimeout(() => {
+      this.hideInitFilter = true;
+    }, 0);
   }
 }

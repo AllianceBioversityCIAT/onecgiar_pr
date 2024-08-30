@@ -27,7 +27,8 @@ describe('ResultsNotificationsService', () => {
     mockApiService = {
       resultsSE: {
         GET_allRequest: () => of({ response: mockGET_allRequestResponse }),
-        GET_requestStatus: () => of({})
+        GET_requestStatus: () => of({}),
+        GET_requestIPSR: () => of({ response: mockGET_allRequestResponse })
       },
       dataControlSE: {
         myInitiativesList: [
@@ -137,8 +138,8 @@ describe('ResultsNotificationsService', () => {
       ]);
     });
     it('should not update dataIPSR for get_section_innovation_packages', () => {
-      mockApiService.resultsSE.GET_allRequest = () => of({});
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_allRequest');
+      mockApiService.resultsSE.GET_requestIPSR = () => of({});
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR');
 
       service.get_section_innovation_packages();
 

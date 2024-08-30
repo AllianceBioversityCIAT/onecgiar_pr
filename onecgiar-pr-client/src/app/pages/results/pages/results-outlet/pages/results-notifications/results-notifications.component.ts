@@ -12,7 +12,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   allInitiatives = [];
-  myInitiatives = [];
   phaseList = [];
 
   constructor(
@@ -27,7 +26,6 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     this.getAllPhases();
     if (this.api.rolesSE.isAdmin) this.GET_AllInitiatives();
     this.api.updateUserData(() => {
-      this.myInitiatives = this.api.dataControlSE.myInitiativesList;
       this.resultsNotificationsSE.get_section_information();
       this.resultsNotificationsSE.get_sent_notifications();
     });

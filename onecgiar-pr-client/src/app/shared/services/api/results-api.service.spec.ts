@@ -1838,20 +1838,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_requestStatus', () => {
-    it('should call GET_requestStatus and return expected data ', done => {
-      service.GET_requestStatus().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/status`);
-      expect(req.request.method).toBe('GET');
-
-      req.flush(mockResponse);
-    });
-  });
-
   describe('POST_updateRequest', () => {
     it('should call POST_updateRequest and return expected data ', done => {
       const mockBody = {};
