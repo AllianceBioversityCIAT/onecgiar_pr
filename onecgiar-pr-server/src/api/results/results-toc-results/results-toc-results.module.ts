@@ -30,6 +30,9 @@ import { ResultsActionAreaOutcomeRepository } from './repositories/result-toc-ac
 import { ResultsTocTargetIndicatorRepository } from './repositories/result-toc-result-target-indicator.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsService } from './results-toc-result-indicators.service';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
+import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -64,7 +67,10 @@ import { ResultsTocResultIndicatorsService } from './results-toc-result-indicato
     ResultsTocTargetIndicatorRepository,
     ClarisaInitiativesRepository,
     ResultsTocResultIndicatorsService,
+    TemplateRepository,
+    UserNotificationSettingRepository,
   ],
   exports: [ResultsTocResultRepository, ResultsTocResultsService],
+  imports: [EmailNotificationManagementModule],
 })
 export class ResultsTocResultsModule {}

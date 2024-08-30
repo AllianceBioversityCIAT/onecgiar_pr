@@ -1,6 +1,6 @@
 import { DataSource, Repository } from 'typeorm';
-import { PlatformReport } from './entities/platform-report.entity';
-import { HandlersError } from '../../shared/handlers/error.utils';
+import { PlatformReport } from '../entities/platform-report.entity';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

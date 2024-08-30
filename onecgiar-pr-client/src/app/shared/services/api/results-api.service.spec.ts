@@ -1782,7 +1782,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/all`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -1833,20 +1833,6 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}request/update`);
       expect(req.request.method).toBe('PATCH');
-
-      req.flush(mockResponse);
-    });
-  });
-
-  describe('GET_requestStatus', () => {
-    it('should call GET_requestStatus and return expected data ', done => {
-      service.GET_requestStatus().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/status`);
-      expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
     });

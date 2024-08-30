@@ -28,10 +28,18 @@ import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
 import { ResultsTocResultIndicatorsService } from '../../results/results-toc-results/results-toc-result-indicators.service';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
+import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
-  imports: [VersioningModule, ResultsTocResultsModule],
+  imports: [
+    VersioningModule,
+    ResultsTocResultsModule,
+    EmailNotificationManagementModule,
+  ],
   providers: [
     ResultsPackageTocResultService,
     ResultRepository,
@@ -57,8 +65,9 @@ import { ResultsTocResultIndicatorsService } from '../../results/results-toc-res
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
-    ReturnResponse,
-    ResultsTocResultRepository,
+    ClarisaInitiativesRepository,
+    TemplateRepository,
+    UserNotificationSettingRepository,
   ],
   exports: [ResultsPackageTocResultService],
 })

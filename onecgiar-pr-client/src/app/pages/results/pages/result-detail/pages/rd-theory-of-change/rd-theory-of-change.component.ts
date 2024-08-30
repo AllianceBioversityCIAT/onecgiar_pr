@@ -142,7 +142,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
           ...this.theoryOfChangeBody.contributing_initiatives.pending_contributing_initiatives,
           ...this.contributingInitiativeNew
         ]
-      }
+      },
+      email_template: 'email_template_contribution'
     };
 
     const saveSection = () => {

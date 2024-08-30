@@ -464,34 +464,43 @@ export class ResultByInitiativesRepository
     const initiativepnd = initiativeArrayPnd ?? [];
     const initiativeparameter = initiative.concat(initiativepnd);
 
-    const upDateInactive = `
-        update results_by_inititiative  
-        set is_active  = 0,
+    try {
+      const inits = `
+      SELECT
+        *
+      FROM
+        results_by_inititiative rbi
+      WHERE
+        rbi.result_id = ?
+        AND rbi.initiative_role_id = 2
+        AND rbi.is_active > 0
+    `;
+
+      const initsResult = await this.query(inits, [resultId]);
+      const currentInits = initsResult.map((e) => e.inititiative_id);
+
+      const initsToInactive = currentInits.filter(
+        (e: number) => !initiativeparameter.includes(e),
+      );
+
+      if (initsToInactive.length > 0) {
+        const upDateInactive = `
+        UPDATE
+          results_by_inititiative
+        SET
+          is_active = 0,
           last_updated_date = NOW(),
           last_updated_by = ?
-        where is_active > 0 
-          and result_id = ?
-          and initiative_role_id = ?
-          and inititiative_id not in (${initiativeparameter.toString()})
-      
-    `;
-
-    const upDateAllInactive = `
-    update results_by_inititiative  
-      set is_active  = 0,
-        last_updated_date = NOW(),
-        last_updated_by = ?
-      where is_active > 0 
-        and result_id = ?
-        and initiative_role_id = ?;
-    `;
-
-    try {
-      if (initiative?.length) {
-        return await this.query(upDateInactive, [userId, resultId, 2]);
-      } else {
-        return await this.query(upDateAllInactive, [userId, resultId, 2]);
+        WHERE
+          is_active > 0
+          AND result_id = ?
+          AND initiative_role_id = ?
+          AND inititiative_id IN(${initsToInactive.toString()});
+        `;
+        await this.query(upDateInactive, [userId, resultId, 2]);
+        return initsToInactive;
       }
+      return [];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
@@ -500,6 +509,7 @@ export class ResultByInitiativesRepository
       });
     }
   }
+
   async updateIniciativeSubmitter(
     resultId: number,
     old_primary_submitter: number,

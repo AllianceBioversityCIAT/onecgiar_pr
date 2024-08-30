@@ -20,6 +20,11 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsTocResultIndicatorsService } from '../results-toc-results/results-toc-result-indicators.service';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
+import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
+import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -42,7 +47,11 @@ import { ResultsTocResultIndicatorsService } from '../results-toc-results/result
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    TemplateRepository,
+    ClarisaInitiativesRepository,
+    UserNotificationSettingRepository,
   ],
-  exports: [ShareResultRequestRepository],
+  exports: [ShareResultRequestRepository, ShareResultRequestService],
+  imports: [EmailNotificationManagementModule, ResultsTocResultsModule],
 })
 export class ShareResultRequestModule {}

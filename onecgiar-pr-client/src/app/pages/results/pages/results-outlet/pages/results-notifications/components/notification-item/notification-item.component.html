@@ -1,102 +1,119 @@
-<div [ngSwitch]="notification?.request_status_id" class="noti_container">
-  <i class="material-icons-round direction_icon" [style]="'rotate:' + (this.comes ? '130deg' : '320deg')"> arrow_right_alt </i>
-  <div *ngSwitchCase="1">
-    <div class="title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
-      Request from {{ notification?.requester_official_code }} to add {{ notification?.approving_official_code }} as a contributor to the result:
+<div
+  [ngSwitch]="notification?.request_status_id"
+  class="notification"
+  [ngStyle]="{
+    'background-color': notification?.request_status_id === 1 ? '#eef0fc' : '',
+    border: notification?.request_status_id === 1 ? '1px solid #bac1e5' : ''
+  }">
+  <div class="notification_header">
+    <div class="notification_header_item">
+      <p class="notification_header_item_text">
+        {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
+      </p>
     </div>
 
-    <div class="title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-      {{ notification?.requester_official_code }} requests to be added as a contributor to the result:
-    </div>
-
-    <div class="sub_title" *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id">
-      <strong>({{ notification?.requester_official_code }})</strong> - {{ notification?.result_type_name }} -
-
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
-    </div>
-
-    <div class="sub_title" *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id">
-      <strong>({{ notification?.approving_official_code }})</strong> - {{ notification?.result_type_name }} -
-
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
-    </div>
-
-    <div class="buttons">
-      <app-pr-button
-        text="Map and accept"
-        colorType="success"
-        (click)="mapAndAccept(notification)"
-        [rotating]="this.requesting"
-        [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
-        [icon]="this.requesting ? 'loop' : ''"
-        [tooltipText]="
-          this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
-            ? 'This result has been Quality Assessed and no additional contributors can be added.'
-            : ''
-        "
-        tooltipStyleClass="tooltip-w-300"
-        *ngIf="!notification?.action_area_outcome_id && !notification?.toc_result_id"></app-pr-button>
-
-      <app-pr-button
-        text="Accept"
-        colorType="success"
-        (click)="acceptOrReject(true)"
-        [disabled]="this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status"
-        [rotating]="this.requesting"
-        [icon]="this.requesting ? 'loop' : ''"
-        [tooltipText]="
-          this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status
-            ? 'This result has been Quality Assessed and no additional contributors can be added.'
-            : ''
-        "
-        tooltipStyleClass="tooltip-w-300"
-        *ngIf="notification?.action_area_outcome_id || notification?.toc_result_id"></app-pr-button>
-
-      <app-pr-button
-        text="Reject"
-        colorType="danger"
-        (click)="acceptOrReject(false)"
-        [rotating]="this.requesting"
-        [icon]="this.requesting ? 'loop' : ''"
-        [ngClass]="{ globalDisabled: this.requesting || this.api.rolesSE.platformIsClosed || !this.notification?.version_status }"></app-pr-button>
+    <div class="notification_header_item">
+      <p class="notification_header_item_text">
+        <b> From </b>
+        {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+        <b> to </b>
+        {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
+      </p>
     </div>
   </div>
 
-  <div *ngSwitchCase="2">
-    <div class="title">{{ notification?.requester_official_code }} requests to be added as a contributor to the result:</div>
-
-    <div class="sub_title">
-      <strong>({{ notification?.approving_official_code }})</strong> - {{ notification?.result_type_name }} -
-
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
+  <div *ngSwitchCase="1" class="notification_content">
+    <div class="notification_content_body">
+      <p class="notification_content_body_text">
+        <b>
+          {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
+          {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+          has requested {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
+          {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
+          as a contributor
+        </b>
+        to result
+        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+          {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+        </a>
+      </p>
     </div>
 
-    <div class="text_icon accepted">
-      Accepted by <strong>{{ notification?.approved_last_name }} {{ notification?.approved_first_name }}</strong>
-      <i class="material-icons-round"> check_circle </i>
+    <div class="notification_content_actions">
+      <div class="notification_content_actions_buttons" *ngIf="!isSent">
+        <app-pr-button
+          [text]="notification?.is_map_to_toc ? 'Accept' : 'Map and accept'"
+          colorType="success"
+          (click)="notification?.is_map_to_toc ? acceptOrReject(true) : mapAndAccept(notification)"
+          [rotating]="this.requestingAccept"
+          [disabled]="invalidateRequest()"
+          [icon]="this.requestingAccept ? 'loop' : ''"
+          [tooltipText]="invalidateRequest() ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
+          [verticalMargin]="0"
+          tooltipStyleClass="tooltip-w-300"></app-pr-button>
+
+        <app-pr-button
+          text="Reject"
+          colorType="danger"
+          (click)="acceptOrReject(false)"
+          [rotating]="this.requestingReject"
+          [icon]="this.requestingReject ? 'loop' : ''"
+          [verticalMargin]="0"
+          [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+      </div>
+
+      <div *ngIf="isSent" class="notification_content_actions_sent">
+        <i class="material-icons-round"> watch_later </i>
+        <p>Pending</p>
+      </div>
     </div>
   </div>
 
-  <div *ngSwitchCase="3">
-    <div class="title">{{ notification?.requester_official_code }} requests to be added as a contributor to the result:</div>
-
-    <div class="sub_title">
-      <strong>({{ notification?.approving_official_code }})</strong> - {{ notification?.result_type_name }} -
-
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
+  <div *ngSwitchCase="2" class="notification_content">
+    <div class="notification_content_body">
+      <p class="notification_content_body_text">
+        <b>
+          {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
+          {{ notification?.obj_shared_inititiative?.official_code }} has requested
+          {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
+          {{ notification?.obj_owner_initiative?.official_code }} as a contributor
+        </b>
+        to result
+        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+          {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+        </a>
+      </p>
     </div>
 
-    <div class="text_icon rejected">
-      Rejected by <strong>{{ notification?.approved_last_name }} {{ notification?.approved_first_name }}</strong>
-      <i class="material-icons-round"> check_circle </i>
+    <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
+      <p class="notification_content_actions_status">
+        <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #008000"> Accepted</span> by
+        {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
+      </p>
+    </div>
+  </div>
+
+  <div *ngSwitchCase="3" class="notification_content">
+    <div class="notification_content_body">
+      <p class="notification_content_body_text">
+        <b>
+          {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
+          {{ notification?.obj_shared_inititiative?.official_code }} has requested
+          {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
+          {{ notification?.obj_owner_initiative?.official_code }} as a contributor
+        </b>
+        to result
+        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+          {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+        </a>
+      </p>
+    </div>
+
+    <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
+      <p class="notification_content_actions_status">
+        <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #db321c">Rejected</span> by
+        {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
+      </p>
     </div>
   </div>
 
@@ -109,7 +126,7 @@
     <div class="sub_title">
       {{ notification?.result_type_name }} -
 
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)">
+      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer">
         (Result code: {{ notification?.result_code }}) {{ notification?.title }}
       </a>
     </div>
@@ -120,4 +137,6 @@
       <i class="material-icons-round"> watch_later </i>
     </div>
   </div>
+
+  <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
 </div>
