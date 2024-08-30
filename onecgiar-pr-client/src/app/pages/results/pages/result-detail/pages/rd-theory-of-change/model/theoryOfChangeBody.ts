@@ -1,9 +1,14 @@
 export class TheoryOfChangeBody {
   result_id: number;
-  contributing_initiatives: initiativeInterfaces[] = [];
+  contributing_initiatives: {
+    accepted_contributing_initiatives: any;
+    pending_contributing_initiatives: any;
+  } = {
+    accepted_contributing_initiatives: [],
+    pending_contributing_initiatives: []
+  };
   contributing_np_projects: donorInterfaceToc[] = [];
   contributing_center: centerInterfacesToc[] = [];
-  // result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
   result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
   contributors_result_toc_result: any = [];
   impacts: ResultTocImpactsInterface[];

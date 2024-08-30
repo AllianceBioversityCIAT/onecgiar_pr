@@ -18,13 +18,17 @@ export class ShareRequestModalComponent implements OnInit {
   allInitiatives = [];
   showForm = true;
   showTocOut = true;
-  disabledOptions = [
-    {
-      initiative_id: 10
-    }
-  ];
+  disabledOptions = [{ initiative_id: 10 }];
 
-  constructor(public retrieveModalSE: RetrieveModalService, public api: ApiService, public rolesSE: RolesService, public shareRequestModalSE: ShareRequestModalService, private router: Router, public resultsNotificationsSE: ResultsNotificationsService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  constructor(
+    public retrieveModalSE: RetrieveModalService,
+    public api: ApiService,
+    public rolesSE: RolesService,
+    public shareRequestModalSE: ShareRequestModalService,
+    private router: Router,
+    public resultsNotificationsSE: ResultsNotificationsService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService
+  ) {}
 
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
@@ -50,11 +54,31 @@ export class ShareRequestModalComponent implements OnInit {
 
   onRequest() {
     this.requesting = true;
-    this.api.resultsSE.POST_createRequest(this.shareRequestModalSE.shareRequestBody).subscribe({
+
+    const sendBody = {
+      result_id: this.api?.dataControlSE?.currentResult?.id,
+      initiativeShareId: [this.shareRequestModalSE.shareRequestBody.initiative_id],
+      isToc: true,
+      contributors_result_toc_result: [
+        {
+          planned_result: true,
+          initiative_id: this.shareRequestModalSE.shareRequestBody.initiative_id,
+          result_toc_results: this.shareRequestModalSE.shareRequestBody.result_toc_results
+        }
+      ],
+      email_template: 'email_template_request_as_contribution'
+    };
+
+    this.api.resultsSE.POST_createRequest(sendBody).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
 
-        this.api.alertsFe.show({ id: 'requesqshared', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
+        this.api.alertsFe.show({
+          id: 'requesqshared',
+          title: `Request sent`,
+          description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
+          status: 'success'
+        });
         this.requesting = false;
         if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
           this.router.navigate([`/ipsr/list/innovation-list`]);
@@ -75,7 +99,9 @@ export class ShareRequestModalComponent implements OnInit {
   modelChange() {
     this.showTocOut = false;
 
-    const selectedInitiative = this.allInitiatives.find(initiative => initiative.initiative_id === this.shareRequestModalSE.shareRequestBody.initiative_id);
+    const selectedInitiative = this.allInitiatives.find(
+      initiative => initiative.initiative_id === this.shareRequestModalSE.shareRequestBody.initiative_id
+    );
 
     setTimeout(() => {
       if (selectedInitiative) {
@@ -104,14 +130,23 @@ export class ShareRequestModalComponent implements OnInit {
   }
 
   acceptOrReject() {
-    const body = { result_request: this.api.dataControlSE.currentNotification, result_toc_result: this.shareRequestModalSE.shareRequestBody, request_status_id: 2 };
+    const body = {
+      result_request: this.api.dataControlSE.currentNotification,
+      result_toc_result: this.shareRequestModalSE.shareRequestBody,
+      request_status_id: 2
+    };
 
     this.requesting = true;
 
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
-        this.api.alertsFe.show({ id: 'noti', title: `Request sent`, description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`, status: 'success' });
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: `Request sent`,
+          description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
+          status: 'success'
+        });
         this.requesting = false;
         if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
           this.resultsNotificationsSE.get_section_innovation_packages();

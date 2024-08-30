@@ -339,7 +339,7 @@ export class ResultsApiService {
   GET_toc() {
     return this.http.get<any>(`${this.apiBaseUrl}toc/get/result/${this.currentResultId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(
+        resp?.response?.contributing_initiatives?.accepted_contributing_initiatives.map(
           initiative =>
             (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
               initiative?.initiative_name
@@ -530,8 +530,24 @@ export class ResultsApiService {
     return this.http.post<any>(`${this.apiBaseUrl}request/create/${this.currentResultId}`, body);
   }
 
-  GET_allRequest() {
+  GET_requestIPSR() {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
+  }
+
+  GET_allRequest() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/received`);
+  }
+
+  GET_sentRequest() {
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
+  }
+
+  GET_userNotificationSettingsByInitiativeId(initiativeId) {
+    return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/${initiativeId}`);
+  }
+
+  PATCH_userNotificationSettingsByInitiativeId(body) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}user-notification-settings/update`, body);
   }
 
   GET_reportingList(initDate: string = '2022-12-01', inits?, phases?, searchText?) {
@@ -564,10 +580,6 @@ export class ResultsApiService {
 
   PATCH_updateRequest(body) {
     return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
-  }
-
-  GET_requestStatus() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/status`);
   }
 
   POST_updateRequest(body) {
@@ -684,7 +696,7 @@ export class ResultsApiService {
   GETContributorsByIpsrResultId() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
       map(resp => {
-        resp?.response?.contributing_initiatives.map(
+        resp?.response?.contributing_initiatives?.accepted_contributing_initiatives.map(
           initiative =>
             (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name || ''}</strong> - ${
               initiative?.initiative_name

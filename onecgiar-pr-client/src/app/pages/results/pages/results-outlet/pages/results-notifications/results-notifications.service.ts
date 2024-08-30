@@ -7,67 +7,82 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 export class ResultsNotificationsService {
   interactiveNotisList = [];
   staticNotisList = [];
-  data = [];
+  receivedData = {
+    receivedContributionsPending: [],
+    receivedContributionsDone: []
+  };
+  sentData = {
+    sentContributionsPending: [],
+    sentContributionsDone: []
+  };
   dataIPSR = [];
   notificationLength = null;
+  phaseFilter = null;
+  initiativeIdFilter = null;
+  searchFilter = null;
+
+  hideInitFilter = true;
 
   constructor(private api: ApiService) {
     this.get_section_information();
   }
 
-  get_section_information(callback?) {
-    this.api.resultsSE.GET_allRequest().subscribe(
-      ({ response }) => {
+  get_sent_notifications(callback?) {
+    this.api.resultsSE.GET_sentRequest().subscribe({
+      next: ({ response }) => {
         if (!response) {
           return;
         }
 
-        const { requestData, requestPendingData } = response;
+        const { sentContributionsDone, sentContributionsPending } = response;
 
-        requestData.forEach(noti => {
-          const myInit = this.api.dataControlSE.myInitiativesList.find(
-            init => init?.role === 'Member' && init.initiative_id === noti.approving_inititiative_id
-          );
+        const orderedSentContributionsDone = sentContributionsDone.sort(
+          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+        );
 
-          if (myInit) {
-            noti.readOnly = true;
-          }
-        });
+        const orderedSentContributionsPending = sentContributionsPending.sort(
+          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+        );
 
-        const updateRequestPendingData = requestPendingData.map(item => {
-          if (item.request_status_id === 1) {
-            return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
-          }
+        this.sentData = {
+          sentContributionsDone: orderedSentContributionsDone,
+          sentContributionsPending: orderedSentContributionsPending
+        };
+      },
+      error: err => console.error(err),
+      complete: () => callback?.()
+    });
+  }
 
-          return item;
-        });
-
-        this.data = [...requestData, ...updateRequestPendingData];
-
-        if (!this.api.rolesSE?.isAdmin) {
-          if (this.api.dataControlSE.myInitiativesList?.length === 0) {
-            this.data = [];
-            return;
-          }
-
-          this.data = this.data.filter(data => {
-            const isInitiativeOwner = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.owner_initiative_id);
-            const isInitiativeApprover = this.api.dataControlSE.myInitiativesList.find(init => init.initiative_id === data.approving_inititiative_id);
-            return isInitiativeOwner || isInitiativeApprover;
-          });
+  get_section_information(callback?) {
+    this.api.resultsSE.GET_allRequest().subscribe({
+      next: ({ response }) => {
+        if (!response) {
+          return;
         }
 
-        this.notificationLength = this.data.length;
-      },
-      err => console.error(err),
-      () => callback?.()
-    );
+        const { receivedContributionsDone, receivedContributionsPending } = response;
 
-    this.api.resultsSE.GET_requestStatus().subscribe();
+        const orderedReceivedContributionsDone = receivedContributionsDone.sort(
+          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+        );
+
+        const orderedReceivedContributionsPending = receivedContributionsPending.sort(
+          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+        );
+
+        this.receivedData = {
+          receivedContributionsDone: orderedReceivedContributionsDone,
+          receivedContributionsPending: orderedReceivedContributionsPending
+        };
+      },
+      error: err => console.error(err),
+      complete: () => callback?.()
+    });
   }
 
   get_section_innovation_packages() {
-    this.api.resultsSE.GET_allRequest().subscribe(({ response }) => {
+    this.api.resultsSE.GET_requestIPSR().subscribe(({ response }) => {
       if (!response) {
         return;
       }
@@ -97,7 +112,28 @@ export class ResultsNotificationsService {
 
       this.dataIPSR = [...requestData, ...updateRequestPendingData];
     });
+  }
 
-    this.api.resultsSE.GET_requestStatus().subscribe();
+  resetNotificationInformation() {
+    this.receivedData = {
+      receivedContributionsPending: [],
+      receivedContributionsDone: []
+    };
+    this.sentData = {
+      sentContributionsPending: [],
+      sentContributionsDone: []
+    };
+    this.phaseFilter = null;
+    this.resetFilters();
+  }
+
+  resetFilters() {
+    this.hideInitFilter = false;
+    this.initiativeIdFilter = null;
+    this.searchFilter = null;
+
+    setTimeout(() => {
+      this.hideInitFilter = true;
+    }, 0);
   }
 }

@@ -15,34 +15,25 @@ describe('TocInitiativeOutComponent', () => {
   let mockApiService: any;
   const mockResponse = {
     version_id: '123'
-  }
+  };
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
-        get_vesrsionDashboard: () => of({ response: mockResponse }),
-      },
-    }
+        get_vesrsionDashboard: () => of({ response: mockResponse })
+      }
+    };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        TocInitiativeOutComponent,
-        YesOrNotByBooleanPipe,
-        PrYesOrNotComponent,
-        PrFieldHeaderComponent
-      ],
-      imports: [
-        HttpClientTestingModule
-      ],
+      declarations: [TocInitiativeOutComponent, YesOrNotByBooleanPipe, PrYesOrNotComponent, PrFieldHeaderComponent],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: ApiService,
           useValue: mockApiService
         }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(TocInitiativeOutComponent);
     component = fixture.componentInstance;
@@ -62,6 +53,15 @@ describe('TocInitiativeOutComponent', () => {
       component.isIpsr = true;
       const officialCode = 'ABC';
       const shortName = 'name';
+      component.initiative = {
+        result_toc_results: [
+          {
+            toc_level_id: 1,
+            planned_result: false,
+            toc_result_id: 1
+          }
+        ]
+      };
 
       const result = component.getDescription(officialCode, shortName);
 
@@ -71,10 +71,43 @@ describe('TocInitiativeOutComponent', () => {
       component.isIpsr = false;
       const officialCode = 'XYZ';
       const shortName = 'name';
-
+      component.initiative = {
+        result_toc_results: [
+          {
+            toc_level_id: 1,
+            planned_result: false,
+            toc_result_id: 1
+          }
+        ]
+      };
       const result = component.getDescription(officialCode, shortName);
 
       expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Does this result match a planned result in your Theory of Change?`);
+    });
+
+    it('should return correct description for non-IPSR when initiative.result_toc_results is empty and isContributor is true', () => {
+      component.isIpsr = false;
+      component.isContributor = true;
+      const officialCode = 'XYZ';
+      const shortName = 'name';
+      component.initiative = {
+        result_toc_results: []
+      };
+      const result = component.getDescription(officialCode, shortName);
+
+      expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Pending confirmation`);
+    });
+
+    it('should return correct description for non-IPSR when initiative.result_toc_results is empty and isIpsr is true', () => {
+      component.isIpsr = true;
+      const officialCode = 'XYZ';
+      const shortName = 'name';
+      component.initiative = {
+        result_toc_results: []
+      };
+      const result = component.getDescription(officialCode, shortName);
+
+      expect(result).toBe(`<strong>${officialCode} ${shortName}</strong> - Pending confirmation`);
     });
   });
 
@@ -109,13 +142,11 @@ describe('TocInitiativeOutComponent', () => {
       jest.runAllTimers();
 
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
-      expect(component.initiative.result_toc_results[0]).toEqual(
-        {
-          planned_result: true,
-          toc_level_id: 1,
-          toc_result_id: null
-        }
-      )
+      expect(component.initiative.result_toc_results[0]).toEqual({
+        planned_result: true,
+        toc_level_id: 1,
+        toc_result_id: null
+      });
     });
     it('should clear toc result id and update initiative properties when initiative.planned_result is true and resultLevelId is not 1 ', () => {
       component.initiative = {
@@ -135,13 +166,11 @@ describe('TocInitiativeOutComponent', () => {
       jest.runAllTimers();
 
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
-      expect(component.initiative.result_toc_results[0]).toEqual(
-        {
-          planned_result: true,
-          toc_level_id: 2,
-          toc_result_id: null
-        }
-      )
+      expect(component.initiative.result_toc_results[0]).toEqual({
+        planned_result: true,
+        toc_level_id: 2,
+        toc_result_id: null
+      });
     });
     it('should clear toc result id and update initiative properties when initiative.planned_result is false', () => {
       component.initiative = {
@@ -161,13 +190,11 @@ describe('TocInitiativeOutComponent', () => {
       jest.runAllTimers();
 
       expect(component.initiative.showMultipleWPsContent).toBeTruthy();
-      expect(component.initiative.result_toc_results[0]).toEqual(
-        {
-          planned_result: false,
-          toc_level_id: 3,
-          toc_result_id: null
-        }
-      )
+      expect(component.initiative.result_toc_results[0]).toEqual({
+        planned_result: false,
+        toc_level_id: 3,
+        toc_result_id: null
+      });
     });
   });
 
@@ -193,8 +220,7 @@ describe('TocInitiativeOutComponent', () => {
     });
     it('should handle error when get_vesrsionDashboard call fails', () => {
       const errorMessage = 'Your error message';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard')
-        .mockReturnValue(throwError(errorMessage));;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard').mockReturnValue(throwError(errorMessage));
       const spyConsoleError = jest.spyOn(console, 'error');
 
       component.get_versionDashboard();

@@ -8,7 +8,22 @@ describe('FilterNotificationByPhasePipe', () => {
   });
 
   it('should return the original list if phaseId is false', () => {
-    const list = [{ version_id: '1' }, { version_id: '2' }];
+    const list = [
+      {
+        obj_result: {
+          obj_version: {
+            id: '1'
+          }
+        }
+      },
+      {
+        obj_result: {
+          obj_version: {
+            id: '2'
+          }
+        }
+      }
+    ];
 
     const result = pipe.transform(list, '');
 
@@ -25,13 +40,46 @@ describe('FilterNotificationByPhasePipe', () => {
 
   it('should filter the list based on version_id', () => {
     const list = [
-      { version_id: '1' },
-      { version_id: '2' },
-      { version_id: '1' }
+      {
+        obj_result: {
+          obj_version: {
+            id: '1'
+          }
+        }
+      },
+      {
+        obj_result: {
+          obj_version: {
+            id: '2'
+          }
+        }
+      },
+      {
+        obj_result: {
+          obj_version: {
+            id: '1'
+          }
+        }
+      }
     ];
 
     const result = pipe.transform(list, '1');
 
-    expect(result).toEqual([{ version_id: '1' }, { version_id: '1' }]);
+    expect(result).toEqual([
+      {
+        obj_result: {
+          obj_version: {
+            id: '1'
+          }
+        }
+      },
+      {
+        obj_result: {
+          obj_version: {
+            id: '1'
+          }
+        }
+      }
+    ]);
   });
 });

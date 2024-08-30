@@ -44,10 +44,24 @@ export const initadminModuleRouting: PrRoute[] = [
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
+  { prName: 'Notifications', path: 'results-notifications', redirectTo: 'results-notifications/requests', pathMatch: 'full' },
   { prName: 'Notifications', path: 'results-notifications', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
   { prName: '', path: 'results-list', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-list/results-list.module').then(m => m.ResultsListModule) },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
+
+export const notificationsRouting: PrRoute[] = [
+  { prName: 'Updates', path: 'updates', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/updates/updates.module').then(m => m.UpdatesModule) },
+  { prName: 'Requests', path: 'requests', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/requests.module').then(m => m.RequestsModule) },
+  { prName: 'Settings', path: 'settings', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/settings/settings.module').then(m => m.SettingsModule) }
+];
+
+export const requestsNotificationsRouting: PrRoute[] = [
+  { prName: 'Received requests', path: 'received', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/received-requests/received-requests.module').then(m => m.ReceivedRequestsModule) },
+  { prName: 'Sent requests', path: 'sent', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/sent-requests/sent-requests.module').then(m => m.SentRequestsModule) },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'received' }
+];
+
 export const rdResultTypesPages: PrRoute[] = [
   { prName: 'CapSharing info', path: 'cap-dev-info', prHide: 5, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/cap-dev-info/cap-dev-info.module').then(m => m.CapDevInfoModule) },
   { prName: 'Innovation Dev info', path: 'innovation-dev-info', prHide: 7, underConstruction: false, loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/innovation-dev-info.module').then(m => m.InnovationDevInfoModule) },

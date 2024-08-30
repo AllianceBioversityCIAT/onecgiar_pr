@@ -27,7 +27,8 @@ describe('ResultsNotificationsService', () => {
     mockApiService = {
       resultsSE: {
         GET_allRequest: () => of({ response: mockGET_allRequestResponse }),
-        GET_requestStatus: () => of({})
+        GET_requestStatus: () => of({}),
+        GET_requestIPSR: () => of({ response: mockGET_allRequestResponse })
       },
       dataControlSE: {
         myInitiativesList: [
@@ -54,7 +55,7 @@ describe('ResultsNotificationsService', () => {
   describe('get_section_information()', () => {
     it('should update data for get_section_information', () => {
       service.get_section_information(() => {
-        expect(service.data).toEqual([
+        expect(service.receivedData).toEqual([
           {
             approving_inititiative_id: 1,
             result_type_id: 10,
@@ -73,7 +74,7 @@ describe('ResultsNotificationsService', () => {
     it('should update data for get_section_information when item.request_status_id is not 1', () => {
       mockGET_allRequestResponse.requestPendingData[0].request_status_id = 2;
       service.get_section_information(() => {
-        expect(service.data).toEqual([
+        expect(service.receivedData).toEqual([
           {
             approving_inititiative_id: 1,
             result_type_id: 10,
@@ -93,7 +94,7 @@ describe('ResultsNotificationsService', () => {
 
       service.get_section_information(() => {
         expect(spy).toHaveBeenCalled();
-        expect(service.data).toEqual([]);
+        expect(service.receivedData).toEqual([]);
       });
     });
   });
@@ -137,8 +138,8 @@ describe('ResultsNotificationsService', () => {
       ]);
     });
     it('should not update dataIPSR for get_section_innovation_packages', () => {
-      mockApiService.resultsSE.GET_allRequest = () => of({});
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_allRequest');
+      mockApiService.resultsSE.GET_requestIPSR = () => of({});
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR');
 
       service.get_section_innovation_packages();
 

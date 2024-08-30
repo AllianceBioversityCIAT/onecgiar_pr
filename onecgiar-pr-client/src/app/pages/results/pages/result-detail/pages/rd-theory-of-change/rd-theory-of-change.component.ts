@@ -23,6 +23,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
   cgspaceDisabledList: any = [];
   contributingCenterOptions = [];
 
+  disabledOptions = [];
+
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
@@ -89,6 +91,11 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
         this.theoryOfChangeBody.changePrimaryInit = this.theoryOfChangeBody?.result_toc_result.initiative_id;
 
+        this.disabledOptions = [
+          ...(this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+          ...(this.theoryOfChangeBody?.contributing_initiatives.pending_contributing_initiatives || [])
+        ];
+
         this.disabledCenters();
 
         setTimeout(() => {
@@ -118,7 +125,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   onSaveSection() {
     this.theoryOfChangeBody.bodyActionArea = this.theoryOfChangesServices.resultActionArea;
-    this.theoryOfChangeBody.contributing_initiatives = [...this.theoryOfChangeBody.contributing_initiatives, ...this.contributingInitiativeNew];
+
     this.theoryOfChangeBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
     this.theoryOfChangeBody.contributors_result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result;
 
@@ -127,8 +134,20 @@ export class RdTheoryOfChangeComponent implements OnInit {
         ? this.theoryOfChangeBody.result_toc_result.result_toc_results
         : this.theoryOfChangeBody?.result_toc_result?.result_toc_results.filter(result => result.toc_result_id !== null);
 
+    const sendedData = {
+      ...this.theoryOfChangeBody,
+      contributing_initiatives: {
+        ...this.theoryOfChangeBody.contributing_initiatives,
+        pending_contributing_initiatives: [
+          ...this.theoryOfChangeBody.contributing_initiatives.pending_contributing_initiatives,
+          ...this.contributingInitiativeNew
+        ]
+      },
+      email_template: 'email_template_contribution'
+    };
+
     const saveSection = () => {
-      this.api.resultsSE.POST_toc(this.theoryOfChangeBody).subscribe(resp => {
+      this.api.resultsSE.POST_toc(sendedData).subscribe(resp => {
         this.getConsumed = false;
         this.theoryOfChangeBody?.result_toc_result?.initiative_id !== this.theoryOfChangeBody.changePrimaryInit
           ? location.reload()
@@ -162,7 +181,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   onSelectContributingInitiative() {
-    this.theoryOfChangeBody?.contributing_initiatives.forEach((resp: any) => {
+    this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
       const contributorToPush = new resultTocResultsInterface();
       contributorToPush.initiative_id = resp.id;
@@ -186,8 +205,12 @@ export class RdTheoryOfChangeComponent implements OnInit {
     );
   }
 
-  onRemoveContribuiting(index) {
-    this.contributingInitiativeNew.splice(index, 1);
+  onRemoveContribuiting(index, isAcceptedArray: boolean) {
+    if (isAcceptedArray) {
+      this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    } else {
+      this.contributingInitiativeNew.splice(index, 1);
+    }
   }
 
   addBilateralContribution() {

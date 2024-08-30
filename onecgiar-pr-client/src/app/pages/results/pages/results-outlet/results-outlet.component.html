@@ -1,21 +1,19 @@
 <!-- Don't delete - Global banner -->
 <!-- <app-alert-global-info className="section_container"></app-alert-global-info> -->
 
-<div class=" local_container section_container">
-
-  <div class="tabs">
+<div class="local_container section_container">
+  <!-- <div class="tabs">
     <a class="tab" routerLinkActive="active" routerLink="results-list">Results</a>
-    <a class="tab" routerLinkActive="active" routerLink="results-notifications">
+    <a class="tab" routerLink="results-notifications/requests" [ngClass]="{ active: router.url.includes('/results-notifications') }">
       Notifications
-      <i class=" counter material-icons-round animate_bell" [ngClass]="{'animate_bell': this.animateBell}">
+      <i class="counter material-icons-round animate_bell" [ngClass]="{ animate_bell: this.animateBell }">
         notifications
         <div class="counter_value" *ngIf="this.resultsNotificationsSE?.notificationLength && false">
-          {{this.resultsNotificationsSE?.notificationLength}}
+          {{ this.resultsNotificationsSE?.notificationLength }}
         </div>
       </i>
-
     </a>
-  </div>
+  </div> -->
   <div class="outlet">
     <router-outlet></router-outlet>
   </div>

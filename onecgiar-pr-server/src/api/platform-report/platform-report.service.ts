@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import {
   HandlersError,

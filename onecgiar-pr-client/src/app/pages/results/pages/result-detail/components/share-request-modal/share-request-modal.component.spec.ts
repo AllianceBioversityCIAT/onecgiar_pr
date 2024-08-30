@@ -26,7 +26,7 @@ describe('ShareRequestModalComponent', () => {
   let mockApiService: any;
   let mockRetrieveModalService: any;
   let mockShareRequestModalService: any;
-  let mockResultsNotificationsService:any;
+  let mockResultsNotificationsService: any;
   let router: Router;
   const allInitiatives = [{ initiative_id: 1, official_code: 'code', short_name: 'name' }];
 
@@ -44,25 +44,25 @@ describe('ShareRequestModalComponent', () => {
         show: jest.fn()
       },
       dataControlSE: {
-        showShareRequest: false,
+        showShareRequest: false
       },
       rolesSE: {
         isAdmin: true
       }
-    }
+    };
 
-    mockRetrieveModalService = {}
+    mockRetrieveModalService = {};
 
     mockShareRequestModalService = {
       initiative_id: undefined,
       shareRequestBody: {
         result_toc_results: []
       }
-    }
+    };
 
     mockResultsNotificationsService = {
       get_section_information: jest.fn()
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -73,14 +73,7 @@ describe('ShareRequestModalComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        RouterTestingModule,
-        DialogModule,
-        FormsModule,
-        TooltipModule,
-        ScrollingModule
-      ],
+      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule],
       providers: [
         {
           provide: ApiService,
@@ -97,10 +90,9 @@ describe('ShareRequestModalComponent', () => {
         {
           provide: ResultsNotificationsService,
           useValue: mockResultsNotificationsService
-        },
+        }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ShareRequestModalComponent);
     component = fixture.componentInstance;
@@ -138,7 +130,7 @@ describe('ShareRequestModalComponent', () => {
           short_name: '',
           official_code: '1',
           initiative_id: 1
-        },
+        }
       ];
       const result = component.validateAcceptOrReject();
 
@@ -156,7 +148,7 @@ describe('ShareRequestModalComponent', () => {
           short_name: '',
           official_code: '1',
           initiative_id: 1
-        },
+        }
       ];
 
       const result = component.validateAcceptOrReject();
@@ -183,16 +175,29 @@ describe('ShareRequestModalComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createRequest');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
       const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      const sendBody = {
+        result_id: undefined,
+        initiativeShareId: [null],
+        isToc: true,
+        contributors_result_toc_result: [
+          {
+            planned_result: true,
+            initiative_id: null,
+            result_toc_results: []
+          }
+        ],
+        email_template: 'email_template_request_as_contribution'
+      };
 
       component.onRequest();
 
       expect(component.requesting).toBeFalsy();
-      expect(spy).toHaveBeenCalledWith(mockShareRequestModalService.shareRequestBody);
+      expect(spy).toHaveBeenCalledWith(sendBody);
       expect(spyShow).toHaveBeenCalledWith({
         id: 'requesqshared',
         title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
-        status: 'success',
+        status: 'success'
       });
       expect(navigateSpy).toHaveBeenCalledWith([`/ipsr/list/innovation-list`]);
     });
@@ -201,40 +206,64 @@ describe('ShareRequestModalComponent', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createRequest');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
       const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      const sendBody = {
+        result_id: undefined,
+        initiativeShareId: [null],
+        isToc: true,
+        contributors_result_toc_result: [
+          {
+            planned_result: true,
+            initiative_id: null,
+            result_toc_results: []
+          }
+        ],
+        email_template: 'email_template_request_as_contribution'
+      };
 
       component.onRequest();
 
       expect(component.requesting).toBeFalsy();
-      expect(spy).toHaveBeenCalledWith(mockShareRequestModalService.shareRequestBody);
+      expect(spy).toHaveBeenCalledWith(sendBody);
       expect(spyShow).toHaveBeenCalledWith({
         id: 'requesqshared',
         title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
-        status: 'success',
+        status: 'success'
       });
       expect(navigateSpy).toHaveBeenCalledWith([`/result/results-outlet/results-list`]);
     });
     it('should handle error on POST_createRequest call', () => {
       const errorMessage = {
-        error:{
+        error: {
           message: 'error message'
         }
-        };
-      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createRequest')
-        .mockReturnValue(throwError(errorMessage));
+      };
+      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createRequest').mockReturnValue(throwError(errorMessage));
+      const sendBody = {
+        result_id: undefined,
+        initiativeShareId: [null],
+        isToc: true,
+        contributors_result_toc_result: [
+          {
+            planned_result: true,
+            initiative_id: null,
+            result_toc_results: []
+          }
+        ],
+        email_template: 'email_template_request_as_contribution'
+      };
 
       component.onRequest();
 
-      expect(spy).toHaveBeenCalledWith(mockShareRequestModalService.shareRequestBody);
+      expect(spy).toHaveBeenCalledWith(sendBody);
       expect(component.api.dataControlSE.showShareRequest).toBeFalsy();
       expect(mockApiService.alertsFe.show).toHaveBeenCalledWith({
         id: 'requesqsharederror',
         title: 'Error when requesting',
         description: '',
-        status: 'error',
+        status: 'error'
       });
       expect(component.requesting).toBeFalsy();
-
     });
   });
 
@@ -249,7 +278,7 @@ describe('ShareRequestModalComponent', () => {
           short_name: '',
           official_code: '1',
           initiative_id: 1
-        },
+        }
       ];
       component.modelChange();
       expect(component.showTocOut).toBeFalsy();
@@ -277,14 +306,14 @@ describe('ShareRequestModalComponent', () => {
         id: 'noti',
         title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
-        status: 'success',
+        status: 'success'
       });
     });
     it('should set requesting to true and call PATCH_updateRequest when api.resultsSE.ipsrDataControlSE.inIpsr is false', () => {
       mockApiService.resultsSE.ipsrDataControlSE.inIpsr = false;
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-      const spygGet_section_information= jest.spyOn(mockResultsNotificationsService, 'get_section_information');
+      const spygGet_section_information = jest.spyOn(mockResultsNotificationsService, 'get_section_information');
 
       component.acceptOrReject();
 
@@ -294,18 +323,17 @@ describe('ShareRequestModalComponent', () => {
         id: 'noti',
         title: `Request sent`,
         description: `Once your request is accepted, the result can be mapped to your Initiative's ToC.`,
-        status: 'success',
+        status: 'success'
       });
       expect(spygGet_section_information).toHaveBeenCalled();
     });
     it('should handle error on PATCH_updateRequest call', () => {
       const errorMessage = {
-        error:{
+        error: {
           message: 'error message'
         }
-        };
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest')
-        .mockReturnValue(throwError(errorMessage));
+      };
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(errorMessage));
 
       component.acceptOrReject();
 
@@ -315,7 +343,7 @@ describe('ShareRequestModalComponent', () => {
         id: 'noti-error',
         title: 'Error when requesting ',
         description: '',
-        status: 'error',
+        status: 'error'
       });
       expect(component.requesting).toBeFalsy();
     });

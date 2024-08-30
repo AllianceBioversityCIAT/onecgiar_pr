@@ -1,0 +1,69 @@
+<h1 class="settings-title">Notifications Settings</h1>
+
+<div class="filters" style="margin-top: 20px; padding: 0; justify-content: flex-start">
+  <div *ngFor="let initiative of this.api.dataControlSE?.myInitiativesList" class="filter">
+    <div class="chips">
+      <div
+        class="chip"
+        [ngClass]="{ chip_selected: this.activatedRoute.snapshot.queryParams['init'] == initiative?.id }"
+        (click)="handleInitiative(initiative)">
+        {{ initiative.name }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-alert-status [description]="description" inlineStyles="padding-left: 40px; padding-bottom: 5px;"></app-alert-status>
+
+<div class="settings-container">
+  <p-inputSwitch
+    [(ngModel)]="emailNotifications"
+    [style]="{ marginTop: '10px' }"
+    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']"></p-inputSwitch>
+
+  <div class="settings-content">
+    <h2 class="settings-content-title">Email for contribution requests</h2>
+
+    <div class="settings-content-description">
+      <p class="settings-content-description-title">These notifications include:</p>
+
+      <ul class="settings-content-description-list">
+        <li>Sending notifications emails to initiatives once they receive requests for results contributions.</li>
+        <li>Sending notifications emails to initiatives when a shared result has been removed of contributing initiatives.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<br />
+
+<div class="settings-container">
+  <p-inputSwitch
+    [(ngModel)]="systemNotifications"
+    [style]="{ marginTop: '10px' }"
+    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']"></p-inputSwitch>
+
+  <div class="settings-content">
+    <h2 class="settings-content-title">System notifications of updates</h2>
+
+    <div class="settings-content-description">
+      <p class="settings-content-description-title">These notifications include:</p>
+
+      <ul class="settings-content-description-list">
+        <li>Updates on the status of the shared results to your initiatives.</li>
+        <li>Updates of the shared results when they have received Quality Assessed approval.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="save-button">
+  <app-pr-button
+    text="Save"
+    [disabled]="isLoading || isSaving || !this.activatedRoute.snapshot.queryParams['init']"
+    [ngClass]="{ globalDisabled: isLoading || isSaving || !this.activatedRoute.snapshot.queryParams['init'] }"
+    (click)="onSaveSection()"
+    padding="medium"
+    [rotating]="isSaving"
+    [icon]="this.isSaving ? 'loop' : 'save'"></app-pr-button>
+</div>
