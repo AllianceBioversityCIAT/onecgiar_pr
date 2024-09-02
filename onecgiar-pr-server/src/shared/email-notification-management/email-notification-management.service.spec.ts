@@ -4,6 +4,8 @@ import { EmailNotificationManagementService } from './email-notification-managem
 import { ConfigMessageDto } from './dto/send-email.dto';
 import { Logger } from '@nestjs/common';
 import { TokenDto } from '../globalInterfaces/token.dto';
+import { EmailTemplate } from './enum/email-notification.enum';
+import { BuildEmailDataDto } from './dto/email-template.dto';
 
 describe('EmailNotificationManagementService', () => {
   let service: EmailNotificationManagementService;
@@ -94,29 +96,44 @@ describe('EmailNotificationManagementService', () => {
 
   describe('buildEmailData', () => {
     it('should build email data for email_template_contribution', () => {
-      const data = {
-        initOwner: { official_code: 'INIT1', name: 'Owner Initiative' },
-        initContributing: { name: 'Contributing Initiative' },
+      const data: BuildEmailDataDto = {
+        initOwner: {
+          id: 1,
+          official_code: 'INIT-01',
+          name: 'Owner Initiative',
+        },
+        initContributing: {
+          id: 2,
+          name: 'Contributing Initiative',
+          official_code: 'INIT-02',
+        },
         user: { first_name: 'John', last_name: 'Doe' },
-        result: { result_code: 'R001', title: 'Sample Result' },
+        result: {
+          result_code: 1,
+          title: 'Sample Result',
+          version_id: 1,
+        },
       };
-      const result = service.buildEmailData(
-        'email_template_contribution',
-        data,
-      );
+
+      const result = service.buildEmailData(EmailTemplate.CONTRIBUTION, data);
+
       expect(result).toEqual({
         subject:
-          '[PRMS] Result Contributing: INIT1 confirmation required for contribution to Result R001',
+          '[PRMS] Result Contributing: INIT-01 confirmation required for contribution to Result 1',
         initContributingName: 'Contributing Initiative',
         requesterName: 'John Doe',
-        initOwner: 'INIT1 Owner Initiative',
-        urlNotification: process.env.RESULTS_URL,
-        result: 'R001 - Sample Result',
+        initOwner: 'INIT-01 Owner Initiative',
+        resultUrl: `${process.env.RESULTS_URL}1/general-information?phase=1`,
+        result: '1 - Sample Result',
+        resultNotificationUrl: `${process.env.NOTIFICATION_MODULE_URL}requests/received?phase=1&init=2&search=1 - Sample Result`,
+        notificationSettingUrl: `${process.env.NOTIFICATION_MODULE_URL}settings?init=2`,
       });
     });
 
     it('should throw an error for an unknown template', () => {
-      expect(() => service.buildEmailData('unknown_template', {})).toThrow(
+      expect(() =>
+        service.buildEmailData('unknown_template' as any, {} as any),
+      ).toThrow(
         'No email data configuration found for template unknown_template',
       );
     });

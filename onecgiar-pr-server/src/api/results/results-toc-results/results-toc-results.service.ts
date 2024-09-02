@@ -29,6 +29,7 @@ import Handlebars from 'handlebars';
 import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
+import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -1018,11 +1019,11 @@ export class ResultsTocResultsService {
       const to = userEnable.map((u) => u.obj_user.email);
 
       const template = await this._templateRepository.findOne({
-        where: { name: 'email_template_removed_contribution' },
+        where: { name: EmailTemplate.REMOVED_CONTRIBUTION },
       });
 
       const emailData = this._emailNotificationManagementService.buildEmailData(
-        template.name,
+        template.name as EmailTemplate.REMOVED_CONTRIBUTION,
         {
           initContributing,
           result,
@@ -1033,7 +1034,7 @@ export class ResultsTocResultsService {
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: env.EMAIL_SENDER, name: '[PRMS]' },
+        from: { email: env.EMAIL_SENDER, name: 'Reporting tool' },
         emailBody: {
           subject: emailData.subject,
           to,
@@ -1044,7 +1045,7 @@ export class ResultsTocResultsService {
           },
         },
       };
-      await this._emailNotificationManagementService.sendEmail(email);
+      this._emailNotificationManagementService.sendEmail(email);
     }
   }
 }
