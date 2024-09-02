@@ -1,6 +1,6 @@
 <h1 class="settings-title">Notifications Settings</h1>
 
-<div class="filters" style="margin-top: 20px; padding: 0; justify-content: flex-start">
+<div class="filters">
   <div *ngFor="let initiative of this.api.dataControlSE?.myInitiativesList" class="filter">
     <div class="chips">
       <div
@@ -67,3 +67,5 @@
     [rotating]="isSaving"
     [icon]="this.isSaving ? 'loop' : 'save'"></app-pr-button>
 </div>
+
+<p-toast position="bottom-right"></p-toast>
