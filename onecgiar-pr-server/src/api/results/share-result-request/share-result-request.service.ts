@@ -20,6 +20,7 @@ import { ResultsTocResultsService } from '../results-toc-results/results-toc-res
 import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
+import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -218,7 +219,9 @@ export class ShareResultRequestService {
       const handle = Handlebars.compile(template.template);
 
       const emailData = this._emailNotificationManagementService.buildEmailData(
-        template.name,
+        template.name as
+          | EmailTemplate.CONTRIBUTION
+          | EmailTemplate.REQUEST_AS_CONTRIBUTION,
         {
           initContributing,
           user,
@@ -228,7 +231,7 @@ export class ShareResultRequestService {
       );
 
       const email: ConfigMessageDto = {
-        from: { email: env.EMAIL_SENDER, name: '[PRMS]' },
+        from: { email: env.EMAIL_SENDER, name: 'Reporting tool' },
         emailBody: {
           subject: emailData.subject,
           to,
