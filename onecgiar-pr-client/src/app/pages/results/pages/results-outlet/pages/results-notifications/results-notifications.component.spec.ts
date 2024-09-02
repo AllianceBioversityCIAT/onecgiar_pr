@@ -35,6 +35,7 @@ describe('ResultsNotificationsComponent', () => {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
       resetNotificationInformation: jest.fn(),
+      resetFilters: jest.fn(),
       phaseFilter: null,
       initiativeIdFilter: null,
       searchFilter: null

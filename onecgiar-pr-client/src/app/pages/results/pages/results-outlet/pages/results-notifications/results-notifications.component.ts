@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { ResultsNotificationsService } from './results-notifications.service';
@@ -10,7 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
   templateUrl: './results-notifications.component.html',
   styleUrls: ['./results-notifications.component.scss']
 })
-export class ResultsNotificationsComponent implements OnInit {
+export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   allInitiatives = [];
   phaseList = [];
 
@@ -31,6 +31,10 @@ export class ResultsNotificationsComponent implements OnInit {
     });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
+  }
+
+  ngOnDestroy() {
+    this.resultsNotificationsSE.resetFilters();
   }
 
   setQueryParams() {
