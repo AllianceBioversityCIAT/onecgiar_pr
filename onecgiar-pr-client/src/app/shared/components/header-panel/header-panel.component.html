@@ -41,7 +41,7 @@
       <i class="material-icons-round info_icon">info</i>
     </div>
 
-    <div (click)="this.api.authSE.logout(); this.api.clearAll()">
+    <div (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>

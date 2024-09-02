@@ -5,6 +5,7 @@ import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 import { Router } from '@angular/router';
+import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 @Component({
   selector: 'app-header-panel',
   templateUrl: './header-panel.component.html',
@@ -33,7 +34,13 @@ export class HeaderPanelComponent implements OnInit {
     // // }
   ];
 
-  constructor(public api: ApiService, public dataControlSE: DataControlService, public globalLinksSE: GlobalLinksService, private router: Router) {}
+  constructor(
+    public api: ApiService,
+    public dataControlSE: DataControlService,
+    public globalLinksSE: GlobalLinksService,
+    private router: Router,
+    public resultsNotificationsSE: ResultsNotificationsService
+  ) {}
 
   ngOnInit(): void {
     this.api.updateUserData(() => {});
