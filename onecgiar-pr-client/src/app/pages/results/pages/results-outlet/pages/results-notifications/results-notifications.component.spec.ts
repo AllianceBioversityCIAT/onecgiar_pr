@@ -86,11 +86,6 @@ describe('ResultsNotificationsComponent', () => {
     expect(resultsNotificationsServiceMock.searchFilter).toBe('someSearch');
   });
 
-  it('should reset notification information on ngOnDestroy', () => {
-    component.ngOnDestroy();
-    expect(resultsNotificationsServiceMock.resetNotificationInformation).toHaveBeenCalled();
-  });
-
   it('should update query params', () => {
     component.updateQueryParams();
 

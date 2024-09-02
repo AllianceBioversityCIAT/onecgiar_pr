@@ -19,6 +19,8 @@ export class RequestsComponent {
       this.resultsNotificationsSE.get_section_information();
     }
 
-    this.resultsNotificationsSE.resetFilters();
+    if (this.resultsNotificationsSE.initiativeIdFilter || this.resultsNotificationsSE.searchFilter) {
+      this.resultsNotificationsSE.resetFilters();
+    }
   }
 }
