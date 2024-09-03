@@ -237,7 +237,12 @@ export class ResultsByInstitutionsService {
 
       const knowledgeProduct =
         await this._resultKnowledgeProductRepository.findOne({
-          where: { results_id: incomingResult.id },
+          where: {
+            results_id: incomingResult.id,
+            result_knowledge_product_institution_array: {
+              is_active: true,
+            },
+          },
           relations: {
             result_knowledge_product_institution_array: {
               result_by_institution_object: {
@@ -458,8 +463,8 @@ export class ResultsByInstitutionsService {
       await this.handleDeliveries(
         toUpdateDeliveries['isNew']
           ? toUpdateDeliveries.delivery
-          : incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
-              ?.delivery ?? [],
+          : (incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
+              ?.delivery ?? []),
         toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
         toUpdateDeliveries.id,
         userId,
