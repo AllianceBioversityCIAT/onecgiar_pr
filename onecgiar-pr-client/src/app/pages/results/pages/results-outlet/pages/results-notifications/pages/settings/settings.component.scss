@@ -41,6 +41,15 @@
   }
 }
 
+.filters {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 20px;
+  padding: 0;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .save-button {
   display: flex;
   justify-content: flex-end;

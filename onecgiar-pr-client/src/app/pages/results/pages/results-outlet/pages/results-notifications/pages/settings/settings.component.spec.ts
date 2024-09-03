@@ -7,6 +7,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { RouterTestingModule } from '@angular/router/testing';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { AlertStatusComponent } from '../../../../../../../../custom-fields/alert-status/alert-status.component';
+import { MessageService } from 'primeng/api';
 
 describe('SettingsComponent', () => {
   let component: SettingsComponent;
@@ -60,7 +61,8 @@ describe('SettingsComponent', () => {
         { provide: ApiService, useValue: mockApiService },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
-        { provide: ResultsNotificationsService, useValue: mockResultsNotificationsService }
+        { provide: ResultsNotificationsService, useValue: mockResultsNotificationsService },
+        MessageService
       ]
     }).compileComponents();
 
