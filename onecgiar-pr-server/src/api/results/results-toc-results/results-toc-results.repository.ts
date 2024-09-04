@@ -160,9 +160,12 @@ export class ResultsTocResultRepository
         final_data = await this.query(queryFind, [config.new_result_id]);
       }
     } catch (error) {
-      config.f?.errorFunction
-        ? config.f.errorFunction(error)
-        : this._logger.error(error);
+      if (config.f?.errorFunction) {
+        config.f.errorFunction(error);
+      } else {
+        this._logger.error(error);
+      }
+
       final_data = null;
     }
 
