@@ -34,6 +34,7 @@ describe('SettingsComponent', () => {
 
     mockActivatedRoute = {
       snapshot: {
+        title: 'Settings',
         queryParams: {},
         url: [],
         params: {},
