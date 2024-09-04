@@ -126,12 +126,11 @@ export class ShareResultRequestService {
       shareInitRequests.push(newShare);
 
       if (createTocShareResult.isToc === true) {
-          await this._resultsTocResultService.saveMapToToc(
-            createTocShareResult.contributors_result_toc_result,
-            user,
-            resultId,
-            initiativeId,
-          );
+        await this._resultsTocResultService.saveMapToToc(
+          createTocShareResult.contributors_result_toc_result,
+          user,
+          resultId,
+        );
       }
     }
 
@@ -178,8 +177,7 @@ export class ShareResultRequestService {
     resultId: number,
     user: TokenDto,
   ) {
-    const saveData =
-      await this._shareResultRequestRepository.save(shareInitRequests);
+    await this._shareResultRequestRepository.save(shareInitRequests);
 
     await this.sendEmailsForShareRequests(
       shareInitRequests,
@@ -514,8 +512,11 @@ export class ShareResultRequestService {
     user: TokenDto,
   ) {
     try {
-      const { result_request: rr, result_toc_result: rtr } =
-        createShareResultsRequestDto;
+      const {
+        result_request: rr,
+        result_toc_result: rtr,
+        request_status_id,
+      } = createShareResultsRequestDto;
 
       const res = await this._resultRepository.findOne({
         where: { id: rr.result_id, is_active: true },
@@ -530,7 +531,7 @@ export class ShareResultRequestService {
         return this.createInvalidShareRequestResponse();
       }
 
-      await this.updateShareResultRequest(rr, user);
+      await this.updateShareResultRequest(rr, user, request_status_id);
 
       const findShare = await this._shareResultRequestRepository.findOne({
         where: { share_result_request_id: rr.share_result_request_id },
@@ -569,13 +570,17 @@ export class ShareResultRequestService {
     };
   }
 
-  private async updateShareResultRequest(rr: any, user: TokenDto) {
+  private async updateShareResultRequest(
+    rr: any,
+    user: TokenDto,
+    request_status_id: number,
+  ) {
     await this._shareResultRequestRepository.update(
       rr.share_result_request_id,
       {
         approved_by: user.id,
         aprovaed_date: new Date(),
-        request_status_id: rr.request_status_id,
+        request_status_id: request_status_id,
       },
     );
   }
@@ -586,11 +591,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     dto: CreateShareResultRequestDto,
   ) {
-    const {
-      shared_inititiative_id,
-      result_id,
-      is_map_to_toc,
-    } = findShare;
+    const { shared_inititiative_id, result_id, is_map_to_toc } = findShare;
 
     if (dto.request_status_id == 2) {
       await this.approveRequest(

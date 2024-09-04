@@ -939,7 +939,6 @@ export class ResultsTocResultsService {
     createResultsTocResultDto: ContributorResultTocResult[],
     user: TokenDto,
     result_id: number,
-    initSubmitter: number,
   ) {
     try {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
