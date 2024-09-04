@@ -328,7 +328,13 @@ export class EvidencesRepository
     try {
       await this.query(inactiveAll);
       await this.query(justActivateList);
-    } catch (error) {}
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
   }
 
   async getLastSharepointId() {

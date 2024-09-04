@@ -54,7 +54,7 @@ export class VersionRepository extends Repository<Version> {
       `;
       await this.query(queryData, [appModuleId]);
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -182,7 +182,7 @@ export class VersionRepository extends Repository<Version> {
         status: sr.length ? sr[0].status_name : null,
         type: rt.length ? rt[0].name : null,
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         status: null,
         type: null,

@@ -31,7 +31,7 @@ export class ClarisaCredentialsBiService {
         message: 'Validates correctly with CLARISA',
         status: HttpStatus.OK,
       };
-    } catch (error) {
+    } catch (_error) {
       return { Error: 'Error' };
     }
   }

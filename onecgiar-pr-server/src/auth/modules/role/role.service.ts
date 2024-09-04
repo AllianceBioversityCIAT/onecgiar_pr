@@ -11,7 +11,7 @@ export class RoleService {
   create(createRoleDto: CreateRoleDto) {
     try {
       this._roleRepository.create();
-    } catch (error) {
+    } catch (_error) {
       return createRoleDto;
     }
   }
