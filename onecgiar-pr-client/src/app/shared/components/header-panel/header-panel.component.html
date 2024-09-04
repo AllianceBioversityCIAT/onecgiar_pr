@@ -30,8 +30,8 @@
       </div>
     </div>
 
-    <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round" *ngIf="this.mockNotifications.length === 0">notifications</i>
+    <div (click)="this.goToNotifications()" class="info_icon">
+      <i class="material-icons-round animate_bell" *ngIf="this.mockNotifications.length === 0">notifications</i>
       <i class="material-icons-round" pBadge [value]="notificationBadgeLength()" severity="danger" *ngIf="this.mockNotifications.length > 0">
         notifications
       </i>
@@ -41,7 +41,7 @@
       <i class="material-icons-round info_icon">info</i>
     </div>
 
-    <div (click)="this.api.authSE.logout(); this.api.clearAll()">
+    <div (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>
   </div>

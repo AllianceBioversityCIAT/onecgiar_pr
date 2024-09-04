@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ResultsNotificationsService } from '../../results-notifications.service';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-settings',
@@ -17,6 +18,7 @@ export class SettingsComponent implements OnInit {
   isSaving = false;
 
   constructor(
+    private messageService: MessageService,
     public api: ApiService,
     public router: Router,
     public activatedRoute: ActivatedRoute,
@@ -78,10 +80,12 @@ export class SettingsComponent implements OnInit {
         next: () => {
           this.isSaving = false;
           this.getNotificationSettings(this.activatedRoute.snapshot.queryParams['init']);
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Settings saved successfully!' });
         },
         error: err => {
           console.error(err);
           this.isSaving = false;
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error updating settings' });
         }
       });
   }

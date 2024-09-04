@@ -64,8 +64,9 @@ describe('RequestsComponent', () => {
     expect(resultsNotificationsServiceMock.get_section_information).not.toHaveBeenCalled();
   });
 
-  it('should call resetFilters', () => {
+  it('should call resetFilters if initiativeIdFilter is not null', () => {
     routerMock.url = '/some-url';
+    resultsNotificationsServiceMock.initiativeIdFilter = 1;
     component.clearFiltersAndUpdateResults();
     expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
   });

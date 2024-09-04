@@ -35,6 +35,7 @@ describe('ResultsNotificationsComponent', () => {
       get_section_information: jest.fn(),
       get_sent_notifications: jest.fn(),
       resetNotificationInformation: jest.fn(),
+      resetFilters: jest.fn(),
       phaseFilter: null,
       initiativeIdFilter: null,
       searchFilter: null
@@ -84,11 +85,6 @@ describe('ResultsNotificationsComponent', () => {
     expect(resultsNotificationsServiceMock.phaseFilter).toBe('somePhase');
     expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('someInit');
     expect(resultsNotificationsServiceMock.searchFilter).toBe('someSearch');
-  });
-
-  it('should reset notification information on ngOnDestroy', () => {
-    component.ngOnDestroy();
-    expect(resultsNotificationsServiceMock.resetNotificationInformation).toHaveBeenCalled();
   });
 
   it('should update query params', () => {

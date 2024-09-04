@@ -27,6 +27,8 @@ import { UserNotificationSettingRepository } from '../../user_notification_setti
 import Handlebars from 'handlebars';
 import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
+import { env } from 'process';
+import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -137,7 +139,7 @@ export class ResultsTocResultsService {
         }
 
         const dataRequst: CreateTocShareResult = {
-          isToc: true,
+          isToc: false,
           initiativeShareId: initiativeArrayPnd,
           email_template,
         };
@@ -757,8 +759,6 @@ export class ResultsTocResultsService {
     }
   }
 
-  async saveMapToToc() {}
-
   async saveResultTocResultPrimary(
     createResultsTocResultDto: CreateResultsTocResultDto,
     user: TokenDto,
@@ -914,36 +914,55 @@ export class ResultsTocResultsService {
                 },
               );
             } else {
-              const RtRArray = [];
-              const newRtR = new ResultsTocResult();
-              newRtR.created_by = user.id;
-              newRtR.planned_result = contributor?.planned_result;
-              newRtR.results_id = result_id;
-              newRtR.initiative_id = contributor?.initiative_id || null;
-              newRtR.is_active = true;
-              if (result.result_level_id == 2) {
-                newRtR.action_area_outcome_id =
-                  rtrc?.action_area_outcome_id || null;
-              } else {
-                newRtR.toc_result_id = rtrc?.toc_result_id || null;
-              }
-              newRtR.planned_result = contributor?.planned_result || null;
-              newRtR.toc_progressive_narrative =
-                rtrc?.toc_progressive_narrative || null;
-              RtRArray.push(newRtR);
-
-              await this._resultsTocResultRepository.save({
-                initiative_ids: newRtR.initiative_id,
-                toc_result_id: newRtR.toc_result_id,
-                created_by: newRtR.created_by,
-                last_updated_by: newRtR.last_updated_by,
-                result_id: newRtR.results_id,
-                planned_result: newRtR.planned_result,
-                action_area_outcome_id: newRtR.action_area_outcome_id,
-                toc_progressive_narrative: newRtR.toc_progressive_narrative,
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: contributor?.initiative_id,
+                toc_result_id: rtrc?.toc_result_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+                result_id: result_id,
+                planned_result: contributor?.planned_result,
+                action_area_outcome_id: rtrc?.action_area_outcome_id || null,
                 is_active: true,
+                toc_progressive_narrative:
+                  rtrc?.toc_progressive_narrative || null,
               });
             }
+          }
+        }
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveMapToToc(
+    createResultsTocResultDto: ContributorResultTocResult[],
+    user: TokenDto,
+    result_id: number,
+  ) {
+    try {
+      // * Logic to map multiple WPs to multiple Initiatives Contributors
+      if (createResultsTocResultDto) {
+        for (const contributor of createResultsTocResultDto) {
+          if (!contributor.result_toc_results?.length) {
+            contributor.result_toc_results = [];
+          }
+          for (const rtrc of contributor.result_toc_results) {
+            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
+              continue;
+            }
+            await this._resultsTocResultRepository.insert({
+              initiative_ids: contributor?.initiative_id,
+              toc_result_id: rtrc?.toc_result_id,
+              created_by: user.id,
+              last_updated_by: user.id,
+              result_id: result_id,
+              planned_result: contributor?.planned_result,
+              action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+              is_active: true,
+              toc_progressive_narrative:
+                rtrc?.toc_progressive_narrative || null,
+            });
           }
         }
       }
@@ -991,11 +1010,11 @@ export class ResultsTocResultsService {
       const to = userEnable.map((u) => u.obj_user.email);
 
       const template = await this._templateRepository.findOne({
-        where: { name: 'email_template_removed_contribution' },
+        where: { name: EmailTemplate.REMOVED_CONTRIBUTION },
       });
 
       const emailData = this._emailNotificationManagementService.buildEmailData(
-        template.name,
+        template.name as EmailTemplate.REMOVED_CONTRIBUTION,
         {
           initContributing,
           result,
@@ -1006,18 +1025,18 @@ export class ResultsTocResultsService {
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: 'ClarisaSupport@cgiar.org', name: 'PRMS' },
+        from: { email: env.EMAIL_SENDER, name: 'Reporting tool' },
         emailBody: {
           subject: emailData.subject,
           to,
-          cc: [user.email, 'j.delgado@cgiar.org', 'k.collazos@cgiar.org'],
+          cc: [user.email],
           message: {
             text: 'Contributing Initiative Removed from a Result',
             socketFile: handle(emailData),
           },
         },
       };
-      await this._emailNotificationManagementService.sendEmail(email);
+      this._emailNotificationManagementService.sendEmail(email);
     }
   }
 }

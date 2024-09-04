@@ -34,7 +34,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.resultsNotificationsSE.resetNotificationInformation();
+    this.resultsNotificationsSE.resetFilters();
   }
 
   setQueryParams() {

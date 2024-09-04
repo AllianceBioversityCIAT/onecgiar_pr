@@ -39,7 +39,8 @@ export class NotificationItemComponent {
       title: obj_result?.title,
       submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
       result_level_id: obj_result?.obj_result_level?.id,
-      result_type: obj_result?.obj_result_type?.name
+      result_type: obj_result?.obj_result_type?.name,
+      initiative_id: obj_owner_initiative?.id
     };
 
     this.retrieveModalSE = {
@@ -60,8 +61,8 @@ export class NotificationItemComponent {
       result_toc_results: [
         {
           action_area_outcome_id: null,
-          initiative_id: this.shareRequestModalSE.shareRequestBody.initiative_id,
-          official_code: this.shareRequestModalSE.shareRequestBody.official_code,
+          initiative_id: obj_shared_inititiative?.id,
+          official_code: obj_shared_inititiative?.official_code,
           planned_result: this.shareRequestModalSE.shareRequestBody.planned_result,
           results_id: null,
           short_name: this.shareRequestModalSE.shareRequestBody.short_name,
