@@ -195,7 +195,7 @@ export class VersioningService {
         },
       });
       return res ? false : true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
