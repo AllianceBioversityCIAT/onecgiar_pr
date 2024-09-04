@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PlatformReportRepository } from './platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import {
@@ -9,15 +9,40 @@ import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
 import axios from 'axios';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
-export class PlatformReportService {
+export class PlatformReportService implements OnModuleInit {
   private readonly _logger: Logger = new Logger(PlatformReportService.name);
+  private authHeaderMs2 = JSON.stringify({
+    username: env.MS_REPORTS_USER,
+    password: env.MS_REPORTS_PASSWORD,
+  });
+  private authHeaderMs4 = JSON.stringify({
+    username: env.MS_FILE_MANAGEMENT_USER,
+    password: env.MS_FILE_MANAGEMENT_PASSWORD,
+  });
+
   public constructor(
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
     private readonly _resultRepository: ResultRepository,
+    @Inject('REPORT_SERVICE') private client: ClientProxy,
   ) {}
+
+  async onModuleInit() {
+    try {
+      await this.client.connect();
+      this._logger.log(
+        'Successfully connected to RabbitMQ Reports MicroService',
+      );
+    } catch (error) {
+      this._logger.error(
+        'Failed to connect to RabbitMQ Reports MicroService',
+        error,
+      );
+    }
+  }
 
   async getFullResultReportByResultCode(
     result_code: string,
@@ -78,15 +103,6 @@ export class PlatformReportService {
         };
         throw error;
       }
-
-      /*const header = report.template_object.children_array.find(
-        (c) => c.name === enumValue.children.header_name,
-      )?.template;
-      const footer = report.template_object.children_array.find(
-        (c) => c.name === enumValue.children.footer_name,
-      )?.template;
-      const compiledHeader = Handlebars.compile(header)(data);
-      const compiledFooter = Handlebars.compile(footer)(data);*/
 
       const optionsIPSR = {
         format: 'A3',
@@ -239,32 +255,63 @@ export class PlatformReportService {
         },
       };
 
-      const authData = {
-        username: env.CLA_MICROSERVICE_USER,
-        password: env.CLA_MICROSERVICE_PASSWORD,
+      const fileName =
+        'PRMS-Result-' +
+        data.result_code +
+        '_' +
+        data.generation_date_filename +
+        '.pdf';
+
+      const info = {
+        templateData: report.template_object.template,
+        data: data,
+        options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
+        fileName,
+        bucketName: env.AWS_BUCKET_NAME,
+        credentials: this.authHeaderMs2,
       };
 
-      const authHeader = JSON.stringify(authData);
+      this.client.emit({ cmd: 'generate' }, info);
+      this._logger.log('PDF generation result on queue:', info.fileName);
 
-      const microserviceUrl = env.MS_URL;
-      const pdf = await axios.post(
-        microserviceUrl,
-        {
-          templateData: report.template_object.template,
-          data: data,
-          options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
-        },
-        {
-          responseType: 'arraybuffer',
-          headers: {
-            auth: authHeader,
-          },
-        },
-      );
-
-      return { pdf: pdf.data, filename_date: data.generation_date_filename };
+      try {
+        return await this.fetchPDF(info.bucketName, info.fileName);
+      } catch (error) {
+        return this._handlerError.returnErrorRes({ error, debug: true });
+      }
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async fetchPDF(bucketName: string, fileName: string): Promise<any> {
+    try {
+      this._logger.verbose(
+        `Fetching PDF from File Management: ${fileName} in ${bucketName} bucket S3`,
+      );
+      const response = await axios.post<ValidationResponse>(
+        env.MS_FM_URL,
+        { bucketName, key: fileName },
+        {
+          headers: { auth: this.authHeaderMs4 },
+          responseType: 'json',
+        },
+      );
+
+      if (response.data.data) {
+        this._logger.log('PDF generated and uploaded successfully');
+        return {
+          pdf: response.data.data,
+          fileName,
+        };
+      }
+      throw new Error('No data returned from the validation endpoint');
+    } catch (error) {
+      this._logger.error('Error fetching PDF:', error);
+    }
+  }
+}
+
+interface ValidationResponse {
+  data: string;
 }

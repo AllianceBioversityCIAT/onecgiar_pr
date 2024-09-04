@@ -40,6 +40,8 @@
     "@nestjs/typeorm": "^10.0.2",
     "@types/jsonwebtoken": "^9.0.6",
     "activedirectory": "^0.7.2",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.4",
     "aws-lambda": "^1.0.7",
     "aws-sdk": "^2.1685.0",
     "aws-serverless-express": "^3.4.0",

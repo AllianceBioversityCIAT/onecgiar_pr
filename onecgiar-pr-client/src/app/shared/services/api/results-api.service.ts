@@ -366,11 +366,11 @@ export class ResultsApiService {
         .pipe(this.saveButtonSE.isGettingSectionPipe());
     }
   }
-  get_vesrsionDashboard(id_toc, init) {
+  get_vesrsionDashboard(init) {
     return this.http.get<any>(
       `${this.apiBaseUrl}toc/get/version/${
         this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
-      }/initiative/${init}/resultToc/${id_toc}`
+      }/initiative/${init}/resultToc`
     );
   }
 

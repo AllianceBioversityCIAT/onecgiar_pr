@@ -61,14 +61,11 @@ export class ResultsTocResultsController {
     );
   }
 
-  @Get('get/version/:resultId/initiative/:initiativeId/resultToc/:resultTocId')
+  @Get('get/version/:resultId/initiative/:initiativeId/resultToc')
   findVersionDashBoard(
     @Param('resultId') resultId: number,
     @Param('initiativeId') initiativeId: number,
-    @Param('resultTocId') _resultTocId: number,
   ) {
-    //TODO: I cannot delete that value but I can accommodate it as an internal value,
-    //since the url would have to be modified and that would have to be modified from the front as well
     return this.resultsTocResultsService.getVersionId(resultId, initiativeId);
   }
 }
