@@ -17,7 +17,6 @@ import { TemplateRepository } from '../../platform-report/repositories/template.
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
 import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
