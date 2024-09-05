@@ -7,7 +7,7 @@ import { NavigationBarComponent } from './shared/components/navigation-bar/navig
 import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { GeneralInterceptorService } from './shared/interceptors/general-interceptor.service';
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
@@ -21,32 +21,25 @@ import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
-@NgModule({
-  declarations: [
-    AppComponent,
-    NavigationBarComponent,
-    HeaderPanelComponent,
-    ExternalToolsComponent,
-    TestEnvironmentLabelComponent,
-    TawkComponent,
-    GoogleAnalyticsComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    BrowserAnimationsModule,
-    HttpClientModule,
-    CustomFieldsModule,
-    ShareRequestModalModule,
-    YmzListStructureItemModule,
-    ChangePhaseModalModule,
-    FooterModule,
-    DialogModule,
-    BadgeModule,
-    SatPopoverModule,
-    FormatTimeAgoModule
-  ],
-  providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
-  bootstrap: [AppComponent]
-})
+@NgModule({ declarations: [
+        AppComponent,
+        NavigationBarComponent,
+        HeaderPanelComponent,
+        ExternalToolsComponent,
+        TestEnvironmentLabelComponent,
+        TawkComponent,
+        GoogleAnalyticsComponent
+    ],
+    bootstrap: [AppComponent], imports: [BrowserModule,
+        AppRoutingModule,
+        BrowserAnimationsModule,
+        CustomFieldsModule,
+        ShareRequestModalModule,
+        YmzListStructureItemModule,
+        ChangePhaseModalModule,
+        FooterModule,
+        DialogModule,
+        BadgeModule,
+        SatPopoverModule,
+        FormatTimeAgoModule], providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }, provideHttpClient(withInterceptorsFromDi())] })
 export class AppModule {}
