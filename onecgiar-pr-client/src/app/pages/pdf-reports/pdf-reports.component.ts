@@ -12,10 +12,7 @@ import { environment } from '../../../environments/environment';
 })
 export class PdfReportsComponent implements OnInit, OnDestroy {
   iframeLoaded = null;
-  error = {
-    type: null,
-    message: null
-  };
+  error = null;
   pdfUrl = null;
   report = new Report(this.activatedRoute, this.sanitizer);
 
@@ -28,32 +25,35 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
   }
 
   getPdfData() {
-    if (!this.activatedRoute.snapshot.paramMap.get('id')) return (this.error.type = 'warning');
+    if (!this.activatedRoute.snapshot.paramMap.get('id')) {
+      this.error = 'warning';
+      return;
+    }
+
     this.iframeLoaded = true;
+
     this.http.get<any>(this.report.iframeRoute).subscribe({
       next: resp => {
+        if (!resp) {
+          this.error = 'error';
+          return;
+        }
+
+        if (resp?.response?.error) {
+          this.error = 'warning';
+          return;
+        }
+
         this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(resp.pdf);
-        this.validateErrors(resp);
         this.iframeLoaded = false;
       },
       error: err => {
         console.error(err);
-        this.validateErrors(err);
+        this.error = 'warning';
         this.iframeLoaded = false;
       }
     });
     return null;
-  }
-
-  validateErrors({ message, status }) {
-    const statusText = String(status);
-    if (statusText.startsWith('5')) {
-      this.error.type = 'error';
-    } else if (statusText.startsWith('4')) {
-      this.error.type = 'warning';
-    } else {
-      this.error.type = null;
-    }
   }
 
   ngOnDestroy(): void {
