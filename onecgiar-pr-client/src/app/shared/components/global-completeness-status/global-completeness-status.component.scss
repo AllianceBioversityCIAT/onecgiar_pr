@@ -16,6 +16,10 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        z-index: 3;
 
         .name {
             color: var(--pr-color-primary);

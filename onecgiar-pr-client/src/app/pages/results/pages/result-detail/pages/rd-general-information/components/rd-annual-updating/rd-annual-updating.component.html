@@ -21,7 +21,7 @@
                 </app-pr-checkbox>
                 <app-pr-input *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
                     placeholder="Enter text" type="text" [required]="false"
-                    [(ngModel)]="!this.api.dataControlSE?.currentResult?.status&&this.discontinuedOption.description">
+                    [ngModel]="!this.api.dataControlSE?.currentResult?.status&&this.discontinuedOption.description" (ngModelChange)="!this.api.dataControlSE?.currentResult?.status && (this.discontinuedOption.description = $event)">
                 </app-pr-input>
             </div>
         </div>
