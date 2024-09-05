@@ -334,6 +334,7 @@ export class EvidencesRepository
         await this.query(justActivateList);
       }
     } catch (error) {
+      this._logger.error(error);
       throw this._handlersError.returnErrorRepository({
         className: EvidencesRepository.name,
         error: error,
