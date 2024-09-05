@@ -41,7 +41,8 @@ export class EmailNotificationManagementService implements OnModuleInit {
     switch (emailTemplate) {
       case EmailTemplate.CONTRIBUTION:
         return {
-          subject: `[PRMS] Result Contributing: ${data.initOwner.official_code} confirmation required for contribution to Result ${data.result.result_code}`,
+          cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
+          subject: `[PRMS] Result Contributing: ${data.initOwner.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
@@ -53,7 +54,8 @@ export class EmailNotificationManagementService implements OnModuleInit {
 
       case EmailTemplate.REQUEST_AS_CONTRIBUTION:
         return {
-          subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code}`,
+          cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
+          subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code} - `,
           initOwnerName: data.initOwner.name,
           user: `${data.user.first_name} ${data.user.last_name}`,
           initContributing: data.initContributing.name,
@@ -65,7 +67,8 @@ export class EmailNotificationManagementService implements OnModuleInit {
 
       case EmailTemplate.REMOVED_CONTRIBUTION:
         return {
-          subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code}`,
+          cc: process.env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
+          subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.name,
           initContributing: `${data.initContributing.official_code} ${data.initContributing.name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
@@ -79,5 +82,13 @@ export class EmailNotificationManagementService implements OnModuleInit {
           `No email data configuration found for template ${emailTemplate}`,
         );
     }
+  }
+
+  addPcuEmailToCC(userEmail: string, pcuEmail: string): string[] {
+    const cc = [userEmail];
+    if (process.env.IS_PRODUCTION === 'true' && pcuEmail) {
+      cc.push(pcuEmail);
+    }
+    return cc;
   }
 }

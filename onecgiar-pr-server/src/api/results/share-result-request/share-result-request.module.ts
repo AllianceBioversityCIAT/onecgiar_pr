@@ -25,6 +25,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
 import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -50,6 +51,7 @@ import { EmailNotificationManagementModule } from '../../../shared/email-notific
     TemplateRepository,
     ClarisaInitiativesRepository,
     UserNotificationSettingRepository,
+    GlobalParameterRepository,
   ],
   exports: [ShareResultRequestRepository, ShareResultRequestService],
   imports: [EmailNotificationManagementModule, ResultsTocResultsModule],
