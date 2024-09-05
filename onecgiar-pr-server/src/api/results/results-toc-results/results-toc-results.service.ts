@@ -620,9 +620,9 @@ export class ResultsTocResultsService {
           AND rtr.is_active = TRUE
       `);
       if (result.length != 0) {
-        (isSdg = result[0].isSdg),
-          (isImpactArea = result[0].isImpactArea),
-          (is_sdg_action_impact = result[0].is_sdg_action_impact);
+        isSdg = result[0].isSdg;
+        isImpactArea = result[0].isImpactArea;
+        is_sdg_action_impact = result[0].is_sdg_action_impact;
       } else {
         is_sdg_action_impact = false;
       }

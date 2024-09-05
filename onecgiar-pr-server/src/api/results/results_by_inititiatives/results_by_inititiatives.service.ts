@@ -33,7 +33,7 @@ export class ResultsByInititiativesService {
   findAll() {
     try {
       this._resultByInitiativesRepository.find();
-    } catch (error) {}
+    } catch (_error) {}
     return `This action returns all resultsByInititiatives`;
   }
 

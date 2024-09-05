@@ -553,7 +553,7 @@ export class ResultByIntitutionsRepository
         this.query(query, [resultId])
       ));
       return algo?.length ? algo[0].result_type_id : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

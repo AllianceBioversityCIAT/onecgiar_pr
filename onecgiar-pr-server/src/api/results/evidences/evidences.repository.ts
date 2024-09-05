@@ -300,35 +300,47 @@ export class EvidencesRepository
     is_supplementary: boolean,
     type: number,
   ) {
+    evidenceIdList = evidenceIdList ?? [];
     const evidenceIdListString = evidenceIdList.filter((e) => e).join(',');
 
-    evidenceIdList = evidenceIdList ?? [];
     const inactiveAll = `
-      update evidence
-      set is_active = 0,
-        last_updated_date  = NOW(),
-        last_updated_by  = ${userId}
-      where is_active  > 0
-        and result_id = ${resultId}
-        and is_supplementary = ${is_supplementary}
-        and evidence_type_id = ${type};
+      UPDATE evidence
+      SET is_active = 0,
+        last_updated_date = NOW(),
+        last_updated_by = ${userId}
+      WHERE is_active > 0
+        AND result_id = ${resultId}
+        AND is_supplementary = ${is_supplementary}
+        AND evidence_type_id = ${type};
     `;
 
-    const justActivateList = `
-      update evidence
-      set is_active = 1,
-        last_updated_date  = NOW(),
-        last_updated_by  = ${userId}
-      where result_id = ${resultId}
-        and id in (${evidenceIdListString})
-        and is_supplementary = ${is_supplementary}
-        and evidence_type_id = ${type};
-    `;
+    let justActivateList = '';
+    if (evidenceIdListString) {
+      justActivateList = `
+        UPDATE evidence
+        SET is_active = 1,
+          last_updated_date = NOW(),
+          last_updated_by = ${userId}
+        WHERE result_id = ${resultId}
+          AND id IN (${evidenceIdListString})
+          AND is_supplementary = ${is_supplementary}
+          AND evidence_type_id = ${type};
+      `;
+    }
 
     try {
       await this.query(inactiveAll);
-      await this.query(justActivateList);
-    } catch (error) {}
+      if (justActivateList) {
+        await this.query(justActivateList);
+      }
+    } catch (error) {
+      this._logger.error(error);
+      throw this._handlersError.returnErrorRepository({
+        className: EvidencesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
   }
 
   async getLastSharepointId() {
