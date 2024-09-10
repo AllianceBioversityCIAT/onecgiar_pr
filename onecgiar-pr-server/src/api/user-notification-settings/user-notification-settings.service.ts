@@ -2,12 +2,12 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { UserNotificationSettingDto } from './dto/create-user-notification-setting.dto';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { User } from '../../auth/modules/user/entities/user.entity';
-import { UserNotificationSettingRepository } from './user_notification_settings.repository';
+import { UserNotificationSettingRepository } from './user-notification-settings.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
-import { UserNotificationSetting } from './entities/user_notification_setting.entity';
+import { UserNotificationSetting } from './entities/user-notification-settings.entity';
 
 @Injectable()
 export class UserNotificationSettingsService {

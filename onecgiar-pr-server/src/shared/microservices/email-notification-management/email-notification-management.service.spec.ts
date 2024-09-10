@@ -3,9 +3,9 @@ import { ClientProxy } from '@nestjs/microservices';
 import { EmailNotificationManagementService } from './email-notification-management.service';
 import { ConfigMessageDto } from './dto/send-email.dto';
 import { Logger } from '@nestjs/common';
-import { TokenDto } from '../globalInterfaces/token.dto';
 import { EmailTemplate } from './enum/email-notification.enum';
 import { BuildEmailDataDto } from './dto/email-template.dto';
+import { TokenDto } from '../../globalInterfaces/token.dto';
 
 describe('EmailNotificationManagementService', () => {
   let service: EmailNotificationManagementService;
@@ -125,7 +125,7 @@ describe('EmailNotificationManagementService', () => {
       expect(result).toEqual({
         cc: ['jhon@doe.com'],
         subject:
-          '[PRMS] Result Contributing: INIT-02 confirmation required for contribution to Result 1 - ',
+          '[PRMS] Result Contributing: INIT-01 confirmation required for contribution to Result 1 - ',
         initContributingName: 'Contributing Initiative',
         requesterName: 'John Doe',
         initOwner: 'INIT-01 Owner Initiative',

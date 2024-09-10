@@ -28,6 +28,7 @@ import { ResultsCenter } from '../results-centers/entities/results-center.entity
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
 import { ShareResultRequest } from '../share-result-request/entities/share-result-request.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
+import { Notification } from '../../notification/entities/notification.entity';
 
 @Entity()
 export class Result {
@@ -385,4 +386,7 @@ export class Result {
 
   @OneToMany(() => ResultsTocResult, (ra) => ra.results_id)
   obj_results_toc_result: ResultsTocResult[];
+
+  @OneToMany(() => Notification, (ra) => ra.obj_result)
+  obj_result_notification: Notification[];
 }

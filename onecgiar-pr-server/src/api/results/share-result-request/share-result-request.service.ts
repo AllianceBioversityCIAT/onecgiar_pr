@@ -14,13 +14,13 @@ import { CreateShareResultRequestDto } from './dto/create-share-result-request.d
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
-import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
-import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 
 @Injectable()
 export class ShareResultRequestService {

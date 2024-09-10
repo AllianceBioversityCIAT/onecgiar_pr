@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClarisaCgiarEntityType } from '../../clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
-import { UserNotificationSetting } from '../../../api/user_notification_settings/entities/user_notification_setting.entity';
+import { UserNotificationSetting } from '../../../api/user-notification-settings/entities/user-notification-settings.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {

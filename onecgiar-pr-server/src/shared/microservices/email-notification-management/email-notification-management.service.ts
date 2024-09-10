@@ -2,8 +2,8 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { env } from 'process';
 import { ConfigMessageDto } from './dto/send-email.dto';
-import { BuildEmailDataDto } from './dto/email-template.dto';
 import { EmailTemplate } from './enum/email-notification.enum';
+import { BuildEmailDataDto } from './dto/email-template.dto';
 
 @Injectable()
 export class EmailNotificationManagementService implements OnModuleInit {
@@ -58,7 +58,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
           subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code} - `,
           initOwnerName: data.initOwner.name,
           user: `${data.user.first_name} ${data.user.last_name}`,
-          initContributing: data.initContributing.name,
+          initContributing: `${data.initContributing.official_code} ${data.initContributing.name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
           resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initOwner.id}&search=${data.result.result_code} - ${data.result.title} - ${data.initContributing.official_code}`,

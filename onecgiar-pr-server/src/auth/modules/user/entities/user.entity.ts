@@ -9,7 +9,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserNotificationSetting } from '../../../../api/user_notification_settings/entities/user_notification_setting.entity';
+import { Notification } from '../../../../api/notification/entities/notification.entity';
+import { UserNotificationSetting } from '../../../../api/user-notification-settings/entities/user-notification-settings.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -81,4 +82,16 @@ export class User {
     (notificationSetting) => notificationSetting.obj_user,
   )
   obj_user_notification_setting: UserNotificationSetting[];
+
+  @OneToMany(
+    () => Notification,
+    (notificationSetting) => notificationSetting.obj_target_user,
+  )
+  obj_target_user_notification: Notification[];
+
+  @OneToMany(
+    () => Notification,
+    (notificationSetting) => notificationSetting.obj_emitter_user,
+  )
+  obj_emitter_user_notification: Notification[];
 }

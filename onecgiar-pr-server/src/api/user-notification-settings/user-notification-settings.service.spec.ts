@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserNotificationSettingsService } from './user_notification_settings.service';
+import { UserNotificationSettingsService } from './user-notification-settings.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
-import { UserNotificationSettingRepository } from './user_notification_settings.repository';
+import { UserNotificationSettingRepository } from './user-notification-settings.repository';
 import { Logger } from '@nestjs/common';
 import { User } from '../../auth/modules/user/entities/user.entity';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';

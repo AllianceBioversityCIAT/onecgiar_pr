@@ -29,9 +29,9 @@ import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
-import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
-import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
