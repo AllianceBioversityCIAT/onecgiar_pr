@@ -165,6 +165,8 @@
   .notifications_list {
     display: flex;
     flex-direction: column;
+    overflow: auto;
+    max-height: 500px;
 
     .notification {
       padding: 20px 1.5rem 10px 1.5rem;

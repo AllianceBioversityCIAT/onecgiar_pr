@@ -12,16 +12,15 @@
         class="tab"
         routerLinkActive="active"
         routerLink="requests"
-        (click)="this.resultsNotificationsSE.resetFilters(); this.resultsNotificationsSE.get_section_information()">
+        (click)="this.clearFilters(); this.resultsNotificationsSE.get_section_information()">
         <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
         Requests
       </a>
 
-      <!-- ! Do not delete this tab. It will be implementend on next sprint -->
-      <!-- <a class="tab" routerLinkActive="active" routerLink="updates">
+      <a class="tab" routerLinkActive="active" routerLink="updates" (click)="this.clearFilters()">
         <i class="material-icons-round" style="font-size: 20px"> pending_actions </i>
         Updates
-      </a> -->
+      </a>
     </div>
 
     <div class="tabs">
