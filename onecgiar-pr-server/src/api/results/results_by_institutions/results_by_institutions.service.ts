@@ -18,6 +18,10 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ChangeTracker } from '../../../shared/utils/change-tracker';
+import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -32,6 +36,9 @@ export class ResultsByInstitutionsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
+    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -84,12 +91,12 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  async getGetInstitutionsPartnersByResultId(id: number) {
+  async getGetInstitutionsPartnersByResultId(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultById(id);
+      const result = await this._resultRepository.getResultById(resultId);
       if (!result?.id) {
         throw {
-          response: id,
+          response: resultId,
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
         };
@@ -97,7 +104,7 @@ export class ResultsByInstitutionsService {
 
       const knowledgeProduct =
         await this._resultKnowledgeProductRepository.findOne({
-          where: { results_id: id },
+          where: { results_id: resultId },
           relations: { result_knowledge_product_institution_array: true },
         });
 
@@ -106,7 +113,7 @@ export class ResultsByInstitutionsService {
         !knowledgeProduct?.result_knowledge_product_id
       ) {
         throw {
-          response: { result_id: id },
+          response: { result_id: resultId },
           message: 'Knowledge Product Not Found',
           status: HttpStatus.NOT_FOUND,
         };
@@ -115,7 +122,7 @@ export class ResultsByInstitutionsService {
       let institutions: any = [];
       institutions = await this._resultByIntitutionsRepository.find({
         where: {
-          result_id: id,
+          result_id: resultId,
           is_active: true,
           institution_roles_id: knowledgeProduct
             ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
@@ -182,11 +189,23 @@ export class ResultsByInstitutionsService {
         });
       }
 
+      const npProject =
+        await this._nonPooledProjectRepository.getAllNPProjectByResultId(
+          resultId,
+          1,
+        );
+      const resCenters =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
       return {
         response: {
           no_applicable_partner: !!result.no_applicable_partner,
           institutions,
           mqap_institutions,
+          contributing_np_projects: npProject,
+          contributing_center: resCenters,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -296,6 +315,150 @@ export class ResultsByInstitutionsService {
           oldPartners,
           !!knowledgeProduct,
           data.result_id,
+          user.id,
+        );
+      }
+
+      const { contributing_np_projects, contributing_center } = data;
+
+      //non-pooled projects
+      if (contributing_center.filter((el) => el.primary == true).length > 1) {
+        contributing_center.map((el) => {
+          el.primary = false;
+        });
+      }
+
+      if (contributing_np_projects?.length) {
+        const titleArray = contributing_np_projects.map((el) => el.grant_title);
+        await this._nonPooledProjectRepository.updateNPProjectById(
+          data.result_id,
+          titleArray,
+          user.id,
+          1,
+        );
+        await this._nonPooledProjectRepository.update(
+          { results_id: data.result_id },
+          { is_active: false },
+        );
+
+        for (const project of contributing_np_projects) {
+          if (project?.grant_title?.length) {
+            const existingProject =
+              await this._nonPooledProjectRepository.findOne({
+                where: {
+                  results_id: data.result_id,
+                  grant_title: project.grant_title,
+                  funder_institution_id: project.funder,
+                  non_pooled_project_type_id: 1,
+                },
+              });
+
+            const projectData = {
+              center_grant_id: project.center_grant_id,
+              funder_institution_id: project.funder,
+              lead_center_id: String(project.lead_center),
+              is_active: true,
+              last_updated_by: user.id,
+            };
+
+            if (existingProject) {
+              await this._nonPooledProjectRepository.update(
+                existingProject.id,
+                projectData,
+              );
+            } else {
+              await this._nonPooledProjectRepository.save({
+                ...projectData,
+                results_id: data.result_id,
+                grant_title: project.grant_title,
+                created_by: user.id,
+                non_pooled_project_type_id: 1,
+              });
+            }
+          }
+        }
+
+        const activeProjects = await this._nonPooledProjectRepository.find({
+          where: { results_id: data.result_id, is_active: true },
+        });
+
+        for (const project of activeProjects) {
+          const existingBudget =
+            await this._resultBilateralBudgetRepository.findOne({
+              where: { non_pooled_projetct_id: project.id },
+            });
+
+          const budgetData = {
+            non_pooled_projetct_id: project.id,
+            is_active: true,
+            last_updated_by: user.id,
+          };
+
+          if (!existingBudget) {
+            await this._resultBilateralBudgetRepository.save({
+              ...budgetData,
+              created_by: user.id,
+            });
+          } else {
+            await this._resultBilateralBudgetRepository.update(
+              project.id,
+              budgetData,
+            );
+          }
+        }
+      } else {
+        await this._nonPooledProjectRepository.updateNPProjectById(
+          data.result_id,
+          [],
+          user.id,
+          1,
+        );
+      }
+
+      //centers
+      if (contributing_center?.length) {
+        const centerArray = contributing_center.map((el) => el.code);
+        await this._resultsCenterRepository.updateCenter(
+          data.result_id,
+          centerArray,
+          user.id,
+        );
+
+        const resultCenterArray: ResultsCenter[] = [];
+
+        for (const center of contributing_center) {
+          const exists =
+            await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+              data.result_id,
+              center.code,
+            );
+
+          const resultCenterData = {
+            center_id: center.code,
+            result_id: data.result_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            is_primary: center.primary || false,
+          };
+
+          if (!exists) {
+            const newResultCenter = new ResultsCenter();
+            Object.assign(newResultCenter, resultCenterData);
+            resultCenterArray.push(newResultCenter);
+          } else if (center?.primary) {
+            exists.is_primary = center.primary;
+            exists.last_updated_by = user.id;
+            resultCenterArray.push(exists);
+          }
+        }
+
+        if (resultCenterArray.length) {
+          await this._resultsCenterRepository.save(resultCenterArray);
+        }
+      } else {
+        await this._resultsCenterRepository.updateCenter(
+          data.result_id,
+          [],
           user.id,
         );
       }

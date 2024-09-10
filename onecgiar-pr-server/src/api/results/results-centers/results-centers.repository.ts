@@ -9,6 +9,7 @@ import {
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { ResultsCenterDto } from './dto/results-center.dto';
 
 @Injectable()
 export class ResultsCenterRepository
@@ -151,7 +152,7 @@ export class ResultsCenterRepository
         and rc.is_active > 0;
     `;
     try {
-      const resultCenter: ResultsCenter[] = await this.query(queryData, [
+      const resultCenter: ResultsCenterDto[] = await this.query(queryData, [
         resultId,
       ]);
       return resultCenter;

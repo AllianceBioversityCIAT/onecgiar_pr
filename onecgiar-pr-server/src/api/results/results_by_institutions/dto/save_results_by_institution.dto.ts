@@ -1,4 +1,6 @@
+import { NonPooledProjectDto } from '../../non-pooled-projects/dto/non-pooled-project.dto';
 import { ResultByInstitutionsByDeliveriesType } from '../../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
+import { ResultsCenterDto } from '../../results-centers/dto/results-center.dto';
 import { ResultsByInstitution } from '../entities/results_by_institution.entity';
 
 export class SaveResultsByInstitutionDto {
@@ -6,6 +8,8 @@ export class SaveResultsByInstitutionDto {
   public no_applicable_partner: boolean;
   public institutions: ResultsByInstitution[];
   public mqap_institutions: ResultsByInstitution[];
+  public contributing_np_projects: NonPooledProjectDto[];
+  public contributing_center: ResultsCenterDto[];
 }
 
 export interface institutionsInterface {
