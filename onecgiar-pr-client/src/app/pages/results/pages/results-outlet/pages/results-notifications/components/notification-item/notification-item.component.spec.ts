@@ -346,7 +346,7 @@ describe('NotificationItemComponent', () => {
       };
       const errorMessage = 'error message';
       const spy = jest.spyOn(mockApiService.alertsFe, 'show');
-      const spyPATCH_updateRequest = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(errorMessage));
+      const spyPATCH_updateRequest = jest.spyOn(mockApiService.resultsSE, 'PATCH_updateRequest').mockReturnValue(throwError(() => errorMessage));
       const emitSpy = jest.spyOn(component.requestEvent, 'emit');
 
       component.acceptOrReject(true);

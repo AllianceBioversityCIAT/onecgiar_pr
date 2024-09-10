@@ -62,10 +62,7 @@
           [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
       </div>
 
-      <div *ngIf="isSent" class="notification_content_actions_sent">
-        <i class="material-icons-round"> watch_later </i>
-        <p>Pending</p>
-      </div>
+      <div class="notification_date" style="min-width: 165px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
     </div>
   </div>
 
@@ -90,6 +87,8 @@
         <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #008000"> Accepted</span> by
         {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
       </p>
+
+      <div class="notification_date" style="min-width: 150px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
     </div>
   </div>
 
@@ -114,29 +113,8 @@
         <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #db321c">Rejected</span> by
         {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
       </p>
+
+      <div class="notification_date" style="min-width: 150px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
     </div>
   </div>
-
-  <div *ngSwitchCase="4">
-    <div class="title">
-      Request from {{ notification?.requester_official_code }} to {{ notification?.approving_official_code }} to be added as a contributor to the
-      result:
-    </div>
-
-    <div class="sub_title">
-      {{ notification?.result_type_name }} -
-
-      <a class="open_route" target="_blank" rel="noopener noreferrer" [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer">
-        (Result code: {{ notification?.result_code }}) {{ notification?.title }}
-      </a>
-    </div>
-
-    <div class="text_icon pending">
-      Pending
-
-      <i class="material-icons-round"> watch_later </i>
-    </div>
-  </div>
-
-  <div class="notification_date">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
 </div>

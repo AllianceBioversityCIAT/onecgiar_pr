@@ -1,13 +1,12 @@
+import { TokenDto } from '../../globalInterfaces/token.dto';
+
 export interface BuildEmailDataDto {
   initContributing: {
     id: number;
     name: string;
     official_code: string;
   };
-  user?: {
-    first_name: string;
-    last_name: string;
-  };
+  user?: TokenDto;
   initOwner: {
     id: number;
     name: string;
@@ -18,4 +17,5 @@ export interface BuildEmailDataDto {
     title: string;
     version_id: number;
   };
+  pcuEmail?: string;
 }

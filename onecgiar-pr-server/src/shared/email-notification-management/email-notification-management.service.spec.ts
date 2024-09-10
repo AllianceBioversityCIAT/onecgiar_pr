@@ -107,7 +107,12 @@ describe('EmailNotificationManagementService', () => {
           name: 'Contributing Initiative',
           official_code: 'INIT-02',
         },
-        user: { first_name: 'John', last_name: 'Doe' },
+        user: {
+          id: 1,
+          first_name: 'John',
+          last_name: 'Doe',
+          email: 'jhon@doe.com',
+        },
         result: {
           result_code: 1,
           title: 'Sample Result',
@@ -118,8 +123,9 @@ describe('EmailNotificationManagementService', () => {
       const result = service.buildEmailData(EmailTemplate.CONTRIBUTION, data);
 
       expect(result).toEqual({
+        cc: ['jhon@doe.com'],
         subject:
-          '[PRMS] Result Contributing: INIT-01 confirmation required for contribution to Result 1',
+          '[PRMS] Result Contributing: INIT-02 confirmation required for contribution to Result 1 - ',
         initContributingName: 'Contributing Initiative',
         requesterName: 'John Doe',
         initOwner: 'INIT-01 Owner Initiative',
@@ -136,6 +142,32 @@ describe('EmailNotificationManagementService', () => {
       ).toThrow(
         'No email data configuration found for template unknown_template',
       );
+    });
+  });
+
+  describe('addPcuEmailToCC', () => {
+    it('should add PCU email to CC when IS_PRODUCTION is true', () => {
+      process.env.IS_PRODUCTION = 'true';
+      const result = service.addPcuEmailToCC(
+        'john.doe@test.com',
+        'pcu@test.com',
+      );
+      expect(result).toEqual(['john.doe@test.com', 'pcu@test.com']);
+    });
+
+    it('should not add PCU email to CC when IS_PRODUCTION is false', () => {
+      process.env.IS_PRODUCTION = 'false';
+      const result = service.addPcuEmailToCC(
+        'john.doe@test.com',
+        'pcu@test.com',
+      );
+      expect(result).toEqual(['john.doe@test.com']);
+    });
+
+    it('should not add PCU email to CC if pcuEmail is undefined', () => {
+      process.env.IS_PRODUCTION = 'true';
+      const result = service.addPcuEmailToCC('john.doe@test.com', undefined);
+      expect(result).toEqual(['john.doe@test.com']);
     });
   });
 });

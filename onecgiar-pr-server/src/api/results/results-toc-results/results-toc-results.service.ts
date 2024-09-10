@@ -29,6 +29,7 @@ import { ConfigMessageDto } from '../../../shared/email-notification-management/
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
 import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -50,6 +51,7 @@ export class ResultsTocResultsService {
     private readonly _templateRepository: TemplateRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
   ) {}
 
   async create(
@@ -134,7 +136,6 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
-            user,
           );
         }
 
@@ -163,7 +164,6 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
-            user,
           );
         }
       }
@@ -975,7 +975,6 @@ export class ResultsTocResultsService {
     contributingInit: number[],
     result_id: number,
     initSubmitter: number,
-    user: TokenDto,
   ) {
     for (const init of contributingInit) {
       const [initOwner, result, initContributing, initMembers] =
@@ -1012,6 +1011,18 @@ export class ResultsTocResultsService {
       const template = await this._templateRepository.findOne({
         where: { name: EmailTemplate.REMOVED_CONTRIBUTION },
       });
+      const pcuEmail = await this._globalParametersRepository.findOne({
+        where: { name: 'pcu_email' },
+        select: {
+          value: true,
+        },
+      });
+
+      const technicalTeamEmailsRecord =
+        await this._globalParametersRepository.findOne({
+          where: { name: 'technical_team_email' },
+          select: { value: true },
+        });
 
       const emailData = this._emailNotificationManagementService.buildEmailData(
         template.name as EmailTemplate.REMOVED_CONTRIBUTION,
@@ -1019,17 +1030,19 @@ export class ResultsTocResultsService {
           initContributing,
           result,
           initOwner,
+          pcuEmail: pcuEmail.value,
         },
       );
 
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: env.EMAIL_SENDER, name: 'Reporting tool' },
+        from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
         emailBody: {
           subject: emailData.subject,
           to,
-          cc: [user.email],
+          cc: emailData.cc,
+          bcc: technicalTeamEmailsRecord.value,
           message: {
             text: 'Contributing Initiative Removed from a Result',
             socketFile: handle(emailData),

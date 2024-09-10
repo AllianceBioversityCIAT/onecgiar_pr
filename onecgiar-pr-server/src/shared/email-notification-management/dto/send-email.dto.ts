@@ -19,7 +19,7 @@ export class EmailBodyDto {
   cc?: string[];
 
   @ApiProperty({ required: false, isArray: true, type: String })
-  bcc?: string[];
+  bcc?: string;
 
   @ApiProperty({ type: EmailBodyMessageDto })
   message: EmailBodyMessageDto;

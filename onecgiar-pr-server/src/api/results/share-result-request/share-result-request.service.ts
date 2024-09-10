@@ -20,6 +20,7 @@ import { ResultsTocResultsService } from '../results-toc-results/results-toc-res
 import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
 import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -37,6 +38,7 @@ export class ShareResultRequestService {
     private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
     @Inject(forwardRef(() => ResultsTocResultsService))
     private readonly _resultsTocResultService: ResultsTocResultsService,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
   ) {}
 
   async resultRequest(
@@ -194,14 +196,28 @@ export class ShareResultRequestService {
   ) {
     for (const request of shareInitRequests) {
       const [initOwner, result, initContributing, initMembers] =
-        await this.getRequestRelatedData(request, resultId);
+        await this.getRequestRelatedData(request, resultId, emailTemplate);
 
       const to = await this.getEmailRecipients(
         initMembers,
+        emailTemplate,
         request.shared_inititiative_id,
+        initOwner.id,
       );
 
       const template = await this.getEmailTemplate(emailTemplate);
+      const pcuEmail = await this._globalParametersRepository.findOne({
+        where: { name: 'pcu_email' },
+        select: {
+          value: true,
+        },
+      });
+
+      const technicalTeamEmailsRecord =
+        await this._globalParametersRepository.findOne({
+          where: { name: 'technical_team_email' },
+          select: { value: true },
+        });
 
       const emailData = this.buildEmailData(
         template,
@@ -209,14 +225,17 @@ export class ShareResultRequestService {
         user,
         initOwner,
         result,
+        pcuEmail.value,
       );
 
-      await this._emailNotificationManagementService.sendEmail({
-        from: { email: env.EMAIL_SENDER, name: 'Reporting tool' },
+      console.log(technicalTeamEmailsRecord.value);
+      this._emailNotificationManagementService.sendEmail({
+        from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
         emailBody: {
           subject: emailData.subject,
           to,
-          cc: [user.email],
+          cc: emailData.cc,
+          bcc: technicalTeamEmailsRecord.value,
           message: {
             text: 'Contribution request',
             socketFile: Handlebars.compile(template.template)(emailData),
@@ -229,6 +248,7 @@ export class ShareResultRequestService {
   private async getRequestRelatedData(
     request: ShareResultRequest,
     resultId: number,
+    emailTemplate: string,
   ) {
     return await Promise.all([
       this._clarisaInitiativeRepository.findOne({
@@ -240,7 +260,10 @@ export class ShareResultRequestService {
       }),
       this._roleByUserRepository.find({
         where: {
-          initiative_id: request.shared_inititiative_id,
+          initiative_id:
+            emailTemplate === EmailTemplate.CONTRIBUTION
+              ? request.shared_inititiative_id
+              : request.owner_initiative_id,
           role: In([3, 4, 5]),
           active: true,
         },
@@ -251,14 +274,19 @@ export class ShareResultRequestService {
 
   private async getEmailRecipients(
     initMembers: any[],
-    sharedInitiativeId: number,
+    emailTemplate: string,
+    sharedInitiativeId?: number,
+    initOwner?: number,
   ) {
     const users = initMembers.map((m) => m.obj_user.id);
     const userEnable = await this._userNotificationSettingsRepository.find({
       where: {
         user_id: In(users),
         email_notifications_contributing_request_enabled: true,
-        initiative_id: sharedInitiativeId,
+        initiative_id:
+          emailTemplate === EmailTemplate.CONTRIBUTION
+            ? sharedInitiativeId
+            : initOwner,
       },
       relations: ['obj_user'],
     });
@@ -281,12 +309,13 @@ export class ShareResultRequestService {
     user: TokenDto,
     initOwner: any,
     result: any,
+    pcuEmail: string,
   ) {
     return this._emailNotificationManagementService.buildEmailData(
       template.name as
         | EmailTemplate.CONTRIBUTION
         | EmailTemplate.REQUEST_AS_CONTRIBUTION,
-      { initContributing, user, initOwner, result },
+      { initContributing, user, initOwner, result, pcuEmail },
     );
   }
 
@@ -329,13 +358,17 @@ export class ShareResultRequestService {
     });
   }
 
-  private buildWhereConditions(inits: any[], role: number) {
+  private buildWhereConditions(inits: any[], role: number, user?: number) {
     const sharedInitiativeIds = inits.map((i) => i.initiative_id);
-    const commonConditions = {
+    const commonConditions: any = {
       request_status_id: 1,
       is_active: true,
       obj_result: { is_active: true },
     };
+
+    if (user) {
+      commonConditions.requested_by = user;
+    }
 
     return {
       pendingOwner:
@@ -441,7 +474,6 @@ export class ShareResultRequestService {
         obj_version: true,
         obj_result_type: true,
         obj_result_level: true,
-        obj_results_toc_result: true,
       },
       obj_requested_by: true,
       obj_approved_by: true,
@@ -464,7 +496,7 @@ export class ShareResultRequestService {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const whereConditions = this.buildWhereConditions(inits, role);
+      const whereConditions = this.buildWhereConditions(inits, role, user.id);
 
       const sentContributionsPendingOwner = await this.getPendingRequests(
         whereConditions.pendingOwner,
