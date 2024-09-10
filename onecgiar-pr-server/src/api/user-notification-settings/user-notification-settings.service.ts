@@ -136,81 +136,74 @@ export class UserNotificationSettingsService {
   }
 
   async userNotificationSettings(
-    userNotificationSettingDto: UserNotificationSettingDto,
+    userNotificationSettingDto: UserNotificationSettingDto[],
     user: TokenDto,
   ) {
-    const {
-      initiative_id,
-      email_notifications_contributing_request_enabled,
-      email_notifications_updates_enabled,
-    } = userNotificationSettingDto;
-
     try {
       const userExists = await this.verifyUserExists(user.id);
-      const initExists = await this.verifyInitiativeExists(initiative_id);
+      for (const us of userNotificationSettingDto) {
+        const initExists = await this.verifyInitiativeExists(us.initiative_id);
 
-      if (!userExists || !initExists) {
-        return {
-          response: null,
-          message: 'User or Initiative not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+        if (!userExists || !initExists) {
+          return {
+            response: null,
+            message: 'User or Initiative not found',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
 
-      const isUserInInitiative = await this.verifyUserInit(
-        user.id,
-        initiative_id,
-      );
-
-      if (!isUserInInitiative) {
-        return {
-          response: null,
-          message: 'User is not part of the Initiative',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const userNotificationSettings: UserNotificationSetting =
-        await this._userNotificationSettingRepository.findOne({
-          where: {
-            user_id: user.id,
-            initiative_id,
-            is_active: true,
-          },
-        });
-      console.log(
-        '🚀 ~ UserNotificationSettingsService ~ userNotificationSettings:',
-        userNotificationSettings,
-      );
-
-      if (!userNotificationSettings) {
-        const newUserNotificationSettings = new UserNotificationSetting();
-        newUserNotificationSettings.user_id = user.id;
-        newUserNotificationSettings.initiative_id = initiative_id;
-        newUserNotificationSettings.email_notifications_contributing_request_enabled =
-          email_notifications_contributing_request_enabled;
-        newUserNotificationSettings.email_notifications_updates_enabled =
-          email_notifications_updates_enabled;
-        newUserNotificationSettings.is_active = true;
-        newUserNotificationSettings.created_by = user.id;
-        newUserNotificationSettings.last_updated_by = user.id;
-
-        await this._userNotificationSettingRepository.insert(
-          newUserNotificationSettings,
+        const isUserInInitiative = await this.verifyUserInit(
+          user.id,
+          us.initiative_id,
         );
-      } else {
-        await this._userNotificationSettingRepository.update(
-          {
-            id: userNotificationSettings.id,
-          },
-          {
-            email_notifications_contributing_request_enabled,
-            email_notifications_updates_enabled,
-            last_updated_by: user.id,
-          },
-        );
-      }
 
+        if (!isUserInInitiative) {
+          return {
+            response: null,
+            message: 'User is not part of the Initiative',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const userNotificationSettings: UserNotificationSetting =
+          await this._userNotificationSettingRepository.findOne({
+            where: {
+              user_id: user.id,
+              initiative_id: us.initiative_id,
+              is_active: true,
+            },
+          });
+
+        if (!userNotificationSettings) {
+          const newUserNotificationSettings = new UserNotificationSetting();
+          newUserNotificationSettings.user_id = user.id;
+          newUserNotificationSettings.initiative_id = us.initiative_id;
+          newUserNotificationSettings.email_notifications_contributing_request_enabled =
+            us.email_notifications_contributing_request_enabled;
+          newUserNotificationSettings.email_notifications_updates_enabled =
+            us.email_notifications_updates_enabled;
+          newUserNotificationSettings.is_active = true;
+          newUserNotificationSettings.created_by = user.id;
+          newUserNotificationSettings.last_updated_by = user.id;
+
+          await this._userNotificationSettingRepository.insert(
+            newUserNotificationSettings,
+          );
+        } else {
+          await this._userNotificationSettingRepository.update(
+            {
+              id: userNotificationSettings.id,
+            },
+            {
+              email_notifications_contributing_request_enabled:
+                us.email_notifications_contributing_request_enabled,
+              email_notifications_updates_enabled:
+                us.email_notifications_updates_enabled,
+              last_updated_by: user.id,
+            },
+          );
+        }
+      }
       return {
         response: 'User notification settings updated successfully',
         message:

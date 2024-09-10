@@ -35,7 +35,7 @@ export class UserNotificationSettingsController {
     description: 'Internal server error',
   })
   async emailNotificationSettings(
-    @Body() userNotificationSettingDto: UserNotificationSettingDto,
+    @Body() userNotificationSettingDto: UserNotificationSettingDto[],
     @UserToken() user: TokenDto,
   ) {
     return await this.userNotificationSettingsService.userNotificationSettings(
