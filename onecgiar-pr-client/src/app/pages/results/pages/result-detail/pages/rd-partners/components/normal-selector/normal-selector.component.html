@@ -1,11 +1,6 @@
-<app-alert-status *ngIf="!dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
-</app-alert-status>
-<div class="column_title" *ngIf="dataControlSE.isKnowledgeProduct">
-    Additional partners
+<div class="column_title">
+    {{dataControlSE.isKnowledgeProduct ? "Additional partners" : "Partners"}}
 </div>
-<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
-    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
-</app-alert-status>
 <div [ngSwitch]="this.rolesSE.readOnly">
     <div *ngSwitchCase="true">{{this.rdPartnersSE.partnersBody.no_applicable_partner?'Marked as not applicable':''}}
     </div>
@@ -15,6 +10,9 @@
         </app-pr-checkbox>
     </div>
 </div>
+<app-alert-status *ngIf="dataControlSE.isKnowledgeProduct"
+    description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
+</app-alert-status>
 
 <app-alert-status [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner"
     *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
@@ -24,7 +22,7 @@
 <div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
     <div (click)="getDisableOptions()">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsWithoutCentersListPartners" [required]="false"
-            label="Partners" selectedOptionLabel="institutions_name" optionLabel="full_name"
+            [label]="dataControlSE.isKnowledgeProduct ? 'Partners': null" selectedOptionLabel="institutions_name" optionLabel="full_name"
             optionValue="institutions_id" [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
             [disableOptions]="this.disableOptions" placeholder="Select partner"
             (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle+1; getOnlyPartnerTypes();">
@@ -79,7 +77,7 @@
     </div>
 
     <div>
-        <app-pr-field-header label="Partner types"
+        <app-pr-field-header label="Partner types" labelDescInlineStyles="margin-top: 0 !important;"
             [description]="'Total partner(s) type ('+ (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes:this.rdPartnersSE.toggle)?.length + '):'" [required]="false">
         </app-pr-field-header>
 

@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
-import { PartnersBody } from './models/partnersBody';
+import { NonPooledProjectDto, PartnersBody } from './models/partnersBody';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { RdPartnersService } from './rd-partners.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
 @Component({
   selector: 'app-rd-partners',
@@ -17,20 +18,25 @@ export class RdPartnersComponent implements OnInit {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 
-  alertStatusMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
+  alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
+  cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
+
+  contributingCenterOptions = [];
+  cgspaceDisabledList: any = [];
+  disabledText = 'To remove this center, please contact your librarian';
 
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
     public rolesSE: RolesService,
     public rdPartnersSE: RdPartnersService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public centersSE: CentersService
   ) {}
 
   ngOnInit(): void {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
-    this.rdPartnersSE.getCenterInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
         document.querySelectorAll('.alert-event').forEach(element => {
@@ -42,6 +48,8 @@ export class RdPartnersComponent implements OnInit {
         console.error(error);
       }
     });
+    this.getContributingCenterOptions();
+    this.getDisabledCentersForKP();
   }
 
   onSyncSection() {
@@ -58,10 +66,51 @@ export class RdPartnersComponent implements OnInit {
       () => {
         this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
           this.rdPartnersSE.getSectionInformation();
-          this.rdPartnersSE.getCenterInformation();
         });
       }
     );
+  }
+
+  async getContributingCenterOptions() {
+    this.contributingCenterOptions = await this.centersSE.getData();
+  }
+
+  deleteEvidence(index: number) {
+    this.rdPartnersSE.partnersBody.contributing_np_projects.splice(index, 1);
+  }
+
+  addBilateralContribution() {
+    this.rdPartnersSE.partnersBody.contributing_np_projects.push(new NonPooledProjectDto());
+  }
+
+  validatePrimarySelection() {
+    if (this.rdPartnersSE.partnersBody.contributing_center.length === 1) this.rdPartnersSE.partnersBody.contributing_center[0].primary = true;
+  }
+
+  deletContributingCenter(index: number) {
+    this.rdPartnersSE.partnersBody?.contributing_center.splice(index, 1);
+  }
+
+  addPrimaryCenter(center) {
+    this.rdPartnersSE.partnersBody?.contributing_center.forEach(center => (center.primary = false));
+    center.primary = true;
+  }
+
+  getDisabledCentersForKP() {
+    this.cgspaceDisabledList = this.rdPartnersSE.partnersBody.contributing_center?.filter(center => center.from_cgspace);
+  }
+
+  get validateGranTitle() {
+    for (const iterator of this.rdPartnersSE.partnersBody.contributing_np_projects) {
+      const evidencesFinded = this.rdPartnersSE.partnersBody.contributing_np_projects.filter(
+        evidence => evidence.grant_title == iterator.grant_title
+      );
+      if (evidencesFinded.length >= 2) {
+        return evidencesFinded.length >= 2;
+      }
+    }
+
+    return !!this.rdPartnersSE.partnersBody.contributing_np_projects.find(evidence => !evidence.grant_title);
   }
 
   onSaveSection() {

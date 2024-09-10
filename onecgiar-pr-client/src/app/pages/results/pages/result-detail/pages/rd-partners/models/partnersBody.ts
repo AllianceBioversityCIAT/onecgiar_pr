@@ -2,6 +2,8 @@ export class PartnersBody {
   public no_applicable_partner: boolean = false;
   public mqap_institutions: UnmappedMQAPInstitutionDto[] = [];
   public institutions: InstitutionsInterface[] = [];
+  contributing_np_projects: NonPooledProjectDto[];
+  contributing_center: ResultsCenterDto[];
 }
 
 export class InstitutionsInterface {
@@ -74,4 +76,33 @@ export class UnmappedMQAPInstitutionDto {
     last_updated_by: number;
     last_updated_date: string;
   }[];
+}
+
+export class NonPooledProjectDto {
+  id?: number;
+  grant_title: string;
+  center_grant_id: string;
+  is_active?: boolean;
+  created_date?: Date;
+  last_updated_date?: Date;
+  results_id?: number;
+  lead_center: number;
+  funder: number;
+  created_by?: number;
+  last_updated_by?: number;
+}
+
+export class ResultsCenterDto {
+  id: number;
+  primary: boolean;
+  from_cgspace: boolean;
+  is_active: boolean;
+  created_date: Date;
+  last_updated_date: Date;
+  result_id: number;
+  created_by: number;
+  last_updated_by: number;
+  code: string;
+  name: string;
+  acronym: string;
 }

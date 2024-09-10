@@ -15,7 +15,6 @@ export class NormalSelectorComponent {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 
-  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
   disableOptions: any[] = null;
 
   partnerUniqueTypes = [];
