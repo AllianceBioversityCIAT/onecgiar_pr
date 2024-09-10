@@ -541,8 +541,8 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
   }
 
-  GET_userNotificationSettingsByInitiativeId(initiativeId) {
-    return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/${initiativeId}`);
+  GET_userAllNotificationSettings() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/all`);
   }
 
   PATCH_userNotificationSettingsByInitiativeId(body) {

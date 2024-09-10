@@ -3,7 +3,7 @@ p {
 }
 
 .notification {
-  padding: 0 30px 20px 30px;
+  padding: 0 30px 15px 30px;
   background-color: #f2f2f2;
   border: 1px solid #808080;
   border-radius: 10px;
@@ -13,7 +13,6 @@ p {
     justify-content: flex-start;
     align-items: center;
     gap: 10px;
-    margin-bottom: 15px;
 
     .notification_header_item {
       display: flex;
@@ -38,13 +37,14 @@ p {
     justify-content: space-between;
     align-items: center;
     gap: 20px;
+    margin-top: 5px;
+    min-height: 52px;
 
     .notification_content_actions {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: flex-end;
-      gap: 10px;
 
       .notification_content_actions_status {
         text-align: center;

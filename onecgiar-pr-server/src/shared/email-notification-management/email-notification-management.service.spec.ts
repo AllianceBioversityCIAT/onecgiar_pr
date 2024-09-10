@@ -125,7 +125,7 @@ describe('EmailNotificationManagementService', () => {
       expect(result).toEqual({
         cc: ['jhon@doe.com'],
         subject:
-          '[PRMS] Result Contributing: INIT-01 confirmation required for contribution to Result 1 - ',
+          '[PRMS] Result Contributing: INIT-02 confirmation required for contribution to Result 1 - ',
         initContributingName: 'Contributing Initiative',
         requesterName: 'John Doe',
         initOwner: 'INIT-01 Owner Initiative',

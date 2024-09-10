@@ -358,13 +358,17 @@ export class ShareResultRequestService {
     });
   }
 
-  private buildWhereConditions(inits: any[], role: number) {
+  private buildWhereConditions(inits: any[], role: number, user?: number) {
     const sharedInitiativeIds = inits.map((i) => i.initiative_id);
-    const commonConditions = {
+    const commonConditions: any = {
       request_status_id: 1,
       is_active: true,
       obj_result: { is_active: true },
     };
+
+    if (user) {
+      commonConditions.requested_by = user;
+    }
 
     return {
       pendingOwner:
@@ -470,7 +474,6 @@ export class ShareResultRequestService {
         obj_version: true,
         obj_result_type: true,
         obj_result_level: true,
-        obj_results_toc_result: true,
       },
       obj_requested_by: true,
       obj_approved_by: true,
@@ -493,7 +496,7 @@ export class ShareResultRequestService {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const whereConditions = this.buildWhereConditions(inits, role);
+      const whereConditions = this.buildWhereConditions(inits, role, user.id);
 
       const sentContributionsPendingOwner = await this.getPendingRequests(
         whereConditions.pendingOwner,
