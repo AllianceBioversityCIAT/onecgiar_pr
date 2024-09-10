@@ -42,7 +42,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
       case EmailTemplate.CONTRIBUTION:
         return {
           cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
-          subject: `[PRMS] Result Contributing: ${data.initOwner.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
+          subject: `[PRMS] Result Contributing: ${data.initContributing.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
