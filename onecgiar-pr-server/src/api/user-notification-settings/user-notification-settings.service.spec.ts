@@ -222,11 +222,13 @@ describe('UserNotificationSettingsService', () => {
         .mockResolvedValue({} as any);
 
       const result = await service.userNotificationSettings(
-        {
-          initiative_id: 1,
-          email_notifications_contributing_request_enabled: true,
-          email_notifications_updates_enabled: true,
-        },
+        [
+          {
+            initiative_id: 1,
+            email_notifications_contributing_request_enabled: true,
+            email_notifications_updates_enabled: true,
+          },
+        ],
         userTest,
       );
 
@@ -256,11 +258,13 @@ describe('UserNotificationSettingsService', () => {
         .mockResolvedValue({} as any);
 
       const result = await service.userNotificationSettings(
-        {
-          initiative_id: 1,
-          email_notifications_contributing_request_enabled: true,
-          email_notifications_updates_enabled: true,
-        },
+        [
+          {
+            initiative_id: 1,
+            email_notifications_contributing_request_enabled: true,
+            email_notifications_updates_enabled: true,
+          },
+        ],
         userTest,
       );
 
@@ -276,11 +280,13 @@ describe('UserNotificationSettingsService', () => {
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
 
       const result = await service.userNotificationSettings(
-        {
-          initiative_id: 1,
-          email_notifications_contributing_request_enabled: true,
-          email_notifications_updates_enabled: true,
-        },
+        [
+          {
+            initiative_id: 1,
+            email_notifications_contributing_request_enabled: true,
+            email_notifications_updates_enabled: true,
+          },
+        ],
         userTest,
       );
 
@@ -299,11 +305,13 @@ describe('UserNotificationSettingsService', () => {
       jest.spyOn(roleByUserRepository, 'findOne').mockResolvedValue(null);
 
       const result = await service.userNotificationSettings(
-        {
-          initiative_id: 1,
-          email_notifications_contributing_request_enabled: true,
-          email_notifications_updates_enabled: true,
-        },
+        [
+          {
+            initiative_id: 1,
+            email_notifications_contributing_request_enabled: true,
+            email_notifications_updates_enabled: true,
+          },
+        ],
         userTest,
       );
 
@@ -319,11 +327,13 @@ describe('UserNotificationSettingsService', () => {
         .spyOn(userRepository, 'findOne')
         .mockRejectedValue(new Error('Test error'));
       const result = await service.userNotificationSettings(
-        {
-          initiative_id: 1,
-          email_notifications_contributing_request_enabled: true,
-          email_notifications_updates_enabled: true,
-        },
+        [
+          {
+            initiative_id: 1,
+            email_notifications_contributing_request_enabled: true,
+            email_notifications_updates_enabled: true,
+          },
+        ],
         userTest,
       );
 

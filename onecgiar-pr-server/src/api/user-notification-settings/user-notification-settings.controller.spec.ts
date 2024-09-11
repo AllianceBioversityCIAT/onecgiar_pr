@@ -46,11 +46,13 @@ describe('UserNotificationSettingsController', () => {
 
   describe('emailNotificationSettings', () => {
     it('should update user notification settings', async () => {
-      const userNotificationSettingDto: UserNotificationSettingDto = {
-        initiative_id: 1,
-        email_notifications_contributing_request_enabled: true,
-        email_notifications_updates_enabled: true,
-      };
+      const userNotificationSettingDto: UserNotificationSettingDto[] = [
+        {
+          initiative_id: 1,
+          email_notifications_contributing_request_enabled: true,
+          email_notifications_updates_enabled: true,
+        },
+      ];
 
       const expectedResult = {
         response: 'User notification settings updated successfully',
@@ -76,11 +78,13 @@ describe('UserNotificationSettingsController', () => {
     });
 
     it('should handle errors and return INTERNAL_SERVER_ERROR', async () => {
-      const userNotificationSettingDto: UserNotificationSettingDto = {
-        initiative_id: 1,
-        email_notifications_contributing_request_enabled: true,
-        email_notifications_updates_enabled: true,
-      };
+      const userNotificationSettingDto: UserNotificationSettingDto[] = [
+        {
+          initiative_id: 1,
+          email_notifications_contributing_request_enabled: true,
+          email_notifications_updates_enabled: true,
+        },
+      ];
 
       jest
         .spyOn(service, 'userNotificationSettings')

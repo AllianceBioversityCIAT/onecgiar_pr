@@ -63,6 +63,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
           result: `${data.result.result_code} - ${data.result.title}`,
           resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initOwner.id}&search=${data.result.result_code} - ${data.result.title} - ${data.initContributing.official_code}`,
           notificationSettingUrl: `${env.NOTIFICATION_MODULE_URL}settings?init=${data.initContributing.id}`,
+          initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
         };
 
       case EmailTemplate.REMOVED_CONTRIBUTION:
