@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateAnnouncementNotificationDto } from './dto/create-notification.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
@@ -17,5 +17,10 @@ export class NotificationController {
       createNotificationDto,
       user,
     );
+  }
+
+  @Get('all-notifications')
+  getAllNotifications(@UserToken() user: TokenDto) {
+    return this.notificationService.getAllNotifications(user);
   }
 }

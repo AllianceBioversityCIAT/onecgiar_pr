@@ -114,4 +114,124 @@ export class NotificationService {
       };
     }
   }
+
+  async getAllNotifications(user: TokenDto) {
+    try {
+      const [notificationsViewed, notificationsPending, notificationAnnouncement] = await Promise.all([
+        await this._notificationRepository.find({
+          select: this.getNotificattionSelect(),
+          relations: this.getNotificationWhere(),
+          where: {
+            target_user: user.id,
+            read: true,
+            obj_result: { is_active: true },
+          },
+        }),
+
+        await this._notificationRepository.find({
+          select: this.getNotificattionSelect(),
+          relations: this.getNotificationWhere(),
+          where: {
+            target_user: user.id,
+            read: false,
+            obj_result: { is_active: true },
+          },
+        }),
+
+        await this._notificationRepository.find({
+          select: {
+            text: true,
+            created_date: true,
+            obj_emitter_user: {
+              first_name: true,
+              last_name: true,
+            },
+            obj_notification_level: { type: true },
+            obj_notification_type: { type: true },
+          },
+          relations: {
+            obj_notification_level: true,
+            obj_notification_type: true,
+          },
+          where: {
+            target_user: user.id,
+            obj_notification_level: { type: NotificationLevelEnum.APPLICATION },
+            obj_notification_type: { type: NotificationTypeEnum.ANNOUNCEMENT },
+          },
+        })
+      ]);
+
+      const notifications = {
+        notificationsViewed,
+        notificationsPending,
+        notificationAnnouncement,
+      }
+
+      return {
+        response: notifications,
+        message: 'Notifications retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(error);
+      return {
+        response: null,
+        message: '',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  private getNotificattionSelect() {
+    return {
+      obj_notification_level: {
+        type: true,
+      },
+      obj_notification_type: {
+        type: true,
+      },
+      obj_emitter_user: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+      },
+      obj_target_user: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+      },
+      obj_result: {
+        result_code: true,
+        title: true,
+        status_id: true,
+        obj_result_by_initiatives: {
+          obj_initiative: {
+            id: true,
+            official_code: true,
+            name: true,
+          },
+        },
+        obj_version: {
+          phase_name: true,
+        },
+      },
+    };
+  }
+
+  private getNotificationWhere() {
+    return {
+      obj_notification_level: true,
+      obj_notification_type: true,
+      obj_emitter_user: true,
+      obj_target_user: true,
+      obj_result: {
+        obj_result_by_initiatives: {
+          obj_initiative: true,
+        },
+        obj_version: true,
+      },
+    };
+  }
 }
