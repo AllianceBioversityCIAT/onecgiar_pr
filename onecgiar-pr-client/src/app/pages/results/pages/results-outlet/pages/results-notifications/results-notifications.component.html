@@ -38,6 +38,12 @@
 
   <div class="line"></div>
 
+  <p class="request_description" *ngIf="router.url.includes('/results-notifications/requests')">
+    In this section, there are notifications of requests that any initiative has made to my initiative(s) for collaboration on an result. Allowing
+    users to accept or reject each one of the requests. Please note that it will now be possible to send, accept or reject request even if the result
+    has already been submitted.
+  </p>
+
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
     <app-pr-select
       label="Phases"
@@ -47,7 +53,8 @@
       optionLabel="phase_name_status"
       optionValue="id"
       placeholder="Select phase"
-      [(ngModel)]="this.resultsNotificationsSE.phaseFilter">
+      [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+      [truncateSelectionText]="true">
     </app-pr-select>
 
     <div *ngIf="this.resultsNotificationsSE.hideInitFilter">

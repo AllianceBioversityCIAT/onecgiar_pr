@@ -28,14 +28,22 @@
         <b>
           {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
           {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
-          has requested {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
-          {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
-          as a contributor
+          has requested {{ notification?.is_map_to_toc ? 'to include this initiative' : 'the inclusion of' }}
         </b>
+
+        <b *ngIf="!notification?.is_map_to_toc">
+          {{ notification?.obj_shared_inititiative?.official_code }}
+        </b>
+
+        <b> as a contributor </b>
+
         to result
+
         <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
+
+        <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
       </p>
     </div>
 
