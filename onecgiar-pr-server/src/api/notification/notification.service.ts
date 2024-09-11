@@ -169,7 +169,7 @@ export class NotificationService {
 
       return {
         response: notifications,
-        message: 'Notifications retrieved successfully',
+        message: 'List of all notifications retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {
