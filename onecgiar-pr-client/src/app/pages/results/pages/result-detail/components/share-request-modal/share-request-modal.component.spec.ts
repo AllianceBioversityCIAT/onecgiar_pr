@@ -304,7 +304,7 @@ describe('ShareRequestModalComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'noti',
-        title: `The request has been answered successfully`,
+        title: `Request successfully accepted`,
         status: 'success'
       });
     });
@@ -320,7 +320,7 @@ describe('ShareRequestModalComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'noti',
-        title: `The request has been answered successfully`,
+        title: `Request successfully accepted`,
         status: 'success'
       });
       expect(spygGet_section_information).toHaveBeenCalled();

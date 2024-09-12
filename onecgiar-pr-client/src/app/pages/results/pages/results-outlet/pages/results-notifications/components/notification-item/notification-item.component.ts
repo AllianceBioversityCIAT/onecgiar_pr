@@ -97,14 +97,18 @@ export class NotificationItemComponent {
       next: resp => {
         this.requestingAccept = false;
         this.requestingReject = false;
-        this.api.alertsFe.show({ id: 'noti', title: isAccept ? 'Request accepted' : 'Request rejected', status: 'success' });
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
+          status: 'success'
+        });
         this.requestEvent.emit();
       },
       error: err => {
         this.requestingAccept = false;
         this.requestingReject = false;
         console.error(err);
-        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
         this.requestEvent.emit();
       }
     });
