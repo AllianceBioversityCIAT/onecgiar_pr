@@ -5,12 +5,14 @@ export interface BuildEmailDataDto {
     id: number;
     name: string;
     official_code: string;
+    short_name: string;
   };
   user?: TokenDto;
   initOwner: {
     id: number;
     name: string;
     official_code: string;
+    short_name: string;
   };
   result: {
     result_code: number;

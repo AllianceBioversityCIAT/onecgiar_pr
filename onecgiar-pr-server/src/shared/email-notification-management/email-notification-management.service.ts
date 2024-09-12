@@ -43,9 +43,9 @@ export class EmailNotificationManagementService implements OnModuleInit {
         return {
           cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
           subject: `[PRMS] Result Contributing: ${data.initContributing.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
-          initContributingName: data.initContributing.name,
+          initContributingName: data.initContributing.short_name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
-          initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
+          initOwner: `${data.initOwner.official_code} ${data.initOwner.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
           resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initContributing.id}&search=${data.result.result_code} - ${data.result.title}`,
@@ -56,22 +56,22 @@ export class EmailNotificationManagementService implements OnModuleInit {
         return {
           cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
           subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code} - `,
-          initOwnerName: data.initOwner.name,
+          initOwnerName: data.initOwner.short_name,
           user: `${data.user.first_name} ${data.user.last_name}`,
-          initContributing: data.initContributing.name,
+          initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
           resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initOwner.id}&search=${data.result.result_code} - ${data.result.title} - ${data.initContributing.official_code}`,
           notificationSettingUrl: `${env.NOTIFICATION_MODULE_URL}settings?init=${data.initContributing.id}`,
-          initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
+          initOwner: `${data.initOwner.official_code} ${data.initOwner.short_name}`,
         };
 
       case EmailTemplate.REMOVED_CONTRIBUTION:
         return {
           cc: process.env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
           subject: `[PRMS] Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
-          initContributingName: data.initContributing.name,
-          initContributing: `${data.initContributing.official_code} ${data.initContributing.name}`,
+          initContributingName: data.initContributing.short_name,
+          initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
