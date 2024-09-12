@@ -1,11 +1,23 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { env } from 'process';
 import { NotificationDto } from './dto/create-socket.dto';
 
 @Injectable()
-export class SocketManagementService {
+export class SocketManagementService implements OnModuleInit {
   private readonly _logger = new Logger(SocketManagementService.name);
-  private readonly url = env.SOCKET_URL;
+  private readonly url =
+    env.SOCKET_URL ||
+    'https://fork-au-one-cgiar-microservices-production.up.railway.app';
+
+  async onModuleInit() {
+    try {
+      this._logger.log(
+        `Successfully connected to Sockets Microservice ${this.url}`,
+      );
+    } catch (error) {
+      this._logger.error(error);
+    }
+  }
 
   async getActiveUsers() {
     try {
@@ -27,8 +39,15 @@ export class SocketManagementService {
     }
   }
 
-  async sendNotificationToUsers(userIds: number[], notification: NotificationDto) {
+  async sendNotificationToUsers(
+    userIds: number[],
+    notification: NotificationDto,
+  ) {
+    console.log('🚀 ~ SocketManagementService ~ userIds:', userIds);
     try {
+      if (userIds.length === 0) {
+        this._logger.warn('No users online to send notification');
+      }
       const response = await fetch(`${this.url}/socket/notification`, {
         method: 'POST',
         headers: {
@@ -41,6 +60,7 @@ export class SocketManagementService {
         }),
       });
       const data = await response.json();
+      console.log('🚀 ~ SocketManagementService ~ data:', data);
 
       return {
         response: data,
@@ -51,7 +71,7 @@ export class SocketManagementService {
       this._logger.error(error);
       return {
         response: null,
-        message: '',
+        message: 'AN error occurred while sending notification',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }

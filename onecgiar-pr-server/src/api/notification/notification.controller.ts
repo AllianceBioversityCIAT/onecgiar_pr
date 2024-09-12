@@ -1,14 +1,9 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateAnnouncementNotificationDto } from './dto/create-notification.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiHeader,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 
 @ApiTags('Notifications')
 @ApiHeader({
@@ -30,10 +25,32 @@ export class NotificationController {
     @Body() createNotificationDto: CreateAnnouncementNotificationDto,
     @UserToken() user: TokenDto,
   ) {
-    return this.notificationService.createAnouncement(
+    return this.notificationService.emitApplicationAnouncement(
       createNotificationDto,
       user,
     );
+  }
+
+  @ApiOperation({ summary: 'Update the read status of a notification' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification updated successfully',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error',
+  })
+  @Patch('read/:notificationId')
+  updateReadStatus(
+    @Param('notificationId') notificationId: number,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.notificationService.updateReadStatus(notificationId, user);
+  }
+
+  @Patch('read-all')
+  updateAllReadStatus(@UserToken() user: TokenDto) {
+    return this.notificationService.updateAllReadStatus(user);
   }
 
   @ApiOperation({ summary: 'Retrieve all notifications for the current user' })

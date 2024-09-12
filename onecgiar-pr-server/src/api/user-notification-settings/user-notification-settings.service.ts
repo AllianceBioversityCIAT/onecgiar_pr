@@ -8,6 +8,7 @@ import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/cl
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { UserNotificationSetting } from './entities/user-notification-settings.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class UserNotificationSettingsService {
@@ -221,5 +222,26 @@ export class UserNotificationSettingsService {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+  }
+
+  async getNotificationUpdatesRecipients(initiativeId: number): Promise<number[]> {
+    const initMembers = await this._roleByUserRepository.find({
+      relations: {
+        obj_user: {
+          obj_user_notification_setting: true,
+        },
+      },
+      where: {
+        initiative_id: initiativeId,
+        role: In([3, 4, 5]),
+        active: true,
+        obj_user: {
+          obj_user_notification_setting: {
+            email_notifications_updates_enabled: true,
+          },
+        },
+      },
+    });
+    return initMembers.map((m) => m.obj_user.id);
   }
 }

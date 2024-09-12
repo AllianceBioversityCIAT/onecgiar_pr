@@ -754,7 +754,7 @@ WHERE
     }
   }
 
-  async getResultById(id: number): Promise<Result> {
+  async getResultById(id: number): Promise<any> {
     const queryData = `
     SELECT
     r.id,

@@ -15,6 +15,6 @@ import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.m
     UserNotificationSettingRepository,
   ],
   imports: [UserModule, ClarisaInitiativesModule, RoleByUserModule],
-  exports: [UserNotificationSettingRepository],
+  exports: [UserNotificationSettingRepository, UserNotificationSettingsService],
 })
 export class UserNotificationSettingsModule {}

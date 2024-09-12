@@ -27,6 +27,7 @@ export class NotificationService {
     notificationType: NotificationTypeEnum,
     userIds: number[],
     emmiterUser: number,
+    resultId: number,
     notification: NotificationDto,
   ) {
     try {
@@ -40,31 +41,34 @@ export class NotificationService {
           where: { type: notificationType },
         });
 
-      for (const userId of userIds) {
+      const filteredUserIds = userIds.filter(
+        (userId) => userId !== emmiterUser,
+      );
+
+      for (const userId of filteredUserIds) {
         await this._notificationRepository.save({
           target_user: userId,
           emitter_user: emmiterUser,
+          result_id: resultId,
           notification_level: notificationLevelData.notifications_level_id,
           notification_type: notificationTypeData.notifications_type_id,
         });
       }
 
       const usersOnline = await this._socketManagementService.getActiveUsers();
-
       const usersOnlineIds = usersOnline.response.map((user: any) => user.id);
-
       const matchUsers = userIds.filter((userId) =>
         usersOnlineIds.includes(userId),
       );
 
-      const newNotification =
+      const newSocketNotification =
         await this._socketManagementService.sendNotificationToUsers(
           matchUsers,
           notification,
         );
 
       return {
-        response: newNotification,
+        response: newSocketNotification,
         message: 'Notification created successfully',
         status: HttpStatus.CREATED,
       };
@@ -78,7 +82,7 @@ export class NotificationService {
     }
   }
 
-  async createAnouncement(
+  async emitApplicationAnouncement(
     createNotificationDto: CreateAnnouncementNotificationDto,
     user: TokenDto,
   ) {
@@ -95,9 +99,13 @@ export class NotificationService {
 
       const notification = await this._notificationRepository.save({
         text: createNotificationDto.text,
+        result_id: null,
+        target_user: null,
+        read_date: null,
         emitter_user: user.id,
-        notifications_level_id: notificationLevel.notifications_level_id,
-        notifications_type_id: notificationType.notifications_type_id,
+        created_date: new Date(),
+        notification_level: notificationLevel.notifications_level_id,
+        notification_type: notificationType.notifications_type_id,
       });
 
       return {
@@ -108,8 +116,85 @@ export class NotificationService {
     } catch (error) {
       this._logger.error(error);
       return {
+        response: error,
+        message: 'An error occurred while creating the notification',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async updateReadStatus(notificationId: number, user: TokenDto) {
+    try {
+      const notification = await this._notificationRepository.findOne({
+        where: {
+          notification_id: notificationId,
+          target_user: user.id,
+        },
+      });
+
+      if (!notification) {
+        return {
+          response: null,
+          message: 'Notification not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      notification.read = true;
+      notification.read_date = new Date();
+      await this._notificationRepository.save(notification);
+
+      return {
+        response: notification,
+        message: 'Notification updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(error);
+      return {
         response: null,
-        message: '',
+        message:
+          'An error occurred while updating the notification read status',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async updateAllReadStatus(user: TokenDto) {
+    try {
+      const notifications = await this._notificationRepository.find({
+        where: {
+          target_user: user.id,
+          read: false,
+        },
+      });
+
+      if (!notifications) {
+        return {
+          response: null,
+          message: 'Notifications not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      notifications.forEach((notification) => {
+        notification.read = true;
+        notification.read_date = new Date();
+      });
+
+      await this._notificationRepository.save(notifications);
+
+      return {
+        response: notifications,
+        message: 'Notifications updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(error);
+      return {
+        response: null,
+        message:
+          'An error occurred while updating the notifications read status',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
@@ -117,24 +202,34 @@ export class NotificationService {
 
   async getAllNotifications(user: TokenDto) {
     try {
-      const [notificationsViewed, notificationsPending, notificationAnnouncement] = await Promise.all([
+      const [
+        notificationsViewed,
+        notificationsPending,
+        notificationAnnouncement,
+      ] = await Promise.all([
         await this._notificationRepository.find({
           select: this.getNotificattionSelect(),
-          relations: this.getNotificationWhere(),
+          relations: this.getNotificationRelations(),
           where: {
             target_user: user.id,
             read: true,
-            obj_result: { is_active: true },
+            obj_result: {
+              is_active: true,
+              obj_result_by_initiatives: { initiative_role_id: 1 },
+            },
           },
         }),
 
         await this._notificationRepository.find({
           select: this.getNotificattionSelect(),
-          relations: this.getNotificationWhere(),
+          relations: this.getNotificationRelations(),
           where: {
             target_user: user.id,
             read: false,
-            obj_result: { is_active: true },
+            obj_result: {
+              is_active: true,
+              obj_result_by_initiatives: { initiative_role_id: 1 },
+            },
           },
         }),
 
@@ -154,18 +249,17 @@ export class NotificationService {
             obj_notification_type: true,
           },
           where: {
-            target_user: user.id,
             obj_notification_level: { type: NotificationLevelEnum.APPLICATION },
             obj_notification_type: { type: NotificationTypeEnum.ANNOUNCEMENT },
           },
-        })
+        }),
       ]);
 
       const notifications = {
         notificationsViewed,
         notificationsPending,
         notificationAnnouncement,
-      }
+      };
 
       return {
         response: notifications,
@@ -175,8 +269,8 @@ export class NotificationService {
     } catch (error) {
       this._logger.error(error);
       return {
-        response: null,
-        message: '',
+        response: error,
+        message: 'An error occurred while retrieving the notifications',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
@@ -207,20 +301,21 @@ export class NotificationService {
         title: true,
         status_id: true,
         obj_result_by_initiatives: {
+          initiative_id: true,
           obj_initiative: {
             id: true,
             official_code: true,
-            name: true,
           },
         },
         obj_version: {
+          id: true,
           phase_name: true,
         },
       },
     };
   }
 
-  private getNotificationWhere() {
+  private getNotificationRelations() {
     return {
       obj_notification_level: true,
       obj_notification_type: true,

@@ -42,7 +42,7 @@ export class Notification {
 
   @Column({
     type: 'int',
-    name: 'user',
+    name: 'target_user',
     nullable: true,
   })
   target_user: number;
@@ -53,7 +53,7 @@ export class Notification {
 
   @Column({
     type: 'int',
-    name: 'emitter',
+    name: 'emitter_user',
     nullable: true,
   })
   emitter_user: number;
