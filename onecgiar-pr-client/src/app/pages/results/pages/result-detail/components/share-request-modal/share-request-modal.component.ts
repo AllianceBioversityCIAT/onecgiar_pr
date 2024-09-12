@@ -143,7 +143,7 @@ export class ShareRequestModalComponent implements OnInit {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({
           id: 'noti',
-          title: `The request has been answered successfully`,
+          title: `Request successfully accepted`,
           status: 'success'
         });
         this.requesting = false;
