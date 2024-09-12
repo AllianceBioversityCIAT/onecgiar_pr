@@ -108,7 +108,7 @@ export class NotificationItemComponent {
         this.requestingAccept = false;
         this.requestingReject = false;
         console.error(err);
-        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
+        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
         this.requestEvent.emit();
       }
     });
