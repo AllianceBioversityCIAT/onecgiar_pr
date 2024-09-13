@@ -1,0 +1,90 @@
+p {
+  margin: 0;
+}
+
+.update_notification {
+  padding: 12px 30px;
+  background-color: #f2f2f2;
+  border: 1px solid #808080;
+  border-radius: 10px;
+  position: relative;
+
+  .update_notification_header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+
+    .update_notification_header_item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1px 8px;
+      border: 1px solid #5569dd;
+      border-radius: 10px;
+      color: #5569dd;
+
+      .update_notification_header_item_text {
+        font-weight: 500;
+        font-size: 12px;
+      }
+    }
+
+    .update_notification_header_announcement {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 8px;
+
+      .update_notification_header_announcement_text {
+        font-size: 14px;
+        font-weight: 700;
+        color: #5569dd;
+      }
+    }
+  }
+
+  .update_notification_content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-top: 8px;
+
+    .update_notification_content_actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .update_notification_content_body {
+      .update_notification_content_body_text {
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .update_notification_read {
+    position: absolute;
+    top: -1px;
+    right: 30px;
+    background-color: #5569dd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px 22px;
+    border-radius: 0 0px 5px 5px;
+    cursor: pointer;
+  }
+
+  .update_notification_date {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    color: #76716a;
+    font-size: 12px;
+  }
+}

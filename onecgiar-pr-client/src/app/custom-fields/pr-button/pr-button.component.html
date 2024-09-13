@@ -15,7 +15,7 @@
   <div class="text">{{ this.text }}</div>
 
   <i
-    class="material-icons-round"
+    [class]="iconsStylesClass"
     [ngClass]="{ rotating: this.rotating, 'rotate-right': this.rotateRight }"
     *ngIf="this.icon && !this.use_png_icon; else pngicon">
     {{ this.icon }}

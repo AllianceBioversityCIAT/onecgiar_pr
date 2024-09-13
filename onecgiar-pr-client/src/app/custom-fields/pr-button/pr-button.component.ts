@@ -13,6 +13,7 @@ export class PrButtonComponent implements OnInit {
   @Input() rotateRight: boolean = false;
   @Input() underConstruction: boolean = false;
   @Input() showBackground: boolean = true;
+  @Input() iconsStylesClass: 'material-icons-round' | 'material-icons-outlined' = 'material-icons-round';
   @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;

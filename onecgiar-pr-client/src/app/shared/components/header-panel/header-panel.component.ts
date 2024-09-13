@@ -43,11 +43,13 @@ export class HeaderPanelComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.updateUserData(() => {});
+    this.api.updateUserData(() => {
+      this.resultsNotificationsSE.get_updates_notifications();
+    });
   }
 
   notificationBadgeLength() {
-    return `${this.mockNotifications.length}`;
+    return `${this.resultsNotificationsSE.updatesData.notificationsPending.length}`;
   }
 
   openInfoLink() {

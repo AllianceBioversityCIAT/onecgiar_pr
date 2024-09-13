@@ -542,6 +542,18 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
   }
 
+  GET_requestUpdates() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/all-by-user`);
+  }
+
+  PATCH_readNotification(notificationId) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read/${notificationId}`, {});
+  }
+
+  PATCH_readAllNotifications() {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read-all`, {});
+  }
+
   GET_userAllNotificationSettings() {
     return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/all`);
   }
