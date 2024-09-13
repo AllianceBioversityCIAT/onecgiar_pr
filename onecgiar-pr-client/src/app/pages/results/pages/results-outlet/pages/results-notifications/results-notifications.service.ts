@@ -177,6 +177,8 @@ export class ResultsNotificationsService {
   }
 
   markAllUpdatesNotificationsAsRead() {
+    if (this.updatesData.notificationsPending.length === 0) return;
+
     const initialViewed = this.updatesData.notificationsViewed.map(notification => ({ ...notification }));
     const initialPending = this.updatesData.notificationsPending.map(notification => ({ ...notification }));
 
