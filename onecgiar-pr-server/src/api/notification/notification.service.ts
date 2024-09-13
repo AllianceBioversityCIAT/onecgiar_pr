@@ -140,8 +140,11 @@ export class NotificationService {
         };
       }
 
-      notification.read = true;
-      notification.read_date = new Date();
+      notification.read = !notification.read;
+
+      if (notification.read) notification.read_date = new Date();
+      if (!notification.read) notification.read_date = null;
+      
       await this._notificationRepository.save(notification);
 
       return {
