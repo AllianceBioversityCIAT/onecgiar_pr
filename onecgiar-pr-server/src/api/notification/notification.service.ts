@@ -241,8 +241,11 @@ export class NotificationService {
               first_name: true,
               last_name: true,
             },
-            obj_notification_level: { type: true },
-            obj_notification_type: { type: true },
+            obj_notification_level: {
+              notifications_level_id: true,
+              type: true,
+            },
+            obj_notification_type: { notifications_type_id: true, type: true },
           },
           relations: {
             obj_notification_level: true,
@@ -279,9 +282,11 @@ export class NotificationService {
   private getNotificattionSelect() {
     return {
       obj_notification_level: {
+        notifications_level_id: true,
         type: true,
       },
       obj_notification_type: {
+        notifications_type_id: true,
         type: true,
       },
       obj_emitter_user: {
