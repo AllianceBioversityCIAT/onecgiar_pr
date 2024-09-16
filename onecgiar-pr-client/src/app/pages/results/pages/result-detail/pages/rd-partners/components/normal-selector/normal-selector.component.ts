@@ -5,6 +5,7 @@ import { InstitutionsService } from '../../../../../../../../shared/services/glo
 import { GreenChecksService } from '../../../../../../../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { EventType } from '../../../../../../../../shared/interfaces/event-type.dto';
 
 @Component({
   selector: 'app-normal-selector',
@@ -37,7 +38,14 @@ export class NormalSelectorComponent {
   }
 
   getOnlyPartnerTypes() {
-    const partnerTypes = this.rdPartnersSE.partnersBody.institutions.map(element => element?.obj_institutions.obj_institution_type_code.name);
+    const partnerTypes = this.rdPartnersSE.partnersBody.institutions?.map(element => element?.obj_institutions.obj_institution_type_code.name);
     this.partnerUniqueTypes = Array.from(new Set(partnerTypes));
+  }
+
+  emitPartnerEvent(partner) {
+    if (this.rdPartnersSE.leadPartnerId === partner) {
+      this.rdPartnersSE.leadPartnerId = null;
+    }
+    this.rdPartnersSE.setPossibleLeadPartners(true);
   }
 }

@@ -2,8 +2,9 @@ export class PartnersBody {
   public no_applicable_partner: boolean = false;
   public mqap_institutions: UnmappedMQAPInstitutionDto[] = [];
   public institutions: InstitutionsInterface[] = [];
-  contributing_np_projects: NonPooledProjectDto[];
-  contributing_center: ResultsCenterDto[];
+  public contributing_np_projects: NonPooledProjectDto[];
+  public contributing_center: ResultsCenterDto[];
+  public is_lead_by_partner: boolean | null;
 }
 
 export class InstitutionsInterface {
@@ -16,6 +17,7 @@ export class InstitutionsInterface {
   result_kp_mqap_institution_id: string | null;
   created_date: string;
   last_updated_date: string;
+  is_leading_result: boolean;
   obj_institutions: {
     name: number;
     website_link: string;
@@ -47,6 +49,7 @@ export class UnmappedMQAPInstitutionDto {
   created_date: string;
   last_updated_date: string;
   institutions_type_name: string;
+  is_leading_result: boolean;
   result_kp_mqap_institution_object: {
     result_kp_mqap_institution_id: string;
     result_knowledge_product_id: string;
@@ -105,4 +108,5 @@ export class ResultsCenterDto {
   code: string;
   name: string;
   acronym: string;
+  is_leading_result: boolean;
 }

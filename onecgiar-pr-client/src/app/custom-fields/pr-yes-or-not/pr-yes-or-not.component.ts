@@ -28,7 +28,7 @@ export class PrYesOrNotComponent {
   @Input() showDescriptionLabel: boolean = true;
   @Input() descInlineStyles: string = 'true';
 
-  @Output() selectOptionEvent = new EventEmitter();
+  @Output() selectOptionEvent = new EventEmitter<boolean>();
   private _value: boolean;
 
   constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
@@ -60,11 +60,11 @@ export class PrYesOrNotComponent {
 
   onclickYes() {
     this.value = true;
-    this.selectOptionEvent.emit();
+    this.selectOptionEvent.emit(true);
   }
 
   onClickNo() {
     this.value = false;
-    this.selectOptionEvent.emit();
+    this.selectOptionEvent.emit(false);
   }
 }
