@@ -6,6 +6,8 @@ import { NotificationTypeRepository } from './repositories/notification-type.res
 import { NotificationRepository } from './repositories/notification.respository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { SocketManagementModule } from '../../shared/microservices/socket-management/socket-management.module';
+import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
+import { VersioningModule } from '../versioning/versioning.module';
 
 @Module({
   controllers: [NotificationController],
@@ -17,6 +19,6 @@ import { SocketManagementModule } from '../../shared/microservices/socket-manage
     HandlersError
   ],
   exports: [NotificationService],
-  imports: [SocketManagementModule],
+  imports: [SocketManagementModule, ShareResultRequestModule, VersioningModule],
 })
 export class NotificationModule {}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { ShareResultRequestController } from './share-result-request.controller';
 import { ShareResultRequestRepository } from './share-result-request.repository';
@@ -25,6 +25,7 @@ import { ResultsTocResultsModule } from '../results-toc-results/results-toc-resu
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -52,6 +53,6 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
     GlobalParameterRepository,
   ],
   exports: [ShareResultRequestRepository, ShareResultRequestService],
-  imports: [EmailNotificationManagementModule, ResultsTocResultsModule],
+  imports: [EmailNotificationManagementModule, ResultsTocResultsModule, forwardRef(() => VersioningModule)],
 })
 export class ShareResultRequestModule {}

@@ -10,6 +10,9 @@ import {
 } from './enum/notification.enum';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { NotificationDto } from '../../shared/microservices/socket-management/dto/create-socket.dto';
+import { env } from 'process';
+import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class NotificationService {
@@ -20,6 +23,7 @@ export class NotificationService {
     private readonly _notificationTypeRepository: NotificationTypeRepository,
     private readonly _notificationRepository: NotificationRepository,
     private readonly _socketManagementService: SocketManagementService,
+    private readonly _shareResultRequestService: ShareResultRequestService,
   ) {}
 
   async emitResultNotification(
@@ -144,7 +148,7 @@ export class NotificationService {
 
       if (notification.read) notification.read_date = new Date();
       if (!notification.read) notification.read_date = null;
-      
+
       await this._notificationRepository.save(notification);
 
       return {
@@ -205,6 +209,9 @@ export class NotificationService {
 
   async getAllNotifications(user: TokenDto) {
     try {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
       const [
         notificationsViewed,
         notificationsPending,
@@ -257,6 +264,7 @@ export class NotificationService {
           where: {
             obj_notification_level: { type: NotificationLevelEnum.APPLICATION },
             obj_notification_type: { type: NotificationTypeEnum.ANNOUNCEMENT },
+            created_date: MoreThan(oneWeekAgo),
           },
         }),
       ]);
@@ -266,6 +274,49 @@ export class NotificationService {
         notificationsPending,
         notificationAnnouncement,
       };
+
+      return {
+        response: notifications,
+        message: 'List of all notifications retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(error);
+      return {
+        response: error,
+        message: 'An error occurred while retrieving the notifications',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getPopUpNotifications(user: TokenDto) {
+    try {
+      const notificationsUpdates = await this._notificationRepository.find({
+        select: this.getNotificattionSelect(),
+        relations: this.getNotificationRelations(),
+        where: {
+          target_user: user.id,
+          read: false,
+          obj_result: {
+            is_active: true,
+            obj_result_by_initiatives: { initiative_role_id: 1 },
+          },
+        },
+      });
+
+      const shareResultPendings =
+        await this._shareResultRequestService.getReceivedResultRequestPopUp(
+          user,
+        );
+
+      const isError = (shareResultPendings as any)?.response;
+      const notifications = isError
+        ? notificationsUpdates
+        : [
+            ...notificationsUpdates,
+            ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
+          ];
 
       return {
         response: notifications,

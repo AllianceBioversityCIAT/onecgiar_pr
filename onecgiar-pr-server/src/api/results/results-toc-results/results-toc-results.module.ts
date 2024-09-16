@@ -33,6 +33,7 @@ import { TemplateRepository } from '../../platform-report/repositories/template.
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -43,8 +44,6 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
     NonPooledProjectRepository,
     ResultsCenterRepository,
     ResultByInitiativesRepository,
-    VersionsService,
-    VersionRepository,
     UserRepository,
     ResultRepository,
     TocResultsRepository,
@@ -71,6 +70,6 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
     GlobalParameterRepository,
   ],
   exports: [ResultsTocResultRepository, ResultsTocResultsService],
-  imports: [EmailNotificationManagementModule],
+  imports: [EmailNotificationManagementModule, VersioningModule],
 })
 export class ResultsTocResultsModule {}
