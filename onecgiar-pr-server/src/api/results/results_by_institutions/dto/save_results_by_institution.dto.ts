@@ -10,6 +10,7 @@ export class SaveResultsByInstitutionDto {
   public mqap_institutions: ResultsByInstitution[];
   public contributing_np_projects: NonPooledProjectDto[];
   public contributing_center: ResultsCenterDto[];
+  public is_lead_by_partner: boolean;
 }
 
 export interface institutionsInterface {

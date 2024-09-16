@@ -342,6 +342,9 @@ export class Result {
   })
   justification_action_type!: string;
 
+  @Column({ type: 'boolean', nullable: true })
+  is_lead_by_partner: boolean;
+
   // helpers??
   initiative_id!: number;
 

@@ -11,4 +11,5 @@ export class ResultsCenterDto {
   code: string;
   name: string;
   acronym: string;
+  is_leading_result: boolean;
 }
