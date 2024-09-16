@@ -8,11 +8,9 @@ type TNotificationItem = {
     id: string;
   };
   obj_result: {
-    obj_result_by_initiatives: [
-      {
-        initiative_id: string;
-      }
-    ];
+    obj_result_by_initiatives: {
+      initiative_id: string;
+    }[];
   };
 };
 

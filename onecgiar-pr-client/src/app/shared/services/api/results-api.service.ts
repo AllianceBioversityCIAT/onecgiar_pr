@@ -543,7 +543,11 @@ export class ResultsApiService {
   }
 
   GET_requestUpdates() {
-    return this.http.get<any>(`${this.baseApiBaseUrl}notification/all-by-user`);
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates`);
+  }
+
+  GET_notificationsPopUp() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates-pop-up`);
   }
 
   PATCH_readNotification(notificationId) {

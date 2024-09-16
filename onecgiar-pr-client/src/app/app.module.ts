@@ -21,6 +21,7 @@ import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
+import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 @NgModule({ declarations: [
         AppComponent,
         NavigationBarComponent,
@@ -41,5 +42,6 @@ import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-
         DialogModule,
         BadgeModule,
         SatPopoverModule,
+        PopUpNotificationItemComponent,
         FormatTimeAgoModule], providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }, provideHttpClient(withInterceptorsFromDi())] })
 export class AppModule {}

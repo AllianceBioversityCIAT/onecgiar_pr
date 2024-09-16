@@ -23,6 +23,8 @@ export class ResultsNotificationsService {
     notificationsViewed: []
   };
 
+  updatesPopUpData = [];
+
   dataIPSR = [];
   notificationLength = null;
   phaseFilter = null;
@@ -107,6 +109,21 @@ export class ResultsNotificationsService {
           notificationsPending: orderedNotificationsPending,
           notificationsViewed: orderedNotificationsViewed
         };
+      },
+      error: err => console.error(err)
+    });
+  }
+
+  get_updates_pop_up_notifications() {
+    this.api.resultsSE.GET_notificationsPopUp().subscribe({
+      next: ({ response }) => {
+        const orderedUpdatesUnread = response.sort((a, b) => {
+          const dateA = a.notification_id ? new Date(a.created_date) : new Date(a.requested_date);
+          const dateB = b.notification_id ? new Date(b.created_date) : new Date(b.requested_date);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        this.updatesPopUpData = orderedUpdatesUnread;
       },
       error: err => console.error(err)
     });

@@ -157,7 +157,6 @@
 
   .no_notifications {
     font-weight: 500;
-    margin: 0;
     text-wrap: pretty;
     padding: 10px 1.5rem;
   }
@@ -167,33 +166,31 @@
     flex-direction: column;
     overflow: auto;
     max-height: 500px;
+    scrollbar-width: thin;
+    scrollbar-color: #5569dd #eef0fc;
+
+    &::-webkit-scrollbar {
+      width: 2px;
+      height: 2px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #5569dd;
+      border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #eef0fc;
+    }
+
+    @media (max-height: 800px) {
+      max-height: 400px;
+    }
 
     .notification {
-      padding: 20px 1.5rem 10px 1.5rem;
+      padding: 15px 1.5rem 10px 1.5rem;
       background-color: #eef0fc;
       border-bottom: 1px solid #5569dd;
-
-      .init {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: #5569dd;
-        padding: 2px 6px;
-        border: 1px solid #5569dd;
-        border-radius: 20px;
-        width: 62px;
-        margin-bottom: 8px;
-        font-size: 12px;
-        font-weight: 500;
-      }
-
-      .date {
-        font-size: 12px;
-        font-weight: 400;
-        color: #808080;
-        text-align: right;
-        margin-top: 10px;
-      }
     }
   }
 
