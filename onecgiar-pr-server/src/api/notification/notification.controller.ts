@@ -59,8 +59,13 @@ export class NotificationController {
     description: 'List of all notifications retrieved successfully.',
   })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @Get('all-by-user')
+  @Get('updates')
   getAllNotifications(@UserToken() user: TokenDto) {
     return this.notificationService.getAllNotifications(user);
+  }
+
+  @Get('updates-pop-up')
+  getPopUpNotifications(@UserToken() user: TokenDto) {
+    return this.notificationService.getPopUpNotifications(user);
   }
 }

@@ -21,6 +21,8 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -39,6 +41,8 @@ export class ShareResultRequestService {
     @Inject(forwardRef(() => ResultsTocResultsService))
     private readonly _resultsTocResultService: ResultsTocResultsService,
     private readonly _globalParametersRepository: GlobalParameterRepository,
+    @Inject(forwardRef(() => VersioningService))
+    private readonly _versioningService: VersioningService,
   ) {}
 
   async resultRequest(
@@ -352,13 +356,54 @@ export class ShareResultRequestService {
     }
   }
 
+  async getReceivedResultRequestPopUp(user: TokenDto) {
+    try {
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const inits = await this.getUserInitiatives(user);
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+
+      const extraConditions = {
+        obj_result: { version_id: version.id },
+      };
+
+      const whereConditions = this.buildWhereConditions(
+        inits,
+        role,
+        extraConditions,
+      );
+
+      const receivedContributionsPendingOwner = await this.getPendingRequests(
+        whereConditions.pendingOwner,
+      );
+      const receivedContributionsPendingShared = await this.getPendingRequests(
+        whereConditions.pendingShared,
+      );
+
+      const receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+
+      return receivedContributionsPending;
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   private async getUserInitiatives(user: TokenDto) {
     return await this._roleByUserRepository.find({
       where: { user: user.id, active: true, initiative_id: Not(IsNull()) },
     });
   }
 
-  private buildWhereConditions(inits: any[], role: number, user?: number) {
+  private buildWhereConditions(
+    inits: any[],
+    role: number,
+    extraConditions?: any,
+    user?: number,
+  ) {
     const sharedInitiativeIds = inits.map((i) => i.initiative_id);
     const commonConditions: any = {
       request_status_id: 1,
@@ -368,6 +413,24 @@ export class ShareResultRequestService {
 
     if (user) {
       commonConditions.requested_by = user;
+    }
+
+    if (extraConditions) {
+      for (const key in extraConditions) {
+        if (extraConditions.hasOwnProperty(key)) {
+          if (
+            typeof commonConditions[key] === 'object' &&
+            typeof extraConditions[key] === 'object'
+          ) {
+            commonConditions[key] = {
+              ...commonConditions[key],
+              ...extraConditions[key],
+            };
+          } else {
+            commonConditions[key] = extraConditions[key];
+          }
+        }
+      }
     }
 
     return {
