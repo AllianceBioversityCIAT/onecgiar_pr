@@ -22,8 +22,8 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
-import { ResultsCenterDto } from 'd:/workspace-node/onecgiar_pr/onecgiar-pr-server/src/api/results/results-centers/dto/results-center.dto';
 import { NonPooledProjectDto } from '../non-pooled-projects/dto/non-pooled-project.dto';
+import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
 
 @Injectable()
 export class ResultsByInstitutionsService {
