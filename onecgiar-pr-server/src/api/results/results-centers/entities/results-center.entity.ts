@@ -16,13 +16,6 @@ export class ResultsCenter {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
-    name: 'is_primary',
-    type: 'boolean',
-    nullable: false,
-  })
-  is_primary: boolean;
-
   @Column({ type: 'varchar', length: 15, nullable: true })
   center_id: string;
 
@@ -30,12 +23,11 @@ export class ResultsCenter {
   result_id: number;
 
   @Column({
-    name: 'is_active',
+    name: 'is_primary',
     type: 'boolean',
     nullable: false,
-    default: true,
   })
-  is_active: boolean;
+  is_primary: boolean;
 
   @Column({
     name: 'from_cgspace',
@@ -44,6 +36,17 @@ export class ResultsCenter {
     default: false,
   })
   from_cgspace: boolean;
+
+  @Column({ type: 'boolean', nullable: true })
+  is_leading_result: boolean;
+
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: false,
+    default: true,
+  })
+  is_active: boolean;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

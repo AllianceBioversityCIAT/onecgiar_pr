@@ -68,6 +68,9 @@ export class ResultsByInstitution {
   })
   last_updated_date!: Date;
 
+  @Column({ type: 'boolean', nullable: true })
+  is_leading_result: boolean;
+
   // relations
 
   @Column({

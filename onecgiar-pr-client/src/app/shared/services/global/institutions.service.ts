@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { EventEmitter, Injectable } from '@angular/core';
 import { ApiService } from '../api/api.service';
 
 @Injectable({
@@ -11,6 +11,9 @@ export class InstitutionsService {
   institutionsTypesList = [];
   institutionsTypesPartnerRequestList = [];
   institutionsChildlessTypes = [];
+
+  loadedInstitutions: EventEmitter<boolean> = new EventEmitter();
+
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_allInstitutions().subscribe(({ response }) => {
       this.institutionsList = response;
@@ -28,6 +31,7 @@ export class InstitutionsService {
           delivery: []
         };
       });
+      this.loadedInstitutions.emit(true);
       //(this.institutionsList);
     });
     this.api.resultsSE.GET_allInstitutionTypes().subscribe(({ response }) => {

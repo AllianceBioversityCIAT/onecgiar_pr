@@ -199,7 +199,7 @@ export class ResultsApiService {
 
   GET_partnersSection() {
     return this.http
-      .get<any>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
+      .get<PartnersBody>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 

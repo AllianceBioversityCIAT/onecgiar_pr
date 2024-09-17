@@ -1,11 +1,14 @@
-import { Injectable } from '@angular/core';
+import { EventEmitter, Injectable } from '@angular/core';
 import { ApiService } from '../api/api.service';
+import { CenterDto } from '../../interfaces/center.dto';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CentersService {
-  centersList = [];
+  centersList: CenterDto[] = [];
+  loadedCenters: EventEmitter<boolean> = new EventEmitter();
+
   constructor(private api: ApiService) {
     this.getData();
   }
@@ -17,6 +20,7 @@ export class CentersService {
         next: ({ response }) => {
           resolve([...response]);
           this.centersList = response;
+          this.loadedCenters.emit(true);
         },
         error: err => {
           reject(err);

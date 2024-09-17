@@ -9,6 +9,7 @@ import {
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { ResultsCenterDto } from './dto/results-center.dto';
 
 @Injectable()
 export class ResultsCenterRepository
@@ -142,7 +143,8 @@ export class ResultsCenterRepository
       rc.last_updated_by,
       rc.center_id as code,
       ci.name,
-      ci.acronym 
+      ci.acronym,
+      rc.is_leading_result
       from results_center rc 
         left join clarisa_center cc on rc.center_id = cc.code 
       	left join clarisa_institutions ci on ci.id = cc.institutionId 
@@ -151,7 +153,7 @@ export class ResultsCenterRepository
         and rc.is_active > 0;
     `;
     try {
-      const resultCenter: ResultsCenter[] = await this.query(queryData, [
+      const resultCenter: ResultsCenterDto[] = await this.query(queryData, [
         resultId,
       ]);
       return resultCenter;
