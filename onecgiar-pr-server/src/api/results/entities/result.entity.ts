@@ -344,7 +344,7 @@ export class Result {
   })
   justification_action_type!: string;
 
-  @Column({ type: 'boolean', nullable: true })
+  @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
   is_lead_by_partner: boolean;
 
   // helpers??
