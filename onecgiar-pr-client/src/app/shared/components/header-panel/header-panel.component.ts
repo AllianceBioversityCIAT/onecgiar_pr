@@ -50,7 +50,9 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   handleClosePopUp() {
+    if (this.resultsNotificationsSE.updatesPopUpData.length === 0) return;
+
     this.resultsNotificationsSE.updatesPopUpData = [];
-    this.resultsNotificationsSE.markAllUpdatesNotificationsAsRead();
+    this.resultsNotificationsSE.handlePopUpNotificationLastViewed();
   }
 }

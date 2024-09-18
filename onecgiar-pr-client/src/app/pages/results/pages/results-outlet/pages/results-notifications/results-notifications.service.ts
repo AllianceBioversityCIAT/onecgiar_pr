@@ -221,6 +221,13 @@ export class ResultsNotificationsService {
     });
   }
 
+  handlePopUpNotificationLastViewed() {
+    this.api.resultsSE.PATCH_handlePopUpViewed(this.api.authSE?.localStorageUser?.id).subscribe({
+      next: () => {},
+      error: err => console.error(err)
+    });
+  }
+
   resetNotificationInformation() {
     this.receivedData = {
       receivedContributionsPending: [],
