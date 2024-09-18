@@ -13,6 +13,7 @@ import { NotificationDto } from '../../shared/microservices/socket-management/dt
 import { env } from 'process';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { MoreThan } from 'typeorm';
+import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 
 @Injectable()
 export class NotificationService {
@@ -24,6 +25,7 @@ export class NotificationService {
     private readonly _notificationRepository: NotificationRepository,
     private readonly _socketManagementService: SocketManagementService,
     private readonly _shareResultRequestService: ShareResultRequestService,
+    private readonly _userRepository: UserRepository,
   ) {}
 
   async emitResultNotification(
@@ -292,17 +294,29 @@ export class NotificationService {
 
   async getPopUpNotifications(user: TokenDto) {
     try {
+      const userLastViewed = await this._userRepository.findOne({
+        where: { id: user.id },
+      });
+
+      const whereConditions: any = {
+        target_user: user.id,
+        read: false,
+        obj_result: {
+          is_active: true,
+          obj_result_by_initiatives: { initiative_role_id: 1 },
+        },
+      };
+
+      if (userLastViewed.last_pop_up_viewed) {
+        whereConditions.created_date = MoreThan(
+          userLastViewed.last_pop_up_viewed,
+        );
+      }
+
       const notificationsUpdates = await this._notificationRepository.find({
         select: this.getNotificattionSelect(),
         relations: this.getNotificationRelations(),
-        where: {
-          target_user: user.id,
-          read: false,
-          obj_result: {
-            is_active: true,
-            obj_result_by_initiatives: { initiative_role_id: 1 },
-          },
-        },
+        where: whereConditions,
       });
 
       const shareResultPendings =
@@ -326,7 +340,7 @@ export class NotificationService {
     } catch (error) {
       this._logger.error(error);
       return {
-        response: error,
+        response: [],
         message: 'An error occurred while retrieving the notifications',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };

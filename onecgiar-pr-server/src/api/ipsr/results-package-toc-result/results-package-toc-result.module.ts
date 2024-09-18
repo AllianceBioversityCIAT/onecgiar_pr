@@ -32,6 +32,7 @@ import { TemplateRepository } from '../../platform-report/repositories/template.
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -68,6 +69,7 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
     TemplateRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,
+    UserRepository
   ],
   exports: [ResultsPackageTocResultService],
 })

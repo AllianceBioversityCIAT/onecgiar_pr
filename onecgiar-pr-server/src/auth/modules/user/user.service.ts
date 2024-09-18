@@ -182,4 +182,33 @@ export class UserService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async lastPopUpViewed(
+    userId: number,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    try {
+      const user: User = await this._userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw {
+          response: {},
+          message: 'User Not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      user.last_updated_by = user.id;
+      await this._userRepository.save(user);
+
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }

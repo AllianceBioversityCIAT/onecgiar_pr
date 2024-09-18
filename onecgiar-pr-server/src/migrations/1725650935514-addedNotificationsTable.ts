@@ -12,9 +12,11 @@ export class AddedNotificationsTable1725650935514 implements MigrationInterface 
         await queryRunner.query(`ALTER TABLE \`notifications\` ADD CONSTRAINT \`FK_5fdec6c5f9c7e06de0e30386a82\` FOREIGN KEY (\`target_user\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`notifications\` ADD CONSTRAINT \`FK_ef66df94009519ca4e88215b6e0\` FOREIGN KEY (\`emitter_user\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE \`notifications\` ADD CONSTRAINT \`FK_6cf4ea3f81b85cf9d8aa71a9085\` FOREIGN KEY (\`result_id\`) REFERENCES \`result\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE \`users\` ADD \`last_pop_up_viewed\` timestamp(6) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(6)`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE \`users\` DROP COLUMN \`last_pop_up_viewed\``);
         await queryRunner.query(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`FK_6cf4ea3f81b85cf9d8aa71a9085\``);
         await queryRunner.query(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`FK_ef66df94009519ca4e88215b6e0\``);
         await queryRunner.query(`ALTER TABLE \`notifications\` DROP FOREIGN KEY \`FK_5fdec6c5f9c7e06de0e30386a82\``);

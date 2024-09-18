@@ -11,7 +11,7 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
-import { In, IsNull, Not } from 'typeorm';
+import { In, IsNull, MoreThan, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import Handlebars from 'handlebars';
@@ -23,6 +23,7 @@ import { EmailTemplate } from '../../../shared/microservices/email-notification-
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -43,6 +44,7 @@ export class ShareResultRequestService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     @Inject(forwardRef(() => VersioningService))
     private readonly _versioningService: VersioningService,
+    private readonly _userRepository: UserRepository,
   ) {}
 
   async resultRequest(
@@ -209,6 +211,14 @@ export class ShareResultRequestService {
         initOwner.id,
       );
 
+      if (!to) {
+        return {
+          response: 'No recipients found',
+          message: 'No recipients found',
+          status: HttpStatus.OK,
+        };
+      }
+
       const template = await this.getEmailTemplate(emailTemplate);
       const pcuEmail = await this._globalParametersRepository.findOne({
         where: { name: 'pcu_email' },
@@ -232,7 +242,6 @@ export class ShareResultRequestService {
         pcuEmail.value,
       );
 
-      console.log(technicalTeamEmailsRecord.value);
       this._emailNotificationManagementService.sendEmail({
         from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
         emailBody: {
@@ -358,15 +367,24 @@ export class ShareResultRequestService {
 
   async getReceivedResultRequestPopUp(user: TokenDto) {
     try {
+      const userLastViewed = await this._userRepository.findOne({
+        where: { id: user.id },
+      });
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
       const version = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.REPORTING,
       );
 
-      const extraConditions = {
+      const extraConditions: any = {
         obj_result: { version_id: version.id },
       };
+
+      if (userLastViewed.last_pop_up_viewed) {
+        extraConditions.requested_date = MoreThan(
+          userLastViewed.last_pop_up_viewed,
+        );
+      }
 
       const whereConditions = this.buildWhereConditions(
         inits,

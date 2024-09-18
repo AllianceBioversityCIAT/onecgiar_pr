@@ -77,6 +77,13 @@ export class User {
   })
   last_updated_date!: Date;
 
+  @UpdateDateColumn({
+    name: 'last_pop_up_viewed',
+    type: 'timestamp',
+    nullable: true,
+  })
+  last_pop_up_viewed!: Date;
+
   @OneToMany(
     () => UserNotificationSetting,
     (notificationSetting) => notificationSetting.obj_user,

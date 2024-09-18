@@ -1008,6 +1008,14 @@ export class ResultsTocResultsService {
 
       const to = userEnable.map((u) => u.obj_user.email);
 
+      if (!to) {
+        return {
+          response: {},
+          message: 'The email was not sent',
+          status: HttpStatus.CREATED,
+        };
+      }
+
       const template = await this._templateRepository.findOne({
         where: { name: EmailTemplate.REMOVED_CONTRIBUTION },
       });

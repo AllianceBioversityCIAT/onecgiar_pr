@@ -26,6 +26,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -51,6 +52,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     ClarisaInitiativesRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,
+    UserRepository
   ],
   exports: [ShareResultRequestRepository, ShareResultRequestService],
   imports: [EmailNotificationManagementModule, ResultsTocResultsModule, forwardRef(() => VersioningModule)],
