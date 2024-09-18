@@ -38,13 +38,31 @@ export class EvidenceItemComponent {
     { id: 1, name: 'Yes' }
   ];
 
-  publicFileDesc = `
-  <li>You confirm that the SharePoint link is publicly accessible.</li>
-  <li>You confirm that all intellectual property rights related to the document at the SharePoint link have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>
-  <li>You agree to the SharePoint link being displayed on the CGIAR Results Dashboard.</li>
-  `;
-
   constructor(public dataControlSE: DataControlService, public api: ApiService) {}
+
+  dynamicAlertStatusBasedOnVisibility() {
+    if (this.evidence.is_public_file) {
+      return `
+        <b>If you indicate that the file being uploaded to the PRMS repository is public:</b>
+        <li>You confirm that the file is publicly accessible.</li>
+        <li>You confirm that all intellectual property rights related to the file have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>
+        <li>You agree to the link to the file being displayed in the CGIAR Results Dashboard.</li>
+      `;
+    }
+
+    return `
+      <b>If you indicate that the file being uploaded to the PRMS repository is NOT public:</b>
+      <li>You confirm that the file should not be publicly accessible.</li>
+      <li>The file will not be accessible through the CGIAR Results Dashboard.</li>
+      <li>The file will be stored in the PRMS repository and will only be accessible by CGIAR staff with the repository link.</li>
+    `;
+  }
+
+  validateCloudLink() {
+    const cloudRegex =
+      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w\-]+\.)?sharepoint\.com)(\/.*)?$/;
+    return this.evidence.link && cloudRegex.test(this.evidence.link?.trim());
+  }
 
   validateCGLink() {
     const regex = /^https:\/\/(?:cgspace\.cgiar\.org\/items\/[0-9a-f-]{36}|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
@@ -58,7 +76,7 @@ export class EvidenceItemComponent {
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
   }
 
-  isInvalidLink(value: string = '') {
+  isInvalidLink(value: string) {
     const regex = new RegExp(
       /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
     );
