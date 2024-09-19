@@ -87,4 +87,79 @@ describe('FilterNotificationBySearchPipe', () => {
     ];
     expect(pipe.transform(list, 'title')).toEqual(expected);
   });
+
+  it('should handle the isUpdateTab flag correctly', () => {
+    const list = [
+      {
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        notification_type: 1,
+        obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
+      },
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        notification_type: 3
+      }
+    ];
+    const expected = [
+      {
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        notification_type: 1,
+        obj_emitter_user: { first_name: 'John', last_name: 'Doe' },
+        joinAll: 'John Doe has submitted the result 001 - Title One'
+      },
+      {
+        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_shared_inititiative: { official_code: '01' },
+        obj_owner_initiative: { official_code: '02' },
+        notification_type: 3,
+        joinAll: 'The result 002 - Title Two was successfully Quality Assessed.'
+      }
+    ];
+    expect(pipe.transform(list, 'Title', true)).toEqual(expected);
+  });
+
+  it('should create the correct string for notification types 1', () => {
+    const item = {
+      obj_result: { result_code: '001', title: 'Title One' },
+      notification_type: 1,
+      obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
+    };
+    const result = pipe['createUpdateTabString'](item);
+    expect(result).toBe('John Doe has submitted the result 001 - Title One');
+  });
+
+  it('should create the correct string for notification types 2', () => {
+    const item = {
+      obj_result: { result_code: '001', title: 'Title One' },
+      notification_type: 2,
+      obj_emitter_user: { first_name: 'John', last_name: 'Doe' }
+    };
+    const result = pipe['createUpdateTabString'](item);
+    expect(result).toBe('John Doe has unsubmitted the result 001 - Title One');
+  });
+
+  it('should create the correct string for other notification types', () => {
+    const item = {
+      obj_result: { result_code: '001', title: 'Title One' },
+      notification_type: 3
+    };
+    const result = pipe['createUpdateTabString'](item);
+    expect(result).toBe('The result 001 - Title One was successfully Quality Assessed.');
+  });
+
+  it('should create the correct default string', () => {
+    const item = {
+      obj_result: { result_code: '001', title: 'Title One' },
+      obj_shared_inititiative: { official_code: '01' },
+      obj_owner_initiative: { official_code: '02' }
+    };
+    const result = pipe['createDefaultString'](item);
+    expect(result).toBe('001 - Title One - 01 - 02');
+  });
 });
