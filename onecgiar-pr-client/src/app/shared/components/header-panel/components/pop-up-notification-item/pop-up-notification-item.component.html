@@ -1,6 +1,7 @@
 @if (!!notification?.notification_id) { @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
-@let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;@let resultUrl =
-'/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
+@let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name; @let resultUrl
+='result/results-outlet/results-notifications/updates?phase=' + notification?.obj_result?.obj_version?.id + '&init=' +
+notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative.id + '&search=' + generateNotificationTextUpdates(notification);
 
 <div class="init">{{ officialCode }}</div>
 
@@ -9,7 +10,7 @@
   <b> {{ emitterName }} has {{ notification?.notification_type === 1 ? 'submitted' : 'unsubmitted' }} the result </b>
   } @else { The result }
 
-  <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+  <a [href]="resultUrl" style="text-decoration: underline; color: #000">
     {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
   </a>
 
@@ -18,8 +19,9 @@
 
 <div class="date">{{ notification.created_date | appFormatTimeAgo }}</div>
 
-} @else { @let resultUrlRequest = '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' +
-notification?.obj_result?.obj_version?.id;
+} @else { @let resultUrlRequest = '/result/results-outlet/results-notifications/requests/received?phase=' + notification?.obj_result?.obj_version?.id
++ '&init=' + notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code +
+'&search=' + generateNotificationTextRequest(notification);
 
 <div class="init">
   {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
@@ -40,7 +42,7 @@ notification?.obj_result?.obj_version?.id;
 
   to result
 
-  <a [href]="resultUrlRequest" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+  <a [href]="resultUrlRequest" style="text-decoration: underline; color: #000">
     {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
   </a>
 

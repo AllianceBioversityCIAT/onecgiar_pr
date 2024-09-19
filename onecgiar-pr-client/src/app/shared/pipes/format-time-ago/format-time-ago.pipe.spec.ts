@@ -1,5 +1,5 @@
 import { FormatTimeAgoPipe } from './format-time-ago.pipe';
-import { formatDistanceToNowStrict, parseISO, subHours } from 'date-fns';
+import { format, formatDistanceToNowStrict, parseISO, subHours } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
 describe('FormatTimeAgoPipe', () => {
@@ -54,6 +54,49 @@ describe('FormatTimeAgoPipe', () => {
       addSuffix: false,
       locale: enUS
     })} ago`;
+    expect(result).toBe(expected);
+  });
+
+  it('should format dates older than one week correctly', () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 8);
+    const isoString = date.toISOString();
+    const result = pipe.transform(isoString);
+    const expected = format(subHours(parseISO(isoString), new Date().getTimezoneOffset() / 60), 'yyyy MMM dd', { locale: enUS });
+    expect(result).toBe(expected);
+  });
+
+  it('should format dates within one week correctly', () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 5);
+    const isoString = date.toISOString();
+    const result = pipe.transform(isoString);
+    const expected = `${formatDistanceToNowStrict(subHours(parseISO(isoString), new Date().getTimezoneOffset() / 60), {
+      addSuffix: false,
+      locale: enUS
+    })} ago`;
+    expect(result).toBe(expected);
+  });
+
+  it('should handle server timezone for dates older than one week correctly', () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 8);
+    const isoString = date.toISOString();
+    const serverTimezone = 3;
+    const result = pipe.transform(isoString, serverTimezone);
+    const expectedDate = subHours(parseISO(isoString), serverTimezone + new Date().getTimezoneOffset() / 60);
+    const expected = format(expectedDate, 'yyyy MMM dd', { locale: enUS });
+    expect(result).toBe(expected);
+  });
+
+  it('should handle server timezone for dates within one week correctly', () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 5);
+    const isoString = date.toISOString();
+    const serverTimezone = 3;
+    const result = pipe.transform(isoString, serverTimezone);
+    const expectedDate = subHours(parseISO(isoString), serverTimezone + new Date().getTimezoneOffset() / 60);
+    const expected = `${formatDistanceToNowStrict(expectedDate, { addSuffix: false, locale: enUS })} ago`;
     expect(result).toBe(expected);
   });
 });
