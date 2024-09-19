@@ -43,10 +43,14 @@ export class SocketManagementService implements OnModuleInit {
     userIds: number[],
     notification: NotificationDto,
   ) {
-    console.log('🚀 ~ SocketManagementService ~ userIds:', userIds);
     try {
-      if (userIds.length === 0) {
+      if (!userIds) {
         this._logger.warn('No users online to send notification');
+        return {
+          response: null,
+          message: 'No users online to send notification',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
       const response = await fetch(`${this.url}/socket/notification`, {
         method: 'POST',

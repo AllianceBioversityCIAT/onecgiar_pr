@@ -1,5 +1,7 @@
+import { Notification } from "../../../../api/notification/entities/notification.entity";
+
 export class NotificationDto {
-    official_code: string;
-    desc: string;
-    created_date: Date;
+    title: string;
+    desc: string
+    result: Notification
 }

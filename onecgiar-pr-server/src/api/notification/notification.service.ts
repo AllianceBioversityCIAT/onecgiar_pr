@@ -14,6 +14,7 @@ import { env } from 'process';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { MoreThan } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { Notification } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationService {
@@ -34,7 +35,6 @@ export class NotificationService {
     userIds: number[],
     emmiterUser: number,
     resultId: number,
-    notification: NotificationDto,
   ) {
     try {
       const notificationLevelData =
@@ -60,12 +60,35 @@ export class NotificationService {
           notification_type: notificationTypeData.notifications_type_id,
         });
       }
-
       const usersOnline = await this._socketManagementService.getActiveUsers();
       const usersOnlineIds = usersOnline.response.map((user: any) => user.id);
       const matchUsers = userIds.filter((userId) =>
         usersOnlineIds.includes(userId),
       );
+
+      const resultData: Notification[] =
+        await this._notificationRepository.find({
+          select: this.getNotificattionSelect(),
+          relations: this.getNotificationRelations(),
+          where: {
+            result_id: resultId,
+            emitter_user: emmiterUser,
+            notification_level: notificationLevelData.notifications_level_id,
+            notification_type: notificationTypeData.notifications_type_id,
+          },
+          take: 1,
+        });
+
+      const desc =
+        notificationType === NotificationTypeEnum.RESULT_SUBMITTED
+          ? `The result ${resultData[0].obj_result.result_code} has been submitted`
+          : `The result ${resultData[0].obj_result.result_code} has been unsubmitted`;
+
+      const notification: NotificationDto = {
+        title: 'New Notification',
+        desc,
+        result: resultData[0],
+      };
 
       const newSocketNotification =
         await this._socketManagementService.sendNotificationToUsers(

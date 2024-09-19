@@ -15,9 +15,6 @@ import {
   NotificationLevelEnum,
   NotificationTypeEnum,
 } from '../../notification/enum/notification.enum';
-import { In } from 'typeorm';
-import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
-import { NotificationDto } from '../../../shared/microservices/socket-management/dto/create-socket.dto';
 import { UserNotificationSettingsService } from '../../user-notification-settings/user-notification-settings.service';
 
 @Injectable()
@@ -40,7 +37,7 @@ export class SubmissionsService {
     createSubmissionDto: CreateSubmissionDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
+      const result= await this._resultRepository.getResultById(resultId);
       const role = await this._roleByUserRepository.validationRolePermissions(
         user.id,
         result.id,
@@ -329,17 +326,6 @@ export class SubmissionsService {
         result.initiative_id,
       );
 
-    const desc =
-      nType === NotificationTypeEnum.RESULT_SUBMITTED
-        ? `The result ${result.result_code} has been submitted`
-        : `The result ${result.result_code} has been unsubmitted`;
-
-    const notification: NotificationDto = {
-      official_code: result.initiative_official_code,
-      desc,
-      created_date: new Date(),
-    };
-
     const saveNotification =
       await this._notificationService.emitResultNotification(
         nLevel,
@@ -347,7 +333,6 @@ export class SubmissionsService {
         recipients,
         user.id,
         result.id,
-        notification,
       );
 
     return saveNotification;
