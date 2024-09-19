@@ -49,6 +49,6 @@ notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative.id + '&se
   <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
 </p>
 
-<div class="date">{{ notification.requested_date | appFormatTimeAgo }}</div>
+<div class="date">{{ notification?.requested_date | appFormatTimeAgo }}</div>
 
 }

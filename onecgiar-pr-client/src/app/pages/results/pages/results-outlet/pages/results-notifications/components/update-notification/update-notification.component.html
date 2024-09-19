@@ -3,11 +3,11 @@ notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official
 notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
 
 <div
-  [ngSwitch]="notification.obj_notification_level.notifications_level_id"
+  [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"
   class="update_notification"
   [ngStyle]="{ 'background-color': !notification?.read ? '#eef0fc' : '', border: !notification?.read ? '1px solid #bac1e5' : '' }">
   <div class="update_notification_header">
-    @if (notification.notification_level === 2) {
+    @if (notification?.notification_level === 2) {
     <div class="update_notification_header_item">
       <p class="update_notification_header_item_text">
         {{ initOfficialCode }}
@@ -21,7 +21,7 @@ notification?.obj_result?.result_code + '/general-information?phase=' + notifica
     }
   </div>
 
-  @if ( notification.notification_level === 2 ) {
+  @if ( notification?.notification_level === 2 ) {
   <div class="update_notification_read" (click)="this.resultsNotificationSE.readUpdatesNotifications(notification)">
     <i class="material-icons-outlined" style="font-size: 18px; color: #fff">
       {{ notification?.read ? 'mail' : 'drafts' }}
