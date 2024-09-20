@@ -1,4 +1,4 @@
-import { Injectable, EventEmitter } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { map } from 'rxjs';
 export class AuthService {
   inLogin = false;
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
+
   constructor(public http: HttpClient, private router: Router) {}
 
   set localStorageToken(token: string) {
@@ -35,7 +36,6 @@ export class AuthService {
   }
 
   private logOutTawtkTo() {
-    //(window.hasOwnProperty('Tawk_API'))
     if (window.hasOwnProperty('Tawk_API')) {
       try {
         window['Tawk_API']?.endChat();
@@ -45,25 +45,19 @@ export class AuthService {
         };
         this.cleanTWKCookies();
       } catch (error) {
-        //(error);
+        console.error(error);
       }
-      // if (window['Tawk_API'].isChatMaximized()) {
-      // }
     }
   }
 
   cleanTWKCookies() {
-    //('cleanTWKCookies');
-    // window['Tawk_API'].endChat()
-
-    var cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
+    const cookies = document.cookie.split(';');
+    for (const element of cookies) {
+      const cookie = element;
 
       if (cookie?.split('=')[0]?.includes('twk')) {
         const eqPos = cookie.indexOf('=');
-        //(cookie + ' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
         document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     }
@@ -84,7 +78,6 @@ export class AuthService {
   GET_initiativesByUser() {
     return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/${this.localStorageUser?.id}`).pipe(
       map(resp => {
-        //(resp.response);
         resp.response.map(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
         return resp;
       })

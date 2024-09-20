@@ -22,26 +22,44 @@ import { BadgeModule } from 'primeng/badge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
-@NgModule({ declarations: [
-        AppComponent,
-        NavigationBarComponent,
-        HeaderPanelComponent,
-        ExternalToolsComponent,
-        TestEnvironmentLabelComponent,
-        TawkComponent,
-        GoogleAnalyticsComponent
-    ],
-    bootstrap: [AppComponent], imports: [BrowserModule,
-        AppRoutingModule,
-        BrowserAnimationsModule,
-        CustomFieldsModule,
-        ShareRequestModalModule,
-        YmzListStructureItemModule,
-        ChangePhaseModalModule,
-        FooterModule,
-        DialogModule,
-        BadgeModule,
-        SatPopoverModule,
-        PopUpNotificationItemComponent,
-        FormatTimeAgoModule], providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }, provideHttpClient(withInterceptorsFromDi())] })
+import { SocketIoModule } from 'ngx-socket-io';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { WebsocketService } from './sockets/websocket.service';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    NavigationBarComponent,
+    HeaderPanelComponent,
+    ExternalToolsComponent,
+    TestEnvironmentLabelComponent,
+    TawkComponent,
+    GoogleAnalyticsComponent
+  ],
+  bootstrap: [AppComponent],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    BrowserAnimationsModule,
+    CustomFieldsModule,
+    ShareRequestModalModule,
+    YmzListStructureItemModule,
+    ChangePhaseModalModule,
+    FooterModule,
+    DialogModule,
+    BadgeModule,
+    SatPopoverModule,
+    FormatTimeAgoModule,
+    ToastModule,
+    PopUpNotificationItemComponent,
+    SocketIoModule.forRoot({ url: 'https://fork-au-one-cgiar-microservices-production.up.railway.app/', options: {} })
+  ],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
+    provideHttpClient(withInterceptorsFromDi()),
+    MessageService,
+    WebsocketService
+  ]
+})
 export class AppModule {}
