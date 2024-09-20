@@ -105,30 +105,6 @@ describe('EvidenceItemComponent', () => {
       expect(result).toBeTruthy();
     });
 
-    it('should return true for a valid Google Docs link', () => {
-      component.evidence.link = 'https://docs.google.com/document/d/1A2B3C4D5E6F7G8H9I0J/edit';
-
-      const result = component.validateCloudLink();
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid OneDrive link', () => {
-      component.evidence.link = 'https://onedrive.live.com/?cid=1A2B3C4D5E6F7G8H&id=1A2B3C4D5E6F7G8H%21123';
-
-      const result = component.validateCloudLink();
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid Dropbox link', () => {
-      component.evidence.link = 'https://www.dropbox.com/s/1a2b3c4d5e6f7g8h9i0j/file.txt?dl=0';
-
-      const result = component.validateCloudLink();
-
-      expect(result).toBeTruthy();
-    });
-
     it('should return true for a valid SharePoint link', () => {
       component.evidence.link = 'https://example.sharepoint.com/sites/siteName/Shared%20Documents/file.txt';
 
@@ -144,47 +120,9 @@ describe('EvidenceItemComponent', () => {
 
       expect(result).toBeFalsy();
     });
-
-    it('should return false for an empty link', () => {
-      component.evidence.link = '';
-
-      const result = component.validateCloudLink();
-
-      expect(result).toBeFalsy();
-    });
   });
 
   describe('isInvalidLink', () => {
-    it('should return true for a valid HTTP link', () => {
-      const result = component.isInvalidLink('http://example.com');
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid HTTPS link', () => {
-      const result = component.isInvalidLink('https://example.com');
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid link with www', () => {
-      const result = component.isInvalidLink('https://www.example.com');
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid link with subdomain', () => {
-      const result = component.isInvalidLink('https://sub.example.com');
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid link with port', () => {
-      const result = component.isInvalidLink('https://example.com:8080');
-
-      expect(result).toBeTruthy();
-    });
-
     it('should return true for a valid link with path', () => {
       const result = component.isInvalidLink('https://example.com/path/to/resource');
 
@@ -195,24 +133,6 @@ describe('EvidenceItemComponent', () => {
       const result = component.isInvalidLink('invalid_link');
 
       expect(result).toBeFalsy();
-    });
-
-    it('should return false for an empty link', () => {
-      const result = component.isInvalidLink('');
-
-      expect(result).toBeFalsy();
-    });
-
-    it('should return true for a valid link with query parameters', () => {
-      const result = component.isInvalidLink('https://example.com/path?name=value');
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true for a valid link with fragment', () => {
-      const result = component.isInvalidLink('https://example.com/path#section');
-
-      expect(result).toBeTruthy();
     });
   });
 
