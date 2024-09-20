@@ -72,6 +72,70 @@ describe('EvidenceItemComponent', () => {
     component.evidence = mockEvidences;
   });
 
+  describe('dynamicAlertStatusBasedOnVisibility', () => {
+    it('should return public file alert message when is_public_file is true', () => {
+      component.evidence.is_public_file = true;
+
+      const result = component.dynamicAlertStatusBasedOnVisibility();
+
+      expect(result).toContain('If you indicate that the file being uploaded to the PRMS repository is public:');
+      expect(result).toContain('You confirm that the file is publicly accessible.');
+      expect(result).toContain('You confirm that all intellectual property rights related to the file have been observed.');
+      expect(result).toContain('You agree to the link to the file being displayed in the CGIAR Results Dashboard.');
+    });
+
+    it('should return non-public file alert message when is_public_file is false', () => {
+      component.evidence.is_public_file = false;
+
+      const result = component.dynamicAlertStatusBasedOnVisibility();
+
+      expect(result).toContain('If you indicate that the file being uploaded to the PRMS repository is NOT public:');
+      expect(result).toContain('You confirm that the file should not be publicly accessible.');
+      expect(result).toContain('The file will not be accessible through the CGIAR Results Dashboard.');
+      expect(result).toContain('The file will be stored in the PRMS repository and will only be accessible by CGIAR staff with the repository link.');
+    });
+  });
+
+  describe('validateCloudLink', () => {
+    it('should return true for a valid Google Drive link', () => {
+      component.evidence.link = 'https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view';
+
+      const result = component.validateCloudLink();
+
+      expect(result).toBeTruthy();
+    });
+
+    it('should return true for a valid SharePoint link', () => {
+      component.evidence.link = 'https://example.sharepoint.com/sites/siteName/Shared%20Documents/file.txt';
+
+      const result = component.validateCloudLink();
+
+      expect(result).toBeTruthy();
+    });
+
+    it('should return false for an invalid cloud link', () => {
+      component.evidence.link = 'https://example.com';
+
+      const result = component.validateCloudLink();
+
+      expect(result).toBeFalsy();
+    });
+  });
+
+  describe('isInvalidLink', () => {
+    it('should return true for a valid link with path', () => {
+      const result = component.isInvalidLink('https://example.com/path/to/resource');
+
+      expect(result).toBeTruthy();
+    });
+
+    it('should return false for an invalid link', () => {
+      const result = component.isInvalidLink('invalid_link');
+
+      expect(result).toBeFalsy();
+    });
+  });
+
   describe('validateCGLink', () => {
     it('should return true for a valid legacy link', () => {
       component.evidence.link = 'https://cgspace.cgiar.org/handle/10568/12423';
