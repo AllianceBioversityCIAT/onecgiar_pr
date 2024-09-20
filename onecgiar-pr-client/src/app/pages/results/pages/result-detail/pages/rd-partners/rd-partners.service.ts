@@ -24,7 +24,7 @@ export class RdPartnersService implements OnDestroy {
   updatingLeadData: boolean = false;
 
   constructor(public api: ApiService, public institutionsSE: InstitutionsService, public centersSE: CentersService) {
-    this.institutionsSE.loadedInstitutions.subscribe(loaded => {
+    this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
       if (loaded) {
         this.setPossibleLeadPartners(true);
         this.setLeadPartnerOnLoad(true);
@@ -39,7 +39,7 @@ export class RdPartnersService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.institutionsSE.loadedInstitutions.unsubscribe();
+    this.institutionsSE?.loadedInstitutions?.unsubscribe();
     this.centersSE.loadedCenters.unsubscribe();
   }
 
