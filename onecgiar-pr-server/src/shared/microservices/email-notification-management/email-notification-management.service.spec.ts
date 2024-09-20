@@ -101,11 +101,13 @@ describe('EmailNotificationManagementService', () => {
           id: 1,
           official_code: 'INIT-01',
           name: 'Owner Initiative',
+          short_name: 'Owner',
         },
         initContributing: {
           id: 2,
           name: 'Contributing Initiative',
           official_code: 'INIT-02',
+          short_name: 'Contributing',
         },
         user: {
           id: 1,
@@ -129,7 +131,7 @@ describe('EmailNotificationManagementService', () => {
         initContributingName: 'Contributing Initiative',
         initContributing: 'INIT-02 Contributing Initiative',
         requesterName: 'John Doe',
-        initOwner: 'INIT-01 Owner Initiative',
+        initOwner: 'INIT-01 Owner',
         resultUrl: `${process.env.RESULTS_URL}1/general-information?phase=1`,
         result: '1 - Sample Result',
         resultNotificationUrl: `${process.env.NOTIFICATION_MODULE_URL}requests/received?phase=1&init=2&search=1 - Sample Result`,

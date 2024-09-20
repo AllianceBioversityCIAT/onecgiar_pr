@@ -257,7 +257,7 @@ describe('NotificationItemComponent', () => {
 
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
-        title: 'Request accepted',
+        title: 'Request successfully accepted',
         status: 'success'
       });
       expect(component.requestingAccept).toBeFalsy();
@@ -300,7 +300,7 @@ describe('NotificationItemComponent', () => {
 
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
-        title: 'Request rejected',
+        title: 'Request successfully rejected',
         status: 'success'
       });
       expect(component.requestingReject).toBeFalsy();
@@ -353,7 +353,7 @@ describe('NotificationItemComponent', () => {
 
       expect(spy).toHaveBeenCalledWith({
         id: 'noti-error',
-        title: 'Error when requesting ',
+        title: 'Error when requesting',
         description: '',
         status: 'error'
       });
