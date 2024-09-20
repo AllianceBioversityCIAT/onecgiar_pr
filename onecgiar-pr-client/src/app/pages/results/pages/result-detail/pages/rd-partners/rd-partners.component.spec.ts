@@ -20,7 +20,7 @@ describe('RdPartnersComponent', () => {
   let fixture: ComponentFixture<RdPartnersComponent>;
   let mockApiService: any;
   let mockRdPartnersService: any;
-  let mockCustomizedAlertsFeService:any;
+  let mockCustomizedAlertsFeService: any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -35,8 +35,9 @@ describe('RdPartnersComponent', () => {
         GET_centers: () => of({ response: [] }),
         PATCH_resyncKnowledgeProducts: () => of({ response: [] }),
         PATCH_partnersSection: () => of({ response: [] }),
+        GET_AllCLARISACenters: () => of({ response: [] })
       }
-    }
+    };
 
     mockRdPartnersService = {
       getSectionInformation: jest.fn(),
@@ -44,14 +45,16 @@ describe('RdPartnersComponent', () => {
       partnersBody: {
         no_applicable_partner: true,
         institutions: [],
+        contributing_np_projects: [] as any[],
+        contributing_center: []
       }
-    }
+    };
 
     mockCustomizedAlertsFeService = {
       show: jest.fn().mockImplementationOnce((config, callback) => {
         callback();
       })
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -65,10 +68,7 @@ describe('RdPartnersComponent', () => {
         PrMultiSelectComponent,
         AlertStatusComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -83,7 +83,6 @@ describe('RdPartnersComponent', () => {
           useValue: mockCustomizedAlertsFeService
         }
       ]
-
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdPartnersComponent);
@@ -93,16 +92,44 @@ describe('RdPartnersComponent', () => {
   describe('ngOnInit()', () => {
     it('should initialize partnersBody and call getSectionInformation on ngOnInit', () => {
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>`,
-        'text/html');
-      jest.spyOn(document, 'querySelectorAll')
-        .mockImplementation((selector) => dom.querySelectorAll(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
       const spy = jest.spyOn(component.rdPartnersSE, 'getSectionInformation');
 
       component.ngOnInit();
 
       expect(spy).toHaveBeenCalled();
+    });
+
+    it('should set showPartnersRequest to true when alert-event is clicked', async () => {
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(`<div class="alert-event"></div>`, 'text/html');
+      const querySelector = jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+      await component.ngOnInit();
+
+      const alertEventElement = dom.querySelector('.alert-event');
+      alertEventElement.dispatchEvent(new Event('click'));
+
+      expect(component.api.dataControlSE.showPartnersRequest).toBe(true);
+
+      querySelector.mockRestore();
+    });
+
+    it('should log an error if an exception occurs', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const querySelector = jest.spyOn(document, 'querySelectorAll').mockImplementation(() => {
+        throw new Error('Test error');
+      });
+
+      await component.ngOnInit();
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
+
+      querySelector.mockRestore();
     });
   });
 
@@ -118,15 +145,213 @@ describe('RdPartnersComponent', () => {
     });
   });
 
+  describe('validateGranTitle()', () => {
+    it('should return false when no duplicate grant titles', () => {
+      component.rdPartnersSE.partnersBody.contributing_np_projects = [
+        {
+          grant_title: 'Grant A',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        },
+        {
+          grant_title: 'Grant B',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        }
+      ];
+
+      expect(component.validateGranTitle).toBeFalsy();
+    });
+    it('should return true when there are duplicate grant titles', () => {
+      component.rdPartnersSE.partnersBody.contributing_np_projects = [
+        {
+          grant_title: 'Grant A',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        },
+        {
+          grant_title: 'Grant A',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        }
+      ];
+
+      expect(component.validateGranTitle).toBeTruthy();
+    });
+  });
+
+  describe('addBilateralContribution()', () => {
+    it('should add a new donor interface to contributing_np_projects', () => {
+      component.rdPartnersSE.partnersBody.contributing_np_projects = [];
+      const initialLength = component.rdPartnersSE.partnersBody.contributing_np_projects.length;
+
+      component.addBilateralContribution();
+
+      expect(component.rdPartnersSE.partnersBody.contributing_np_projects.length).toBe(initialLength + 1);
+    });
+  });
+
+  describe('addPrimaryCenter()', () => {
+    it('should set primary to true for the specified center', async () => {
+      (component.rdPartnersSE.partnersBody.contributing_center = [{ primary: false }, { primary: false }] as any[]),
+        component.addPrimaryCenter(component.rdPartnersSE.partnersBody.contributing_center[1]);
+
+      expect(component.rdPartnersSE.partnersBody.contributing_center[1].primary).toBeTruthy();
+      expect(component.rdPartnersSE.partnersBody.contributing_center[0].primary).toBeFalsy();
+    });
+  });
+
+  describe('deleteContributingCenter()', () => {
+    beforeEach(() => {
+      component.rdPartnersSE.partnersBody = {
+        contributing_center: [
+          { code: 'center1', primary: false },
+          { code: 'center2', primary: false }
+        ]
+      } as any;
+    });
+
+    it('should delete the contributing center at the specified index', async () => {
+      component.deleteContributingCenter(1);
+
+      expect(component.rdPartnersSE.partnersBody.contributing_center.length).toBe(1);
+    });
+
+    it('should set updatingLeadData to true and then false after timeout when updateComponent is true', done => {
+      jest.useFakeTimers();
+      component.rdPartnersSE.updatingLeadData = false;
+
+      component.deleteContributingCenter(1, true);
+
+      expect(component.rdPartnersSE.updatingLeadData).toBe(true);
+
+      jest.advanceTimersByTime(50);
+
+      setTimeout(() => {
+        expect(component.rdPartnersSE.updatingLeadData).toBe(false);
+        done();
+      }, 50);
+
+      jest.runAllTimers();
+      jest.useRealTimers();
+    });
+  });
+
+  describe('deleteEvidence()', () => {
+    it('should delete the evidence at the specified index', () => {
+      component.rdPartnersSE.partnersBody.contributing_np_projects = [
+        {
+          grant_title: 'Grant A',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        },
+        {
+          grant_title: 'Grant B',
+          funder: 1,
+          center_grant_id: '',
+          lead_center: ''
+        }
+      ];
+      component.deleteEvidence(0);
+
+      expect(component.rdPartnersSE.partnersBody.contributing_np_projects.length).toBe(1);
+    });
+  });
+
+  describe('validatePrimarySelection()', () => {
+    it('should set the primary flag if there is only one contributing center', async () => {
+      component.rdPartnersSE.partnersBody.contributing_center = [{ primary: false }] as any[];
+
+      component.validatePrimarySelection();
+
+      expect(component.rdPartnersSE.partnersBody.contributing_center[0].primary).toBeTruthy();
+    });
+  });
+
+  describe('getMessageLead()', () => {
+    it('should change the message depending on is_lead_by_partner flag', () => {
+      component.rdPartnersSE.partnersBody.is_lead_by_partner = true;
+
+      let message = component.getMessageLead();
+      expect(message).toContain('partner');
+
+      component.rdPartnersSE.partnersBody.is_lead_by_partner = false;
+
+      message = component.getMessageLead();
+      expect(message).toContain('CG Center');
+    });
+  });
+
   describe('onSaveSection()', () => {
-    it('should call PATCH_partnersSection and getSectionInformation on onSaveSection', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_partnersSection');
+    it('should clear institutions if no_applicable_partner is true', () => {
+      component.rdPartnersSE.partnersBody.no_applicable_partner = true;
+      component.rdPartnersSE.partnersBody.institutions = [{}, {}] as any[];
+
+      component.onSaveSection();
+
+      expect(component.rdPartnersSE.partnersBody.institutions).toEqual([]);
+    });
+
+    it('should set is_leading_result correctly when is_lead_by_partner is true', () => {
+      component.rdPartnersSE = {
+        leadPartnerId: 1,
+        partnersBody: {
+          is_lead_by_partner: true,
+          mqap_institutions: [
+            { institutions_id: 1, is_leading_result: false },
+            { institutions_id: 2, is_leading_result: false }
+          ] as any[],
+          institutions: [
+            { institutions_id: 3, is_leading_result: false },
+            { institutions_id: 4, is_leading_result: false }
+          ] as any[],
+          contributing_center: [{ is_leading_result: true }] as any[]
+        } as any
+      } as any;
+
+      component.onSaveSection();
+
+      expect(component.rdPartnersSE.partnersBody.mqap_institutions[0].is_leading_result).toBe(true);
+      expect(component.rdPartnersSE.partnersBody.mqap_institutions[1].is_leading_result).toBe(false);
+      expect(component.rdPartnersSE.partnersBody.institutions[0].is_leading_result).toBe(false);
+      expect(component.rdPartnersSE.partnersBody.institutions[1].is_leading_result).toBe(false);
+      expect(component.rdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(false);
+    });
+
+    it('should set is_leading_result correctly when is_lead_by_partner is false', () => {
+      component.rdPartnersSE = {
+        leadCenterCode: 'center1',
+        partnersBody: {
+          is_lead_by_partner: false,
+          contributing_center: [
+            { code: 'center1', is_leading_result: false },
+            { code: 'center2', is_leading_result: false }
+          ] as any[],
+          mqap_institutions: [{ is_leading_result: true }] as any[],
+          institutions: [{ is_leading_result: true }] as any[]
+        } as any
+      } as any;
+
+      component.onSaveSection();
+
+      expect(component.rdPartnersSE.partnersBody.contributing_center[0].is_leading_result).toBe(true);
+      expect(component.rdPartnersSE.partnersBody.contributing_center[1].is_leading_result).toBe(false);
+      expect(component.rdPartnersSE.partnersBody.mqap_institutions[0].is_leading_result).toBe(false);
+      expect(component.rdPartnersSE.partnersBody.institutions[0].is_leading_result).toBe(false);
+    });
+
+    it('should call PATCH_partnersSection and getSectionInformation', () => {
+      const spyPatch = jest.spyOn(mockApiService.resultsSE, 'PATCH_partnersSection');
       const spyGetSectionInformation = jest.spyOn(mockRdPartnersService, 'getSectionInformation');
 
       component.onSaveSection();
 
-      expect(spy).toHaveBeenCalled();
-
+      expect(spyPatch).toHaveBeenCalled();
       expect(spyGetSectionInformation).toHaveBeenCalled();
     });
   });
