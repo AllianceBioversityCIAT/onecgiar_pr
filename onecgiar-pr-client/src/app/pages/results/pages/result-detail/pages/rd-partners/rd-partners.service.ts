@@ -1,8 +1,6 @@
-import { EventEmitter, Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { centerInterfacesToc } from '../rd-theory-of-change/model/theoryOfChangeBody';
-import { EventType } from '../../../../../../shared/interfaces/event-type.dto';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -46,7 +44,7 @@ export class RdPartnersService implements OnDestroy {
   }
 
   validateDeliverySelection(deliveries, deliveryId: number) {
-    if (!(typeof deliveries == 'object')) return false;
+    if (!Array.isArray(deliveries)) return false;
     const index = deliveries.indexOf(deliveryId);
     return index < 0 ? false : true;
   }
@@ -64,7 +62,7 @@ export class RdPartnersService implements OnDestroy {
   }
 
   validateDeliverySelectionPartners(deliveries, deliveryId: number) {
-    if (typeof deliveries !== 'object') return false;
+    if (!Array.isArray(deliveries)) return false;
 
     return deliveries.find(delivery => delivery.partner_delivery_type_id == deliveryId);
   }

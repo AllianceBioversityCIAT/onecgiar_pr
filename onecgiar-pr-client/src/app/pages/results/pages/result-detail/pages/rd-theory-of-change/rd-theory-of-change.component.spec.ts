@@ -134,12 +134,11 @@ describe('RdTheoryOfChangeComponent', () => {
   });
 
   describe('ngOnInit()', () => {
-    it('should call requestEvent(), getSectionInformation(), GET_AllWithoutResults() and getContributingCenterOptions() on initialization', () => {
+    it('should call requestEvent(), getSectionInformation(), and GET_AllWithoutResults() on initialization', async () => {
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyRequestEvent = jest.spyOn(component, 'requestEvent');
       const spyGET_AllWithoutResults = jest.spyOn(component, 'GET_AllWithoutResults');
-      const spyGetContributingCenterOptions = jest.spyOn(component, 'getContributingCenterOptions');
 
       const parser = new DOMParser();
       const dom = parser.parseFromString(
@@ -150,12 +149,11 @@ describe('RdTheoryOfChangeComponent', () => {
 
       jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      component.ngOnInit();
+      await component.ngOnInit();
       expect(spyRequestEvent).toHaveBeenCalled();
       expect(spyGetSectionInformation).toHaveBeenCalled();
       expect(spyFindClassTenSeconds).toHaveBeenCalled();
       expect(spyGET_AllWithoutResults).toHaveBeenCalled();
-      expect(spyGetContributingCenterOptions).toHaveBeenCalled();
     });
   });
 
@@ -168,43 +166,6 @@ describe('RdTheoryOfChangeComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(mockApiService.resultsSE.GET_AllWithoutResults).toHaveBeenCalled();
       expect(component.contributingInitiativesList).toEqual(mockGET_AllWithoutResultsResponse);
-    });
-  });
-
-  describe('disabledCenters()', () => {
-    it('should update cgspaceDisabledList based on contributing_center', () => {
-      component.theoryOfChangeBody.contributing_center = [
-        {
-          from_cgspace: true,
-          code: 'code',
-          name: 'name'
-        },
-        {
-          from_cgspace: false,
-          code: 'code',
-          name: 'name'
-        }
-      ];
-      component.disabledCenters();
-
-      expect(component.cgspaceDisabledList).toEqual([
-        {
-          from_cgspace: true,
-          code: 'code',
-          name: 'name'
-        }
-      ]);
-    });
-  });
-
-  describe('getContributingCenterOptions()', () => {
-    it('should set contributingCenterOptions with data from the service', async () => {
-      const mockGetData = jest.fn(() => Promise.resolve(['option1', 'option2']));
-      jest.spyOn(component.centersSE, 'getData').mockImplementation(mockGetData);
-
-      await component.getContributingCenterOptions();
-
-      expect(component.contributingCenterOptions).toEqual(['option1', 'option2']);
     });
   });
 
@@ -253,7 +214,7 @@ describe('RdTheoryOfChangeComponent', () => {
 
     it('should handle errors from GET_toc correctly', async () => {
       const errorMessage = 'error message';
-      jest.spyOn(component.api.resultsSE, 'GET_toc').mockReturnValue(throwError(errorMessage));
+      jest.spyOn(component.api.resultsSE, 'GET_toc').mockReturnValue(throwError(() => errorMessage));
       const consoleErrorSpy = jest.spyOn(console, 'error');
 
       await component.getSectionInformation();
@@ -261,75 +222,87 @@ describe('RdTheoryOfChangeComponent', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
       expect(component.getConsumed).toBeTruthy();
     });
-  });
 
-  describe('validateGranTitle()', () => {
-    it('should return false when no duplicate grant titles', () => {
-      component.theoryOfChangeBody.contributing_np_projects = [
-        {
-          grant_title: 'Grant A',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        },
-        {
-          grant_title: 'Grant B',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        }
-      ];
+    it('should set getConsumed to true', () => {
+      jest.useFakeTimers();
+      jest.spyOn(component.api.resultsSE, 'GET_toc');
 
-      expect(component.validateGranTitle).toBeFalsy();
-    });
-    it('should return true when there are duplicate grant titles', () => {
-      component.theoryOfChangeBody.contributing_np_projects = [
-        {
-          grant_title: 'Grant A',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        },
-        {
-          grant_title: 'Grant A',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        }
-      ];
+      component.getSectionInformation();
 
-      expect(component.validateGranTitle).toBeTruthy();
+      jest.advanceTimersByTime(100);
+      expect(component.getConsumed).toBe(true);
+
+      jest.useRealTimers();
     });
   });
 
   describe('onSaveSection()', () => {
-    it('should call POST_toc when official_code is different to newInitOfficialCode', async () => {
-      const spy = jest.spyOn(mockApiService.alertsFe, 'show');
+    beforeEach(async () => {
       await component.getSectionInformation();
-      component.onSaveSection();
-
-      expect(component.getConsumed).toBeFalsy();
-      expect(component.contributingInitiativeNew).toEqual([]);
-      expect(spy).toHaveBeenCalled();
     });
-    it('should call POST_toc when official_code is the same to newInitOfficialCode', async () => {
-      mockGET_tocResponse.contributing_and_primary_initiative[0].id = 2;
-      const spy = jest.spyOn(component, 'getSectionInformation');
 
-      await component.getSectionInformation();
+    it('should call POST_toc when official_code is different from newInitOfficialCode', () => {
+      const spyPOST_toc = jest.spyOn(mockApiService.resultsSE, 'POST_toc').mockReturnValue(of({}));
+      const spyShowAlert = jest.spyOn(mockApiService.alertsFe, 'show').mockImplementation((config, callback: () => any) => callback());
+
+      component.theoryOfChangeBody.result_toc_result.official_code = 'oldCode';
+      component.theoryOfChangeBody.changePrimaryInit = 2;
+      component.theoryOfChangeBody.contributing_and_primary_initiative = [{ id: 2, official_code: 'newCode' }];
+
       component.onSaveSection();
 
-      expect(component.getConsumed).toBeFalsy();
-      expect(component.contributingInitiativeNew).toEqual([]);
-      expect(spy).toHaveBeenCalled();
+      expect(spyShowAlert).toHaveBeenCalled();
+      expect(spyPOST_toc).toHaveBeenCalled();
+    });
+
+    it('should call POST_toc when official_code is the same as newInitOfficialCode', () => {
+      const spyPOST_toc = jest.spyOn(mockApiService.resultsSE, 'POST_toc').mockReturnValue(of({}));
+
+      component.theoryOfChangeBody.result_toc_result.official_code = 'sameCode';
+      component.theoryOfChangeBody.changePrimaryInit = 1;
+      component.theoryOfChangeBody.contributing_and_primary_initiative = [{ id: 1, official_code: 'sameCode' }];
+
+      component.onSaveSection();
+
+      expect(spyPOST_toc).toHaveBeenCalled();
+    });
+
+    it('should filter out result_toc_results with null toc_result_id when length is greater than 1', () => {
+      component.theoryOfChangeBody.result_toc_result.result_toc_results = [
+        { toc_result_id: 1 },
+        { toc_result_id: null },
+        { toc_result_id: 2 }
+      ] as any[];
+
+      component.onSaveSection();
+
+      expect(component.theoryOfChangeBody.result_toc_result.result_toc_results).toEqual([{ toc_result_id: 1 }, { toc_result_id: 2 }]);
+    });
+
+    it('should reload the page when initiative_id is different from changePrimaryInit', () => {
+      const reloadMock = jest.fn();
+      delete window.location;
+      window.location = { ...window.location, reload: reloadMock };
+
+      component.theoryOfChangeBody.result_toc_result.initiative_id = 1;
+      component.theoryOfChangeBody.changePrimaryInit = 2;
+
+      component.onSaveSection();
+
+      expect(reloadMock).toHaveBeenCalled();
+
+      jest.restoreAllMocks();
+    });
+
+    it('should call getSectionInformation when initiative_id is the same as changePrimaryInit', () => {
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
+
+      component.theoryOfChangeBody.result_toc_result.initiative_id = 1;
+      component.theoryOfChangeBody.changePrimaryInit = 1;
+
+      component.onSaveSection();
+
+      expect(spyGetSectionInformation).toHaveBeenCalled();
     });
   });
 
@@ -398,6 +371,20 @@ describe('RdTheoryOfChangeComponent', () => {
         expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual(expectedContributor);
       });
     });
+
+    it('should add contributor to contributors_result_toc_result when it does not exist', () => {
+      component.theoryOfChangeBody = {
+        contributing_initiatives: [{ id: 1, short_name: 'Initiative 1', official_code: 'CODE1' }],
+        contributors_result_toc_result: []
+      } as any;
+
+      component.onSelectContributingInitiative();
+
+      expect(component.theoryOfChangeBody.contributors_result_toc_result.length).toBe(1);
+      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].initiative_id).toBe(1);
+      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].short_name).toBe('Initiative 1');
+      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].official_code).toBe('CODE1');
+    });
   });
 
   describe('toggleActiveContributor()', () => {
@@ -428,6 +415,29 @@ describe('RdTheoryOfChangeComponent', () => {
 
       expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual([contributor2]);
     });
+
+    it('should remove the contributing initiative and update the arrays', () => {
+      component.theoryOfChangeBody = {
+        contributors_result_toc_result: [
+          { initiative_id: 1, name: 'Initiative 1' },
+          { initiative_id: 2, name: 'Initiative 2' }
+        ],
+        contributing_and_primary_initiative: [
+          { id: 1, name: 'Initiative 1' },
+          { id: 2, name: 'Initiative 2' }
+        ]
+      } as any;
+
+      const event = { remove: { id: 1 } };
+
+      component.onRemoveContributingInitiative(event);
+
+      expect(component.theoryOfChangeBody.contributors_result_toc_result.length).toBe(1);
+      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].initiative_id).toBe(2);
+
+      expect(component.theoryOfChangeBody.contributing_and_primary_initiative.length).toBe(1);
+      expect(component.theoryOfChangeBody.contributing_and_primary_initiative[0].id).toBe(2);
+    });
   });
 
   describe('onRemoveContribuiting()', () => {
@@ -445,16 +455,6 @@ describe('RdTheoryOfChangeComponent', () => {
       component.onRemoveContribuiting(1, true);
 
       expect(component.theoryOfChangeBody.contributing_initiatives.accepted_contributing_initiatives).toEqual(['initiative1', 'initiative3']);
-    });
-  });
-
-  describe('addBilateralContribution()', () => {
-    it('should add a new donor interface to contributing_np_projects', () => {
-      const initialLength = component.theoryOfChangeBody.contributing_np_projects.length;
-
-      component.addBilateralContribution();
-
-      expect(component.theoryOfChangeBody.contributing_np_projects.length).toBe(initialLength + 1);
     });
   });
 
@@ -476,60 +476,22 @@ describe('RdTheoryOfChangeComponent', () => {
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
     });
-  });
 
-  describe('addPrimary()', () => {
-    it('should set primary to true for the specified center', async () => {
-      await component.getSectionInformation();
-      component.addPrimary(component.theoryOfChangeBody.contributing_center[1]);
+    it('should log an error if document.querySelector throws an error', async () => {
+      const findClassTenSecondsMock = jest.fn().mockResolvedValueOnce({});
+      component.api.dataControlSE.findClassTenSeconds = findClassTenSecondsMock;
 
-      expect(component.theoryOfChangeBody.contributing_center[1].primary).toBeTruthy();
-      expect(component.theoryOfChangeBody.contributing_center[0].primary).toBeFalsy();
-    });
-  });
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-  describe('deletContributingCenter()', () => {
-    it('should delete the contributing center at the specified index', async () => {
-      await component.getSectionInformation();
-      component.deletContributingCenter(1);
+      jest.spyOn(document, 'querySelector').mockImplementation(() => {
+        throw new Error('Query selector error');
+      });
 
-      expect(component.theoryOfChangeBody.contributing_center.length).toBe(1);
-    });
-  });
+      await component.requestEvent();
 
-  describe('deleteEvidence()', () => {
-    it('should delete the evidence at the specified index', () => {
-      component.theoryOfChangeBody.contributing_np_projects = [
-        {
-          grant_title: 'Grant A',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        },
-        {
-          grant_title: 'Grant B',
-          funder: {
-            institutions_id: 1
-          },
-          center_grant_id: '',
-          lead_center: ''
-        }
-      ];
-      component.deleteEvidence(0);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(new Error('Query selector error'));
 
-      expect(component.theoryOfChangeBody.contributing_np_projects.length).toBe(1);
-    });
-  });
-
-  describe('validatePrimarySelection()', () => {
-    it('should set the primary flag if there is only one contributing center', async () => {
-      await component.getSectionInformation();
-
-      component.validatePrimarySelection();
-
-      expect(component.theoryOfChangeBody.contributing_center[0].primary).toBeTruthy();
+      consoleErrorSpy.mockRestore();
     });
   });
 });

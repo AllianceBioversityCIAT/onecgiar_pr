@@ -32,8 +32,8 @@ export class RdTheoryOfChangeComponent implements OnInit {
     public dataControlSE: DataControlService
   ) {}
 
-  ngOnInit(): void {
-    this.requestEvent();
+  async ngOnInit(): Promise<void> {
+    await this.requestEvent();
     this.getSectionInformation();
     this.GET_AllWithoutResults();
   }
@@ -192,7 +192,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
+    return this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
       try {
         document.querySelector('.alert-event').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
