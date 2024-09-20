@@ -64,7 +64,6 @@ export class SocketManagementService implements OnModuleInit {
         }),
       });
       const data = await response.json();
-      console.log('🚀 ~ SocketManagementService ~ data:', data);
 
       return {
         response: data,

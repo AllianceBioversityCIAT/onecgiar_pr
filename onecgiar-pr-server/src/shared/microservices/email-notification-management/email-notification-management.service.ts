@@ -46,6 +46,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
           initContributingName: data.initContributing.name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.name}`,
+          initContributing: `${data.initContributing.official_code} ${data.initContributing.name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
           resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initContributing.id}&search=${data.result.result_code} - ${data.result.title}`,
