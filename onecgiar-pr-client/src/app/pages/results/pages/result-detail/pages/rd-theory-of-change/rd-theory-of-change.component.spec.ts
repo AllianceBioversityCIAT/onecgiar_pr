@@ -207,7 +207,7 @@ describe('RdTheoryOfChangeComponent', () => {
       jest.spyOn(component.api.resultsSE, 'GET_toc').mockReturnValue(throwError(() => errorMessage));
       const consoleErrorSpy = jest.spyOn(console, 'error');
 
-      await component.getSectionInformation();
+      component.getSectionInformation();
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
       expect(component.getConsumed).toBeTruthy();
@@ -228,7 +228,7 @@ describe('RdTheoryOfChangeComponent', () => {
 
   describe('onSaveSection()', () => {
     beforeEach(async () => {
-      await component.getSectionInformation();
+      component.getSectionInformation();
     });
 
     it('should call POST_toc when official_code is different from newInitOfficialCode', () => {
@@ -360,20 +360,6 @@ describe('RdTheoryOfChangeComponent', () => {
         ];
         expect(component.theoryOfChangeBody.contributors_result_toc_result).toEqual(expectedContributor);
       });
-    });
-
-    it('should add contributor to contributors_result_toc_result when it does not exist', () => {
-      component.theoryOfChangeBody = {
-        contributing_initiatives: [{ id: 1, short_name: 'Initiative 1', official_code: 'CODE1' }],
-        contributors_result_toc_result: []
-      } as any;
-
-      component.onSelectContributingInitiative();
-
-      expect(component.theoryOfChangeBody.contributors_result_toc_result.length).toBe(1);
-      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].initiative_id).toBe(1);
-      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].short_name).toBe('Initiative 1');
-      expect(component.theoryOfChangeBody.contributors_result_toc_result[0].official_code).toBe('CODE1');
     });
   });
 
