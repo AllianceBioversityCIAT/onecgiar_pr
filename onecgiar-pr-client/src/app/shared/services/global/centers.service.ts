@@ -16,7 +16,7 @@ export class CentersService {
   async getData(): Promise<any> {
     return new Promise((resolve, reject) => {
       if (this.centersList?.length) return resolve(JSON.parse(JSON.stringify(this.centersList)));
-      this.api.resultsSE.GET_AllCLARISACenters().subscribe({
+      this.api.resultsSE?.GET_AllCLARISACenters()?.subscribe({
         next: ({ response }) => {
           resolve([...response]);
           this.centersList = response;
