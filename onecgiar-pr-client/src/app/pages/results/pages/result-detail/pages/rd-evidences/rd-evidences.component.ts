@@ -140,7 +140,7 @@ export class RdEvidencesComponent implements OnInit {
 
   get validateButtonDisabled() {
     const invalidLinkRegex =
-      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w\-]+\.)?sharepoint\.com)(\/.*)?$/i;
+      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
 
     const evidences = this.evidencesBody.evidences;
 

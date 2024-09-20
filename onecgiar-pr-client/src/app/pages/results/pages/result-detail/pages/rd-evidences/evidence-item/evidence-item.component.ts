@@ -60,7 +60,7 @@ export class EvidenceItemComponent {
 
   validateCloudLink() {
     const cloudRegex =
-      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w\-]+\.)?sharepoint\.com)(\/.*)?$/;
+      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
     return this.evidence.link && cloudRegex.test(this.evidence.link?.trim());
   }
 
