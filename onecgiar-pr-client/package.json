@@ -34,6 +34,7 @@
     "jest": "^29.7.0",
     "jest-preset-angular": "^14.2.2",
     "ng-circle-progress": "^1.7.1",
+    "ngx-socket-io": "^4.7.0",
     "primeicons": "^7.0.0",
     "primeng": "^17.18.9",
     "pusher-js": "^7.1.0-beta",
