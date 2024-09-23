@@ -870,8 +870,6 @@ export class ResultsKnowledgeProductsService {
           confidenceThreshold,
         );
 
-      await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
-
       // * Updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -899,6 +897,8 @@ export class ResultsKnowledgeProductsService {
       await this._resultByInstitutionRepository.save(
         resultByInstitutions ?? [],
       );
+
+      await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
 
       await this._resultsKnowledgeProductKeywordRepository.save(
         newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
