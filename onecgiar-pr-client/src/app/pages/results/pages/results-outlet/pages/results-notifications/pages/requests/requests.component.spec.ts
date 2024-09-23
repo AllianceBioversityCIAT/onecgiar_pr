@@ -46,4 +46,11 @@ describe('RequestsComponent', () => {
     component.clearFiltersAndUpdateResults();
     expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
   });
+
+  it('should call resetFilters if searchFilter is not null', () => {
+    routerMock.url = '/some-url';
+    resultsNotificationsServiceMock.searchFilter = 'search';
+    component.clearFiltersAndUpdateResults();
+    expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
+  });
 });
