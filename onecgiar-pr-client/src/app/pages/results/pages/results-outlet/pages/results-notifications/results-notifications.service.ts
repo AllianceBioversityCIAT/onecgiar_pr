@@ -33,9 +33,7 @@ export class ResultsNotificationsService {
 
   hideInitFilter = true;
 
-  constructor(private api: ApiService, private router: Router) {
-    this.get_section_information();
-  }
+  constructor(private api: ApiService, private router: Router) {}
 
   get_sent_notifications(callback?) {
     this.api.resultsSE.GET_sentRequest().subscribe({

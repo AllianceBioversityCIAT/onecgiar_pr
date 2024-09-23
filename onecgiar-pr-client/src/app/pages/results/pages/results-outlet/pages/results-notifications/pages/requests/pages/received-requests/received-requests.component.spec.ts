@@ -12,10 +12,6 @@ describe('ReceivedRequestsComponent', () => {
   let resultsNotificationsServiceMock: any;
 
   beforeEach(async () => {
-    apiServiceMock = {
-      updateUserData: jest.fn()
-    };
-
     resultsNotificationsServiceMock = {
       get_section_information: jest.fn()
     };
@@ -37,17 +33,9 @@ describe('ReceivedRequestsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should call updateUserData and get_section_information on ngOnInit', () => {
-    const updateUserDataCallback = jest.fn();
-    apiServiceMock.updateUserData.mockImplementation((callback: Function) => {
-      updateUserDataCallback();
-      callback();
-    });
-
+  it('should call get_section_information on ngOnInit', () => {
     component.ngOnInit();
 
-    expect(apiServiceMock.updateUserData).toHaveBeenCalled();
-    expect(updateUserDataCallback).toHaveBeenCalled();
     expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
   });
 });

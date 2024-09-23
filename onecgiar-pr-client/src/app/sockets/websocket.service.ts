@@ -34,7 +34,7 @@ export class WebsocketService {
     this.getNotifications();
     this.getConnectedUsers();
     this.getAlerts();
-    this.configUser(this.api.authSE.localStorageUser.user_name, this.api.authSE.localStorageUser.id);
+    this.configUser(this.api?.authSE?.localStorageUser?.user_name, this.api?.authSE?.localStorageUser?.id);
   }
 
   checkStatus() {
