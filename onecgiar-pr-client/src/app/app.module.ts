@@ -26,7 +26,6 @@ import { SocketIoModule } from 'ngx-socket-io';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { WebsocketService } from './sockets/websocket.service';
-import { environment } from '../environments/environment';
 
 @NgModule({
   declarations: [
@@ -54,7 +53,7 @@ import { environment } from '../environments/environment';
     FormatTimeAgoModule,
     ToastModule,
     PopUpNotificationItemComponent,
-    SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
+    SocketIoModule.forRoot({ url: 'https://dev-sockets-production.up.railway.app/', options: {} })
   ],
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },

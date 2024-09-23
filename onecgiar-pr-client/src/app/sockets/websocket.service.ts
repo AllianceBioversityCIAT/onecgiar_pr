@@ -5,14 +5,16 @@ import { User } from './classes/User';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../shared/services/api/api.service';
 import { ResultsNotificationsService } from '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebsocketService {
+  platform = 'PRMS';
+  webSocketUrl = 'https://dev-sockets-production.up.railway.app/';
+
   socket = new Socket({
-    url: environment.webSocketUrl,
+    url: this.webSocketUrl,
     options: {}
   });
 
@@ -55,7 +57,7 @@ export class WebsocketService {
 
   configUser(name: string, userId: number) {
     return new Promise((resolve, reject) => {
-      this.emit('config-user', { name, userId, platform: environment.platform }, (resp: any) => {
+      this.emit('config-user', { name, userId, platform: this.platform }, (resp: any) => {
         this.user = new User(name, userId);
         resolve(null);
       });
@@ -79,13 +81,13 @@ export class WebsocketService {
   }
 
   getConnectedUsers() {
-    this.listen(`all-connected-users-${environment.platform}`).subscribe(resp => {
+    this.listen(`all-connected-users-${this.platform}`).subscribe(resp => {
       this.userList.set(resp);
     });
   }
 
   getAlerts() {
-    this.listen(`alert-${environment.platform}`).subscribe((msg: any) => {
+    this.listen(`alert-${this.platform}`).subscribe((msg: any) => {
       alert(msg.text);
     });
   }
