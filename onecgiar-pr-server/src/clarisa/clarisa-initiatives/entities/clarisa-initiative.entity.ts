@@ -73,9 +73,6 @@ export class ClarisaInitiative {
   )
   obj_user_notification_setting?: UserNotificationSetting[];
 
-  @OneToMany(
-    () => ResultsByInititiative,
-    (rbi) => rbi.obj_initiative,
-  )
+  @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_initiative)
   obj_result_by_initiative?: ResultsByInititiative[];
 }

@@ -77,7 +77,7 @@ import { EmailNotificationManagementModule } from './shared/microservices/email-
     SharePointModule,
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,
-    NotificationModule
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

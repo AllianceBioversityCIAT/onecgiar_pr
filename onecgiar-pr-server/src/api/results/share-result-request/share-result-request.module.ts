@@ -52,9 +52,13 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
     ClarisaInitiativesRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,
-    UserRepository
+    UserRepository,
   ],
   exports: [ShareResultRequestRepository, ShareResultRequestService],
-  imports: [EmailNotificationManagementModule, ResultsTocResultsModule, forwardRef(() => VersioningModule)],
+  imports: [
+    EmailNotificationManagementModule,
+    ResultsTocResultsModule,
+    forwardRef(() => VersioningModule),
+  ],
 })
 export class ShareResultRequestModule {}

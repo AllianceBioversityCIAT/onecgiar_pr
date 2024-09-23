@@ -8,7 +8,3 @@ export class CreateAnnouncementNotificationDto {
   })
   text: string;
 }
-
-export class CreateResultNotificationDto {
-  notification: {};
-}

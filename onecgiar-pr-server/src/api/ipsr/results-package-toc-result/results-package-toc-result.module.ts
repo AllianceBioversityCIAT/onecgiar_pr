@@ -69,7 +69,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
     TemplateRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,
-    UserRepository
+    UserRepository,
   ],
   exports: [ResultsPackageTocResultService],
 })

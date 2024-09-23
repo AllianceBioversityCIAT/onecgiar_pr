@@ -18,7 +18,7 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     NotificationTypeRepository,
     NotificationRepository,
     UserRepository,
-    HandlersError
+    HandlersError,
   ],
   exports: [NotificationService],
   imports: [SocketManagementModule, ShareResultRequestModule, VersioningModule],

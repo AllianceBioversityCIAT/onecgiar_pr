@@ -9,8 +9,6 @@ import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../../versioning/versioning.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';

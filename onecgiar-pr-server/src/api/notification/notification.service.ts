@@ -10,11 +10,9 @@ import {
 } from './enum/notification.enum';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { NotificationDto } from '../../shared/microservices/socket-management/dto/create-socket.dto';
-import { env } from 'process';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { FindOperator, MoreThan } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
-import { Notification } from './entities/notification.entity';
 import { User } from '../../auth/modules/user/entities/user.entity';
 
 @Injectable()

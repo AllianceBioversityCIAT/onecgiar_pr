@@ -54,7 +54,7 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'User found by email',
-  })  
+  })
   @Get('get/all/:email')
   async findByEmail(@Param('email') email: string) {
     return this.userService.findOneByEmail(email);
