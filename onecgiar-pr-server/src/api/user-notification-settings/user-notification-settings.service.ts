@@ -224,7 +224,9 @@ export class UserNotificationSettingsService {
     }
   }
 
-  async getNotificationUpdatesRecipients(initiativeId: number): Promise<number[]> {
+  async getNotificationUpdatesRecipients(
+    initiativeId: number,
+  ): Promise<number[]> {
     const initMembers = await this._roleByUserRepository.find({
       relations: {
         obj_user: {

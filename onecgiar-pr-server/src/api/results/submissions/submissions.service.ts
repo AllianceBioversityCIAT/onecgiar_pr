@@ -37,7 +37,7 @@ export class SubmissionsService {
     createSubmissionDto: CreateSubmissionDto,
   ) {
     try {
-      const result= await this._resultRepository.getResultById(resultId);
+      const result = await this._resultRepository.getResultById(resultId);
       const role = await this._roleByUserRepository.validationRolePermissions(
         user.id,
         result.id,
