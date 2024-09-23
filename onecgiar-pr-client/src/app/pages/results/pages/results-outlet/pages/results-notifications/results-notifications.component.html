@@ -1,27 +1,21 @@
 <div class="local_container" style="padding: 20px 50px 50px 50px">
   <h1 class="notifications_title">Notifications</h1>
 
-  <p class="notifications_description">
-    Welcome to the Notification Center! Here, you will find all system notifications related to the events and actions needed on the cross-initiative
-    results.
-  </p>
-
   <div class="options">
     <div class="tabs">
       <a
         class="tab"
         routerLinkActive="active"
         routerLink="requests"
-        (click)="this.resultsNotificationsSE.resetFilters(); this.resultsNotificationsSE.get_section_information()">
+        (click)="this.clearFilters(); this.resultsNotificationsSE.get_section_information()">
         <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
         Requests
       </a>
 
-      <!-- ! Do not delete this tab. It will be implementend on next sprint -->
-      <!-- <a class="tab" routerLinkActive="active" routerLink="updates">
+      <a class="tab" routerLinkActive="active" routerLink="updates" (click)="this.clearFilters()">
         <i class="material-icons-round" style="font-size: 20px"> pending_actions </i>
         Updates
-      </a> -->
+      </a>
     </div>
 
     <div class="tabs">
@@ -39,9 +33,12 @@
   <div class="line"></div>
 
   <p class="request_description" *ngIf="router.url.includes('/results-notifications/requests')">
-    In this section, there are notifications of requests that any initiative has made to my initiative(s) for collaboration on an result. Allowing
-    users to accept or reject each one of the requests. Please note that it will now be possible to send, accept or reject request even if the result
-    has already been submitted.
+    In this section, there are requests that any initiative has made to your initiative(s) for collaboration on a result. Please note that it will now
+    be possible to send, accept or reject request even if the result has already been submitted.
+  </p>
+
+  <p class="request_description" *ngIf="router.url.includes('/results-notifications/updates')">
+    In this section, there are updates on any results to which your initiative(s) are contributing.
   </p>
 
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">

@@ -20,13 +20,13 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { In, Not } from 'typeorm';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
-import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
-import { ConfigMessageDto } from '../../../shared/email-notification-management/dto/send-email.dto';
-import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
-import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { ConfigMessageDto } from '../../../shared/microservices/email-notification-management/dto/send-email.dto';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
@@ -881,6 +881,14 @@ export class ResultsTocResultsService {
       });
 
       const to = userEnable.map((u) => u.obj_user.email);
+
+      if (!to) {
+        return {
+          response: {},
+          message: 'The email was not sent',
+          status: HttpStatus.CREATED,
+        };
+      }
 
       const template = await this._templateRepository.findOne({
         where: { name: EmailTemplate.REMOVED_CONTRIBUTION },

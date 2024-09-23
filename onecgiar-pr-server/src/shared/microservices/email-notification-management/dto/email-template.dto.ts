@@ -1,4 +1,4 @@
-import { TokenDto } from '../../globalInterfaces/token.dto';
+import { TokenDto } from '../../../globalInterfaces/token.dto';
 
 export interface BuildEmailDataDto {
   initContributing: {

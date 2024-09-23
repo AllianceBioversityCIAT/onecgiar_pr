@@ -101,6 +101,25 @@ describe('ResultsNotificationsComponent', () => {
     });
   });
 
+  it('should call resetFilters if initiativeIdFilter is set', () => {
+    resultsNotificationsServiceMock.initiativeIdFilter = 'someInitiative';
+    component.clearFilters();
+    expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
+  });
+
+  it('should call resetFilters if searchFilter is set', () => {
+    resultsNotificationsServiceMock.searchFilter = 'someSearch';
+    component.clearFilters();
+    expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
+  });
+
+  it('should not call resetFilters if neither initiativeIdFilter nor searchFilter is set', () => {
+    resultsNotificationsServiceMock.initiativeIdFilter = null;
+    resultsNotificationsServiceMock.searchFilter = null;
+    component.clearFilters();
+    expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
+  });
+
   it('should GET all initiatives if admin', () => {
     component.GET_AllInitiatives();
     expect(apiServiceMock.resultsSE.GET_AllInitiatives).toHaveBeenCalled();

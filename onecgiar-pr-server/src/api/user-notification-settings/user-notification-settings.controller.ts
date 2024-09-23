@@ -1,5 +1,5 @@
 import { Controller, Body, Patch, Get, Param } from '@nestjs/common';
-import { UserNotificationSettingsService } from './user_notification_settings.service';
+import { UserNotificationSettingsService } from './user-notification-settings.service';
 import { UserNotificationSettingDto } from './dto/create-user-notification-setting.dto';
 import {
   ApiTags,

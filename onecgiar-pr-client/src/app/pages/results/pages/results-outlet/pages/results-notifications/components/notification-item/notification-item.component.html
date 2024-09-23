@@ -8,15 +8,14 @@
   <div class="notification_header">
     <div class="notification_header_item">
       <p class="notification_header_item_text">
-        {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
+        <b>Requester</b>
+        {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
       </p>
     </div>
 
     <div class="notification_header_item">
       <p class="notification_header_item_text">
-        <b> From </b>
-        {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
-        <b> to </b>
+        <b> Responder </b>
         {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
       </p>
     </div>
@@ -28,14 +27,14 @@
         <b>
           {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
           {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
-          has requested {{ notification?.is_map_to_toc ? 'to include this initiative' : 'the inclusion of' }}
+          has requested {{ notification?.is_map_to_toc ? 'the contribution' : 'the inclusion of' }}
         </b>
 
         <b *ngIf="!notification?.is_map_to_toc">
           {{ notification?.obj_shared_inititiative?.official_code }}
         </b>
 
-        <b> as a contributor </b>
+        <b *ngIf="!notification?.is_map_to_toc"> as a contributor </b>
 
         to result
 

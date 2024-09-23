@@ -1,0 +1,54 @@
+@if (!!notification?.notification_id) { @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+@let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name; @let resultUrl
+='result/results-outlet/results-notifications/updates?phase=' + notification?.obj_result?.obj_version?.id + '&init=' +
+notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative.id + '&search=' + generateNotificationTextUpdates(notification);
+
+<div class="init">{{ officialCode }}</div>
+
+<p style="font-weight: 500; margin: 0">
+  @if (notification?.notification_type === 1 || notification?.notification_type === 2) {
+  <b> {{ emitterName }} has {{ notification?.notification_type === 1 ? 'submitted' : 'unsubmitted' }} the result </b>
+  } @else { The result }
+
+  <a [href]="resultUrl" style="text-decoration: underline; color: #000">
+    {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+  </a>
+
+  @if (notification?.notification_type === 3) { <b> was successfully Quality Assessed. </b> }
+</p>
+
+<div class="date">{{ notification.created_date | appFormatTimeAgo }}</div>
+
+} @else { @let resultUrlRequest = '/result/results-outlet/results-notifications/requests/received?phase=' + notification?.obj_result?.obj_version?.id
++ '&init=' + notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code +
+'&search=' + generateNotificationTextRequest(notification);
+
+<div class="init">
+  {{ notification?.is_map_to_toc ? notification?.obj_owner_initiative?.official_code : notification?.obj_shared_inititiative?.official_code }}
+</div>
+
+<p style="font-weight: 500; margin: 0">
+  <b>
+    {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
+    {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+    has requested {{ notification?.is_map_to_toc ? 'the contribution' : 'the inclusion of' }}
+  </b>
+
+  <b *ngIf="!notification?.is_map_to_toc">
+    {{ notification?.obj_shared_inititiative?.official_code }}
+  </b>
+
+  <b *ngIf="!notification?.is_map_to_toc"> as a contributor </b>
+
+  to result
+
+  <a [href]="resultUrlRequest" style="text-decoration: underline; color: #000">
+    {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+  </a>
+
+  <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+</p>
+
+<div class="date">{{ notification?.requested_date | appFormatTimeAgo }}</div>
+
+}

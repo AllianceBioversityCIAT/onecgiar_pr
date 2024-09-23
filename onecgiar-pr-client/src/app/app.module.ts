@@ -7,7 +7,7 @@ import { NavigationBarComponent } from './shared/components/navigation-bar/navig
 import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { GeneralInterceptorService } from './shared/interceptors/general-interceptor.service';
 import { TestEnvironmentLabelComponent } from './shared/components/test-environment-label/test-environment-label.component';
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
@@ -21,6 +21,12 @@ import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
+import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
+import { SocketIoModule } from 'ngx-socket-io';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { WebsocketService } from './sockets/websocket.service';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -31,11 +37,11 @@ import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-
     TawkComponent,
     GoogleAnalyticsComponent
   ],
+  bootstrap: [AppComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
-    HttpClientModule,
     CustomFieldsModule,
     ShareRequestModalModule,
     YmzListStructureItemModule,
@@ -44,9 +50,16 @@ import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-
     DialogModule,
     BadgeModule,
     SatPopoverModule,
-    FormatTimeAgoModule
+    FormatTimeAgoModule,
+    ToastModule,
+    PopUpNotificationItemComponent,
+    SocketIoModule.forRoot({ url: 'https://fork-au-one-cgiar-microservices-production.up.railway.app/', options: {} })
   ],
-  providers: [{ provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true }],
-  bootstrap: [AppComponent]
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
+    provideHttpClient(withInterceptorsFromDi()),
+    MessageService,
+    WebsocketService
+  ]
 })
 export class AppModule {}

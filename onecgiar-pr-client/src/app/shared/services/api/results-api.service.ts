@@ -541,6 +541,26 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
   }
 
+  GET_requestUpdates() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates`);
+  }
+
+  GET_notificationsPopUp() {
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates-pop-up`);
+  }
+
+  PATCH_readNotification(notificationId) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read/${notificationId}`, {});
+  }
+
+  PATCH_readAllNotifications() {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}notification/read-all`, {});
+  }
+
+  PATCH_handlePopUpViewed(userId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/last-pop-up-viewed/${userId}`, {});
+  }
+
   GET_userAllNotificationSettings() {
     return this.http.get<any>(`${this.baseApiBaseUrl}user-notification-settings/all`);
   }

@@ -8,6 +8,8 @@ import { resultValidationRepository } from '../results-validation-module/results
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { IpsrModule } from '../../ipsr/ipsr.module';
 import { ResultsInnovationPackagesValidationModuleModule } from '../../ipsr/results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
+import { NotificationModule } from '../../notification/notification.module';
+import { UserNotificationSettingsModule } from '../../user-notification-settings/user-notification-settings.module';
 
 @Module({
   controllers: [SubmissionsController],
@@ -20,6 +22,11 @@ import { ResultsInnovationPackagesValidationModuleModule } from '../../ipsr/resu
     HandlersError,
   ],
   exports: [submissionRepository],
-  imports: [IpsrModule, ResultsInnovationPackagesValidationModuleModule],
+  imports: [
+    IpsrModule,
+    ResultsInnovationPackagesValidationModuleModule,
+    NotificationModule,
+    UserNotificationSettingsModule,
+  ],
 })
 export class SubmissionsModule {}

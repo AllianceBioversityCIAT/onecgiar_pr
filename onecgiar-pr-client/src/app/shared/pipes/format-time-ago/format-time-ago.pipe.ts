@@ -1,6 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { formatDistanceToNowStrict, parseISO, subHours } from 'date-fns';
+import { formatDistanceToNowStrict, parseISO, subHours, format } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+
 @Pipe({
   name: 'appFormatTimeAgo'
 })
@@ -22,8 +23,14 @@ export class FormatTimeAgoPipe implements PipeTransform {
     }
 
     const localTimezoneOffset = new Date().getTimezoneOffset() / 60;
-
     const localDate = subHours(date, localTimezoneOffset);
+
+    const now = new Date();
+    const oneWeekInMilliseconds = 7 * 24 * 60 * 60 * 1000;
+
+    if (now.getTime() - localDate.getTime() > oneWeekInMilliseconds) {
+      return format(localDate, 'yyyy MMM dd', { locale: enUS });
+    }
 
     return `${formatDistanceToNowStrict(localDate, { addSuffix: false, locale: enUS })} ago`;
   }

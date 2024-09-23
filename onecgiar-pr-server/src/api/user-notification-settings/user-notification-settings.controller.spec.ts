@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserNotificationSettingsController } from './user_notification_settings.controller';
-import { UserNotificationSettingsService } from './user_notification_settings.service';
+import { UserNotificationSettingsController } from './user-notification-settings.controller';
+import { UserNotificationSettingsService } from './user-notification-settings.service';
 import { UserNotificationSettingDto } from './dto/create-user-notification-setting.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { UserNotificationSetting } from './entities/user_notification_setting.entity';
+import { UserNotificationSetting } from './entities/user-notification-settings.entity';
 import { OrmConfigTestModule } from '../../shared/test/orm-connection.module';
 
 describe('UserNotificationSettingsController', () => {

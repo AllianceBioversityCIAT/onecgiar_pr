@@ -38,8 +38,9 @@ import { GlobalNarrativesModule } from './api/global-narratives/global-narrative
 import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
 import { SharePointModule } from './shared/services/share-point/share-point.module';
-import { UserNotificationSettingsModule } from './api/user_notification_settings/user_notification_settings.module';
-import { EmailNotificationManagementModule } from './shared/email-notification-management/email-notification-management.module';
+import { NotificationModule } from './api/notification/notification.module';
+import { UserNotificationSettingsModule } from './api/user-notification-settings/user-notification-settings.module';
+import { EmailNotificationManagementModule } from './shared/microservices/email-notification-management/email-notification-management.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { EmailNotificationManagementModule } from './shared/email-notification-m
     SharePointModule,
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [

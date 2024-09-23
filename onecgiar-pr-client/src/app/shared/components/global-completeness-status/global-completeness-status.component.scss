@@ -1,6 +1,4 @@
 .table_container {
-    display: grid;
-    grid-template-columns: 1fr;
     padding: 10px;
     overflow: hidden;
     position: relative;
@@ -12,16 +10,16 @@
 
     .counter {
         font-size: 1.1em;
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        z-index: 3;
         margin-bottom: 35px;
         margin-left: 20px;
         font-weight: 500;
         display: flex;
         align-items: center;
         gap: 10px;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        z-index: 3;
 
         .name {
             color: var(--pr-color-primary);
@@ -38,7 +36,7 @@
 
 .first_options {
     grid-template-columns: 250px 2fr 1fr;
-
+    margin-bottom: 0px !important;
 
     .initiatives_selector {
         min-width: 300px;
@@ -46,11 +44,9 @@
 
     .search_input {
         width: auto;
-    }
-}
+        margin-bottom: 0px !important;
 
-.first_options .search_input {
-    margin-bottom: 0px !important;
+    }
 }
 
 .not_provided_text {
@@ -66,7 +62,6 @@
 .Completed {
     color: #23ac67;
     font-weight: 500;
-    // border: 1px solid #23ac67;
     padding: 5px;
     border-radius: 4px;
     display: flex;

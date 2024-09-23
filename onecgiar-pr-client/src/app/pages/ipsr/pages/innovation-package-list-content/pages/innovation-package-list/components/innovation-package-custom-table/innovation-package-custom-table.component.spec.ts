@@ -57,13 +57,13 @@ describe('InnovationPackageCustomTableComponent', () => {
   });
 
   it('should set showShareRequest to true when "Map to TOC" is selected', () => {
-    component.items[0].command();
+    component.items[0].command(null);
 
     expect(component.api.dataControlSE.showShareRequest).toBe(true);
   });
 
   it('should set showShareRequest to true when "Map to TOC" is selected', () => {
-    component.itemsWithDelete[0].command();
+    component.itemsWithDelete[0].command(null);
 
     expect(component.api.dataControlSE.showShareRequest).toBe(true);
   });
@@ -71,7 +71,7 @@ describe('InnovationPackageCustomTableComponent', () => {
   it('should call onDelete when "Delete" is selected', () => {
     const onDeleteSpy = jest.spyOn(component, 'onDelete');
 
-    component.itemsWithDelete[2].command();
+    component.itemsWithDelete[2].command(null);
 
     expect(onDeleteSpy).toHaveBeenCalled();
   });

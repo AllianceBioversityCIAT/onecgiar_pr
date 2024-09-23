@@ -11,16 +11,19 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
-import { In, IsNull, Not } from 'typeorm';
+import { In, IsNull, MoreThan, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
-import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { EmailNotificationManagementService } from '../../../shared/email-notification-management/email-notification-management.service';
 import { env } from 'process';
-import { EmailTemplate } from '../../../shared/email-notification-management/enum/email-notification.enum';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningService } from '../../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Injectable()
 export class ShareResultRequestService {
@@ -39,6 +42,9 @@ export class ShareResultRequestService {
     @Inject(forwardRef(() => ResultsTocResultsService))
     private readonly _resultsTocResultService: ResultsTocResultsService,
     private readonly _globalParametersRepository: GlobalParameterRepository,
+    @Inject(forwardRef(() => VersioningService))
+    private readonly _versioningService: VersioningService,
+    private readonly _userRepository: UserRepository,
   ) {}
 
   async resultRequest(
@@ -205,6 +211,14 @@ export class ShareResultRequestService {
         initOwner.id,
       );
 
+      if (!to) {
+        return {
+          response: 'No recipients found',
+          message: 'No recipients found',
+          status: HttpStatus.OK,
+        };
+      }
+
       const template = await this.getEmailTemplate(emailTemplate);
       const pcuEmail = await this._globalParametersRepository.findOne({
         where: { name: 'pcu_email' },
@@ -228,7 +242,6 @@ export class ShareResultRequestService {
         pcuEmail.value,
       );
 
-      console.log(technicalTeamEmailsRecord.value);
       this._emailNotificationManagementService.sendEmail({
         from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
         emailBody: {
@@ -326,13 +339,13 @@ export class ShareResultRequestService {
 
       const whereConditions = this.buildWhereConditions(inits, role);
 
-      const receivedContributionsPendingOwner = await this.getPendingRequests(
+      const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
       );
-      const receivedContributionsPendingShared = await this.getPendingRequests(
+      const receivedContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
-      const receivedContributionsDone = await this.getDoneRequests(
+      const receivedContributionsDone = await this.getRequest(
         whereConditions.done,
       );
 
@@ -352,13 +365,62 @@ export class ShareResultRequestService {
     }
   }
 
+  async getReceivedResultRequestPopUp(user: TokenDto) {
+    try {
+      const userLastViewed = await this._userRepository.findOne({
+        where: { id: user.id },
+      });
+      const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
+      const inits = await this.getUserInitiatives(user);
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+
+      const extraConditions: any = {
+        obj_result: { version_id: version.id },
+      };
+
+      if (userLastViewed.last_pop_up_viewed) {
+        extraConditions.requested_date = MoreThan(
+          userLastViewed.last_pop_up_viewed,
+        );
+      }
+
+      const whereConditions = this.buildWhereConditions(
+        inits,
+        role,
+        extraConditions,
+      );
+
+      const receivedContributionsPendingOwner = await this.getRequest(
+        whereConditions.pendingOwner,
+      );
+      const receivedContributionsPendingShared = await this.getRequest(
+        whereConditions.pendingShared,
+      );
+
+      const receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+
+      return receivedContributionsPending;
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   private async getUserInitiatives(user: TokenDto) {
     return await this._roleByUserRepository.find({
       where: { user: user.id, active: true, initiative_id: Not(IsNull()) },
     });
   }
 
-  private buildWhereConditions(inits: any[], role: number, user?: number) {
+  private buildWhereConditions(
+    inits: any[],
+    role: number,
+    extraConditions?: any,
+  ) {
     const sharedInitiativeIds = inits.map((i) => i.initiative_id);
     const commonConditions: any = {
       request_status_id: 1,
@@ -366,8 +428,22 @@ export class ShareResultRequestService {
       obj_result: { is_active: true },
     };
 
-    if (user) {
-      commonConditions.requested_by = user;
+    if (extraConditions) {
+      for (const key in extraConditions) {
+        if (extraConditions.hasOwnProperty(key)) {
+          if (
+            typeof commonConditions[key] === 'object' &&
+            typeof extraConditions[key] === 'object'
+          ) {
+            commonConditions[key] = {
+              ...commonConditions[key],
+              ...extraConditions[key],
+            };
+          } else {
+            commonConditions[key] = extraConditions[key];
+          }
+        }
+      }
     }
 
     return {
@@ -393,15 +469,7 @@ export class ShareResultRequestService {
     };
   }
 
-  private async getPendingRequests(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
-      select: this.getRequestSelectFields(),
-      relations: this.getRequestRelations(),
-      where: whereCondition,
-    });
-  }
-
-  private async getDoneRequests(whereCondition: any) {
+  private async getRequest(whereCondition: any) {
     return await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
@@ -496,17 +564,22 @@ export class ShareResultRequestService {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const whereConditions = this.buildWhereConditions(inits, role, user.id);
+      const extraContidions: any = {
+        requested_by: user.id,
+      };
+      const whereConditions = this.buildWhereConditions(
+        inits,
+        role,
+        extraContidions,
+      );
 
-      const sentContributionsPendingOwner = await this.getPendingRequests(
+      const sentContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
       );
-      const sentContributionsPendingShared = await this.getPendingRequests(
+      const sentContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
-      const sentContributionsDone = await this.getDoneRequests(
-        whereConditions.done,
-      );
+      const sentContributionsDone = await this.getRequest(whereConditions.done);
 
       return {
         response: {

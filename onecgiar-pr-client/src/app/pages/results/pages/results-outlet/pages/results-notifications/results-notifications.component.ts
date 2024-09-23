@@ -51,6 +51,12 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
+  clearFilters() {
+    if (this.resultsNotificationsSE.initiativeIdFilter || this.resultsNotificationsSE.searchFilter) {
+      this.resultsNotificationsSE.resetFilters();
+    }
+  }
+
   updateQueryParams() {
     this.router.navigate([], {
       relativeTo: this.activatedRoute,

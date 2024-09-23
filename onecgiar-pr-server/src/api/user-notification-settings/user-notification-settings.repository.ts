@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { UserNotificationSetting } from './entities/user_notification_setting.entity';
+import { UserNotificationSetting } from './entities/user-notification-settings.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Injectable()

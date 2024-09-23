@@ -30,9 +30,10 @@ import { ResultsTocResultsModule } from '../../results/results-toc-results/resul
 import { ResultsTocResultIndicatorsService } from '../../results/results-toc-results/results-toc-result-indicators.service';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
-import { UserNotificationSettingRepository } from '../../user_notification_settings/user_notification_settings.repository';
-import { EmailNotificationManagementModule } from '../../../shared/email-notification-management/email-notification-management.module';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -70,6 +71,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
     TemplateRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,
+    UserRepository
   ],
   exports: [ResultsPackageTocResultService],
 })

@@ -138,7 +138,6 @@ describe('StepN1Component', () => {
         StepN1ExpertsComponent,
         NoDataTextComponent,
         StepN1ScalingAmbitionBlurbComponent,
-        CdkCopyToClipboard,
         StepN1InstitutionsComponent,
         PrMultiSelectComponent,
         InnovationUseFormComponent,
@@ -148,7 +147,7 @@ describe('StepN1Component', () => {
         SaveButtonComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule],
+      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule, CdkCopyToClipboard],
       providers: [
         {
           provide: ApiService,

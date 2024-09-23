@@ -10,6 +10,12 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { IpsrService } from '../../ipsr/ipsr.service';
 import { ResultsInnovationPackagesValidationModuleService } from '../../ipsr/results-innovation-packages-validation-module/results-innovation-packages-validation-module.service';
 import { RoleEnum } from '../../../shared/constants/role-type.enum';
+import { NotificationService } from '../../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../../notification/enum/notification.enum';
+import { UserNotificationSettingsService } from '../../user-notification-settings/user-notification-settings.service';
 
 @Injectable()
 export class SubmissionsService {
@@ -21,6 +27,8 @@ export class SubmissionsService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _generalInformationIpsrService: IpsrService,
     private readonly _resultInnovationPackageValidationService: ResultsInnovationPackagesValidationModuleService,
+    private readonly _notificationService: NotificationService,
+    private readonly _userNotificationSettingsService: UserNotificationSettingsService,
   ) {}
 
   async submitFunction(
@@ -29,14 +37,14 @@ export class SubmissionsService {
     createSubmissionDto: CreateSubmissionDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
+      const result= await this._resultRepository.getResultById(resultId);
       const role = await this._roleByUserRepository.validationRolePermissions(
         user.id,
         result.id,
         [RoleEnum.ADMIN, RoleEnum.LEAD, RoleEnum.CO_LEAD, RoleEnum.COORDINATOR],
       );
       if (!role) {
-        throw {
+        return {
           response: {},
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
@@ -44,7 +52,7 @@ export class SubmissionsService {
       }
 
       if (!result) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
@@ -55,7 +63,7 @@ export class SubmissionsService {
         result.id,
       );
       if (!isValid) {
-        throw {
+        return {
           response: {},
           message:
             'This result cannot be submit, sections are missing to complete',
@@ -74,6 +82,14 @@ export class SubmissionsService {
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
+
+      this.sentNotification(
+        result,
+        user,
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_SUBMITTED,
+      );
+
       return {
         response: data,
         message: 'the result has been submitted successfully',
@@ -97,7 +113,7 @@ export class SubmissionsService {
         [3, 4, 5],
       );
       if (!role) {
-        throw {
+        return {
           response: {},
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
@@ -105,7 +121,7 @@ export class SubmissionsService {
       }
 
       if (!result) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
@@ -117,7 +133,7 @@ export class SubmissionsService {
           result.id,
         );
       if (!isValid.response.validResult) {
-        throw {
+        return {
           response: {},
           message:
             'This result cannot be submit, sections are missing to complete',
@@ -141,6 +157,13 @@ export class SubmissionsService {
         await this._generalInformationIpsrService.findInnovationDetail(
           result.id,
         );
+
+      this.sentNotification(
+        result,
+        user,
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_SUBMITTED,
+      );
 
       return {
         response: {
@@ -169,14 +192,14 @@ export class SubmissionsService {
         [3, 4, 5],
       );
       if (!role) {
-        throw {
+        return {
           response: {},
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
         };
       }
       if (!result) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
@@ -184,7 +207,7 @@ export class SubmissionsService {
       }
 
       if (!createSubmissionDto?.comment) {
-        throw {
+        return {
           response: {},
           message: 'No justification provided',
           status: HttpStatus.BAD_REQUEST,
@@ -202,6 +225,14 @@ export class SubmissionsService {
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
+
+      this.sentNotification(
+        result,
+        user,
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_UNSUBMITTED,
+      );
+
       return {
         response: data,
         message: 'the result has been unsubmitted successfully',
@@ -225,14 +256,14 @@ export class SubmissionsService {
         [3, 4, 5],
       );
       if (!role) {
-        throw {
+        return {
           response: {},
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
         };
       }
       if (!result) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
@@ -240,7 +271,7 @@ export class SubmissionsService {
       }
 
       if (!createSubmissionDto?.comment) {
-        throw {
+        return {
           response: {},
           message: 'No justification provided',
           status: HttpStatus.BAD_REQUEST,
@@ -264,6 +295,13 @@ export class SubmissionsService {
           result.id,
         );
 
+      this.sentNotification(
+        result,
+        user,
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_UNSUBMITTED,
+      );
+
       return {
         response: {
           innoPckg: ipsr.response,
@@ -275,5 +313,28 @@ export class SubmissionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private async sentNotification(
+    result: any,
+    user: TokenDto,
+    nLevel: NotificationLevelEnum,
+    nType: NotificationTypeEnum,
+  ) {
+    const recipients =
+      await this._userNotificationSettingsService.getNotificationUpdatesRecipients(
+        result.initiative_id,
+      );
+
+    const saveNotification =
+      await this._notificationService.emitResultNotification(
+        nLevel,
+        nType,
+        recipients,
+        user.id,
+        result.id,
+      );
+
+    return saveNotification;
   }
 }

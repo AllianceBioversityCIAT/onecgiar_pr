@@ -12,11 +12,31 @@ describe('FilterNotificationByInitiativePipe', () => {
       {
         obj_shared_inititiative: {
           id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
         }
       },
       {
         obj_shared_inititiative: {
           id: '2'
+        },
+        obj_owner_initiative: {
+          id: '2'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '2'
+            }
+          ]
         }
       }
     ];
@@ -39,16 +59,46 @@ describe('FilterNotificationByInitiativePipe', () => {
       {
         obj_shared_inititiative: {
           id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
         }
       },
       {
         obj_shared_inititiative: {
           id: '2'
+        },
+        obj_owner_initiative: {
+          id: '2'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '2'
+            }
+          ]
         }
       },
       {
         obj_shared_inititiative: {
           id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
         }
       }
     ];
@@ -59,11 +109,31 @@ describe('FilterNotificationByInitiativePipe', () => {
       {
         obj_shared_inititiative: {
           id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
         }
       },
       {
         obj_shared_inititiative: {
           id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
         }
       }
     ]);

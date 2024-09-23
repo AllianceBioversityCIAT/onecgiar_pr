@@ -12,7 +12,8 @@ import { VersioningModule } from './versioning/versioning.module';
 import { GlobalNarrativesModule } from './global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './delete-recover-data/delete-recover-data.module';
 import { GlobalParameterModule } from './global-parameter/global-parameter.module';
-import { UserNotificationSettingsModule } from './user_notification_settings/user_notification_settings.module';
+import { NotificationModule } from './notification/notification.module';
+import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -61,5 +62,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'user-notification-settings',
     module: UserNotificationSettingsModule,
+  },
+  {
+    path: 'notification',
+    module: NotificationModule,
   },
 ];

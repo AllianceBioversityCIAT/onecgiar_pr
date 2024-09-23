@@ -44,7 +44,8 @@
               "src/styles/filters-list.scss",
               "src/styles/ymz-directives.scss"
             ],
-            "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"]
+            "scripts": ["node_modules/pusher-js/dist/web/pusher.min.js"],
+            "allowedCommonJsDependencies": ["exceljs", "file-saver"]
           },
           "configurations": {
             "production": {
@@ -83,10 +84,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "onecgiar-pr-client:build:production"
+              "buildTarget": "onecgiar-pr-client:build:production"
             },
             "development": {
-              "browserTarget": "onecgiar-pr-client:build:development"
+              "buildTarget": "onecgiar-pr-client:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -94,7 +95,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "onecgiar-pr-client:build"
+            "buildTarget": "onecgiar-pr-client:build"
           }
         },
         "lint": {

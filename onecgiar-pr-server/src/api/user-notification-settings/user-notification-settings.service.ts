@@ -2,12 +2,13 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { UserNotificationSettingDto } from './dto/create-user-notification-setting.dto';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { User } from '../../auth/modules/user/entities/user.entity';
-import { UserNotificationSettingRepository } from './user_notification_settings.repository';
+import { UserNotificationSettingRepository } from './user-notification-settings.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
-import { UserNotificationSetting } from './entities/user_notification_setting.entity';
+import { UserNotificationSetting } from './entities/user-notification-settings.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class UserNotificationSettingsService {
@@ -221,5 +222,26 @@ export class UserNotificationSettingsService {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+  }
+
+  async getNotificationUpdatesRecipients(initiativeId: number): Promise<number[]> {
+    const initMembers = await this._roleByUserRepository.find({
+      relations: {
+        obj_user: {
+          obj_user_notification_setting: true,
+        },
+      },
+      where: {
+        initiative_id: initiativeId,
+        role: In([3, 4, 5]),
+        active: true,
+        obj_user: {
+          obj_user_notification_setting: {
+            email_notifications_updates_enabled: true,
+          },
+        },
+      },
+    });
+    return initMembers.map((m) => m.obj_user.id);
   }
 }
