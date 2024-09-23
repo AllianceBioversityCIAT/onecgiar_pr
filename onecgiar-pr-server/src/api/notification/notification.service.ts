@@ -12,9 +12,10 @@ import { SocketManagementService } from '../../shared/microservices/socket-manag
 import { NotificationDto } from '../../shared/microservices/socket-management/dto/create-socket.dto';
 import { env } from 'process';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
-import { MoreThan } from 'typeorm';
+import { FindOperator, MoreThan } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { Notification } from './entities/notification.entity';
+import { User } from '../../auth/modules/user/entities/user.entity';
 
 @Injectable()
 export class NotificationService {
@@ -61,23 +62,22 @@ export class NotificationService {
         });
       }
       const usersOnline = await this._socketManagementService.getActiveUsers();
-      const usersOnlineIds = usersOnline.response.map((user: any) => user.id);
+      const usersOnlineIds = usersOnline.response.map((user: User) => user.id);
       const matchUsers = userIds.filter((userId) =>
         usersOnlineIds.includes(userId),
       );
 
-      const resultData: Notification[] =
-        await this._notificationRepository.find({
-          select: this.getNotificattionSelect(),
-          relations: this.getNotificationRelations(),
-          where: {
-            result_id: resultId,
-            emitter_user: emmiterUser,
-            notification_level: notificationLevelData.notifications_level_id,
-            notification_type: notificationTypeData.notifications_type_id,
-          },
-          take: 1,
-        });
+      const resultData = await this._notificationRepository.find({
+        select: this.getNotificattionSelect(),
+        relations: this.getNotificationRelations(),
+        where: {
+          result_id: resultId,
+          emitter_user: emmiterUser,
+          notification_level: notificationLevelData.notifications_level_id,
+          notification_type: notificationTypeData.notifications_type_id,
+        },
+        take: 1,
+      });
 
       const desc =
         notificationType === NotificationTypeEnum.RESULT_SUBMITTED
@@ -321,7 +321,7 @@ export class NotificationService {
         where: { id: user.id },
       });
 
-      const whereConditions: any = {
+      const whereConditions: WhereConditions = {
         target_user: user.id,
         read: false,
         obj_result: {
@@ -425,4 +425,16 @@ export class NotificationService {
       },
     };
   }
+}
+
+interface WhereConditions {
+  target_user: number;
+  read: boolean;
+  obj_result: {
+    is_active: boolean;
+    obj_result_by_initiatives: {
+      initiative_role_id: number;
+    };
+  };
+  created_date?: FindOperator<Date>;
 }

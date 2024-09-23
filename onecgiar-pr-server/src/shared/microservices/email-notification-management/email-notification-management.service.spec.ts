@@ -128,8 +128,8 @@ describe('EmailNotificationManagementService', () => {
         cc: ['jhon@doe.com'],
         subject:
           '[PRMS] Result Contributing: INIT-02 confirmation required for contribution to Result 1 - ',
-        initContributingName: 'Contributing Initiative',
-        initContributing: 'INIT-02 Contributing Initiative',
+        initContributingName: 'Contributing',
+        initContributing: 'INIT-02 Contributing',
         requesterName: 'John Doe',
         initOwner: 'INIT-01 Owner',
         resultUrl: `${process.env.RESULTS_URL}1/general-information?phase=1`,

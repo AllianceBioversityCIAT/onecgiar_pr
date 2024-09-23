@@ -339,13 +339,13 @@ export class ShareResultRequestService {
 
       const whereConditions = this.buildWhereConditions(inits, role);
 
-      const receivedContributionsPendingOwner = await this.getPendingRequests(
+      const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
       );
-      const receivedContributionsPendingShared = await this.getPendingRequests(
+      const receivedContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
-      const receivedContributionsDone = await this.getDoneRequests(
+      const receivedContributionsDone = await this.getRequest(
         whereConditions.done,
       );
 
@@ -392,10 +392,10 @@ export class ShareResultRequestService {
         extraConditions,
       );
 
-      const receivedContributionsPendingOwner = await this.getPendingRequests(
+      const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
       );
-      const receivedContributionsPendingShared = await this.getPendingRequests(
+      const receivedContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
 
@@ -420,7 +420,6 @@ export class ShareResultRequestService {
     inits: any[],
     role: number,
     extraConditions?: any,
-    user?: number,
   ) {
     const sharedInitiativeIds = inits.map((i) => i.initiative_id);
     const commonConditions: any = {
@@ -428,10 +427,6 @@ export class ShareResultRequestService {
       is_active: true,
       obj_result: { is_active: true },
     };
-
-    if (user) {
-      commonConditions.requested_by = user;
-    }
 
     if (extraConditions) {
       for (const key in extraConditions) {
@@ -474,15 +469,7 @@ export class ShareResultRequestService {
     };
   }
 
-  private async getPendingRequests(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
-      select: this.getRequestSelectFields(),
-      relations: this.getRequestRelations(),
-      where: whereCondition,
-    });
-  }
-
-  private async getDoneRequests(whereCondition: any) {
+  private async getRequest(whereCondition: any) {
     return await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
@@ -577,17 +564,22 @@ export class ShareResultRequestService {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const whereConditions = this.buildWhereConditions(inits, role, user.id);
+      const extraContidions: any = {
+        requested_by: user.id,
+      };
+      const whereConditions = this.buildWhereConditions(
+        inits,
+        role,
+        extraContidions,
+      );
 
-      const sentContributionsPendingOwner = await this.getPendingRequests(
+      const sentContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
       );
-      const sentContributionsPendingShared = await this.getPendingRequests(
+      const sentContributionsPendingShared = await this.getRequest(
         whereConditions.pendingShared,
       );
-      const sentContributionsDone = await this.getDoneRequests(
-        whereConditions.done,
-      );
+      const sentContributionsDone = await this.getRequest(whereConditions.done);
 
       return {
         response: {

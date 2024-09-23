@@ -45,7 +45,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
           subject: `[PRMS] Result Contributing: ${data.initContributing.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.short_name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
-          initContributing: `${data.initContributing.official_code} ${data.initContributing.name}`,
+          initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,

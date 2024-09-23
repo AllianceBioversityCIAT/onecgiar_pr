@@ -48,6 +48,15 @@ export class NotificationController {
     return this.notificationService.updateReadStatus(notificationId, user);
   }
 
+  @ApiOperation({ summary: 'Update the read status of all notifications' })
+  @ApiResponse({
+    status: 200,
+    description: 'All notifications updated successfully',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error',
+  })
   @Patch('read-all')
   updateAllReadStatus(@UserToken() user: TokenDto) {
     return this.notificationService.updateAllReadStatus(user);
@@ -64,6 +73,12 @@ export class NotificationController {
     return this.notificationService.getAllNotifications(user);
   }
 
+  @ApiOperation({ summary: 'Retrieve all notifications for the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all notifications retrieved successfully.',
+  })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @Get('updates-pop-up')
   getPopUpNotifications(@UserToken() user: TokenDto) {
     return this.notificationService.getPopUpNotifications(user);
