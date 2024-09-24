@@ -13,8 +13,6 @@ import { CentersService } from '../../../../../../shared/services/global/centers
   styleUrls: ['./rd-partners.component.scss']
 })
 export class RdPartnersComponent implements OnInit {
-  primaryText = ' - <strong>Primary</strong> ';
-
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 
@@ -75,10 +73,6 @@ export class RdPartnersComponent implements OnInit {
     this.rdPartnersSE.partnersBody.contributing_np_projects.push(new NonPooledProjectDto());
   }
 
-  validatePrimarySelection() {
-    if (this.rdPartnersSE.partnersBody.contributing_center.length === 1) this.rdPartnersSE.partnersBody.contributing_center[0].primary = true;
-  }
-
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
     if (updateComponent) {
       this.rdPartnersSE.updatingLeadData = true;
@@ -94,11 +88,6 @@ export class RdPartnersComponent implements OnInit {
         this.rdPartnersSE.updatingLeadData = false;
       }, 50);
     }
-  }
-
-  addPrimaryCenter(center) {
-    this.rdPartnersSE.partnersBody?.contributing_center.forEach(center => (center.primary = false));
-    center.primary = true;
   }
 
   get validateGranTitle() {

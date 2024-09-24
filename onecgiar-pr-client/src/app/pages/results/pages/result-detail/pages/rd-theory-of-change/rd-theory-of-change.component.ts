@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { resultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -15,7 +15,6 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
-  primaryText = ' - <strong>Primary</strong> ';
   getConsumed = false;
   contributingInitiativeNew = [];
 
@@ -29,11 +28,11 @@ export class RdTheoryOfChangeComponent implements OnInit {
     public institutionsSE: InstitutionsService,
     public greenChecksSE: GreenChecksService,
     public theoryOfChangesServices: RdTheoryOfChangesServicesService,
-    public dataControlSE: DataControlService
+    public dataControlSE: DataControlService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
-  async ngOnInit(): Promise<void> {
-    await this.requestEvent();
+  ngOnInit() {
     this.getSectionInformation();
     this.GET_AllWithoutResults();
   }
@@ -41,6 +40,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
+      this.changeDetectorRef.detectChanges();
     });
   }
 
@@ -87,16 +87,16 @@ export class RdTheoryOfChangeComponent implements OnInit {
           ...(this.theoryOfChangeBody?.contributing_initiatives.pending_contributing_initiatives || [])
         ];
 
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 50);
+        this.getConsumed = true;
+        this.changeDetectorRef.detectChanges();
       },
       error: err => {
         this.getConsumed = true;
+        this.changeDetectorRef.detectChanges();
         console.error(err);
       },
       complete: () => {
-        callback?.();
+        if (callback) callback();
       }
     });
   }
@@ -189,17 +189,5 @@ export class RdTheoryOfChangeComponent implements OnInit {
     } else {
       this.contributingInitiativeNew.splice(index, 1);
     }
-  }
-
-  requestEvent() {
-    return this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
   }
 }
