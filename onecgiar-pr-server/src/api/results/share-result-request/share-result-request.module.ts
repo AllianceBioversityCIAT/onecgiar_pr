@@ -27,6 +27,7 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -59,6 +60,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
     EmailNotificationManagementModule,
     ResultsTocResultsModule,
     forwardRef(() => VersioningModule),
+    SocketManagementModule,
   ],
 })
 export class ShareResultRequestModule {}

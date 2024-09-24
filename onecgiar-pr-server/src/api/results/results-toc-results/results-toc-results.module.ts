@@ -32,6 +32,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -68,6 +69,10 @@ import { VersioningModule } from '../../versioning/versioning.module';
     GlobalParameterRepository,
   ],
   exports: [ResultsTocResultRepository, ResultsTocResultsService],
-  imports: [EmailNotificationManagementModule, VersioningModule],
+  imports: [
+    EmailNotificationManagementModule,
+    VersioningModule,
+    SocketManagementModule,
+  ],
 })
 export class ResultsTocResultsModule {}

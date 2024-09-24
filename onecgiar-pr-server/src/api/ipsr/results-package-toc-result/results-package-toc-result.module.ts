@@ -33,6 +33,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -40,6 +41,7 @@ import { UserRepository } from '../../../auth/modules/user/repositories/user.rep
     VersioningModule,
     ResultsTocResultsModule,
     EmailNotificationManagementModule,
+    SocketManagementModule,
   ],
   providers: [
     ResultsPackageTocResultService,
