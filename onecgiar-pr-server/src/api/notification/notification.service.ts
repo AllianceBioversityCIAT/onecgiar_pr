@@ -13,7 +13,6 @@ import { NotificationDto } from '../../shared/microservices/socket-management/dt
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { FindOperator, MoreThan } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
-import { User } from '../../auth/modules/user/entities/user.entity';
 
 @Injectable()
 export class NotificationService {
@@ -59,11 +58,23 @@ export class NotificationService {
           notification_type: notificationTypeData.notifications_type_id,
         });
       }
+
       const usersOnline = await this._socketManagementService.getActiveUsers();
-      const usersOnlineIds = usersOnline.response.map((user: User) => user.id);
-      const matchUsers = userIds.filter((userId) =>
+      const usersOnlineIds = usersOnline.response.map(
+        (user: { userId: number }) => user.userId,
+      );
+      const matchUsers = filteredUserIds.filter((userId) =>
         usersOnlineIds.includes(userId),
       );
+
+      if (matchUsers.length === 0) {
+        this._logger.warn('No online users to notify.');
+        return {
+          response: null,
+          message: 'No online users to notify.',
+          status: HttpStatus.OK,
+        };
+      }
 
       const resultData = await this._notificationRepository.find({
         select: this.getNotificattionSelect(),
@@ -90,7 +101,7 @@ export class NotificationService {
 
       const newSocketNotification =
         await this._socketManagementService.sendNotificationToUsers(
-          matchUsers,
+          matchUsers.map(String),
           notification,
         );
 
@@ -100,10 +111,10 @@ export class NotificationService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
-      this._logger.error(error);
+      this._logger.error('Error emitting result notification:', error);
       return {
         response: null,
-        message: '',
+        message: 'Failed to create notification',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }

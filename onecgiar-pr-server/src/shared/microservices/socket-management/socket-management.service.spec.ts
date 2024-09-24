@@ -60,9 +60,12 @@ describe('SocketManagementService', () => {
       },
     },
   };
+  let expectedPlatform: string;
 
   beforeEach(async () => {
     process.env.SOCKET_URL = 'http://localhost:3000';
+    process.env.IS_PRODUCTION = 'false';
+    expectedPlatform = 'PRMS-TEST';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [SocketManagementService],
@@ -102,7 +105,7 @@ describe('SocketManagementService', () => {
   });
 
   describe('getActiveUsers', () => {
-    it('should return active users when fetch is successful', async () => {
+    it('should return active users when fetch is successful in test environment', async () => {
       const mockResponse = {
         json: jest.fn().mockResolvedValue({ clients: ['user1', 'user2'] }),
       };
@@ -110,7 +113,9 @@ describe('SocketManagementService', () => {
 
       const result = await service.getActiveUsers();
 
-      expect(fetch).toHaveBeenCalledWith(`${service['url']}/socket/users`);
+      expect(fetch).toHaveBeenCalledWith(
+        `${service['url']}/socket/users/${expectedPlatform}`,
+      );
       expect(result).toEqual({
         response: ['user1', 'user2'],
         message: 'Active users fetched successfully',
@@ -132,11 +137,32 @@ describe('SocketManagementService', () => {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
     });
+
+    it('should return active users when fetch is successful in production environment', async () => {
+      process.env.IS_PRODUCTION = 'true';
+      expectedPlatform = 'PRMS-PROD';
+
+      const mockResponse = {
+        json: jest.fn().mockResolvedValue({ clients: ['1', '2'] }),
+      };
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await service.getActiveUsers();
+
+      expect(fetch).toHaveBeenCalledWith(
+        `${service['url']}/socket/users/${expectedPlatform}`,
+      );
+      expect(result).toEqual({
+        response: ['1', '2'],
+        message: 'Active users fetched successfully',
+        status: HttpStatus.OK,
+      });
+    });
   });
 
   describe('sendNotificationToUsers', () => {
     it('should send notification successfully', async () => {
-      const userIds = [1, 2, 3];
+      const userIds = ['1', '2', '3'];
 
       const mockResponse = {
         json: jest.fn().mockResolvedValue({ success: true }),
@@ -157,7 +183,7 @@ describe('SocketManagementService', () => {
           },
           body: JSON.stringify({
             userIds,
-            platformPrefix: 'PRMS',
+            platform: expectedPlatform,
             notification,
           }),
         },
@@ -189,7 +215,7 @@ describe('SocketManagementService', () => {
     });
 
     it('should handle errors during notification sending', async () => {
-      const userIds = [1, 2, 3];
+      const userIds = ['1', '2', '3'];
       const error = new Error('Notification Error');
       (global.fetch as jest.Mock).mockRejectedValue(error);
       const errorSpy = jest.spyOn(service['_logger'], 'error');
