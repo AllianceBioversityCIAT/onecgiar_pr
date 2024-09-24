@@ -8,7 +8,6 @@
   <app-pr-multi-select
     [options]="this.centersSE.centersList"
     label="Contributing CG Centers"
-    (selectOptionEvent)="validatePrimarySelection()"
     selectedLabel="Center(s) selected"
     optionLabel="full_name"
     optionValue="code"
@@ -27,16 +26,7 @@
         [pTooltip]="this.disabledText"
         [tooltipDisabled]="!center.from_cgspace"
         *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <i
-          class="material-icons-round medal"
-          [ngClass]="{ primary: center.primary }"
-          (click)="
-            this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status ? null : addPrimaryCenter(center);
-            this.rdPartnersSE.setPossibleLeadCenters(true)
-          "
-          >workspace_premium</i
-        >
-        <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
+        <div class="name" [innerHtml]="center?.name"></div>
         <i
           *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
           class="material-icons-round"

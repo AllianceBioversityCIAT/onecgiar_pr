@@ -195,16 +195,6 @@ describe('RdPartnersComponent', () => {
     });
   });
 
-  describe('addPrimaryCenter()', () => {
-    it('should set primary to true for the specified center', async () => {
-      (component.rdPartnersSE.partnersBody.contributing_center = [{ primary: false }, { primary: false }] as any[]),
-        component.addPrimaryCenter(component.rdPartnersSE.partnersBody.contributing_center[1]);
-
-      expect(component.rdPartnersSE.partnersBody.contributing_center[1].primary).toBeTruthy();
-      expect(component.rdPartnersSE.partnersBody.contributing_center[0].primary).toBeFalsy();
-    });
-  });
-
   describe('deleteContributingCenter()', () => {
     beforeEach(() => {
       component.rdPartnersSE.partnersBody = {
@@ -260,16 +250,6 @@ describe('RdPartnersComponent', () => {
       component.deleteEvidence(0);
 
       expect(component.rdPartnersSE.partnersBody.contributing_np_projects.length).toBe(1);
-    });
-  });
-
-  describe('validatePrimarySelection()', () => {
-    it('should set the primary flag if there is only one contributing center', async () => {
-      component.rdPartnersSE.partnersBody.contributing_center = [{ primary: false }] as any[];
-
-      component.validatePrimarySelection();
-
-      expect(component.rdPartnersSE.partnersBody.contributing_center[0].primary).toBeTruthy();
     });
   });
 
