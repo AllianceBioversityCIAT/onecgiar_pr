@@ -55,7 +55,7 @@
           [rotating]="this.requestingAccept"
           [disabled]="invalidateRequest()"
           [icon]="this.requestingAccept ? 'loop' : ''"
-          [tooltipText]="invalidateRequest() ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
+          [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
           [verticalMargin]="0"
           tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
