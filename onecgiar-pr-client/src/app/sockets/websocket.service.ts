@@ -5,13 +5,14 @@ import { User } from './classes/User';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../shared/services/api/api.service';
 import { ResultsNotificationsService } from '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebsocketService {
-  platform = 'PRMS';
-  webSocketUrl = 'https://dev-sockets-production.up.railway.app/';
+  platform = environment.production ? 'PRMS-PROD' : 'PRMS-TEST';
+  webSocketUrl = environment.webSocketUrl;
 
   socket = new Socket({
     url: this.webSocketUrl,
@@ -95,8 +96,13 @@ export class WebsocketService {
   getNotifications() {
     this.listen(`notifications`).subscribe((msg: { result: any; title: string; desc: string }) => {
       this.showToast1(msg);
-      this.resultsNotificationsService.updatesPopUpData.push(msg.result);
-      this.resultsNotificationsService.get_updates_notifications();
+      this.resultsNotificationsService.updatesPopUpData.unshift(msg.result);
+
+      if (!msg?.result?.notification_id) {
+        this.resultsNotificationsService.get_section_information();
+      } else {
+        this.resultsNotificationsService.get_updates_notifications();
+      }
     });
   }
 
