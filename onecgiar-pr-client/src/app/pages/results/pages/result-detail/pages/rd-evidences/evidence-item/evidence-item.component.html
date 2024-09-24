@@ -17,19 +17,20 @@
     </div>
     
     <p-message @fadeInOut *ngIf="this.validateCGLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="info" text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
+    <p-message @fadeInOut *ngIf="this.validateCloudLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="warn" text="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></p-message>
     <ng-template #upload_file>
 
       <app-pr-radio-button [options]="this.isPubilcFileOptions" optionLabel="name" optionValue="id"
         label="Is this a public file?" [(ngModel)]="this.evidence.is_public_file">
       </app-pr-radio-button>
 
-      <app-alert-status [description]="this.publicFileDesc">
+      <app-alert-status [description]="dynamicAlertStatusBasedOnVisibility()" *ngIf="this.evidence.is_public_file !== null">
       </app-alert-status>
 
-      <app-pr-field-header label="File to be uploaded on the repository"></app-pr-field-header>
+      <app-pr-field-header label="File to be uploaded to the repository"></app-pr-field-header>
       <app-alert-status
         status="warning"
-        description="This repository will be managed through SharePoint in the: “One CGIAR – PRMS Repository“. The documents within it will be <b>view-only and can not be edited</b>. Also the access will be limited to <b>CGIAR accounts</b>.">
+        description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
       </app-alert-status>
 
 

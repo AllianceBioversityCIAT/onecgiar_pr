@@ -30,9 +30,9 @@
 
   <br><br>
 
-  <div appFeedbackValidation labelText="Empty or repeated link" [isComplete]="!this.validateCGSpaceLinks">
+  <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled">
   </div>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateCGSpaceLinks" (clickSave)="onSaveSection()">
+<app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()">
 </app-save-button>
