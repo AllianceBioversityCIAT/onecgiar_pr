@@ -15,6 +15,7 @@
     [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
     placeholder="Select center(s)"
     [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+    labelDescInlineStyles="font-size: 1.3rem"
     (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
   </app-pr-multi-select>
 
@@ -56,6 +57,7 @@
     label="Is this result being led by a partner?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+    labelDescInlineStyles="font-size: 1.3rem"
     (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)">
   </app-pr-yes-or-not>
   <app-alert-status [description]="getMessageLead()"></app-alert-status>
@@ -83,6 +85,8 @@
       *ngIf="!this.rdPartnersSE.updatingLeadData">
     </app-pr-select>
   </ng-template>
+
+  <br />
   <!-- Lead partner/center end -->
 
   <!-- Contributing non-pooled start -->
