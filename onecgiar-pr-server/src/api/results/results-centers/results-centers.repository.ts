@@ -173,7 +173,7 @@ export class ResultsCenterRepository
     const queryData = `
     select
       rc.id,
-      rc.is_primary,
+      rc.is_leading_result,
       rc.is_active,
       rc.created_date,
       rc.last_updated_date,

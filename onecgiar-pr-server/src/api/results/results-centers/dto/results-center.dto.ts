@@ -1,6 +1,5 @@
 export class ResultsCenterDto {
   id: number;
-  primary: boolean;
   from_cgspace: boolean;
   is_active: boolean;
   created_date: Date;

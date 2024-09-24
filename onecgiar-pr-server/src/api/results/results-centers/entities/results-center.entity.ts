@@ -25,7 +25,7 @@ export class ResultsCenter {
   @Column({
     name: 'is_primary',
     type: 'boolean',
-    nullable: false,
+    nullable: true,
   })
   is_primary: boolean;
 

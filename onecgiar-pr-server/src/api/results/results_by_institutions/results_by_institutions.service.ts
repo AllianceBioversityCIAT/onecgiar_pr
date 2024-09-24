@@ -346,12 +346,6 @@ export class ResultsByInstitutionsService {
     data: SaveResultsByInstitutionDto,
     user: TokenDto,
   ) {
-    if (contributing_center.filter((el) => el.primary == true).length > 1) {
-      contributing_center.map((el) => {
-        el.primary = false;
-      });
-    }
-
     if (contributing_center?.length) {
       const centerArray = contributing_center.map((el) => el.code);
       await this._resultsCenterRepository.updateCenter(
@@ -374,7 +368,6 @@ export class ResultsByInstitutionsService {
           result_id: data.result_id,
           created_by: user.id,
           last_updated_by: user.id,
-          is_primary: center.primary || false,
           is_leading_result: center.is_leading_result,
         };
 
@@ -383,9 +376,6 @@ export class ResultsByInstitutionsService {
           Object.assign(newResultCenter, resultCenterData);
           resultCenterArray.push(newResultCenter);
         } else {
-          if (center?.primary) {
-            exists.is_primary = center.primary;
-          }
           exists.is_leading_result = center.is_leading_result;
           exists.last_updated_by = user.id;
           resultCenterArray.push(exists);
