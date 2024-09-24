@@ -18,7 +18,7 @@
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
 </app-alert-status>
 
-<div class="auto_fit_container fadeIn" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
+<div class="auto_fit_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
   <div (click)="getDisableOptions()">
     <app-pr-multi-select
       [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
@@ -30,6 +30,7 @@
       [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
       [disableOptions]="this.disableOptions"
       placeholder="Select partner"
+      labelDescInlineStyles="margin-top: 0 !important;"
       (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; getOnlyPartnerTypes(); emitPartnerEvent($event)">
     </app-pr-multi-select>
     <div class="partners_selected_header" [style]="this.rolesSE.readOnly ? 'margin-top: -15px' : ''">

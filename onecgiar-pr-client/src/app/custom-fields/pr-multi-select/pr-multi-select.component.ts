@@ -36,6 +36,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() flagsCode: string;
   @Input() confirmDeletion: boolean = false;
   @Input() logicalDeletion: boolean = false;
+  @Input() labelDescInlineStyles?: string = '';
   @Input() selectedPrimary?: any;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
