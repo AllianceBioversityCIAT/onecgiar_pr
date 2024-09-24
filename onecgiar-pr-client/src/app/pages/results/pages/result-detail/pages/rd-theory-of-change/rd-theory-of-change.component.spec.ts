@@ -10,6 +10,7 @@ import { DetailSectionTitleComponent } from '../../../../../../custom-fields/det
 import { FeedbackValidationDirective } from '../../../../../../shared/directives/feedback-validation.directive';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 
 jest.useFakeTimers();
 
@@ -106,7 +107,7 @@ describe('RdTheoryOfChangeComponent', () => {
         DetailSectionTitleComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule],
       providers: [
         {
           provide: ApiService,
@@ -124,10 +125,8 @@ describe('RdTheoryOfChangeComponent', () => {
   });
 
   describe('ngOnInit()', () => {
-    it('should call requestEvent(), getSectionInformation(), and GET_AllWithoutResults() on initialization', async () => {
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
+    it('should call getSectionInformation(), and GET_AllWithoutResults() on initialization', async () => {
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
-      const spyRequestEvent = jest.spyOn(component, 'requestEvent');
       const spyGET_AllWithoutResults = jest.spyOn(component, 'GET_AllWithoutResults');
 
       const parser = new DOMParser();
@@ -139,10 +138,8 @@ describe('RdTheoryOfChangeComponent', () => {
 
       jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      await component.ngOnInit();
-      expect(spyRequestEvent).toHaveBeenCalled();
+      component.ngOnInit();
       expect(spyGetSectionInformation).toHaveBeenCalled();
-      expect(spyFindClassTenSeconds).toHaveBeenCalled();
       expect(spyGET_AllWithoutResults).toHaveBeenCalled();
     });
   });
@@ -423,43 +420,6 @@ describe('RdTheoryOfChangeComponent', () => {
       component.onRemoveContribuiting(1);
 
       expect(component.contributingInitiativeNew).toEqual(['initiative1', 'initiative3']);
-    });
-  });
-
-  describe('requestEvent()', () => {
-    it('should handle the click event on alert-event', async () => {
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>`,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
-
-      await component.requestEvent();
-      const alertDiv = dom.querySelector('.alert-event');
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
-    });
-
-    it('should log an error if document.querySelector throws an error', async () => {
-      const findClassTenSecondsMock = jest.fn().mockResolvedValueOnce({});
-      component.api.dataControlSE.findClassTenSeconds = findClassTenSecondsMock;
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      jest.spyOn(document, 'querySelector').mockImplementation(() => {
-        throw new Error('Query selector error');
-      });
-
-      await component.requestEvent();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(new Error('Query selector error'));
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });
