@@ -135,6 +135,15 @@ export class ShareResultRequestService {
         continue;
       }
 
+      if (initiativeId === shareInitId) {
+        this._logger.warn('The owner initiative cannot be shared with itself');
+        throw {
+          message: 'The owner initiative cannot be shared with itself',
+          status: HttpStatus.BAD_REQUEST,
+        };
+        continue;
+      }
+
       const newShare = this.buildShareResultRequest(
         createTocShareResult,
         resultId,

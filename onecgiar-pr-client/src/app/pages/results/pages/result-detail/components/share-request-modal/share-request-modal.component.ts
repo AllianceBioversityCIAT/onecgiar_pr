@@ -89,7 +89,16 @@ export class ShareRequestModalComponent implements OnInit {
       error: err => {
         console.error(err);
         this.api.dataControlSE.showShareRequest = false;
-
+        if (err.error?.statusCode === 400) {
+          this.api.alertsFe.show({
+            id: 'requesqsharederror',
+            title: 'The request could not be sent',
+            description: err?.error?.message,
+            status: 'information'
+          });
+          this.requesting = false;
+          return;
+        }
         this.api.alertsFe.show({ id: 'requesqsharederror', title: 'Error when requesting', description: '', status: 'error' });
         this.requesting = false;
       }

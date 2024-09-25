@@ -218,6 +218,9 @@ describe('UserNotificationSettingsService', () => {
         .mockResolvedValue(mockInitiative);
       jest.spyOn(roleByUserRepository, 'findOne').mockResolvedValue({} as any);
       jest
+        .spyOn(userNotificationSettingRepository, 'findOne')
+        .mockResolvedValue(null);
+      jest
         .spyOn(userNotificationSettingRepository, 'insert')
         .mockResolvedValue({} as any);
 
@@ -238,6 +241,7 @@ describe('UserNotificationSettingsService', () => {
           'The user notification settings have been updated successfully',
         status: 201,
       });
+      expect(userNotificationSettingRepository.insert).toHaveBeenCalled();
     });
 
     it('should update notification settings if user and initiative exist', async () => {
@@ -274,9 +278,10 @@ describe('UserNotificationSettingsService', () => {
           'The user notification settings have been updated successfully',
         status: 201,
       });
+      expect(userNotificationSettingRepository.update).toHaveBeenCalled();
     });
 
-    it('should return NOT_FOUND if user or initiative does not exist', async () => {
+    it('should return NOT_FOUND if user does not exist', async () => {
       jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
 
       const result = await service.userNotificationSettings(
@@ -292,17 +297,23 @@ describe('UserNotificationSettingsService', () => {
 
       expect(result).toEqual({
         response: null,
-        message: 'User or Initiative not found',
+        message: 'User not found',
         status: 404,
       });
     });
 
-    it('should return NOT_FOUND if user is not part of the initiative', async () => {
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue({} as User);
+    it('should skip initiatives where user is not part of the initiative and continue processing others', async () => {
+      const mockUser = { id: 1, active: true } as User;
+      const mockInitiative = { id: 1, active: true } as ClarisaInitiative;
+
+      jest.spyOn(userRepository, 'findOne').mockResolvedValue(mockUser);
       jest
         .spyOn(clarisaInitiativeRepository, 'findOne')
-        .mockResolvedValue({} as ClarisaInitiative);
+        .mockResolvedValue(mockInitiative);
       jest.spyOn(roleByUserRepository, 'findOne').mockResolvedValue(null);
+      jest
+        .spyOn(userNotificationSettingRepository, 'insert')
+        .mockResolvedValue({} as any);
 
       const result = await service.userNotificationSettings(
         [
@@ -316,10 +327,12 @@ describe('UserNotificationSettingsService', () => {
       );
 
       expect(result).toEqual({
-        response: null,
-        message: 'User is not part of the Initiative',
-        status: 404,
+        response: 'User notification settings updated successfully',
+        message:
+          'The user notification settings have been updated successfully',
+        status: 201,
       });
+      expect(userNotificationSettingRepository.insert).not.toHaveBeenCalled();
     });
 
     it('should return INTERNAL_SERVER_ERROR on error', async () => {

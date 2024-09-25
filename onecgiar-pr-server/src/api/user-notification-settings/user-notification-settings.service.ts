@@ -142,15 +142,19 @@ export class UserNotificationSettingsService {
   ) {
     try {
       const userExists = await this.verifyUserExists(user.id);
+      if (!userExists) {
+        return {
+          response: null,
+          message: 'User not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       for (const us of userNotificationSettingDto) {
         const initExists = await this.verifyInitiativeExists(us.initiative_id);
 
-        if (!userExists || !initExists) {
-          return {
-            response: null,
-            message: 'User or Initiative not found',
-            status: HttpStatus.NOT_FOUND,
-          };
+        if (!initExists) {
+          continue;
         }
 
         const isUserInInitiative = await this.verifyUserInit(
@@ -159,11 +163,7 @@ export class UserNotificationSettingsService {
         );
 
         if (!isUserInInitiative) {
-          return {
-            response: null,
-            message: 'User is not part of the Initiative',
-            status: HttpStatus.NOT_FOUND,
-          };
+          continue;
         }
 
         const userNotificationSettings: UserNotificationSetting =
