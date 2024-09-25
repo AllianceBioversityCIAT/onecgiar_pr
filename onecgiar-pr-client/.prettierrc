@@ -9,5 +9,13 @@
   "bracketSameLine": true,
   "printWidth": 150,
   "bracketLine": true,
-  "endOfLine": "auto"
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
 }
