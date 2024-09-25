@@ -40,33 +40,16 @@ describe('RequestsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should call get_sent_notifications if URL does not include "sent"', () => {
-    routerMock.url = '/some-url';
-    component.clearFiltersAndUpdateResults();
-    expect(resultsNotificationsServiceMock.get_sent_notifications).toHaveBeenCalled();
-  });
-
-  it('should not call get_sent_notifications if URL includes "sent"', () => {
-    routerMock.url = '/sent';
-    component.clearFiltersAndUpdateResults();
-    expect(resultsNotificationsServiceMock.get_sent_notifications).not.toHaveBeenCalled();
-  });
-
-  it('should call get_section_information if URL does not include "received"', () => {
-    routerMock.url = '/some-url';
-    component.clearFiltersAndUpdateResults();
-    expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
-  });
-
-  it('should not call get_section_information if URL includes "received"', () => {
-    routerMock.url = '/received';
-    component.clearFiltersAndUpdateResults();
-    expect(resultsNotificationsServiceMock.get_section_information).not.toHaveBeenCalled();
-  });
-
   it('should call resetFilters if initiativeIdFilter is not null', () => {
     routerMock.url = '/some-url';
     resultsNotificationsServiceMock.initiativeIdFilter = 1;
+    component.clearFiltersAndUpdateResults();
+    expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
+  });
+
+  it('should call resetFilters if searchFilter is not null', () => {
+    routerMock.url = '/some-url';
+    resultsNotificationsServiceMock.searchFilter = 'search';
     component.clearFiltersAndUpdateResults();
     expect(resultsNotificationsServiceMock.resetFilters).toHaveBeenCalled();
   });

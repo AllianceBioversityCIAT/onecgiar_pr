@@ -11,14 +11,6 @@ export class RequestsComponent {
   constructor(public resultsNotificationsSE: ResultsNotificationsService, public router: Router) {}
 
   clearFiltersAndUpdateResults() {
-    if (!this.router.url.includes('sent')) {
-      this.resultsNotificationsSE.get_sent_notifications();
-    }
-
-    if (!this.router.url.includes('received')) {
-      this.resultsNotificationsSE.get_section_information();
-    }
-
     if (this.resultsNotificationsSE.initiativeIdFilter || this.resultsNotificationsSE.searchFilter) {
       this.resultsNotificationsSE.resetFilters();
     }

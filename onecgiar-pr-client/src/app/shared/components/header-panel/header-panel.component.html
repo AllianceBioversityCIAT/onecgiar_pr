@@ -33,8 +33,13 @@
     </div>
 
     <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round animate_bell" *ngIf="unreadNotifications.length === 0">notifications</i>
-      <i class="material-icons-round" pBadge [value]="notificationBadgeLength()" severity="danger" *ngIf="unreadNotifications.length > 0">
+      <i class="material-icons-round" *ngIf="unreadNotifications.length === 0">notifications</i>
+      <i
+        class="material-icons-round animate_bell"
+        pBadge
+        [value]="notificationBadgeLength()"
+        severity="danger"
+        *ngIf="unreadNotifications.length > 0">
         notifications
       </i>
     </div>
@@ -56,7 +61,7 @@
   verticalAlign="below"
   scrollStrategy="close"
   [autoFocus]="false"
-  (afterClose)="handleClosePopUp()">
+  (closed)="handleClosePopUp()">
   <div class="overlay_panel">
     <div class="overlay_panel_header">
       <h1 class="overlay_panel_title">Notifications</h1>

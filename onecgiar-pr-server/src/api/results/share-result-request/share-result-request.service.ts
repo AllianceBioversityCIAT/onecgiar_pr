@@ -1,4 +1,10 @@
-import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
@@ -24,9 +30,13 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { SocketManagementService } from '../../../shared/microservices/socket-management/socket-management.service';
+import { NotificationDto } from '../../../shared/microservices/socket-management/dto/create-socket.dto';
 
 @Injectable()
 export class ShareResultRequestService {
+  private readonly _logger = new Logger(ShareResultRequestService.name);
+
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
@@ -45,6 +55,8 @@ export class ShareResultRequestService {
     @Inject(forwardRef(() => VersioningService))
     private readonly _versioningService: VersioningService,
     private readonly _userRepository: UserRepository,
+    @Inject(forwardRef(() => SocketManagementService))
+    private readonly _socketManagementService: SocketManagementService,
   ) {}
 
   async resultRequest(
@@ -192,6 +204,12 @@ export class ShareResultRequestService {
       resultId,
       emailTemplate,
     );
+
+    await this.sendSocketNotification(
+      shareInitRequests,
+      resultId,
+      emailTemplate,
+    );
   }
 
   private async sendEmailsForShareRequests(
@@ -204,14 +222,14 @@ export class ShareResultRequestService {
       const [initOwner, result, initContributing, initMembers] =
         await this.getRequestRelatedData(request, resultId, emailTemplate);
 
-      const to = await this.getEmailRecipients(
+      const to = await this.getEmailAndNotificationRecipients(
         initMembers,
         emailTemplate,
         request.shared_inititiative_id,
         initOwner.id,
       );
 
-      if (!to) {
+      if (!to.userEmail.length) {
         return {
           response: 'No recipients found',
           message: 'No recipients found',
@@ -243,10 +261,10 @@ export class ShareResultRequestService {
       );
 
       this._emailNotificationManagementService.sendEmail({
-        from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
+        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
         emailBody: {
           subject: emailData.subject,
-          to,
+          to: to.userEmail,
           cc: emailData.cc,
           bcc: technicalTeamEmailsRecord.value,
           message: {
@@ -255,6 +273,78 @@ export class ShareResultRequestService {
           },
         },
       });
+    }
+  }
+
+  private async sendSocketNotification(
+    shareInitRequests: ShareResultRequest[],
+    resultId: number,
+    emailTemplate: string,
+  ) {
+    try {
+      const usersOnlineResponse =
+        await this._socketManagementService.getActiveUsers();
+
+      const usersOnlineIds = usersOnlineResponse.response.map(
+        (user: { userId: number }) => user.userId,
+      );
+
+      for (const request of shareInitRequests) {
+        const [initOwner, result, , initMembers] =
+          await this.getRequestRelatedData(request, resultId, emailTemplate);
+
+        const receivers = await this.getEmailAndNotificationRecipients(
+          initMembers,
+          emailTemplate,
+          request.shared_inititiative_id,
+          initOwner.id,
+        );
+
+        if (!receivers.userNotification.length) {
+          this._logger.warn(
+            `No recipients found for request ID: ${request.share_result_request_id}`,
+          );
+          continue;
+        }
+
+        const matchUsers = receivers.userNotification.filter((userId) =>
+          usersOnlineIds.includes(userId),
+        );
+
+        if (!matchUsers.length) {
+          this._logger.warn(
+            `No online users to notify for request ID: ${request.share_result_request_id}`,
+          );
+          continue;
+        }
+
+        const data = await this._shareResultRequestRepository.findOne({
+          select: this.getRequestSelectFields(),
+          relations: this.getRequestRelations(),
+          where: {
+            result_id: result.id,
+            shared_inititiative_id: request.shared_inititiative_id,
+          },
+        });
+
+        const description = data.is_map_to_toc
+          ? `Request as contributor for result ${result.result_code}`
+          : `Contribution request for result ${result.result_code}`;
+
+        const notification: NotificationDto = {
+          title: 'Contribution request',
+          desc: description,
+          result: data,
+        };
+
+        await this._socketManagementService.sendNotificationToUsers(
+          matchUsers.map(String),
+          notification,
+        );
+      }
+    } catch (error) {
+      this._logger.error('Error sending socket notifications', error);
+      this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -285,25 +375,44 @@ export class ShareResultRequestService {
     ]);
   }
 
-  private async getEmailRecipients(
+  private async getEmailAndNotificationRecipients(
     initMembers: any[],
     emailTemplate: string,
     sharedInitiativeId?: number,
     initOwner?: number,
   ) {
-    const users = initMembers.map((m) => m.obj_user.id);
-    const userEnable = await this._userNotificationSettingsRepository.find({
-      where: {
-        user_id: In(users),
-        email_notifications_contributing_request_enabled: true,
-        initiative_id:
-          emailTemplate === EmailTemplate.CONTRIBUTION
-            ? sharedInitiativeId
-            : initOwner,
+    const usersEmail = initMembers.map((m) => m.obj_user.id);
+    const userEmailEnable = await this._userNotificationSettingsRepository.find(
+      {
+        where: {
+          user_id: In(usersEmail),
+          email_notifications_contributing_request_enabled: true,
+          initiative_id:
+            emailTemplate === EmailTemplate.CONTRIBUTION
+              ? sharedInitiativeId
+              : initOwner,
+        },
+        relations: ['obj_user'],
       },
-      relations: ['obj_user'],
-    });
-    return userEnable.map((u) => u.obj_user.email);
+    );
+
+    const usersNotification = initMembers.map((m) => m.obj_user.id);
+    const userNotificationEnable =
+      await this._userNotificationSettingsRepository.find({
+        where: {
+          user_id: In(usersNotification),
+          email_notifications_updates_enabled: true,
+          initiative_id:
+            emailTemplate === EmailTemplate.CONTRIBUTION
+              ? sharedInitiativeId
+              : initOwner,
+        },
+        relations: ['obj_user'],
+      });
+    return {
+      userEmail: userEmailEnable.map((u) => u.obj_user.email),
+      userNotification: userNotificationEnable.map((u) => u.obj_user.id),
+    };
   }
 
   private async getEmailTemplate(emailTemplate: string) {

@@ -80,8 +80,6 @@ describe('ResultsNotificationsComponent', () => {
 
     expect(component.phaseList).toEqual([]);
     expect(shareRequestModalServiceMock.inNotifications).toBe(true);
-    expect(resultsNotificationsServiceMock.get_section_information).toHaveBeenCalled();
-    expect(resultsNotificationsServiceMock.get_sent_notifications).toHaveBeenCalled();
     expect(resultsNotificationsServiceMock.phaseFilter).toBe('somePhase');
     expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('someInit');
     expect(resultsNotificationsServiceMock.searchFilter).toBe('someSearch');

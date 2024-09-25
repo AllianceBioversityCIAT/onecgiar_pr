@@ -919,7 +919,7 @@ export class ResultsTocResultsService {
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
+        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
         emailBody: {
           subject: emailData.subject,
           to,

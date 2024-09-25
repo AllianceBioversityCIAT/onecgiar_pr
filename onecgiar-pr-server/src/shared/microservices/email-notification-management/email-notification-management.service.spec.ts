@@ -173,4 +173,18 @@ describe('EmailNotificationManagementService', () => {
       expect(result).toEqual(['john.doe@test.com']);
     });
   });
+
+  describe('addLabel', () => {
+    it('should return "[PRMS Testing]" when IS_PRODUCTION is false', () => {
+      process.env.IS_PRODUCTION = 'false';
+      const result = service.addLabel();
+      expect(result).toBe('[PRMS Testing]');
+    });
+
+    it('should return "[PRMS]" when IS_PRODUCTION is true', () => {
+      process.env.IS_PRODUCTION = 'true';
+      const result = service.addLabel();
+      expect(result).toBe('[PRMS]');
+    });
+  });
 });
