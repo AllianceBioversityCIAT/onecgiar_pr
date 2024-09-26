@@ -6,8 +6,6 @@ import { Router } from '@angular/router';
   providedIn: 'root'
 })
 export class ResultsNotificationsService {
-  interactiveNotisList = [];
-  staticNotisList = [];
   receivedData = {
     receivedContributionsPending: [],
     receivedContributionsDone: []
@@ -33,7 +31,10 @@ export class ResultsNotificationsService {
 
   hideInitFilter = true;
 
-  constructor(private api: ApiService, private router: Router) {}
+  constructor(
+    private api: ApiService,
+    private router: Router
+  ) {}
 
   get_sent_notifications(callback?) {
     this.api.resultsSE.GET_sentRequest().subscribe({

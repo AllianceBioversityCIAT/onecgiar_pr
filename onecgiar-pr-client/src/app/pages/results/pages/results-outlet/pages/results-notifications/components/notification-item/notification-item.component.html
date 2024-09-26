@@ -30,11 +30,11 @@
           has requested {{ notification?.is_map_to_toc ? 'the contribution' : 'the inclusion of' }}
         </b>
 
-        <b *ngIf="!notification?.is_map_to_toc">
-          {{ notification?.obj_shared_inititiative?.official_code }}
-        </b>
+        @if (!notification?.is_map_to_toc) {
+          <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
 
-        <b *ngIf="!notification?.is_map_to_toc"> as a contributor </b>
+          <b> as a contributor </b>
+        }
 
         to result
 
@@ -42,32 +42,36 @@
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
-        <b *ngIf="notification?.is_map_to_toc"> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+        @if (notification?.is_map_to_toc) {
+          <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+        }
       </p>
     </div>
 
     <div class="notification_content_actions">
-      <div class="notification_content_actions_buttons" *ngIf="!isSent">
-        <app-pr-button
-          [text]="notification?.is_map_to_toc ? 'Accept' : 'Map and accept'"
-          colorType="success"
-          (click)="notification?.is_map_to_toc ? acceptOrReject(true) : mapAndAccept(notification)"
-          [rotating]="this.requestingAccept"
-          [disabled]="invalidateRequest()"
-          [icon]="this.requestingAccept ? 'loop' : ''"
-          [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
-          [verticalMargin]="0"
-          tooltipStyleClass="tooltip-w-300"></app-pr-button>
+      @if (!isSent) {
+        <div class="notification_content_actions_buttons">
+          <app-pr-button
+            [text]="notification?.is_map_to_toc ? 'Accept' : 'Map and accept'"
+            colorType="success"
+            (click)="notification?.is_map_to_toc ? acceptOrReject(true) : mapAndAccept(notification)"
+            [rotating]="this.requestingAccept"
+            [disabled]="invalidateRequest()"
+            [icon]="this.requestingAccept ? 'loop' : ''"
+            [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
+            [verticalMargin]="0"
+            tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
-        <app-pr-button
-          text="Reject"
-          colorType="danger"
-          (click)="acceptOrReject(false)"
-          [rotating]="this.requestingReject"
-          [icon]="this.requestingReject ? 'loop' : ''"
-          [verticalMargin]="0"
-          [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
-      </div>
+          <app-pr-button
+            text="Reject"
+            colorType="danger"
+            (click)="acceptOrReject(false)"
+            [rotating]="this.requestingReject"
+            [icon]="this.requestingReject ? 'loop' : ''"
+            [verticalMargin]="0"
+            [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
+        </div>
+      }
 
       <div class="notification_date" style="min-width: 165px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
     </div>
@@ -78,14 +82,25 @@
       <p class="notification_content_body_text">
         <b>
           {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
-          {{ notification?.obj_shared_inititiative?.official_code }} has requested
-          {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
-          {{ notification?.obj_owner_initiative?.official_code }} as a contributor
+          {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+          has requested {{ notification?.is_map_to_toc ? 'the contribution' : 'the inclusion of' }}
         </b>
+
+        @if (!notification?.is_map_to_toc) {
+          <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+
+          <b> as a contributor </b>
+        }
+
         to result
+
         <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
+
+        @if (notification?.is_map_to_toc) {
+          <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+        }
       </p>
     </div>
 
@@ -104,14 +119,25 @@
       <p class="notification_content_body_text">
         <b>
           {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
-          {{ notification?.obj_shared_inititiative?.official_code }} has requested
-          {{ notification?.is_map_to_toc ? 'to include this initiative in' : 'the inclusion of' }}
-          {{ notification?.obj_owner_initiative?.official_code }} as a contributor
+          {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+          has requested {{ notification?.is_map_to_toc ? 'the contribution' : 'the inclusion of' }}
         </b>
+
+        @if (!notification?.is_map_to_toc) {
+          <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+
+          <b> as a contributor </b>
+        }
+
         to result
+
         <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
+
+        @if (notification?.is_map_to_toc) {
+          <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+        }
       </p>
     </div>
 

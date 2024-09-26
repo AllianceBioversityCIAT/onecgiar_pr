@@ -1,3 +1,15 @@
+@let notificationsPending =
+  this.resultsNotificationsSE?.updatesData.notificationsPending
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
+
+@let notificationsViewed =
+  this.resultsNotificationsSE?.updatesData?.notificationsViewed
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
+
 <div class="updates_header">
   <app-pr-button
     [text]="'Mark all as read'"
@@ -10,85 +22,43 @@
 </div>
 
 <div class="updates_container">
-  <div class="updates_container_content" *ngIf="this.resultsNotificationsSE?.updatesData.notificationAnnouncements.length > 0">
-    <h1 class="updates_container_header_title">Announcements</h1>
+  @if (this.resultsNotificationsSE?.updatesData.notificationAnnouncements.length > 0) {
+    <div class="updates_container_content">
+      <h1 class="updates_container_header_title">Announcements</h1>
 
-    <div class="updates_container_content_item">
-      <app-update-notification *ngFor="let item of this.resultsNotificationsSE?.updatesData.notificationAnnouncements" [notification]="item" />
+      <div class="updates_container_content_item">
+        @for (item of this.resultsNotificationsSE?.updatesData.notificationAnnouncements; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
     </div>
-  </div>
+  }
 
   <div class="updates_container_content">
     <h1 class="updates_container_header_title">Unread</h1>
 
-    <div
-      class="updates_container_content_item"
-      *ngIf="
-        (
-          this.resultsNotificationsSE?.updatesData.notificationsPending
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        ).length > 0
-      ">
-      <app-update-notification
-        *ngFor="
-          let item of this.resultsNotificationsSE?.updatesData.notificationsPending
-            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        "
-        [notification]="item" />
-    </div>
-
-    <div
-      class="updates_container_content_empty"
-      *ngIf="
-        !(
-          this.resultsNotificationsSE?.updatesData?.notificationsPending
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        ).length
-      ">
-      You have no unread notifications related with the search.
-    </div>
+    @if (notificationsPending.length > 0) {
+      <div class="updates_container_content_item">
+        @for (item of notificationsPending; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
+    } @else {
+      <div class="updates_container_content_empty">You have no unread notifications related with the search.</div>
+    }
   </div>
 
   <div class="updates_container_content">
     <h1 class="updates_container_header_title">Latest</h1>
 
-    <div
-      class="updates_container_content_item"
-      *ngIf="
-        (
-          this.resultsNotificationsSE?.updatesData?.notificationsViewed
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        ).length > 0
-      ">
-      <app-update-notification
-        *ngFor="
-          let item of this.resultsNotificationsSE?.updatesData?.notificationsViewed
-            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        "
-        [notification]="item" />
-    </div>
-
-    <div
-      class="updates_container_content_empty"
-      *ngIf="
-        !(
-          this.resultsNotificationsSE?.updatesData?.notificationsViewed
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter : true
-        ).length
-      ">
-      You have no read notifications related with the search.
-    </div>
+    @if (notificationsViewed.length > 0) {
+      <div class="updates_container_content_item">
+        @for (item of notificationsViewed; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
+    } @else {
+      <div class="updates_container_content_empty">You have no read notifications related with the search.</div>
+    }
   </div>
 </div>
