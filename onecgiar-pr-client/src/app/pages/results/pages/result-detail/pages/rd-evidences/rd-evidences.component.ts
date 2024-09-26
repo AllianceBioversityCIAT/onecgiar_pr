@@ -14,12 +14,22 @@ export class RdEvidencesComponent implements OnInit {
   isOptional: boolean = false;
 
   alertStatus() {
-    if (this.api.dataControlSE.isKnowledgeProduct) return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
-    let mainText = '<ul><li>Submit a maximum of 6 pieces of evidence.</li><li>Please list evidence from most to least important.</li><li>Files can be uploaded.</li>';
-    if (this.api.dataControlSE?.currentResult?.result_type_id === 5) mainText += '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
+    if (this.api.dataControlSE.isKnowledgeProduct)
+      return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
+    let mainText = `<ul>
+    <li>Submit a maximum of 6 pieces of evidence.</li>
+    <li>Please list evidence from most to least important.</li>
+    <li>All links provided should be publicly accessible. All CGIAR publications should be shared using a CGSpace link.</li>
+    <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
+    <li>Files can be also uploaded to the PRMS repository.</li>
+    <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>`;
+    if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
+      mainText +=
+        '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
     mainText += '</ul> ';
     return mainText;
   }
+
   constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService, private saveButtonSE: SaveButtonService) {}
 
   ngOnInit(): void {
@@ -55,7 +65,11 @@ export class RdEvidencesComponent implements OnInit {
       if (evidenceIterator.file) count++;
       if (!evidenceIterator?.file) continue;
       try {
-        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({ resultId: this.evidencesBody.result_id, fileName: evidenceIterator?.file?.name, count });
+        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({
+          resultId: this.evidencesBody.result_id,
+          fileName: evidenceIterator?.file?.name,
+          count
+        });
         const intervalId = setInterval(async () => {
           try {
             const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
@@ -123,22 +137,26 @@ export class RdEvidencesComponent implements OnInit {
 
     return `<ul>${text}</ul>`;
   }
-  get validateCGSpaceLinks() {
-    if (this.evidencesBody.evidences.length < 2) return false;
 
-    for (const evidenteIterator of this.evidencesBody.evidences) {
-      if (this.evidencesBody.evidences.find(evidence => !evidence?.link && !evidence?.is_sharepoint)) return true;
-      const evidencesFinded = this.evidencesBody.evidences.filter(evidence => evidence.link == evidenteIterator.link && !evidence.is_sharepoint);
-      if (evidencesFinded.length >= 2) {
-        return true;
-      }
-      if (evidenteIterator.is_sharepoint && !(evidenteIterator?.file || evidenteIterator?.link)) {
-        return true;
-      }
-    }
+  get validateButtonDisabled() {
+    const invalidLinkRegex =
+      /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
+
+    const evidences = this.evidencesBody.evidences;
+
+    const missingLinkNonSharepoint = evidences.some(e => !e?.link && !e?.is_sharepoint);
+    if (missingLinkNonSharepoint) return true;
+
+    const nonSharepointLinks = evidences.filter(e => e.link && !e.is_sharepoint).map(e => e.link);
+    const uniqueLinks = new Set(nonSharepointLinks);
+    if (uniqueLinks.size !== nonSharepointLinks.length) return true;
+
+    const sharepointMissingFileAndLink = evidences.some(e => e.is_sharepoint && !(e.file || e.link));
+    if (sharepointMissingFileAndLink) return true;
+
+    const hasInvalidLink = evidences.some(e => e.link && invalidLinkRegex.test(e.link));
+    if (hasInvalidLink) return true;
 
     return false;
   }
-
-  OpenKp() {}
 }
