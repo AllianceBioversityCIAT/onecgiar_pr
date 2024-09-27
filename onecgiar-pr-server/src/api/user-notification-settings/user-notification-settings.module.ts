@@ -6,6 +6,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { UserModule } from '../../auth/modules/user/user.module';
 import { ClarisaInitiativesModule } from '../../clarisa/clarisa-initiatives/clarisa-initiatives.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
+import { ResultRepository } from '../results/result.repository';
 
 @Module({
   controllers: [UserNotificationSettingsController],
@@ -13,6 +14,7 @@ import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.m
     HandlersError,
     UserNotificationSettingsService,
     UserNotificationSettingRepository,
+    ResultRepository,
   ],
   imports: [UserModule, ClarisaInitiativesModule, RoleByUserModule],
   exports: [UserNotificationSettingRepository, UserNotificationSettingsService],

@@ -9,6 +9,9 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { OrmConfigTestModule } from '../../shared/test/orm-connection.module';
+import { ResultRepository } from '../results/result.repository';
+import { Result } from '../results/entities/result.entity';
+import { RoleByUser } from '../../auth/modules/role-by-user/entities/role-by-user.entity';
 
 describe('UserNotificationSettingsService', () => {
   let service: UserNotificationSettingsService;
@@ -16,6 +19,7 @@ describe('UserNotificationSettingsService', () => {
   let userNotificationSettingRepository: UserNotificationSettingRepository;
   let clarisaInitiativeRepository: ClarisaInitiativesRepository;
   let roleByUserRepository: RoleByUserRepository;
+  let resultRepository: ResultRepository;
   const userTest: TokenDto = {
     email: 'support@prms.pr',
     id: 1,
@@ -52,6 +56,13 @@ describe('UserNotificationSettingsService', () => {
           provide: RoleByUserRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn(),
+          },
+        },
+        {
+          provide: ResultRepository,
+          useValue: {
+            find: jest.fn(),
           },
         },
         Logger,
@@ -76,6 +87,7 @@ describe('UserNotificationSettingsService', () => {
     );
     roleByUserRepository =
       module.get<RoleByUserRepository>(RoleByUserRepository);
+    resultRepository = module.get<ResultRepository>(ResultRepository);
   });
 
   it('should be defined', () => {
@@ -355,6 +367,118 @@ describe('UserNotificationSettingsService', () => {
         message: 'Internal server error',
         status: 500,
       });
+    });
+  });
+
+  describe('getNotificationUpdatesRecipients', () => {
+    it('should return an array of user IDs who should receive notification updates', async () => {
+      const mockResult = { id: 1 };
+      const mockInitContributing: Result[] = [
+        {
+          id: 1,
+          result_code: 'code',
+          title: 'title',
+          description: 'description',
+          result_type_id: 1,
+          result_level_id: 1,
+          obj_result_by_initiatives: [{ initiative_id: 1 }],
+        } as unknown as Result,
+      ];
+      const mockInitMembers: RoleByUser[] = [
+        {
+          id: 1,
+          role: {} as any,
+          obj_role: {} as any,
+          initiative_id: 1,
+          obj_user: {
+            id: 1,
+            first_name: '',
+            last_name: '',
+            email: '',
+            is_cgiar: false,
+            password: '',
+            last_login: undefined,
+            active: false,
+            created_by: 0,
+            created_date: undefined,
+            last_updated_by: 0,
+            last_updated_date: undefined,
+            last_pop_up_viewed: undefined,
+            obj_user_notification_setting: [],
+            obj_target_user_notification: [],
+            obj_emitter_user_notification: [],
+          },
+          obj_initiative: {} as any,
+          action_area_id: 1,
+          obj_action_area: {} as any,
+          user: {} as any,
+          created_by: 1,
+          created_date: new Date(),
+          last_updated_by: 1,
+          last_updated_date: new Date(),
+          active: true,
+        },
+      ];
+
+      jest
+        .spyOn(resultRepository, 'find')
+        .mockResolvedValue(mockInitContributing);
+      jest
+        .spyOn(roleByUserRepository, 'find')
+        .mockResolvedValue(mockInitMembers);
+
+      const result = await service.getNotificationUpdatesRecipients(mockResult);
+
+      expect(result).toEqual([1]);
+    });
+
+    it('should return an empty array if no initiatives are found', async () => {
+      const mockResult = { id: 1 };
+      const mockInitContributing = [];
+
+      jest
+        .spyOn(resultRepository, 'find')
+        .mockResolvedValue(mockInitContributing);
+
+      const result = await service.getNotificationUpdatesRecipients(mockResult);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return an empty array if no members are found', async () => {
+      const mockResult = { id: 1 };
+      const mockInitContributing: Result[] = [
+        {
+          id: 1,
+          result_code: 'code',
+          title: 'title',
+          description: 'description',
+          result_type_id: 1,
+          result_level_id: 1,
+          obj_result_by_initiatives: [{ initiative_id: 1 }],
+        } as unknown as Result,
+      ];
+
+      jest
+        .spyOn(resultRepository, 'find')
+        .mockResolvedValue(mockInitContributing);
+      jest.spyOn(roleByUserRepository, 'find').mockResolvedValue([]);
+
+      const result = await service.getNotificationUpdatesRecipients(mockResult);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw an error if there is an issue retrieving recipients', async () => {
+      const mockResult = { id: 1 };
+
+      jest
+        .spyOn(resultRepository, 'find')
+        .mockRejectedValue(new Error('Test error'));
+
+      await expect(
+        service.getNotificationUpdatesRecipients(mockResult),
+      ).rejects.toThrow('Failed to get notification update recipients');
     });
   });
 });
