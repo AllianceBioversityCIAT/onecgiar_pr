@@ -323,7 +323,7 @@ export class SubmissionsService {
   ) {
     const recipients =
       await this._userNotificationSettingsService.getNotificationUpdatesRecipients(
-        result.initiative_id,
+        result,
       );
 
     const saveNotification =
