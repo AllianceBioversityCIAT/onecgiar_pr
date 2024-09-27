@@ -22,6 +22,7 @@ export class RdPartnersService implements OnDestroy {
   leadCenterCode: string = null;
 
   updatingLeadData: boolean = false;
+  disableLeadPartner: boolean = false;
 
   constructor(public api: ApiService, public institutionsSE: InstitutionsService, public centersSE: CentersService) {
     this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
