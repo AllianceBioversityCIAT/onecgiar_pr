@@ -136,6 +136,7 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
+            user,
           );
         }
 
@@ -164,6 +165,7 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
+            user,
           );
         }
       }
@@ -975,6 +977,7 @@ export class ResultsTocResultsService {
     contributingInit: number[],
     result_id: number,
     initSubmitter: number,
+    user: TokenDto,
   ) {
     for (const init of contributingInit) {
       const [initOwner, result, initContributing, initMembers] =
@@ -1039,6 +1042,7 @@ export class ResultsTocResultsService {
           result,
           initOwner,
           pcuEmail: pcuEmail.value,
+          user,
         },
       );
 
