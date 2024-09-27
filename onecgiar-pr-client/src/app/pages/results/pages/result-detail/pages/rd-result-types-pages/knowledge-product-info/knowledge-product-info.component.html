@@ -68,24 +68,30 @@
         </app-pr-input>
     </div>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG"
-            label="Web of Science Core Collection (former ISI) (CGSpace)" [required]="false" [readOnly]="true">
-        </app-pr-input>
+        <div>
+            <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG" label="Web of Science Core Collection (former ISI) (CGSpace)" 
+            [required]="false" [readOnly]="true"></app-pr-input>
+            <p-message *ngIf="!knowledgeProductBody.is_isi_CG" [style]="{ width : '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }" severity="info" text="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        </div>
         <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS"
             label="Web of Science Core Collection (former ISI) (WoS)" [required]="false" [readOnly]="true">
         </app-pr-input>
     </div>
+
     <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true">
     </app-pr-input>
     <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" label="Accessibility (CGSpace)"
-            [required]="false" [readOnly]="true">
-        </app-pr-input>
+        <div>
+            <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" label="Accessibility (CGSpace)"
+            [required]="false" [readOnly]="true"></app-pr-input>
+            <p-message *ngIf="!knowledgeProductBody.accessibility_CG" [style]="{ width : '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }" severity="info" text="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        </div>
         <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS"
             [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility (Unpaywall)" [required]="false"
             [readOnly]="true">
         </app-pr-input>
     </div>
+
     <app-pr-input [(ngModel)]="knowledgeProductBody.licence" label="License" [required]="false" [readOnly]="true">
     </app-pr-input>
     <app-pr-input [(ngModel)]="knowledgeProductBody.keywords" label="Keywords" [required]="false" [readOnly]="true">
