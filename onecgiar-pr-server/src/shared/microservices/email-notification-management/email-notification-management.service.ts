@@ -70,6 +70,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
       case EmailTemplate.REMOVED_CONTRIBUTION:
         return {
           cc: process.env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
+          userEmmiter: `${data.user.first_name}`,
           subject: `${this.addLabel()} Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.short_name,
           initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
