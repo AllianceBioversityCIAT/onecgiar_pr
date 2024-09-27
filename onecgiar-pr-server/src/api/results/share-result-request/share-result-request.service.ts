@@ -454,7 +454,6 @@ export class ShareResultRequestService {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
-
       const whereConditions = this.buildWhereConditions(inits, role);
 
       const receivedContributionsPendingOwner = await this.getRequest(
