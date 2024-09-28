@@ -48,4 +48,13 @@ export class NormalSelectorComponent {
     }
     this.rdPartnersSE.setPossibleLeadPartners(true);
   }
+
+  updateLeadData() {
+    if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
+      this.rdPartnersSE.partnersBody.is_lead_by_partner = false;
+      this.rdPartnersSE.disableLeadPartner = true;
+    } else {
+      this.rdPartnersSE.disableLeadPartner = false;
+    }
+  }
 }

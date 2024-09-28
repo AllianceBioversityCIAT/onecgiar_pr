@@ -18,8 +18,6 @@
     (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
   </app-pr-multi-select>
 
-  <div class="medal_info">Please select the primary Center by clicking the medal icon <i class="material-icons-round">workspace_premium</i></div>
-
   <div class="medal_selector selected_container">
     <div class="centers chips_container">
       <div
@@ -48,7 +46,8 @@
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
     labelDescInlineStyles="font-size: 1.3rem"
-    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)">
+    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+    [readOnly]="this.rdPartnersSE.disableLeadPartner">
   </app-pr-yes-or-not>
   <app-alert-status [description]="getMessageLead()"></app-alert-status>
   <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">

@@ -104,6 +104,9 @@ describe('RdTheoryOfChangeComponent', () => {
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
         }
+      },
+      rolesSE: {
+        readOnly: () => false
       }
     };
 

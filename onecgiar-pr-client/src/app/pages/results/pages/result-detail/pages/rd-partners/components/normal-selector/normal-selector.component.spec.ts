@@ -85,4 +85,19 @@ describe('NormalSelectorComponent', () => {
       expect(component.rdPartnersSE.setPossibleLeadPartners).toHaveBeenCalledWith(true);
     });
   });
+
+  describe('updateLeadData()', () => {
+    it('should set is_lead_by_partner to false and disableLeadPartner to true if no_applicable_partner is true', () => {
+      component.rdPartnersSE.partnersBody.no_applicable_partner = true;
+      component.updateLeadData();
+      expect(component.rdPartnersSE.partnersBody.is_lead_by_partner).toBe(false);
+      expect(component.rdPartnersSE.disableLeadPartner).toBe(true);
+    });
+
+    it('should set disableLeadPartner to false if no_applicable_partner is false', () => {
+      component.rdPartnersSE.partnersBody.no_applicable_partner = false;
+      component.updateLeadData();
+      expect(component.rdPartnersSE.disableLeadPartner).toBe(false);
+    });
+  });
 });

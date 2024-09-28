@@ -4,7 +4,11 @@
 <div [ngSwitch]="this.rolesSE.readOnly">
   <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
   <div *ngSwitchCase="false">
-    <app-pr-checkbox label="This section is not applicable." [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"> </app-pr-checkbox>
+    <app-pr-checkbox
+      label="This section is not applicable."
+      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+      (selectOptionEvent)="this.updateLeadData()">
+    </app-pr-checkbox>
   </div>
 </div>
 <app-alert-status
