@@ -83,7 +83,7 @@ export class SubmissionsService {
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      this.sentNotification(
+      await this.sentNotification(
         result,
         user,
         NotificationLevelEnum.RESULT,
@@ -158,7 +158,7 @@ export class SubmissionsService {
           result.id,
         );
 
-      this.sentNotification(
+      await this.sentNotification(
         result,
         user,
         NotificationLevelEnum.RESULT,
@@ -226,7 +226,7 @@ export class SubmissionsService {
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      this.sentNotification(
+      await this.sentNotification(
         result,
         user,
         NotificationLevelEnum.RESULT,
@@ -295,7 +295,7 @@ export class SubmissionsService {
           result.id,
         );
 
-      this.sentNotification(
+      await this.sentNotification(
         result,
         user,
         NotificationLevelEnum.RESULT,
@@ -323,7 +323,7 @@ export class SubmissionsService {
   ) {
     const recipients =
       await this._userNotificationSettingsService.getNotificationUpdatesRecipients(
-        result.initiative_id,
+        result,
       );
 
     const saveNotification =

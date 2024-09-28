@@ -9,6 +9,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { UserNotificationSetting } from './entities/user-notification-settings.entity';
 import { In } from 'typeorm';
+import { ResultRepository } from '../results/result.repository';
 
 @Injectable()
 export class UserNotificationSettingsService {
@@ -19,6 +20,7 @@ export class UserNotificationSettingsService {
     private readonly _userNotificationSettingRepository: UserNotificationSettingRepository,
     private readonly _clarisaInitiativeRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _resultRepository: ResultRepository,
   ) {}
 
   private async verifyUserExists(userId: number): Promise<User | null> {
@@ -142,15 +144,19 @@ export class UserNotificationSettingsService {
   ) {
     try {
       const userExists = await this.verifyUserExists(user.id);
+      if (!userExists) {
+        return {
+          response: null,
+          message: 'User not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       for (const us of userNotificationSettingDto) {
         const initExists = await this.verifyInitiativeExists(us.initiative_id);
 
-        if (!userExists || !initExists) {
-          return {
-            response: null,
-            message: 'User or Initiative not found',
-            status: HttpStatus.NOT_FOUND,
-          };
+        if (!initExists) {
+          continue;
         }
 
         const isUserInInitiative = await this.verifyUserInit(
@@ -159,11 +165,7 @@ export class UserNotificationSettingsService {
         );
 
         if (!isUserInInitiative) {
-          return {
-            response: null,
-            message: 'User is not part of the Initiative',
-            status: HttpStatus.NOT_FOUND,
-          };
+          continue;
         }
 
         const userNotificationSettings: UserNotificationSetting =
@@ -224,26 +226,60 @@ export class UserNotificationSettingsService {
     }
   }
 
-  async getNotificationUpdatesRecipients(
-    initiativeId: number,
-  ): Promise<number[]> {
-    const initMembers = await this._roleByUserRepository.find({
-      relations: {
-        obj_user: {
-          obj_user_notification_setting: true,
-        },
-      },
-      where: {
-        initiative_id: initiativeId,
-        role: In([3, 4, 5]),
-        active: true,
-        obj_user: {
-          obj_user_notification_setting: {
-            email_notifications_updates_enabled: true,
+  async getNotificationUpdatesRecipients(result: any): Promise<number[]> {
+    try {
+      const initContributing = await this._resultRepository.find({
+        select: {
+          id: true,
+          obj_result_by_initiatives: {
+            initiative_id: true,
           },
         },
-      },
-    });
-    return initMembers.map((m) => m.obj_user.id);
+        relations: {
+          obj_result_by_initiatives: true,
+        },
+        where: {
+          id: result.id,
+          obj_result_by_initiatives: {
+            initiative_role_id: 2,
+            is_active: true,
+          },
+        },
+      });
+
+      const initiativeIds = initContributing.flatMap((r) =>
+        r.obj_result_by_initiatives.map((i) => i.initiative_id),
+      );
+
+      if (initiativeIds.length === 0) {
+        return [];
+      }
+
+      const initMembers = await this._roleByUserRepository.find({
+        relations: {
+          obj_user: {
+            obj_user_notification_setting: true,
+          },
+        },
+        where: {
+          initiative_id: In(initiativeIds),
+          role: In([3, 4, 5]),
+          active: true,
+          obj_user: {
+            obj_user_notification_setting: {
+              email_notifications_updates_enabled: true,
+            },
+          },
+        },
+      });
+
+      return initMembers.map((m) => m.obj_user.id);
+    } catch (error) {
+      this._logger.error(
+        'Error retrieving notification update recipients',
+        error,
+      );
+      throw new Error('Failed to get notification update recipients');
+    }
   }
 }

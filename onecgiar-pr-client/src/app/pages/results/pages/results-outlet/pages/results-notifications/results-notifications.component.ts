@@ -25,10 +25,6 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.getAllPhases();
     if (this.api.rolesSE.isAdmin) this.GET_AllInitiatives();
-    this.api.updateUserData(() => {
-      this.resultsNotificationsSE.get_section_information();
-      this.resultsNotificationsSE.get_sent_notifications();
-    });
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
   }

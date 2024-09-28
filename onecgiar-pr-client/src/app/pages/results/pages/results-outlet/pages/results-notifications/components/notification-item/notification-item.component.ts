@@ -18,13 +18,7 @@ export class NotificationItemComponent {
   constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
 
   invalidateRequest() {
-    return (
-      this.requestingAccept ||
-      this.requestingReject ||
-      this.api.rolesSE.platformIsClosed ||
-      this.isQAed ||
-      !this.notification?.obj_result?.obj_version?.status
-    );
+    return this.requestingAccept || this.requestingReject || this.api.rolesSE.platformIsClosed || this.isQAed;
   }
 
   mapAndAccept(notification) {

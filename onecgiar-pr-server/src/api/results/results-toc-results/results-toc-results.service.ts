@@ -120,6 +120,7 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
+            user,
           );
         }
 
@@ -148,6 +149,7 @@ export class ResultsTocResultsService {
             contributingInit,
             result_id,
             initSubmitter.initiative_id,
+            user,
           );
         }
       }
@@ -849,6 +851,7 @@ export class ResultsTocResultsService {
     contributingInit: number[],
     result_id: number,
     initSubmitter: number,
+    user: TokenDto,
   ) {
     for (const init of contributingInit) {
       const [initOwner, result, initContributing, initMembers] =
@@ -913,13 +916,14 @@ export class ResultsTocResultsService {
           result,
           initOwner,
           pcuEmail: pcuEmail.value,
+          user,
         },
       );
 
       const handle = Handlebars.compile(template.template);
 
       const email: ConfigMessageDto = {
-        from: { email: env.EMAIL_SENDER, name: 'Reporting tool -' },
+        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
         emailBody: {
           subject: emailData.subject,
           to,

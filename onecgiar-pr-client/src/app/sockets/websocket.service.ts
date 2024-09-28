@@ -5,17 +5,17 @@ import { User } from './classes/User';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../shared/services/api/api.service';
 import { ResultsNotificationsService } from '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-// import { CacheService } from '../services/cache.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WebsocketService {
-  // cache = inject(CacheService);
-  // socket = inject(Socket);
+  platform = environment.production ? 'PRMS-PROD' : 'PRMS-TEST';
+  webSocketUrl = environment.webSocketUrl;
+
   socket = new Socket({
-    // url: 'https://gvtpm71c-3005.use.devtunnels.ms/', options: {}
-    url: 'https://fork-au-one-cgiar-microservices-production.up.railway.app/',
+    url: this.webSocketUrl,
     options: {}
   });
 
@@ -35,9 +35,7 @@ export class WebsocketService {
     this.getNotifications();
     this.getConnectedUsers();
     this.getAlerts();
-    if (this.api.authSE?.localStorageUser?.user_name) {
-      this.configUser(this.api.authSE.localStorageUser.user_name, this.api.authSE.localStorageUser.id);
-    }
+    this.configUser(this.api?.authSE?.localStorageUser?.user_name, this.api?.authSE?.localStorageUser?.id);
   }
 
   checkStatus() {
@@ -60,7 +58,7 @@ export class WebsocketService {
 
   configUser(name: string, userId: number) {
     return new Promise((resolve, reject) => {
-      this.emit('config-user', { name, userId }, (resp: any) => {
+      this.emit('config-user', { name, userId, platform: this.platform }, (resp: any) => {
         this.user = new User(name, userId);
         resolve(null);
       });
@@ -84,27 +82,31 @@ export class WebsocketService {
   }
 
   getConnectedUsers() {
-    this.listen('all-connected-users').subscribe(resp => {
+    this.listen(`all-connected-users-${this.platform}`).subscribe(resp => {
       this.userList.set(resp);
     });
   }
 
   getAlerts() {
-    this.listen('alert').subscribe((msg: any) => {
+    this.listen(`alert-${this.platform}`).subscribe((msg: any) => {
       alert(msg.text);
     });
   }
 
   getNotifications() {
-    this.listen('notifications').subscribe((msg: { result: any; title: string; desc: string }) => {
+    this.listen(`notifications`).subscribe((msg: { result: any; title: string; desc: string }) => {
       this.showToast1(msg);
-      this.resultsNotificationsService.updatesPopUpData.push(msg.result);
-      this.resultsNotificationsService.get_updates_notifications();
+      this.resultsNotificationsService.updatesPopUpData.unshift(msg.result);
+
+      if (!msg?.result?.notification_id) {
+        this.resultsNotificationsService.get_section_information();
+      } else {
+        this.resultsNotificationsService.get_updates_notifications();
+      }
     });
   }
 
   showToast1(msg) {
-    this.messageService.clear();
     this.messageService.add({ key: 'globalUserNotification', severity: 'info', summary: msg.title, detail: msg.desc });
   }
 }

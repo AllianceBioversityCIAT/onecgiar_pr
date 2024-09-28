@@ -11,8 +11,6 @@ export class ReceivedRequestsComponent implements OnInit {
   constructor(public api: ApiService, public resultsNotificationsSE: ResultsNotificationsService) {}
 
   ngOnInit(): void {
-    this.api.updateUserData(() => {
-      this.resultsNotificationsSE.get_section_information();
-    });
+    this.resultsNotificationsSE.get_section_information();
   }
 }

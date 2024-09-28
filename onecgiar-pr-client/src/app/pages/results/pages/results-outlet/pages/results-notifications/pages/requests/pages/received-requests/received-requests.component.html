@@ -1,76 +1,41 @@
+@let receivedContributionsPending =
+  this.resultsNotificationsSE?.receivedData.receivedContributionsPending
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+
+@let receivedContributionsDone =
+  this.resultsNotificationsSE?.receivedData.receivedContributionsDone
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+
 <div class="received_container">
   <div class="received_container_content">
     <h1 class="received_container_header_title">Pending</h1>
 
-    <div
-      class="received_container_content_item"
-      *ngIf="
-        (
-          this.resultsNotificationsSE?.receivedData.receivedContributionsPending
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        ).length > 0
-      ">
-      <app-notification-item
-        *ngFor="
-          let notification of this.resultsNotificationsSE?.receivedData.receivedContributionsPending
-            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        "
-        [notification]="notification"
-        (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
-    </div>
-
-    <div
-      class="received_container_content_empty"
-      *ngIf="
-        !(
-          this.resultsNotificationsSE?.receivedData.receivedContributionsPending
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        ).length
-      ">
-      You have no pending notifications related with the search.
-    </div>
+    @if (receivedContributionsPending.length > 0) {
+      <div class="received_container_content_item">
+        @for (item of receivedContributionsPending; track $index) {
+          <app-notification-item [notification]="item" (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
+        }
+      </div>
+    } @else {
+      <div class="received_container_content_empty">You have no pending notifications related with the search.</div>
+    }
   </div>
 
   <div class="received_container_content">
     <h1 class="received_container_header_title">Done</h1>
 
-    <div
-      class="received_container_content_item"
-      *ngIf="
-        (
-          this.resultsNotificationsSE?.receivedData.receivedContributionsDone
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        ).length > 0
-      ">
-      <app-notification-item
-        *ngFor="
-          let notification of this.resultsNotificationsSE?.receivedData.receivedContributionsDone
-            | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-            | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-            | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        "
-        [notification]="notification"></app-notification-item>
-    </div>
-
-    <div
-      class="received_container_content_empty"
-      *ngIf="
-        !(
-          this.resultsNotificationsSE?.receivedData.receivedContributionsDone
-          | filterNotificationByInitiative : this.resultsNotificationsSE.initiativeIdFilter
-          | filterNotificationByPhase : this.resultsNotificationsSE.phaseFilter
-          | appFilterNotificationBySearch : this.resultsNotificationsSE.searchFilter
-        ).length
-      ">
-      You have no done notifications related with the search.
-    </div>
+    @if (receivedContributionsDone.length > 0) {
+      <div class="received_container_content_item">
+        @for (item of receivedContributionsDone; track $index) {
+          <app-notification-item [notification]="item"></app-notification-item>
+        }
+      </div>
+    } @else {
+      <div class="received_container_content_empty">You have no done notifications related with the search.</div>
+    }
   </div>
 </div>

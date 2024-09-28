@@ -5,9 +5,7 @@ import { NotificationDto } from './dto/create-socket.dto';
 @Injectable()
 export class SocketManagementService implements OnModuleInit {
   private readonly _logger = new Logger(SocketManagementService.name);
-  private readonly url =
-    env.SOCKET_URL ||
-    'https://fork-au-one-cgiar-microservices-production.up.railway.app';
+  private readonly url = env.SOCKET_URL;
 
   async onModuleInit() {
     try {
@@ -21,7 +19,9 @@ export class SocketManagementService implements OnModuleInit {
 
   async getActiveUsers() {
     try {
-      const response = await fetch(`${this.url}/socket/users`);
+      const response = await fetch(
+        `${this.url}/socket/users/${this.environmentCheck()}`,
+      );
       const data = await response.json();
 
       return {
@@ -40,7 +40,7 @@ export class SocketManagementService implements OnModuleInit {
   }
 
   async sendNotificationToUsers(
-    userIds: number[],
+    userIds: string[],
     notification: NotificationDto,
   ) {
     try {
@@ -59,7 +59,7 @@ export class SocketManagementService implements OnModuleInit {
         },
         body: JSON.stringify({
           userIds,
-          platformPrefix: 'PRMS',
+          platform: this.environmentCheck(),
           notification,
         }),
       });
@@ -77,6 +77,14 @@ export class SocketManagementService implements OnModuleInit {
         message: 'AN error occurred while sending notification',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
+    }
+  }
+
+  private environmentCheck() {
+    if (process.env.IS_PRODUCTION === 'true') {
+      return 'PRMS-PROD';
+    } else {
+      return 'PRMS-TEST';
     }
   }
 }
