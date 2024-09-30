@@ -69,15 +69,17 @@
 
     <div class="overlay_panel_separator" [ngStyle]="{ 'margin-bottom': unreadNotifications.length > 0 && '0' }"></div>
 
-    <p class="no_notifications" *ngIf="unreadNotifications.length === 0">
-      You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
-    </p>
-
-    <div class="notifications_list" *ngIf="unreadNotifications.length > 0">
-      <div class="notification" *ngFor="let notification of unreadNotifications">
-        <app-pop-up-notification-item [notification]="notification"></app-pop-up-notification-item>
+    @if (unreadNotifications.length === 0) {
+      <p class="no_notifications">
+        You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
+      </p>
+    } @else {
+      <div class="notifications_list">
+        @for (notification of unreadNotifications; track $index) {
+          <app-pop-up-notification-item [notification]="notification" (click)="popover.toggle()"></app-pop-up-notification-item>
+        }
       </div>
-    </div>
+    }
 
     <div class="overlay_panel_separator" *ngIf="unreadNotifications.length === 0"></div>
 

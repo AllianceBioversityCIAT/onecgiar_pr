@@ -19,7 +19,7 @@ export class HeaderPanelComponent implements OnInit {
     public api: ApiService,
     public dataControlSE: DataControlService,
     public globalLinksSE: GlobalLinksService,
-    private router: Router,
+    public router: Router,
     public resultsNotificationsSE: ResultsNotificationsService
   ) {}
 

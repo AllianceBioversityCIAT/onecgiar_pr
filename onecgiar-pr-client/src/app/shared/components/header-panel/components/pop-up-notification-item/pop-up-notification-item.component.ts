@@ -22,6 +22,21 @@ export class PopUpNotificationItemComponent {
     return `The result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} was successfully Quality Assessed.`;
   }
 
+  generateUrlLink(notification) {
+    const baseUrl = 'result/results-outlet/results-notifications';
+    const versionId = notification?.obj_result?.obj_version?.id;
+
+    if (!!notification?.notification_id) {
+      const updateInitId = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.id;
+
+      return `${baseUrl}/updates?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
+    } else {
+      const requestInitId = notification?.is_map_to_toc ? notification?.obj_owner_initiative?.id : notification?.obj_shared_inititiative?.id;
+
+      return `${baseUrl}/requests/received?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
+    }
+  }
+
   generateNotificationTextRequest(notification) {
     return `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} - ${notification?.obj_shared_inititiative?.official_code} - ${notification?.obj_owner_initiative?.official_code}`;
   }
