@@ -115,7 +115,8 @@ describe('StepN1Component', () => {
         getAllInnoPaRelevantCountry: () => of({ response: [] }),
         getAllInnoPaRegionalLeadership: () => of({ response: [] }),
         getAllInnoPaRegionalIntegrated: () => of({ response: [] }),
-        getAllInnoPaActiveBackstopping: () => of({ response: [] })
+        getAllInnoPaActiveBackstopping: () => of({ response: [] }),
+        GETInnovationPathwayByRiId: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
@@ -379,5 +380,65 @@ describe('StepN1Component', () => {
 
       expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is true', () => {
+    const list = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const attr = 'id';
+    component.api.rolesSE.readOnly = true;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is false and item.is_active is true', () => {
+    const list = [{ is_active: true }, { is_active: true }, { is_active: true }];
+    const attr = 'is_active';
+    component.api.rolesSE.readOnly = false;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
+    component.ipsrStep3Body = {
+      result_innovation_package: {
+        is_expert_workshop_organized: true
+      }
+    } as any;
+    const result = component.cleanEvidence();
+    expect(result).toBeUndefined();
+  });
+
+  it('should set readiness_level_evidence_based and use_level_evidence_based  to null if is_expert_workshop_organized is false on cleanEvidence', () => {
+    component.ipsrStep3Body = {
+      result_innovation_package: {
+        is_expert_workshop_organized: false
+      }
+    } as any;
+    component.cleanEvidence();
+    expect(component.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based).toBeNull();
+    expect(component.ipsrStep3Body.result_innovation_package.use_level_evidence_based).toBeNull();
+  });
+
+  it('should return expected string on workshopDescription', () => {
+    const result = component.workshopDescription();
+    expect(result).toBe(
+      'A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>'
+    );
+  });
+
+  it('should add expert to result_ip_expert_workshop_organized when addExpert has been called', () => {
+    component.ipsrStep3Body = {
+      result_ip_expert_workshop_organized: []
+    } as any;
+    component.addExpert();
+    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
+  });
+
+  it('should remove the item at the given index from result_ip_expert_workshop_organized when delete has been called', () => {
+    component.ipsrStep3Body = {
+      result_ip_expert_workshop_organized: [{}, {}, {}]
+    } as any;
+    component.deleteExpert(1);
+    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(2);
   });
 });

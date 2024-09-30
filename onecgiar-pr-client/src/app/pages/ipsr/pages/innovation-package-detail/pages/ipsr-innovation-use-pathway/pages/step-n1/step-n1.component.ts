@@ -4,6 +4,7 @@ import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from 
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
+import { ActorN3, expert_workshop_organized, IpsrStep3Body, OrganizationN3 } from '../step-n3/model/Ipsr-step-3-body.model';
 
 @Component({
   selector: 'app-step-n1',
@@ -12,15 +13,60 @@ import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum
 })
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
+
   coreResult = new CoreResult();
+
+  // NUEVO
+  ipsrStep3Body = new IpsrStep3Body();
+  radioOptions = [
+    { id: true, name: 'Yes, an expert workshop was organized' },
+    { id: false, name: 'No expert workshop was organized' }
+  ];
+  result_core_innovation: any;
+
+  // NUEVO
 
   constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.getSectionInformationStep3(); //nuevo
     this.requestEvent();
     this.api.dataControlSE.detailSectionTitle('Step 1');
   }
+
+  // Nuevo
+  getSectionInformationStep3() {
+    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
+      this.ipsrStep3Body = response;
+
+      this.result_core_innovation = response.result_core_innovation;
+
+      if (this.ipsrStep3Body?.result_ip_expert_workshop_organized?.length === 0) {
+        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+      }
+    });
+  }
+
+  cleanEvidence() {
+    if (this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true) return;
+    this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based = null;
+    this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
+  }
+  hasElementsWithId(list, attr) {
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
+    return finalList.length;
+  }
+  addExpert() {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+  }
+  workshopDescription() {
+    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
+  }
+  deleteExpert(index: number): void {
+    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index, 1);
+  }
+  // Nuevo
 
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {

@@ -1,75 +1,70 @@
 <div class="step_sub_section">
-    <div class="ipsr-sub-title">Innovation Packaging Experts</div>
-    <app-pr-field-header
-        label="Identify a diverse group of public/ private experts that need to be engaged in Innovation Package design and Scaling Readiness assessment"></app-pr-field-header>
-    <app-alert-status *ngIf="!this.rolesSE.readOnly"
-        description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-    </app-alert-status>
-    <app-pr-field-header description="{{narrativeActors()}}"></app-pr-field-header>
-    <div class="step_divider"></div>
+  <div class="ipsr-sub-title">Innovation Packaging Experts</div>
 
-    <div class="experts">
+  <app-pr-field-header
+    label="Identify a diverse group of public/ private experts that need to be engaged in Innovation Package design and Scaling Readiness assessment"></app-pr-field-header>
 
-        <div *ngFor="let expert of this.body.experts" appYmzListStructureItem (deleteEvent)="expert.is_active = false"
-            [ngClass]="{'hideElement': expert.is_active == false|| (!this.expert?.result_ip_expert_id && this.rolesSE.readOnly)}">
-            <div class="component_fields two_elements_grid">
-                <div>
-                    <div class="two_elements_grid">
-                        <app-pr-input placeholder="Enter text" label="First name" type="text"
-                            [(ngModel)]="this.expert.first_name">
-                        </app-pr-input>
-                        <app-pr-input placeholder="Enter text" label="Last name" type="text"
-                            [(ngModel)]="this.expert.last_name">
-                        </app-pr-input>
-                    </div>
-                    <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization"
-                        optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization"
-                        [(ngModel)]="this.expert.organization_id" [required]="false">
-                    </app-pr-select>
-                </div>
-                <div>
-                    <app-pr-input placeholder="Enter text" label="Email" type="text" [required]="false"
-                        [(ngModel)]="this.expert.email">
-                    </app-pr-input>
+  <app-alert-status
+    *ngIf="!this.rolesSE.readOnly"
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+  </app-alert-status>
 
-                    <app-pr-multi-select [logicalDeletion]="true" label="What expertises will this expert contribute?"
-                        description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop."
-                        [options]="this.expertisesList" optionLabel="name" optionValue="expertises_id"
-                        selectedLabel="Expertises(s) selected" placeholder="Select expertises"
-                        selectedOptionLabel="name" [(ngModel)]="this.expert.expertises">
-                    </app-pr-multi-select>
+  <app-pr-field-header [description]="narrativeActors()"></app-pr-field-header>
 
-                    <div appFeedbackValidation labelText="What expertises will this expert contribute?"
-                        [isComplete]="!!this.expert.expertises?.length">
-                    </div>
-                    <!-- <app-pr-multi-select *ngIf="body.geo_scope_id == 2" [options]="this.regionsCountriesSE.regionsList"
-                    [description]="selectRegionsDescription" label="Select regions" selectedLabel="Regions(s) selected"
-                    selectedOptionLabel="name" optionLabel="name" optionValue="id" placeholder="Select regions"
-                    [(ngModel)]="body.regions">
-                </app-pr-multi-select> -->
+  <div class="step_divider"></div>
 
+  <div class="experts">
+    <div
+      *ngFor="let expert of this.body.experts"
+      appYmzListStructureItem
+      (deleteEvent)="expert.is_active = false"
+      [ngClass]="{ hideElement: expert.is_active == false || (!this.expert?.result_ip_expert_id && this.rolesSE.readOnly) }">
+      <div class="component_fields two_elements_grid">
+        <app-pr-select
+          [options]="this.institutionsSE.institutionsList"
+          label="Organization"
+          optionLabel="full_name"
+          optionValue="institutions_id"
+          placeholder="Select organization"
+          [(ngModel)]="this.expert.organization_id"
+          [required]="false">
+        </app-pr-select>
 
+        <app-pr-multi-select
+          [logicalDeletion]="true"
+          label="What expertises will this expert contribute?"
+          description="To design a realistic innovation package, the engagement of a diverse group of experts is recommended. Please consider the following scaling expertises when developing the invitee list for the innovation packaging and scaling readiness assessment workshop."
+          [options]="this.expertisesList"
+          optionLabel="name"
+          optionValue="expertises_id"
+          selectedLabel="Expertises(s) selected"
+          placeholder="Select expertises"
+          selectedOptionLabel="name"
+          [(ngModel)]="this.expert.expertises">
+        </app-pr-multi-select>
 
-                </div>
-            </div>
-            <div class="fragment_section_divider"></div>
-
-        </div>
+        <div appFeedbackValidation labelText="What expertises will this expert contribute?" [isComplete]="!!this.expert.expertises?.length"></div>
+      </div>
+      <div class="fragment_section_divider"></div>
     </div>
+  </div>
 
-    <app-no-data-text *ngIf="!hasElementsWithId(this.body.experts,'result_ip_expert_id')"
-        title="No experts provided"></app-no-data-text>
-    <app-add-button name="Add expert" *ngIf="!this.rolesSE.readOnly" (clickEvent)="addExpert()"></app-add-button>
+  <app-no-data-text *ngIf="!hasElementsWithId(this.body.experts, 'result_ip_expert_id')" title="No experts provided"></app-no-data-text>
+  <app-add-button name="Add expert" *ngIf="!this.rolesSE.readOnly" (clickEvent)="addExpert()"></app-add-button>
 
+  <app-pr-radio-button
+    label="Engaging a diverse group of experts leads to better and more realistic innovation package design and assessment. Please confirm that the above list of experts is diverse in gender, age, disciplinary and cultural background, organizational affiliation and typology, etc."
+    [options]="this.engagingOptions"
+    optionLabel="name"
+    optionValue="id"
+    [(ngModel)]="this.body.result_ip.experts_is_diverse">
+  </app-pr-radio-button>
 
-    <app-pr-radio-button
-        label="Engaging a diverse group of experts leads to better and more realistic innovation package design and assessment. Please confirm that the above list of experts is diverse in gender, age, disciplinary and cultural background, organizational affiliation and typology, etc."
-        [options]="this.engagingOptions" optionLabel="name" optionValue="id"
-        [(ngModel)]="this.body.result_ip.experts_is_diverse">
-    </app-pr-radio-button>
-    <br>
-    <app-pr-textarea *ngIf="this.body.result_ip.experts_is_diverse === false" placeholder="Enter text" type="text"
-        [(ngModel)]="this.body.result_ip.is_not_diverse_justification"></app-pr-textarea>
+  <br />
 
-    <!-- <div class="step_divider"></div> -->
+  <app-pr-textarea
+    *ngIf="this.body.result_ip.experts_is_diverse === false"
+    placeholder="Enter text"
+    type="text"
+    [(ngModel)]="this.body.result_ip.is_not_diverse_justification"></app-pr-textarea>
 </div>

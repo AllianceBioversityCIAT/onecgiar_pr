@@ -1,4 +1,3 @@
-/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
@@ -14,10 +13,6 @@ export class StepN3Component implements OnInit {
   rangesOptions = [];
   ipsrStep3Body = new IpsrStep3Body();
   innovationUseList = [];
-  radioOptions = [
-    { id: true, name: 'Yes, an expert workshop was organized' },
-    { id: false, name: 'No expert workshop was organized' }
-  ];
   result_core_innovation: any;
   innoUseLevel: number;
   rangeLevel2Required = true;
@@ -29,11 +24,6 @@ export class StepN3Component implements OnInit {
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('Step 3');
-  }
-
-  hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
-    return finalList.length;
   }
 
   openClosed(response) {
@@ -151,25 +141,8 @@ export class StepN3Component implements OnInit {
       }
     });
   }
-  cleanEvidence() {
-    if (this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true) return;
-    this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based = null;
-    this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
-  }
 
   resultUrl(resultCode, phase) {
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
-  }
-
-  workshopDescription() {
-    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
-  }
-
-  addExpert() {
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
-  }
-
-  delete(index) {
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index, 1);
   }
 }
