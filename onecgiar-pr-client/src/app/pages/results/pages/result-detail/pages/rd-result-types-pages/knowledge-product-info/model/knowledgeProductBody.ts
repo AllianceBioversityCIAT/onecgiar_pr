@@ -1,15 +1,11 @@
 export class KnowledgeProductBody {
   id: string;
-  //accessible: number;
   commodity?: any;
   description: string;
-  //findable: number;
   handle: string;
-  //interoperable: number;
   licence: string;
   title: string;
   references_other_knowledge_products?: any;
-  //reusable: number;
   sponsor?: any;
   type: string;
   authors: Author[];
@@ -40,7 +36,7 @@ interface Institution {
 
 interface Metadatum {
   source: string;
-  accessibility: boolean;
+  accessibility: string | boolean;
   doi?: any;
   is_isi: boolean;
   is_peer_reviewed: boolean;
