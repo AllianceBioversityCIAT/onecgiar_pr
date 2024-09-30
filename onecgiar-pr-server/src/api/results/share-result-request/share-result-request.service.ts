@@ -568,7 +568,7 @@ export class ShareResultRequestService {
         role !== 1
           ? {
               ...commonConditions,
-              shared_inititiative_id: In(sharedInitiativeIds),
+              shared_inititiative_id: In(sharedInitiativeIds), 
             }
           : commonConditions,
       pendingShared:
@@ -576,6 +576,7 @@ export class ShareResultRequestService {
           ? {
               ...commonConditions,
               owner_initiative_id: In(sharedInitiativeIds),
+              is_map_to_toc: true,
             }
           : commonConditions,
       done: {
