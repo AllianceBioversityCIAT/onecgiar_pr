@@ -10,19 +10,17 @@ export class SaveStepFour {
   bilateral_expected_investment: BilateralExpectedInvestment[];
   bilateral_unit_time_id: number;
   bilateral_expected_time: string;
-  institutions_expected_investment: institutionsFour[];
+  institutions_expected_investment: InstitutionsFour[];
   partner_unit_time_id: number;
   partner_expected_time: string;
-  is_result_ip_published: boolean;
-  ipsr_pdf_report: string;
 }
 
-export interface institutionsFour {
-  institution: institutionsInterface;
+export interface InstitutionsFour {
+  institution: InstitutionsInterface;
   budget: ResultInstitutionsBudget[];
 }
 
-export class institutionsInterface extends PartialType(ResultsByInstitution) {
+export class InstitutionsInterface extends PartialType(ResultsByInstitution) {
   deliveries?: number[];
 }
 

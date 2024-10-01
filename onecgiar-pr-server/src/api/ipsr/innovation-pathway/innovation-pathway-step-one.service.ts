@@ -1,10 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
-import {
-  HandlersError,
-  ReturnResponse,
-} from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../shared/handlers/error.utils';
 import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
@@ -23,18 +20,15 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultIpSdgTargetRepository } from './repository/result-ip-sdg-targets.repository';
-import { ResultIpSdgTargets } from './entities/result-ip-sdg-targets.entity';
 import { ResultIpEoiOutcomeRepository } from './repository/result-ip-eoi-outcomes.repository';
 import { ResultIpEoiOutcome } from './entities/result-ip-eoi-outcome.entity';
 import { ResultIpAAOutcomeRepository } from './repository/result-ip-action-area-outcome.repository';
-import { ResultIpAAOutcome } from './entities/result-ip-action-area-outcome.entity';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../result-ip-measures/result-ip-measures.repository';
 import { ResultIpMeasure } from '../result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpImpactAreaRepository } from './repository/result-ip-impact-area-targets.repository';
-import { ResultIpImpactArea } from './entities/result-ip-impact-area.entity';
 import { ResultInnovationPackage } from '../result-innovation-package/entities/result-innovation-package.entity';
 import { ResultByInstitutionsByDeliveriesType } from 'src/api/results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { In, IsNull } from 'typeorm';
@@ -49,6 +43,9 @@ import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 import { ResultInnovationPackageService } from '../result-innovation-package/result-innovation-package.service';
+import { InnovationPathwayStepThreeService } from './innovation-pathway-step-three.service';
+import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip-expert-workshop-organized.repository';
+import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
 @Injectable()
 export class InnovationPathwayStepOneService {
@@ -75,10 +72,12 @@ export class InnovationPathwayStepOneService {
     protected readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     protected readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     protected readonly _resultIpExpertisesRepository: ResultIpExpertisesRepository,
-    private readonly _versioningService: VersioningService,
-    private readonly _returnResponse: ReturnResponse,
+    protected readonly _versioningService: VersioningService,
     protected readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
-    private $_resultInnovationPackageService: ResultInnovationPackageService,
+    protected readonly _resultInnovationPackageService: ResultInnovationPackageService,
+    protected readonly _stepThreeService: InnovationPathwayStepThreeService,
+    protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
+    protected readonly _evidenceRepository: EvidencesRepository,
   ) {}
 
   async getStepOne(resultId: number) {
@@ -118,18 +117,6 @@ export class InnovationPathwayStepOneService {
         await this._resultIpEoiOutcomes.getEoiOutcomes(
           resultByInnovationPackageId.result_by_innovation_package_id,
         );
-      const actionAreaOutcomes: ResultIpAAOutcome[] =
-        await this._resultIpAAOutcomes.getAAOutcomes(
-          resultByInnovationPackageId.result_by_innovation_package_id,
-        );
-      const impactAreas: ResultIpImpactArea[] =
-        await this._resultIpImpactAreasRepository.getImpactAreas(
-          resultByInnovationPackageId.result_by_innovation_package_id,
-        );
-      const sdgTargets: ResultIpSdgTargets[] =
-        await this._resultIpSdgsTargetsRepository.getSdgs(
-          resultByInnovationPackageId.result_by_innovation_package_id,
-        );
       const resultInnovationPackage: ResultInnovationPackage[] =
         await this._resultInnovationPackageRepository.findBy({
           result_innovation_package_id: resultId,
@@ -141,10 +128,10 @@ export class InnovationPathwayStepOneService {
           5,
         );
       const deliveries: ResultByInstitutionsByDeliveriesType[] =
-        await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+        await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
           institutions?.map((el) => el.id),
         );
-      institutions?.map((int) => {
+      institutions?.forEach((int) => {
         int['deliveries'] = deliveries
           ?.filter((del) => del.result_by_institution_id == int.id)
           .map((del) => del.partner_delivery_type_id);
@@ -167,13 +154,13 @@ export class InnovationPathwayStepOneService {
           },
         });
 
-      countries.map((el) => {
+      countries.forEach((el) => {
         el['sub_national'] = sub_national_counties
           .filter((seb) => seb.result_country_id == el.result_country_id)
           .map((el) => el.clarisa_subnational_scope_object);
       });
 
-      experts.map(async (el) => {
+      experts.forEach(async (el) => {
         el.expertises = await this._resultIpExpertisesRepository.find({
           where: {
             result_ip_expert_id: el.result_ip_expert_id,
@@ -188,7 +175,7 @@ export class InnovationPathwayStepOneService {
         where: { result_id: result.id, is_active: true },
         relations: { obj_actor_type: true },
       });
-      actorsData.map((el) => {
+      actorsData.forEach((el) => {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
@@ -277,8 +264,37 @@ export class InnovationPathwayStepOneService {
         },
       );
 
+      const link_workshop_list = await this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 5,
+        },
+      });
+
+      const result_ip_expert_workshop_organized =
+        await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+
+      const result_core = await this._innovationByResultRepository.findOne({
+        where: {
+          ipsr_role_id: 1,
+          result_innovation_package_id: result_ip.result_innovation_package_id,
+          is_active: true,
+        },
+        relations: [
+          'obj_result',
+          'obj_readiness_level_evidence_based',
+          'obj_use_level_evidence_based',
+        ],
+      });
+
       return {
-        response: await {
+        response: {
           result_id: result.id,
           scalig_ambition,
           geo_scope_id,
@@ -291,10 +307,10 @@ export class InnovationPathwayStepOneService {
           regions,
           countries,
           eoiOutcomes,
-          actionAreaOutcomes,
-          impactAreas,
-          sdgTargets,
           resultInnovationPackage,
+          result_ip_expert_workshop_organized,
+          link_workshop_list: link_workshop_list?.link,
+          result_ip_result_core: result_core,
         },
         message: 'Result data',
         status: HttpStatus.OK,
@@ -462,11 +478,7 @@ export class InnovationPathwayStepOneService {
       });
       // * Validate if the query incoming empty
       if (!result) {
-        throw {
-          response: result,
-          message: 'The result was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found');
       }
 
       const version = await this._versioningService.$_findActivePhase(
@@ -485,27 +497,8 @@ export class InnovationPathwayStepOneService {
           UpdateInnovationPathwayDto,
           user,
         );
-      const actionAreaOutcomes = await this.saveActionAreaOutcomes(
-        result,
-        version,
-        UpdateInnovationPathwayDto,
-        user,
-      );
-      const impactAreas = await this.saveImpactAreas(
-        result,
-        version,
-        UpdateInnovationPathwayDto,
-        user,
-      );
-      const sdgTargets = await this.saveSdgTargets(
-        result,
-        version,
-        UpdateInnovationPathwayDto,
-        user,
-      );
       const experts = await this.saveInnovationPackagingExperts(
         result,
-        version,
         user,
         UpdateInnovationPathwayDto,
       );
@@ -533,17 +526,38 @@ export class InnovationPathwayStepOneService {
         user,
       );
 
+      const result_ip = UpdateInnovationPathwayDto.result_ip;
+
+      await this._resultInnovationPackageRepository.update(
+        result_ip.result_innovation_package_id,
+        {
+          is_expert_workshop_organized: result_ip.is_expert_workshop_organized,
+          readiness_level_evidence_based:
+            result_ip.readiness_level_evidence_based,
+          use_level_evidence_based: result_ip.use_level_evidence_based,
+          assessed_during_expert_workshop_id:
+            result_ip?.is_expert_workshop_organized
+              ? result_ip.assessed_during_expert_workshop_id
+              : null,
+          last_updated_by: user.id,
+        },
+      );
+
+      const saveInnivationWorkshop = await this._stepThreeService.saveWorkshop(
+        resultId,
+        user,
+        UpdateInnovationPathwayDto,
+      );
+
       return {
         response: [
           specifyAspiredOutcomesAndImpact,
-          actionAreaOutcomes,
-          impactAreas,
-          sdgTargets,
           experts,
           consensus,
           partners,
           innovationUse,
           geoScope,
+          saveInnivationWorkshop,
         ],
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
@@ -643,7 +657,7 @@ export class InnovationPathwayStepOneService {
             newInnovationCountries.push(newRc);
 
             if (geoScopeId === 5 && ct?.sub_national?.length) {
-              await this.$_resultInnovationPackageService.saveSubNational(
+              await this._resultInnovationPackageService.saveSubNational(
                 newRc.result_country_id,
                 ct.sub_national,
                 user,
@@ -752,237 +766,24 @@ export class InnovationPathwayStepOneService {
     }
   }
 
-  async saveActionAreaOutcomes(
-    result: any,
-    version: Version,
-    UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
-    user: TokenDto,
-  ) {
-    const id = result.id;
-    try {
-      const resultByInnovationPackageId =
-        await this._innovationByResultRepository.findOneBy({
-          result_innovation_package_id: id,
-        });
-      const result_by_innovation_package_id =
-        resultByInnovationPackageId.result_by_innovation_package_id;
-      const aaOutcomes = UpdateInnovationPathwayDto.actionAreaOutcomes;
-
-      const allAAOutcome = await this._resultIpAAOutcomes.find({
-        where: {
-          result_by_innovation_package_id: result_by_innovation_package_id,
-        },
-      });
-
-      const existingIds = allAAOutcome.map((et) => et.action_area_outcome_id);
-
-      const aaToActive = allAAOutcome.filter(
-        (eoi) =>
-          aaOutcomes.find(
-            (e) => e.action_area_outcome_id === eoi.action_area_outcome_id,
-          ) && eoi.is_active === false,
-      );
-
-      const aaToInactive = allAAOutcome.filter(
-        (eoi) =>
-          !aaOutcomes.find(
-            (e) => e.action_area_outcome_id === eoi.action_area_outcome_id,
-          ) && eoi.is_active === true,
-      );
-
-      const aaToSave = aaOutcomes.filter(
-        (eoi) => !existingIds.includes(eoi.action_area_outcome_id),
-      );
-
-      const saveActionAreas = [];
-
-      if (aaToSave?.length > 0) {
-        for (const entity of aaToSave) {
-          const newEoi = new ResultIpAAOutcome();
-          newEoi.action_area_outcome_id = entity.action_area_outcome_id;
-          newEoi.result_by_innovation_package_id =
-            result_by_innovation_package_id;
-          newEoi.created_by = user.id;
-          newEoi.last_updated_by = user.id;
-          newEoi.created_date = new Date();
-          newEoi.last_updated_date = new Date();
-          saveActionAreas.push(this._resultIpAAOutcomes.save(newEoi));
-        }
-      }
-
-      if (aaToActive?.length > 0) {
-        for (const entity of aaToActive) {
-          entity.is_active = true;
-          saveActionAreas.push(this._resultIpAAOutcomes.save(entity));
-        }
-      }
-
-      if (aaToInactive?.length > 0) {
-        for (const entity of aaToInactive) {
-          entity.is_active = false;
-          saveActionAreas.push(this._resultIpAAOutcomes.save(entity));
-        }
-      }
-
-      return {
-        response: { status: 'Success' },
-        message: 'The Action Area Outcomes have been saved successfully',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async saveImpactAreas(
-    result: any,
-    version: Version,
-    UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
-    user: TokenDto,
-  ) {
-    const id = result.id;
-    try {
-      const resultByInnovationPackageId =
-        await this._innovationByResultRepository.findOneBy({
-          result_innovation_package_id: id,
-        });
-      const result_by_innovation_package_id =
-        resultByInnovationPackageId.result_by_innovation_package_id;
-      const impactAreas = UpdateInnovationPathwayDto.impactAreas;
-
-      const allImpactAreas = await this._resultIpImpactAreasRepository.find({
-        where: {
-          result_by_innovation_package_id: result_by_innovation_package_id,
-        },
-      });
-
-      const existingIds = allImpactAreas.map(
-        (et) => et.impact_area_indicator_id,
-      );
-
-      const impactAreasToActive = allImpactAreas.filter(
-        (ia) =>
-          impactAreas.find((e) => e.targetId === ia.impact_area_indicator_id) &&
-          ia.is_active === false,
-      );
-
-      const impactAreasToInactive = allImpactAreas.filter(
-        (ia) =>
-          !impactAreas.find(
-            (e) => e.targetId === ia.impact_area_indicator_id,
-          ) && ia.is_active === true,
-      );
-
-      const impactAreasToSave = impactAreas.filter(
-        (ia) => !existingIds.includes(ia.targetId),
-      );
-
-      const saveImpactAreas = [];
-
-      if (impactAreasToSave?.length > 0) {
-        for (const entity of impactAreasToSave) {
-          const newEoi = new ResultIpImpactArea();
-          newEoi.impact_area_indicator_id = entity.targetId;
-          newEoi.result_by_innovation_package_id =
-            result_by_innovation_package_id;
-          newEoi.created_by = user.id;
-          newEoi.last_updated_by = user.id;
-          newEoi.created_date = new Date();
-          newEoi.last_updated_date = new Date();
-          saveImpactAreas.push(
-            this._resultIpImpactAreasRepository.save(newEoi),
-          );
-        }
-      }
-
-      if (impactAreasToActive?.length > 0) {
-        for (const entity of impactAreasToActive) {
-          entity.is_active = true;
-          saveImpactAreas.push(
-            this._resultIpImpactAreasRepository.save(entity),
-          );
-        }
-      }
-
-      if (impactAreasToInactive?.length > 0) {
-        for (const entity of impactAreasToInactive) {
-          entity.is_active = false;
-          saveImpactAreas.push(
-            this._resultIpImpactAreasRepository.save(entity),
-          );
-        }
-      }
-
-      return {
-        response: { status: 'Success' },
-        message: 'The Impact Areas have been saved successfully',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  async saveSdgTargets(
-    result: any,
-    version: Version,
-    UpdateInnovationPathwayDto: UpdateInnovationPathwayDto,
-    user: TokenDto,
-  ) {
-    const id = result.id;
-    try {
-      const sdgsTargets: ResultIpSdgTargets[] = [];
-      const resultByInnovationPackageId =
-        await this._innovationByResultRepository.findOneBy({
-          result_innovation_package_id: id,
-        });
-      const sdgs = UpdateInnovationPathwayDto.sdgTargets;
-
-      await this._resultIpSdgsTargetsRepository.updateSdg(
-        resultByInnovationPackageId.result_by_innovation_package_id,
-        sdgs.map((c) => c.id),
-        user.id,
-      );
-      if (sdgs?.length) {
-        for (let i = 0; i < sdgs.length; i++) {
-          const sdgExist =
-            await this._resultIpSdgsTargetsRepository.getSdgsByIpAndSdgId(
-              resultByInnovationPackageId.result_by_innovation_package_id,
-              sdgs[i].id,
-            );
-
-          if (!sdgExist) {
-            const newSdgs = new ResultIpSdgTargets();
-            newSdgs.clarisa_sdg_target_id = sdgs[i].id;
-            newSdgs.clarisa_sdg_usnd_code = sdgs[i].usnd_code;
-            newSdgs.result_by_innovation_package_id =
-              resultByInnovationPackageId.result_by_innovation_package_id;
-            newSdgs.created_by = user.id;
-            newSdgs.last_updated_by = user.id;
-            newSdgs.created_date = new Date();
-            newSdgs.last_updated_date = new Date();
-            sdgsTargets.push(newSdgs);
-          }
-
-          await this._resultIpSdgsTargetsRepository.save(sdgsTargets);
-        }
-      }
-
-      return {
-        response: { status: 'Success' },
-        message: 'The SDGs have been saved successfully',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
   private async saveInnovationPackagingExperts(
     result: Result,
-    v: Version,
     user: TokenDto,
     { result_ip: rpData, experts }: UpdateInnovationPathwayDto,
+  ) {
+    await this.updateOrCreateInnovationPackage(result, user, rpData);
+
+    if (experts?.length) {
+      for (const ex of experts) {
+        await this.updateOrCreateExpert(ex, result, user);
+      }
+    }
+  }
+
+  private async updateOrCreateInnovationPackage(
+    result: Result,
+    user: TokenDto,
+    rpData: any,
   ) {
     const rip = await this._resultInnovationPackageRepository.findOne({
       where: {
@@ -990,81 +791,57 @@ export class InnovationPathwayStepOneService {
       },
     });
 
+    const data = {
+      last_updated_by: user.id,
+      experts_is_diverse: rpData?.experts_is_diverse,
+      is_not_diverse_justification: !rpData?.experts_is_diverse
+        ? rpData?.is_not_diverse_justification
+        : null,
+    };
+
     if (rip) {
-      this._resultInnovationPackageRepository.update(result.id, {
-        last_updated_by: user.id,
-        experts_is_diverse: rpData?.experts_is_diverse,
-        is_not_diverse_justification: !rpData?.experts_is_diverse
-          ? rpData?.is_not_diverse_justification
-          : null,
-      });
+      await this._resultInnovationPackageRepository.update(result.id, data);
     } else {
-      this._resultInnovationPackageRepository.save({
+      await this._resultInnovationPackageRepository.save({
+        ...data,
         result_innovation_package_id: result.id,
-        last_updated_by: user.id,
         created_by: user.id,
-        experts_is_diverse: rpData?.experts_is_diverse,
-        is_not_diverse_justification: !rpData?.experts_is_diverse
-          ? rpData?.is_not_diverse_justification
-          : null,
+      });
+    }
+  }
+
+  private async updateOrCreateExpert(ex: any, result: Result, user: TokenDto) {
+    let innExp: InnovationPackagingExpert = null;
+    if (ex?.result_ip_expert_id) {
+      innExp = await this._innovationPackagingExpertRepository.findOne({
+        where: {
+          result_ip_expert_id: ex.result_ip_expert_id,
+          result_id: result.id,
+        },
       });
     }
 
-    if (experts?.length) {
-      for (const ex of experts) {
-        let innExp: InnovationPackagingExpert = null;
-        if (ex?.result_ip_expert_id) {
-          innExp = await this._innovationPackagingExpertRepository.findOne({
-            where: {
-              result_ip_expert_id: ex.result_ip_expert_id,
-              result_id: result.id,
-            },
-          });
-        } else if (!innExp && ex?.first_name && ex?.last_name) {
-          innExp = await this._innovationPackagingExpertRepository.findOne({
-            where: {
-              email: IsNull(),
-              first_name: ex.first_name,
-              last_name: ex.last_name,
-              result_id: result.id,
-            },
-          });
-        }
+    const data = {
+      is_active: ex.is_active ?? true,
+      last_updated_by: user.id,
+      expertises_id: ex?.expertises_id,
+      organization_id: ex?.organization_id,
+    };
 
-        if (innExp) {
-          await this._innovationPackagingExpertRepository.update(
-            innExp.result_ip_expert_id,
-            {
-              first_name: ex?.first_name,
-              last_name: ex?.last_name,
-              is_active: ex.is_active == undefined ? true : ex.is_active,
-              email: ex?.email,
-              last_updated_by: user.id,
-              expertises_id: ex?.expertises_id,
-              organization_id: ex?.organization_id,
-            },
-          );
-        } else {
-          innExp = await this._innovationPackagingExpertRepository.save({
-            first_name: ex?.first_name,
-            last_name: ex?.last_name,
-            is_active: ex?.is_active,
-            email: ex?.email,
-            last_updated_by: user.id,
-            created_by: user.id,
-            expertises_id: ex?.expertises_id,
-            organization_id: ex?.organization_id,
-            result_id: result.id,
-          });
-        }
-
-        await this.saveExpertises(
-          ex.expertises,
-          innExp.result_ip_expert_id,
-          user,
-        );
-      }
+    if (innExp) {
+      await this._innovationPackagingExpertRepository.update(
+        innExp.result_ip_expert_id,
+        data,
+      );
+    } else {
+      innExp = await this._innovationPackagingExpertRepository.save({
+        ...data,
+        created_by: user.id,
+        result_id: result.id,
+      });
     }
+
+    await this.saveExpertises(ex.expertises, innExp.result_ip_expert_id, user);
   }
 
   private async saveExpertises(
