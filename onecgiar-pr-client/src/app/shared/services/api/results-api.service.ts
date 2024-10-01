@@ -832,7 +832,7 @@ export class ResultsApiService {
         `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`,
         body
       )
-      .pipe(this.saveButtonSE.isSavingPipe());
+      .pipe(this.saveButtonSE.isSavingPipe(true));
   }
 
   GETInnovationPathwayByRiId() {
