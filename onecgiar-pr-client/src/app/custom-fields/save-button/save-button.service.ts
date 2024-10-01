@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { tap, catchError, retry, throwError, pipe } from 'rxjs';
-import { ApiService } from '../../shared/services/api/api.service';
+import { tap, catchError, throwError, pipe } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Injectable({
@@ -21,7 +20,6 @@ export class SaveButtonService {
     Promise.resolve().then(() => {
       this.isGettingSection = true;
     });
-    // this.cd.detectChanges();
     return pipe(
       tap(resp => {
         Promise.resolve().then(() => {
@@ -34,11 +32,10 @@ export class SaveButtonService {
         });
         return throwError(err);
       })
-      // ,retry(1)
     );
   }
 
-  isSavingPipe(): any {
+  isSavingPipe(validateErrorMessage : boolean = false): any {
     this.showSaveSpinner();
     return pipe(
       tap(resp => {
@@ -47,10 +44,15 @@ export class SaveButtonService {
       }),
       catchError(err => {
         this.hideSaveSpinner();
+
+        if(err.error.message && validateErrorMessage){
+          this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: err.error.message, status: 'error', closeIn: 500 });
+          return throwError(() => err);
+        }
+
         this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
-        return throwError(err);
+        return throwError(() => err);
       })
-      // ,retry(1)
     );
   }
 
@@ -67,7 +69,6 @@ export class SaveButtonService {
         this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
         return throwError(err);
       })
-      // ,retry(1)
     );
   }
 
@@ -81,7 +82,6 @@ export class SaveButtonService {
         this.hideSaveSpinner();
         return throwError(err);
       })
-      // ,retry(1)
     );
   }
 }
