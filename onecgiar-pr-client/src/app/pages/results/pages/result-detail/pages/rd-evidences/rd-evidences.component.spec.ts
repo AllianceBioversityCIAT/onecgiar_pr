@@ -312,7 +312,7 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
-  describe('validateCGSpaceLinks', () => {
+  describe('validateButtonDisabled', () => {
     it('should return true if conditions for links are met', () => {
       component.evidencesBody = {
         result_id: 1,
@@ -328,7 +328,7 @@ describe('RdEvidencesComponent', () => {
         ],
       };
 
-      const result = component.validateCGSpaceLinks;
+      const result = component.validateButtonDisabled;
 
       expect(result).toBeTruthy();
     });
@@ -348,7 +348,7 @@ describe('RdEvidencesComponent', () => {
         ],
       };
 
-      const result = component.validateCGSpaceLinks;
+      const result = component.validateButtonDisabled;
 
       expect(result).toBeTruthy();
     });
@@ -368,7 +368,7 @@ describe('RdEvidencesComponent', () => {
         ],
       };
 
-      const result = component.validateCGSpaceLinks;
+      const result = component.validateButtonDisabled;
 
       expect(result).toBeTruthy();
     });
@@ -386,18 +386,10 @@ describe('RdEvidencesComponent', () => {
         ],
       };
 
-      const result = component.validateCGSpaceLinks;
+      const result = component.validateButtonDisabled;
 
       expect(result).toBeFalsy();
     });
 
   });
-
-  describe('OpenKp', () => {
-    it('should have OpenKp function defined', () => {
-      component.OpenKp();
-      expect(component.OpenKp).toBeDefined();
-    });
-  });
-
 });
