@@ -1,6 +1,5 @@
 export class IpsrStep4Body {
   ipsr_pictures: IpsrpictureStep4[] = [];
-  ipsr_materials: IpsrpictureStep4[] = [];
   initiative_expected_investment: Initiativeexpectedinvestment[] = [];
   initiative_unit_time_id: number = null;
   initiative_expected_time: string = null;

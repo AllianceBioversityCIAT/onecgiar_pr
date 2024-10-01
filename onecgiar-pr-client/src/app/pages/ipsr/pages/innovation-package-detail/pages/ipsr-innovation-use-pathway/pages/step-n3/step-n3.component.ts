@@ -59,9 +59,6 @@ export class StepN3Component implements OnInit {
       if (this.ipsrStep3Body.innovatonUse.organization.length == 0) {
         this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
       }
-      if (this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0) {
-        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
-      }
     });
   }
 

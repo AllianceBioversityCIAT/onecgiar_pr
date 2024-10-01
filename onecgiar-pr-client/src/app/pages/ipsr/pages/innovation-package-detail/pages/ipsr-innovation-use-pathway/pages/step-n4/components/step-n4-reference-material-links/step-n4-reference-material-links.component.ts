@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
-import { IpsrStep4Body, IpsrpictureStep4 } from '../../model/Ipsr-step-4-body.model';
+import { IpsrpictureStep4 } from '../../model/Ipsr-step-4-body.model';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
+import { IPSRMaterialsStep3, IpsrStep3Body } from '../../../step-n3/model/Ipsr-step-3-body.model';
 
 @Component({
   selector: 'app-step-n4-reference-material-links',
@@ -8,15 +9,15 @@ import { RolesService } from '../../../../../../../../../../shared/services/glob
   styleUrls: ['./step-n4-reference-material-links.component.scss']
 })
 export class StepN4ReferenceMaterialLinksComponent {
-  @Input() body = new IpsrStep4Body();
+  @Input() body: IpsrStep3Body = new IpsrStep3Body();
 
   constructor(public rolesSE: RolesService) {}
 
   addItem() {
-    this.body.ipsr_materials.push(new IpsrpictureStep4());
+    this.body.ipsr_materials.push(new IPSRMaterialsStep3());
   }
 
-  delete(index) {
+  deleteItem(index) {
     this.body.ipsr_materials.splice(index, 1);
   }
 
