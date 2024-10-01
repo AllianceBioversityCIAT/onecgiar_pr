@@ -36,14 +36,14 @@
     optionValue="id"
     [options]="this.radioOptions"
     (selectOptionEvent)="cleanEvidence()"
-    [(ngModel)]="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized">
+    [(ngModel)]="this.ipsrStep1Body.result_ip.is_expert_workshop_organized">
   </app-pr-radio-button>
 
-  <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+  <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
     <app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
     <div
       style="margin-top: 20px"
-      *ngFor="let expertItem of this.ipsrStep3Body.result_ip_expert_workshop_organized; let i = index"
+      *ngFor="let expertItem of this.ipsrStep1Body.result_ip_expert_workshop_organized; let i = index"
       appYmzListStructureItem
       (deleteEvent)="deleteExpert(i)"
       [ngClass]="{ hideElement: !this.expertItem?.result_ip_expert_workshop_organized_id && this.api.rolesSE.readOnly }">
@@ -56,25 +56,25 @@
     </div>
   </div>
 
-  <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
+  <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
     <app-no-data-text
-      *ngIf="!hasElementsWithId(this.ipsrStep3Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id')"
+      *ngIf="!hasElementsWithId(this.ipsrStep1Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id')"
       title="No facilitators provided">
     </app-no-data-text>
     <app-add-button *ngIf="!this.api.rolesSE.readOnly" name="Add Lead/Co-Lead" (clickEvent)="addExpert()"></app-add-button>
   </div>
 
   <app-pr-input
-    *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true"
+    *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true"
     label="Provide the link to the workshop list of participants"
     [description]="workshopDescription()"
     [required]="false"
     placeholder="Link"
-    [(ngModel)]="this.ipsrStep3Body.link_workshop_list">
+    [(ngModel)]="this.ipsrStep1Body.link_workshop_list">
   </app-pr-input>
 
-  <div *ngIf="this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true">
-    <app-step-n3-assessed-expert-workshop [body]="this.ipsrStep3Body"></app-step-n3-assessed-expert-workshop>
+  <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
+    <app-step-n3-assessed-expert-workshop [body]="this.ipsrStep1Body"></app-step-n3-assessed-expert-workshop>
   </div>
 </div>
 

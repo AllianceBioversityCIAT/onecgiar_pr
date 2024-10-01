@@ -7,7 +7,7 @@ export class IpsrStep3Body {
   result_ip_expert_workshop_organized: expert_workshop_organized[];
 }
 
-class Resultipresultcomplementary {
+export class Resultipresultcomplementary {
   created_by: string;
   readinees_evidence_link?: any;
   use_evidence_link?: any;

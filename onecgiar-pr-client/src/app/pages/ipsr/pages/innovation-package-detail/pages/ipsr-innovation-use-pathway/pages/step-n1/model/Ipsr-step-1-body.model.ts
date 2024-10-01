@@ -1,3 +1,5 @@
+import { Resultipresultcomplementary } from '../../step-n3/model/Ipsr-step-3-body.model';
+
 export class IpsrStep1Body {
   initiative_id: number = null;
   geo_scope_id: number = null;
@@ -11,8 +13,11 @@ export class IpsrStep1Body {
   innovatonUse: InnovatonUse = new InnovatonUse();
   institutions: Institutions[] = [];
   experts: Expert[] = [];
-  result_ip = new Result_ip();
+  result_ip: Result_ip = new Result_ip();
   scalig_ambition: Scalig_ambition = new Scalig_ambition();
+  result_ip_result_core: Resultipresultcomplementary = new Resultipresultcomplementary();
+  result_ip_expert_workshop_organized = [];
+  link_workshop_list: string = null;
 }
 
 class Scalig_ambition {
@@ -32,15 +37,32 @@ export class Expert {
 }
 
 class Result_ip {
-  //experts
-  is_not_diverse_justification: string = null;
+  is_active: boolean = null;
+  created_date: Date = null;
+  last_updated_date: Date = null;
+  created_by: string = null;
+  last_updated_by: string = null;
+  result_innovation_package_id: string = null;
   experts_is_diverse: boolean = null;
-  // Consensus and Consultation
-  consensus_initiative_work_package_id: number = null;
-  relevant_country_id: number = null;
-  regional_leadership_id: number = null;
-  regional_integrated_id: number = null;
-  active_backstopping_id: number = null;
+  is_not_diverse_justification: null = null;
+  consensus_initiative_work_package_id: string = null;
+  relevant_country_id: string = null;
+  regional_leadership_id: string = null;
+  regional_integrated_id: string = null;
+  active_backstopping_id: string = null;
+  use_level_evidence_based: null = null;
+  readiness_level_evidence_based: null = null;
+  is_expert_workshop_organized: boolean = null;
+  initiative_expected_time: null = null;
+  initiative_unit_time_id: null = null;
+  bilateral_expected_time: null = null;
+  bilateral_unit_time_id: null = null;
+  partner_expected_time: null = null;
+  partner_unit_time_id: null = null;
+  is_result_ip_published: boolean = null;
+  ipsr_pdf_report: null = null;
+  assessed_during_expert_workshop_id: null = null;
+  scaling_ambition_blurb: string = null;
 }
 
 interface Institutions {
