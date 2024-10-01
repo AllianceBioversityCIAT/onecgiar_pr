@@ -516,6 +516,7 @@ export class ResultsByInstitutionsService {
                   .predicted_institution_id &&
               incomingMqapInstitution.result_kp_mqap_institution_object
                 .confidant >= confidenceThreshold,
+            is_leading_result: incomingMqapInstitution.is_leading_result,
           },
         );
 
