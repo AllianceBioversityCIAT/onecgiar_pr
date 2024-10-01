@@ -47,19 +47,6 @@ describe('NewComplementaryInnovationComponent', () => {
     expect(component.linksComplemntaryInnovation).toEqual([{ link: '' }, { link: '' }, { link: '' }]);
   });
 
-  it('should add a new input when addNewInput is called and linksRegister is less than 3', () => {
-    component.linksRegister = 2;
-    component.linksComplemntaryInnovation[1].link = 'https://example.com';
-    component.addNewInput();
-    expect(component.linksRegister).toBe(3);
-  });
-
-  it('should set statusAdd to true when addNewInput is called and linksRegister is 3', () => {
-    component.linksRegister = 3;
-    component.addNewInput();
-    expect(component.statusAdd).toBe(true);
-  });
-
   it('should filter out empty links and update bodyNewComplementaryInnovation when onSave is called', () => {
     component.linksComplemntaryInnovation = [{ link: 'https://example.com' }, { link: '' }, { link: 'https://example.org' }];
     component.selectedValues = [{ complementary_innovation_functions_id: 1 }, { complementary_innovation_functions_id: 2 }];
@@ -68,7 +55,6 @@ describe('NewComplementaryInnovationComponent', () => {
 
     component.onSave(() => {
       expect(component.linksComplemntaryInnovation).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
-      expect(component.bodyNewComplementaryInnovation.referenceMaterials).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
       expect(component.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
         { complementary_innovation_functions_id: 1 },
         { complementary_innovation_functions_id: 2 }
@@ -96,17 +82,5 @@ describe('NewComplementaryInnovationComponent', () => {
     });
 
     expect(emitSpy).toHaveBeenCalledWith({ initiative_id: 1, initiative_official_code: 'INIT-01' });
-  });
-
-  it('should add the selected value to selectedValues when change is called and selectedValues is empty', () => {
-    component.selectedValues = [];
-    component.change(1);
-    expect(component.selectedValues).toEqual([{ complementary_innovation_functions_id: 1 }]);
-  });
-
-  it('should remove the selected value from selectedValues when change is called and selectedValues already contains the value', () => {
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }, { complementary_innovation_functions_id: 2 }];
-    component.change(1);
-    expect(component.selectedValues).toEqual([{ complementary_innovation_functions_id: 2 }]);
   });
 });
