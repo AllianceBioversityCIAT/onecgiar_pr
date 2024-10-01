@@ -23,3 +23,17 @@
   text-align: right;
   margin-top: 6px;
 }
+
+.notification {
+  display: block;
+  unicode-bidi: isolate;
+  padding: 15px 1.5rem 10px 1.5rem;
+  background-color: #eef0fc;
+  border-bottom: 1px solid #5569dd;
+  color: #000;
+
+  &:hover {
+    background-color: #f5f6fd;
+    cursor: pointer;
+  }
+}

@@ -117,7 +117,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
     mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
-    mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
+    mapped.accessibility_CG = !response.metadataCG?.accessibility ? 'Not available' : response.metadataCG?.accessibility === 'yes' ? 'Open Access' : 'Limited Access';
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
