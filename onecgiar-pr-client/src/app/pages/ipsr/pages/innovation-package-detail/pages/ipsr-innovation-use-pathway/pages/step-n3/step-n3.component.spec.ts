@@ -134,7 +134,7 @@ describe('StepN3Component', () => {
     expect(updateRangeLevel2).toBe(false);
   });
 
-  it('should call GETInnovationPathwayByRiId and update ipsrStep3Body, convertOrganizations, result_core_innovation, and result_ip_expert_workshop_organized on getSectionInformation', () => {
+  it('should call GETInnovationPathwayByRiId and update ipsrStep3Body, convertOrganizations, result_core_innovation on getSectionInformation', () => {
     const response = {
       result_ip_result_complementary: [
         { result_by_innovation_package_id: 1, open: false },
@@ -145,7 +145,6 @@ describe('StepN3Component', () => {
         organization: [],
         actors: []
       },
-      result_ip_expert_workshop_organized: [],
       result_core_innovation: null
     };
     const GETInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response }));
@@ -160,7 +159,6 @@ describe('StepN3Component', () => {
     expect(component.result_core_innovation).toBeNull();
     expect(component.ipsrStep3Body.innovatonUse.actors.length).toBe(1);
     expect(component.ipsrStep3Body.innovatonUse.organization.length).toBe(1);
-    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
   });
 
   it('should return true if innoUseLevel is 0 based on this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based', () => {

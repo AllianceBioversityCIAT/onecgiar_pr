@@ -69,6 +69,8 @@
         <app-no-data-text *ngIf="!this.ipsrStep3Body.result_ip_result_complementary.length"
             title="There are no complementary innovations/enablers/solutions selected for this innovation package. {{goToStep()}} to add them."></app-no-data-text>
     </div>
+
+    <app-step-n4-reference-material-links [body]="this.ipsrStep3Body"></app-step-n4-reference-material-links>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()">
