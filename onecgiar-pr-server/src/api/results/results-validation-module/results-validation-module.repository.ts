@@ -309,9 +309,9 @@ export class resultValidationRepository
 		WHEN r.is_lead_by_partner IS NULL THEN FALSE
 		WHEN (
 			(
-				SELECT 
+				SELECT
 					COUNT(rbi.id)
-				FROM 
+				FROM
 					results_by_institution rbi
 				WHERE
 					rbi.result_id = r.id
@@ -367,33 +367,33 @@ export class resultValidationRepository
 			) <= 0
 		) THEN FALSE
 		WHEN (
-                (
-					SELECT 
-						CASE 
-							#if there are not non-pooled, we consider this as valid
-							WHEN IFNULL(COUNT(npp.id),0) = 0 THEN 1
-							#if the difference between the number of valid non-pooled and the total number is 0, then this is valid
-							ELSE (
-								IFNULL(
-			                    	SUM(
-			                    		IF(
-			                    			(
-			                    				npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id > 0 AND 
-			                    				COALESCE(npp.grant_title, '') <> '' AND COALESCE(npp.lead_center_id, '') <> ''
-			                    			), 
-			                    			1, 0
-										)
-									),
-			                        0
-			                    ) - IFNULL(COUNT(npp.id), 0) = 0
-							)
-						END as npp_validation
-					FROM
-						non_pooled_project npp
-					WHERE
-						npp.results_id = r.id
-						AND npp.is_active > 0
-				) = 0
+			(
+				SELECT
+					CASE
+						#if there are not non-pooled, we consider this as valid
+						WHEN IFNULL(COUNT(npp.id),0) = 0 THEN 1
+						#if the difference between the number of valid non-pooled and the total number is 0, then this is valid
+						ELSE (
+							IFNULL(
+								SUM(
+									IF(
+										(
+											npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id > 0 AND
+											COALESCE(npp.grant_title, '') <> '' AND COALESCE(npp.lead_center_id, '') <> ''
+										),
+										1, 0
+									)
+								),
+								0
+							) - IFNULL(COUNT(npp.id), 0) = 0
+						)
+					END as npp_validation
+				FROM
+					non_pooled_project npp
+				WHERE
+					npp.results_id = r.id
+					AND npp.is_active > 0
+			) = 0
 		) THEN FALSE
 		WHEN (
 			(
@@ -401,7 +401,7 @@ export class resultValidationRepository
 					COUNT(rbi2.id)
 				FROM results_by_institution rbi2
 				WHERE
-					rbi2.is_active 
+					rbi2.is_active
 					AND rbi2.result_id = r.id
 					AND rbi2.is_leading_result = 1
 			) <> 1 AND r.is_lead_by_partner = 1
@@ -415,9 +415,8 @@ export class resultValidationRepository
 				WHERE
 					rc.is_active
 					AND rc.result_id = r.id
-					AND r.is_lead_by_partner = 0
 					AND rc.is_leading_result = 1
-			) <> 1
+			) <> 1 AND r.is_lead_by_partner = 0
 		) THEN FALSE
 		ELSE TRUE
 	END AS validation
@@ -432,6 +431,7 @@ export class resultValidationRepository
 		);
     `;
     try {
+      console.log(queryData);
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
