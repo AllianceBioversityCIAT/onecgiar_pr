@@ -8,6 +8,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { CreateComplementaryInnovationDto } from './create-complementary-innovation.dto';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ResultIpExpertWorkshopOrganized } from '../entities/result-ip-expert-workshop-organized.entity';
+import { Ipsr } from '../../entities/ipsr.entity';
 
 export class UpdateInnovationPathwayDto {
   public result_id: number;
@@ -28,6 +29,7 @@ export class UpdateInnovationPathwayDto {
   public countries: CountriesInterface[];
   public scalig_ambition?: ScaligAmbition;
   public link_workshop_list: string;
+  public result_ip_result_core: Ipsr;
   public result_ip_expert_workshop_organized: ResultIpExpertWorkshopOrganized[];
 }
 

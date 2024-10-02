@@ -537,6 +537,8 @@ export class InnovationPathwayStepOneService {
       );
 
       const result_ip = UpdateInnovationPathwayDto.result_ip;
+      const result_ip_result_core =
+        UpdateInnovationPathwayDto.result_ip_result_core;
 
       await this._resultInnovationPackageRepository.update(
         result_ip.result_innovation_package_id,
@@ -553,7 +555,13 @@ export class InnovationPathwayStepOneService {
         },
       );
 
-      const saveInnivationWorkshop = await this._stepThreeService.saveWorkshop(
+      const saveInnovationWorkshop =
+        await this._stepThreeService.saveinnovationWorkshop(
+          user,
+          result_ip_result_core,
+        );
+
+      const saveWorkshop = await this._stepThreeService.saveWorkshop(
         resultId,
         user,
         UpdateInnovationPathwayDto,
@@ -568,7 +576,8 @@ export class InnovationPathwayStepOneService {
           partners,
           innovationUse,
           geoScope,
-          saveInnivationWorkshop,
+          saveInnovationWorkshop,
+          saveWorkshop,
         ],
         message: 'The data was updated correctly',
         status: HttpStatus.OK,
