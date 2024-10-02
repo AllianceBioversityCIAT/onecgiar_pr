@@ -350,8 +350,6 @@ export class SummaryService {
         newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
         newInnDev.innovation_characterization_id =
           innovation_characterization_id;
-        newInnDev.innovation_acknowledgement = innovation_acknowledgement;
-        newInnDev.innovation_pdf = innovation_pdf;
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
@@ -390,12 +388,6 @@ export class SummaryService {
       );
 
       // * Save Evidence
-      await this._innoDevService.saveEvidence(
-        resultId,
-        user.id,
-        createInnovationDevDto.pictures,
-        3,
-      );
       await this._innoDevService.saveEvidence(
         resultId,
         user.id,
