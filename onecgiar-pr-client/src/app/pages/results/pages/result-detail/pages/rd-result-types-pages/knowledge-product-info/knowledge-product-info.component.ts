@@ -1,5 +1,3 @@
-/* eslint-disable arrow-parens */
-/* eslint-disable camelcase */
 import chroma from 'chroma-js';
 
 import { Component, OnInit } from '@angular/core';
@@ -25,7 +23,11 @@ export class KnowledgeProductInfoComponent implements OnInit {
   fairGuideline =
     'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
 
-  constructor(public api: ApiService, public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(
+    public api: ApiService,
+    public rolesSE: RolesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -115,7 +117,13 @@ export class KnowledgeProductInfoComponent implements OnInit {
   private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
     mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
-    mapped.accessibility_CG = response.metadataCG?.accessibility == true ? 'Open Access' : 'Limited Access';
+    let accessibilityCG: string;
+    if (!response.metadataCG?.accessibility) {
+      accessibilityCG = 'Not available';
+    } else {
+      accessibilityCG = response.metadataCG.accessibility === 'yes' ? 'Open Access' : 'Limited Access';
+    }
+    mapped.accessibility_CG = accessibilityCG;
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
