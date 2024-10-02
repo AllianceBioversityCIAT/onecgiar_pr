@@ -549,6 +549,7 @@ export class InnovationPathwayStepOneService {
         await this._stepThreeService.saveinnovationWorkshop(
           user,
           result_ip_result_core,
+          result_ip.assessed_during_expert_workshop_id,
         );
 
       const saveWorkshop = await this._stepThreeService.saveWorkshop(

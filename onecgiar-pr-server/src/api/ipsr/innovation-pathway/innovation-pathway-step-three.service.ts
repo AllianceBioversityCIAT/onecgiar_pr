@@ -97,12 +97,20 @@ export class InnovationPathwayStepThreeService {
         },
       );
 
-      await this.saveinnovationWorkshop(user, result_ip_core);
+      await this.saveinnovationWorkshop(
+        user,
+        result_ip_core,
+        result_ip.assessed_during_expert_workshop_id,
+      );
       await this.saveInnovationUse(user, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
-          await this.saveinnovationWorkshop(user, ripc);
+          await this.saveinnovationWorkshop(
+            user,
+            ripc,
+            result_ip.assessed_during_expert_workshop_id,
+          );
         }
       }
 
@@ -121,46 +129,53 @@ export class InnovationPathwayStepThreeService {
     }
   }
 
-  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr) {
+  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr, data_id: any) {
     try {
       await this._innovationByResultRepository.update(
         rbi.result_by_innovation_package_id,
         {
-          readiness_level_evidence_based: this.isNullData(
-            rbi?.readiness_level_evidence_based,
-          ),
-          readinees_evidence_link: this.isNullData(
-            rbi?.readinees_evidence_link,
-          ),
-          use_level_evidence_based: this.isNullData(
-            rbi?.use_level_evidence_based,
-          ),
-          use_evidence_link: this.isNullData(rbi?.use_evidence_link),
-          use_details_of_evidence: this.isNullData(
-            rbi?.use_details_of_evidence,
-          ),
-          readiness_details_of_evidence: this.isNullData(
-            rbi?.readiness_details_of_evidence,
-          ),
-          potential_innovation_readiness_level: this.isNullData(
+          readiness_level_evidence_based: rbi?.readiness_level_evidence_based,
+
+          readinees_evidence_link: rbi?.readinees_evidence_link,
+
+          use_level_evidence_based: rbi?.use_level_evidence_based,
+
+          use_evidence_link: rbi?.use_evidence_link,
+          use_details_of_evidence: rbi?.use_details_of_evidence,
+
+          readiness_details_of_evidence: rbi?.readiness_details_of_evidence,
+
+          potential_innovation_readiness_level: this.validData(
             rbi?.potential_innovation_readiness_level,
+            data_id,
+            [2],
           ),
-          potential_innovation_use_level: this.isNullData(
+          potential_innovation_use_level: this.validData(
             rbi?.potential_innovation_use_level,
+            data_id,
+            [2],
           ),
-          current_innovation_readiness_level: this.isNullData(
+          current_innovation_readiness_level: this.validData(
             rbi?.current_innovation_readiness_level,
+            data_id,
+            [1, 2],
           ),
-          current_innovation_use_level: this.isNullData(
+          current_innovation_use_level: this.validData(
             rbi?.current_innovation_use_level,
+            data_id,
+            [1, 2],
           ),
-          last_updated_by: this.isNullData(user?.id),
+          last_updated_by: user?.id,
         },
       );
       return;
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private validData(data: any, data_id: number, valid: number[]) {
+    return valid.includes(parseInt(`${data_id}`)) ? data : null;
   }
 
   async saveWorkshop(
