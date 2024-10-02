@@ -102,6 +102,11 @@ export class InnovationPathwayStepThreeService {
         result_ip.assessed_during_expert_workshop_id,
       );
 
+      await this.saveinnovationWorkshop(
+        user,
+        result_ip_core,
+        result_ip.assessed_during_expert_workshop_id,
+      );
       await this.saveInnovationUse(user, saveData);
 
       if (result_ip_complementary?.length) {
