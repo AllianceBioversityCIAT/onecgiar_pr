@@ -107,24 +107,6 @@
 
   <app-estimates [body]="innovationDevInfoBody"></app-estimates>
 
-  <app-pr-radio-button
-    label="Would you like this innovation to be published as a CGIAR IPSR Innovation Profile PDF?"
-    [description]="pdfDescription()"
-    [options]="this.pdfOptions"
-    optionLabel="name"
-    optionValue="value"
-    [(ngModel)]="this.innovationDevInfoBody.innovation_pdf">
-  </app-pr-radio-button>
-
-  <app-pr-textarea
-    *ngIf="this.innovationDevInfoBody.innovation_pdf"
-    placeholder="Contact persons info goes here..."
-    [required]="false"
-    label="Innovation acknowledgement"
-    [description]="acknowledgementDescription()"
-    [(ngModel)]="innovationDevInfoBody.innovation_acknowledgement">
-  </app-pr-textarea>
-
   <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
 </div>
 
