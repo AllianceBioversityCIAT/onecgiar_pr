@@ -568,7 +568,8 @@ export class ShareResultRequestService {
         role !== 1
           ? {
               ...commonConditions,
-              shared_inititiative_id: In(sharedInitiativeIds), 
+              shared_inititiative_id: In(sharedInitiativeIds),
+              is_map_to_toc: false,
             }
           : commonConditions,
       pendingShared:
