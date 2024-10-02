@@ -98,8 +98,8 @@ export class ResultsTocResultsService {
         };
       }
 
-      if (contributing_center.filter((el) => el.primary == true).length > 1) {
-        contributing_center.map((el) => {
+      if (contributing_center.filter((el) => Boolean(el.primary)).length > 1) {
+        contributing_center.forEach((el) => {
           el.primary = false;
         });
       }

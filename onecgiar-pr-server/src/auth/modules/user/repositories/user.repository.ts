@@ -155,7 +155,8 @@ export class UserRepository extends Repository<User> {
     	inner join clarisa_initiatives ci on ci.id = rbu.initiative_id 
     									and ci.active > 0
     	inner join clarisa_cgiar_entity_types ccet on ccet.code = ci.cgiar_entity_type_id 
-    where rbu.\`user\` = ?;
+    where rbu.\`user\` = ?
+      and rbu.active = 1;
     `;
     try {
       const completeUser: any[] = await this.query(queryData, [userId]);
