@@ -20,6 +20,7 @@ export class InnovationDevInfoBody {
   public initiative_expected_investment: Initiative_expected_investment[] = [];
   public bilateral_expected_investment: Bilateral_expected_investment[] = [];
   public institutions_expected_investment: Institutions_expected_investment[] = [];
+  public previous_irl: number;
 }
 
 class InnovatonUse {
