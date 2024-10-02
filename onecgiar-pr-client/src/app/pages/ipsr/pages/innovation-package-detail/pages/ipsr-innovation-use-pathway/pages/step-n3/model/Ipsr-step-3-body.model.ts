@@ -17,6 +17,8 @@ export class Resultipresultcomplementary {
   readiness_details_of_evidence: string;
   use_details_of_evidence: string;
   open: boolean = true;
+  showDetailsOfReadiness: boolean;
+  showDetailsOfUseLevel: boolean;
 }
 
 class Resultinnovationpackage {

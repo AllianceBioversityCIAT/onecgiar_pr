@@ -12,6 +12,9 @@ import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-butt
 import { PrFieldValidationsComponent } from '../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
+import { CheckboxModule } from 'primeng/checkbox';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 
 describe('StepN3Component', () => {
   let component: StepN3Component;
@@ -25,8 +28,8 @@ describe('StepN3Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [StepN3Component, PrRadioButtonComponent, PrFieldHeaderComponent, PrRangeLevelComponent, PrInputComponent, PrTextareaComponent, SaveButtonComponent, PrButtonComponent, PrFieldValidationsComponent],
-      imports: [HttpClientTestingModule],
+      declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent, ],
+      imports: [HttpClientTestingModule, CheckboxModule, CustomFieldsModule],
       providers: [
         {
           provide: Router,

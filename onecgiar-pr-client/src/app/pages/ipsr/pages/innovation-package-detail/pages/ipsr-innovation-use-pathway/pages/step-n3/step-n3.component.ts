@@ -16,6 +16,8 @@ export class StepN3Component implements OnInit {
   result_core_innovation: any;
   innoUseLevel: number;
   rangeLevel2Required = true;
+  showDetailsOfReadiness = false;
+  showDetailsOfUseLevel = false
 
   constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
@@ -52,6 +54,13 @@ export class StepN3Component implements OnInit {
 
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.result_core_innovation = response.result_core_innovation;
+      this.showDetailsOfReadiness = !!this.ipsrStep3Body?.result_ip_result_core?.readiness_details_of_evidence;
+      this.showDetailsOfUseLevel = !!this.ipsrStep3Body?.result_ip_result_core?.use_details_of_evidence;
+
+      this.ipsrStep3Body?.result_ip_result_complementary.forEach((item: any) => {
+        item.showDetailsOfReadiness = !!item.readiness_details_of_evidence;
+        item.showDetailsOfUseLevel = !!item.use_details_of_evidence;
+      });
 
       if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
         this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());

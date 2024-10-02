@@ -8,9 +8,10 @@ import { StepN3ComplementaryInnovationsComponent } from './components/step-n3-co
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CollapsibleContainerModule } from '../../../../../../../../shared/components/collapsible-container/collapsible-container.module';
 import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @NgModule({
   declarations: [StepN3Component, StepN3CurrentUseComponent, StepN3ComplementaryInnovationsComponent, StepN4ReferenceMaterialLinksComponent],
-  imports: [CommonModule, StepN3RoutingModule, CustomFieldsModule, CollapsibleContainerModule]
+  imports: [CommonModule, StepN3RoutingModule, CustomFieldsModule, CollapsibleContainerModule, CheckboxModule]
 })
 export class StepN3Module {}

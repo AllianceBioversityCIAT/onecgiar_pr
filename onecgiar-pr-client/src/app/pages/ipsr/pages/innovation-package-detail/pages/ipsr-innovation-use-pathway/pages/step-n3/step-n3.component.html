@@ -24,7 +24,12 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
         </app-pr-input>
 
-        <app-pr-textarea placeholder="Enter text"
+        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness" label="I want to provide a description"
+        (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"></p-checkbox>
+
+        <app-pr-textarea 
+            *ngIf="this.showDetailsOfReadiness"
+            placeholder="Enter text"
             label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
             type="text" [required]="false"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence"></app-pr-textarea>
@@ -43,7 +48,12 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
         </app-pr-input>
 
-        <app-pr-textarea placeholder="Enter text"
+        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel" label="I want to provide a description"
+        (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"></p-checkbox>
+
+        <app-pr-textarea 
+            *ngIf="this.showDetailsOfUseLevel"
+            placeholder="Enter text"
             label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
             type="text" [required]="false"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence"></app-pr-textarea>
