@@ -454,7 +454,7 @@ export class ShareResultRequestService {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
-      const whereConditions = this.buildWhereConditions(inits, role);
+      const whereConditions = this.buildWhereReceivedConditions(inits, role);
 
       const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
@@ -503,7 +503,7 @@ export class ShareResultRequestService {
         );
       }
 
-      const whereConditions = this.buildWhereConditions(
+      const whereConditions = this.buildWhereReceivedConditions(
         inits,
         role,
         extraConditions,
@@ -533,7 +533,7 @@ export class ShareResultRequestService {
     });
   }
 
-  private buildWhereConditions(
+  private buildWhereReceivedConditions(
     inits: any[],
     role: number,
     extraConditions?: any,
@@ -580,11 +580,24 @@ export class ShareResultRequestService {
               is_map_to_toc: true,
             }
           : commonConditions,
-      done: {
-        ...commonConditions,
-        request_status_id: In([2, 3]),
-        shared_inititiative_id: In(sharedInitiativeIds),
-      },
+      done: [
+        {
+          ...commonConditions,
+          request_status_id: In([2, 3]),
+          is_active: true,
+          obj_result: { is_active: true },
+          shared_inititiative_id: In(sharedInitiativeIds),
+          is_map_to_toc: false,
+        },
+        {
+          ...commonConditions,
+          request_status_id: In([2, 3]),
+          is_active: true,
+          obj_result: { is_active: true },
+          owner_initiative_id: In(sharedInitiativeIds),
+          is_map_to_toc: true,
+        },
+      ],
     };
   }
 
@@ -686,7 +699,7 @@ export class ShareResultRequestService {
       const extraContidions: any = {
         requested_by: user.id,
       };
-      const whereConditions = this.buildWhereConditions(
+      const whereConditions = this.buildWhereSentConditions(
         inits,
         role,
         extraContidions,
@@ -714,6 +727,74 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private buildWhereSentConditions(
+    inits: any[],
+    role: number,
+    extraConditions?: any,
+  ) {
+    const sharedInitiativeIds = inits.map((i) => i.initiative_id);
+    const commonConditions: any = {
+      request_status_id: 1,
+      is_active: true,
+      obj_result: { is_active: true },
+    };
+
+    if (extraConditions) {
+      for (const key in extraConditions) {
+        if (extraConditions.hasOwnProperty(key)) {
+          if (
+            typeof commonConditions[key] === 'object' &&
+            typeof extraConditions[key] === 'object'
+          ) {
+            commonConditions[key] = {
+              ...commonConditions[key],
+              ...extraConditions[key],
+            };
+          } else {
+            commonConditions[key] = extraConditions[key];
+          }
+        }
+      }
+    }
+
+    return {
+      pendingOwner:
+        role !== 1
+          ? {
+              ...commonConditions,
+              owner_initiative_id: In(sharedInitiativeIds),
+              is_map_to_toc: false,
+            }
+          : commonConditions,
+      pendingShared:
+        role !== 1
+          ? {
+              ...commonConditions,
+              shared_inititiative_id: In(sharedInitiativeIds),
+              is_map_to_toc: true,
+            }
+          : commonConditions,
+      done: [
+        {
+          ...commonConditions,
+          request_status_id: In([2, 3]),
+          is_active: true,
+          obj_result: { is_active: true },
+          owner_initiative_id: In(sharedInitiativeIds),
+          is_map_to_toc: false,
+        },
+        {
+          ...commonConditions,
+          request_status_id: In([2, 3]),
+          is_active: true,
+          obj_result: { is_active: true },
+          shared_inititiative_id: In(sharedInitiativeIds),
+          is_map_to_toc: true,
+        },
+      ],
+    };
   }
 
   async getAllStatus() {
