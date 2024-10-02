@@ -569,13 +569,13 @@ export class ShareResultRequestService {
           ? {
               ...commonConditions,
               shared_inititiative_id: In(sharedInitiativeIds),
-              is_map_to_toc: false
+              is_map_to_toc: false,
             }
           : commonConditions,
       pendingShared:
         role !== 1
           ? {
-              ...commonConditions, 
+              ...commonConditions,
               owner_initiative_id: In(sharedInitiativeIds),
               is_map_to_toc: true,
             }
