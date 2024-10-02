@@ -16,7 +16,6 @@
   justify-content: flex-end;
   margin-right: 50px;
   margin-top: -45px;
-
 }
 
 .table {
@@ -33,7 +32,7 @@ td {
 
 .title {
   a {
-    &:nth-child(2) {
+    &:not(:first-child) {
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
       padding-top: 10px;
@@ -47,7 +46,7 @@ td {
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
@@ -62,7 +61,7 @@ td {
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
@@ -77,7 +76,7 @@ td {
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
@@ -86,13 +85,13 @@ td {
   }
 }
 
-.status_name {
+.full_status_name_html {
   a {
     height: 35px;
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
@@ -107,7 +106,7 @@ td {
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;
@@ -122,7 +121,7 @@ td {
     display: flex;
     align-items: center;
 
-    &:nth-child(2) {
+    &:not(:first-child) {
       height: 45px;
       border-top: 1px solid #eaeaea;
       margin-top: 10px;

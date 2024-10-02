@@ -1,10 +1,12 @@
-<iframe title="Report Frame" [src]="this.report.sanitizedUrl" *ngIf="this.report.sanitizedUrl"></iframe>
-<div class="iframe_spinner" *ngIf="this.iframeLoaded">
-    <div class="spinner">
-        <div class="info">
-            <i class="pi pi-spin pi-sync" style="font-size: 4rem; color: white; margin-bottom: 1rem; "></i>
-            <div class="text">Generating pdf, please wait...</div>
-        </div>
+<iframe title="Report Frame" [src]="this.pdfUrl" *ngIf="this.pdfUrl && !this.error"></iframe>
+
+<div class="iframe_spinner" *ngIf="this.iframeLoaded && !this.error">
+  <div class="spinner">
+    <div class="info">
+      <i class="pi pi-spin pi-sync" style="font-size: 4rem; color: white; margin-bottom: 1rem"></i>
+      <div class="text">Generating pdf, please wait...</div>
     </div>
+  </div>
 </div>
-<app-page-alert *ngIf="this.error.type" [type]="this.error.type"></app-page-alert>
+
+<app-page-alert *ngIf="this.error" [type]="this.error"></app-page-alert>

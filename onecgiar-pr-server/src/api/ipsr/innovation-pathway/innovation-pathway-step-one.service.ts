@@ -1154,7 +1154,7 @@ export class InnovationPathwayStepOneService {
         },
       });
       return res;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

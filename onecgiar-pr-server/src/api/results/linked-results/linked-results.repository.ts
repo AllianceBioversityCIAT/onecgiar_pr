@@ -201,7 +201,7 @@ export class LinkedResultRepository
         }
       });
       return largestObject?.id ? largestObject.id : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
