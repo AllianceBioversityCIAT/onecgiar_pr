@@ -162,7 +162,7 @@ export class InnoDevService {
     }
   };
 
-  async saveAnticepatedInnoUser(
+  async saveAnticipatedInnoUser(
     resultId: number,
     user: number,
     { innovatonUse: crtr }: InnovationUseDto,
@@ -233,6 +233,7 @@ export class InnoDevService {
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
               how_many: el?.how_many,
+              addressing_demands: this.isNullData(el?.addressing_demands),
             },
           );
         } else {
@@ -261,6 +262,7 @@ export class InnoDevService {
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }
@@ -304,6 +306,7 @@ export class InnoDevService {
               how_many: this.isNullData(el?.how_many),
               is_active: el?.is_active,
               graduate_students: this.isNullData(el?.graduate_students),
+              addressing_demands: this.isNullData(el?.addressing_demands),
             });
           }
         } else {
@@ -323,6 +326,7 @@ export class InnoDevService {
             graduate_students: this.isNullData(el?.graduate_students),
             institution_roles_id: 5,
             how_many: el?.how_many,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }
@@ -371,6 +375,7 @@ export class InnoDevService {
               quantity: this.isNullData(el.quantity),
               last_updated_by: user,
               is_active: el.is_active == undefined ? true : el.is_active,
+              addressing_demands: this.isNullData(el?.addressing_demands),
             },
           );
         } else {
@@ -387,6 +392,7 @@ export class InnoDevService {
             unit_of_measure: this.isNullData(el?.unit_of_measure),
             created_by: user,
             last_updated_by: user,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }

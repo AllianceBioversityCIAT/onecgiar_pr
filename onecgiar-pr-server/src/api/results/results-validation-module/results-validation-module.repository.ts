@@ -1026,6 +1026,7 @@ export class resultValidationRepository
 						WHERE
 							ra.result_id = r.id
 							AND ra.is_active = 1
+							AND coalesce(ra.addressing_demands,'') <> ''
 							AND (
 								(
 									ra.sex_and_age_disaggregation = 0
@@ -1079,6 +1080,7 @@ export class resultValidationRepository
 						WHERE
 							rbit.results_id = r.id
 							AND rbit.is_active = true
+							AND coalesce(rbit.addressing_demands,'') <> ''
 							AND (
 								(
 									rbit.institution_types_id != 78
@@ -1107,6 +1109,7 @@ export class resultValidationRepository
 							rim.result_id = r.id
 							AND rim.is_active = TRUE
 							AND rim.unit_of_measure IS NOT NULL
+							AND coalesce(rim.addressing_demands,'') <> ''
 					) = 0
 				)
 			) THEN FALSE
@@ -1422,7 +1425,6 @@ export class resultValidationRepository
 		and r.version_id = ${version};
     `;
     try {
-      console.log(queryData);
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;

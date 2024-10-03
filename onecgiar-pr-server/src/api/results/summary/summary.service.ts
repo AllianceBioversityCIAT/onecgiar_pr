@@ -69,7 +69,7 @@ export class SummaryService {
         where: { id: resultId },
       });
 
-      const InnovationUse = await this._innoDevService.saveAnticepatedInnoUser(
+      const InnovationUse = await this._innoDevService.saveAnticipatedInnoUser(
         resultExist.id,
         user.id,
         innovationUseDto,
@@ -416,7 +416,7 @@ export class SummaryService {
         innovation_user_to_be_determined != null
       ) {
         // * Save InnovationUser
-        await this._innoDevService.saveAnticepatedInnoUser(
+        await this._innoDevService.saveAnticipatedInnoUser(
           resultId,
           user.id,
           innovationUseDto,
