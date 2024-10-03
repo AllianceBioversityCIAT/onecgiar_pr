@@ -123,6 +123,11 @@ export class AnticipatedInnovationUserComponent implements OnInit {
     <li>We are currently working to include broader diversity dimensions beyond male, female and youth, which will be implemented in future reporting periods.</li>`;
   }
 
+  sectionName() {
+    return `Demand of anticipated innovation user
+    <br>Who would be the user(s) of this innovation and what demand or problem does it address?`;
+  }
+
   removeOther(actors) {
     return actors.filter(item => item.actor_type_id != 5);
   }
