@@ -15,6 +15,7 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -32,6 +33,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
     ReturnResponse,
     ResultInstitutionsBudgetRepository,
     GlobalParameterRepository,
+    ResultsInnovationsDevRepository,
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],

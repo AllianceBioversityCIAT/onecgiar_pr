@@ -18,6 +18,8 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ChangeTracker } from '../../../shared/utils/change-tracker';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
+import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -32,6 +34,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
+    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -253,6 +256,11 @@ export class ResultsByInstitutionsService {
           },
         });
 
+      const resultsInnovationsDev =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          incomingResult.id,
+        );
+
       if (knowledgeProduct && data.mqap_institutions?.length) {
         await this.handleMqapInstitutionsUpdate(
           data.mqap_institutions,
@@ -295,6 +303,7 @@ export class ResultsByInstitutionsService {
           data.institutions,
           oldPartners,
           !!knowledgeProduct,
+          !!resultsInnovationsDev,
           data.result_id,
           user.id,
         );
@@ -392,6 +401,7 @@ export class ResultsByInstitutionsService {
     incomingInstitutions: ResultsByInstitution[],
     oldInstitutions: ResultsByInstitution[],
     isKnowledgeProduct: boolean,
+    isInnoDev: boolean,
     resultId: number,
     userId: number,
   ) {
@@ -424,6 +434,7 @@ export class ResultsByInstitutionsService {
     if (added.length) {
       added = added.map((a) => {
         const toAdd = new ResultsByInstitution();
+
         toAdd.created_by = userId;
         toAdd.last_updated_by = userId;
         toAdd.is_active = true;
@@ -434,10 +445,27 @@ export class ResultsByInstitutionsService {
           : InstitutionRoleEnum.PARTNER;
         toAdd.delivery = a.delivery;
         toAdd['isNew'] = true;
+
         return toAdd;
       });
 
       added = await this._resultByIntitutionsRepository.save(added);
+
+      if (isInnoDev) {
+        const resultInstitutionsBudgets = added.map((a) => {
+          const toAdd = new ResultInstitutionsBudget();
+
+          toAdd.created_by = userId;
+          toAdd.result_institution_id = a.id;
+          toAdd.is_active = true;
+
+          return toAdd;
+        });
+
+        await this._resultInstitutionsBudgetRepository.save(
+          resultInstitutionsBudgets,
+        );
+      }
     }
 
     // handling modfiy result_by_institutions
