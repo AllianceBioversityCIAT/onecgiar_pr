@@ -1,18 +1,10 @@
 import { ExportTablesService } from './export-tables.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import * as FileSaver from 'file-saver';
-import * as xlsx from 'xlsx';
 import * as ExcelJS from 'exceljs';
 
 jest.mock('file-saver', () => ({
   saveAs: jest.fn()
-}));
-
-jest.mock('xlsx', () => ({
-  utils: {
-    json_to_sheet: jest.fn().mockReturnValue('worksheet')
-  },
-  write: jest.fn().mockReturnValue('excelBuffer')
 }));
 
 jest.mock('exceljs', () => ({
