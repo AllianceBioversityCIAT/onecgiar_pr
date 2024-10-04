@@ -24,7 +24,7 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
         </app-pr-input>
 
-        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness" label="I want to provide a description"
+        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness" label="I want to provide evidence details."
         (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"></p-checkbox>
 
         <app-pr-textarea 
@@ -48,7 +48,7 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
         </app-pr-input>
 
-        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel" label="I want to provide a description"
+        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel" label="I want to provide evidence details."
         (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"></p-checkbox>
 
         <app-pr-textarea 
