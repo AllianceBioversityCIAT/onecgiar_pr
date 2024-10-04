@@ -372,27 +372,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     ) > 0
                 )
             ) THEN FALSE
-            WHEN (
-                rip.is_expert_workshop_organized = 1
-                AND (
-                    rip.assessed_during_expert_workshop_id = 2
-                    AND (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_by_innovation_package rbip
-                        WHERE
-                            rbip.result_innovation_package_id = r.id
-                            AND rbip.is_active = TRUE
-                            AND (
-                                rbip.current_innovation_readiness_level IS NULL
-                                OR rbip.current_innovation_use_level IS NULL
-                                OR rbip.potential_innovation_readiness_level IS NULL
-                                OR rbip.potential_innovation_use_level IS NULL
-                            )
-                    ) > 0
-                )
-            ) THEN FALSE
             WHEN(
                 SELECT
                     COUNT(*)
@@ -500,10 +479,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 WHERE
                     rie.is_active = TRUE
                     AND rie.result_id = r.id
-                    AND rie.first_name IS NOT NULL
-                    AND rie.first_name <> ''
-                    AND rie.last_name IS NOT NULL
-                    AND rie.last_name <> ''
                     AND rie.result_ip_expert_id IN (
                         SELECT
                             rie2.result_ip_expert_id
@@ -523,11 +498,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     rie3.result_id = r.id
                     AND rie3.is_active = TRUE
                     AND (
-                        rie3.first_name IS NULL
-                        OR rie3.last_name IS NULL
-                        OR rie3.first_name = ''
-                        OR rie3.last_name = ''
-                        OR NOT EXISTS (
+                        NOT EXISTS (
                             SELECT
                                 rie4.result_ip_expert_id
                             FROM
