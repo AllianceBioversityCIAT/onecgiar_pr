@@ -13,11 +13,14 @@ import { ListFilterByTextAndAttrPipe } from '../../../custom-fields/pr-multi-sel
 import { PrFieldHeaderComponent } from '../../../custom-fields/pr-field-header/pr-field-header.component';
 import { DialogModule } from 'primeng/dialog';
 import { of } from 'rxjs';
+import { ApiService } from '../../services/api/api.service';
+import { ExportTablesService } from '../../services/export-tables.service';
 
 describe('GlobalCompletenessStatusComponent', () => {
   let component: GlobalCompletenessStatusComponent;
   let fixture: ComponentFixture<GlobalCompletenessStatusComponent>;
   let apiServiceMock: any;
+  let mockExportTablesService: ExportTablesService;
 
   beforeEach(async () => {
     apiServiceMock = {
@@ -31,6 +34,11 @@ describe('GlobalCompletenessStatusComponent', () => {
         showResultHistoryOfChangesModal: false
       }
     };
+
+    mockExportTablesService = {
+      exportExcel: jest.fn()
+    } as any;
+
     await TestBed.configureTestingModule({
       declarations: [
         GlobalCompletenessStatusComponent,
@@ -40,7 +48,17 @@ describe('GlobalCompletenessStatusComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientModule, FilterInitWithRoleCoordAndLeadModule, FilterByTextModule, TableModule, DialogModule, FormsModule]
+      imports: [HttpClientModule, FilterInitWithRoleCoordAndLeadModule, FilterByTextModule, TableModule, DialogModule, FormsModule],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: apiServiceMock
+        },
+        {
+          provide: ExportTablesService,
+          useValue: mockExportTablesService
+        }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(GlobalCompletenessStatusComponent);
@@ -63,7 +81,7 @@ describe('GlobalCompletenessStatusComponent', () => {
   });
 
   it('should call exportExcel on exportTablesSE when exportToExcel is called', () => {
-    const spy = jest.spyOn(component.exportTablesSE, 'exportExcel');
+    const spy = jest.spyOn(mockExportTablesService, 'exportExcel');
     component.exportExcel([]);
     expect(spy).toHaveBeenCalled();
   });

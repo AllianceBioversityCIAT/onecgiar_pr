@@ -18,26 +18,15 @@ export class UserReportComponent implements OnInit {
 
   GET_reportUsers() {
     this.api.resultsSE.GET_reportUsers().subscribe(({ response }) => {
-      //(response);
       this.usersList = response;
     });
   }
 
   exportExcel(usersList) {
-    //(usersList);
     const usersListMapped = [];
-    usersListMapped.push({
-      user_id: 'User id',
-      init_name_official_code: 'Initiative name',
-      user_email: 'Email',
-      user_first_name: 'First name',
-      user_last_name: 'Last name',
-      initiative_role_name: 'Initiative role',
-      app_role_name: 'Application role'
-    });
+
     usersList.map(result => {
       const { user_id, init_name_official_code, user_email, user_first_name, user_last_name, app_role_name, initiative_role_name } = result;
-      //(is_submitted);
       usersListMapped.push({
         user_id: this.convertToNodata(user_id),
         init_name_official_code: this.convertToNodata(init_name_official_code),
@@ -48,14 +37,21 @@ export class UserReportComponent implements OnInit {
         initiative_role_name: this.convertToNodata(initiative_role_name)
       });
     });
-    // console.table(resultsListMapped);
-    const wscols = [{ wpx: 70 }, { wpx: 600 }, { wpx: 200 }, { wpx: 100 }, { wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+
+    const wscols = [
+      { header: 'User id', key: 'user_id', width: 16 },
+      { header: 'Initiative name', key: 'init_name_official_code', width: 70 },
+      { header: 'Email', key: 'user_email', width: 38 },
+      { header: 'First name', key: 'user_first_name', width: 16 },
+      { header: 'Last name', key: 'user_last_name', width: 16 },
+      { header: 'Initiative role', key: 'initiative_role_name', width: 16 },
+      { header: 'Application role', key: 'app_role_name', width: 18 }
+    ];
+
     this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
   }
 
-  convertToNodata(value, nullOptionindex?) {
-    if (value && value != 'null') return value;
-    const nullOptions = ['Not applicable', 'Not provided'];
-    return nullOptions[nullOptionindex ? nullOptionindex : 0];
+  convertToNodata(value: string | null): string {
+    return value && value !== 'null' ? value : 'Not applicable';
   }
 }
