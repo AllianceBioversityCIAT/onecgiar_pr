@@ -414,7 +414,8 @@ export class EvidencesRepository
     e.poverty_related,
     e.is_supplementary,
     e.result_id,
-    e.knowledge_product_related 
+    e.knowledge_product_related,
+    e.innovation_readiness_related
     FROM evidence e 
     LEFT JOIN (
         SELECT es1.*
