@@ -43,6 +43,51 @@ describe('NewComplementaryInnovationComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should return true when short_title is empty', () => {
+    component.bodyNewComplementaryInnovation.short_title = '';
+    component.bodyNewComplementaryInnovation.title = 'Title';
+    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
+    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should return true when title is empty', () => {
+    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
+    component.bodyNewComplementaryInnovation.title = '';
+    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
+    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should return true when selectedValues is empty', () => {
+    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
+    component.bodyNewComplementaryInnovation.title = 'Title';
+    component.selectedValues = [];
+    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should return true when projects_organizations_working_on_innovation is null', () => {
+    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
+    component.bodyNewComplementaryInnovation.title = 'Title';
+    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
+    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = null;
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should return false when all required fields are filled', () => {
+    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
+    component.bodyNewComplementaryInnovation.title = 'Title';
+    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
+    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
+
+    expect(component.disableSaveButton()).toBe(false);
+  });
+
   it('should initialize linksComplemntaryInnovation with three empty links', () => {
     expect(component.linksComplemntaryInnovation).toEqual([{ link: '' }, { link: '' }, { link: '' }]);
   });
