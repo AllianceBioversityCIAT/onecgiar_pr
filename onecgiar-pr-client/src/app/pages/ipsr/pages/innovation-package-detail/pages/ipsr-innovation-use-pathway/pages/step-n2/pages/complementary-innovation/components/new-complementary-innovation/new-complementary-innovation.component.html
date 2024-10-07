@@ -83,7 +83,8 @@
     </div>
     <div class="buttons">
 
-        <app-pr-button text="Save and continue" padding="medium" colorType="success" (click)="onSave()"></app-pr-button>
+        <app-pr-button text="Save and continue" padding="medium" colorType="success" (click)="disableSaveButton() ? null : onSave()" [disabled]="disableSaveButton()"
+        [tooltipText]="disableSaveButton() ? 'Please complete the mandatory fields.' : ''"></app-pr-button>
     </div>
 
 </p-dialog>

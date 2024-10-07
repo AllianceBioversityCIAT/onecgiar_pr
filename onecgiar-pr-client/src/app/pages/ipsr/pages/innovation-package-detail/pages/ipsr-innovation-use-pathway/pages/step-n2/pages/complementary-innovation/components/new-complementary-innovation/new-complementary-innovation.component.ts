@@ -39,6 +39,12 @@ export class NewComplementaryInnovationComponent implements OnInit {
     this.linksComplemntaryInnovation = [{ link: '' }, { link: '' }, { link: '' }];
   }
 
+  disableSaveButton(): boolean {
+    const { short_title, title, projects_organizations_working_on_innovation } = this.bodyNewComplementaryInnovation;
+
+    return !short_title?.trim() || !title?.trim() || !this.selectedValues?.length || projects_organizations_working_on_innovation == null;
+  }
+
   onSave(callback?) {
     this.linksComplemntaryInnovation = this.linksComplemntaryInnovation.filter(element => element.link != '');
     this.bodyNewComplementaryInnovation.complementaryFunctions = this.selectedValues;
