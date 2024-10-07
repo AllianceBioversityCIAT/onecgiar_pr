@@ -139,6 +139,6 @@ export class RdPartnersComponent implements OnInit {
 
   getMessageLead() {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
-    return `Please select the ${entity} leading this result. Only ${entity}s already added in this section can be selected as the result lead.`;
+    return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 }
