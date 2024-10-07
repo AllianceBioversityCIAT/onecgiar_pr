@@ -124,7 +124,7 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   sectionName() {
-    return `Demand of anticipated innovation user
+    return `<b>Demand of anticipated innovation user</b>
     <br>Who would be the user(s) of this innovation and what demand or problem does it address?`;
   }
 

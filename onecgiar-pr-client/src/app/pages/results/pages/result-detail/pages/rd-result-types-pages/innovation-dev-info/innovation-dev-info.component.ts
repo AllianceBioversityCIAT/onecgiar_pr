@@ -143,11 +143,12 @@ export class InnovationDevInfoComponent implements OnInit {
   }
 
   hasReadinessLevelDiminished() {
-    const currentLevel = this.innovationControlListSE.readinessLevelsList.find(
-      irl => irl.id === this.innovationDevInfoBody.innovation_readiness_level_id
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
+      irl => irl.id === this.innovationDevInfoBody?.innovation_readiness_level_id
     );
-    const oldLevel = this.innovationControlListSE.readinessLevelsList.find(irl => irl.id === this.innovationDevInfoBody.previous_irl);
-    return Number(currentLevel.level) < Number(oldLevel.level);
+    const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.innovationDevInfoBody?.previous_irl);
+
+    return Number(currentLevel?.level) < Number(oldLevel?.level);
   }
 
   alertDiminishedReadinessLevel() {
