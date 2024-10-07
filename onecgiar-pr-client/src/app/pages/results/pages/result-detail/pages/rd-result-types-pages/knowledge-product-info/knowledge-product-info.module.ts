@@ -6,9 +6,17 @@ import { KnowledgeProductInfoComponent } from './knowledge-product-info.componen
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { NgCircleProgressModule } from 'ng-circle-progress';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
+import { MessageModule } from 'primeng/message';
 
 @NgModule({
   declarations: [KnowledgeProductInfoComponent],
-  imports: [CommonModule, KnowledgeProductInfoRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, NgCircleProgressModule.forRoot()]
+  imports: [
+    CommonModule,
+    KnowledgeProductInfoRoutingModule,
+    CustomFieldsModule,
+    FeedbackValidationDirectiveModule,
+    NgCircleProgressModule.forRoot(),
+    MessageModule
+  ]
 })
 export class KnowledgeProductInfoModule {}
