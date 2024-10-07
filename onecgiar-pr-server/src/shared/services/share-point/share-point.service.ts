@@ -6,6 +6,7 @@ import { CreateUploadSessionDto } from 'src/api/results/evidences/dto/create-upl
 import { ReturnResponseUtil } from '../../utils/response.util';
 
 @Injectable()
+//TODO change console.log for logger
 export class SharePointService {
   private token = null;
   private expiresIn = null;

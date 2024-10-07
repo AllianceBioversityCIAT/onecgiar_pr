@@ -109,7 +109,7 @@ describe('RdPartnersComponent', () => {
       const parser = new DOMParser();
       const dom = parser.parseFromString(`<div class="alert-event"></div>`, 'text/html');
       const querySelector = jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
-      await component.ngOnInit();
+      component.ngOnInit();
 
       const alertEventElement = dom.querySelector('.alert-event');
       alertEventElement.dispatchEvent(new Event('click'));
@@ -125,7 +125,7 @@ describe('RdPartnersComponent', () => {
         throw new Error('Test error');
       });
 
-      await component.ngOnInit();
+      component.ngOnInit();
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
 
