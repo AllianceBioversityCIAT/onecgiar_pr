@@ -6,10 +6,7 @@ import {
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
-import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
-import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
 import { ResultRepository } from '../result.repository';
 import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
@@ -35,8 +32,6 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 export class ResultsTocResultsService {
   constructor(
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
-    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
-    private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
     private readonly _resultRepository: ResultRepository,
@@ -60,9 +55,7 @@ export class ResultsTocResultsService {
   ) {
     try {
       const {
-        contributing_np_projects,
         result_id,
-        contributing_center,
         contributing_initiatives,
         impactsTarge,
         sdgTargets,
@@ -81,8 +74,6 @@ export class ResultsTocResultsService {
       let initiativeArrayRtr: number[] = [];
       let initiativeArrayPnd: number[] = [];
 
-      const titleArray = contributing_np_projects.map((el) => el.grant_title);
-
       if (initSubmitter.initiative_id !== changePrimaryInit) {
         const newInit =
           await this._resultByInitiativesRepository.updateIniciativeSubmitter(
@@ -96,12 +87,6 @@ export class ResultsTocResultsService {
           message: 'The Primary Submitter was changed successfully',
           status: HttpStatus.CREATED,
         };
-      }
-
-      if (contributing_center.filter((el) => Boolean(el.primary)).length > 1) {
-        contributing_center.forEach((el) => {
-          el.primary = false;
-        });
       }
 
       if (
@@ -176,125 +161,6 @@ export class ResultsTocResultsService {
       if (cancelRequest?.length) {
         await this._shareResultRequestRepository.cancelRequest(
           cancelRequest.map((e) => e.share_result_request_id),
-        );
-      }
-
-      if (contributing_np_projects?.length) {
-        await this._nonPooledProjectRepository.updateNPProjectById(
-          result_id,
-          titleArray,
-          user.id,
-          1,
-        );
-        await this._nonPooledProjectRepository.update(
-          { results_id: result_id },
-          {
-            is_active: false,
-          },
-        );
-        for (const contributing_np_project of contributing_np_projects) {
-          if (contributing_np_project?.grant_title?.length) {
-            const resultData = await this._nonPooledProjectRepository.findOne({
-              where: {
-                results_id: result_id,
-                grant_title: contributing_np_project.grant_title,
-                funder_institution_id: contributing_np_project.funder,
-                non_pooled_project_type_id: 1,
-              },
-            });
-
-            if (resultData) {
-              await this._nonPooledProjectRepository.update(resultData.id, {
-                center_grant_id: contributing_np_project.center_grant_id,
-                funder_institution_id: contributing_np_project.funder,
-                lead_center_id: contributing_np_project.lead_center,
-                is_active: true,
-                last_updated_by: user.id,
-              });
-            } else {
-              await this._nonPooledProjectRepository.save({
-                results_id: result_id,
-                center_grant_id: contributing_np_project.center_grant_id,
-                funder_institution_id: contributing_np_project.funder,
-                lead_center_id: contributing_np_project.lead_center,
-                grant_title: contributing_np_project.grant_title,
-                created_by: user.id,
-                last_updated_by: user.id,
-                non_pooled_project_type_id: 1,
-              });
-            }
-          }
-        }
-
-        const npps = await this._nonPooledProjectRepository.find({
-          where: {
-            results_id: result_id,
-            is_active: true,
-          },
-        });
-        for (const npp of npps) {
-          const initBudget =
-            await this._resultBilateralBudgetRepository.findOne({
-              where: {
-                non_pooled_projetct_id: npp.id,
-              },
-            });
-          if (!initBudget) {
-            await this._resultBilateralBudgetRepository.save({
-              non_pooled_projetct_id: npp.id,
-              created_by: user.id,
-              last_updated_by: user.id,
-            });
-          } else {
-            await this._resultBilateralBudgetRepository.update(npp.id, {
-              is_active: true,
-              last_updated_by: user.id,
-            });
-          }
-        }
-      } else {
-        await this._nonPooledProjectRepository.updateNPProjectById(
-          result_id,
-          [],
-          user.id,
-          1,
-        );
-      }
-
-      if (contributing_center?.length) {
-        const centerArray = contributing_center.map((el) => el.code);
-        await this._resultsCenterRepository.updateCenter(
-          result_id,
-          centerArray,
-          user.id,
-        );
-        const resultCenterArray: ResultsCenter[] = [];
-        for (const center of contributing_center) {
-          const exists =
-            await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
-              result_id,
-              center.code,
-            );
-          if (!exists) {
-            const newResultCenter = new ResultsCenter();
-            newResultCenter.center_id = center.code;
-            newResultCenter.result_id = result_id;
-            newResultCenter.created_by = user.id;
-            newResultCenter.last_updated_by = user.id;
-            newResultCenter.is_primary = center.primary || false;
-            resultCenterArray.push(newResultCenter);
-          } else if (center.primary) {
-            exists.is_primary = center.primary;
-            exists.last_updated_by = user.id;
-            resultCenterArray.push(exists);
-          }
-        }
-        await this._resultsCenterRepository.save(resultCenterArray);
-      } else {
-        await this._resultsCenterRepository.updateCenter(
-          result_id,
-          [],
-          user.id,
         );
       }
 
@@ -417,15 +283,6 @@ export class ResultsTocResultsService {
         pending_contributing_initiatives: conPending,
       };
 
-      const npProject =
-        await this._nonPooledProjectRepository.getAllNPProjectByResultId(
-          resultId,
-          1,
-        );
-      const resCenters =
-        await this._resultsCenterRepository.getAllResultsCenterByResultId(
-          resultId,
-        );
       const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
 
@@ -579,8 +436,6 @@ export class ResultsTocResultsService {
           // pending_contributing_initiatives: conPending,
           contributing_initiatives: contributingInitiatives,
           contributing_and_primary_initiative: conAndPriInit,
-          contributing_np_projects: npProject,
-          contributing_center: resCenters,
           result_toc_result: {
             planned_result: null,
             initiative_id: resTocRes ? resTocRes[0]?.initiative_id : null,

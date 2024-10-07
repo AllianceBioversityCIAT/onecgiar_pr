@@ -187,17 +187,9 @@ export class resultValidationRepository
 	SELECT
 		'theory-of-change' AS section_name,
 		CASE
-			WHEN (
-				(
-					SELECT COUNT(rc.id)
-					FROM results_center rc
-					WHERE rc.is_active > 0
-					AND rc.result_id = r.id
-				) > 0
-			)
 			${
         resultLevel != 2 && resultLevel != 1
-          ? `AND (
+          ? `WHEN (
 			(
 				SELECT SUM(IF(rtr.planned_result is null, 0, 1))
 				FROM results_toc_result rtr
@@ -247,7 +239,7 @@ export class resultValidationRepository
 			${
         resultLevel == 1
           ? `
-					AND (
+					WHEN (
 						(SELECT COUNT(DISTINCT cgt.impactAreaId)
 						FROM results_impact_area_target riat
 						INNER JOIN clarisa_global_targets cgt ON cgt.targetId = riat.impact_area_target_id
@@ -265,21 +257,7 @@ export class resultValidationRepository
 					)
 				`
           : ``
-      }
-	  AND  (
-		(
-			SELECT
-				IFNULL(
-					SUM(IF(npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id <> '' AND
-						npp.grant_title IS NOT NULL AND npp.grant_title <> '' AND
-						npp.lead_center_id IS NOT NULL AND npp.lead_center_id <> '', 1, 0)),
-					0
-				) - IFNULL(COUNT(npp.id), 0)
-			FROM non_pooled_project npp
-			WHERE npp.results_id = r.id
-			AND npp.is_active > 0
-		) = 0
-		) THEN TRUE
+      } THEN TRUE
 			ELSE FALSE
 		END AS validation
 	FROM
@@ -314,61 +292,124 @@ export class resultValidationRepository
 
     const queryData = `
 	SELECT
-		'partners' AS section_name,
-		CASE
-			WHEN r.no_applicable_partner = 1 THEN TRUE
-			WHEN (
-				(
-					SELECT
-						COUNT(rbi.id)
-					FROM
-						results_by_institution rbi
-					WHERE
-						rbi.result_id = r.id
-						AND (
-							rbi.institution_roles_id = 2
-							OR rbi.institution_roles_id = 8
-						)
-						AND rbi.is_active > 0
-				) <= 0
-			) THEN FALSE
-			WHEN (
+	'partners' AS section_name,
+	CASE
+		WHEN r.is_lead_by_partner IS NULL THEN FALSE
+		WHEN (
+			(
 				SELECT
-					COUNT(*)
+					COUNT(rbi.id)
 				FROM
-					results_by_institution rbi2
+					results_by_institution rbi
 				WHERE
-					rbi2.result_id = r.id
+					rbi.result_id = r.id
 					AND (
-						rbi2.institution_roles_id = 2
-						OR rbi2.institution_roles_id = 8
+						rbi.institution_roles_id = 2
+						OR rbi.institution_roles_id = 8
 					)
-					AND rbi2.is_active = TRUE
-			) != (
+					AND rbi.is_active > 0
+			) <= 0  AND r.no_applicable_partner = 0
+		) THEN FALSE
+		WHEN (
+			SELECT
+				COUNT(*)
+			FROM
+				results_by_institution rbi2
+			WHERE
+				rbi2.result_id = r.id
+				AND (
+					rbi2.institution_roles_id = 2
+					OR rbi2.institution_roles_id = 8
+				)
+				AND rbi2.is_active = TRUE
+		) != (
+			SELECT
+				COUNT(DISTINCT rbibdt.result_by_institution_id)
+			FROM
+				result_by_institutions_by_deliveries_type rbibdt
+			WHERE
+				rbibdt.is_active = TRUE
+				AND rbibdt.result_by_institution_id IN (
+					SELECT
+						rbi4.id
+					FROM
+						results_by_institution rbi4
+					WHERE
+						rbi4.result_id = r.id
+						AND (
+							rbi4.institution_roles_id = 2
+							OR rbi4.institution_roles_id = 8
+						)
+						AND rbi4.is_active = TRUE
+				)
+		) THEN FALSE
+		WHEN (
+			(
 				SELECT
-					COUNT(DISTINCT rbibdt.result_by_institution_id)
+					COUNT(rc.id)
 				FROM
-					result_by_institutions_by_deliveries_type rbibdt
+					results_center rc
 				WHERE
-					rbibdt.is_active = TRUE
-					AND rbibdt.result_by_institution_id IN (
-						SELECT
-							rbi4.id
-						FROM
-							results_by_institution rbi4
-						WHERE
-							rbi4.result_id = r.id
-							AND (
-								rbi4.institution_roles_id = 2
-								OR rbi4.institution_roles_id = 8
-							)
-							AND rbi4.is_active = TRUE
-					)
-			) THEN FALSE
-			ELSE TRUE
-		END AS validation
+					rc.is_active > 0
+					AND rc.result_id = r.id
+			) <= 0
+		) THEN FALSE
+		WHEN (
+			(
+				SELECT
+					CASE
+						#if there are not non-pooled, we consider this as valid
+						WHEN IFNULL(COUNT(npp.id),0) = 0 THEN 1
+						#if the difference between the number of valid non-pooled and the total number is 0, then this is valid
+						ELSE (
+							IFNULL(
+								SUM(
+									IF(
+										(
+											npp.funder_institution_id IS NOT NULL AND npp.funder_institution_id > 0 AND
+											COALESCE(npp.grant_title, '') <> '' AND COALESCE(npp.lead_center_id, '') <> ''
+										),
+										1, 0
+									)
+								),
+								0
+							) - IFNULL(COUNT(npp.id), 0) = 0
+						)
+					END as npp_validation
+				FROM
+					non_pooled_project npp
+				WHERE
+					npp.results_id = r.id
+					AND npp.is_active > 0
+			) = 0
+		) THEN FALSE
+		WHEN (
+			(
+				SELECT
+					COUNT(rbi2.id)
+				FROM results_by_institution rbi2
+				WHERE
+					rbi2.is_active
+					AND rbi2.result_id = r.id
+					AND rbi2.is_leading_result = 1
+			) <> 1 AND r.is_lead_by_partner = 1
+		) THEN FALSE
+		WHEN (
+			(
+				SELECT
+					COUNT(rc.id)
+				FROM
+					results_center rc
+				WHERE
+					rc.is_active
+					AND rc.result_id = r.id
+					AND rc.is_leading_result = 1
+			) <> 1 AND r.is_lead_by_partner = 0
+		) THEN FALSE
+		ELSE TRUE
+	END AS validation
 	FROM
-		\`result\` r
+		result r
 	WHERE
 		r.id = ?
 		AND r.is_active > 0
@@ -378,6 +419,7 @@ export class resultValidationRepository
 		);
     `;
     try {
+      console.log(queryData);
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;

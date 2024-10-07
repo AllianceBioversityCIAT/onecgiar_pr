@@ -797,7 +797,8 @@ WHERE
     r.is_replicated,
     r.in_qa as inQA,
     ci.cgiar_entity_type_id,
-    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type
+    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type,
+    r.is_lead_by_partner
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

@@ -7,13 +7,11 @@ export class TheoryOfChangeBody {
     accepted_contributing_initiatives: [],
     pending_contributing_initiatives: []
   };
-  contributing_np_projects: donorInterfaceToc[] = [];
-  contributing_center: centerInterfacesToc[] = [];
   result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
   contributors_result_toc_result: any = [];
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
-  contributing_and_primary_initiative: any;
+  contributing_and_primary_initiative: any[];
   bodyNewTheoryOfChanges: any[];
   impactsTarge: any[];
   sdgTargets: any[];
@@ -40,16 +38,7 @@ interface indicatorsTocInterface {
   id: number;
   indicator_statement?: string;
 }
-interface institutionsInterfaceToc {
-  institutions_id: number;
-}
 
-export class donorInterfaceToc {
-  funder: institutionsInterfaceToc;
-  grant_title: string;
-  center_grant_id: string;
-  lead_center: string;
-}
 export interface centerInterfacesToc {
   code: string;
   primary?: boolean;

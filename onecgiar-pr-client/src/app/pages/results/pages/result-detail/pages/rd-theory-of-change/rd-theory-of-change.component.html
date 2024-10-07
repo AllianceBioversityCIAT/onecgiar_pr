@@ -13,15 +13,13 @@
     <app-pr-select
       class="segment_title_margin"
       [options]="this.theoryOfChangeBody.contributing_and_primary_initiative"
-      label="Primary submitter"
+      label="Submitter"
       optionLabel="full_name"
       optionValue="id"
       placeholder="Select Initiative"
       description="Select an initiative or platform"
       [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
-      [fieldDisabled]="
-        !!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)
-      ">
+      [fieldDisabled]="true">
     </app-pr-select>
 
     <div
@@ -127,101 +125,6 @@
     </div>
     <div *ngSwitchDefault></div>
   </div>
-
-  <app-pr-field-header label="Contributing non-pooled projects" [required]="false" [simpleStyle]="true"></app-pr-field-header>
-  <app-alert-status
-    *ngIf="!this.api.rolesSE.readOnly"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-  </app-alert-status>
-  <div class="donors">
-    <div class="donor" *ngFor="let donor of this.theoryOfChangeBody.contributing_np_projects; let i = index">
-      <app-pr-field-header [label]="'Non-pooled project No. ' + (i + 1)" [required]="false"></app-pr-field-header>
-      <app-pr-select
-        class="segment_title_margin"
-        [options]="this.institutionsSE?.institutionsList"
-        label="Funder name"
-        optionLabel="full_name"
-        optionValue="institutions_id"
-        placeholder="Select funder"
-        [(ngModel)]="donor.funder">
-      </app-pr-select>
-      <div class="auto_fit_container">
-        <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title" placeholder="Grant title goes here..."> </app-pr-input>
-        <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
-        <app-pr-select
-          [options]="this.contributingCenterOptions"
-          label="Lead/Contract Center"
-          optionLabel="name"
-          optionValue="lead_center"
-          placeholder="Select donor"
-          [(ngModel)]="donor.lead_center"
-          placeholder="Lead/Contract Center goes here...">
-        </app-pr-select>
-      </div>
-      <app-edit-or-delete-item-button
-        (click)="deleteEvidence(i)"
-        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-      </app-edit-or-delete-item-button>
-    </div>
-  </div>
-
-  <app-no-data-text
-    *ngIf="!this.theoryOfChangeBody?.contributing_np_projects?.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-    title="No Non-pooled added">
-  </app-no-data-text>
-
-  <app-add-button
-    name="Add non-pooled project"
-    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-    (clickEvent)="addBilateralContribution()"></app-add-button>
-
-  <app-alert-status
-    *ngIf="this.api.dataControlSE.isKnowledgeProduct"
-    description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
-  </app-alert-status>
-
-  <div appFeedbackValidation labelText="Contributing Centers" [isComplete]="!!this.theoryOfChangeBody.contributing_center?.length"></div>
-
-  <app-pr-multi-select
-    [options]="this.centersSE.centersList"
-    label="Contributing Centers"
-    (selectOptionEvent)="validatePrimarySelection()"
-    selectedLabel="Center(s) selected"
-    optionLabel="full_name"
-    optionValue="code"
-    [(ngModel)]="this.theoryOfChangeBody.contributing_center"
-    placeholder="Select center(s)"
-    [disableOptions]="this.cgspaceDisabledList">
-  </app-pr-multi-select>
-
-  <div class="medal_info">Please select the primary Center by clicking the medal icon <i class="material-icons-round">workspace_premium</i></div>
-
-  <div class="medal_selector selected_container">
-    <div class="centers chips_container">
-      <div
-        class="center pr_chip_selected"
-        [pTooltip]="this.disabledText"
-        [tooltipDisabled]="!center.from_cgspace"
-        *ngFor="let center of this.theoryOfChangeBody.contributing_center; let i = index">
-        <i
-          class="material-icons-round medal"
-          [ngClass]="{ primary: center.primary }"
-          (click)="this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status ? null : addPrimary(center)"
-          >workspace_premium</i
-        >
-        <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
-        <i
-          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
-          class="material-icons-round"
-          (click)="deletContributingCenter(i)"
-          >cancel</i
-        >
-      </div>
-    </div>
-  </div>
-
-  <br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateGranTitle" [editable]="someEditable()" (clickSave)="onSaveSection()">
-</app-save-button>
+<app-save-button class="position_sticky" [editable]="someEditable()" (clickSave)="onSaveSection()"> </app-save-button>
