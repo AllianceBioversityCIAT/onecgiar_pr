@@ -64,7 +64,7 @@ describe('EmailNotificationManagementService', () => {
       await service.onModuleInit();
       expect(errorSpy).toHaveBeenCalledWith(
         'Failed to connect to RabbitMQ Email MicroService',
-        expect.any(Error),
+        'Connection failed',
       );
     });
   });
@@ -126,8 +126,7 @@ describe('EmailNotificationManagementService', () => {
 
       expect(result).toEqual({
         cc: ['jhon@doe.com'],
-        subject:
-          '[PRMS] Result Contributing: INIT-02 confirmation required for contribution to Result 1 - ',
+        subject: '[PRMS] INIT-01 requests INIT-02 to contribute to Result 1 - ',
         initContributingName: 'Contributing',
         initContributing: 'INIT-02 Contributing',
         requesterName: 'John Doe',

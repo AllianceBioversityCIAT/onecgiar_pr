@@ -22,7 +22,10 @@ export class EmailNotificationManagementService implements OnModuleInit {
       await this._client.connect();
       this._logger.log('Successfully connected to RabbitMQ Email MicroService');
     } catch (error) {
-      this._logger.error('Failed to connect to RabbitMQ Email MicroService');
+      this._logger.error(
+        'Failed to connect to RabbitMQ Email MicroService',
+        error.message,
+      );
     }
   }
 
