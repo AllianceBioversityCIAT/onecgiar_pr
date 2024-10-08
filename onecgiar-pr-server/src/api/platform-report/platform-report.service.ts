@@ -37,10 +37,7 @@ export class PlatformReportService implements OnModuleInit {
         'Successfully connected to RabbitMQ Reports MicroService',
       );
     } catch (error) {
-      this._logger.error(
-        'Failed to connect to RabbitMQ Reports MicroService',
-        error,
-      );
+      this._logger.error('Failed to connect to RabbitMQ Reports MicroService');
     }
   }
 
