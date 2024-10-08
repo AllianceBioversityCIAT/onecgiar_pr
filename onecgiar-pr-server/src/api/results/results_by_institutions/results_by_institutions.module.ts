@@ -16,6 +16,9 @@ import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowled
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
+import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -34,6 +37,9 @@ import { ResultsInnovationsDevRepository } from '../summary/repositories/results
     ResultInstitutionsBudgetRepository,
     GlobalParameterRepository,
     ResultsInnovationsDevRepository,
+    NonPooledProjectRepository,
+    ResultsCenterRepository,
+    NonPooledProjectBudgetRepository,
   ],
   imports: [],
   exports: [ResultByIntitutionsRepository],
