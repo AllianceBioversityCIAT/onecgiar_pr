@@ -30,7 +30,7 @@ export class RdPartnersComponent implements OnInit {
     public centersSE: CentersService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
