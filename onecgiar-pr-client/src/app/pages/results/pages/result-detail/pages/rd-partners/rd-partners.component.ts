@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { NonPooledProjectDto, PartnersBody } from './models/partnersBody';
@@ -30,7 +30,7 @@ export class RdPartnersComponent implements OnInit {
     public centersSE: CentersService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {

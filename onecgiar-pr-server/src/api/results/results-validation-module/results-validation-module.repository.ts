@@ -419,7 +419,6 @@ export class resultValidationRepository
 		);
     `;
     try {
-      console.log(queryData);
       const shareResultRequest: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
