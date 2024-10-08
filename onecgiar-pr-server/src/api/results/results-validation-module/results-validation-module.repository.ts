@@ -1068,7 +1068,7 @@ export class resultValidationRepository
 								FROM 
 									result_actors ra
 								WHERE
-									ra.result_id = 7847
+									ra.result_id = r.id
 									AND ra.is_active
 							) = 1,
 							(
@@ -1077,7 +1077,7 @@ export class resultValidationRepository
 								FROM 
 									result_actors ra
 								WHERE
-									ra.result_id = 7847
+									ra.result_id = r.id
 									AND ra.is_active
 									AND COALESCE(TRIM(ra.addressing_demands),'') <> ''
 									AND ra.actor_type_id is not null
@@ -1108,7 +1108,7 @@ export class resultValidationRepository
 								FROM
 									results_by_institution_type rbit
 								WHERE
-									rbit.results_id = 7847
+									rbit.results_id = r.id
 									AND rbit.is_active
 							) = 1,
 							(
@@ -1117,7 +1117,7 @@ export class resultValidationRepository
 								FROM
 									results_by_institution_type rbit
 								WHERE
-									rbit.results_id = 7847
+									rbit.results_id = r.id
 									AND rbit.is_active
 									AND rbit.institution_roles_id = 5
 									AND COALESCE(TRIM(rbit.addressing_demands),'') <> ''
@@ -1137,7 +1137,7 @@ export class resultValidationRepository
 								FROM
 									result_ip_measure rim
 								WHERE
-									rim.result_id = 7847
+									rim.result_id = r.id
 									AND rim.is_active
 							) = 1,
 							(
@@ -1146,7 +1146,7 @@ export class resultValidationRepository
 								FROM
 									result_ip_measure rim
 								WHERE
-									rim.result_id = 7847
+									rim.result_id = r.id
 									AND rim.is_active
 									AND COALESCE(TRIM(rim.unit_of_measure), '') <> ''
 									AND COALESCE(TRIM(rim.addressing_demands),'') <> ''
@@ -1157,7 +1157,7 @@ export class resultValidationRepository
 					TRUE
 				)
 				AND(
-					(
+					/*(
 						# questions 2 and 3 (1 and 2 on front-end)
 						(
 							# both question 2 and 3 have been answered "answer_boolean = true"
@@ -1165,13 +1165,9 @@ export class resultValidationRepository
 								COUNT(*)
 							FROM
 								result_questions rq
-							LEFT JOIN result_answers ra 
-								ON ra.result_question_id = rq.result_question_id
-								AND ra.result_id = r.id
-								AND ra.is_active
+							LEFT JOIN result_answers ra ON ra.result_question_id = rq.result_question_id
 							WHERE
 								ra.result_id = r.id
-								AND ra.is_active
 								AND ra.answer_boolean = TRUE
 								AND (
 									rq.parent_question_id = 2
@@ -1179,52 +1175,113 @@ export class resultValidationRepository
 								)
 						) = 2
 						AND (
-							# unique answers for question 4 and 8
+							SELECT 
+								CASE 
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
+										WHERE ra.result_id = r.id
+											AND ra.result_question_id IN (4, 8)
+											AND (ra.answer_boolean IS NULL OR ra.answer_boolean = FALSE)
+									) > 0 THEN 1
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
+										WHERE ra.result_id = r.id
+											AND ra.result_question_id IN (4, 8)
+											AND ra.answer_boolean = TRUE
+									) > 0 
+									AND (
+										SELECT COUNT(*) 
+										FROM result_answers ra_child
+										JOIN result_questions rq_child ON ra_child.result_question_id = rq_child.result_question_id
+										WHERE ra_child.result_id = r.id
+											AND ra_child.answer_boolean = TRUE
+											AND rq_child.parent_question_id IN (4, 8)
+									) > 0 THEN 1
+									ELSE 0
+								END
+						)
+						AND(
 							(
-								SELECT
-									COUNT(*)
-								FROM
-									result_questions rq
-								LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
-								WHERE
-									ra.result_id = r.id
-									AND ra.is_active
-									AND ra.answer_boolean = TRUE
-									AND (
-										ra.result_question_id = 4
-										OR ra.result_question_id = 8
-									)
+								select 
+									count(*) 
+								from (
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 17 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+										and coalesce(trim(ra.answer_text), '') <> ''
+								) as q1
 							) = (
-								SELECT
-									COUNT(DISTINCT rq.parent_question_id)
-								FROM
-									result_answers ra
-								LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
-								WHERE
-									ra.result_id = r.id
-									AND ra.is_active
-									AND ra.answer_boolean = TRUE
-									AND (
-										rq.parent_question_id = 4
-										OR rq.parent_question_id = 8
-									)
+								select count(*) 
+								from(
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 17 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+								) as q2
 							)
 						)
 						AND(
-							SELECT
-								COUNT(*)
-							FROM
-								result_answers ra
-							LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
-							WHERE
-								ra.result_id = r.id
-								AND ra.is_active
-								AND rq.result_question_id IN (17, 24)
-								AND ra.answer_boolean = TRUE
-								AND COALESCE(TRIM(ra.answer_text), '') <> ''
-						) = 0
-					)
-					AND(
+							(
+								select 
+									count(*) 
+								from (
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 24 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+										and coalesce(trim(ra.answer_text), '') <> ''
+								) as q1
+							) = (
+								select count(*) 
+								from(
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 24 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+								) as q2
+							)
+						)
+					)*/
+					true AND (
 						# validations about question 26 (intellectual rights on front)
 						(
 							# validate that question 27 have been answered
@@ -1235,7 +1292,6 @@ export class resultValidationRepository
 							LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
 							WHERE
 								ra.result_id = r.id
-								AND ra.is_active
 								AND ra.answer_boolean = TRUE
 								AND rq.parent_question_id = 27
 						) > 0
@@ -1247,7 +1303,6 @@ export class resultValidationRepository
 									FROM result_questions rq2
 									JOIN result_answers ra2 ON rq2.result_question_id = ra2.result_question_id
 									WHERE ra2.result_id = r.id
-										AND ra2.is_active = TRUE
 										AND ra2.answer_boolean = TRUE
 										AND rq2.result_question_id IN (30, 31)
 								) = 1,
@@ -1259,7 +1314,6 @@ export class resultValidationRepository
 									JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
 									WHERE 
 										ra.result_id = r.id
-										AND ra.is_active
 										AND ra.answer_boolean = TRUE
 										AND rq.parent_question_id = 28
 								) > 0,
@@ -1274,7 +1328,6 @@ export class resultValidationRepository
 									FROM result_questions rq2
 									JOIN result_answers ra2 ON rq2.result_question_id = ra2.result_question_id
 									WHERE ra2.result_id = r.id
-										AND ra2.is_active = TRUE
 										AND ra2.answer_boolean = TRUE
 										AND rq2.result_question_id IN (33, 34)
 								) = 1,
@@ -1286,7 +1339,6 @@ export class resultValidationRepository
 									JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
 									WHERE 
 										ra.result_id = r.id
-										AND ra.is_active
 										AND ra.answer_boolean = TRUE
 										AND rq.parent_question_id = 29
 								) > 0,
@@ -1305,7 +1357,6 @@ export class resultValidationRepository
 							LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
 							WHERE
 								ra.result_id = r.id
-								AND ra.is_active
 								AND ra.answer_boolean = TRUE
 								AND rq.parent_question_id = 38
 						) > 0
@@ -1319,7 +1370,6 @@ export class resultValidationRepository
 								LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
 								WHERE
 									ra.result_id = r.id
-									AND ra.is_active
 									AND ra.answer_boolean = TRUE
 									AND ra.result_question_id = 39
 							) = (
@@ -1330,7 +1380,6 @@ export class resultValidationRepository
 								LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
 								WHERE
 									ra.result_id = r.id
-									AND ra.is_active
 									AND ra.answer_boolean = TRUE
 									AND rq.parent_question_id = 39
 							)
@@ -1343,7 +1392,6 @@ export class resultValidationRepository
 							LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
 							WHERE
 								ra.result_id = r.id
-								AND ra.is_active
 								AND ra.result_question_id = 47
 								AND (
 									coalesce(ra.answer_boolean, 0) = 0
