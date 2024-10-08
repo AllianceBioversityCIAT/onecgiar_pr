@@ -9,6 +9,7 @@ import {
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { NonPooledProjectDto } from './dto/non-pooled-project.dto';
 
 @Injectable()
 export class NonPooledProjectRepository
@@ -234,7 +235,7 @@ export class NonPooledProjectRepository
         and npp.non_pooled_project_type_id = ?;
     `;
     try {
-      const npProject: NonPooledProject[] = await this.query(queryData, [
+      const npProject: NonPooledProjectDto[] = await this.query(queryData, [
         resultId,
         type,
       ]);

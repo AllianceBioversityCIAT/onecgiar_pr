@@ -2,6 +2,9 @@ export class PartnersBody {
   public no_applicable_partner: boolean = false;
   public mqap_institutions: UnmappedMQAPInstitutionDto[] = [];
   public institutions: InstitutionsInterface[] = [];
+  public contributing_np_projects: NonPooledProjectDto[];
+  public contributing_center: ResultsCenterDto[];
+  public is_lead_by_partner: boolean | null;
 }
 
 export class InstitutionsInterface {
@@ -14,6 +17,7 @@ export class InstitutionsInterface {
   result_kp_mqap_institution_id: string | null;
   created_date: string;
   last_updated_date: string;
+  is_leading_result: boolean;
   obj_institutions: {
     name: number;
     website_link: string;
@@ -45,6 +49,7 @@ export class UnmappedMQAPInstitutionDto {
   created_date: string;
   last_updated_date: string;
   institutions_type_name: string;
+  is_leading_result: boolean;
   result_kp_mqap_institution_object: {
     result_kp_mqap_institution_id: string;
     result_knowledge_product_id: string;
@@ -74,4 +79,33 @@ export class UnmappedMQAPInstitutionDto {
     last_updated_by: number;
     last_updated_date: string;
   }[];
+}
+
+export class NonPooledProjectDto {
+  id?: number;
+  grant_title: string;
+  center_grant_id: string;
+  is_active?: boolean;
+  created_date?: Date;
+  last_updated_date?: Date;
+  results_id?: number;
+  lead_center: string | number;
+  funder: number | string;
+  created_by?: number;
+  last_updated_by?: number;
+}
+
+export class ResultsCenterDto {
+  id: number;
+  from_cgspace: boolean;
+  is_active: boolean;
+  created_date: Date;
+  last_updated_date: Date;
+  result_id: number;
+  created_by: number;
+  last_updated_by: number;
+  code: string;
+  name: string;
+  acronym: string;
+  is_leading_result: boolean;
 }

@@ -10,14 +10,12 @@ describe('RdTheoryOfChangesServicesService', () => {
   beforeEach(() => {
     mockApiService = {
       resultsSE: {
-        get_vesrsionDashboard: () => of({ response: {version_id: 1}}),
+        get_vesrsionDashboard: () => of({ response: { version_id: 1 } })
       }
     };
 
     TestBed.configureTestingModule({
-      imports: [
-        HttpClientTestingModule
-      ],
+      imports: [HttpClientTestingModule]
     });
     service = new RdTheoryOfChangesServicesService(mockApiService);
   });
@@ -28,14 +26,13 @@ describe('RdTheoryOfChangesServicesService', () => {
 
       service.get_versionDashboard(1);
 
-      expect(spy).toHaveBeenCalled()
+      expect(spy).toHaveBeenCalled();
       expect(service.fullInitiativeToc).toEqual(1);
     });
 
-    it('should log an error when get_vesrsionDashboard call fails', () => {
+    it('should log an error when get_versionDashboard call fails', () => {
       const mockError = 'error';
-      jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard')
-        .mockReturnValue(throwError(mockError));
+      jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard').mockReturnValue(throwError(mockError));
       const spy = jest.spyOn(console, 'error');
 
       service.get_versionDashboard(1);

@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
+import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -468,10 +469,13 @@ describe('ResultsApiService', () => {
 
   describe('PATCH_partnersSection', () => {
     it('should call PATCH_partnersSection, return expected data and should call isSavingPipe', done => {
-      const mockBody = {
+      const mockBody: PartnersBody = {
         no_applicable_partner: false,
         mqap_institutions: [],
-        institutions: []
+        institutions: [],
+        contributing_center: [],
+        contributing_np_projects: [],
+        is_lead_by_partner: false
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 

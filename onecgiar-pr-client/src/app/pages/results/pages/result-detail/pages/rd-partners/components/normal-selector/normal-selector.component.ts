@@ -15,7 +15,6 @@ export class NormalSelectorComponent {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 
-  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
   disableOptions: any[] = null;
 
   partnerUniqueTypes = [];
@@ -38,7 +37,23 @@ export class NormalSelectorComponent {
   }
 
   getOnlyPartnerTypes() {
-    const partnerTypes = this.rdPartnersSE.partnersBody.institutions.map(element => element?.obj_institutions.obj_institution_type_code.name);
+    const partnerTypes = this.rdPartnersSE.partnersBody.institutions?.map(element => element?.obj_institutions.obj_institution_type_code.name);
     this.partnerUniqueTypes = Array.from(new Set(partnerTypes));
+  }
+
+  emitPartnerEvent(partner) {
+    if (this.rdPartnersSE.leadPartnerId === partner) {
+      this.rdPartnersSE.leadPartnerId = null;
+    }
+    this.rdPartnersSE.setPossibleLeadPartners(true);
+  }
+
+  updateLeadData() {
+    if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
+      this.rdPartnersSE.partnersBody.is_lead_by_partner = false;
+      this.rdPartnersSE.disableLeadPartner = true;
+    } else {
+      this.rdPartnersSE.disableLeadPartner = false;
+    }
   }
 }

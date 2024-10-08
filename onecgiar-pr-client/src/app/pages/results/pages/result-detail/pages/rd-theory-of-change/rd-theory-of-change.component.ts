@@ -1,8 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { resultTocResultsInterface, TheoryOfChangeBody, donorInterfaceToc } from './model/theoryOfChangeBody';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { resultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
-import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
@@ -16,42 +15,31 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
-  primaryText = ' - <strong>Primary</strong> ';
-  disabledText = 'To remove this center, please contact your librarian';
   getConsumed = false;
   contributingInitiativeNew = [];
-  cgspaceDisabledList: any = [];
-  contributingCenterOptions = [];
+
+  submitter: string = '';
 
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
-    public centersSE: CentersService,
     public institutionsSE: InstitutionsService,
     public greenChecksSE: GreenChecksService,
     public theoryOfChangesServices: RdTheoryOfChangesServicesService,
-    public dataControlSE: DataControlService
+    public dataControlSE: DataControlService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {}
 
-  ngOnInit(): void {
-    this.requestEvent();
+  ngOnInit() {
     this.getSectionInformation();
     this.GET_AllWithoutResults();
-    this.getContributingCenterOptions();
   }
 
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
       this.contributingInitiativesList = response;
+      this.changeDetectorRef.detectChanges();
     });
-  }
-
-  disabledCenters() {
-    this.cgspaceDisabledList = this.theoryOfChangeBody.contributing_center.filter(center => center.from_cgspace);
-  }
-
-  async getContributingCenterOptions() {
-    this.contributingCenterOptions = await this.centersSE.getData();
   }
 
   getSectionInformation(callback?) {
@@ -63,6 +51,9 @@ export class RdTheoryOfChangeComponent implements OnInit {
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(
           init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
         );
+        this.submitter = this.theoryOfChangeBody.contributing_and_primary_initiative.find(
+          init => init.id === this.theoryOfChangeBody?.result_toc_result?.initiative_id
+        )?.full_name;
 
         if (this.theoryOfChangeBody?.impactsTarge)
           this.theoryOfChangeBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
@@ -88,32 +79,18 @@ export class RdTheoryOfChangeComponent implements OnInit {
         }
 
         this.theoryOfChangeBody.changePrimaryInit = this.theoryOfChangeBody?.result_toc_result.initiative_id;
-
-        this.disabledCenters();
-
-        setTimeout(() => {
-          this.getConsumed = true;
-        }, 50);
+        this.getConsumed = true;
+        this.changeDetectorRef.detectChanges();
       },
       error: err => {
         this.getConsumed = true;
+        this.changeDetectorRef.detectChanges();
         console.error(err);
       },
       complete: () => {
-        callback?.();
+        if (callback) callback();
       }
     });
-  }
-
-  get validateGranTitle() {
-    for (const iterator of this.theoryOfChangeBody.contributing_np_projects) {
-      const evidencesFinded = this.theoryOfChangeBody.contributing_np_projects.filter(evidence => evidence.grant_title == iterator.grant_title);
-      if (evidencesFinded.length >= 2) {
-        return evidencesFinded.length >= 2;
-      }
-    }
-
-    return !!this.theoryOfChangeBody.contributing_np_projects.find(evidence => !evidence.grant_title);
   }
 
   onSaveSection() {
@@ -188,38 +165,5 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
   onRemoveContribuiting(index) {
     this.contributingInitiativeNew.splice(index, 1);
-  }
-
-  addBilateralContribution() {
-    this.theoryOfChangeBody.contributing_np_projects.push(new donorInterfaceToc());
-  }
-
-  requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
-  }
-
-  addPrimary(center) {
-    this.theoryOfChangeBody?.contributing_center.forEach(center => (center.primary = false));
-    center.primary = true;
-  }
-
-  deletContributingCenter(index) {
-    this.theoryOfChangeBody?.contributing_center.splice(index, 1);
-  }
-
-  deleteEvidence(index) {
-    this.theoryOfChangeBody.contributing_np_projects.splice(index, 1);
-  }
-
-  validatePrimarySelection() {
-    if (this.theoryOfChangeBody.contributing_center.length === 1) this.theoryOfChangeBody.contributing_center[0].primary = true;
   }
 }
