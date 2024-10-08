@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { NonPooledProjectDto, PartnersBody } from './models/partnersBody';
@@ -30,7 +30,7 @@ export class RdPartnersComponent implements OnInit {
     public centersSE: CentersService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
@@ -139,6 +139,6 @@ export class RdPartnersComponent implements OnInit {
 
   getMessageLead() {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
-    return `Please select the ${entity} leading this result. Only ${entity}s already added in this section can be selected as the result lead.`;
+    return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 }

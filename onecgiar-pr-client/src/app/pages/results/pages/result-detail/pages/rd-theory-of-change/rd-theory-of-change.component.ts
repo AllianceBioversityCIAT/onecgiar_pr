@@ -29,7 +29,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
     public greenChecksSE: GreenChecksService,
     public theoryOfChangesServices: RdTheoryOfChangesServicesService,
     public dataControlSE: DataControlService,
-    private changeDetectorRef: ChangeDetectorRef
+    private readonly changeDetectorRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {

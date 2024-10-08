@@ -5,7 +5,6 @@ import { InstitutionsService } from '../../../../../../../../shared/services/glo
 import { GreenChecksService } from '../../../../../../../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { EventType } from '../../../../../../../../shared/interfaces/event-type.dto';
 
 @Component({
   selector: 'app-normal-selector',
