@@ -16,38 +16,35 @@ describe('FilterNotificationBySearchPipe', () => {
     const list = [
       {
         obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane1', last_name: 'Doe1' },
         obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' }
+        obj_owner_initiative: { official_code: '02' },
+        is_map_to_toc: false
       },
       {
-        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane2', last_name: 'Doe2' },
         obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' }
-      },
-      {
-        obj_result: { result_code: '003', title: 'Another Title' },
-        obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' }
+        obj_owner_initiative: { official_code: '02' },
+        is_map_to_toc: false
       }
     ];
     const expected = [
       {
         obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane1', last_name: 'Doe1' },
         obj_shared_inititiative: { official_code: '01' },
         obj_owner_initiative: { official_code: '02' },
-        joinAll: '001 - Title One - 01 - 02'
+        is_map_to_toc: false,
+        joinAll: 'Jane1 Doe1 from 02 has requested inclusion of 01 as a contributor to result 001 - Title One'
       },
       {
-        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane2', last_name: 'Doe2' },
         obj_shared_inititiative: { official_code: '01' },
         obj_owner_initiative: { official_code: '02' },
-        joinAll: '002 - Title Two - 01 - 02'
-      },
-      {
-        obj_result: { result_code: '003', title: 'Another Title' },
-        obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' },
-        joinAll: '003 - Another Title - 01 - 02'
+        is_map_to_toc: false,
+        joinAll: 'Jane2 Doe2 from 02 has requested inclusion of 01 as a contributor to result 001 - Title One'
       }
     ];
     expect(pipe.transform(list, 'Title')).toEqual(expected);
@@ -62,29 +59,39 @@ describe('FilterNotificationBySearchPipe', () => {
     const list = [
       {
         obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane1', last_name: 'Doe1' },
         obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' }
+        obj_owner_initiative: { official_code: '02' },
+        is_map_to_toc: false
       },
       {
-        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane2', last_name: 'Doe2' },
         obj_shared_inititiative: { official_code: '01' },
-        obj_owner_initiative: { official_code: '02' }
+        obj_owner_initiative: { official_code: '02' },
+        is_map_to_toc: false
       }
     ];
+
     const expected = [
       {
         obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane1', last_name: 'Doe1' },
         obj_shared_inititiative: { official_code: '01' },
         obj_owner_initiative: { official_code: '02' },
-        joinAll: '001 - Title One - 01 - 02'
+        is_map_to_toc: false,
+        joinAll: 'Jane1 Doe1 from 02 has requested inclusion of 01 as a contributor to result 001 - Title One'
       },
       {
-        obj_result: { result_code: '002', title: 'Title Two' },
+        obj_result: { result_code: '001', title: 'Title One' },
+        obj_requested_by: { first_name: 'Jane2', last_name: 'Doe2' },
         obj_shared_inititiative: { official_code: '01' },
         obj_owner_initiative: { official_code: '02' },
-        joinAll: '002 - Title Two - 01 - 02'
+        is_map_to_toc: false,
+        joinAll: 'Jane2 Doe2 from 02 has requested inclusion of 01 as a contributor to result 001 - Title One'
       }
     ];
+
     expect(pipe.transform(list, 'title')).toEqual(expected);
   });
 
@@ -153,13 +160,27 @@ describe('FilterNotificationBySearchPipe', () => {
     expect(result).toBe('The result 001 - Title One was successfully Quality Assessed.');
   });
 
-  it('should create the correct default string', () => {
+  it('should create the correct default string when is_map_to_toc is true', () => {
     const item = {
       obj_result: { result_code: '001', title: 'Title One' },
+      obj_requested_by: { first_name: 'Jane', last_name: 'Doe' },
       obj_shared_inititiative: { official_code: '01' },
-      obj_owner_initiative: { official_code: '02' }
+      obj_owner_initiative: { official_code: '02' },
+      is_map_to_toc: true
     };
     const result = pipe['createDefaultString'](item);
-    expect(result).toBe('001 - Title One - 01 - 02');
+    expect(result).toBe('Jane Doe from 01 has requested contribution to result 001 - Title One submitted by 02');
+  });
+
+  it('should create the correct default string when is_map_to_toc is false', () => {
+    const item = {
+      obj_result: { result_code: '001', title: 'Title One' },
+      obj_requested_by: { first_name: 'Jane', last_name: 'Doe' },
+      obj_shared_inititiative: { official_code: '01' },
+      obj_owner_initiative: { official_code: '02' },
+      is_map_to_toc: false
+    };
+    const result = pipe['createDefaultString'](item);
+    expect(result).toBe('Jane Doe from 02 has requested inclusion of 01 as a contributor to result 001 - Title One');
   });
 });

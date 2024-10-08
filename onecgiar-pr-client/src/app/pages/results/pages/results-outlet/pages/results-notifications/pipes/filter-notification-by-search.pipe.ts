@@ -35,6 +35,10 @@ export class FilterNotificationBySearchPipe implements PipeTransform {
   }
 
   private createDefaultString(item): string {
-    return `${item?.obj_result?.result_code} - ${item?.obj_result?.title} - ${item?.obj_shared_inititiative?.official_code} - ${item?.obj_owner_initiative?.official_code}`;
+    if (item.is_map_to_toc) {
+      return `${item?.obj_requested_by?.first_name} ${item?.obj_requested_by?.last_name} from ${item?.obj_shared_inititiative?.official_code} has requested contribution to result ${item?.obj_result?.result_code} - ${item?.obj_result?.title} submitted by ${item?.obj_owner_initiative?.official_code}`;
+    }
+
+    return `${item?.obj_requested_by?.first_name} ${item?.obj_requested_by?.last_name} from ${item?.obj_owner_initiative?.official_code} has requested inclusion of ${item?.obj_shared_inititiative?.official_code} as a contributor to result ${item?.obj_result?.result_code} - ${item?.obj_result?.title}`;
   }
 }
