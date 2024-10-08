@@ -14,28 +14,43 @@
   <div class="received_container_content">
     <h1 class="received_container_header_title">Pending</h1>
 
-    @if (receivedContributionsPending.length > 0) {
-      <div class="received_container_content_item">
-        @for (item of receivedContributionsPending; track $index) {
-          <app-notification-item [notification]="item" (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
-        }
-      </div>
-    } @else {
-      <div class="received_container_content_empty">You have no pending notifications related with the search.</div>
+    @defer (when receivedContributionsPending.length) {
+      @if (receivedContributionsPending.length > 0) {
+        <div class="received_container_content_item">
+          @for (item of receivedContributionsPending; track $index) {
+            <app-notification-item
+              [notification]="item"
+              (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
+          }
+        </div>
+      } @else {
+        <div class="received_container_content_empty">You have no pending notifications related with the search.</div>
+      }
+    } @placeholder {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
     }
   </div>
 
   <div class="received_container_content">
     <h1 class="received_container_header_title">Done</h1>
-
-    @if (receivedContributionsDone.length > 0) {
-      <div class="received_container_content_item">
-        @for (item of receivedContributionsDone; track $index) {
-          <app-notification-item [notification]="item"></app-notification-item>
-        }
-      </div>
-    } @else {
-      <div class="received_container_content_empty">You have no done notifications related with the search.</div>
+    @defer (when receivedContributionsDone.length) {
+      @if (receivedContributionsDone.length > 0) {
+        <div class="received_container_content_item">
+          @for (item of receivedContributionsDone; track $index) {
+            @defer (on viewport) {
+              <app-notification-item [notification]="item"></app-notification-item>
+            } @placeholder {
+              <app-skeleton-notification-item></app-skeleton-notification-item>
+            }
+          }
+        </div>
+      } @else {
+        <div class="received_container_content_empty">You have no done notifications related with the search.</div>
+      }
+    } @placeholder {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
     }
   </div>
 </div>
