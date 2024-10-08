@@ -22,10 +22,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
       await this._client.connect();
       this._logger.log('Successfully connected to RabbitMQ Email MicroService');
     } catch (error) {
-      this._logger.error(
-        'Failed to connect to RabbitMQ Email MicroService',
-        error,
-      );
+      this._logger.error('Failed to connect to RabbitMQ Email MicroService');
     }
   }
 
@@ -42,7 +39,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
       case EmailTemplate.CONTRIBUTION:
         return {
           cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
-          subject: `${this.addLabel()} Result Contributing: ${data.initContributing.official_code} confirmation required for contribution to Result ${data.result.result_code} - `,
+          subject: `${this.addLabel()} ${data.initOwner.official_code} requests ${data.initContributing.official_code} to contribute to Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.short_name,
           requesterName: `${data.user.first_name} ${data.user.last_name}`,
           initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
@@ -56,7 +53,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
       case EmailTemplate.REQUEST_AS_CONTRIBUTION:
         return {
           cc: this.addPcuEmailToCC(data.user.email, data.pcuEmail),
-          subject: `${this.addLabel()} Result Contribution: ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code} - `,
+          subject: `${this.addLabel()} ${data.initContributing.official_code} requests to be added as contributor for Result ${data.result.result_code} - `,
           initOwnerName: data.initOwner.short_name,
           user: `${data.user.first_name} ${data.user.last_name}`,
           initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
@@ -70,8 +67,8 @@ export class EmailNotificationManagementService implements OnModuleInit {
       case EmailTemplate.REMOVED_CONTRIBUTION:
         return {
           cc: process.env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
-          userEmmiter: `${data.user.first_name}`,
-          subject: `${this.addLabel()} Result Contribution: ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
+          userEmmiter: `${data.user.first_name} ${data.user.last_name}`,
+          subject: `${this.addLabel()} ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.short_name,
           initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
