@@ -38,7 +38,6 @@
     "pusher-js": "^7.1.0-beta",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
-    "xlsx": "^0.18.5",
     "zone.js": "~0.11.4"
   },
   "devDependencies": {
