@@ -26,18 +26,20 @@ export class PopUpNotificationItemComponent {
     const baseUrl = 'result/results-outlet/results-notifications';
     const versionId = notification?.obj_result?.obj_version?.id;
 
-    if (!!notification?.notification_id) {
+    if (notification?.notification_id) {
       const updateInitId = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.id;
-
       return `${baseUrl}/updates?phase=${versionId}&init=${updateInitId}&search=${this.generateNotificationTextUpdates(notification)}`;
     } else {
       const requestInitId = notification?.is_map_to_toc ? notification?.obj_owner_initiative?.id : notification?.obj_shared_inititiative?.id;
-
       return `${baseUrl}/requests/received?phase=${versionId}&init=${requestInitId}&search=${this.generateNotificationTextRequest(notification)}`;
     }
   }
 
   generateNotificationTextRequest(notification) {
-    return `${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} - ${notification?.obj_shared_inititiative?.official_code} - ${notification?.obj_owner_initiative?.official_code}`;
+    if (notification?.is_map_to_toc) {
+      return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_shared_inititiative?.official_code} has requested contribution to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} submitted by ${notification?.obj_owner_initiative?.official_code}`;
+    }
+
+    return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_owner_initiative?.official_code} has requested inclusion of ${notification?.obj_shared_inititiative?.official_code} as a contributor to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}`;
   }
 }
