@@ -37,10 +37,14 @@ export class GlobalCompletenessStatusComponent implements OnInit {
     { title: 'Section seven', attr: 'section_seven_value' }
   ];
 
-  constructor(public api: ApiService, public phasesSE: PhasesService, public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService, public exportTablesSE: ExportTablesService) {}
+  constructor(
+    public api: ApiService,
+    public phasesSE: PhasesService,
+    public resultHistoryOfChangesModalSE: ResultHistoryOfChangesModalService,
+    public exportTablesSE: ExportTablesService
+  ) {}
 
   ngOnInit(): void {
-    // this.POST_reportSesultsCompleteness([], []);
     this.initMode ? this.GET_initiativesByUser() : this.GET_AllInitiatives();
     this.getThePhases();
   }
@@ -75,26 +79,24 @@ export class GlobalCompletenessStatusComponent implements OnInit {
 
     const resultsListMapped = [];
 
-    resultsListMapped.push({
-      result_code: 'Result code',
-      phase_name: 'Reporting phase',
-      result_title: 'Title',
-      official_code: 'Submitter',
-      result_type_name: 'Indicator category',
-      completeness: 'Progress',
-      is_submitted: 'Submitted',
-      general_information: 'General information',
-      theory_of_change: 'Theory of Change',
-      partners: 'Partners',
-      geographic_location: 'Geographic location',
-      links_to_results: 'Links to results',
-      evidence: 'Evidence',
-      section_seven: 'Section seven',
-      pdf_link: 'PDF Link'
-    });
-
     resultsList.map((result: any) => {
-      const { result_code, result_title, phase_name, official_code, completeness, result_type_name, general_information, theory_of_change, partners, geographic_location, links_to_results, evidence, section_seven, is_submitted, pdf_link } = result;
+      const {
+        result_code,
+        result_title,
+        phase_name,
+        official_code,
+        completeness,
+        result_type_name,
+        general_information,
+        theory_of_change,
+        partners,
+        geographic_location,
+        links_to_results,
+        evidence,
+        section_seven,
+        is_submitted,
+        pdf_link
+      } = result;
 
       resultsListMapped.push({
         result_code,
@@ -114,8 +116,31 @@ export class GlobalCompletenessStatusComponent implements OnInit {
         pdf_link: pdf_link
       });
     });
-    const wscols = [{ wpx: 70 }, { wpx: 100 }, { wpx: 800 }, { wpx: 100 }, { wpx: 130 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
-    this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols);
+
+    const wscols = [
+      { header: 'Result code', key: 'result_code', width: 13 },
+      { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
+      { header: 'Title', key: 'result_title', width: 125 },
+      { header: 'Submitter', key: 'official_code', width: 14 },
+      { header: 'Indicator category', key: 'result_type_name', width: 38 },
+      { header: 'Progress', key: 'completeness', width: 14 },
+      { header: 'Submitted', key: 'is_submitted', width: 14 },
+      { header: 'General information', key: 'general_information', width: 22 },
+      { header: 'Theory of Change', key: 'theory_of_change', width: 19 },
+      { header: 'Partners', key: 'partners', width: 15 },
+      { header: 'Geographic location', key: 'geographic_location', width: 22 },
+      { header: 'Links to results', key: 'links_to_results', width: 16 },
+      { header: 'Evidence', key: 'evidence', width: 15 },
+      { header: 'Section seven', key: 'section_seven', width: 15 },
+      { header: 'PDF Link', key: 'pdf_link', width: 70 }
+    ];
+
+    this.exportTablesSE.exportExcel(resultsListMapped, 'completeness_status', wscols, [
+      {
+        cellNumber: 15,
+        cellKey: 'pdf_link'
+      }
+    ]);
     this.requesting = false;
   }
 

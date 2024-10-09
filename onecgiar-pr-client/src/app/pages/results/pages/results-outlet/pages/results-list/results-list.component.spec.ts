@@ -18,6 +18,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ResultsListService } from './services/results-list.service';
+import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 
 jest.useFakeTimers();
 
@@ -60,7 +61,11 @@ describe('ResultsListComponent', () => {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
-      }
+      },
+      rolesSE: {
+        isAdmin: false
+      },
+      updateUserData: jest.fn()
     };
 
     mockShareRequestModalService = {
@@ -92,7 +97,8 @@ describe('ResultsListComponent', () => {
         PrFieldHeaderComponent,
         PrButtonComponent,
         ResultsListFiltersComponent,
-        ReportNewResultButtonComponent
+        ReportNewResultButtonComponent,
+        ChangePhaseModalComponent
       ],
       imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule],
       providers: [
@@ -111,6 +117,48 @@ describe('ResultsListComponent', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe('ngOnInit()', () => {
+    it('should call unSelectInits if user is admin', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      const spyUnSelectInits = jest.spyOn(component, 'unSelectInits');
+
+      component.ngOnInit();
+
+      expect(spyUnSelectInits).toHaveBeenCalled();
+    });
+
+    it('should call updateUserData if user is not admin', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const spyUpdateUserData = jest.spyOn(mockApiService, 'updateUserData');
+
+      component.ngOnInit();
+
+      expect(spyUpdateUserData).toHaveBeenCalled();
+    });
+
+    it('should call updateResultsList', () => {
+      const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
+
+      component.ngOnInit();
+
+      expect(spyUpdateResultsList).toHaveBeenCalled();
+    });
+
+    it('should set inNotifications to false', () => {
+      component.ngOnInit();
+
+      expect(mockShareRequestModalService.inNotifications).toBeFalsy();
+    });
+
+    it('should call getCurrentPhases', () => {
+      const spyGetCurrentPhases = jest.spyOn(mockApiService.dataControlSE, 'getCurrentPhases');
+
+      component.ngOnInit();
+
+      expect(spyGetCurrentPhases).toHaveBeenCalled();
+    });
   });
 
   describe('Menu Items', () => {
@@ -181,15 +229,71 @@ describe('ResultsListComponent', () => {
       expect(mockApiService.resultsSE.currentResultId).toBe(result.id);
       expect(mockApiService.dataControlSE.currentResult).toBe(result);
     });
+
+    it('should set itemsWithDelete[1].visible to true if current result phase year is less than reporting current phase year', () => {
+      const result = { id: 1, title: 'Test Result', phase_year: 2022 };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[1].visible).toBe(true);
+    });
+
+    it('should set itemsWithDelete[1].visible to false if current result phase year is equal to reporting current phase year', () => {
+      const result = { id: 1, title: 'Test Result', phase_year: 2023 };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+    });
+
+    it('should set itemsWithDelete[1].visible to false if current result phase year is greater than reporting current phase year', () => {
+      const result = { id: 1, title: 'Test Result', phase_year: 2024 };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+    });
   });
 
   describe('onDownLoadTableAsExcel()', () => {
     it('should set gettingReport to true and export Excel on exportExcel API response', () => {
       const spyExportExcel = jest.spyOn(mockExportTablesService, 'exportExcel');
+      const wscols = [
+        { header: 'Result code', key: 'result_code', width: 13 },
+        { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
+        { header: 'Reporting year', key: 'reported_year_id', width: 13 },
+        { header: 'Result title', key: 'title', width: 125 },
+        { header: 'Result type', key: 'result_type', width: 45 },
+        { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
+        { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
+        { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
+        { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
+        { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
+        { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
+        { header: 'Submitter', key: 'official_code', width: 14 },
+        { header: 'Status', key: 'status_name', width: 17 },
+        { header: 'Creation date', key: 'creation_date', width: 15 },
+        { header: 'Work package id', key: 'work_package_id', width: 18 },
+        { header: 'Work package title', key: 'work_package_title', width: 125 },
+        { header: 'ToC result id', key: 'toc_result_id', width: 15 },
+        { header: 'ToC result title', key: 'toc_result_title', width: 125 },
+        { header: 'Action Area(s)', key: 'action_areas', width: 53 },
+        { header: 'Center(s)', key: 'centers', width: 80 },
+        { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
+        { header: 'PDF Link', key: 'pdf_link', width: 65 }
+      ];
 
       component.onDownLoadTableAsExcel();
 
-      expect(spyExportExcel).toHaveBeenCalledWith([], 'results_list');
+      expect(spyExportExcel).toHaveBeenCalledWith([], 'results_list', wscols, [
+        {
+          cellNumber: 22,
+          cellKey: 'pdf_link'
+        }
+      ]);
       expect(component.gettingReport).toBeFalsy();
     });
 
