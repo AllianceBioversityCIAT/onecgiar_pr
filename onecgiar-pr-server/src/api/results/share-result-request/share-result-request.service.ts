@@ -141,7 +141,6 @@ export class ShareResultRequestService {
           message: 'The owner initiative cannot be shared with itself',
           status: HttpStatus.BAD_REQUEST,
         };
-        continue;
       }
 
       const newShare = this.buildShareResultRequest(

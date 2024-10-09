@@ -92,7 +92,7 @@ export class ResultsPackageTocResultService {
         crtr?.contributing_initiatives?.accepted_contributing_initiatives.length
       ) {
         const { contributing_initiatives: ci } = crtr;
-        for (const init of ci?.accepted_contributing_initiatives) {
+        for (const init of ci?.accepted_contributing_initiatives ?? []) {
           if (init?.is_active == false) {
             await this._resultByInitiativesRepository.update(
               { result_id: rip.id, initiative_id: init.id },
