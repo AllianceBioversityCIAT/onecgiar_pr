@@ -1,3 +1,6 @@
+@let allSentContributionsPending = this.resultsNotificationsSE?.sentData.sentContributionsPending;
+@let allSentContributionsDone = this.resultsNotificationsSE?.sentData.sentContributionsDone;
+
 @let sentContributionsPending =
   this.resultsNotificationsSE?.sentData.sentContributionsPending
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
@@ -13,7 +16,7 @@
 <div class="sent_container">
   <div class="sent_container_content">
     <h1 class="sent_container_header_title">Pending</h1>
-    @defer (when sentContributionsPending.length) {
+    @defer (when allSentContributionsPending.length) {
       @if (sentContributionsPending.length > 0) {
         <div class="sent_container_content_item">
           @for (item of sentContributionsPending; track $index) {
@@ -35,7 +38,7 @@
 
   <div class="sent_container_content">
     <h1 class="sent_container_header_title">Done</h1>
-    @defer (when sentContributionsDone.length) {
+    @defer (when allSentContributionsDone.length) {
       @if (sentContributionsDone.length > 0) {
         <div class="sent_container_content_item">
           @for (item of sentContributionsDone; track $index) {

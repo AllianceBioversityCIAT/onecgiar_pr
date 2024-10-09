@@ -1,3 +1,6 @@
+@let allReceivedContributionsPending = this.resultsNotificationsSE?.receivedData.receivedContributionsPending;
+@let allReceivedContributionsDone = this.resultsNotificationsSE?.receivedData.receivedContributionsDone;
+
 @let receivedContributionsPending =
   this.resultsNotificationsSE?.receivedData.receivedContributionsPending
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
@@ -14,8 +17,8 @@
   <div class="received_container_content">
     <h1 class="received_container_header_title">Pending</h1>
 
-    @defer (when receivedContributionsPending.length) {
-      @if (receivedContributionsPending.length > 0) {
+    @defer (when allReceivedContributionsPending.length) {
+      @if (receivedContributionsPending?.length > 0) {
         <div class="received_container_content_item">
           @for (item of receivedContributionsPending; track $index) {
             <app-notification-item
@@ -34,8 +37,8 @@
 
   <div class="received_container_content">
     <h1 class="received_container_header_title">Done</h1>
-    @defer (when receivedContributionsDone.length) {
-      @if (receivedContributionsDone.length > 0) {
+    @defer (when allReceivedContributionsDone.length) {
+      @if (receivedContributionsDone?.length > 0) {
         <div class="received_container_content_item">
           @for (item of receivedContributionsDone; track $index) {
             @defer (on viewport) {
