@@ -738,7 +738,7 @@ export class resultValidationRepository
 					)
 					AND(
 						IF(
-							r.result_type_id = 6,
+							r.result_type_id = 7 AND cirl.\`level\` <> 0,
 							(
 								select
 									count(*)
@@ -749,8 +749,7 @@ export class resultValidationRepository
 									and e.is_active
 									and e.innovation_readiness_related
 									and (
-										e.link is not null
-										and trim(e.link) <> ''
+										coalesce(trim(e.link), '')<> ''
 									)
 							) > 0,
 							true
@@ -763,6 +762,8 @@ export class resultValidationRepository
 			result r
 		LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
 			AND rid.is_active > 0
+		LEFT JOIN clarisa_innovation_readiness_level cirl
+			ON rid.innovation_readiness_level_id = cirl.id
 		WHERE
 			r.id = ${resultId}
 			AND r.is_active > 0
@@ -821,14 +822,16 @@ export class resultValidationRepository
           const evidenceValidations: GetValidationSectionDto[] =
             await this.dataSource.query(queryData);
 
-          return evidenceValidations.length
-            ? {
-                section_name: evidenceValidations[0].section_name,
-                validation: Number(
-                  evidenceValidations[0].validation && multiplePerField,
-                ),
-              }
-            : undefined;
+          if (evidenceValidations.length > 0) {
+            return {
+              section_name: evidenceValidations[0].section_name,
+              validation: +(
+                Number(evidenceValidations[0].validation) && multiplePerField
+              ),
+            };
+          }
+
+          return undefined;
         } else if (resultTypeId == 7 && level == 0) {
           const response = {
             section_name: 'evidences',
@@ -838,17 +841,20 @@ export class resultValidationRepository
           return response;
         }
       }
+
       const evidenceValidations: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
 
-      return evidenceValidations.length
-        ? {
-            section_name: evidenceValidations[0].section_name,
-            validation: Number(
-              evidenceValidations[0].validation && multiplePerField,
-            ),
-          }
-        : undefined;
+      if (evidenceValidations.length > 0) {
+        return {
+          section_name: evidenceValidations[0].section_name,
+          validation: +(
+            Number(evidenceValidations[0].validation) && multiplePerField
+          ),
+        };
+      }
+
+      return undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
