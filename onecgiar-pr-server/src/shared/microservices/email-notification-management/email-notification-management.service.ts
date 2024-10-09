@@ -49,7 +49,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
           initOwner: `${data.initOwner.official_code} ${data.initOwner.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
-          resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initContributing.id}&search=${data.result.result_code} - ${data.result.title}`,
+          resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initContributing.id}&search=${data.user.first_name} ${data.user.last_name} from ${data.initOwner.official_code} has requested inclusion of ${data.initContributing.official_code} as a contributor to result ${data.result.result_code} - ${data.result.title}`,
           notificationSettingUrl: `${env.NOTIFICATION_MODULE_URL}settings?init=${data.initContributing.id}`,
         };
 
@@ -62,14 +62,14 @@ export class EmailNotificationManagementService implements OnModuleInit {
           initContributing: `${data.initContributing.official_code} ${data.initContributing.short_name}`,
           resultUrl: `${env.RESULTS_URL}${data.result.result_code}/general-information?phase=${data.result.version_id}`,
           result: `${data.result.result_code} - ${data.result.title}`,
-          resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initOwner.id}&search=${data.result.result_code} - ${data.result.title} - ${data.initContributing.official_code}`,
+          resultNotificationUrl: `${env.NOTIFICATION_MODULE_URL}requests/received?phase=${data.result.version_id}&init=${data.initOwner.id}&search=${data.user.first_name} ${data.user.last_name} from ${data.initContributing.official_code} has requested contribution to result ${data.result.result_code} - ${data.result.title} submitted by ${data.initOwner.official_code}`,
           notificationSettingUrl: `${env.NOTIFICATION_MODULE_URL}settings?init=${data.initContributing.id}`,
           initOwner: `${data.initOwner.official_code} ${data.initOwner.short_name}`,
         };
 
       case EmailTemplate.REMOVED_CONTRIBUTION:
         return {
-          cc: process.env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
+          cc: env.IS_PRODUCTION === 'true' ? [data.pcuEmail] : [],
           userEmmiter: `${data.user.first_name} ${data.user.last_name}`,
           subject: `${this.addLabel()} ${data.initContributing.official_code} has been removed as contributor for Result ${data.result.result_code} - `,
           initContributingName: data.initContributing.short_name,
@@ -89,14 +89,14 @@ export class EmailNotificationManagementService implements OnModuleInit {
 
   addPcuEmailToCC(userEmail: string, pcuEmail: string): string[] {
     const cc = [userEmail];
-    if (process.env.IS_PRODUCTION === 'true' && pcuEmail) {
+    if (env.IS_PRODUCTION === 'true' && pcuEmail) {
       cc.push(pcuEmail);
     }
     return cc;
   }
 
   addLabel() {
-    if (process.env.IS_PRODUCTION === 'false') {
+    if (env.IS_PRODUCTION === 'false') {
       return '[PRMS Testing]';
     } else {
       return '[PRMS]';
