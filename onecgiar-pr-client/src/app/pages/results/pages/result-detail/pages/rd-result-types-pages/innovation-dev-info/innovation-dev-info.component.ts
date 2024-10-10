@@ -18,7 +18,11 @@ export class InnovationDevInfoComponent implements OnInit {
   innovationDevelopmentQuestions: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
-  constructor(private api: ApiService, public innovationControlListSE: InnovationControlListService, private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
+  constructor(
+    private api: ApiService,
+    public innovationControlListSE: InnovationControlListService,
+    private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -34,6 +38,7 @@ export class InnovationDevInfoComponent implements OnInit {
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q1);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q2);
       this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.intellectual_property_rights.q3);
+      this.innovationDevInfoUtilsSE.mapRadioButtonBooleans(this.innovationDevelopmentQuestions.megatrends);
     });
   }
 
@@ -136,5 +141,18 @@ export class InnovationDevInfoComponent implements OnInit {
     <li>The innovation readiness level will be quality assessed.</li>
     <li><strong>YOUR READINESS LEVEL IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">INNOVATION READINESS CALCULATOR</a></strong></li>
     </ul>`;
+  }
+
+  hasReadinessLevelDiminished() {
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
+      irl => irl.id === this.innovationDevInfoBody?.innovation_readiness_level_id
+    );
+    const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.innovationDevInfoBody?.previous_irl);
+
+    return Number(currentLevel?.level) < Number(oldLevel?.level);
+  }
+
+  alertDiminishedReadinessLevel() {
+    return `It appears that the readiness level has decreased since the previous report. Please provide a justification in the text box below.`;
   }
 }

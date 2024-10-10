@@ -118,7 +118,7 @@ export class ResultsPackageTocResultService {
           user,
         );
         const cancelRequest = ci?.pending_contributing_initiatives?.filter(
-          (e) => e.is_active == false,
+          (e) => !e.is_active,
         );
         if (cancelRequest?.length) {
           await this._shareResultRequestRepository.cancelRequest(

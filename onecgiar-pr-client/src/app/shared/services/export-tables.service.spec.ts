@@ -44,7 +44,6 @@ describe('ExportTablesService', () => {
       const list = [];
       const fileName = 'test.xlsx';
       const wscols = [];
-      const callback = jest.fn();
 
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
       const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();

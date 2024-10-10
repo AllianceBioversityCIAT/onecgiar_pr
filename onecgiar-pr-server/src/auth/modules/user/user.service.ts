@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, HttpException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -132,11 +132,7 @@ export class UserService {
       });
 
       if (!user) {
-        throw {
-          response: {},
-          message: 'User Not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new HttpException('User Not found', HttpStatus.NOT_FOUND);
       }
 
       return {

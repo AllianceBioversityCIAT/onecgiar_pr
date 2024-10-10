@@ -9,6 +9,7 @@ import {
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { InnovationDevelopmentDto } from '../dto/innovation-development.dto';
 
 @Injectable()
 export class ResultsInnovationsDevRepository
@@ -273,33 +274,37 @@ export class ResultsInnovationsDevRepository
   async InnovationDevExists(resultId: number) {
     const queryData = `
     SELECT
-    	rid.result_innovation_dev_id,
-    	rid.short_title,
-    	rid.is_new_variety,
-    	rid.number_of_varieties,
-    	rid.innovation_developers,
-    	rid.innovation_collaborators,
-    	rid.readiness_level,
-    	rid.evidences_justification,
-    	rid.is_active,
-    	rid.created_date,
-    	rid.last_updated_date,
-    	rid.results_id,
-    	rid.created_by,
-    	rid.last_updated_by,
-    	rid.innovation_characterization_id,
-    	rid.innovation_nature_id,
-    	rid.innovation_readiness_level_id,
+      rid.result_innovation_dev_id,
+      rid.short_title,
+      rid.is_new_variety,
+      rid.number_of_varieties,
+      rid.innovation_developers,
+      rid.innovation_collaborators,
+      rid.readiness_level,
+      rid.evidences_justification,
+      rid.is_active,
+      rid.created_date,
+      rid.last_updated_date,
+      rid.results_id,
+      rid.created_by,
+      rid.last_updated_by,
+      rid.innovation_characterization_id,
+      rid.innovation_nature_id,
+      rid.innovation_readiness_level_id,
       rid.innovation_acknowledgement,
       rid.innovation_pdf,
-      rid.innovation_user_to_be_determined
-    FROM
-    	results_innovations_dev rid 
-    WHERE 
-    	rid.results_id = ?;
+      rid.innovation_user_to_be_determined,
+      previous_rid.innovation_readiness_level_id as previous_irl
+    FROM \`result\` r
+    left join \`version\` v on r.version_id = v.id
+    right JOIN results_innovations_dev rid on rid.results_id = r.id and rid.is_active
+    LEFT JOIN \`version\` previous_v on v.previous_phase = previous_v.id
+    left join \`result\` previous_r on r.result_code = previous_r.result_code and previous_r.version_id = previous_v.id
+    left join results_innovations_dev previous_rid on previous_rid.results_id = previous_r.id
+    WHERE r.id = ? AND r.is_active;
     `;
     try {
-      const resultTocResult: ResultsInnovationsDev[] = await this.query(
+      const resultTocResult: InnovationDevelopmentDto[] = await this.query(
         queryData,
         [resultId],
       );

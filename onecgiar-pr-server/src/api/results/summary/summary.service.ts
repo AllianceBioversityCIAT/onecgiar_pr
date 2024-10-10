@@ -69,7 +69,7 @@ export class SummaryService {
         where: { id: resultId },
       });
 
-      const InnovationUse = await this._innoDevService.saveAnticepatedInnoUser(
+      const InnovationUse = await this._innoDevService.saveAnticipatedInnoUser(
         resultExist.id,
         user.id,
         innovationUseDto,
@@ -329,14 +329,16 @@ export class SummaryService {
         innDevExists.innovation_pdf = innovation_pdf;
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
-        InnDevRes =
-          await this._resultsInnovationsDevRepository.save(innDevExists);
+        InnDevRes = await this._resultsInnovationsDevRepository.save(
+          innDevExists as any,
+        );
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
         newInnDev.results_id = resultId;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
+        newInnDev.is_active = true;
         newInnDev.is_new_variety = is_new_variety;
         newInnDev.readiness_level = readiness_level;
         newInnDev.number_of_varieties = number_of_varieties;
@@ -348,8 +350,6 @@ export class SummaryService {
         newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
         newInnDev.innovation_characterization_id =
           innovation_characterization_id;
-        newInnDev.innovation_acknowledgement = innovation_acknowledgement;
-        newInnDev.innovation_pdf = innovation_pdf;
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
@@ -386,14 +386,13 @@ export class SummaryService {
         user.id,
         createInnovationDevDto?.innovation_team_diversity.options,
       );
-
-      // * Save Evidence
-      await this._innoDevService.saveEvidence(
+      await this._innoDevService.saveOptionsAndSubOptions(
         resultId,
         user.id,
-        createInnovationDevDto.pictures,
-        3,
+        createInnovationDevDto?.megatrends.options,
       );
+
+      // * Save Evidence
       await this._innoDevService.saveEvidence(
         resultId,
         user.id,
@@ -422,7 +421,7 @@ export class SummaryService {
         innovation_user_to_be_determined != null
       ) {
         // * Save InnovationUser
-        await this._innoDevService.saveAnticepatedInnoUser(
+        await this._innoDevService.saveAnticipatedInnoUser(
           resultId,
           user.id,
           innovationUseDto,
@@ -557,7 +556,7 @@ export class SummaryService {
           bilateral_expected_investment,
           institutions_expected_investment,
           reference_materials,
-          result: result,
+          result,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

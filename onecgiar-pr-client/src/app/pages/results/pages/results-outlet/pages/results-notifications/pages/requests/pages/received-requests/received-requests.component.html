@@ -17,7 +17,7 @@
   <div class="received_container_content">
     <h1 class="received_container_header_title">Pending</h1>
 
-    @defer (when allReceivedContributionsPending.length) {
+    @defer (when allReceivedContributionsPending) {
       @if (receivedContributionsPending?.length > 0) {
         <div class="received_container_content_item">
           @for (item of receivedContributionsPending; track $index) {
@@ -37,7 +37,7 @@
 
   <div class="received_container_content">
     <h1 class="received_container_header_title">Done</h1>
-    @defer (when allReceivedContributionsDone.length) {
+    @defer (when allReceivedContributionsDone) {
       @if (receivedContributionsDone?.length > 0) {
         <div class="received_container_content_item">
           @for (item of receivedContributionsDone; track $index) {

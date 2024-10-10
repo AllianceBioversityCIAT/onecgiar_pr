@@ -7,12 +7,12 @@ import { Router } from '@angular/router';
 })
 export class ResultsNotificationsService {
   receivedData = {
-    receivedContributionsPending: [],
-    receivedContributionsDone: []
+    receivedContributionsPending: null,
+    receivedContributionsDone: null
   };
   sentData = {
-    sentContributionsPending: [],
-    sentContributionsDone: []
+    sentContributionsPending: null,
+    sentContributionsDone: null
   };
 
   updatesData = {
@@ -221,12 +221,12 @@ export class ResultsNotificationsService {
 
   resetNotificationInformation() {
     this.receivedData = {
-      receivedContributionsPending: [],
-      receivedContributionsDone: []
+      receivedContributionsPending: null,
+      receivedContributionsDone: null
     };
     this.sentData = {
-      sentContributionsPending: [],
-      sentContributionsDone: []
+      sentContributionsPending: null,
+      sentContributionsDone: null
     };
     this.phaseFilter = null;
     this.resetFilters();

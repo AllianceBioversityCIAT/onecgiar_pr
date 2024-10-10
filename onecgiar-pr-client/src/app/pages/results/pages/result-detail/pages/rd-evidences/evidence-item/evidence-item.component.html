@@ -1,117 +1,134 @@
 <div class="evidence_item">
-  <div class="index">{{this.index}}</div>
+  <div class="index">{{ this.index }}</div>
   <div class="evidence_fields">
-
-    <app-pr-radio-button *ngIf="!this.dataControlSE.isKnowledgeProduct" [options]="this.evidencesType"
-      optionLabel="name" optionValue="id" (ngModelChange)="cleanSource($event)" label="Source of the evidence"
+    <app-pr-radio-button
+      *ngIf="!this.dataControlSE.isKnowledgeProduct"
+      [options]="this.evidencesType"
+      optionLabel="name"
+      optionValue="id"
+      (ngModelChange)="cleanSource($event)"
+      label="Source of the evidence"
       [(ngModel)]="this.evidence.is_sharepoint">
     </app-pr-radio-button>
 
-    <div class="link" *ngIf="!this.evidence.is_sharepoint;else upload_file">
-      <app-pr-input label="Link" [(ngModel)]="this.evidence.link" placeholder="Add link" type="link"
-        [disabled]="this.dataControlSE.isKnowledgeProduct" [required]="!isOptional"></app-pr-input>
-        <div appFeedbackValidation
-        labelText="Invalid URL provided."
-        [isComplete]="this.evidence.link ? isInvalidLink(this.evidence.link) : true">
-      </div>
+    <div class="link" *ngIf="!this.evidence.is_sharepoint; else upload_file">
+      <app-pr-input
+        label="Link"
+        [(ngModel)]="this.evidence.link"
+        placeholder="Add link"
+        type="link"
+        [disabled]="this.dataControlSE.isKnowledgeProduct"
+        [required]="!isOptional"></app-pr-input>
+      <div appFeedbackValidation labelText="Invalid URL provided." [isComplete]="this.evidence.link ? isInvalidLink(this.evidence.link) : true"></div>
     </div>
-    
-    <p-message @fadeInOut *ngIf="this.validateCGLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="info" text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
-    <p-message @fadeInOut *ngIf="this.validateCloudLink()" [style]="{ width : '100%', 'justify-content': 'flex-start' }" severity="warn" text="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></p-message>
-    <ng-template #upload_file>
 
-      <app-pr-radio-button [options]="this.isPubilcFileOptions" optionLabel="name" optionValue="id"
-        label="Is this a public file?" [(ngModel)]="this.evidence.is_public_file">
+    <p-message
+      @fadeInOut
+      *ngIf="this.validateCGLink()"
+      [style]="{ width: '100%', 'justify-content': 'flex-start' }"
+      severity="info"
+      text="This CGSpace link will be automatically replaced by its permanent link once you save the changes in this section."></p-message>
+    <p-message
+      @fadeInOut
+      *ngIf="this.validateCloudLink()"
+      [style]="{ width: '100%', 'justify-content': 'flex-start' }"
+      severity="warn"
+      text="Links to file storage platforms are not accepted. If you do not have a CGSpace or other public link available, use the “Upload file” option to upload your evidence to the PRMS repository."></p-message>
+    <ng-template #upload_file>
+      <app-pr-radio-button
+        [options]="this.isPubilcFileOptions"
+        optionLabel="name"
+        optionValue="id"
+        label="Is this a public file?"
+        [(ngModel)]="this.evidence.is_public_file">
       </app-pr-radio-button>
 
-      <app-alert-status [description]="dynamicAlertStatusBasedOnVisibility()" *ngIf="this.evidence.is_public_file !== null">
-      </app-alert-status>
+      <app-alert-status [description]="dynamicAlertStatusBasedOnVisibility()" *ngIf="this.evidence.is_public_file !== null"> </app-alert-status>
 
       <app-pr-field-header label="File to be uploaded to the repository"></app-pr-field-header>
-      <app-alert-status
-        status="warning"
-        description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
+      <app-alert-status status="warning" description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
       </app-alert-status>
 
-
-      <div class="file-link-view" *ngIf="this.evidence?.sp_file_name;else uploadfilefield">
+      <div class="file-link-view" *ngIf="this.evidence?.sp_file_name; else uploadfilefield">
         <div class="file-name">
-          <i class="material-icons-round">
-            description
-          </i>
-          <a *ngIf="this.evidence.link else nolinktext" [href]="this.evidence.link" target="_blank"
-            rel="noopener noreferrer">{{this.evidence?.sp_file_name}}</a>
-          <ng-template #nolinktext>You are going to save the file:
-            <strong>{{this.evidence?.sp_file_name}}</strong></ng-template>
+          <i class="material-icons-round"> description </i>
+          <a *ngIf="this.evidence.link; else nolinktext" [href]="this.evidence.link" target="_blank" rel="noopener noreferrer">{{
+            this.evidence?.sp_file_name
+          }}</a>
+          <ng-template #nolinktext
+            >You are going to save the file: <strong>{{ this.evidence?.sp_file_name }}</strong></ng-template
+          >
         </div>
         <div class="file-actions">
+          <div class="size" *ngIf="!this.evidence?.link">{{ this.evidence?.file.size / 1048576 | number : '1.2-2' }} MB</div>
 
-          <div class="size" *ngIf="!this.evidence?.link">
-            {{(this.evidence?.file.size / 1048576) | number:'1.2-2' }} MB
-          </div>
+          <div class="line"></div>
 
-          <div class="line">
-
-          </div>
-
-          <div class="percentage" pTooltip="Uploading"
-            *ngIf="this.evidence?.percentage !== 100 && !this.evidence.link; else fileloaded">
-            {{this.evidence?.percentage}} <div *ngIf="this.evidence?.percentage">%</div>
+          <div class="percentage" pTooltip="Uploading" *ngIf="this.evidence?.percentage !== 100 && !this.evidence.link; else fileloaded">
+            {{ this.evidence?.percentage }}
+            <div *ngIf="this.evidence?.percentage">%</div>
           </div>
           <ng-template #fileloaded>
-            <i class="material-icons-round" pTooltip="Uploaded" style="margin-right: 5px;" (click)="onDeleteSPLink()">
-              check_circle
-            </i>
+            <i class="material-icons-round" pTooltip="Uploaded" style="margin-right: 5px" (click)="onDeleteSPLink()"> check_circle </i>
           </ng-template>
-          <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()"
-            *ngIf="!this.api.rolesSE.readOnly">
-            delete
-          </i>
+          <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()" *ngIf="!this.api.rolesSE.readOnly"> delete </i>
         </div>
         <div class="floating-line-animated" [style.width.%]="this.evidence?.percentage"></div>
-
       </div>
 
       <ng-template #uploadfilefield>
-        <div *ngIf="this.evidence.is_public_file == true || this.evidence.is_public_file == false"
-          class="drag-and-drop-field" [ngClass]="{'incorrect-drag-and-drop-field': this.incorrectFile}"
-          (drop)="onFileDropped($event)" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)">
+        <div
+          *ngIf="this.evidence.is_public_file == true || this.evidence.is_public_file == false"
+          class="drag-and-drop-field"
+          [ngClass]="{ 'incorrect-drag-and-drop-field': this.incorrectFile }"
+          (drop)="onFileDropped($event)"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)">
           <div class="content">
-            <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="">
+            <img src="assets/icons/feather_upload-cloud.svg" alt="" srcset="" />
             <div class="title">Select a file or drag and drop here</div>
             <div class="description">jpg, png, doc, xlsx or PDF, file size no more than 1GB</div>
             <app-pr-button text="Select file" (click)="fileInput.click()"></app-pr-button>
           </div>
         </div>
-        <input class="inputfieldHidden" #fileInput type="file" (change)="onFileSelected($event)"
-          accept=".jpg, .png, .pdf, .doc, .pptx, .xlsx" multiple="false">
-        <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg,
-          .png, .pdf, .doc, .pptx, .xlsx</div>
+        <input
+          class="inputfieldHidden"
+          #fileInput
+          type="file"
+          (change)="onFileSelected($event)"
+          accept=".jpg, .png, .pdf, .doc, .pptx, .xlsx"
+          multiple="false" />
+        <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg, .png, .pdf, .doc, .pptx, .xlsx</div>
       </ng-template>
-
     </ng-template>
 
-    <app-pr-field-header label="Please indicate for which Impact Area tags this evidence is related to"
-      [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
+    <app-pr-field-header
+      label="Please indicate for which Impact Area tags this evidence is related to"
+      [required]="false"
+      *ngIf="!isSuppInfo"></app-pr-field-header>
     <div class="checkboxes" *ngIf="!isSuppInfo">
-      <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related">
-      </app-pr-checkbox>
-      <app-pr-checkbox label="Climate change" [(ngModel)]="this.evidence.youth_related">
-      </app-pr-checkbox>
-      <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related">
-      </app-pr-checkbox>
-      <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related">
-      </app-pr-checkbox>
-      <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related">
+      <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Climate change" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Innovation Readiness" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
       </app-pr-checkbox>
     </div>
     <app-pr-textarea
-      [label]="'Please provide details of where' + (isSuppInfo ? ' supplementary information ' :' evidence ') +'can be found within the source link (e.g. page number, slide number, table number)'"
-      [required]="false" [(ngModel)]="this.evidence.description" [maxWords]="50" placeholder="Add description">
+      [label]="
+        'Please provide details of where' +
+        (isSuppInfo ? ' supplementary information ' : ' evidence ') +
+        'can be found within the source link (e.g. page number, slide number, table number)'
+      "
+      [required]="false"
+      [(ngModel)]="this.evidence.description"
+      [maxWords]="50"
+      placeholder="Add description">
     </app-pr-textarea>
   </div>
-  <app-edit-or-delete-item-button (click)="this.deleteItem()"
-    *ngIf="!this.dataControlSE.isKnowledgeProduct  && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+  <app-edit-or-delete-item-button
+    (click)="this.deleteItem()"
+    *ngIf="!this.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
   </app-edit-or-delete-item-button>
-
 </div>

@@ -15,6 +15,7 @@ import { ResultsKnowledgeProductsRepository } from '../results-knowledge-product
 import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
@@ -35,6 +36,7 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
     ReturnResponse,
     ResultInstitutionsBudgetRepository,
     GlobalParameterRepository,
+    ResultsInnovationsDevRepository,
     NonPooledProjectRepository,
     ResultsCenterRepository,
     NonPooledProjectBudgetRepository,

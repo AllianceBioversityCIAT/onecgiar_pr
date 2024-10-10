@@ -18,6 +18,8 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ChangeTracker } from '../../../shared/utils/change-tracker';
+import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
+import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
@@ -38,6 +40,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
+    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
@@ -275,6 +278,11 @@ export class ResultsByInstitutionsService {
           },
         });
 
+      const resultsInnovationsDev =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          incomingResult.id,
+        );
+
       if (knowledgeProduct && data.mqap_institutions?.length) {
         await this.handleMqapInstitutionsUpdate(
           data.mqap_institutions,
@@ -318,6 +326,7 @@ export class ResultsByInstitutionsService {
           data.institutions,
           oldPartners,
           !!knowledgeProduct,
+          !!resultsInnovationsDev,
           data.result_id,
           user.id,
         );
@@ -581,6 +590,7 @@ export class ResultsByInstitutionsService {
     incomingInstitutions: ResultsByInstitution[],
     oldInstitutions: ResultsByInstitution[],
     isKnowledgeProduct: boolean,
+    isInnoDev: boolean,
     resultId: number,
     userId: number,
   ) {
@@ -613,6 +623,7 @@ export class ResultsByInstitutionsService {
     if (added.length) {
       added = added.map((a) => {
         const toAdd = new ResultsByInstitution();
+
         toAdd.created_by = userId;
         toAdd.last_updated_by = userId;
         toAdd.is_active = true;
@@ -628,6 +639,22 @@ export class ResultsByInstitutionsService {
       });
 
       added = await this._resultByIntitutionsRepository.save(added);
+
+      if (isInnoDev) {
+        const resultInstitutionsBudgets = added.map((a) => {
+          const toAdd = new ResultInstitutionsBudget();
+
+          toAdd.created_by = userId;
+          toAdd.result_institution_id = a.id;
+          toAdd.is_active = true;
+
+          return toAdd;
+        });
+
+        await this._resultInstitutionsBudgetRepository.save(
+          resultInstitutionsBudgets,
+        );
+      }
     }
 
     // handling modfiy result_by_institutions

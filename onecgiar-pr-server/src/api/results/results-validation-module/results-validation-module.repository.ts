@@ -553,9 +553,9 @@ export class resultValidationRepository
   }
 
   async evidenceValidation(resultTypeId: number, resultId: number) {
-    const { version } = await this.version();
-
     try {
+      const { version } = await this.version();
+
       const queryData = `
 		SELECT
 			'evidences' AS section_name,
@@ -748,13 +748,34 @@ export class resultValidationRepository
 								AND e.is_active > 0
 						) = 0
 					)
+					AND(
+						IF(
+							r.result_type_id = 7 AND cirl.\`level\` <> 0,
+							(
+								select
+									count(*)
+								from 
+									evidence e
+								where 
+									e.result_id = r.id
+									and e.is_active
+									and e.innovation_readiness_related
+									and (
+										coalesce(trim(e.link), '')<> ''
+									)
+							) > 0,
+							true
+						)
+					)
 				) THEN TRUE
 				ELSE FALSE
 			END AS validation
 		FROM
 			result r
-			LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
+		LEFT JOIN results_innovations_dev rid ON rid.results_id = r.id
 			AND rid.is_active > 0
+		LEFT JOIN clarisa_innovation_readiness_level cirl
+			ON rid.innovation_readiness_level_id = cirl.id
 		WHERE
 			r.id = ${resultId}
 			AND r.is_active > 0
@@ -813,14 +834,16 @@ export class resultValidationRepository
           const evidenceValidations: GetValidationSectionDto[] =
             await this.dataSource.query(queryData);
 
-          return evidenceValidations.length
-            ? {
-                section_name: evidenceValidations[0].section_name,
-                validation: Number(
-                  evidenceValidations[0].validation && multiplePerField,
-                ),
-              }
-            : undefined;
+          if (evidenceValidations.length > 0) {
+            return {
+              section_name: evidenceValidations[0].section_name,
+              validation: +(
+                Number(evidenceValidations[0].validation) && multiplePerField
+              ),
+            };
+          }
+
+          return undefined;
         } else if (resultTypeId == 7 && level == 0) {
           const response = {
             section_name: 'evidences',
@@ -830,17 +853,20 @@ export class resultValidationRepository
           return response;
         }
       }
+
       const evidenceValidations: GetValidationSectionDto[] =
         await this.dataSource.query(queryData, [resultId]);
 
-      return evidenceValidations.length
-        ? {
-            section_name: evidenceValidations[0].section_name,
-            validation: Number(
-              evidenceValidations[0].validation && multiplePerField,
-            ),
-          }
-        : undefined;
+      if (evidenceValidations.length > 0) {
+        return {
+          section_name: evidenceValidations[0].section_name,
+          validation: +(
+            Number(evidenceValidations[0].validation) && multiplePerField
+          ),
+        };
+      }
+
+      return undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: resultValidationRepository.name,
@@ -1040,429 +1066,465 @@ export class resultValidationRepository
 	SELECT
 		'innovation-dev-info' as section_name,
 		CASE
-			WHEN (
-				rid.short_title IS NULL
-				OR rid.short_title = ''
-			)
-			OR (
-				rid.innovation_characterization_id IS NULL
-				OR rid.innovation_characterization_id = ''
-			)
-			OR (
-				rid.innovation_nature_id IS NULL
-				OR rid.innovation_nature_id = ''
-			)
-			OR (
-				IF(
-					rid.innovation_nature_id != 12,
-					rid.is_new_variety not in (1, 0),
-					FALSE
+			WHEN(
+				COALESCE(TRIM(rid.short_title), '') <> ''
+				AND COALESCE(rid.innovation_characterization_id, 0) > 0
+				AND COALESCE(rid.innovation_nature_id, 0) > 0
+				AND IF(
+					rid.innovation_nature_id = 12,
+					rid.is_new_variety is not null,
+					true
 				)
-			)
-			OR (
-				rid.innovation_readiness_level_id IS NULL
-				OR (
-					rid.evidences_justification IS NULL
-					OR rid.evidences_justification = ''
-				)
-			)
-			OR (rid.innovation_pdf NOT IN (1, 0)) THEN FALSE
-			WHEN rid.innovation_user_to_be_determined != 1
-			AND (
-				(
-					SELECT
-						COUNT(*)
-					FROM
-						result_actors ra
-					WHERE
-						ra.result_id = r.id
-						AND ra.is_active = 1
-						AND (
+				AND rid.innovation_user_to_be_determined is not null
+				AND IF(
+					rid.innovation_user_to_be_determined = 0,
+					(
+						if(
 							(
-								ra.sex_and_age_disaggregation = 0
-								AND (
-									(
-										ra.actor_type_id != 5
-										AND (
-											ra.has_women IS NOT NULL
-											OR ra.has_women != 0
-										)
-										AND (
-											ra.has_women_youth IS NOT NULL
-											OR ra.has_women_youth != 0
-										)
-										AND (
-											ra.has_men IS NOT NULL
-											OR ra.has_men != 0
-										)
-										AND (
-											ra.has_men_youth IS NOT NULL
-											OR ra.has_men_youth != 0
-										)
+								SELECT
+									1
+								FROM 
+									result_actors ra
+								WHERE
+									ra.result_id = r.id
+									AND ra.is_active
+							) = 1,
+							(
+								SELECT
+									COUNT(*)
+								FROM 
+									result_actors ra
+								WHERE
+									ra.result_id = r.id
+									AND ra.is_active
+									AND COALESCE(TRIM(ra.addressing_demands),'') <> ''
+									AND ra.actor_type_id is not null
+									AND IF(
+										ra.actor_type_id = 5,
+										COALESCE(TRIM(ra.other_actor_type), '') <> '',
+										TRUE
 									)
-									OR (
-										ra.actor_type_id = 5
-										AND (
-											ra.other_actor_type IS NOT NULL
-											OR TRIM(ra.other_actor_type) <> ''
-										)
-									)
-								)
-							)
-							OR (
-								ra.sex_and_age_disaggregation = 1
-								OR (
-									ra.actor_type_id = 5
 									AND (
-										ra.other_actor_type IS NOT NULL
-										AND TRIM(ra.other_actor_type) <> ''
-										AND ra.how_many IS NOT NULL
+										IF(
+											ra.sex_and_age_disaggregation = 1,
+											(
+												ra.has_women IS NOT NULL
+												OR ra.has_women_youth IS NOT NULL
+												OR ra.has_men IS NOT NULL
+												OR ra.has_men_youth IS NOT NULL
+											),
+											TRUE
+										)
+									)
+							) > 0,
+							TRUE
+						)
+						AND IF(
+							(
+								SELECT
+									1
+								FROM
+									results_by_institution_type rbit
+								WHERE
+									rbit.results_id = r.id
+									AND rbit.is_active
+							) = 1,
+							(
+								SELECT
+									COUNT(*)
+								FROM
+									results_by_institution_type rbit
+								WHERE
+									rbit.results_id = r.id
+									AND rbit.is_active
+									AND rbit.institution_roles_id = 5
+									AND COALESCE(TRIM(rbit.addressing_demands),'') <> ''
+									AND rbit.institution_types_id IS NOT NULL
+									AND IF(
+										rbit.institution_types_id = 78,
+										COALESCE(TRIM(rbit.other_institution), '') <> '',
+										TRUE
+									)
+							) > 0,
+							TRUE
+						)
+						AND IF(
+							(
+								SELECT
+									1
+								FROM
+									result_ip_measure rim
+								WHERE
+									rim.result_id = r.id
+									AND rim.is_active
+							) = 1,
+							(
+								SELECT
+									COUNT(*)
+								FROM
+									result_ip_measure rim
+								WHERE
+									rim.result_id = r.id
+									AND rim.is_active
+									AND COALESCE(TRIM(rim.unit_of_measure), '') <> ''
+									AND COALESCE(TRIM(rim.addressing_demands),'') <> ''
+							) > 0,
+							TRUE
+						) 
+					),
+					TRUE
+				)
+				AND(
+					(
+						# questions 2 and 3 (1 and 2 on front-end)
+						(
+							# both question 2 and 3 have been answered "answer_boolean = true"
+							SELECT
+								COUNT(*)
+							FROM
+								result_questions rq
+							LEFT JOIN result_answers ra ON ra.result_question_id = rq.result_question_id
+							WHERE
+								ra.result_id = r.id
+								AND ra.answer_boolean = TRUE
+								AND (
+									rq.parent_question_id = 2
+									OR rq.parent_question_id = 3
+								)
+						) = 2
+						AND (
+							SELECT 
+								CASE 
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
+										WHERE ra.result_id = r.id
+											AND ra.result_question_id IN (4, 8)
+											AND (ra.answer_boolean IS NULL OR ra.answer_boolean = FALSE)
+									) > 0 THEN 1
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
+										WHERE ra.result_id = r.id
+											AND ra.result_question_id IN (4, 8)
+											AND ra.answer_boolean = TRUE
+									) > 0 
+									AND (
+										SELECT COUNT(*) 
+										FROM result_answers ra_child
+										JOIN result_questions rq_child ON ra_child.result_question_id = rq_child.result_question_id
+										WHERE ra_child.result_id = r.id
+											AND ra_child.answer_boolean = TRUE
+											AND rq_child.parent_question_id IN (4, 8)
+									) > 0 THEN 1
+									ELSE 0
+								END
+						)
+						AND(
+							(
+								select 
+									count(*) 
+								from (
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 17 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+										and coalesce(trim(ra.answer_text), '') <> ''
+								) as q1
+							) = (
+								select count(*) 
+								from(
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 17 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+								) as q2
+							)
+						)
+						AND(
+							(
+								select 
+									count(*) 
+								from (
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 24 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+										and coalesce(trim(ra.answer_text), '') <> ''
+								) as q1
+							) = (
+								select count(*) 
+								from(
+									select distinct 1
+									from result_questions rq
+									left join result_questions rq_parent 
+										on rq.parent_question_id = rq_parent.result_question_id
+									left join result_answers ra_parent 
+										on ra_parent.result_question_id = rq_parent.result_question_id 
+										and ra_parent.is_active
+										and coalesce(ra_parent.answer_boolean, 0) = 1
+									left join result_answers ra 
+										on ra.result_question_id = rq.result_question_id
+									where rq.result_question_id = 24 
+										and ra.result_id = r.id
+										and coalesce(ra.answer_boolean, 0) = 1
+								) as q2
+							)
+						)
+					)
+					AND (
+						# validations about question 26 (intellectual rights on front)
+						(
+							# validate that question 27 have been answered
+							SELECT
+								COUNT(*)
+							FROM
+								result_questions rq
+							LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
+							WHERE
+								ra.result_id = r.id
+								AND ra.answer_boolean = TRUE
+								AND rq.parent_question_id = 27
+						) > 0
+						AND (
+							# validate that question 28 have been answered if question 30 or 31 have been marked as yes
+							IF(
+								(
+									SELECT 1
+									FROM result_questions rq2
+									JOIN result_answers ra2 ON rq2.result_question_id = ra2.result_question_id
+									WHERE ra2.result_id = r.id
+										AND ra2.answer_boolean = TRUE
+										AND rq2.result_question_id IN (30, 31)
+								) = 1,
+								(
+									SELECT 
+										COUNT(*)
+									FROM 
+										result_questions rq
+									JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
+									WHERE 
+										ra.result_id = r.id
+										AND ra.answer_boolean = TRUE
+										AND rq.parent_question_id = 28
+								) > 0,
+								TRUE
+							)
+						)
+						AND(
+							# validate that question 29 have been answered if question 33 or 34 have been marked as yes
+							IF(
+								(
+									SELECT 1
+									FROM result_questions rq2
+									JOIN result_answers ra2 ON rq2.result_question_id = ra2.result_question_id
+									WHERE ra2.result_id = r.id
+										AND ra2.answer_boolean = TRUE
+										AND rq2.result_question_id IN (33, 34)
+								) = 1,
+								(
+									SELECT 
+										COUNT(*)
+									FROM 
+										result_questions rq
+									JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
+									WHERE 
+										ra.result_id = r.id
+										AND ra.answer_boolean = TRUE
+										AND rq.parent_question_id = 29
+								) > 0,
+								TRUE
+							)
+						)
+					)
+					AND (
+						# validations about question 38 (team diversity on front)
+						(
+							# validate that question 38 have been answered
+							SELECT
+								COUNT(*)
+							FROM
+								result_questions rq
+							LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
+							WHERE
+								ra.result_id = r.id
+								AND ra.answer_boolean = TRUE
+								AND rq.parent_question_id = 38
+						) > 0
+						AND (
+							# unique answers for question 39
+							(
+								SELECT
+									COUNT(*)
+								FROM
+									result_questions rq
+								LEFT JOIN result_answers ra ON rq.result_question_id = ra.result_question_id
+								WHERE
+									ra.result_id = r.id
+									AND ra.answer_boolean = TRUE
+									AND ra.result_question_id = 39
+							) = (
+								SELECT
+									COUNT(DISTINCT rq.parent_question_id)
+								FROM
+									result_answers ra
+								LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
+								WHERE
+									ra.result_id = r.id
+									AND ra.answer_boolean = TRUE
+									AND rq.parent_question_id = 39
+							)
+						)
+						AND (
+							SELECT
+								COUNT(*)
+							FROM
+								result_answers ra
+							LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
+							WHERE
+								ra.result_id = r.id
+								AND ra.result_question_id = 47
+								AND (
+									coalesce(ra.answer_boolean, 0) = 0
+									OR(
+										ra.answer_boolean = TRUE
+										AND COALESCE(TRIM(ra.answer_text), '') <> ''
 									)
 								)
-							)
-						)
-				) = 0
+						) > 0
+					)
+					AND (
+						#megatrends
+						select 
+							count(*)
+						from 
+							result_answers ra
+						left join result_questions rq on rq.result_question_id = ra.result_question_id
+						where ra.result_id = r.id
+							AND rq.parent_question_id = 52
+							and ra.answer_boolean = TRUE
+					) > 0
+				)
+				AND rid.innovation_readiness_level_id is not null
+				AND IF(
+					rid.innovation_readiness_level_id is not null,
+					COALESCE(TRIM(rid.evidences_justification), '') <> '',
+					true
+				)
 				AND (
-					SELECT
-						COUNT(*)
-					FROM
-						results_by_institution_type rbit
-					WHERE
-						rbit.results_id = r.id
-						AND rbit.is_active = true
-						AND (
-							(
-								rbit.institution_types_id != 78
-								AND(
-									rbit.institution_roles_id IS NOT NULL
-									AND rbit.institution_types_id IS NOT NULL
+					#budget
+					(
+						(
+							SELECT
+								COUNT(*)
+							FROM
+								results_by_inititiative rbi
+							LEFT JOIN result_initiative_budget rib
+								ON rib.result_initiative_id = rbi.id
+								AND rib.is_active
+							WHERE
+								rbi.result_id = r.id AND rbi.is_active
+								AND IF(
+									coalesce(rib.is_determined, 0) = 0,
+									COALESCE(rib.kind_cash, 0) > 0,
+									TRUE
 								)
-							)
-							OR (
-								rbit.institution_types_id = 78
-								AND (
-									rbit.other_institution IS NOT NULL
-									OR rbit.other_institution != ''
-									AND rbit.institution_roles_id IS NOT NULL
-									AND rbit.institution_types_id IS NOT NULL
-								)
-							)
+						) = (
+							SELECT
+								COUNT(*)
+							FROM
+								results_by_inititiative rbi
+							LEFT JOIN result_initiative_budget rib
+								ON rib.result_initiative_id = rbi.id
+								AND rib.is_active
+							WHERE
+								rbi.result_id = r.id AND rbi.is_active
 						)
-				) = 0
-				AND (
-					SELECT
-						COUNT(*)
-					FROM
-						result_ip_measure rim
-					WHERE
-						rim.result_id = r.id
-						AND rim.is_active = TRUE
-						AND rim.unit_of_measure IS NOT NULL
-				) = 0
-			) THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_actors ra
-				WHERE
-					ra.result_id = r.id
-					AND ra.is_active = 1
+					)
 					AND (
 						(
-							ra.sex_and_age_disaggregation = 0
-							AND (
-								(
-									ra.women IS NULL
-									OR ra.women = 0
+							SELECT
+								COUNT(*)
+							FROM
+								non_pooled_project npp
+							LEFT JOIN non_pooled_projetct_budget nppb
+								ON nppb.non_pooled_projetct_id = npp.id
+								AND nppb.is_active
+							WHERE
+								npp.results_id = r.id AND npp.is_active
+								AND IF(
+									coalesce(nppb.is_determined, 0) = 0,
+									COALESCE(nppb.kind_cash, 0) > 0,
+									TRUE
 								)
-								AND (
-									ra.has_women IS NULL
-									OR ra.has_women = 0
-								)
-								AND (
-									ra.has_women_youth IS NULL
-									OR ra.has_women_youth = 0
-								)
-								AND (
-									ra.has_men IS NULL
-									OR ra.has_men = 0
-								)
-								AND (
-									ra.has_men_youth IS NULL
-									OR ra.has_men_youth = 0
-								)
-								OR (
-									ra.actor_type_id = 5
-									AND (
-										ra.other_actor_type IS NULL
-										OR TRIM(ra.other_actor_type) = ''
-									)
-								)
-							)
-						)
-						OR (
-							ra.sex_and_age_disaggregation = 1
-							AND (
-								ra.actor_type_id = 5
-								AND (
-									ra.other_actor_type IS NULL
-									OR TRIM(ra.other_actor_type) = ''
-								)
-							)
+						) = (
+							SELECT
+								COUNT(*)
+							FROM
+								non_pooled_project npp
+							LEFT JOIN non_pooled_projetct_budget nppb
+								ON nppb.non_pooled_projetct_id = npp.id
+								AND nppb.is_active
+							WHERE
+								npp.results_id = r.id AND npp.is_active
 						)
 					)
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					results_by_institution_type rbit
-				WHERE
-					rbit.results_id = r.id
-					AND rbit.is_active = true
 					AND (
-						rbit.institution_roles_id IS NULL
-						OR rbit.institution_types_id IS NULL
-						OR (
-							rbit.institution_types_id = 78
-							AND (
-								rbit.other_institution IS NULL
-								OR rbit.other_institution = ''
-							)
+						(
+							SELECT
+								COUNT(*)
+							FROM
+								results_by_institution rbi
+							LEFT JOIN result_institutions_budget ribu 
+								ON ribu.result_institution_id = rbi.id
+								AND ribu.is_active
+							WHERE
+								rbi.result_id = r.id AND rbi.is_active
+								AND IF(
+									coalesce(ribu.is_determined, 0) = 0,
+									COALESCE(ribu.kind_cash, 0) > 0,
+									TRUE
+								)
+						) = (
+							SELECT
+								COUNT(*)
+							FROM
+								results_by_institution rbi
+							LEFT JOIN result_institutions_budget ribu 
+								ON ribu.result_institution_id = rbi.id
+								AND ribu.is_active
+							WHERE
+								rbi.result_id = r.id AND rbi.is_active
 						)
 					)
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_ip_measure rim
-				WHERE
-					rim.result_id = r.id
-					AND rim.is_active = TRUE
-					AND (rim.unit_of_measure IS NULL)
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_questions rq
-					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
-				WHERE
-					ra2.result_id = r.id
-					AND ra2.is_active = TRUE
-					AND ra2.answer_boolean = TRUE
-					AND (
-						rq.parent_question_id = 2
-						OR rq.parent_question_id = 3
-					)
-			) != 2 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_questions rq
-					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
-				WHERE
-					ra2.result_id = r.id
-					AND ra2.is_active = TRUE
-					AND ra2.answer_boolean = TRUE
-					AND (
-						ra2.result_question_id = 4
-						OR ra2.result_question_id = 8
-					)
-			) != (
-				SELECT
-					COUNT(DISTINCT rq2.parent_question_id)
-				FROM
-					result_answers ra3
-					LEFT JOIN result_questions rq2 ON rq2.result_question_id = ra3.result_question_id
-				WHERE
-					ra3.result_id = r.id
-					AND ra3.is_active = TRUE
-					AND ra3.answer_boolean = TRUE
-					AND (
-						rq2.parent_question_id = 4
-						OR rq2.parent_question_id = 8
-					)
-			) THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_answers ra4
-					LEFT JOIN result_questions rq3 ON rq3.result_question_id = ra4.result_question_id
-				WHERE
-					ra4.result_id = r.id
-					AND ra4.is_active = TRUE
-					AND rq3.result_question_id IN (17, 24)
-					AND ra4.answer_boolean = TRUE
-					AND ra4.answer_text IS NULL
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_questions rq
-					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
-				WHERE
-					ra2.result_id = r.id
-					AND ra2.is_active = TRUE
-					AND ra2.answer_boolean = TRUE
-					AND rq.parent_question_id = 27
-			) = 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_questions rq
-					LEFT JOIN result_answers ra2 ON rq.result_question_id = ra2.result_question_id
-				WHERE
-					ra2.result_id = r.id
-					AND ra2.is_active = TRUE
-					AND ra2.answer_boolean = TRUE
-					AND rq.parent_question_id = 27
-			) = 0 THEN FALSE
-			WHEN (
-				(
-					SELECT
-						COUNT(DISTINCT ra2.result_id)
-					FROM
-						result_answers ra2
-					WHERE
-						ra2.result_id = r.id
-						AND ra2.is_active = TRUE
-						AND ra2.answer_boolean = TRUE
-						AND (
-							ra2.result_question_id = 30
-							OR ra2.result_question_id = 31
-						)
-				) != (
-					SELECT
-						COUNT(DISTINCT ra5.result_id)
-					FROM
-						result_answers ra5
-						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
-					WHERE
-						ra5.result_id = r.id
-						AND ra5.is_active = TRUE
-						AND ra5.answer_boolean = TRUE
-						AND rq4.parent_question_id = 28
 				)
-			) THEN FALSE
-			WHEN (
-				(
-					SELECT
-						COUNT(DISTINCT ra2.result_id)
-					FROM
-						result_answers ra2
-					WHERE
-						ra2.result_id = r.id
-						AND ra2.is_active = TRUE
-						AND ra2.answer_boolean = TRUE
-						AND (
-							ra2.result_question_id = 33
-							OR ra2.result_question_id = 34
-						)
-				) != (
-					SELECT
-						COUNT(DISTINCT ra5.result_id)
-					FROM
-						result_answers ra5
-						LEFT JOIN result_questions rq4 ON rq4.result_question_id = ra5.result_question_id
-					WHERE
-						ra5.result_id = r.id
-						AND ra5.is_active = TRUE
-						AND ra5.answer_boolean = TRUE
-						AND rq4.parent_question_id = 29
-				)
-			) THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_initiative_budget ripb
-				WHERE
-					result_initiative_id IN (
-						SELECT
-							rbi.id
-						FROM
-							results_by_inititiative rbi
-						WHERE
-							rbi.is_active = 1
-							AND rbi.result_id = r.id
-					)
-					AND is_active = TRUE
-					AND (
-						ripb.is_determined != 1
-						OR ripb.is_determined IS NULL
-					)
-					AND ripb.kind_cash IS NULL
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					non_pooled_projetct_budget nppb
-				WHERE
-					nppb.non_pooled_projetct_id IN (
-						SELECT
-							npp.id
-						FROM
-							non_pooled_project npp
-						WHERE
-							npp.is_active = 1
-							AND npp.results_id = r.id
-					)
-					AND nppb.is_active = 1
-					AND (
-						nppb.is_determined != 1
-						OR nppb.is_determined IS NULL
-					)
-					AND nppb.kind_cash IS NULL
-			) > 0 THEN FALSE
-			WHEN (
-				SELECT
-					COUNT(*)
-				FROM
-					result_institutions_budget ribu
-				WHERE
-					ribu.result_institution_id IN (
-						SELECT
-							rbi.id
-						FROM
-							results_by_institution rbi
-						WHERE
-							rbi.is_active = 1
-							AND rbi.result_id = r.id
-					)
-					AND ribu.is_active = 1
-					AND (
-						ribu.is_determined != 1
-						OR ribu.is_determined IS NULL
-					)
-					AND ribu.kind_cash IS NULL
-			) > 0 THEN FALSE
-			WHEN (
-				rid.innovation_pdf = 1
-				AND (
-					SELECT
-						COUNT(*)
-					FROM
-						evidence e
-					WHERE
-						e.result_id = r.id
-						AND e.evidence_type_id = 3
-						AND e.is_active = 1
-						AND (
-							e.link IS NOT NULL
-							AND e.link != ''
-						)
-				) < 1
-			) THEN FALSE
-			WHEN (
-				rid.innovation_pdf = 1
 				AND (
 					SELECT
 						COUNT(*)
@@ -1472,17 +1534,14 @@ export class resultValidationRepository
 						e.result_id = r.id
 						AND e.evidence_type_id = 4
 						AND e.is_active = 1
-						AND (
-							e.link IS NOT NULL
-							AND e.link != ''
-						)
-				) < 1
-			) THEN FALSE
-			ELSE TRUE
-		END AS validation
+						AND COALESCE(TRIM(e.link), '') <> ''
+				) > 0
+			) THEN TRUE
+			ELSE FALSE
+		END as validation
 	FROM
 		result r
-		LEFT JOIN results_innovations_dev rid on rid.results_id = r.id
+	LEFT JOIN results_innovations_dev rid on rid.results_id = r.id
 		AND rid.is_active > 0
 	WHERE
 		r.id = ?
