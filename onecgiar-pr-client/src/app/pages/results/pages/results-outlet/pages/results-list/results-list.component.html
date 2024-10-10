@@ -25,7 +25,14 @@
       this.api.dataControlSE.resultsList
         | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
     "
-    [loading]="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner"
+    [loading]="
+      this.resultsListService.showDeletingResultSpinner ||
+      (this.resultsListService.showLoadingResultSpinner &&
+        !(
+          this.api.dataControlSE.resultsList
+          | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        )?.length)
+    "
     [showLoader]="false"
     [paginator]="
       (
