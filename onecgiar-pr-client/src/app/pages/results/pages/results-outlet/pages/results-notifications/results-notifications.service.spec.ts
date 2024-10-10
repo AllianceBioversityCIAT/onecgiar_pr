@@ -108,7 +108,7 @@ describe('ResultsNotificationsService', () => {
       service.get_section_information(() => {
         expect(spy).toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith('error');
-        expect(service.receivedData).toEqual({ receivedContributionsDone: [], receivedContributionsPending: [] });
+        expect(service.receivedData).toEqual({ receivedContributionsDone: null, receivedContributionsPending: null });
       });
     });
   });
@@ -189,7 +189,7 @@ describe('ResultsNotificationsService', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith('error');
-      expect(service.sentData).toEqual({ sentContributionsDone: [], sentContributionsPending: [] });
+      expect(service.sentData).toEqual({ sentContributionsDone: null, sentContributionsPending: null });
     });
 
     it('should not update sentData when response is empty', () => {
@@ -198,7 +198,7 @@ describe('ResultsNotificationsService', () => {
       service.get_sent_notifications();
 
       expect(spy).toHaveBeenCalled();
-      expect(service.sentData).toEqual({ sentContributionsDone: [], sentContributionsPending: [] });
+      expect(service.sentData).toEqual({ sentContributionsDone: null, sentContributionsPending: null });
     });
   });
 
@@ -392,8 +392,8 @@ describe('ResultsNotificationsService', () => {
 
       service.resetNotificationInformation();
 
-      expect(service.receivedData).toEqual({ receivedContributionsPending: [], receivedContributionsDone: [] });
-      expect(service.sentData).toEqual({ sentContributionsPending: [], sentContributionsDone: [] });
+      expect(service.receivedData).toEqual({ receivedContributionsPending: null, receivedContributionsDone: null });
+      expect(service.sentData).toEqual({ sentContributionsPending: null, sentContributionsDone: null });
     });
 
     it('should call resetFilters', () => {
