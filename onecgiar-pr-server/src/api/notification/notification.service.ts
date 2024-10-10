@@ -76,7 +76,7 @@ export class NotificationService {
         };
       }
 
-      const resultData = await this._notificationRepository.find({
+      const resultData = await this._notificationRepository.findOne({
         select: this.getNotificattionSelect(),
         relations: this.getNotificationRelations(),
         where: {
@@ -85,18 +85,18 @@ export class NotificationService {
           notification_level: notificationLevelData.notifications_level_id,
           notification_type: notificationTypeData.notifications_type_id,
         },
-        take: 1,
+        order: { created_date: 'DESC' },
       });
 
       const desc =
         notificationType === NotificationTypeEnum.RESULT_SUBMITTED
-          ? `The result ${resultData[0].obj_result.result_code} has been submitted`
-          : `The result ${resultData[0].obj_result.result_code} has been unsubmitted`;
+          ? `The result ${resultData.obj_result.result_code} has been submitted`
+          : `The result ${resultData.obj_result.result_code} has been unsubmitted`;
 
       const notification: NotificationDto = {
         title: 'New Notification',
         desc,
-        result: resultData[0],
+        result: resultData,
       };
 
       const newSocketNotification =

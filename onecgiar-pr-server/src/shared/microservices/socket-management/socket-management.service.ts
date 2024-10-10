@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { env } from 'process';
 import { NotificationDto } from './dto/create-socket.dto';
+import axios from 'axios';
 
 @Injectable()
 export class SocketManagementService implements OnModuleInit {
@@ -19,10 +20,10 @@ export class SocketManagementService implements OnModuleInit {
 
   async getActiveUsers() {
     try {
-      const response = await fetch(
+      const response = await axios.get(
         `${this.url}/socket/users/${this.environmentCheck()}`,
       );
-      const data = await response.json();
+      const data = response.data;
 
       return {
         response: data.clients,
@@ -52,18 +53,12 @@ export class SocketManagementService implements OnModuleInit {
           status: HttpStatus.NOT_FOUND,
         };
       }
-      const response = await fetch(`${this.url}/socket/notification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userIds,
-          platform: this.environmentCheck(),
-          notification,
-        }),
+      const response = await axios.post(`${this.url}/socket/notification`, {
+        userIds,
+        platform: this.environmentCheck(),
+        notification,
       });
-      const data = await response.json();
+      const data = response.data;
 
       return {
         response: data,
@@ -74,7 +69,7 @@ export class SocketManagementService implements OnModuleInit {
       this._logger.error(error);
       return {
         response: null,
-        message: 'AN error occurred while sending notification',
+        message: 'An error occurred while sending notification',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }

@@ -17,7 +17,14 @@ import { ResultsTocResultRepository } from '../results-toc-results/results-toc-r
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
-import { In, IsNull, MoreThan, Not } from 'typeorm';
+import {
+  FindOptionsRelations,
+  FindOptionsSelect,
+  In,
+  IsNull,
+  MoreThan,
+  Not,
+} from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import Handlebars from 'handlebars';
@@ -378,7 +385,7 @@ export class ShareResultRequestService {
           role: In([3, 4, 5]),
           active: true,
         },
-        relations: ['obj_user'],
+        relations: { obj_user: true },
       }),
     ]);
   }
@@ -400,7 +407,7 @@ export class ShareResultRequestService {
               ? sharedInitiativeId
               : initOwner,
         },
-        relations: ['obj_user'],
+        relations: { obj_user: true },
       },
     );
 
@@ -415,7 +422,7 @@ export class ShareResultRequestService {
               ? sharedInitiativeId
               : initOwner,
         },
-        relations: ['obj_user'],
+        relations: { obj_user: true },
       });
     return {
       userEmail: userEmailEnable.map((u) => u.obj_user.email),
@@ -608,7 +615,7 @@ export class ShareResultRequestService {
     });
   }
 
-  private getRequestSelectFields() {
+  private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
@@ -666,7 +673,7 @@ export class ShareResultRequestService {
     };
   }
 
-  private getRequestRelations() {
+  private getRequestRelations(): FindOptionsRelations<ShareResultRequest> {
     return {
       obj_request_status: true,
       obj_result: {

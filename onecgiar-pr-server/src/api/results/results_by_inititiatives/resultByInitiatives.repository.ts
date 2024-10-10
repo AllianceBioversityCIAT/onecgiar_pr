@@ -484,22 +484,25 @@ export class ResultByInitiativesRepository
       );
 
       if (initsToInactive.length > 0) {
+        const placeholders = initsToInactive.map(() => '?').join(',');
         const upDateInactive = `
-        UPDATE
-          results_by_inititiative
-        SET
-          is_active = 0,
-          last_updated_date = NOW(),
-          last_updated_by = ?
-        WHERE
-          is_active > 0
-          AND result_id = ?
-          AND initiative_role_id = ?
-          AND inititiative_id IN(${initsToInactive.toString()});
+          UPDATE
+            results_by_inititiative
+          SET
+            is_active = 0,
+            last_updated_date = NOW(),
+            last_updated_by = ?
+          WHERE
+            is_active > 0
+            AND result_id = ?
+            AND initiative_role_id = ?
+            AND inititiative_id IN(${placeholders});
         `;
-        await this.query(upDateInactive, [userId, resultId, 2]);
+        const queryParams = [userId, resultId, 2, ...initsToInactive];
+        await this.query(upDateInactive, queryParams);
         return initsToInactive;
       }
+
       return [];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

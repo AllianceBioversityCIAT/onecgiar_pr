@@ -19,7 +19,10 @@ export class NotificationController {
     status: 201,
     description: 'The notification has been successfully created.',
   })
-  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({
+    status: 500,
+    description: 'An error occurred while creating the notification.',
+  })
   @Post('new-anouncement')
   createAnouncement(
     @Body() createNotificationDto: CreateAnnouncementNotificationDto,
@@ -38,7 +41,8 @@ export class NotificationController {
   })
   @ApiResponse({
     status: 500,
-    description: 'Internal Server Error',
+    description:
+      'An error occurred while updating the notification read status',
   })
   @Patch('read/:notificationId')
   updateReadStatus(
@@ -51,11 +55,12 @@ export class NotificationController {
   @ApiOperation({ summary: 'Update the read status of all notifications' })
   @ApiResponse({
     status: 200,
-    description: 'All notifications updated successfully',
+    description: 'Notifications updated successfully',
   })
   @ApiResponse({
     status: 500,
-    description: 'Internal Server Error',
+    description:
+      'An error occurred while updating the notifications read status',
   })
   @Patch('read-all')
   updateAllReadStatus(@UserToken() user: TokenDto) {
@@ -67,7 +72,10 @@ export class NotificationController {
     status: 200,
     description: 'List of all notifications retrieved successfully.',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  @ApiResponse({
+    status: 500,
+    description: 'An error occurred while retrieving the notifications',
+  })
   @Get('updates')
   getAllNotifications(@UserToken() user: TokenDto) {
     return this.notificationService.getAllNotifications(user);
@@ -78,7 +86,10 @@ export class NotificationController {
     status: 200,
     description: 'List of all notifications retrieved successfully.',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  @ApiResponse({
+    status: 500,
+    description: 'An error occurred while retrieving the notifications',
+  })
   @Get('updates-pop-up')
   getPopUpNotifications(@UserToken() user: TokenDto) {
     return this.notificationService.getPopUpNotifications(user);
