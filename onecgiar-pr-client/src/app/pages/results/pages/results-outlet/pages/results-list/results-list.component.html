@@ -23,12 +23,14 @@
     [sortOrder]="-1"
     [value]="
       this.api.dataControlSE.resultsList
-        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
     "
+    [loading]="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner"
+    [showLoader]="false"
     [paginator]="
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
       )?.length
     "
     responsiveLayout="scroll"
@@ -72,7 +74,7 @@
               <div
                 [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
                 [ngClass]="{ center_flex_100: column.center }"
-                [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date : 'YYYY-MM-dd')"></div>
+                [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')"></div>
             </a>
           </ng-container>
         </td>
@@ -100,6 +102,20 @@
         </td>
       </tr>
     </ng-template>
+
+    <ng-template pTemplate="loadingbody">
+      <div
+        [style]="{
+          height: (
+            this.api.dataControlSE.resultsList
+            | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+          )?.length
+            ? '100%'
+            : '400px'
+        }">
+        <app-custom-spinner [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
+      </div>
+    </ng-template>
   </p-table>
 
   <div
@@ -107,14 +123,14 @@
     *ngIf="
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
       )?.length
     ">
     Total:
     {{
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
       )?.length
     }}/{{ this.api.dataControlSE.resultsList?.length }}
   </div>
@@ -122,17 +138,15 @@
   <div
     class="noDataText"
     *ngIf="
+      !this.resultsListService.showDeletingResultSpinner &&
+      !this.resultsListService.showLoadingResultSpinner &&
       !(
         this.api.dataControlSE.resultsList
-        | resultsListFilter : this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
       )?.length
     ">
     There are no results for the selected filters.
   </div>
-
-  <app-custom-spinner
-    *ngIf="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner"
-    [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
 </div>
 
 <p-menu
