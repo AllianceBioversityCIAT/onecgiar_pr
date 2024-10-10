@@ -29,6 +29,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
+import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -174,6 +175,26 @@ describe('InnovationDevInfoComponent', () => {
       result_type_id: 1,
       question_type_id: '',
       question_level: ''
+    },
+    megatrends: {
+      result_question_id: '',
+      question_text: '',
+      question_description: '',
+      result_type_id: 0,
+      question_type_id: '',
+      question_level: '',
+      options: [
+        {
+          answer_boolean: true,
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
+          parent_question_id: '1',
+          question_type_id: '1',
+          question_level: '',
+          subOptions: []
+        }
+      ]
     }
   };
 
@@ -257,7 +278,8 @@ describe('InnovationDevInfoComponent', () => {
         FeedbackValidationDirective,
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
-        AddButtonComponent
+        AddButtonComponent,
+        MegatrendsComponent
       ],
       imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
       providers: [
@@ -372,7 +394,8 @@ describe('InnovationDevInfoComponent', () => {
           graduate_students: '',
           hide: false,
           is_active: false,
-          id: 1
+          id: 1,
+          addressing_demands: 'yes'
         }
       ];
       component.innovationDevInfoBody.innovatonUse.organization = organizations;
@@ -388,7 +411,8 @@ describe('InnovationDevInfoComponent', () => {
           graduate_students: '',
           hide: false,
           is_active: false,
-          id: 1
+          id: 1,
+          addressing_demands: 'yes'
         }
       ]);
     });
