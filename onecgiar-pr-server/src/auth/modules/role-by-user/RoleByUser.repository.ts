@@ -40,13 +40,17 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
 
   $_getMaxRoleByUser(userId: number) {
     const queryData = `
-	select min(rbu.role) max_role
-		from role_by_user rbu 
-		where rbu.\`user\` = ?
-		and rbu.active > 0 
-		and rbu.initiative_id is null 
-		and rbu.action_area_id is null 
-		LIMIT  1;
+    SELECT
+      MIN(rbu.role) max_role
+    FROM
+      role_by_user rbu
+    WHERE
+      rbu.user = ?
+      AND rbu.active > 0
+      AND rbu.initiative_id IS NULL
+      AND rbu.action_area_id IS NULL
+    LIMIT
+      1;
 	`;
     const res = this.query(queryData, [userId]);
 

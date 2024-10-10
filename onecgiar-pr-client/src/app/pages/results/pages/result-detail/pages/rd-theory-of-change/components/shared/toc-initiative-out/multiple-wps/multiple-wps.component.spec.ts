@@ -384,7 +384,9 @@ describe('MultipleWPsComponent', () => {
 
       component.deleteTabLogic(tab);
 
-      expect(component.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[component.initiative.index].result_toc_results.length).toBe(1);
+      expect(
+        component.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[component.initiative.index].result_toc_results.length
+      ).toBe(1);
     });
 
     it('should return result_toc_results initiative intact since last tab cannot be deleted', () => {
@@ -501,6 +503,18 @@ describe('MultipleWPsComponent', () => {
         { uniqueId: 'abc-1', toc_result_id: 5, disabledd: false },
         { uniqueId: 'abc-2', toc_result_id: 6, disabledd: true }
       ]);
+    });
+
+    it('should return if isNotifications is true on deleteTabLogic', () => {
+      component.isNotifications = true;
+      component.initiative = {
+        result_toc_results: [{ uniqueId: '1' }, { uniqueId: '2' }, { uniqueId: '3' }]
+      };
+      const tab = { ...tabSchema, uniqueId: '1' };
+
+      component.deleteTabLogic(tab);
+
+      expect(component.activeTab).toBeUndefined();
     });
   });
 });

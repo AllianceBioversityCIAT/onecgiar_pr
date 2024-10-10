@@ -10,19 +10,46 @@ interface Wscols {
 })
 export class ExportTablesService {
   constructor(private customAlertService: CustomizedAlertsFeService) {}
-  exportExcel(list, fileName: string, wscols?: Wscols[], callback?, isIPSR = false) {
+
+  exportExcel(
+    list: any[],
+    fileName: string,
+    wscols?: any[],
+    cellsToLink?: {
+      cellNumber: number;
+      cellKey: string;
+    }[]
+  ) {
     try {
-      import('xlsx').then(xlsx => {
-        const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
-        if (wscols) worksheet['!cols'] = wscols as any;
-        const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
-        const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-        this.saveAsExcelFile(excelBuffer, fileName, isIPSR);
-        callback?.();
+      import('exceljs').then(async ExcelJS => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('data');
+
+        if (wscols) {
+          worksheet.columns = wscols;
+        }
+
+        list.forEach(data => {
+          const row = worksheet.addRow(data);
+
+          if (cellsToLink) {
+            cellsToLink.forEach(cell => {
+              row.getCell(cell.cellNumber).value = {
+                text: data[cell.cellKey],
+                hyperlink: data[cell.cellKey],
+                tooltip: data[cell.cellKey]
+              };
+            });
+          }
+        });
+
+        this.formatWorksheet(worksheet);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        this.saveAsExcelFile(buffer, fileName);
       });
     } catch (error) {
-      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Erorr generating file', status: 'error' });
-      callback?.();
+      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
     }
   }
 
@@ -173,7 +200,7 @@ export class ExportTablesService {
     worksheet.getRow(1).height = 20;
 
     worksheet.getRow(1).eachCell(cell => {
-      cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -192,7 +219,7 @@ export class ExportTablesService {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
-          cell.font = { size: 14, color: { argb: '000000' } };
+          cell.font = { size: 12, color: { argb: '000000' } };
           cell.border = {
             top: { style: 'thin' },
             left: { style: 'thin' },

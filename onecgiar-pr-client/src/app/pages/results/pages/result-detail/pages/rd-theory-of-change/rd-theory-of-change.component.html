@@ -1,92 +1,130 @@
 <app-detail-section-title sectionName="Contributors" title="Theory of Change"></app-detail-section-title>
 
 <div class="detail_container">
-    <app-alert-status *ngIf="!!this.dataControlSE?.currentResult?.is_replicated"
-        description="Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other initiatives have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.">
-    </app-alert-status>
+  <app-alert-status
+    *ngIf="!!this.dataControlSE?.currentResult?.is_replicated"
+    description="Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other initiatives have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.">
+  </app-alert-status>
 
-    <app-alert-status
-        description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
-    </app-alert-status>
+  <app-alert-status description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
+  </app-alert-status>
 
-    <app-pr-input placeholder="Enter text" label="Submitter" type="text" [required]="true" [readOnly]="true"
-      [(ngModel)]="this.submitter"> </app-pr-input>
+  <div *ngIf="getConsumed">
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.theoryOfChangeBody.contributing_and_primary_initiative"
+      label="Submitter"
+      optionLabel="full_name"
+      optionValue="id"
+      placeholder="Select Initiative"
+      description="Select an initiative or platform"
+      [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
+      [fieldDisabled]="true">
+    </app-pr-select>
 
-    <app-alert-status
-        description="<strong>Contribution to a reported result:</strong> Include those partners [OR Initiatives/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support."></app-alert-status>
-
-    <app-pr-multi-select [options]="this.contributingInitiativesList" label="Contributing Initiatives or platforms"
-        [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives" optionLabel="full_name"
-        optionValue="id" (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
-        selectedOptionLabel="full_name" [(ngModel)]="contributingInitiativeNew" [confirmDeletion]="true"
-        placeholder="Select initiative(s) or platform(s)">
-    </app-pr-multi-select>
-
-    <app-pr-multi-select [options]="this.contributingInitiativesList"
-        [disableOptions]="this.theoryOfChangeBody?.pending_contributing_initiatives"
-        selectedLabel="Contributing Initiatives" nextSelectedLabel="or platforms" optionLabel="full_name" optionValue="id" [hideSelect]="true"
-        (selectOptionEvent)="onSelectContributingInitiative()" [required]="false"
-        (removeOptionEvent)="onRemoveContributingInitiative($event)" selectedOptionLabel="full_name"
-        [selectedPrimary]="this.theoryOfChangeBody.changePrimaryInit"
-        [(ngModel)]="this.theoryOfChangeBody.contributing_initiatives" [confirmDeletion]="true" placeholder="Select Initiative(s)">
-    </app-pr-multi-select>
-
-    <div class="selected_container custom_scroll">
-        <app-pr-field-header
-            [description]="'Initiatives to be added as contributor('+(this.theoryOfChangeBody?.pending_contributing_initiatives?.length+ contributingInitiativeNew.length)+')'">
-        </app-pr-field-header>
-        <div class="chips_container">
-            <div class="pr_chip_selected pending" *ngFor="let item of contributingInitiativeNew let i=index">
-                <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
-                    [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.name">
-                </div>
-                <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round"
-                    [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
-                    (click)="onRemoveContribuiting(i)">{{item.is_active?'backspace':'undo'}}</i>
-            </div>
-            <div class="pr_chip_selected pending"
-                *ngFor="let item of this.theoryOfChangeBody?.pending_contributing_initiatives let i=index">
-                <div class="name" [ngClass]="{'text_inactive': !item.is_active}"
-                    [innerHtml]="'<strong>'+item.official_code+'</strong> '+item.initiative_name">
-                </div>
-                <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round"
-                    [style.color]="item.is_active?'#fd6d6d':'#5569dd'"
-                    (click)="toggleActiveContributor(item)">{{item.is_active?'backspace':'undo'}}</i>
-            </div>
-        </div>
+    <div
+      class="no-primary-list"
+      *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id">
+      Since this result has not been shared and accepted by other Initiatives, it is not possible to change the submitter.
     </div>
+  </div>
 
-    <div [ngSwitch]="this.resultLevelSE.currentResultLevelId"
-        *ngIf="getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id || getConsumed && this.theoryOfChangeBody?.impacts">
-        <div *ngSwitchCase="1">
-            <app-toc-impact-section [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
-                [impacts]="this.theoryOfChangeBody.impactsTarge"
-                [sdg]="this.theoryOfChangeBody.sdgTargets"></app-toc-impact-section>
-        </div>
-        <div *ngSwitchCase="2">
-            <app-toc-action-area-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
-                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result"> >
-            </app-toc-action-area-outcome-section>
-        </div>
-        <div *ngSwitchCase="3">
-            <app-toc-initiative-outcome-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
-                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
-            </app-toc-initiative-outcome-section>
-        </div>
-        <div *ngSwitchCase="4">
-            <app-toc-initiative-output-section [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
-                [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
-            </app-toc-initiative-output-section>
-        </div>
-        <div *ngSwitchDefault>
+  <app-alert-status
+    description="<strong>Contribution to a reported result:</strong> Include those partners [OR Initiatives/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support."></app-alert-status>
 
+  <app-pr-multi-select
+    [options]="this.contributingInitiativesList"
+    label="Contributing Initiatives or platforms"
+    [disableOptions]="disabledOptions"
+    optionLabel="full_name"
+    optionValue="id"
+    (selectOptionEvent)="onSelectContributingInitiative()"
+    [required]="false"
+    selectedOptionLabel="full_name"
+    [(ngModel)]="contributingInitiativeNew"
+    [confirmDeletion]="true"
+    placeholder="Select initiative(s) or platform(s)">
+  </app-pr-multi-select>
+
+  <div class="selected_container custom_scroll">
+    <app-pr-field-header description="Initiative(s) selected:"> </app-pr-field-header>
+
+    <div class="chips_container">
+      <div
+        class="pr_chip_selected"
+        *ngFor="let item of this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives; let i = index">
+        <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+          <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
         </div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly"
+          class="material-icons-round"
+          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          (click)="onRemoveContribuiting(i, true)">
+          {{ item.is_active ? 'backspace' : 'undo' }}
+        </i>
+      </div>
+
+      <div class="pr_chip_selected pending" *ngFor="let item of contributingInitiativeNew; let i = index">
+        <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+          <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+        </div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly"
+          class="material-icons-round"
+          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          (click)="onRemoveContribuiting(i, false)">
+          {{ item.is_active ? 'backspace' : 'undo' }}
+        </i>
+      </div>
+
+      <div
+        class="pr_chip_selected pending"
+        *ngFor="let item of this.theoryOfChangeBody?.contributing_initiatives.pending_contributing_initiatives; let i = index">
+        <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+          <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+        </div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly"
+          class="material-icons-round"
+          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          (click)="toggleActiveContributor(item)">
+          {{ item.is_active ? 'backspace' : 'undo' }}
+        </i>
+      </div>
     </div>
+  </div>
 
-    <br><br><br><br><br><br><br><br><br><br>
-
+  <div
+    [ngSwitch]="this.resultLevelSE.currentResultLevelId"
+    *ngIf="(getConsumed && this.theoryOfChangeBody?.result_toc_result?.initiative_id) || (getConsumed && this.theoryOfChangeBody?.impacts)">
+    <div *ngSwitchCase="1">
+      <app-toc-impact-section
+        [contributing_initiatives]="this.theoryOfChangeBody.contributing_initiatives"
+        [impacts]="this.theoryOfChangeBody.impactsTarge"
+        [sdg]="this.theoryOfChangeBody.sdgTargets"></app-toc-impact-section>
+    </div>
+    <div *ngSwitchCase="2">
+      <app-toc-action-area-outcome-section
+        [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+        [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
+        >
+      </app-toc-action-area-outcome-section>
+    </div>
+    <div *ngSwitchCase="3">
+      <app-toc-initiative-outcome-section
+        [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+        [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
+      </app-toc-initiative-outcome-section>
+    </div>
+    <div *ngSwitchCase="4">
+      <app-toc-initiative-output-section
+        [result_toc_result]="this.theoryOfChangeBody.result_toc_result"
+        [contributors_result_toc_result]="this.theoryOfChangeBody.contributors_result_toc_result">
+      </app-toc-initiative-output-section>
+    </div>
+    <div *ngSwitchDefault></div>
+  </div>
 </div>
 
-<app-save-button class="position_sticky" [editable]="someEditable()"
-    (clickSave)="onSaveSection()">
-</app-save-button>
+<app-save-button class="position_sticky" [editable]="someEditable()" (clickSave)="onSaveSection()"> </app-save-button>

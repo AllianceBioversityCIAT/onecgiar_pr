@@ -6,8 +6,9 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
-import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { ResultRepository } from '../results/result.repository';
+import { TemplateRepository } from './repositories/template.repository';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { env } from 'process';
 
@@ -34,6 +35,7 @@ import { env } from 'process';
     PlatformReportRepository,
     ReturnResponse,
     ResultRepository,
+    TemplateRepository,
   ],
 })
 export class PlatformReportModule {

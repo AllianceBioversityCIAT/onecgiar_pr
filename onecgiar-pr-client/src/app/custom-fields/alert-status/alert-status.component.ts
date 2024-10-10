@@ -7,7 +7,6 @@ import { Component, Input } from '@angular/core';
 })
 export class AlertStatusComponent {
   @Input() status: 'info' | 'warning' = 'info';
-  @Input() title;
-  @Input() description;
-  @Input() inlineStyles?: string = ' ';
+  @Input() description: string = '';
+  @Input() inlineStyles?: string = '';
 }

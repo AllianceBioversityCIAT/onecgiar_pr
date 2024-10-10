@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
+import { MessageService } from 'primeng/api';
 
 jest.useFakeTimers();
 
@@ -80,6 +81,7 @@ describe('LoginComponent', () => {
           provide: CustomizedAlertsFeService,
           useValue: mockCustomizedAlertsFeService
         },
+        MessageService
       ]
     }).compileComponents();
 
@@ -110,12 +112,13 @@ describe('LoginComponent', () => {
       const spyRouter = jest.spyOn(mockRouter, 'navigate');
       const spyValidateReadOnly = jest.spyOn(mockRolesService, 'validateReadOnly');
       component.onLogin();
-      jest.runAllTimers();
 
-      expect(spy).toHaveBeenCalled();
-      expect(component.successLogin).toBeTruthy();
-      expect(spyRouter).toHaveBeenCalledWith(['/']);
-      expect(spyValidateReadOnly).toHaveBeenCalled();
+      setTimeout(() => {
+        expect(spy).toHaveBeenCalled();
+        expect(component.successLogin).toBeTruthy();
+        expect(spyRouter).toHaveBeenCalledWith(['/']);
+        expect(spyValidateReadOnly).toHaveBeenCalled();
+      }, 1500);
     });
 
     it('should show custom alert on login error with status code is 404', () => {

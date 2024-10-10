@@ -25,6 +25,11 @@ export class TocInitiativeOutComponent implements OnInit {
   getDescription(official_code, short_name) {
     const tocText = `<strong>${official_code} ${short_name}</strong> - Does this result match a planned result in your Theory of Change?`;
     const contributorsText = `Is this result planned in the <strong>${official_code} ${short_name}</strong> ToC?`;
+
+    if (!this.initiative.result_toc_results.length && (this.isContributor || this.isIpsr)) {
+      return `<strong>${official_code} ${short_name}</strong> - Pending confirmation`;
+    }
+
     return this.isIpsr ? contributorsText : tocText;
   }
 

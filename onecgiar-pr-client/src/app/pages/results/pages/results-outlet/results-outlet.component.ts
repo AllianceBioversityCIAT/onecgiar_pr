@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ResultsNotificationsService } from './pages/results-notifications/results-notifications.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-results-outlet',
@@ -8,7 +9,7 @@ import { ResultsNotificationsService } from './pages/results-notifications/resul
 })
 export class ResultsOutletComponent {
   animateBell = true;
-  constructor(public resultsNotificationsSE: ResultsNotificationsService) {
+  constructor(public resultsNotificationsSE: ResultsNotificationsService, public router: Router) {
     setTimeout(() => {
       this.animateBell = false;
     }, 10000);

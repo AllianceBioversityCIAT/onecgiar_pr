@@ -21,7 +21,7 @@ describe('IpsrContributorsComponent', () => {
   let mockApiService: any;
   const mockResponse = {
     result_toc_result: {
-      result_toc_results: [{ planned_result: true }, { planned_result: null }],
+      result_toc_results: [{ planned_result: true }, { planned_result: null }]
     },
     contributors_result_toc_result: [
       {
@@ -38,12 +38,12 @@ describe('IpsrContributorsComponent', () => {
         institutions_name: ''
       }
     ]
-  }
+  };
 
   beforeEach(async () => {
     mockApiService = {
       resultsSE: {
-        GETContributorsByIpsrResultId: () => of({ response: mockResponse}),
+        GETContributorsByIpsrResultId: () => of({ response: mockResponse }),
         GET_AllCLARISACenters: () => of({ response: [] }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
@@ -53,7 +53,7 @@ describe('IpsrContributorsComponent', () => {
         ipsrDataControlSE: {
           inContributos: false
         },
-        get_vesrsionDashboard:() => of({ response: [] }),
+        get_vesrsionDashboard: () => of({ response: [] })
       },
       dataControlSE: {
         findClassTenSeconds: () => {
@@ -80,10 +80,7 @@ describe('IpsrContributorsComponent', () => {
         TocInitiativeOutComponent,
         PrYesOrNotComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -120,14 +117,12 @@ describe('IpsrContributorsComponent', () => {
       expect(component.contributorsBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockResponse.result_toc_result);
-      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(
-        mockResponse.contributors_result_toc_result
-      );
+      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockResponse.contributors_result_toc_result);
     });
 
     it('should call getSectionInformation and set data on getSectionInformation when this.contributorsBody?.result_toc_result?.result_toc_results[0].planned_result is null', () => {
-      mockResponse.contributors_result_toc_result[0].result_toc_results[0].planned_result = null
-      mockResponse.result_toc_result.result_toc_results[0].planned_result = null
+      mockResponse.contributors_result_toc_result[0].result_toc_results[0].planned_result = null;
+      mockResponse.result_toc_result.result_toc_results[0].planned_result = null;
 
       const spy = jest.spyOn(mockApiService.resultsSE, 'GETContributorsByIpsrResultId');
 
@@ -137,9 +132,7 @@ describe('IpsrContributorsComponent', () => {
       expect(component.contributorsBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(mockResponse);
       expect(component.theoryOfChangesServices.result_toc_result).toEqual(mockResponse.result_toc_result);
-      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(
-        mockResponse.contributors_result_toc_result
-      );
+      expect(component.theoryOfChangesServices.contributors_result_toc_result).toEqual(mockResponse.contributors_result_toc_result);
       expect(component.theoryOfChangesServices.result_toc_result.planned_result).toBeNull();
       expect(component.theoryOfChangesServices.contributors_result_toc_result[0].result_toc_results[0].planned_result).toBeNull();
     });
@@ -161,12 +154,13 @@ describe('IpsrContributorsComponent', () => {
     it('should show partners request on click of alert-event', async () => {
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>
         `,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       await component.requestEvent();
 
@@ -183,13 +177,14 @@ describe('IpsrContributorsComponent', () => {
     it('should show partners request on click of alert-event and alert-event-2', async () => {
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>
         <div class="alert-event-2"></div>
         `,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       await component.requestEvent();
 

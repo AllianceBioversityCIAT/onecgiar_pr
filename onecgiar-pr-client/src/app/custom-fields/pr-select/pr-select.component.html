@@ -15,7 +15,7 @@
         <a class="field" tabindex="0" [id]="this.optionValue+indexReference??''"
             [ngClass]="{'select-disable': this.disabled}" [ngClass]="{'globalDisabled': fieldDisabled}">
             <div class="text"
-                [ngClass]="{'select_placeholder': !(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)}"
+                [ngClass]="{'select_placeholder': !(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel), 'truncate': this.truncateSelectionText}"
                 [innerHtml]="(this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel)? (this.optionsIntance | labelName:this.value:this.optionValue:this.optionLabel) :placeholder">
             </div>
 
