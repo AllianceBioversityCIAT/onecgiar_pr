@@ -45,13 +45,9 @@ export class ResultsNotificationsService {
 
         const { sentContributionsDone, sentContributionsPending } = response;
 
-        const orderedSentContributionsDone = sentContributionsDone.sort(
-          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
-        );
+        const orderedSentContributionsDone = sentContributionsDone.sort((a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date));
 
-        const orderedSentContributionsPending = sentContributionsPending.sort(
-          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
-        );
+        const orderedSentContributionsPending = sentContributionsPending.sort((a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date));
 
         this.sentData = {
           sentContributionsDone: orderedSentContributionsDone,
@@ -73,11 +69,11 @@ export class ResultsNotificationsService {
         const { receivedContributionsDone, receivedContributionsPending } = response;
 
         const orderedReceivedContributionsDone = receivedContributionsDone.sort(
-          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+          (a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date)
         );
 
         const orderedReceivedContributionsPending = receivedContributionsPending.sort(
-          (a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime()
+          (a, b) => Date.parse(b.requested_date) - Date.parse(a.requested_date)
         );
 
         this.receivedData = {
@@ -95,13 +91,9 @@ export class ResultsNotificationsService {
       next: ({ response }) => {
         const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
 
-        const orderedNotificationsPending = notificationsPending.sort(
-          (a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
-        );
+        const orderedNotificationsPending = notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
 
-        const orderedNotificationsViewed = notificationsViewed.sort(
-          (a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
-        );
+        const orderedNotificationsViewed = notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
 
         this.updatesData = {
           notificationAnnouncements: notificationAnnouncement,
@@ -117,9 +109,9 @@ export class ResultsNotificationsService {
     this.api.resultsSE.GET_notificationsPopUp().subscribe({
       next: ({ response }) => {
         const orderedUpdatesUnread = response.sort((a, b) => {
-          const dateA = a.notification_id ? new Date(a.created_date) : new Date(a.requested_date);
-          const dateB = b.notification_id ? new Date(b.created_date) : new Date(b.requested_date);
-          return dateB.getTime() - dateA.getTime();
+          const dateA = a.notification_id ? Date.parse(a.created_date) : Date.parse(a.requested_date);
+          const dateB = b.notification_id ? Date.parse(b.created_date) : Date.parse(b.requested_date);
+          return dateB - dateA;
         });
 
         this.updatesPopUpData = orderedUpdatesUnread;
@@ -179,8 +171,8 @@ export class ResultsNotificationsService {
       this.router.navigate(['result/results-outlet/results-notifications/updates']);
     });
 
-    this.updatesData.notificationsViewed.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
-    this.updatesData.notificationsPending.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+    this.updatesData.notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
+    this.updatesData.notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
 
     this.api.resultsSE.PATCH_readNotification(notification.notification_id).subscribe({
       next: () => {},
@@ -207,7 +199,7 @@ export class ResultsNotificationsService {
       this.router.navigate(['result/results-outlet/results-notifications/updates']);
     });
 
-    this.updatesData.notificationsViewed.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
+    this.updatesData.notificationsViewed.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
     this.updatesData.notificationsPending = [];
 
     this.api.resultsSE.PATCH_readAllNotifications().subscribe({

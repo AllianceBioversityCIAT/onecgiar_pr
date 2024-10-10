@@ -869,7 +869,7 @@ export class ResultsTocResultsService {
               role: In([3, 4, 5]),
               active: true,
             },
-            relations: ['obj_user'],
+            relations: { obj_user: true },
           }),
         ]);
       const users = initMembers.map((m) => m.obj_user.id);
@@ -880,7 +880,7 @@ export class ResultsTocResultsService {
           email_notifications_contributing_request_enabled: true,
           initiative_id: init,
         },
-        relations: ['obj_user'],
+        relations: { obj_user: true },
       });
 
       const to = userEnable.map((u) => u.obj_user.email);
