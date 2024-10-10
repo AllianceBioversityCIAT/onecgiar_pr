@@ -2,6 +2,18 @@ export class InnovationDevelopmentQuestions {
   responsible_innovation_and_scaling: Responsibleinnovationandscaling = new Responsibleinnovationandscaling();
   intellectual_property_rights: Intellectualpropertyrights = new Intellectualpropertyrights();
   innovation_team_diversity: Innovationteamdiversity = new Innovationteamdiversity();
+  megatrends: Megatrends = new Megatrends();
+}
+
+export class Megatrends {
+  result_question_id: string = '';
+  question_text: string = '';
+  question_description?: any;
+  result_type_id: number = 0;
+  parent_question_id?: any;
+  question_type_id: string = '';
+  question_level: string = '';
+  options: Option[] = [];
 }
 
 export class Innovationteamdiversity {
