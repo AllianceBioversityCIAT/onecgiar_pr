@@ -116,10 +116,17 @@
         <app-custom-spinner [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
       </div>
     </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr style="height: 200px">
+        <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
+      </tr>
+    </ng-template>
   </p-table>
 
   <div
     class="total"
+    style="margin-top: 10px"
     *ngIf="
       (
         this.api.dataControlSE.resultsList
@@ -133,19 +140,6 @@
         | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
       )?.length
     }}/{{ this.api.dataControlSE.resultsList?.length }}
-  </div>
-
-  <div
-    class="noDataText"
-    *ngIf="
-      !this.resultsListService.showDeletingResultSpinner &&
-      !this.resultsListService.showLoadingResultSpinner &&
-      !(
-        this.api.dataControlSE.resultsList
-        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
-      )?.length
-    ">
-    There are no results for the selected filters.
   </div>
 </div>
 
