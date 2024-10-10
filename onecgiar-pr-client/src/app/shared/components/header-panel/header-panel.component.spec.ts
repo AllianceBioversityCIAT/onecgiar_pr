@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HeaderPanelComponent } from './header-panel.component';
 import { HttpClientModule } from '@angular/common/http';
 import { SatPopoverModule } from '@ncstate/sat-popover';
-import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
 import { TooltipModule } from 'primeng/tooltip';
 
