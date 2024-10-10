@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import {
   HandlersError,
@@ -39,7 +39,7 @@ export class PlatformReportService implements OnModuleInit {
     } catch (error) {
       this._logger.error(
         'Failed to connect to RabbitMQ Reports MicroService',
-        error,
+        error.message,
       );
     }
   }

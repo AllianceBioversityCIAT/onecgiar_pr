@@ -47,7 +47,6 @@ export class ResultsPackageTocResultService {
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
-    //create Contributing initiative
     try {
       const rip = await this._resultRepository.getResultById(crtr.result_id);
       if (!rip) {
@@ -74,7 +73,7 @@ export class ResultsPackageTocResultService {
           response: {
             result_id: rip.id,
           },
-          message: `result_id: ${rip.id} - does not exist`,
+          message: `IPSR: The result id ${rip.id} does not exist`,
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -89,9 +88,11 @@ export class ResultsPackageTocResultService {
         });
       }
 
-      if (crtr?.contributing_initiatives.length) {
-        const { contributing_initiatives: cinit } = crtr;
-        for (const init of cinit) {
+      if (
+        crtr?.contributing_initiatives?.accepted_contributing_initiatives.length
+      ) {
+        const { contributing_initiatives: ci } = crtr;
+        for (const init of ci?.accepted_contributing_initiatives ?? []) {
           if (init?.is_active == false) {
             await this._resultByInitiativesRepository.update(
               { result_id: rip.id, initiative_id: init.id },
@@ -99,24 +100,26 @@ export class ResultsPackageTocResultService {
             );
           }
         }
+      }
 
-        const dataRequst: CreateTocShareResult = {
-          isToc: true,
-          initiativeShareId: cinit.map((el) => el.id),
-          action_area_outcome_id: null,
-          planned_result: null,
-          toc_result_id: null,
+      if (
+        crtr?.contributing_initiatives?.pending_contributing_initiatives.length
+      ) {
+        const { contributing_initiatives: ci } = crtr;
+        const dataRequest: CreateTocShareResult = {
+          isToc: false,
+          initiativeShareId: ci?.pending_contributing_initiatives.map(
+            (el) => el.id,
+          ),
         };
         await this._shareResultRequestService.resultRequest(
-          dataRequst,
+          dataRequest,
           rip.id,
           user,
         );
-      }
-
-      if (crtr?.pending_contributing_initiatives.length) {
-        const { pending_contributing_initiatives: pint } = crtr;
-        const cancelRequest = pint?.filter((e) => e.is_active == false);
+        const cancelRequest = ci?.pending_contributing_initiatives?.filter(
+          (e) => !e.is_active,
+        );
         if (cancelRequest?.length) {
           await this._shareResultRequestRepository.cancelRequest(
             cancelRequest.map((e) => e.share_result_request_id),
@@ -228,7 +231,7 @@ export class ResultsPackageTocResultService {
 
       // * Save Contributors ResultTocResult
       await this._resultTocResultService.saveResultTocResultContributor(
-        crtr,
+        crtr.contributors_result_toc_result,
         user,
         rip,
         crtr.result_id,
@@ -302,8 +305,6 @@ export class ResultsPackageTocResultService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
-      console.error(error);
-
       return this._handlersError.returnErrorRes({ error });
     }
   }
@@ -414,12 +415,18 @@ export class ResultsPackageTocResultService {
         await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
         );
-      const conInit =
+      const [conInit, conPending] = await Promise.all([
         await this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
-        );
-      const conPending =
-        await this._resultByInitiativesRepository.getPendingInit(resultId);
+        ),
+        await this._resultByInitiativesRepository.getPendingInit(resultId),
+      ]);
+
+      const contributingInititiatives = {
+        accepted_contributing_initiatives: conInit,
+        pending_contributing_initiatives: conPending,
+      };
+
       const npProject =
         await this._nonPooledProjectRepository.getAllNPProjectByResultId(
           resultId,
@@ -500,19 +507,27 @@ export class ResultsPackageTocResultService {
 
         resTocResConResponse.forEach((response) => {
           individualResponses.push({
-            planned_result: response.planned_result,
-            initiative_id: response.initiative_id,
-            official_code: response.official_code,
-            short_name: response.short_name,
-            result_toc_results: response.result_toc_results,
+            planned_result: response?.planned_result,
+            initiative_id: response?.initiative_id,
+            official_code: response?.official_code,
+            short_name: response?.short_name,
+            result_toc_results: response?.result_toc_results,
           });
         });
       }
+      conPending.forEach((pending) => {
+        individualResponses.push({
+          planned_result: null,
+          initiative_id: pending?.id,
+          official_code: pending?.official_code,
+          short_name: pending?.short_name,
+          result_toc_results: [],
+        });
+      });
 
       return {
         response: {
-          contributing_initiatives: conInit,
-          pending_contributing_initiatives: conPending,
+          contributing_initiatives: contributingInititiatives,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: {

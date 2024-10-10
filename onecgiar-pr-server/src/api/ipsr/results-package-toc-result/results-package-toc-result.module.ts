@@ -27,10 +27,22 @@ import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/result-toc-result-target-indicator.repository';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
-  imports: [VersioningModule, ResultsTocResultsModule],
+  imports: [
+    VersioningModule,
+    ResultsTocResultsModule,
+    EmailNotificationManagementModule,
+    SocketManagementModule,
+  ],
   providers: [
     ResultsPackageTocResultService,
     ResultRepository,
@@ -55,8 +67,11 @@ import { ResultsTocResultsModule } from '../../results/results-toc-results/resul
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
-    ReturnResponse,
-    ResultsTocResultRepository,
+    ClarisaInitiativesRepository,
+    TemplateRepository,
+    UserNotificationSettingRepository,
+    GlobalParameterRepository,
+    UserRepository,
   ],
   exports: [ResultsPackageTocResultService],
 })

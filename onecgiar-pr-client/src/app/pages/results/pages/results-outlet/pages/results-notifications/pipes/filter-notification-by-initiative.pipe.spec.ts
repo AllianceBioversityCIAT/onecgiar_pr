@@ -8,7 +8,38 @@ describe('FilterNotificationByInitiativePipe', () => {
   });
 
   it('should return the original list if initiativeId is false', () => {
-    const list = [{ shared_inititiative_id: '1' }, { shared_inititiative_id: '2' }];
+    const list = [
+      {
+        obj_shared_inititiative: {
+          id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
+        }
+      },
+      {
+        obj_shared_inititiative: {
+          id: '2'
+        },
+        obj_owner_initiative: {
+          id: '2'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '2'
+            }
+          ]
+        }
+      }
+    ];
 
     const result = pipe.transform(list, null);
 
@@ -24,10 +55,87 @@ describe('FilterNotificationByInitiativePipe', () => {
   });
 
   it('should filter the list based on shared_inititiative_id', () => {
-    const list = [{ shared_inititiative_id: '1' }, { shared_inititiative_id: '2' }, { shared_inititiative_id: '1' }];
+    const list = [
+      {
+        obj_shared_inititiative: {
+          id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
+        }
+      },
+      {
+        obj_shared_inititiative: {
+          id: '2'
+        },
+        obj_owner_initiative: {
+          id: '2'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '2'
+            }
+          ]
+        }
+      },
+      {
+        obj_shared_inititiative: {
+          id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
+        }
+      }
+    ];
 
     const result = pipe.transform(list, '1');
 
-    expect(result).toEqual([{ shared_inititiative_id: '1' }, { shared_inititiative_id: '1' }]);
+    expect(result).toEqual([
+      {
+        obj_shared_inititiative: {
+          id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
+        }
+      },
+      {
+        obj_shared_inititiative: {
+          id: '1'
+        },
+        obj_owner_initiative: {
+          id: '1'
+        },
+        obj_result: {
+          obj_result_by_initiatives: [
+            {
+              initiative_id: '1'
+            }
+          ]
+        }
+      }
+    ]);
   });
 });

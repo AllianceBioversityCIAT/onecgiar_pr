@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PanelMenuComponent } from './panel-menu.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PanelMenuPipe } from './pipes/panel-menu.pipe';
-import { RouterTestingModule } from '@angular/router/testing';
 import { PrInputComponent } from '../../../../../custom-fields/pr-input/pr-input.component';
 import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.component';
 import { CdkCopyToClipboard } from '@angular/cdk/clipboard';
@@ -34,15 +33,10 @@ describe('PanelMenuComponent', () => {
         PanelMenuPipe,
         PrInputComponent,
         PdfActionsComponent,
-        CdkCopyToClipboard,
         PrButtonComponent,
         PdfIconComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        RouterTestingModule,
-        TooltipModule
-      ],
+      imports: [HttpClientTestingModule, TooltipModule, CdkCopyToClipboard],
       providers: [
         {
           provide: ApiService,

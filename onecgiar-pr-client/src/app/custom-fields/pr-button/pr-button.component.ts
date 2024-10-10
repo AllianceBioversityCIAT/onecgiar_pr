@@ -13,6 +13,7 @@ export class PrButtonComponent implements OnInit {
   @Input() rotateRight: boolean = false;
   @Input() underConstruction: boolean = false;
   @Input() showBackground: boolean = true;
+  @Input() iconsStylesClass: 'material-icons-round' | 'material-icons-outlined' = 'material-icons-round';
   @Input() colorType: 'primary' | 'danger' | 'secondary' | 'success' = 'primary';
   @Input() padding: 'small' | 'medium' | 'big' = 'small';
   @Input() pulse: boolean = false;
@@ -20,6 +21,7 @@ export class PrButtonComponent implements OnInit {
   @Input() disabled: boolean = false;
   @Input() tooltipText: string = '';
   @Input() tooltipTextPosition: 'right' | 'left' | 'top' | 'bottom' = 'top';
+  @Input() tooltipStyleClass: string = '';
   @Output() clickEvent = new EventEmitter<any>();
 
   png_icons = ['excel_white'];

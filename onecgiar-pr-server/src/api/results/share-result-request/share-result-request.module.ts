@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { ShareResultRequestController } from './share-result-request.controller';
 import { ShareResultRequestRepository } from './share-result-request.repository';
@@ -19,6 +19,15 @@ import { ResultsSdgTargetRepository } from '../results-toc-results/results-sdg-t
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/result-toc-result-target-indicator.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -40,7 +49,18 @@ import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/resu
     RoleByUserRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    TemplateRepository,
+    ClarisaInitiativesRepository,
+    UserNotificationSettingRepository,
+    GlobalParameterRepository,
+    UserRepository,
   ],
-  exports: [ShareResultRequestRepository],
+  exports: [ShareResultRequestRepository, ShareResultRequestService],
+  imports: [
+    EmailNotificationManagementModule,
+    ResultsTocResultsModule,
+    forwardRef(() => VersioningModule),
+    SocketManagementModule,
+  ],
 })
 export class ShareResultRequestModule {}

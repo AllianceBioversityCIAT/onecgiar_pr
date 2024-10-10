@@ -19,29 +19,57 @@ export class ShareResultRequest {
   })
   share_result_request_id: number;
 
+  @Column({
+    name: 'result_id',
+    type: 'int',
+    nullable: false,
+  })
+  result_id: number;
+
   @ManyToOne(() => Result, (r) => r.id, { nullable: false })
   @JoinColumn({
     name: 'result_id',
   })
-  result_id: number;
+  obj_result: Result[];
+
+  @Column({
+    name: 'owner_initiative_id',
+    type: 'int',
+    nullable: false,
+  })
+  owner_initiative_id: number;
 
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: false })
   @JoinColumn({
     name: 'owner_initiative_id',
   })
-  owner_initiative_id: number;
+  obj_owner_initiative: ClarisaInitiative[];
+
+  @Column({
+    name: 'requester_initiative_id',
+    type: 'int',
+    nullable: true,
+  })
+  requester_initiative_id!: number;
 
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: true })
   @JoinColumn({
     name: 'requester_initiative_id',
   })
-  requester_initiative_id!: number;
+  obj_requester_initiative!: ClarisaInitiative[];
+
+  @Column({
+    name: 'shared_inititiative_id',
+    type: 'int',
+    nullable: false,
+  })
+  shared_inititiative_id: number;
 
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: false })
   @JoinColumn({
     name: 'shared_inititiative_id',
   })
-  shared_inititiative_id: number;
+  obj_shared_inititiative: ClarisaInitiative[];
 
   @ManyToOne(() => ClarisaInitiative, (ci) => ci.id, { nullable: false })
   @JoinColumn({
@@ -64,13 +92,20 @@ export class ShareResultRequest {
   })
   action_area_outcome_id!: number;
 
+  @Column({
+    name: 'request_status_id',
+    type: 'int',
+    nullable: false,
+  })
+  request_status_id: number;
+
   @ManyToOne(() => RequestStatus, (re) => re.request_status_id, {
     nullable: false,
   })
   @JoinColumn({
     name: 'request_status_id',
   })
-  request_status_id: number;
+  obj_request_status: RequestStatus[];
 
   @Column({
     name: 'planned_result',
@@ -87,11 +122,18 @@ export class ShareResultRequest {
   })
   is_active: boolean;
 
+  @Column({
+    name: 'requested_by',
+    type: 'int',
+    nullable: false,
+  })
+  requested_by: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({
     name: 'requested_by',
   })
-  requested_by: number;
+  obj_requested_by: User[];
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -99,11 +141,18 @@ export class ShareResultRequest {
   })
   requested_date: Date;
 
+  @Column({
+    name: 'approved_by',
+    type: 'int',
+    nullable: true,
+  })
+  approved_by!: number;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'approved_by',
   })
-  approved_by!: number;
+  obj_approved_by!: User[];
 
   @Column({
     name: 'aprovaed_date',
@@ -111,4 +160,12 @@ export class ShareResultRequest {
     nullable: true,
   })
   aprovaed_date!: Date;
+
+  @Column({
+    name: 'is_map_to_toc',
+    type: 'boolean',
+    nullable: true,
+    default: false,
+  })
+  is_map_to_toc: boolean;
 }

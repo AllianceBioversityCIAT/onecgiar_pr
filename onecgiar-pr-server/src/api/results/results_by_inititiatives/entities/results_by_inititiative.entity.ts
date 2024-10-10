@@ -39,7 +39,7 @@ export class ResultsByInititiative {
   })
   initiative_id: number;
 
-  @ManyToOne(() => ClarisaInitiative, (i) => i.id)
+  @ManyToOne(() => ClarisaInitiative, (i) => i.obj_result_by_initiative)
   @JoinColumn({
     name: 'inititiative_id',
   })

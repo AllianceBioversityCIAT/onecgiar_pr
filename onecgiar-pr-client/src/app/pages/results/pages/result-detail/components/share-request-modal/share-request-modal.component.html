@@ -1,66 +1,116 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showShareRequest"
-    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
-    [dismissableMask]="true" [style]="{padding: '0px'}">
-    <div class="modal_title">Request to be added as contributor of a result.</div>
+<p-dialog
+  class="support_information"
+  header="Title"
+  [(visible)]="this.api.dataControlSE.showShareRequest"
+  (onHide)="cleanObject()"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px' }">
+  <div class="modal_title">Request to be added as contributor of a result.</div>
 
-    <div class="modal_container partners-request-container" *ngIf="showForm"
-        [ngClass]="{ 'small_height' :this.api.dataControlSE?.currentResult?.result_level_id !== 4 && this.api.dataControlSE?.currentResult?.result_level_id !== 3}">
-        <div class="information">
-            {{this.api?.dataControlSE?.currentResult?.result_type}} -
-            <strong>
-                {{this.api?.dataControlSE?.currentResult?.title}}
-            </strong>
-            has already been recorded for
-            <strong>
-                {{this.api?.dataControlSE?.currentResult?.submitter}}.
-            </strong>
-        </div>
-
-        <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-            *ngIf="!this.api.rolesSE.isAdmin" label="Select initiative" [isStatic]="true" optionLabel="full_name"
-            disableOptionsText="<strong class='init-mapped'>Mapped</strong>" optionValue="initiative_id"
-            placeholder="Select initiative" [disableOptions]="[{  
-                initiative_id: this.api?.dataControlSE?.currentResult?.submitter_id
-            }]" [disabled]="this.api.dataControlSE.inNotifications"
-            [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id" (selectOptionEvent)="modelChange()">
-        </app-pr-select>
-
-        <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select Initiative"
-            [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-            placeholder="Select Initiative" [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
-            (selectOptionEvent)="modelChange()">
-        </app-pr-select>
-
-        <app-toc-initiative-out
-            *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && !this.api.dataControlSE.inNotifications"
-            [initiative]="shareRequestModalSE.shareRequestBody" [isNotifications]="true"
-            [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
-            [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
-        </app-toc-initiative-out>
-
-        <app-toc-initiative-out
-            *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && this.api.dataControlSE.inNotifications && (this.api.dataControlSE?.currentResult?.result_level_id === 4 || this.api.dataControlSE?.currentResult?.result_level_id === 3)"
-            [initiative]="shareRequestModalSE.shareRequestBody" [isNotifications]="true"
-            [editable]="!this.api.rolesSE.platformIsClosed && (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) || this.rolesSE.isAdmin || this.api.dataControlSE.inNotifications)"
-            [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
-        </app-toc-initiative-out>
+  <div
+    class="modal_container partners-request-container"
+    *ngIf="showForm"
+    [ngClass]="{
+      small_height: this.api.dataControlSE?.currentResult?.result_level_id !== 4 && this.api.dataControlSE?.currentResult?.result_level_id !== 3
+    }">
+    <div class="information">
+      {{ this.api?.dataControlSE?.currentResult?.result_type }} - <strong>{{ this.api?.dataControlSE?.currentResult?.title }}</strong> has already
+      been recorded for <strong> {{ this.api?.dataControlSE?.currentResult?.submitter }}. </strong>
     </div>
 
-    <div class="buttons">
-        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
-            (click)="this.api.dataControlSE.showShareRequest = false" *ngIf="!this.api.dataControlSE.inNotifications">
-        </app-pr-button>
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.api.dataControlSE.myInitiativesList"
+      *ngIf="!this.api.rolesSE.isAdmin"
+      label="Select initiative"
+      [isStatic]="true"
+      optionLabel="full_name"
+      disableOptionsText="<strong class='init-mapped'>Mapped</strong>"
+      optionValue="initiative_id"
+      placeholder="Select initiative"
+      [disableOptions]="[{ initiative_id: this.api?.dataControlSE?.currentResult?.submitter_id }]"
+      [disabled]="this.api.dataControlSE.inNotifications"
+      [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
+      (selectOptionEvent)="modelChange()">
+    </app-pr-select>
 
-        <app-pr-button [text]="this.requesting ? 'Saving' : 'Send Request'" [rotating]="this.requesting"
-            [ngClass]="{'globalDisabled': validateAcceptOrReject()}" [icon]="this.requesting ? 'loop' : 'send'"
-            padding="medium" (click)="onRequest()" *ngIf="!this.api.dataControlSE.inNotifications">
-        </app-pr-button>
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.allInitiatives"
+      label="Select Initiative"
+      [isStatic]="true"
+      *ngIf="this.api.rolesSE.isAdmin"
+      optionLabel="full_name"
+      optionValue="initiative_id"
+      placeholder="Select Initiative"
+      [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
+      (selectOptionEvent)="modelChange()">
+    </app-pr-select>
 
-        <app-pr-button [text]="this.requesting ? 'Saving' : 'Accept'" [rotating]="this.requesting"
-            [ngClass]="{'globalDisabled': this.api.dataControlSE?.currentResult?.result_level_id === 4 && validateAcceptOrReject()}"
-            [icon]="this.requesting ? 'loop' : 'send'" padding="medium" (click)="acceptOrReject()"
-            *ngIf="this.api.dataControlSE.inNotifications">
-        </app-pr-button>
-    </div>
+    <app-toc-initiative-out
+      *ngIf="shareRequestModalSE.shareRequestBody?.initiative_id && this.showTocOut && !this.api.dataControlSE.inNotifications"
+      [initiative]="shareRequestModalSE.shareRequestBody"
+      [isNotifications]="true"
+      [editable]="
+        !this.api.rolesSE.platformIsClosed &&
+        (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) ||
+          this.rolesSE.isAdmin ||
+          this.api.dataControlSE.inNotifications)
+      "
+      [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
+    </app-toc-initiative-out>
 
+    <app-toc-initiative-out
+      *ngIf="
+        shareRequestModalSE.shareRequestBody?.initiative_id &&
+        this.showTocOut &&
+        this.api.dataControlSE.inNotifications &&
+        (this.api.dataControlSE?.currentResult?.result_level_id === 4 || this.api.dataControlSE?.currentResult?.result_level_id === 3)
+      "
+      [initiative]="shareRequestModalSE.shareRequestBody"
+      [isNotifications]="true"
+      [editable]="
+        !this.api.rolesSE.platformIsClosed &&
+        (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) ||
+          this.rolesSE.isAdmin ||
+          this.api.dataControlSE.inNotifications)
+      "
+      [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
+    </app-toc-initiative-out>
+  </div>
+
+  <div class="buttons">
+    <app-pr-button
+      *ngIf="!this.api.dataControlSE.inNotifications"
+      padding="medium"
+      text="Cancel"
+      icon="cancel_schedule_send"
+      colorType="secondary"
+      (click)="this.api.dataControlSE.showShareRequest = false">
+    </app-pr-button>
+
+    <app-pr-button
+      *ngIf="!this.api.dataControlSE.inNotifications"
+      [text]="this.requesting ? 'Saving' : 'Send Request'"
+      [rotating]="this.requesting"
+      [ngClass]="{ globalDisabled: validateAcceptOrReject() }"
+      [icon]="this.requesting ? 'loop' : 'send'"
+      padding="medium"
+      (click)="onRequest()">
+    </app-pr-button>
+
+    <app-pr-button
+      *ngIf="this.api.dataControlSE.inNotifications"
+      [text]="this.requesting ? 'Saving' : 'Accept'"
+      [rotating]="this.requesting"
+      [ngClass]="{ globalDisabled: this.api.dataControlSE?.currentResult?.result_level_id === 4 && validateAcceptOrReject() }"
+      [icon]="this.requesting ? 'loop' : 'send'"
+      padding="medium"
+      (click)="acceptOrReject()">
+    </app-pr-button>
+  </div>
 </p-dialog>

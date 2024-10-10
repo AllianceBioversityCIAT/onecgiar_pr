@@ -9,8 +9,6 @@ import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { VersionsService } from '../versions/versions.service';
-import { VersionRepository } from '../../versioning/versioning.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
@@ -29,6 +27,12 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { VersioningModule } from '../../versioning/versioning.module';
+import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
 
 @Module({
   controllers: [ResultsTocResultsController],
@@ -39,8 +43,6 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
     NonPooledProjectRepository,
     ResultsCenterRepository,
     ResultByInitiativesRepository,
-    VersionsService,
-    VersionRepository,
     UserRepository,
     ResultRepository,
     TocResultsRepository,
@@ -62,7 +64,15 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ClarisaInitiativesRepository,
+    TemplateRepository,
+    UserNotificationSettingRepository,
+    GlobalParameterRepository,
   ],
   exports: [ResultsTocResultRepository, ResultsTocResultsService],
+  imports: [
+    EmailNotificationManagementModule,
+    VersioningModule,
+    SocketManagementModule,
+  ],
 })
 export class ResultsTocResultsModule {}
