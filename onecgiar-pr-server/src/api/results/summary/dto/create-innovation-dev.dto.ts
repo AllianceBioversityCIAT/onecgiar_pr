@@ -24,6 +24,7 @@ export class CreateInnovationDevDto {
   public responsible_innovation_and_scaling!: TopLevelQuestions;
   public intellectual_property_rights!: TopLevelQuestions;
   public innovation_team_diversity!: TopLevelQuestions;
+  public megatrends!: TopLevelQuestions;
   public reference_materials!: Evidence[];
   public pictures!: Evidence[];
   public innovatonUse: innovatonUseInterface;

@@ -386,6 +386,11 @@ export class SummaryService {
         user.id,
         createInnovationDevDto?.innovation_team_diversity.options,
       );
+      await this._innoDevService.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.megatrends.options,
+      );
 
       // * Save Evidence
       await this._innoDevService.saveEvidence(

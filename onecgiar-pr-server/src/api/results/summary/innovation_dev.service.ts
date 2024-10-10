@@ -40,11 +40,11 @@ export class InnoDevService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
-  saveOptionsAndSubOptions = async (
+  async saveOptionsAndSubOptions(
     resultId: number,
     user: number,
     options: Option[],
-  ) => {
+  ) {
     for (const optionData of options) {
       if (optionData.answer_boolean == null && optionData.answer_text == null) {
         continue;
@@ -73,7 +73,7 @@ export class InnoDevService {
         await this._resultAnswerRepository.save(optionAnswer);
       }
 
-      for (const subOptionData of optionData.subOptions) {
+      for (const subOptionData of optionData.subOptions ?? []) {
         if (
           subOptionData.answer_boolean === null &&
           subOptionData.answer_text === null
@@ -104,14 +104,14 @@ export class InnoDevService {
         }
       }
     }
-  };
+  }
 
-  saveEvidence = async (
+  async saveEvidence(
     resultId: number,
     user: number,
     evidences: Evidence[],
     evidence_type_id: number,
-  ) => {
+  ) {
     const existingEvidences = await this._evidenceRepository.find({
       where: {
         result_id: resultId,
@@ -160,7 +160,7 @@ export class InnoDevService {
         await this._evidenceRepository.save(newEvidence);
       }
     }
-  };
+  }
 
   async saveAnticipatedInnoUser(
     resultId: number,

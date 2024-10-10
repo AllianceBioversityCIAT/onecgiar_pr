@@ -1163,7 +1163,7 @@ export class resultValidationRepository
 					TRUE
 				)
 				AND(
-					/*(
+					(
 						# questions 2 and 3 (1 and 2 on front-end)
 						(
 							# both question 2 and 3 have been answered "answer_boolean = true"
@@ -1286,8 +1286,8 @@ export class resultValidationRepository
 								) as q2
 							)
 						)
-					)*/
-					true AND (
+					)
+					AND (
 						# validations about question 26 (intellectual rights on front)
 						(
 							# validate that question 27 have been answered
@@ -1408,6 +1408,17 @@ export class resultValidationRepository
 								)
 						) > 0
 					)
+					AND (
+						#megatrends
+						select 
+							count(*)
+						from 
+							result_answers ra
+						left join result_questions rq on rq.result_question_id = ra.result_question_id
+						where ra.result_id = r.id
+							AND rq.parent_question_id = 52
+							and ra.answer_boolean = TRUE
+					) > 0
 				)
 				AND rid.innovation_readiness_level_id is not null
 				AND IF(

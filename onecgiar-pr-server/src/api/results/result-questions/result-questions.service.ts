@@ -11,43 +11,63 @@ export class ResultQuestionsService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
+  async findQuestionInnovationDevelopment(resultId: number) {
+    try {
+      const scaling = await this.responsibleInnovationAndScaling(resultId);
+      const intellectual = await this.intellectualPropertyRights(resultId);
+      const innovation = await this.innovationTeamDiversity(resultId);
+      const megatrends = await this.getMegatrends(resultId);
+
+      return {
+        response: {
+          responsible_innovation_and_scaling: scaling[0],
+          intellectual_property_rights: intellectual[0],
+          innovation_team_diversity: innovation[0],
+          megatrends,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlerError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private getAnswersForQuestion(resultId: number, questionId: number) {
+    return this._resultAnswerRepository.find({
+      select: ['answer_boolean', 'answer_text'],
+      where: {
+        result_id: resultId,
+        result_question_id: questionId,
+      },
+    });
+  }
+
+  private mapOptions(resultId: number, options: any[]) {
+    return Promise.all(
+      options.map(async (option) => {
+        const answers = await this.getAnswersForQuestion(
+          resultId,
+          option.result_question_id,
+        );
+        return {
+          ...option,
+          answer_boolean:
+            answers[0] === undefined ? null : answers[0].answer_boolean,
+          answer_text: answers[0] === undefined ? null : answers[0].answer_text,
+        };
+      }),
+    );
+  }
+
   async findQuestionPolicyChange(resultId: number) {
     try {
-      const getAnswersForQuestion = async (
-        questionId: number,
-      ): Promise<any> => {
-        return await this._resultAnswerRepository.find({
-          select: ['answer_boolean', 'answer_text'],
-          where: {
-            result_id: resultId,
-            result_question_id: questionId,
-          },
-        });
-      };
-
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
           question_level: 1,
           result_type_id: 1,
         },
       });
-
-      const mapOptions = async (options: any[]) => {
-        return Promise.all(
-          options.map(async (option) => {
-            const answers = await getAnswersForQuestion(
-              option.result_question_id,
-            );
-            return {
-              ...option,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-            };
-          }),
-        );
-      };
 
       const policyResultRelated = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
@@ -58,7 +78,10 @@ export class ResultQuestionsService {
             },
           });
 
-          const optionsWithAnswers = await mapOptions(childQuestions);
+          const optionsWithAnswers = await this.mapOptions(
+            resultId,
+            childQuestions,
+          );
 
           return {
             ...topLevelQuestion,
@@ -78,20 +101,28 @@ export class ResultQuestionsService {
     }
   }
 
-  async findQuestionInnovationDevelopment(resultId: number) {
+  async getMegatrends(resultId: number) {
     try {
-      const scaling = await this.responsibleInnovationAndScaling(resultId);
-      const intellectual = await this.intellectualPropertyRights(resultId);
-      const innovation = await this.innovationTeamDiversity(resultId);
+      const megatrendQuestion = await this._resultQuestionRepository.findOne({
+        where: { result_question_id: 52 },
+      });
+
+      const megatrendQuestionChildren =
+        await this._resultQuestionRepository.find({
+          where: {
+            question_level: 2,
+            parent_question_id: megatrendQuestion.result_question_id,
+          },
+        });
+
+      const megatrendAnswers = await this.mapOptions(
+        resultId,
+        megatrendQuestionChildren,
+      );
 
       return {
-        response: {
-          responsible_innovation_and_scaling: scaling[0],
-          intellectual_property_rights: intellectual[0],
-          innovation_team_diversity: innovation[0],
-        },
-        message: 'Successful response',
-        status: HttpStatus.OK,
+        ...megatrendQuestion,
+        options: megatrendAnswers,
       };
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
@@ -100,18 +131,6 @@ export class ResultQuestionsService {
 
   async responsibleInnovationAndScaling(resultId: number): Promise<any> {
     try {
-      const getAnswersForQuestion = async (
-        questionId: number,
-      ): Promise<any> => {
-        return await this._resultAnswerRepository.find({
-          select: ['answer_boolean', 'answer_text'],
-          where: {
-            result_id: resultId,
-            result_question_id: questionId,
-          },
-        });
-      };
-
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
           result_question_id: 1,
@@ -120,27 +139,11 @@ export class ResultQuestionsService {
         },
       });
 
-      const mapSubOptions = async (subOptions: any[]) => {
-        return Promise.all(
-          subOptions.map(async (subOption) => {
-            const answers = await getAnswersForQuestion(
-              subOption.result_question_id,
-            );
-            return {
-              ...subOption,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-            };
-          }),
-        );
-      };
-
-      const mapOptions = async (options: any[]) => {
+      const mapMacroOptions = async (options: any[]) => {
         return Promise.all(
           options.map(async (option) => {
-            const answers = await getAnswersForQuestion(
+            const answers = await this.getAnswersForQuestion(
+              resultId,
               option.result_question_id,
             );
             const subOptions = await this._resultQuestionRepository.find({
@@ -149,7 +152,10 @@ export class ResultQuestionsService {
                 parent_question_id: option.result_question_id,
               },
             });
-            const subOptionsWithAnswers = await mapSubOptions(subOptions);
+            const subOptionsWithAnswers = await this.mapOptions(
+              resultId,
+              subOptions,
+            );
             return {
               ...option,
               answer_boolean:
@@ -182,7 +188,7 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapOptions(questionOptions);
+              const optionsWithAnswers = await mapMacroOptions(questionOptions);
 
               return {
                 ...childQuestion,
@@ -206,18 +212,6 @@ export class ResultQuestionsService {
 
   async intellectualPropertyRights(resultId: number) {
     try {
-      const getAnswersForQuestion = async (
-        questionId: number,
-      ): Promise<any> => {
-        return await this._resultAnswerRepository.find({
-          select: ['answer_boolean', 'answer_text'],
-          where: {
-            result_id: resultId,
-            result_question_id: questionId,
-          },
-        });
-      };
-
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
           result_question_id: 26,
@@ -226,27 +220,11 @@ export class ResultQuestionsService {
         },
       });
 
-      const mapSubOptions = async (subOptions: any[]) => {
-        return Promise.all(
-          subOptions.map(async (subOption) => {
-            const answers = await getAnswersForQuestion(
-              subOption.result_question_id,
-            );
-            return {
-              ...subOption,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-            };
-          }),
-        );
-      };
-
-      const mapOptions = async (options: any[]) => {
+      const mapMacroOptions = async (options: any[]) => {
         return Promise.all(
           options.map(async (option) => {
-            const answers = await getAnswersForQuestion(
+            const answers = await this.getAnswersForQuestion(
+              resultId,
               option.result_question_id,
             );
             const subOptions = await this._resultQuestionRepository.find({
@@ -255,7 +233,10 @@ export class ResultQuestionsService {
                 parent_question_id: option.result_question_id,
               },
             });
-            const subOptionsWithAnswers = await mapSubOptions(subOptions);
+            const subOptionsWithAnswers = await this.mapOptions(
+              resultId,
+              subOptions,
+            );
             return {
               ...option,
               answer_boolean:
@@ -288,7 +269,7 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapOptions(questionOptions);
+              const optionsWithAnswers = await mapMacroOptions(questionOptions);
 
               return {
                 ...childQuestion,
@@ -314,18 +295,6 @@ export class ResultQuestionsService {
 
   async innovationTeamDiversity(resultId: number) {
     try {
-      const getAnswersForQuestion = async (
-        questionId: number,
-      ): Promise<any> => {
-        return await this._resultAnswerRepository.find({
-          select: ['answer_boolean', 'answer_text'],
-          where: {
-            result_id: resultId,
-            result_question_id: questionId,
-          },
-        });
-      };
-
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
           result_question_id: 38,
@@ -334,27 +303,11 @@ export class ResultQuestionsService {
         },
       });
 
-      const mapSubOptions = async (subOptions: any[]) => {
-        return Promise.all(
-          subOptions.map(async (subOption) => {
-            const answers = await getAnswersForQuestion(
-              subOption.result_question_id,
-            );
-            return {
-              ...subOption,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-            };
-          }),
-        );
-      };
-
-      const mapOptions = async (options: any[]) => {
+      const mapMacroOptions = async (options: any[]) => {
         return Promise.all(
           options.map(async (option) => {
-            const answers = await getAnswersForQuestion(
+            const answers = await this.getAnswersForQuestion(
+              resultId,
               option.result_question_id,
             );
             const subOptions = await this._resultQuestionRepository.find({
@@ -363,7 +316,10 @@ export class ResultQuestionsService {
                 parent_question_id: option.result_question_id,
               },
             });
-            const subOptionsWithAnswers = await mapSubOptions(subOptions);
+            const subOptionsWithAnswers = await this.mapOptions(
+              resultId,
+              subOptions,
+            );
             return {
               ...option,
               answer_boolean:
@@ -387,7 +343,8 @@ export class ResultQuestionsService {
 
           const questionsWithOptions = await Promise.all(
             childQuestions.map(async (childQuestion) => {
-              const answers = await getAnswersForQuestion(
+              const answers = await this.getAnswersForQuestion(
+                resultId,
                 childQuestion.result_question_id,
               );
               const questionOptions = await this._resultQuestionRepository.find(
@@ -399,7 +356,7 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapOptions(questionOptions);
+              const optionsWithAnswers = await mapMacroOptions(questionOptions);
 
               return {
                 ...childQuestion,
