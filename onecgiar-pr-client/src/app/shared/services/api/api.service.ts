@@ -102,11 +102,12 @@ export class ApiService {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe({
       next: resp => {
         this.dataControlSE.resultsList = resp.response;
-        this.resultsListSE.showLoadingResultSpinner = false;
 
         this.dataControlSE.resultsList.forEach((result: any) => {
           result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
+
+        this.resultsListSE.showLoadingResultSpinner = false;
       },
       error: err => {
         this.resultsListSE.showLoadingResultSpinner = false;
