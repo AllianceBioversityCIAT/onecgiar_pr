@@ -163,7 +163,7 @@ export class AuthService {
     //const ActiveDirectory = require('activedirectory');
     const ad = new ActiveDirectory(config.active_directory);
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
