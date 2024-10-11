@@ -140,7 +140,7 @@ export class AuthService {
             response: {
               valid: false,
             },
-            message: 'Invalid credentials',
+            message: 'Password does not match',
             status: HttpStatus.UNAUTHORIZED,
           };
         }
@@ -163,7 +163,7 @@ export class AuthService {
     //const ActiveDirectory = require('activedirectory');
     const ad = new ActiveDirectory(config.active_directory);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
@@ -189,31 +189,41 @@ export class AuthService {
                 status: HttpStatus.UNAUTHORIZED,
               };
             } else {
-              const error: string = err.lde_message.split(/:|,/)[2].trim();
-              this._logger.error(`Error: ${error}`);
-              switch (error) {
-                case 'DSID-0C090447':
-                  throw {
-                    response: {
-                      valid: false,
-                      error: err.errno,
-                      code: err.code,
-                    },
-                    message:
-                      'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                    status: HttpStatus.UNAUTHORIZED,
-                  };
-                  break;
-                default:
-                  throw {
-                    response: {
-                      valid: false,
-                    },
-                    message:
-                      'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                    status: HttpStatus.UNAUTHORIZED,
-                  };
-                  break;
+              const errorParts = err.lde_message?.split(/:|,/);
+              if (errorParts && errorParts[2]) {
+                const error = errorParts[2].trim();
+                switch (error) {
+                  case 'DSID-0C090447':
+                    throw {
+                      response: {
+                        valid: false,
+                        error: err.errno,
+                        code: err.code,
+                      },
+                      message:
+                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+                      status: HttpStatus.UNAUTHORIZED,
+                    };
+                    break;
+                  default:
+                    throw {
+                      response: {
+                        valid: false,
+                      },
+                      message:
+                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+                      status: HttpStatus.UNAUTHORIZED,
+                    };
+                    break;
+                }
+              } else {
+                throw {
+                  response: {
+                    valid: false,
+                  },
+                  message: 'Invalid error format',
+                  status: HttpStatus.UNAUTHORIZED,
+                };
               }
             }
           } else {
@@ -227,15 +237,7 @@ export class AuthService {
             };
           }
         } catch (error) {
-          return {
-            response: {
-              valid: false,
-              error: error,
-            },
-            message:
-              'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-            status: HttpStatus.UNAUTHORIZED,
-          };
+          return reject(this._handlersError.returnErrorRes({ error }));
         }
       });
     });
