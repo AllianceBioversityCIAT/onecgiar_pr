@@ -227,7 +227,15 @@ export class AuthService {
             };
           }
         } catch (error) {
-          return reject(this._handlersError.returnErrorRes({ error }));
+          return {
+            response: {
+              valid: false,
+              error: error,
+            },
+            message:
+              'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+            status: HttpStatus.UNAUTHORIZED,
+          };
         }
       });
     });
