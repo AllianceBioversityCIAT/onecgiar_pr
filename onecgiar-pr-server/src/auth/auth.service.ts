@@ -140,7 +140,7 @@ export class AuthService {
             response: {
               valid: false,
             },
-            message: 'Password does not match',
+            message: 'Invalid credentials',
             status: HttpStatus.UNAUTHORIZED,
           };
         }
@@ -189,29 +189,15 @@ export class AuthService {
                 status: HttpStatus.UNAUTHORIZED,
               };
             } else {
-              const error: string = err.lde_message.split(/:|,/)[2].trim();
-              switch (error) {
-                case 'DSID-0C090447':
-                  throw {
-                    response: {
-                      valid: false,
-                      error: err.errno,
-                      code: err.code,
-                    },
-                    message: 'Password does not match',
-                    status: HttpStatus.UNAUTHORIZED,
-                  };
-                  break;
-                default:
-                  throw {
-                    response: {
-                      valid: false,
-                    },
-                    message: 'Unknown error in validation',
-                    status: HttpStatus.UNAUTHORIZED,
-                  };
-                  break;
-              }
+              return {
+                response: {
+                  valid: false,
+                  error: err,
+                },
+                message:
+                  'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+                status: HttpStatus.UNAUTHORIZED,
+              };
             }
           } else {
             throw {
