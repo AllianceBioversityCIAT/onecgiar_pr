@@ -167,6 +167,18 @@ export class AuthService {
       this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
+          if (err) {
+            throw {
+              response: {
+                valid: false,
+                error: err,
+              },
+              message:
+                'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+              status: HttpStatus.UNAUTHORIZED,
+            };
+          }
+          
           if (auth) {
             this._logger.verbose(`Successful validation`);
             return resolve({
@@ -176,36 +188,13 @@ export class AuthService {
               message: 'Successful validation',
               status: HttpStatus.ACCEPTED,
             });
-          }
-          if (err) {
-            if (err?.errno) {
-              throw {
-                response: {
-                  valid: false,
-                  error: err.errno,
-                  code: err.code,
-                },
-                message: 'Error with communication with third party servers',
-                status: HttpStatus.UNAUTHORIZED,
-              };
-            } else {
-              return {
-                response: {
-                  valid: false,
-                  error: err,
-                },
-                message:
-                  'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                status: HttpStatus.UNAUTHORIZED,
-              };
-            }
           } else {
             throw {
               response: {
                 valid: false,
                 error: err,
               },
-              message: 'Unknown error',
+              message: 'Authentication failed, please try again.',
               status: HttpStatus.UNAUTHORIZED,
             };
           }
