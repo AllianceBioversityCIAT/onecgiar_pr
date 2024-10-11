@@ -167,18 +167,6 @@ export class AuthService {
       this._logger.log(`Validation with the active directory`);
       ad.authenticate(email, password, (err, auth) => {
         try {
-          if (err) {
-            throw {
-              response: {
-                valid: false,
-                error: err,
-              },
-              message:
-                'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-              status: HttpStatus.UNAUTHORIZED,
-            };
-          }
-          
           if (auth) {
             this._logger.verbose(`Successful validation`);
             return resolve({
@@ -188,13 +176,53 @@ export class AuthService {
               message: 'Successful validation',
               status: HttpStatus.ACCEPTED,
             });
+          }
+          if (err) {
+            if (err?.errno) {
+              throw {
+                response: {
+                  valid: false,
+                  error: err.errno,
+                  code: err.code,
+                },
+                message: 'Error with communication with third party servers',
+                status: HttpStatus.UNAUTHORIZED,
+              };
+            } else {
+              const error: string = err.lde_message.split(/:|,/)[2].trim();
+              this._logger.error(`Error: ${error}`);
+              switch (error) {
+                case 'DSID-0C090447':
+                  throw {
+                    response: {
+                      valid: false,
+                      error: err.errno,
+                      code: err.code,
+                    },
+                    message:
+                      'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+                    status: HttpStatus.UNAUTHORIZED,
+                  };
+                  break;
+                default:
+                  throw {
+                    response: {
+                      valid: false,
+                    },
+                    message:
+                      'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
+                    status: HttpStatus.UNAUTHORIZED,
+                  };
+                  break;
+              }
+            }
           } else {
             throw {
               response: {
                 valid: false,
                 error: err,
               },
-              message: 'Authentication failed, please try again.',
+              message: 'Unknown error',
               status: HttpStatus.UNAUTHORIZED,
             };
           }
