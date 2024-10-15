@@ -108,12 +108,11 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
-  /**
-   * !endpoint createOwnerResult
-   */
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
+    isAdmin?: boolean,
+    versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
       if (
@@ -211,7 +210,10 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: version.id,
+        version_id:
+          isAdmin != undefined && Boolean(isAdmin) && versionId
+            ? versionId
+            : version.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
