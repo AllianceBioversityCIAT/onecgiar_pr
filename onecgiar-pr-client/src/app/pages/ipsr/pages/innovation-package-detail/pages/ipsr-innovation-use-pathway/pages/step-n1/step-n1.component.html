@@ -30,6 +30,7 @@
 
 <div class="step_sub_section">
   <div class="ipsr-sub-title" style="margin-top: 20px">Self-assessment (IPSR workshop scoring)</div>
+
   <app-pr-radio-button
     label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
     optionLabel="name"
@@ -72,6 +73,16 @@
     placeholder="Link"
     [(ngModel)]="this.ipsrStep1Body.link_workshop_list">
   </app-pr-input>
+
+  @if (hasElementsWithId(this.ipsrStep1Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id')) {
+    <app-pr-radio-button
+      label="Have all participants in the provided list given their consent for their information to be shared in accordance with GDPR requirements?"
+      optionLabel="name"
+      optionValue="id"
+      [options]="this.consentRadioOptions"
+      [(ngModel)]="this.ipsrStep1Body.participantsConsent">
+    </app-pr-radio-button>
+  }
 
   <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
     <app-step-n3-assessed-expert-workshop [body]="this.ipsrStep1Body"></app-step-n3-assessed-expert-workshop>

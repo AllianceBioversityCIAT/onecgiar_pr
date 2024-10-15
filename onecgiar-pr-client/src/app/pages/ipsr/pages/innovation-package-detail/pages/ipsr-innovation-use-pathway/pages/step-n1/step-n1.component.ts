@@ -21,7 +21,16 @@ export class StepN1Component implements OnInit {
     { id: false, name: 'No expert workshop was organized' }
   ];
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+  consentRadioOptions = [
+    { id: true, name: 'Yes' },
+    { id: false, name: 'No' }
+  ];
+
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -72,7 +81,7 @@ export class StepN1Component implements OnInit {
 
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
 
-      this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
+      this.ipsrStep1Body.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
         this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
@@ -119,7 +128,7 @@ export class StepN1Component implements OnInit {
   }
 
   convertOrganizationsTosave() {
-    this.ipsrStep1Body.innovatonUse.organization.map((item: any) => {
+    this.ipsrStep1Body.innovatonUse.organization.forEach((item: any) => {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }
