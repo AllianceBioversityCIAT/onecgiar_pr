@@ -1,0 +1,39 @@
+.p {
+  margin: 0;
+}
+
+.init {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #5569dd;
+  padding: 0px 8px;
+  border: 1px solid #5569dd;
+  border-radius: 20px;
+  width: fit-content;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.date {
+  font-size: 12px;
+  font-weight: 400;
+  color: #808080;
+  text-align: right;
+  margin-top: 6px;
+}
+
+.notification {
+  display: block;
+  unicode-bidi: isolate;
+  padding: 15px 1.5rem 10px 1.5rem;
+  background-color: #eef0fc;
+  border-bottom: 1px solid #5569dd;
+  color: #000;
+
+  &:hover {
+    background-color: #f5f6fd;
+    cursor: pointer;
+  }
+}

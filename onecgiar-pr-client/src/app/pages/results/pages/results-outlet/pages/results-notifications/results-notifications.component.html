@@ -1,39 +1,91 @@
-<div class="local_container">
-    <div class="notifications_filters">
-        <app-pr-select label="Phases" [options]="this.phaseList" [isStatic]="true" [required]="false"
-            optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phaseFilter">
-        </app-pr-select>
+<div class="local_container" style="padding: 20px 50px 50px 50px">
+  <h1 class="notifications_title">Notifications</h1>
 
-        <div>
-            <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
-                label="Initiative" [isStatic]="true" [required]="false" optionLabel="full_name"
-                optionValue="initiative_id" placeholder="Select Initiative" [(ngModel)]="initiativeIdFilter">
-            </app-pr-select>
+  <div class="options">
+    <div class="tabs">
+      <a class="tab" routerLinkActive="active" routerLink="requests" (click)="this.clearFilters()">
+        <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
+        Requests
+      </a>
 
-            <app-pr-select [options]="this.allInitiatives" label="Initiative" [required]="false" [isStatic]="true"
-                *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-                placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
-            </app-pr-select>
-        </div>
-
+      <a class="tab" routerLinkActive="active" routerLink="updates" (click)="this.clearFilters()">
+        <i class="material-icons-round" style="font-size: 20px"> pending_actions </i>
+        Updates
+      </a>
     </div>
 
-    <div
-        *ngIf="(this.resultsNotificationsSE?.data | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length > 0">
-        <div class="all_notifications">
-            <cdk-virtual-scroll-viewport itemSize="151" class="custom_scroll virtual_scroll all_notifications">
-                <div style="display: flex; flex-direction: column; gap: 10px;"
-                    *cdkVirtualFor="let notification of this.resultsNotificationsSE?.data | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter; let i = index">
-                    <app-notification-item [comes]="!notification.pending" [readOnly]="notification.readOnly"
-                        (requestEvent)="this.resultsNotificationsSE.get_section_information()"
-                        [notification]="notification" style="margin-bottom: 10px;">
-                    </app-notification-item>
-                </div>
-            </cdk-virtual-scroll-viewport>
-        </div>
+    <div class="tabs">
+      <a
+        class="tab"
+        [ngClass]="{ active: router.url.includes('/results-notifications/settings') }"
+        routerLink="settings"
+        [queryParams]="{ init: this.api.dataControlSE?.myInitiativesList[0]?.id }"
+        style="padding: 8px">
+        <i class="pi pi-cog" style="font-size: 22px; font-weight: 500"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="line"></div>
+
+  <p class="request_description" *ngIf="router.url.includes('/results-notifications/requests')">
+    In this section, there are requests that any initiative has made to your initiative(s) for collaboration on a result. Please note that it will now
+    be possible to send, accept or reject request even if the result has already been submitted.
+  </p>
+
+  <p class="request_description" *ngIf="router.url.includes('/results-notifications/updates')">
+    In this section, there are updates on any results to which your initiative(s) are contributing.
+  </p>
+
+  <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
+    <app-pr-select
+      label="Phases"
+      [options]="this.phaseList"
+      [isStatic]="true"
+      [required]="false"
+      optionLabel="phase_name_status"
+      optionValue="id"
+      placeholder="Select phase"
+      [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+      [truncateSelectionText]="true">
+    </app-pr-select>
+
+    <div *ngIf="this.resultsNotificationsSE.hideInitFilter">
+      <app-pr-select
+        [options]="this.api.dataControlSE.myInitiativesList"
+        *ngIf="!this.api.rolesSE.isAdmin"
+        label="Initiative"
+        [isStatic]="true"
+        [required]="false"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select Initiative"
+        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
+        [truncateSelectionText]="true">
+      </app-pr-select>
+
+      <app-pr-select
+        [options]="this.allInitiatives"
+        label="Initiative"
+        [required]="false"
+        [isStatic]="true"
+        *ngIf="this.api.rolesSE.isAdmin"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select initiative"
+        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
+        [truncateSelectionText]="true">
+      </app-pr-select>
     </div>
 
-    <app-no-data-text title="No notifications"
-        *ngIf="!(this.resultsNotificationsSE?.data | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length">
-    </app-no-data-text>
+    <app-pr-input
+      label="Search"
+      placeholder="Search"
+      [isStatic]="true"
+      [required]="false"
+      style="grid-column: span 2 / span 2"
+      [(ngModel)]="this.resultsNotificationsSE.searchFilter"></app-pr-input>
+  </div>
+
+  <router-outlet></router-outlet>
 </div>

@@ -101,7 +101,7 @@ export class DataControlService {
     });
   }
 
-  async findClassTenSeconds(className) {
+  findClassTenSeconds(className) {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {

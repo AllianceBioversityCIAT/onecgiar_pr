@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
 
 @Component({
@@ -8,5 +8,6 @@ import { ResultsListService } from '../../../pages/results/pages/results-outlet/
 })
 export class CustomSpinnerComponent {
   @Input() text: string;
+
   constructor(public resultsListService: ResultsListService) {}
 }

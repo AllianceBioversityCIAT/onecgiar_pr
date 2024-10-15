@@ -1,65 +1,60 @@
 .medal_info {
-    display: flex;
-    align-items: center;
-    color: rgb(167, 167, 167);
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  color: rgb(167, 167, 167);
+  gap: 10px;
 }
 
 .no-primary-list {
-    color: var(--pr-color-primary);
-    margin-top: 5px;
-    font-weight: 500;
+  color: var(--pr-color-primary);
+  margin-top: 5px;
+  font-weight: 500;
 }
 
 .selected_container {
-    margin-top: 10px;
-    overflow-y: auto;
-    max-height: 300px;
+  margin-top: 10px;
+  overflow-y: auto;
+  max-height: 300px;
 
-    .chips_container {
-        display: flex;
-        flex-wrap: wrap;
-        position: relative;
-        gap: 3px;
+  .chips_container {
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+    gap: 3px;
 
-        .pending {
-            padding-right: 5px !important;
-
-            .text_inactive {
-                text-decoration: line-through;
-            }
-
-        }
-
-        .pr_chip_selected {
-            background-color: var(--pr-color-primary-2);
-            color: var(--pr-color-secondary);
-            font-size: .95em;
-            padding: 6px 13px;
-            border-radius: 10px;
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            gap: 10px;
-            align-items: center;
-
-            .medal {
-                // font-size: 2em;
-                transition: all ease-in-out .4s;
-                color: rgb(167, 167, 167);
-            }
-
-            .primary {
-                color: var(--pr-color-primary);
-            }
-
-            i {
-                justify-self: center;
-                align-self: center;
-                cursor: pointer;
-                font-size: 1.5em;
-                color: rgb(68, 68, 68);
-            }
-
-        }
+    .pending {
+      .text_inactive {
+        text-decoration: line-through;
+      }
     }
+
+    .pr_chip_selected {
+      display: flex;
+      justify-content: space-between;
+      background-color: var(--pr-color-primary-2);
+      color: var(--pr-color-secondary);
+      font-size: 0.95em;
+      padding: 6px 13px;
+      border-radius: 10px;
+      gap: 10px;
+      align-items: center;
+
+      .medal {
+        transition: all ease-in-out 0.4s;
+        color: rgb(167, 167, 167);
+      }
+
+      .primary {
+        color: var(--pr-color-primary);
+      }
+
+      i {
+        justify-self: center;
+        align-self: center;
+        cursor: pointer;
+        font-size: 1.5em;
+        color: rgb(68, 68, 68);
+      }
+    }
+  }
 }

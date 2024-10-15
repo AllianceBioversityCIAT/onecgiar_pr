@@ -1,0 +1,59 @@
+@let allSentContributionsPending = this.resultsNotificationsSE?.sentData.sentContributionsPending;
+@let allSentContributionsDone = this.resultsNotificationsSE?.sentData.sentContributionsDone;
+
+@let sentContributionsPending =
+  this.resultsNotificationsSE?.sentData.sentContributionsPending
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+
+@let sentContributionsDone =
+  this.resultsNotificationsSE?.sentData.sentContributionsDone
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
+
+<div class="sent_container">
+  <div class="sent_container_content">
+    <h1 class="sent_container_header_title">Pending</h1>
+    @defer (when allSentContributionsPending) {
+      @if (sentContributionsPending.length > 0) {
+        <div class="sent_container_content_item">
+          @for (notification of sentContributionsPending; track $index) {
+            <app-notification-item
+              [notification]="notification"
+              [isSent]="true"
+              (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
+          }
+        </div>
+      } @else {
+        <div class="sent_container_content_empty">You have no pending notifications related with the search.</div>
+      }
+    } @placeholder {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+    }
+  </div>
+
+  <div class="sent_container_content">
+    <h1 class="sent_container_header_title">Done</h1>
+    @defer (when allSentContributionsDone) {
+      @if (sentContributionsDone.length > 0) {
+        <div class="sent_container_content_item">
+          @for (item of sentContributionsDone; track $index) {
+            @defer (on viewport) {
+              <app-notification-item [notification]="item" [isSent]="true"></app-notification-item>
+            } @placeholder {
+              <app-skeleton-notification-item></app-skeleton-notification-item>
+            }
+          }
+        </div>
+      } @else {
+        <div class="sent_container_content_empty">You have no done notifications related with the search.</div>
+      }
+    } @placeholder {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+    }
+  </div>
+</div>

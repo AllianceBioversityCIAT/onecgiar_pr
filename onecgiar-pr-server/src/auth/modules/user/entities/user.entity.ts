@@ -5,9 +5,12 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Notification } from '../../../../api/notification/entities/notification.entity';
+import { UserNotificationSetting } from '../../../../api/user-notification-settings/entities/user-notification-settings.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -61,14 +64,41 @@ export class User {
     name: 'created_date',
   })
   created_date: Date;
+
   @ManyToOne(() => User, (u) => u.id, { nullable: true })
   @JoinColumn({
     name: 'last_updated_by',
   })
   last_updated_by!: number;
+
   @UpdateDateColumn({
     name: 'last_updated_date',
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @UpdateDateColumn({
+    name: 'last_pop_up_viewed',
+    type: 'timestamp',
+    nullable: true,
+  })
+  last_pop_up_viewed!: Date;
+
+  @OneToMany(
+    () => UserNotificationSetting,
+    (notificationSetting) => notificationSetting.obj_user,
+  )
+  obj_user_notification_setting: UserNotificationSetting[];
+
+  @OneToMany(
+    () => Notification,
+    (notificationSetting) => notificationSetting.obj_target_user,
+  )
+  obj_target_user_notification: Notification[];
+
+  @OneToMany(
+    () => Notification,
+    (notificationSetting) => notificationSetting.obj_emitter_user,
+  )
+  obj_emitter_user_notification: Notification[];
 }

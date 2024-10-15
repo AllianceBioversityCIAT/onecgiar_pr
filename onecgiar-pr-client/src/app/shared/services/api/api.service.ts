@@ -21,7 +21,24 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
   providedIn: 'root'
 })
 export class ApiService {
-  constructor(private titleService: Title, public endpointsSE: EndpointsService, public resultsListSE: ResultsListService, public resultsSE: ResultsApiService, public alertsFs: CustomizedAlertsFsService, private qaSE: QualityAssuranceService, public authSE: AuthService, public alertsFe: CustomizedAlertsFeService, public dataControlSE: DataControlService, public resultsListFilterSE: ResultsListFilterService, public wordCounterSE: WordCounterService, public rolesSE: RolesService, public tocApiSE: TocApiService, public ipsrListFilterService: IpsrListFilterService, public globalVariablesSE: GlobalVariablesService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    private titleService: Title,
+    public endpointsSE: EndpointsService,
+    public resultsListSE: ResultsListService,
+    public resultsSE: ResultsApiService,
+    public alertsFs: CustomizedAlertsFsService,
+    private qaSE: QualityAssuranceService,
+    public authSE: AuthService,
+    public alertsFe: CustomizedAlertsFeService,
+    public dataControlSE: DataControlService,
+    public resultsListFilterSE: ResultsListFilterService,
+    public wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public tocApiSE: TocApiService,
+    public ipsrListFilterService: IpsrListFilterService,
+    public globalVariablesSE: GlobalVariablesService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
   isStepTwoTwo: boolean = false;
   isStepTwoOne: boolean = false;
 
@@ -87,11 +104,12 @@ export class ApiService {
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe({
       next: resp => {
         this.dataControlSE.resultsList = resp.response;
-        this.resultsListSE.showLoadingResultSpinner = false;
 
         this.dataControlSE.resultsList.forEach((result: any) => {
           result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
+
+        this.resultsListSE.showLoadingResultSpinner = false;
       },
       error: err => {
         this.resultsListSE.showLoadingResultSpinner = false;

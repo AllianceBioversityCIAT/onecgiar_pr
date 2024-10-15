@@ -4,6 +4,7 @@ import { GlobalParameterService } from '../../../api/global-parameter/global-par
 import { GlobalParameter } from '../../../../src/api/global-parameter/interfaces/global-parameter.interface';
 
 @Injectable()
+//TODO replace by nestjs cache module
 export class GlobalParameterCacheService {
   constructor(private _globalParameterService: GlobalParameterService) {}
   private dataCache: DataCache = {};

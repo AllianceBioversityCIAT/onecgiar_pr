@@ -1,48 +1,52 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
+import {
+  ContributorResultTocResult,
+  CreateResultsTocResultDto,
+} from './dto/create-results-toc-result.dto';
 import { ResultsTocResultRepository } from './results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
-import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
-import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { VersionsService } from '../versions/versions.service';
-import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultRepository } from '../result.repository';
-import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { ResultsImpactAreaTargetRepository } from '../results-impact-area-target/results-impact-area-target.repository';
 import { ResultsImpactAreaIndicatorRepository } from '../results-impact-area-indicators/results-impact-area-indicators.repository';
 import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-area/ClarisaImpactArea.repository';
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
-import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { Not } from 'typeorm';
+import { In, Not } from 'typeorm';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import Handlebars from 'handlebars';
+import { env } from 'process';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { ConfigMessageDto } from '../../../shared/microservices/email-notification-management/dto/send-email.dto';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 
 @Injectable()
 export class ResultsTocResultsService {
   constructor(
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
-    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
-    private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _versionsService: VersionsService,
-    private readonly _userRepository: UserRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
-    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly _templateRepository: TemplateRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
   ) {}
 
   async create(
@@ -51,15 +55,13 @@ export class ResultsTocResultsService {
   ) {
     try {
       const {
-        contributing_np_projects,
         result_id,
-        contributing_center,
         contributing_initiatives,
-        pending_contributing_initiatives,
         impactsTarge,
         sdgTargets,
         bodyActionArea,
         changePrimaryInit,
+        email_template,
       } = createResultsTocResultDto;
 
       let initSubmitter: any =
@@ -71,8 +73,6 @@ export class ResultsTocResultsService {
       let initiativeArray: number[] = [];
       let initiativeArrayRtr: number[] = [];
       let initiativeArrayPnd: number[] = [];
-
-      const titleArray = contributing_np_projects.map((el) => el.grant_title);
 
       if (initSubmitter.initiative_id !== changePrimaryInit) {
         const newInit =
@@ -89,38 +89,46 @@ export class ResultsTocResultsService {
         };
       }
 
-      if (contributing_center.filter((el) => el.primary == true).length > 1) {
-        contributing_center.map((el) => {
-          el.primary = false;
-        });
-      }
-
       if (
-        contributing_initiatives?.length ||
-        pending_contributing_initiatives?.length
+        contributing_initiatives?.accepted_contributing_initiatives?.length ||
+        contributing_initiatives?.pending_contributing_initiatives?.length
       ) {
-        initiativeArray = contributing_initiatives.map((el) => el.id);
+        initiativeArray =
+          contributing_initiatives?.accepted_contributing_initiatives.map(
+            (el) => el.id,
+          );
         if (initSubmitter.initiative_id) {
           initiativeArray = initiativeArray.filter(
             (init) => init !== initSubmitter.initiative_id,
           );
         }
-        initiativeArrayPnd = pending_contributing_initiatives.map(
-          (pend) => pend.id,
-        );
-        await this._resultByInitiativesRepository.updateResultByInitiative(
-          result_id,
-          [...initiativeArray],
-          user.id,
-          false,
-          initiativeArrayPnd,
-        );
+        initiativeArrayPnd =
+          contributing_initiatives?.pending_contributing_initiatives.map(
+            (pend) => pend.id,
+          );
+
+        const contributingInit =
+          await this._resultByInitiativesRepository.updateResultByInitiative(
+            result_id,
+            [...initiativeArray],
+            user.id,
+            false,
+            initiativeArrayPnd,
+          );
+
+        if (contributingInit.length > 0) {
+          await this.sendEmailNotification(
+            contributingInit,
+            result_id,
+            initSubmitter.initiative_id,
+            user,
+          );
+        }
+
         const dataRequst: CreateTocShareResult = {
-          isToc: true,
-          initiativeShareId: initiativeArray,
-          action_area_outcome_id: null,
-          planned_result: null,
-          toc_result_id: null,
+          isToc: false,
+          initiativeShareId: initiativeArrayPnd,
+          email_template,
         };
         await this._shareResultRequestService.resultRequest(
           dataRequst,
@@ -128,142 +136,31 @@ export class ResultsTocResultsService {
           user,
         );
       } else {
-        await this._resultByInitiativesRepository.updateResultByInitiative(
-          result_id,
-          [],
-          user.id,
-          false,
-          [],
-        );
+        const contributingInit =
+          await this._resultByInitiativesRepository.updateResultByInitiative(
+            result_id,
+            [],
+            user.id,
+            false,
+            [],
+          );
+
+        if (contributingInit.length > 0) {
+          await this.sendEmailNotification(
+            contributingInit,
+            result_id,
+            initSubmitter.initiative_id,
+            user,
+          );
+        }
       }
-      const cancelRequest = pending_contributing_initiatives?.filter(
-        (e) => e.is_active == false,
-      );
+      const cancelRequest =
+        contributing_initiatives?.pending_contributing_initiatives?.filter(
+          (e) => !e.is_active,
+        );
       if (cancelRequest?.length) {
         await this._shareResultRequestRepository.cancelRequest(
           cancelRequest.map((e) => e.share_result_request_id),
-        );
-      }
-
-      if (contributing_np_projects?.length) {
-        await this._nonPooledProjectRepository.updateNPProjectById(
-          result_id,
-          titleArray,
-          user.id,
-          1,
-        );
-        await this._nonPooledProjectRepository.update(
-          { results_id: result_id },
-          {
-            is_active: false,
-          },
-        );
-        for (let index = 0; index < contributing_np_projects.length; index++) {
-          if (contributing_np_projects[index]?.grant_title?.length) {
-            const resultData = await this._nonPooledProjectRepository.findOne({
-              where: {
-                results_id: result_id,
-                grant_title: contributing_np_projects[index].grant_title,
-                funder_institution_id: contributing_np_projects[index].funder,
-                non_pooled_project_type_id: 1,
-              },
-            });
-
-            if (resultData) {
-              await this._nonPooledProjectRepository.update(resultData.id, {
-                center_grant_id:
-                  contributing_np_projects[index].center_grant_id,
-                funder_institution_id: contributing_np_projects[index].funder,
-                lead_center_id: contributing_np_projects[index].lead_center,
-                is_active: true,
-                last_updated_by: user.id,
-              });
-            } else {
-              await this._nonPooledProjectRepository.save({
-                results_id: result_id,
-                center_grant_id:
-                  contributing_np_projects[index].center_grant_id,
-                funder_institution_id: contributing_np_projects[index].funder,
-                lead_center_id: contributing_np_projects[index].lead_center,
-                grant_title: contributing_np_projects[index].grant_title,
-                created_by: user.id,
-                last_updated_by: user.id,
-                non_pooled_project_type_id: 1,
-              });
-            }
-          }
-        }
-
-        const npps = await this._nonPooledProjectRepository.find({
-          where: {
-            results_id: result_id,
-            is_active: true,
-          },
-        });
-        for (const npp of npps) {
-          const initBudget =
-            await this._resultBilateralBudgetRepository.findOne({
-              where: {
-                non_pooled_projetct_id: npp.id,
-              },
-            });
-          if (!initBudget) {
-            await this._resultBilateralBudgetRepository.save({
-              non_pooled_projetct_id: npp.id,
-              created_by: user.id,
-              last_updated_by: user.id,
-            });
-          } else {
-            await this._resultBilateralBudgetRepository.update(npp.id, {
-              is_active: true,
-              last_updated_by: user.id,
-            });
-          }
-        }
-      } else {
-        await this._nonPooledProjectRepository.updateNPProjectById(
-          result_id,
-          [],
-          user.id,
-          1,
-        );
-      }
-
-      if (contributing_center?.length) {
-        const centerArray = contributing_center.map((el) => el.code);
-        await this._resultsCenterRepository.updateCenter(
-          result_id,
-          centerArray,
-          user.id,
-        );
-        const resultCenterArray: ResultsCenter[] = [];
-        for (let index = 0; index < contributing_center.length; index++) {
-          const exists =
-            await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
-              result_id,
-              contributing_center[index].code,
-            );
-          if (!exists) {
-            const newResultCenter = new ResultsCenter();
-            newResultCenter.center_id = contributing_center[index].code;
-            newResultCenter.result_id = result_id;
-            newResultCenter.created_by = user.id;
-            newResultCenter.last_updated_by = user.id;
-            newResultCenter.is_primary =
-              contributing_center[index].primary || false;
-            resultCenterArray.push(newResultCenter);
-          } else if (contributing_center[index]?.primary) {
-            exists.is_primary = contributing_center[index].primary;
-            exists.last_updated_by = user.id;
-            resultCenterArray.push(exists);
-          }
-        }
-        await this._resultsCenterRepository.save(resultCenterArray);
-      } else {
-        await this._resultsCenterRepository.updateCenter(
-          result_id,
-          [],
-          user.id,
         );
       }
 
@@ -278,11 +175,14 @@ export class ResultsTocResultsService {
           sdgTargets,
         );
       } else {
-        initiativeArrayRtr = contributing_initiatives.map(
-          (initiative) => initiative.id,
-        );
+        initiativeArrayRtr =
+          contributing_initiatives?.accepted_contributing_initiatives.map(
+            (initiative) => initiative.id,
+          );
         initiativeArrayRtr = initiativeArrayRtr.concat(
-          pending_contributing_initiatives.map((pending) => pending.id),
+          contributing_initiatives?.pending_contributing_initiatives.map(
+            (pending) => pending.id,
+          ),
         );
         await this._resultsTocResultRepository.updateResultByInitiative(
           result_id,
@@ -300,7 +200,7 @@ export class ResultsTocResultsService {
 
         // * Save Contributors ResultTocResult
         await this.saveResultTocResultContributor(
-          createResultsTocResultDto,
+          createResultsTocResultDto.contributors_result_toc_result,
           user,
           result,
           result_id,
@@ -366,27 +266,26 @@ export class ResultsTocResultsService {
         await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
         );
-      const conInit =
-        await this._resultByInitiativesRepository.getContributorInitiativeByResult(
-          resultId,
-        );
       const conAndPriInit =
         await this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         );
-      const conPending =
-        await this._resultByInitiativesRepository.getPendingInit(resultId);
-      const npProject =
-        await this._nonPooledProjectRepository.getAllNPProjectByResultId(
+
+      const [conInit, conPending] = await Promise.all([
+        this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
-          1,
-        );
-      const resCenters =
-        await this._resultsCenterRepository.getAllResultsCenterByResultId(
-          resultId,
-        );
+        ),
+        this._resultByInitiativesRepository.getPendingInit(resultId),
+      ]);
+
+      const contributingInitiatives = {
+        accepted_contributing_initiatives: conInit,
+        pending_contributing_initiatives: conPending,
+      };
+
       const impactAreaArray =
         await this._clarisaImpactAreaRepository.getAllImpactArea();
+
       let resTocRes: any[] = [];
       let consImpactTarget: any[] = [];
       let consSdgTargets: any[] = [];
@@ -456,6 +355,15 @@ export class ResultsTocResultsService {
             });
           });
         }
+        conPending.forEach((pending) => {
+          individualResponses.push({
+            planned_result: null,
+            initiative_id: pending.id,
+            official_code: pending.official_code,
+            short_name: pending.short_name,
+            result_toc_results: [],
+          });
+        });
       } else if (result.result_level_id == 2) {
         resTocRes =
           await this._resultsTocResultRepository.getRTRPrimaryActionArea(
@@ -524,11 +432,10 @@ export class ResultsTocResultsService {
 
       return {
         response: {
-          contributing_initiatives: conInit,
+          // contributing_initiatives: conInit,
+          // pending_contributing_initiatives: conPending,
+          contributing_initiatives: contributingInitiatives,
           contributing_and_primary_initiative: conAndPriInit,
-          pending_contributing_initiatives: conPending,
-          contributing_np_projects: npProject,
-          contributing_center: resCenters,
           result_toc_result: {
             planned_result: null,
             initiative_id: resTocRes ? resTocRes[0]?.initiative_id : null,
@@ -803,19 +710,18 @@ export class ResultsTocResultsService {
   }
 
   async saveResultTocResultContributor(
-    createResultsTocResultDto: CreateResultsTocResultDto,
+    createResultsTocResultDto: ContributorResultTocResult[],
     user: TokenDto,
     result: any,
     result_id: number,
     initSubmitter: number,
   ) {
-    const { contributors_result_toc_result } = createResultsTocResultDto;
     try {
       // * Logic to map multiple WPs to multiple Initiatives Contributors
-      if (contributors_result_toc_result?.length) {
+      if (createResultsTocResultDto) {
         // * Logic to delete a WP from Contributors
         const incomingRtRIds = [];
-        contributors_result_toc_result.forEach((contributor) => {
+        createResultsTocResultDto.forEach((contributor) => {
           contributor?.result_toc_results?.forEach((rtrc) => {
             incomingRtRIds.push(rtrc?.result_toc_result_id);
           });
@@ -838,8 +744,8 @@ export class ResultsTocResultsService {
         });
 
         // * Map multiple WPs to the same initiative
-        const RtRArray: ResultsTocResult[] = [];
-        for (const contributor of contributors_result_toc_result) {
+        // Remove the declaration of RtRArray variable
+        for (const contributor of createResultsTocResultDto) {
           if (!contributor.result_toc_results?.length) {
             contributor.result_toc_results = [];
           }
@@ -865,33 +771,17 @@ export class ResultsTocResultsService {
                 },
               );
             } else {
-              const newRtR = new ResultsTocResult();
-              newRtR.created_by = user.id;
-              newRtR.planned_result = contributor?.planned_result;
-              newRtR.results_id = result.id;
-              newRtR.initiative_id = contributor?.initiative_id || null;
-              newRtR.is_active = true;
-              if (result.result_level_id == 2) {
-                newRtR.action_area_outcome_id =
-                  rtrc?.action_area_outcome_id || null;
-              } else {
-                newRtR.toc_result_id = rtrc?.toc_result_id || null;
-              }
-              newRtR.planned_result = contributor?.planned_result || null;
-              newRtR.toc_progressive_narrative =
-                rtrc?.toc_progressive_narrative || null;
-              RtRArray.push(newRtR);
-
-              await this._resultsTocResultRepository.save({
-                initiative_ids: newRtR.initiative_id,
-                toc_result_id: newRtR.toc_result_id,
-                created_by: newRtR.created_by,
-                last_updated_by: newRtR.last_updated_by,
-                result_id: newRtR.results_id,
-                planned_result: newRtR.planned_result,
-                action_area_outcome_id: newRtR.action_area_outcome_id,
-                toc_progressive_narrative: newRtR.toc_progressive_narrative,
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: contributor?.initiative_id,
+                toc_result_id: rtrc?.toc_result_id,
+                created_by: user.id,
+                last_updated_by: user.id,
+                result_id: result_id,
+                planned_result: contributor?.planned_result,
+                action_area_outcome_id: rtrc?.action_area_outcome_id || null,
                 is_active: true,
+                toc_progressive_narrative:
+                  rtrc?.toc_progressive_narrative || null,
               });
             }
           }
@@ -899,6 +789,134 @@ export class ResultsTocResultsService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveMapToToc(
+    createResultsTocResultDto: ContributorResultTocResult[],
+    user: TokenDto,
+    result_id: number,
+  ) {
+    try {
+      // * Logic to map multiple WPs to multiple Initiatives Contributors
+      if (createResultsTocResultDto) {
+        for (const contributor of createResultsTocResultDto) {
+          if (!contributor.result_toc_results?.length) {
+            contributor.result_toc_results = [];
+          }
+          for (const rtrc of contributor.result_toc_results) {
+            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
+              continue;
+            }
+            await this._resultsTocResultRepository.insert({
+              initiative_ids: contributor?.initiative_id,
+              toc_result_id: rtrc?.toc_result_id,
+              created_by: user.id,
+              last_updated_by: user.id,
+              result_id: result_id,
+              planned_result: contributor?.planned_result,
+              action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+              is_active: true,
+              toc_progressive_narrative:
+                rtrc?.toc_progressive_narrative || null,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async sendEmailNotification(
+    contributingInit: number[],
+    result_id: number,
+    initSubmitter: number,
+    user: TokenDto,
+  ) {
+    for (const init of contributingInit) {
+      const [initOwner, result, initContributing, initMembers] =
+        await Promise.all([
+          this._clarisaInitiatives.findOne({
+            where: { id: initSubmitter },
+          }),
+          this._resultRepository.findOne({ where: { id: result_id } }),
+          this._clarisaInitiatives.findOne({
+            where: { id: init },
+          }),
+          this._roleByUserRepository.find({
+            where: {
+              initiative_id: init,
+              role: In([3, 4, 5]),
+              active: true,
+            },
+            relations: { obj_user: true },
+          }),
+        ]);
+      const users = initMembers.map((m) => m.obj_user.id);
+
+      const userEnable = await this._userNotificationSettingsRepository.find({
+        where: {
+          user_id: In(users),
+          email_notifications_contributing_request_enabled: true,
+          initiative_id: init,
+        },
+        relations: { obj_user: true },
+      });
+
+      const to = userEnable.map((u) => u.obj_user.email);
+
+      if (!to) {
+        return {
+          response: {},
+          message: 'The email was not sent',
+          status: HttpStatus.CREATED,
+        };
+      }
+
+      const template = await this._templateRepository.findOne({
+        where: { name: EmailTemplate.REMOVED_CONTRIBUTION },
+      });
+      const pcuEmail = await this._globalParametersRepository.findOne({
+        where: { name: 'pcu_email' },
+        select: {
+          value: true,
+        },
+      });
+
+      const technicalTeamEmailsRecord =
+        await this._globalParametersRepository.findOne({
+          where: { name: 'technical_team_email' },
+          select: { value: true },
+        });
+
+      const emailData = this._emailNotificationManagementService.buildEmailData(
+        template.name as EmailTemplate.REMOVED_CONTRIBUTION,
+        {
+          initContributing,
+          result,
+          initOwner,
+          pcuEmail: pcuEmail.value,
+          user,
+        },
+      );
+
+      const handle = Handlebars.compile(template.template);
+
+      const email: ConfigMessageDto = {
+        from: { email: env.EMAIL_SENDER, name: 'PRMS Reporting Tool -' },
+        emailBody: {
+          subject: emailData.subject,
+          to,
+          cc: emailData.cc,
+          bcc: technicalTeamEmailsRecord.value,
+          message: {
+            text: 'Contributing Initiative Removed from a Result',
+            socketFile: handle(emailData),
+          },
+        },
+      };
+      this._emailNotificationManagementService.sendEmail(email);
     }
   }
 }

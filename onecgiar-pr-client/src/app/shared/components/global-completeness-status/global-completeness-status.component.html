@@ -39,7 +39,7 @@
 
     <p-table sortField="result_code" [sortOrder]="-1" [value]="this.resultsList | filterByText:this.textToFind"
         [scrollable]="true" [paginator]="true" [rowsPerPageOptions]="[10,50,100]" [rows]="10"
-        scrollHeight="calc(100vh - 303px)" style="min-width: 200px;">
+        scrollHeight="calc(100vh - 303px)" [style]="{'min-width': '200px', 'max-width': show_full_screen ? '100vw' : 'calc(100vw - 287px)'}" >
         <ng-template pTemplate="header">
             <tr>
                 <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder"

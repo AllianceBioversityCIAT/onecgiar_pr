@@ -13,7 +13,7 @@
 </app-toc-initiative-aao>
 
 <div *ngIf="contributors_result_toc_result?.length">
-    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true" labelDescInlineStyles="position: relative; z-index: -1;">
     </app-pr-field-header>
 
     <div *ngFor="let contributor of contributors_result_toc_result; let i = index">

@@ -30,7 +30,7 @@ export class SaveButtonService {
         Promise.resolve().then(() => {
           this.isGettingSection = false;
         });
-        return throwError(err);
+        return throwError(() => err);
       })
     );
   }
@@ -62,12 +62,24 @@ export class SaveButtonService {
     return pipe(
       tap(resp => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved successfully', description: decrip, status: 'success', closeIn: 500 });
+        this.customizedAlertsFeSE.show({
+          id: 'save-button',
+          title: 'Section saved successfully',
+          description: decrip,
+          status: 'success',
+          closeIn: 500
+        });
       }),
       catchError(err => {
         this.hideSaveSpinner();
-        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
-        return throwError(err);
+        this.customizedAlertsFeSE.show({
+          id: 'save-button',
+          title: 'There was an error saving the section',
+          description: '',
+          status: 'error',
+          closeIn: 500
+        });
+        return throwError(() => err);
       })
     );
   }
@@ -80,7 +92,7 @@ export class SaveButtonService {
       }),
       catchError(err => {
         this.hideSaveSpinner();
-        return throwError(err);
+        return throwError(() => err);
       })
     );
   }

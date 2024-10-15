@@ -1,0 +1,62 @@
+.notification {
+  padding: 0 30px 15px 30px;
+  border: 1px solid #d0d0d0;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+
+  .notification_header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notification_content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-top: 5px;
+    min-height: 52px;
+
+    .notification_content_actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+
+      .notification_content_actions_status {
+        text-align: center;
+        font-size: 13px;
+        padding: 5px 20px;
+        border-left: 1px solid var(--pr-color-primary);
+        border-right: 1px solid var(--pr-color-primary);
+        border-radius: 10px;
+      }
+
+      .notification_content_actions_buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .notification_content_actions_sent {
+        color: #666;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        font-weight: 500;
+      }
+    }
+
+    .notification_content_body {
+      width: 100%;
+      .notification_content_body_text {
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+  }
+}
