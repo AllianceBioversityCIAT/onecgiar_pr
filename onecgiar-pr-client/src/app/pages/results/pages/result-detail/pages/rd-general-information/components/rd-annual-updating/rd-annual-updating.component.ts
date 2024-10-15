@@ -20,13 +20,13 @@ export class RdAnnualUpdatingComponent {
       value: true
     }
   ];
+
   constructor(public api: ApiService) {}
 
-  // Create a function that determines if this.generalInfoBody.discontinued_options some value is true if this.generalInfoBody.is_discontinued is true
   isDiscontinuedOptionsTrue() {
     if (!this.generalInfoBody.is_discontinued) return true;
 
-    if (!!this.generalInfoBody.is_discontinued) {
+    if (this.generalInfoBody.is_discontinued) {
       return this.generalInfoBody.discontinued_options.some(option => option.value);
     } else return false;
   }
