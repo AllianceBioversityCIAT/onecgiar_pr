@@ -30,7 +30,11 @@ export class RdEvidencesComponent implements OnInit {
     return mainText;
   }
 
-  constructor(public api: ApiService, public innovationControlListSE: InnovationControlListService, private saveButtonSE: SaveButtonService) {}
+  constructor(
+    public api: ApiService,
+    public innovationControlListSE: InnovationControlListService,
+    private saveButtonSE: SaveButtonService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -154,7 +158,7 @@ export class RdEvidencesComponent implements OnInit {
     const sharepointMissingFileAndLink = evidences.some(e => e.is_sharepoint && !(e.file || e.link));
     if (sharepointMissingFileAndLink) return true;
 
-    const hasInvalidLink = evidences.some(e => e.link && invalidLinkRegex.test(e.link));
+    const hasInvalidLink = evidences.some(e => e.link && !e.is_sharepoint && invalidLinkRegex.test(e.link));
     if (hasInvalidLink) return true;
 
     return false;
