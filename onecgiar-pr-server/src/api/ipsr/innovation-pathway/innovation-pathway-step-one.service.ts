@@ -537,6 +537,7 @@ export class InnovationPathwayStepOneService {
           readiness_level_evidence_based:
             result_ip.readiness_level_evidence_based,
           use_level_evidence_based: result_ip.use_level_evidence_based,
+          participants_consent: result_ip.participants_consent,
           assessed_during_expert_workshop_id:
             result_ip?.is_expert_workshop_organized
               ? result_ip.assessed_during_expert_workshop_id
