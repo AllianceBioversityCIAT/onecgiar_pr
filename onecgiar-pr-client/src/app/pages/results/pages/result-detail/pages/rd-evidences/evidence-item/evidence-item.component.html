@@ -60,7 +60,7 @@
           >
         </div>
         <div class="file-actions">
-          <div class="size" *ngIf="!this.evidence?.link">{{ this.evidence?.file.size / 1048576 | number : '1.2-2' }} MB</div>
+          <div class="size" *ngIf="!this.evidence?.link">{{ this.evidence?.file.size / 1048576 | number: '1.2-2' }} MB</div>
 
           <div class="line"></div>
 
@@ -102,10 +102,7 @@
       </ng-template>
     </ng-template>
 
-    <app-pr-field-header
-      label="Please indicate for which Impact Area tags this evidence is related to"
-      [required]="false"
-      *ngIf="!isSuppInfo"></app-pr-field-header>
+    <app-pr-field-header [label]="getEvidenceRelatedTitle()" [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
     <div class="checkboxes" *ngIf="!isSuppInfo">
       <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
       <app-pr-checkbox label="Climate change" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
