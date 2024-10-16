@@ -38,7 +38,10 @@ export class EvidenceItemComponent {
     { id: 1, name: 'Yes' }
   ];
 
-  constructor(public dataControlSE: DataControlService, public api: ApiService) {}
+  constructor(
+    public dataControlSE: DataControlService,
+    public api: ApiService
+  ) {}
 
   dynamicAlertStatusBasedOnVisibility() {
     if (this.evidence.is_public_file) {
@@ -59,6 +62,10 @@ export class EvidenceItemComponent {
   }
 
   validateCloudLink() {
+    if (this.evidence.is_sharepoint) {
+      return false;
+    }
+
     const cloudRegex =
       /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
     return this.evidence.link && cloudRegex.test(this.evidence.link?.trim());
