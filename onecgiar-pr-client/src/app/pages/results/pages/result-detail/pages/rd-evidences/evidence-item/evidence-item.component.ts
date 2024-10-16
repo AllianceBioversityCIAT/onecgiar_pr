@@ -61,6 +61,10 @@ export class EvidenceItemComponent {
     `;
   }
 
+  getEvidenceRelatedTitle() {
+    return `Please indicate ${!this.dataControlSE.isInnoDev ? 'for which Impact Area tags' : 'to what'} this evidence is related to`;
+  }
+
   validateCloudLink() {
     if (this.evidence.is_sharepoint) {
       return false;
