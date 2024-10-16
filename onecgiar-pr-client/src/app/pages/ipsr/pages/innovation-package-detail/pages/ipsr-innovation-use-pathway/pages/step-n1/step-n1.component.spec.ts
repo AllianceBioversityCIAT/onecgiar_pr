@@ -389,4 +389,38 @@ describe('StepN1Component', () => {
     component.deleteExpert(1);
     expect(component.ipsrStep1Body.result_ip_expert_workshop_organized.length).toBe(2);
   });
+
+  it('should set participants_consent to null if result_ip_expert_workshop_organized length is 1 on deleteExpert', () => {
+    component.ipsrStep1Body = {
+      result_ip_expert_workshop_organized: [{}],
+      result_ip: {
+        participants_consent: true
+      }
+    } as any;
+    component.deleteExpert(0);
+    expect(component.ipsrStep1Body.result_ip.participants_consent).toBeNull();
+  });
+
+  describe('validateParticipantsConsent()', () => {
+    it('should return false if result_ip_expert_workshop_organized is empty', () => {
+      component.ipsrStep1Body.result_ip_expert_workshop_organized = [];
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return false if no participants have first_name and last_name', () => {
+      component.ipsrStep1Body.result_ip_expert_workshop_organized = [
+        { first_name: '', last_name: '' },
+        { first_name: '', last_name: '' }
+      ];
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return true if at least one participant has first_name and last_name', () => {
+      component.ipsrStep1Body.result_ip_expert_workshop_organized = [
+        { first_name: '', last_name: '' },
+        { first_name: 'John', last_name: 'Doe' }
+      ];
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+  });
 });
