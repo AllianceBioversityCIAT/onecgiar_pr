@@ -12,3 +12,4 @@ cd ./onecgiar-pr-server && npm ci
 cd ./onecgiar-pr-client && npm ci
 ```
 testing branch 1
+testing branch 2
