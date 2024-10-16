@@ -74,13 +74,13 @@
     [(ngModel)]="this.ipsrStep1Body.link_workshop_list">
   </app-pr-input>
 
-  @if (hasElementsWithId(this.ipsrStep1Body.result_ip_expert_workshop_organized, 'result_ip_expert_workshop_organized_id')) {
+  @if (validateParticipantsConsent()) {
     <app-pr-radio-button
       label="Have all participants in the provided list given their consent for their information to be shared in accordance with GDPR requirements?"
       optionLabel="name"
       optionValue="id"
       [options]="this.consentRadioOptions"
-      [(ngModel)]="this.ipsrStep1Body.participantsConsent">
+      [(ngModel)]="this.ipsrStep1Body.result_ip.participants_consent">
     </app-pr-radio-button>
   }
 

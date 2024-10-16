@@ -18,7 +18,6 @@ export class IpsrStep1Body {
   result_ip_result_core: Resultipresultcomplementary = new Resultipresultcomplementary();
   result_ip_expert_workshop_organized = [];
   link_workshop_list: string = null;
-  participantsConsent: boolean = null;
 }
 
 class Scalig_ambition {
@@ -38,6 +37,7 @@ export class Expert {
 }
 
 class Result_ip {
+  participants_consent: boolean = null;
   is_active: boolean = null;
   created_date: Date = null;
   last_updated_date: Date = null;

@@ -58,7 +58,21 @@ export class StepN1Component implements OnInit {
   }
 
   deleteExpert(index: number): void {
+    if (this.ipsrStep1Body.result_ip_expert_workshop_organized.length === 1) {
+      this.ipsrStep1Body.result_ip.participants_consent = null;
+    }
+
     this.ipsrStep1Body.result_ip_expert_workshop_organized.splice(index, 1);
+  }
+
+  validateParticipantsConsent() {
+    const participants = this.ipsrStep1Body.result_ip_expert_workshop_organized;
+
+    if (participants.length === 0) return false;
+
+    const hasParticipants = participants.filter(participant => participant.first_name && participant.last_name);
+
+    return hasParticipants.length > 0;
   }
 
   getSectionInformation() {
