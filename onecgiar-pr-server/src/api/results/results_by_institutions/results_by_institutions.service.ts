@@ -18,7 +18,6 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ChangeTracker } from '../../../shared/utils/change-tracker';
-import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
@@ -26,6 +25,7 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { NonPooledProjectDto } from '../non-pooled-projects/dto/non-pooled-project.dto';
 import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -40,7 +40,6 @@ export class ResultsByInstitutionsService {
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
-    private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
@@ -278,11 +277,6 @@ export class ResultsByInstitutionsService {
           },
         });
 
-      const resultsInnovationsDev =
-        await this._resultsInnovationsDevRepository.InnovationDevExists(
-          incomingResult.id,
-        );
-
       if (knowledgeProduct && data.mqap_institutions?.length) {
         await this.handleMqapInstitutionsUpdate(
           data.mqap_institutions,
@@ -326,7 +320,8 @@ export class ResultsByInstitutionsService {
           data.institutions,
           oldPartners,
           !!knowledgeProduct,
-          !!resultsInnovationsDev,
+          incomingResult.result_type_id ===
+            ResultTypeEnum.INNOVATION_DEVELOPMENT,
           data.result_id,
           user.id,
         );
