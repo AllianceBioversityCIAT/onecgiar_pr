@@ -21,7 +21,16 @@ export class StepN1Component implements OnInit {
     { id: false, name: 'No expert workshop was organized' }
   ];
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private router: Router) {}
+  consentRadioOptions = [
+    { id: true, name: 'Yes' },
+    { id: false, name: 'No' }
+  ];
+
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -49,7 +58,21 @@ export class StepN1Component implements OnInit {
   }
 
   deleteExpert(index: number): void {
+    if (this.ipsrStep1Body.result_ip_expert_workshop_organized.length === 1) {
+      this.ipsrStep1Body.result_ip.participants_consent = null;
+    }
+
     this.ipsrStep1Body.result_ip_expert_workshop_organized.splice(index, 1);
+  }
+
+  validateParticipantsConsent() {
+    const participants = this.ipsrStep1Body.result_ip_expert_workshop_organized;
+
+    if (participants.length === 0) return false;
+
+    const hasParticipants = participants.filter(participant => participant.first_name && participant.last_name);
+
+    return hasParticipants.length > 0;
   }
 
   getSectionInformation() {
@@ -72,7 +95,7 @@ export class StepN1Component implements OnInit {
 
       this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
 
-      this.ipsrStep1Body.institutions.map(item => (item.institutions_type_name = item.institutions_name));
+      this.ipsrStep1Body.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
         this.ipsrStep1Body.innovatonUse.actors.push(new Actor());
@@ -119,7 +142,7 @@ export class StepN1Component implements OnInit {
   }
 
   convertOrganizationsTosave() {
-    this.ipsrStep1Body.innovatonUse.organization.map((item: any) => {
+    this.ipsrStep1Body.innovatonUse.organization.forEach((item: any) => {
       if (item.institution_sub_type_id) {
         item.institution_types_id = item.institution_sub_type_id;
       }

@@ -37,6 +37,7 @@ export class Expert {
 }
 
 class Result_ip {
+  participants_consent: boolean = null;
   is_active: boolean = null;
   created_date: Date = null;
   last_updated_date: Date = null;
