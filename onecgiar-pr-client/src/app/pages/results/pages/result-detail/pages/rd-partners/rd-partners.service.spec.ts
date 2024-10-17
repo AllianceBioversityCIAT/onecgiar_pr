@@ -333,7 +333,9 @@ describe('RdPartnersService', () => {
           financial_code: '1',
           institutionId: 1,
           name: 'IWMI',
-          acronym: 'IWMI'
+          acronym: 'IWMI',
+          selected: false,
+          disabled: false
         }
       ]);
     });
