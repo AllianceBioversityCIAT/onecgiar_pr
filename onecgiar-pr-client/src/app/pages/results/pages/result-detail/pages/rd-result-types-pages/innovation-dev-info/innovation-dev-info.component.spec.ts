@@ -483,7 +483,7 @@ describe('InnovationDevInfoComponent', () => {
   describe('alertInfoText2()', () => {
     it('should generate the correct alert info text 2', () => {
       const expectedText = `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
-      * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${mockApiService.resultsSE?.currentResultCode}/general-information?phase=${mockApiService.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
+      * Evidence are inputted in the "Evidence" section <a class="open_route" target="_blank" href="/result/result-detail/${mockApiService.resultsSE?.currentResultCode}/evidences?phase=${mockApiService.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
       <br><br>
       Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation. 
       <br><br>
