@@ -342,6 +342,24 @@ describe('EvidenceItemComponent', () => {
       expect(cleanSPSpy).toHaveBeenCalled();
     });
   });
+
+  describe('getEvidenceRelatedTitle', () => {
+    it('should return the correct title when isInnoDev is false', () => {
+      mockDataControlService.isInnoDev = false;
+
+      const result = component.getEvidenceRelatedTitle();
+
+      expect(result).toBe('Please indicate for which Impact Area tags this evidence is related to');
+    });
+
+    it('should return the correct title when isInnoDev is true', () => {
+      mockDataControlService.isInnoDev = true;
+
+      const result = component.getEvidenceRelatedTitle();
+
+      expect(result).toBe('Please indicate to what this evidence is related to');
+    });
+  });
 });
 
 function createFile(name: string, sizeInKB: number): File {
