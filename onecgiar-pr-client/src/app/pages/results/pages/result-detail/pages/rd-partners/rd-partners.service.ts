@@ -24,7 +24,11 @@ export class RdPartnersService implements OnDestroy {
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService, public centersSE: CentersService) {
+  constructor(
+    public api: ApiService,
+    public institutionsSE: InstitutionsService,
+    public centersSE: CentersService
+  ) {
     this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
       if (loaded) {
         this.setPossibleLeadPartners(true);
@@ -162,6 +166,10 @@ export class RdPartnersService implements OnDestroy {
       //('center has changes');
       this.possibleLeadCenters = this.centersSE.centersList.filter(center => {
         return this.partnersBody.contributing_center.some(c => c?.code === center.code);
+      });
+
+      this.possibleLeadCenters = this.possibleLeadCenters.map(center => {
+        return { ...center, selected: false, disabled: false };
       });
 
       //('possibleLeadCenters', this.possibleLeadCenters);
