@@ -261,9 +261,6 @@ export class ResultsByInstitutionsService {
         await this._resultKnowledgeProductRepository.findOne({
           where: {
             results_id: incomingResult.id,
-            result_knowledge_product_institution_array: {
-              is_active: true,
-            },
           },
           relations: {
             result_knowledge_product_institution_array: {
@@ -274,6 +271,13 @@ export class ResultsByInstitutionsService {
             },
           },
         });
+
+      if (knowledgeProduct) {
+        knowledgeProduct.result_knowledge_product_institution_array =
+          knowledgeProduct.result_knowledge_product_institution_array.filter(
+            (rki) => rki.is_active,
+          );
+      }
 
       if (knowledgeProduct && data.mqap_institutions?.length) {
         await this.handleMqapInstitutionsUpdate(
