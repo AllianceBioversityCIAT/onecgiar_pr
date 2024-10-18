@@ -357,7 +357,7 @@ describe('EvidenceItemComponent', () => {
 
       const result = component.getEvidenceRelatedTitle();
 
-      expect(result).toBe('Please indicate to what this evidence is related to');
+      expect(result).toBe('Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Readiness level');
     });
   });
 });

@@ -597,7 +597,7 @@ export class ResultsKnowledgeProductsService {
           mqapResponse,
         );
 
-      if (isAdmin != undefined && !Boolean(isAdmin)) {
+      if (!isAdmin) {
         if ((mqapResponse?.Type ?? '') == 'Journal Article') {
           if (
             ['online_publication_date', 'issued_date'].includes(
@@ -837,11 +837,13 @@ export class ResultsKnowledgeProductsService {
           }
 
           if (kpVersion.cgspace_year != cgspaceKPYear) {
-            throw {
-              response: {},
-              message: `A phase with a cgspace year of ${cgspaceKPYear} was not found`,
-              status: HttpStatus.UNPROCESSABLE_ENTITY,
-            };
+            throw this._handlersError.returnErrorRes({
+              error: {
+                response: {},
+                message: `A phase with a cgspace year of ${cgspaceKPYear} was not found`,
+                status: HttpStatus.UNPROCESSABLE_ENTITY,
+              },
+            });
           }
 
           versionId = kpVersion.id;

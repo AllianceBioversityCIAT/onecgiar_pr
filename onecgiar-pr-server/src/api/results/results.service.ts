@@ -235,33 +235,7 @@ export class ResultsService {
         last_updated_by: user.id,
       });
 
-      const toAddFromElastic = await this.findAllSimplified(
-        newResultHeader.id.toString(),
-      );
-
-      if (toAddFromElastic.status !== HttpStatus.OK) {
-        this._logger.warn(
-          `the result #${newResultHeader.id} could not be found to be inserted in the elastic search`,
-        );
-      } else {
-        try {
-          const elasticOperations = [
-            new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
-          ];
-
-          const elasticJson =
-            this._elasticService.getBulkElasticOperationResults(
-              process.env.ELASTIC_DOCUMENT_NAME,
-              elasticOperations,
-            );
-
-          await this._elasticService.sendBulkOperationToElastic(elasticJson);
-        } catch (_error) {
-          this._logger.warn(
-            `the elastic upload failed for the result #${newResultHeader.id}`,
-          );
-        }
-      }
+      await this.insertResultIntoElastic(newResultHeader);
 
       return {
         response: newResultHeader,
@@ -270,6 +244,35 @@ export class ResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async insertResultIntoElastic(newResultHeader: Result) {
+    const toAddFromElastic = await this.findAllSimplified(
+      newResultHeader.id.toString(),
+    );
+
+    if (toAddFromElastic.status !== HttpStatus.OK) {
+      this._logger.warn(
+        `the result #${newResultHeader.id} could not be found to be inserted in the elastic search`,
+      );
+    } else {
+      try {
+        const elasticOperations = [
+          new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
+        ];
+
+        const elasticJson = this._elasticService.getBulkElasticOperationResults(
+          process.env.ELASTIC_DOCUMENT_NAME,
+          elasticOperations,
+        );
+
+        await this._elasticService.sendBulkOperationToElastic(elasticJson);
+      } catch (_error) {
+        this._logger.warn(
+          `the elastic upload failed for the result #${newResultHeader.id}`,
+        );
+      }
     }
   }
 
