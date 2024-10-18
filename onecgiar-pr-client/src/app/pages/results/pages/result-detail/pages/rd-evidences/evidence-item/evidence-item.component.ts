@@ -62,7 +62,11 @@ export class EvidenceItemComponent {
   }
 
   getEvidenceRelatedTitle() {
-    return `Please indicate ${!this.dataControlSE.isInnoDev ? 'for which Impact Area tags' : 'to what'} this evidence is related to`;
+    if (!this.dataControlSE.isInnoDev) {
+      return `Please indicate for which Impact Area tags this evidence is related to`;
+    }
+
+    return `Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Readiness level`;
   }
 
   validateCloudLink() {
