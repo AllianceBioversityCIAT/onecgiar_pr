@@ -390,36 +390,39 @@ describe('StepN1Component', () => {
     expect(component.ipsrStep1Body.result_ip_expert_workshop_organized.length).toBe(2);
   });
 
-  it('should set participants_consent to null if result_ip_expert_workshop_organized length is 1 on deleteExpert', () => {
-    component.ipsrStep1Body = {
-      result_ip_expert_workshop_organized: [{}],
-      result_ip: {
-        participants_consent: true
-      }
-    } as any;
-    component.deleteExpert(0);
-    expect(component.ipsrStep1Body.result_ip.participants_consent).toBeNull();
-  });
-
   describe('validateParticipantsConsent()', () => {
-    it('should return false if result_ip_expert_workshop_organized is empty', () => {
-      component.ipsrStep1Body.result_ip_expert_workshop_organized = [];
+    it('should return false if link_workshop_list is empty', () => {
+      component.ipsrStep1Body.link_workshop_list = '';
       expect(component.validateParticipantsConsent()).toBe(false);
     });
 
-    it('should return false if no participants have first_name and last_name', () => {
-      component.ipsrStep1Body.result_ip_expert_workshop_organized = [
-        { first_name: '', last_name: '' },
-        { first_name: '', last_name: '' }
-      ];
+    it('should return false if link_workshop_list is null', () => {
+      component.ipsrStep1Body.link_workshop_list = null;
       expect(component.validateParticipantsConsent()).toBe(false);
     });
 
-    it('should return true if at least one participant has first_name and last_name', () => {
-      component.ipsrStep1Body.result_ip_expert_workshop_organized = [
-        { first_name: '', last_name: '' },
-        { first_name: 'John', last_name: 'Doe' }
-      ];
+    it('should return false if link_workshop_list is an invalid URL', () => {
+      component.ipsrStep1Body.link_workshop_list = 'invalid-url';
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return true if link_workshop_list is a valid URL', () => {
+      component.ipsrStep1Body.link_workshop_list = 'https://www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL without protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL with http protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'http://www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL with https protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'https://example.com';
       expect(component.validateParticipantsConsent()).toBe(true);
     });
   });
