@@ -18,6 +18,8 @@ export class RdPartnersService implements OnDestroy {
   possibleLeadPartners: InstitutionMapped[] = [];
   possibleLeadCenters: CenterDto[] = [];
 
+  nppCenters: CenterDto[] = [];
+
   leadPartnerId: number = null;
   leadCenterCode: string = null;
 
@@ -37,6 +39,9 @@ export class RdPartnersService implements OnDestroy {
     });
     this.centersSE.loadedCenters.subscribe(loaded => {
       if (loaded) {
+        this.nppCenters = this.centersSE.centersList?.map(center => {
+          return { ...center, selected: false, disabled: false };
+        });
         this.setPossibleLeadCenters(true);
         this.setLeadCenterOnLoad(true);
       }
