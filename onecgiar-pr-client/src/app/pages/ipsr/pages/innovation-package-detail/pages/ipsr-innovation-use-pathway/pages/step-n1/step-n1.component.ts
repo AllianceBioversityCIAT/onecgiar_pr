@@ -58,21 +58,17 @@ export class StepN1Component implements OnInit {
   }
 
   deleteExpert(index: number): void {
-    if (this.ipsrStep1Body.result_ip_expert_workshop_organized.length === 1) {
-      this.ipsrStep1Body.result_ip.participants_consent = null;
-    }
-
     this.ipsrStep1Body.result_ip_expert_workshop_organized.splice(index, 1);
   }
 
   validateParticipantsConsent() {
-    const participants = this.ipsrStep1Body.result_ip_expert_workshop_organized;
+    const regex = new RegExp(
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
+    );
 
-    if (participants.length === 0) return false;
+    const value = this.ipsrStep1Body.link_workshop_list ? this.ipsrStep1Body.link_workshop_list.trim() : '';
 
-    const hasParticipants = participants.filter(participant => participant.first_name && participant.last_name);
-
-    return hasParticipants.length > 0;
+    return regex.test(value);
   }
 
   getSectionInformation() {
@@ -111,10 +107,18 @@ export class StepN1Component implements OnInit {
 
   onSaveSection() {
     this.convertOrganizationsTosave();
-    this.api.resultsSE.PATCHInnovationPathwayByStepOneResultId(this.ipsrStep1Body).subscribe((resp: any) => {
-      this.api.GETInnovationPackageDetail();
-      this.getSectionInformation();
-    });
+    this.api.resultsSE
+      .PATCHInnovationPathwayByStepOneResultId({
+        ...this.ipsrStep1Body,
+        result_ip: {
+          ...this.ipsrStep1Body.result_ip,
+          participants_consent: this.validateParticipantsConsent() ? this.ipsrStep1Body.result_ip.participants_consent : null
+        }
+      })
+      .subscribe((resp: any) => {
+        this.api.GETInnovationPackageDetail();
+        this.getSectionInformation();
+      });
   }
 
   saveAndNextStep(descrip: string) {
