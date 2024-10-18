@@ -108,12 +108,11 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
-  /**
-   * !endpoint createOwnerResult
-   */
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
+    isAdmin?: boolean,
+    versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
       if (
@@ -211,7 +210,10 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id: version.id,
+        version_id:
+          isAdmin != undefined && Boolean(isAdmin) && versionId
+            ? versionId
+            : version.id,
         title: createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
@@ -233,33 +235,7 @@ export class ResultsService {
         last_updated_by: user.id,
       });
 
-      const toAddFromElastic = await this.findAllSimplified(
-        newResultHeader.id.toString(),
-      );
-
-      if (toAddFromElastic.status !== HttpStatus.OK) {
-        this._logger.warn(
-          `the result #${newResultHeader.id} could not be found to be inserted in the elastic search`,
-        );
-      } else {
-        try {
-          const elasticOperations = [
-            new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
-          ];
-
-          const elasticJson =
-            this._elasticService.getBulkElasticOperationResults(
-              process.env.ELASTIC_DOCUMENT_NAME,
-              elasticOperations,
-            );
-
-          await this._elasticService.sendBulkOperationToElastic(elasticJson);
-        } catch (_error) {
-          this._logger.warn(
-            `the elastic upload failed for the result #${newResultHeader.id}`,
-          );
-        }
-      }
+      await this.insertResultIntoElastic(newResultHeader);
 
       return {
         response: newResultHeader,
@@ -268,6 +244,35 @@ export class ResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async insertResultIntoElastic(newResultHeader: Result) {
+    const toAddFromElastic = await this.findAllSimplified(
+      newResultHeader.id.toString(),
+    );
+
+    if (toAddFromElastic.status !== HttpStatus.OK) {
+      this._logger.warn(
+        `the result #${newResultHeader.id} could not be found to be inserted in the elastic search`,
+      );
+    } else {
+      try {
+        const elasticOperations = [
+          new ElasticOperationDto('PATCH', toAddFromElastic.response[0]),
+        ];
+
+        const elasticJson = this._elasticService.getBulkElasticOperationResults(
+          process.env.ELASTIC_DOCUMENT_NAME,
+          elasticOperations,
+        );
+
+        await this._elasticService.sendBulkOperationToElastic(elasticJson);
+      } catch (_error) {
+        this._logger.warn(
+          `the elastic upload failed for the result #${newResultHeader.id}`,
+        );
+      }
     }
   }
 
@@ -1279,8 +1284,8 @@ export class ResultsService {
           regions: regions,
           countries,
           geo_scope_id: scope,
-          has_countries: result?.has_countries ? true : (false ?? null),
-          has_regions: result?.has_regions ? true : (false ?? null),
+          has_countries: result?.has_countries,
+          has_regions: result?.has_regions,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

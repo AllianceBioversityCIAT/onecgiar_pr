@@ -35,8 +35,15 @@ export class ResultsKnowledgeProductsController {
   }
 
   @Get('mqap')
-  getFromMQAPByHandle(@Query('handle') handle: string) {
-    return this._resultsKnowledgeProductsService.findOnCGSpace(handle, null);
+  getFromMQAPByHandle(
+    @Query('handle') handle: string,
+    @UserToken() user: TokenDto,
+  ) {
+    return this._resultsKnowledgeProductsService.findOnCGSpace(
+      handle,
+      user,
+      null,
+    );
   }
 
   @Get('find/by-handle')
