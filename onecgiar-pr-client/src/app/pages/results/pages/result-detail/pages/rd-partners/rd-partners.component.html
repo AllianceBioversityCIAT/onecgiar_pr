@@ -100,7 +100,7 @@
         <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title" placeholder="Grant title goes here..."> </app-pr-input>
         <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
         <app-pr-select
-          [options]="this.centersSE.centersList"
+          [options]="this.rdPartnersSE.nppCenters"
           label="Lead/Contract Center"
           optionLabel="name"
           optionValue="lead_center"
