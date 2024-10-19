@@ -36,7 +36,7 @@
     "ng-circle-progress": "^1.7.1",
     "ngx-socket-io": "^4.7.0",
     "primeicons": "^7.0.0",
-    "primeng": "^17.18.10",
+    "primeng": "^17.18.11",
     "pusher-js": "^7.1.0-beta",
     "rxjs": "^7.8.1",
     "tslib": "^2.7.0",
