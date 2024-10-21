@@ -1513,17 +1513,6 @@ export class resultValidationRepository
 						)
 					)
 				)
-				AND (
-					SELECT
-						COUNT(*)
-					FROM
-						evidence e
-					WHERE
-						e.result_id = r.id
-						AND e.evidence_type_id = 4
-						AND e.is_active = 1
-						AND COALESCE(TRIM(e.link), '') <> ''
-				) > 0
 			) THEN TRUE
 			ELSE FALSE
 		END as validation

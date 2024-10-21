@@ -1,7 +1,8 @@
 <div>
   <app-pr-field-header
-    label="· Innovations reference materials – Provide at least 1 URL to reference material(s) that describe the innovation"
+    label="Innovation reference materials"
     [description]="temporalReferenceDescription()"
+    [required]="false"
     [useColon]="false"></app-pr-field-header>
 
   <div appFeedbackValidation [labelText]="referencesLinksAlertText()" [isComplete]="this.body.reference_materials.length >= 1"></div>
