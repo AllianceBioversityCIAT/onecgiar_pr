@@ -25,6 +25,18 @@ export class ClarisaTaskService {
     this.clarisaConnection = new ClarisaApiConnection(this._httpService);
   }
 
+  /**
+   * Synchronizes a control list by fetching data from the CLARISA API and saving it to the database.
+   *
+   * @template Entity - The type of the entity to be saved.
+   * @template Dto - The type of the data transfer object received from the CLARISA API.
+   * @param {ClarisaEndpoints<Entity, Dto>} controlList - The control list containing the endpoint details and mapping function.
+   * @param {number} index - The index of the control list, used for logging purposes.
+   * @returns {Promise<Entity[]>} - A promise that resolves to the saved entities.
+   *
+   * @throws Will log an error if fetching data from the CLARISA API fails.
+   * @throws Will log an error if saving data to the database fails.
+   */
   private async syncControlList<Entity, Dto>(
     controlList: ClarisaEndpoints<Entity, Dto>,
     index: number,
@@ -90,7 +102,19 @@ export class ClarisaTaskService {
     });
   }
 
-  async clarisaBootstrap() {
+  /**
+   * Bootstraps the CLARISA control lists by synchronizing various endpoints.
+   *
+   * This method performs the following actions:
+   * - Logs the start of the cloning process.
+   * - Defines a list of asynchronous functions to synchronize different control lists.
+   * - Executes each function in the list, capturing the results and handling any errors.
+   * - Logs the completion of the cloning process.
+   *
+   * @returns {Promise<PromiseSettledResult<unknown>[]>} A promise that resolves to an array of results,
+   * each indicating whether the corresponding control list synchronization was fulfilled or rejected.
+   */
+  async clarisaBootstrap(): Promise<PromiseSettledResult<unknown>[]> {
     this._logger.debug(`Cloning of CLARISA control lists`);
 
     const controlListsPromise: ((index: number) => Promise<unknown[]>)[] = [
