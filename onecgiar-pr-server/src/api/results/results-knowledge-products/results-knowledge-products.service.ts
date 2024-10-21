@@ -123,9 +123,9 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
+      const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
 
-      if (isAdmin?.is_admin == false) {
+      if (!isAdmin) {
         if (
           resultKnowledgeProduct.knowledge_product_type == 'Journal Article'
         ) {
@@ -536,7 +536,7 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const { isAdmin } = await this._roleByUseRepository.isUserAdmin(user.id);
+      const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
 
       if (validateExisting) {
         const currentVersion: Version =
@@ -817,9 +817,7 @@ export class ResultsKnowledgeProductsService {
 
       if (!resultsKnowledgeProductDto.id) {
         let versionId: number = null;
-        const { is_admin } = await this._roleByUseRepository.isUserAdmin(
-          user.id,
-        );
+        const is_admin = await this._roleByUseRepository.isUserAdmin(user.id);
         if (is_admin != undefined && Boolean(is_admin)) {
           let kpVersion = currentVersion;
 

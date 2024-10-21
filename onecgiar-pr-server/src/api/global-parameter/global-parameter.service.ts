@@ -106,7 +106,7 @@ export class GlobalParameterService {
     user: TokenDto,
   ) {
     const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
-    if (!isAdmin?.is_admin) {
+    if (!isAdmin) {
       return this._returnResponse.format({
         message: 'You do not have permission to perform this action',
         statusCode: HttpStatus.FORBIDDEN,
