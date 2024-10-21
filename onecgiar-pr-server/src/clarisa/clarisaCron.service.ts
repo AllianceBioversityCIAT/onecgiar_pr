@@ -14,6 +14,7 @@ export class ClarisaCronsService {
   })
   handleCron() {
     this._clarisaTaskService.clarisaBootstrap();
+    this._clarisaTaskService.tocDBBootstrap();
   }
 
   @Cron(CronExpression.EVERY_HOUR, {
