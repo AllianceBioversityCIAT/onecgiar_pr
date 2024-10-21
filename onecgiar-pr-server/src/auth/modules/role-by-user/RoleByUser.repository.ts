@@ -14,7 +14,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     super(RoleByUser, dataSource.createEntityManager());
   }
 
-  async isUserAdmin(userId: number) {
+  async isUserAdmin(userId: number): Promise<boolean> {
     const queryData = `
     SELECT
       if(rbu.role = 1, 1, 0) as is_admin
@@ -28,7 +28,11 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     `;
     try {
       const isAdmin = await this.query(queryData, [userId]);
-      return isAdmin?.length ? isAdmin[0] : undefined;
+      if (isAdmin?.length > 0) {
+        return Boolean(isAdmin[0].is_admin);
+      }
+
+      return null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
