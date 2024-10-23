@@ -407,6 +407,7 @@ describe('UserNotificationSettingsService', () => {
             obj_user_notification_setting: [],
             obj_target_user_notification: [],
             obj_emitter_user_notification: [],
+            obj_qaed_user: [],
           },
           obj_initiative: {} as any,
           action_area_id: 1,
