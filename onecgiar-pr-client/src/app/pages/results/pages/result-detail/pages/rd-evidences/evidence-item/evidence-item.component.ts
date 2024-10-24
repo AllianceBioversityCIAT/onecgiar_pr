@@ -61,6 +61,14 @@ export class EvidenceItemComponent {
     `;
   }
 
+  getEvidenceRelatedTitle() {
+    if (!this.dataControlSE.isInnoDev) {
+      return `Please indicate for which Impact Area tags this evidence is related to`;
+    }
+
+    return `Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Readiness level`;
+  }
+
   validateCloudLink() {
     if (this.evidence.is_sharepoint) {
       return false;

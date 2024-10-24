@@ -30,7 +30,8 @@ export class InnovationLinksComponent {
   }
 
   temporalReferenceDescription() {
-    return `<ul> 
+    return `Provide reference material(s) that describe the innovation
+    <ul> 
     <li>Reference materials may include (science) publications, websites, newsletters, reports, newspaper articles, videos, etc.</li>
     </ul>`;
   }
