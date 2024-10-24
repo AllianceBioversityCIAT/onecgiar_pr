@@ -27,16 +27,16 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
 
   async getAllCenters() {
     const queryData = `
-    select 
-    cc.code,
-    cc.financial_code,
-    cc.institutionId,
-    ci.name,
-    ci.acronym 
-    from clarisa_center cc
-   	inner join clarisa_institutions ci on ci.id  = cc.institutionId
-     and ci.is_active > 0;
-`;
+      select 
+      cc.code,
+      cc.financial_code,
+      cc.institutionId,
+      ci.name,
+      ci.acronym 
+      from clarisa_center cc
+      inner join clarisa_institutions ci on ci.id  = cc.institutionId
+        and ci.is_active > 0;
+    `;
     try {
       const centers: ClarisaCenterDto[] = await this.query(queryData);
       return centers;
