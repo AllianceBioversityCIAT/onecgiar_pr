@@ -129,6 +129,34 @@ export class ResultQuestionsService {
     }
   }
 
+  private _mapMacroOptions(resultId: number, options: any[]) {
+    return Promise.all(
+      options.map(async (option) => {
+        const answers = await this.getAnswersForQuestion(
+          resultId,
+          option.result_question_id,
+        );
+        const subOptions = await this._resultQuestionRepository.find({
+          where: {
+            question_level: 4,
+            parent_question_id: option.result_question_id,
+          },
+        });
+        const subOptionsWithAnswers = await this.mapOptions(
+          resultId,
+          subOptions,
+        );
+        return {
+          ...option,
+          answer_boolean:
+            answers[0] === undefined ? null : answers[0].answer_boolean,
+          answer_text: answers[0] === undefined ? null : answers[0].answer_text,
+          subOptions: subOptionsWithAnswers,
+        };
+      }),
+    );
+  }
+
   async responsibleInnovationAndScaling(resultId: number): Promise<any> {
     try {
       const topLevelQuestions = await this._resultQuestionRepository.find({
@@ -138,35 +166,6 @@ export class ResultQuestionsService {
           result_type_id: 7,
         },
       });
-
-      const mapMacroOptions = async (options: any[]) => {
-        return Promise.all(
-          options.map(async (option) => {
-            const answers = await this.getAnswersForQuestion(
-              resultId,
-              option.result_question_id,
-            );
-            const subOptions = await this._resultQuestionRepository.find({
-              where: {
-                question_level: 4,
-                parent_question_id: option.result_question_id,
-              },
-            });
-            const subOptionsWithAnswers = await this.mapOptions(
-              resultId,
-              subOptions,
-            );
-            return {
-              ...option,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-              subOptions: subOptionsWithAnswers,
-            };
-          }),
-        );
-      };
 
       const scalingWithOptions = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
@@ -188,7 +187,10 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapMacroOptions(questionOptions);
+              const optionsWithAnswers = await this._mapMacroOptions(
+                resultId,
+                questionOptions,
+              );
 
               return {
                 ...childQuestion,
@@ -220,35 +222,6 @@ export class ResultQuestionsService {
         },
       });
 
-      const mapMacroOptions = async (options: any[]) => {
-        return Promise.all(
-          options.map(async (option) => {
-            const answers = await this.getAnswersForQuestion(
-              resultId,
-              option.result_question_id,
-            );
-            const subOptions = await this._resultQuestionRepository.find({
-              where: {
-                question_level: 4,
-                parent_question_id: option.result_question_id,
-              },
-            });
-            const subOptionsWithAnswers = await this.mapOptions(
-              resultId,
-              subOptions,
-            );
-            return {
-              ...option,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-              subOptions: subOptionsWithAnswers,
-            };
-          }),
-        );
-      };
-
       const intelectuaWithOptions = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
           const childQuestions = await this._resultQuestionRepository.find({
@@ -269,7 +242,10 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapMacroOptions(questionOptions);
+              const optionsWithAnswers = await this._mapMacroOptions(
+                resultId,
+                questionOptions,
+              );
 
               return {
                 ...childQuestion,
@@ -303,35 +279,6 @@ export class ResultQuestionsService {
         },
       });
 
-      const mapMacroOptions = async (options: any[]) => {
-        return Promise.all(
-          options.map(async (option) => {
-            const answers = await this.getAnswersForQuestion(
-              resultId,
-              option.result_question_id,
-            );
-            const subOptions = await this._resultQuestionRepository.find({
-              where: {
-                question_level: 4,
-                parent_question_id: option.result_question_id,
-              },
-            });
-            const subOptionsWithAnswers = await this.mapOptions(
-              resultId,
-              subOptions,
-            );
-            return {
-              ...option,
-              answer_boolean:
-                answers[0] === undefined ? null : answers[0].answer_boolean,
-              answer_text:
-                answers[0] === undefined ? null : answers[0].answer_text,
-              subOptions: subOptionsWithAnswers,
-            };
-          }),
-        );
-      };
-
       const innovationWithOptions = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
           const childQuestions = await this._resultQuestionRepository.find({
@@ -356,7 +303,10 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await mapMacroOptions(questionOptions);
+              const optionsWithAnswers = await this._mapMacroOptions(
+                resultId,
+                questionOptions,
+              );
 
               return {
                 ...childQuestion,
