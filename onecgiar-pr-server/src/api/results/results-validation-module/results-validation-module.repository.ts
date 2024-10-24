@@ -1070,13 +1070,13 @@ export class resultValidationRepository
 						if(
 							(
 								SELECT
-									1
+									COUNT(1)
 								FROM 
 									result_actors ra
 								WHERE
 									ra.result_id = r.id
 									AND ra.is_active
-							) = 1,
+							) > 0,
 							(
 								SELECT
 									COUNT(*)
@@ -1110,13 +1110,13 @@ export class resultValidationRepository
 						AND IF(
 							(
 								SELECT
-									1
+									COUNT(1)
 								FROM
 									results_by_institution_type rbit
 								WHERE
 									rbit.results_id = r.id
 									AND rbit.is_active
-							) = 1,
+							) > 0,
 							(
 								SELECT
 									COUNT(*)
@@ -1139,13 +1139,13 @@ export class resultValidationRepository
 						AND IF(
 							(
 								SELECT
-									1
+									COUNT(1)
 								FROM
 									result_ip_measure rim
 								WHERE
 									rim.result_id = r.id
 									AND rim.is_active
-							) = 1,
+							) > 0,
 							(
 								SELECT
 									COUNT(*)
