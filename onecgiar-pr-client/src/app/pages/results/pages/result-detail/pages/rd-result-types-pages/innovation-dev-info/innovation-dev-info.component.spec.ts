@@ -29,6 +29,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
+import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -82,7 +83,7 @@ describe('InnovationDevInfoComponent', () => {
             question_level: '',
             subOptions: []
           }
-        ],
+        ]
       },
       q2: {
         result_question_id: '',
@@ -146,8 +147,7 @@ describe('InnovationDevInfoComponent', () => {
         result_type_id: 0,
         parent_question_id: '',
         question_type_id: '',
-        question_level: '',
-
+        question_level: ''
       },
       q2: {
         options: [
@@ -168,7 +168,7 @@ describe('InnovationDevInfoComponent', () => {
         result_type_id: 0,
         parent_question_id: '',
         question_type_id: '',
-        question_level: '',
+        question_level: ''
       },
       result_question_id: '',
       question_text: '',
@@ -176,7 +176,26 @@ describe('InnovationDevInfoComponent', () => {
       question_type_id: '',
       question_level: ''
     },
-
+    megatrends: {
+      result_question_id: '',
+      question_text: '',
+      question_description: '',
+      result_type_id: 0,
+      question_type_id: '',
+      question_level: '',
+      options: [
+        {
+          answer_boolean: true,
+          result_question_id: '1',
+          question_text: '',
+          result_type_id: 1,
+          parent_question_id: '1',
+          question_type_id: '1',
+          question_level: '',
+          subOptions: []
+        }
+      ]
+    }
   };
 
   const mockGET_innovationDevResponse = {
@@ -205,11 +224,11 @@ describe('InnovationDevInfoComponent', () => {
     innovation_acknowledgement: '',
     pictures: [],
     reference_materials: [{}],
-    innovation_pdf: false
-  }
+    innovation_pdf: false,
+    previous_irl: 0
+  };
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
         GET_innovationDev: () => of({ response: mockGET_innovationDevResponse }),
@@ -234,7 +253,7 @@ describe('InnovationDevInfoComponent', () => {
 
     mockInnovationDevInfoUtilsService = {
       mapRadioButtonBooleans: jest.fn()
-    }
+    };
     await TestBed.configureTestingModule({
       declarations: [
         InnovationDevInfoComponent,
@@ -259,13 +278,10 @@ describe('InnovationDevInfoComponent', () => {
         FeedbackValidationDirective,
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
-        AddButtonComponent
+        AddButtonComponent,
+        MegatrendsComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        RadioButtonModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -288,7 +304,7 @@ describe('InnovationDevInfoComponent', () => {
 
   describe('ngOnInit()', () => {
     it('should get section information on initialization', () => {
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyGET_questionsInnovationDevelopment = jest.spyOn(component, 'GET_questionsInnovationDevelopment');
 
       component.ngOnInit();
@@ -320,7 +336,7 @@ describe('InnovationDevInfoComponent', () => {
     it('should get section information', () => {
       const spy = jest.spyOn(component, 'GET_questionsInnovationDevelopment');
       const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationDev');
-      const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations')
+      const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations');
 
       component.getSectionInformation();
 
@@ -334,8 +350,7 @@ describe('InnovationDevInfoComponent', () => {
     it('should handle error when getting section information', () => {
       const mockError = new Error('Mock error');
       const spy = jest.spyOn(component, 'GET_questionsInnovationDevelopment');
-      const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationDev')
-        .mockReturnValue(throwError(mockError));
+      const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationDev').mockReturnValue(throwError(mockError));
       const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations');
 
       component.getSectionInformation();
@@ -352,7 +367,7 @@ describe('InnovationDevInfoComponent', () => {
         {
           institution_types_id: 1,
           parent_institution_type_id: 2
-        },
+        }
       ];
 
       component.convertOrganizations(organizations);
@@ -361,9 +376,9 @@ describe('InnovationDevInfoComponent', () => {
         {
           institution_types_id: 2,
           parent_institution_type_id: 2,
-          institution_sub_type_id: 1,
+          institution_sub_type_id: 1
         }
-      ])
+      ]);
     });
   });
 
@@ -379,8 +394,9 @@ describe('InnovationDevInfoComponent', () => {
           graduate_students: '',
           hide: false,
           is_active: false,
-          id: 1
-        },
+          id: 1,
+          addressing_demands: 'yes'
+        }
       ];
       component.innovationDevInfoBody.innovatonUse.organization = organizations;
       component.convertOrganizationsTosave();
@@ -395,9 +411,10 @@ describe('InnovationDevInfoComponent', () => {
           graduate_students: '',
           hide: false,
           is_active: false,
-          id: 1
-        },
-      ])
+          id: 1,
+          addressing_demands: 'yes'
+        }
+      ]);
     });
   });
 
@@ -405,7 +422,7 @@ describe('InnovationDevInfoComponent', () => {
     it('should save section successfully', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
       const spyPATCH_innovationDev = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       component.innovationDevInfoBody.innovation_nature_id = 11;
       component.innovationDevInfoBody = mockGET_innovationDevResponse;
       component.innovationDevelopmentQuestions = mockGET_questionsInnovationDevelopmentResponse;
@@ -421,8 +438,7 @@ describe('InnovationDevInfoComponent', () => {
     });
     it('should handle error when saving section', () => {
       const mockError = new Error('Mock error');
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev')
-        .mockReturnValue(throwError(mockError));
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev').mockReturnValue(throwError(mockError));
 
       component.onSaveSection();
 
@@ -467,11 +483,11 @@ describe('InnovationDevInfoComponent', () => {
   describe('alertInfoText2()', () => {
     it('should generate the correct alert info text 2', () => {
       const expectedText = `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
-      * Evidence are inputted in the General information section <a class="open_route" target="_blank" href="/result/result-detail/${mockApiService.resultsSE?.currentResultCode}/general-information?phase=${mockApiService.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
+      * Evidence are inputted in the "Evidence" section <a class="open_route" target="_blank" href="/result/result-detail/${mockApiService.resultsSE?.currentResultCode}/evidences?phase=${mockApiService.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
       <br><br>
       Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation. 
       <br><br>
-      Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`
+      Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
       const actualText = component.alertInfoText2();
 
       const normalizedExpected = expectedText.replace(/\s+/g, ' ').trim();
@@ -518,6 +534,43 @@ describe('InnovationDevInfoComponent', () => {
       const normalizedActual = actualText.replace(/\s+/g, ' ').trim();
 
       expect(normalizedActual).toEqual(normalizedExpected);
+    });
+  });
+
+  describe('hasReadinessLevelDiminished', () => {
+    it('should return true when the current readiness level is less than the previous readiness level', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '3' },
+        { id: 2, level: '5' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 1;
+      component.innovationDevInfoBody.previous_irl = 2;
+
+      const result = component.hasReadinessLevelDiminished();
+      expect(result).toBe(true);
+    });
+
+    it('should return false when the current readiness level is greater than or equal to the previous readiness level', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '5' },
+        { id: 2, level: '3' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 1;
+      component.innovationDevInfoBody.previous_irl = 2;
+
+      const result = component.hasReadinessLevelDiminished();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('alertDiminishedReadinessLevel', () => {
+    it('should return the same expected text', () => {
+      const expectedText =
+        'It appears that the readiness level has decreased since the previous report. Please provide a justification in the text box below.';
+
+      const actualText = component.alertDiminishedReadinessLevel();
+
+      expect(actualText).toEqual(expectedText);
     });
   });
 });

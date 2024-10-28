@@ -87,6 +87,7 @@ export class ClarisaConnectionsService {
   async executeTask() {
     await this._clarisaTaskService.clarisaBootstrap();
     await this._clarisaTaskService.clarisaBootstrapImportantData();
+    await this._clarisaTaskService.tocDBBootstrap();
     return 1;
   }
 

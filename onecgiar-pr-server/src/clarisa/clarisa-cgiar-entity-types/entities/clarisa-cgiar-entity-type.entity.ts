@@ -1,12 +1,12 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { ClarisaInitiative } from '../../clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity('clarisa_cgiar_entity_types')
 export class ClarisaCgiarEntityType {
-  @Column({
+  @PrimaryColumn({
     name: 'code',
     type: 'bigint',
-    primary: true,
+    nullable: false,
   })
   code: number;
 
