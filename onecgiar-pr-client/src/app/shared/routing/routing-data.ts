@@ -43,6 +43,13 @@ export const routingApp: PrRoute[] = [
     loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule)
   },
   {
+    prName: 'Outcome Indicator Module',
+    onlytest: false,
+    prHide: false,
+    path: 'outcome-indicator-module',
+    loadChildren: () => import('../../pages/outcome-indicator/outcome-indicator.module').then(m => m.OutcomeIndicatorModule)
+  },
+  {
     prName: 'reports',
     prHide: true,
     path: 'reports/result-details/:id',
@@ -150,20 +157,60 @@ export const initadminModuleRouting: PrRoute[] = [
 
 export const resultsOutletRouting: PrRoute[] = [
   { prName: 'Notifications', path: 'results-notifications', redirectTo: 'results-notifications/requests', pathMatch: 'full' },
-  { prName: 'Notifications', path: 'results-notifications', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(m => m.ResultsNotificationsModule) },
-  { prName: '', path: 'results-list', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-list/results-list.module').then(m => m.ResultsListModule) },
+  {
+    prName: 'Notifications',
+    path: 'results-notifications',
+    loadChildren: () =>
+      import('../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.module').then(
+        m => m.ResultsNotificationsModule
+      )
+  },
+  {
+    prName: '',
+    path: 'results-list',
+    loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-list/results-list.module').then(m => m.ResultsListModule)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'results-list' }
 ];
 
 export const notificationsRouting: PrRoute[] = [
-  { prName: 'Updates', path: 'updates', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/updates/updates.module').then(m => m.UpdatesModule) },
-  { prName: 'Requests', path: 'requests', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/requests.module').then(m => m.RequestsModule) },
-  { prName: 'Settings', path: 'settings', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/settings/settings.module').then(m => m.SettingsModule) }
+  {
+    prName: 'Updates',
+    path: 'updates',
+    loadChildren: () =>
+      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/updates/updates.module').then(m => m.UpdatesModule)
+  },
+  {
+    prName: 'Requests',
+    path: 'requests',
+    loadChildren: () =>
+      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/requests.module').then(m => m.RequestsModule)
+  },
+  {
+    prName: 'Settings',
+    path: 'settings',
+    loadChildren: () =>
+      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/settings/settings.module').then(m => m.SettingsModule)
+  }
 ];
 
 export const requestsNotificationsRouting: PrRoute[] = [
-  { prName: 'Received requests', path: 'received', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/received-requests/received-requests.module').then(m => m.ReceivedRequestsModule) },
-  { prName: 'Sent requests', path: 'sent', loadChildren: () => import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/sent-requests/sent-requests.module').then(m => m.SentRequestsModule) },
+  {
+    prName: 'Received requests',
+    path: 'received',
+    loadChildren: () =>
+      import(
+        '../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/received-requests/received-requests.module'
+      ).then(m => m.ReceivedRequestsModule)
+  },
+  {
+    prName: 'Sent requests',
+    path: 'sent',
+    loadChildren: () =>
+      import('../../pages/results/pages/results-outlet/pages/results-notifications/pages/requests/pages/sent-requests/sent-requests.module').then(
+        m => m.SentRequestsModule
+      )
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'received' }
 ];
 
@@ -313,6 +360,24 @@ export const TypePneReportRouting: PrRoute[] = [
     loadChildren: () => import('../../pages/type-one-report/pages/white-page/white-page.module').then(m => m.WhitePageModule)
   },
   { prName: '', path: '**', underConstruction: false, pathMatch: 'full', redirectTo: 'fact-sheet' }
+];
+
+export const OutcomeIndicatorRouting: PrRoute[] = [
+  { prName: 'Outcome Indicator Module', path: 'outcome-indicator-module', redirectTo: 'outcome-indicator-module/home', pathMatch: 'full' },
+  {
+    prName: 'Outcome indicators home',
+    underConstruction: false,
+    path: 'home',
+    loadChildren: () =>
+      import('../../pages/outcome-indicator/pages/outcome-indicator-home/outcome-indicator-home.module').then(m => m.OutcomeIndicatorHomeModule)
+  },
+  // {
+  //   prName: 'Report progress on End-of-initiative outcome',
+  //   underConstruction: false,
+  //   path: 'report-progress-eoi-outcome',
+  //   loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule)
+  // }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
 export interface PrRoute extends Route {

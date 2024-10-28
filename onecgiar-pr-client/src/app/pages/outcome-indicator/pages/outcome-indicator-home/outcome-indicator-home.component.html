@@ -1,0 +1,51 @@
+<div class="filters">
+  <app-pr-select
+    [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
+    label="Initiative"
+    [required]="false"
+    [isStatic]="true"
+    optionLabel="full_name"
+    optionValue="initiative_id"
+    placeholder="Select Initiative"
+    labelDescInlineStyles="color: #5569dd"
+    [(ngModel)]="this.initiativeIdFilter">
+  </app-pr-select>
+
+  <div class="filters_phase">
+    <p class="filters_phase_title">Phase:</p>
+    <p class="filters_phase_text">
+      {{ this.api.dataControlSE.reportingCurrentPhase.phaseName }}
+    </p>
+  </div>
+</div>
+
+<div class="separator_line"></div>
+
+<div class="outcomes">
+  <div class="outcomes_title">
+    <i class="material-icons-outlined" style="font-size: 34px">assessment</i>
+    <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
+  </div>
+
+  <p class="outcomes_desc">Welcome to the Outcome indicators reporting module. Please select an action you would like to do.</p>
+
+  <div class="outcomes_actions">
+    <div class="outcomes_actions_item" [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
+      <i class="pi pi-sign-in" style="font-size: 4rem"></i>
+      <p class="outcomes_actions_item--text">Report progress on End-Of-Initiative Outcomes</p>
+    </div>
+
+    <div class="outcomes_actions_item" [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
+      <i class="pi pi-box" style="font-size: 4rem"></i>
+      <p class="outcomes_actions_item--text">Report progress on Work Packages Outcomes</p>
+    </div>
+
+    <div
+      class="outcomes_actions_item"
+      [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
+      (click)="exportToExcel()">
+      <i class="pi pi-file-export" style="font-size: 4rem"></i>
+      <p class="outcomes_actions_item--text">Export all the progress reported by indicators</p>
+    </div>
+  </div>
+</div>
