@@ -1,38 +1,36 @@
 <app-detail-section-title sectionName="Evidence" title="Evidence"></app-detail-section-title>
 
 <div class="detail_container">
+  <app-alert-status [description]="alertStatus()"> </app-alert-status>
 
-  <app-alert-status [description]="alertStatus()">
+  <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>
 
-  <app-alert-status *ngIf="isOptional"
-    description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
-  </app-alert-status>
-
-  <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning">
-  </app-alert-status>
+  <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning"> </app-alert-status>
 
   <div class="evidences">
-    <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i=index">
-      <app-evidence-item [evidence]="evidence" [index]="i+1" (deleteEvent)="deleteEvidence(i)"
-        [isOptional]="isOptional">
-      </app-evidence-item>
+    <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
+      <app-evidence-item [evidence]="evidence" [index]="i + 1" (deleteEvent)="deleteEvidence(i)" [isOptional]="isOptional"> </app-evidence-item>
     </div>
   </div>
 
-  <app-no-data-text *ngIf="!this.evidencesBody?.evidences?.length"
-    [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' :'No evidence added'"></app-no-data-text>
+  <app-no-data-text
+    *ngIf="!this.evidencesBody?.evidences?.length"
+    [title]="this.api.dataControlSE.isKnowledgeProduct ? 'No evidence' : 'No evidence added'"></app-no-data-text>
 
-  <br>
-  <app-add-button name="Add evidence" (clickEvent)="addEvidence()"
+  <br />
+  <app-add-button
+    name="Add evidence"
+    (clickEvent)="addEvidence()"
     *ngIf="this.evidencesBody?.evidences?.length < 6 && !this.api.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly">
   </app-add-button>
 
-  <br><br>
-
-  <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled">
-  </div>
+  <br /><br />
+  <div
+    appFeedbackValidation
+    labelText="Evidence"
+    [isComplete]="this.evidencesBody.evidences.length > 0 || this.dataControlSE.currentResult?.result_type_id == 5"></div>
+  <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled"></div>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()">
-</app-save-button>
+<app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()"> </app-save-button>
