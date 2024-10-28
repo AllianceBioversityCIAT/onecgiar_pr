@@ -10,7 +10,11 @@ export class GlobalNarrativesController {
   ) {}
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.globalNarrativesService.findOne(+id);
+  findOneById(@Param('id') id: string) {
+    return this.globalNarrativesService.findOneById(+id);
+  }
+  @Get('/name/:name')
+  findOneByName(@Param('name') name: string) {
+    return this.globalNarrativesService.findOneByName(name);
   }
 }
