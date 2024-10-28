@@ -21,6 +21,23 @@ export class RdAnnualUpdatingComponent {
     }
   ];
 
+  alertText = `
+    <p class="m-0">Good to hear that the innovation is active! Please ensure to review and update the following sections:</p>
+    <ol class="m-0">
+      <li>Theory of Change:
+        <ul>
+          <li>Please update the initiative's Theory of Change mapping for this innovation.</li>
+        </ul>
+      </li>
+      <li>Innovation Development Info:
+        <ul>
+          <li>Add information to the new field regarding the expected contribution to CGIAR Megatrends.</li>
+          <li>Include details in the new field for the anticipated demand/problem to be addressed for Innovation users.</li>
+        </ul>
+      </li>
+    </ol>
+  `;
+
   constructor(public api: ApiService) {}
 
   isDiscontinuedOptionsTrue() {
