@@ -203,14 +203,14 @@ export class TocResultsRepository extends Repository<TocResult> {
       i.id as inititiative_id,
       wp.wp_official_code as work_package_id,
       r.active as is_active
-      from ${env.DB_OST}.results r
-      left join ${env.DB_OST}.work_packages wp on r.work_package_id = wp.wp_official_code
-      											and r.initvStgId = wp.initvStgId
-      											and r.active > 0
-      inner join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = r.initvStgId
-      inner join ${env.DB_OST}.initiatives i on  ibs.initiativeId = i.id
-      WHERE r.active > 0 
-	      and ibs.active > 0;
+    from ${env.DB_OST}.results r
+    left join ${env.DB_OST}.work_packages wp on r.work_package_id = wp.wp_official_code
+      and r.initvStgId = wp.initvStgId
+      and r.active > 0
+    inner join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = r.initvStgId
+    inner join ${env.DB_OST}.initiatives i on  ibs.initiativeId = i.id
+    WHERE r.active > 0 
+      and ibs.active > 0;
     `;
     try {
       const tocResult: TocResult[] = await this.query(queryData);
@@ -225,10 +225,7 @@ export class TocResultsRepository extends Repository<TocResult> {
   }
 
   async inactiveTocResult() {
-    const queryData = `
-      UPDATE toc_result 
-        set is_active = 0;
-    `;
+    const queryData = 'UPDATE toc_result set is_active = 0;';
     try {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;

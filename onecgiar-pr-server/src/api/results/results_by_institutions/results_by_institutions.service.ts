@@ -18,12 +18,14 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ResultsKnowledgeProduct } from '../results-knowledge-products/entities/results-knowledge-product.entity';
 import { ChangeTracker } from '../../../shared/utils/change-tracker';
+import { ResultInstitutionsBudget } from '../result_budget/entities/result_institutions_budget.entity';
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { NonPooledProjectDto } from '../non-pooled-projects/dto/non-pooled-project.dto';
 import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -261,9 +263,6 @@ export class ResultsByInstitutionsService {
         await this._resultKnowledgeProductRepository.findOne({
           where: {
             results_id: incomingResult.id,
-            result_knowledge_product_institution_array: {
-              is_active: true,
-            },
           },
           relations: {
             result_knowledge_product_institution_array: {
@@ -274,6 +273,13 @@ export class ResultsByInstitutionsService {
             },
           },
         });
+
+      if (knowledgeProduct) {
+        knowledgeProduct.result_knowledge_product_institution_array =
+          knowledgeProduct.result_knowledge_product_institution_array.filter(
+            (rki) => rki.is_active,
+          );
+      }
 
       if (knowledgeProduct && data.mqap_institutions?.length) {
         await this.handleMqapInstitutionsUpdate(
@@ -318,6 +324,8 @@ export class ResultsByInstitutionsService {
           data.institutions,
           oldPartners,
           !!knowledgeProduct,
+          incomingResult.result_type_id ===
+            ResultTypeEnum.INNOVATION_DEVELOPMENT,
           data.result_id,
           user.id,
         );
@@ -581,6 +589,7 @@ export class ResultsByInstitutionsService {
     incomingInstitutions: ResultsByInstitution[],
     oldInstitutions: ResultsByInstitution[],
     isKnowledgeProduct: boolean,
+    isInnoDev: boolean,
     resultId: number,
     userId: number,
   ) {
@@ -613,6 +622,7 @@ export class ResultsByInstitutionsService {
     if (added.length) {
       added = added.map((a) => {
         const toAdd = new ResultsByInstitution();
+
         toAdd.created_by = userId;
         toAdd.last_updated_by = userId;
         toAdd.is_active = true;
@@ -628,6 +638,22 @@ export class ResultsByInstitutionsService {
       });
 
       added = await this._resultByIntitutionsRepository.save(added);
+
+      if (isInnoDev) {
+        const resultInstitutionsBudgets = added.map((a) => {
+          const toAdd = new ResultInstitutionsBudget();
+
+          toAdd.created_by = userId;
+          toAdd.result_institution_id = a.id;
+          toAdd.is_active = true;
+
+          return toAdd;
+        });
+
+        await this._resultInstitutionsBudgetRepository.save(
+          resultInstitutionsBudgets,
+        );
+      }
     }
 
     // handling modfiy result_by_institutions

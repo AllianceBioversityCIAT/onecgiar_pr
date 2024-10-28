@@ -128,6 +128,10 @@ export class DataControlService {
     return this.currentResult?.result_type_id == 6;
   }
 
+  get isInnoDev() {
+    return this.currentResult?.result_type_id == 7;
+  }
+
   someMandatoryFieldIncomplete(container) {
     const htmlContainer = document.querySelector(container);
     if (!htmlContainer) return true;
