@@ -19,6 +19,17 @@ export class IpsrAnnualUpdatingComponent {
     }
   ];
 
+  alertTextIPSR = `
+    <p class="m-0">Good to hear that the innovation is active! Please ensure to review and update the following sections:</p>
+    <ol class="m-0">
+      <li>Contributors:
+        <ul>
+          <li>Please update the initiative's Theory of Change mapping for this innovation.</li>
+        </ul>
+      </li>
+    </ol>
+  `;
+
   constructor(public api: ApiService) {}
 
   isIpsrDiscontinuedOptionsTrue(): boolean {
