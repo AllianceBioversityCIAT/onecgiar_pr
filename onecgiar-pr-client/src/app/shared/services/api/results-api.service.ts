@@ -18,7 +18,11 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    public http: HttpClient,
+    private saveButtonSE: SaveButtonService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   currentResultId: number | string = null;
@@ -687,6 +691,10 @@ export class ResultsApiService {
 
   GETInnovationByResultId(resultId) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GET_globalNarratives(name: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-narratives/name/${name}`);
   }
 
   GET_downloadPDF(resultCode, resultPhase) {
