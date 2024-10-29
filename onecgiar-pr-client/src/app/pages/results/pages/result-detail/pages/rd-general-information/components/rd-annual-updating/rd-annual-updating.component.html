@@ -7,13 +7,6 @@
       </div>
     </div>
 
-    @if (this.generalInfoBody.is_discontinued === false) {
-      <div class="message">
-        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
-        <div class="message--text" [innerHTML]="alertText"></div>
-      </div>
-    }
-
     <app-pr-radio-button
       [(ngModel)]="this.generalInfoBody.is_discontinued"
       [verticalAlignment]="true"
@@ -22,6 +15,13 @@
       optionValue="value"
       [isStatic]="!this.api.dataControlSE?.currentResult?.status && this.api.rolesSE.access.canDdit">
     </app-pr-radio-button>
+
+    @if (this.generalInfoBody.is_discontinued == false) {
+      <div class="message">
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
+        <div class="message--text" [innerHTML]="alertText"></div>
+      </div>
+    }
 
     <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
       <div class="discontinued_option" *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">

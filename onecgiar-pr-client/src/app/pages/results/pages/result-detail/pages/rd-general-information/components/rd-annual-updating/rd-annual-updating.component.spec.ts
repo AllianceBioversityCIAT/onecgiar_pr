@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RdAnnualUpdatingComponent } from './rd-annual-updating.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 
 describe('RdAnnualUpdatingComponent', () => {
   let component: RdAnnualUpdatingComponent;
@@ -9,12 +10,8 @@ describe('RdAnnualUpdatingComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [RdAnnualUpdatingComponent],
-      imports: [
-        HttpClientTestingModule,
-      ],
-
-    })
-      .compileComponents();
+      imports: [HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(RdAnnualUpdatingComponent);
     component = fixture.componentInstance;
@@ -43,5 +40,25 @@ describe('RdAnnualUpdatingComponent', () => {
 
       expect(result).toBeTruthy();
     });
-  })
+  });
+
+  describe('getAlertNarrative()', () => {
+    it('should set alertText with the response value from the API', () => {
+      const mockResponse = { response: { value: 'Test alert narrative' } };
+      jest.spyOn(component.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of(mockResponse));
+
+      component.getAlertNarrative();
+
+      expect(component.alertText).toBe('Test alert narrative');
+    });
+
+    it('should handle empty response from the API', () => {
+      const mockResponse = { response: { value: '' } };
+      jest.spyOn(component.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of(mockResponse));
+
+      component.getAlertNarrative();
+
+      expect(component.alertText).toBe('');
+    });
+  });
 });

@@ -8,13 +8,6 @@
       </div>
     </div>
 
-    @if (this.ipsrGeneralInfoBody.is_discontinued === false) {
-      <div class="message">
-        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
-        <div class="message--text" [innerHTML]="alertTextIPSR"></div>
-      </div>
-    }
-
     <app-pr-radio-button
       [(ngModel)]="this.ipsrGeneralInfoBody.is_discontinued"
       [verticalAlignment]="true"
@@ -23,6 +16,13 @@
       optionValue="value"
       [isStatic]="this.api.rolesSE.access.canDdit">
     </app-pr-radio-button>
+
+    @if (this.ipsrGeneralInfoBody.is_discontinued == false) {
+      <div class="message">
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
+        <div class="message--text" [innerHTML]="alertTextIPSR"></div>
+      </div>
+    }
 
     <div class="ipsr_annual_updating-discontinued_options" *ngIf="this.ipsrGeneralInfoBody.is_discontinued">
       <div class="ipsr_annual_updating-discontinued_option" *ngFor="let discontinuedOption of this.ipsrGeneralInfoBody.discontinued_options">

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -6,7 +6,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   templateUrl: './ipsr-annual-updating.component.html',
   styleUrls: ['./ipsr-annual-updating.component.scss']
 })
-export class IpsrAnnualUpdatingComponent {
+export class IpsrAnnualUpdatingComponent implements OnInit {
   @Input() ipsrGeneralInfoBody: any;
   options = [
     {
@@ -19,18 +19,19 @@ export class IpsrAnnualUpdatingComponent {
     }
   ];
 
-  alertTextIPSR = `
-    <p class="m-0">Good to hear that the innovation is active! Please ensure to review and update the following sections:</p>
-    <ol class="m-0">
-      <li>Contributors:
-        <ul>
-          <li>Please update the initiative's Theory of Change mapping for this innovation.</li>
-        </ul>
-      </li>
-    </ol>
-  `;
+  alertTextIPSR: string = '';
 
   constructor(public api: ApiService) {}
+
+  ngOnInit(): void {
+    this.getAlertNarrativeIPSR();
+  }
+
+  getAlertNarrativeIPSR(): void {
+    this.api.resultsSE.GET_globalNarratives('updated_ipsr_guidance').subscribe(({ response }) => {
+      this.alertTextIPSR = response.value;
+    });
+  }
 
   isIpsrDiscontinuedOptionsTrue(): boolean {
     return this.ipsrGeneralInfoBody?.is_discontinued ? this.ipsrGeneralInfoBody.discontinued_options.some(option => option.value) : true;
