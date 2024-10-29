@@ -3,6 +3,7 @@ import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -33,7 +34,8 @@ export class RdEvidencesComponent implements OnInit {
   constructor(
     public api: ApiService,
     public innovationControlListSE: InnovationControlListService,
-    private saveButtonSE: SaveButtonService
+    private saveButtonSE: SaveButtonService,
+    public dataControlSE: DataControlService
   ) {}
 
   ngOnInit(): void {

@@ -32,6 +32,15 @@ export class ResultIpMeasure extends BaseEntity {
   quantity!: number;
 
   @Column({
+    name: 'addressing_demands',
+    type: 'text',
+    nullable: true,
+  })
+  addressing_demands!: string;
+
+  // relations
+
+  @Column({
     name: 'result_id',
     type: 'bigint',
     nullable: true,
@@ -44,6 +53,8 @@ export class ResultIpMeasure extends BaseEntity {
     nullable: true,
   })
   result_ip_id: number;
+
+  //object relations
 
   @ManyToOne(
     () => ResultInnovationPackage,

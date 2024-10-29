@@ -46,19 +46,6 @@ export class ResultActor extends BaseEntity {
   men_youth!: number;
 
   @Column({
-    name: 'result_id',
-    type: 'bigint',
-  })
-  result_id: number;
-
-  @Column({
-    name: 'actor_type_id',
-    type: 'bigint',
-    nullable: true,
-  })
-  actor_type_id!: number;
-
-  @Column({
     name: 'other_actor_type',
     type: 'text',
     nullable: true,
@@ -107,6 +94,30 @@ export class ResultActor extends BaseEntity {
     nullable: true,
   })
   has_men_youth: boolean;
+
+  @Column({
+    name: 'addressing_demands',
+    type: 'text',
+    nullable: true,
+  })
+  addressing_demands!: string;
+
+  // relations
+
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+  })
+  result_id: number;
+
+  @Column({
+    name: 'actor_type_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  actor_type_id!: number;
+
+  // object relations
 
   @ManyToOne(() => Result, (r) => r.obj_result_actor)
   @JoinColumn({
