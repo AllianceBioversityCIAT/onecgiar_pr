@@ -4,7 +4,6 @@ export class IpsrStep3Body {
   result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
   link_workshop_list: string;
-  ipsr_materials: IPSRMaterialsStep3[] = [];
 }
 
 export class Resultipresultcomplementary {
@@ -83,8 +82,4 @@ export class ActorN3 {
   result_ip_actors_id: any;
   showWomenExplanationwomen?: boolean;
   showMenExplanationmen?: boolean;
-}
-
-export class IPSRMaterialsStep3 {
-  link: string;
 }

@@ -4,11 +4,16 @@
   optionValue="id"
   [options]="this.radioOptions"
   [verticalAlignment]="true"
-  [required]="this.body.result_ip.is_expert_workshop_organized"
-  [(ngModel)]="this.body.result_ip.assessed_during_expert_workshop_id">
+  [required]="this.body.result_innovation_package.is_expert_workshop_organized"
+  [(ngModel)]="this.body.result_innovation_package.assessed_during_expert_workshop_id">
 </app-pr-radio-button>
 
-<div class="box" *ngIf="this.body.result_ip.assessed_during_expert_workshop_id && this.body.result_ip.assessed_during_expert_workshop_id != 3">
+<div
+  class="box"
+  *ngIf="
+    this.body.result_innovation_package.assessed_during_expert_workshop_id &&
+    this.body.result_innovation_package.assessed_during_expert_workshop_id != 3
+  ">
   <br />
 
   <app-pr-field-header [required]="false" [description]="goToStep()"></app-pr-field-header>
@@ -17,7 +22,7 @@
     <tr class="table_title">
       <th [attr.rowspan]="2" id="package_element">Package element</th>
       <th [attr.colspan]="2" id="current_situation">Current situation (now)</th>
-      <th [attr.colspan]="2" id="potential_situation" *ngIf="this.body.result_ip.assessed_during_expert_workshop_id == 2">
+      <th [attr.colspan]="2" id="potential_situation" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">
         Potential situation (12 months later)
       </th>
     </tr>
@@ -25,18 +30,18 @@
     <tr class="table_title">
       <th id="innovation_readiness">Innovation readiness</th>
       <th id="innovation_use">Innovation use</th>
-      <th id="innovation_readiness" *ngIf="this.body.result_ip.assessed_during_expert_workshop_id == 2">Innovation readiness</th>
-      <th id="innovation_use_2" *ngIf="this.body.result_ip.assessed_during_expert_workshop_id == 2">Innovation use</th>
+      <th id="innovation_readiness" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">Innovation readiness</th>
+      <th id="innovation_use_2" *ngIf="this.body.result_innovation_package.assessed_during_expert_workshop_id == 2">Innovation use</th>
     </tr>
 
     <tr>
       <td
         *ngFor="let attr of attrList; let j = index"
         [ngClass]="{ first_col: j <= 0, min_select: j >= 1 }"
-        [hidden]="j >= 3 && this.body.result_ip.assessed_during_expert_workshop_id != 2">
+        [hidden]="j >= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
         <div *ngIf="j <= 0">
           <strong>Core innovation</strong>
-          <div>{{ this.body?.result_ip_result_core?.obj_result?.title }}</div>
+          <div>{{ this.body?.result_ip_result_core?.obj_result_innovation_package?.title }}</div>
         </div>
 
         <app-pr-select
@@ -53,7 +58,9 @@
     </tr>
 
     <tr *ngFor="let resultComplementary of body.result_ip_result_complementary; let i = index">
-      <td *ngFor="let attr of attrList; let j = index" [hidden]="j >= 3 && this.body.result_ip.assessed_during_expert_workshop_id != 2">
+      <td
+        *ngFor="let attr of attrList; let j = index"
+        [hidden]="j >= 3 && this.body.result_innovation_package.assessed_during_expert_workshop_id != 2">
         <div *ngIf="j <= 0">
           <strong>Complementary innovation/enabler/solution #{{ i + 1 }}</strong>
           <div>{{ resultComplementary?.obj_result?.title }}</div>

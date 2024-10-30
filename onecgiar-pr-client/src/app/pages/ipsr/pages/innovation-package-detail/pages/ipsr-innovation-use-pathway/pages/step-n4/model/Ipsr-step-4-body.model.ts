@@ -11,6 +11,7 @@ export class IpsrStep4Body {
   partner_expected_time: string = null;
   is_result_ip_published: boolean = null;
   ipsr_pdf_report: string = null;
+  ipsr_materials: IPSRMaterialsStep4[] = [];
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
@@ -52,5 +53,9 @@ interface Initiativeexpectedinvestment {
 }
 
 export class IpsrpictureStep4 {
+  link: string;
+}
+
+export class IPSRMaterialsStep4 {
   link: string;
 }

@@ -83,10 +83,6 @@
       [(ngModel)]="this.ipsrStep1Body.result_ip.participants_consent">
     </app-pr-radio-button>
   }
-
-  <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
-    <app-step-n3-assessed-expert-workshop [body]="this.ipsrStep1Body"></app-step-n3-assessed-expert-workshop>
-  </div>
 </div>
 
 <!-- This component is reserved for future use. Please do not remove. -->
