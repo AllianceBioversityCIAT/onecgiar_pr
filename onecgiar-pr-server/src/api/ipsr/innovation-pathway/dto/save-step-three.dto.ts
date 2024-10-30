@@ -3,7 +3,7 @@ import { Ipsr } from '../../entities/ipsr.entity';
 import { ResultsIpActor } from '../../results-ip-actors/entities/results-ip-actor.entity';
 import { ResultsIpInstitutionType } from '../../results-ip-institution-type/entities/results-ip-institution-type.entity';
 import { ResultsByIpInnovationUseMeasure } from '../../results-by-ip-innovation-use-measures/entities/results-by-ip-innovation-use-measure.entity';
-import { IpsrMaterials } from './save-step-four.dto';
+import { ResultIpExpertWorkshopOrganized } from '../entities/result-ip-expert-workshop-organized.entity';
 
 export class SaveStepTwoThree {
   public result_innovation_package: ResultInnovationPackage;
@@ -11,7 +11,7 @@ export class SaveStepTwoThree {
   public innovatonUse: InnovatonUseInterface;
   public result_ip_result_complementary: Ipsr[];
   public result_core_innovation: any;
-  public ipsr_materials: IpsrMaterials[];
+  public result_ip_expert_workshop_organized: ResultIpExpertWorkshopOrganized[];
 }
 
 class InnovatonUseInterface {
