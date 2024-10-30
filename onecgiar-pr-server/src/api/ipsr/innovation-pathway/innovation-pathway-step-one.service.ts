@@ -136,12 +136,13 @@ export class InnovationPathwayStepOneService {
           ?.filter((del) => del.result_by_institution_id == int.id)
           .map((del) => del.partner_delivery_type_id);
       });
-      const experts = await this._innovationPackagingExpertRepository.find({
-        where: {
-          result_id: result.id,
-          is_active: true,
-        },
-      });
+      // * Removed as per the new requirements
+      // const experts = await this._innovationPackagingExpertRepository.find({
+      //   where: {
+      //     result_id: result.id,
+      //     is_active: true,
+      //   },
+      // });
 
       const sub_national_counties: ResultCountrySubnational[] =
         await this._resultCountrySubnationalRepository.find({
@@ -160,17 +161,18 @@ export class InnovationPathwayStepOneService {
           .map((el) => el.clarisa_subnational_scope_object);
       });
 
-      experts.forEach(async (el) => {
-        el.expertises = await this._resultIpExpertisesRepository.find({
-          where: {
-            result_ip_expert_id: el.result_ip_expert_id,
-            is_active: true,
-          },
-          relations: {
-            obj_expertises: true,
-          },
-        });
-      });
+      // * Removed as per the new requirements
+      // experts.forEach(async (el) => {
+      //   el.expertises = await this._resultIpExpertisesRepository.find({
+      //     where: {
+      //       result_ip_expert_id: el.result_ip_expert_id,
+      //       is_active: true,
+      //     },
+      //     relations: {
+      //       obj_expertises: true,
+      //     },
+      //   });
+      // });
       const actorsData = await this._resultActorRepository.find({
         where: { result_id: result.id, is_active: true },
         relations: { obj_actor_type: true },
@@ -301,7 +303,6 @@ export class InnovationPathwayStepOneService {
           coreResult,
           result_ip,
           institutions,
-          experts,
           innovatonUse,
           result,
           regions,
@@ -507,11 +508,12 @@ export class InnovationPathwayStepOneService {
           UpdateInnovationPathwayDto,
           user,
         );
-      const experts = await this.saveInnovationPackagingExperts(
-        result,
-        user,
-        UpdateInnovationPathwayDto,
-      );
+      // * Removed as per the new requirements
+      // const experts = await this.saveInnovationPackagingExperts(
+      //   result,
+      //   user,
+      //   UpdateInnovationPathwayDto,
+      // );
       const consensus = await this.saveConsensus(
         result,
         user,
@@ -573,7 +575,6 @@ export class InnovationPathwayStepOneService {
         response: [
           scalingAmbitionBlurb,
           specifyAspiredOutcomesAndImpact,
-          experts,
           consensus,
           partners,
           innovationUse,

@@ -119,8 +119,6 @@ export class InnovationPathwayStepThreeService {
         }
       }
 
-      await this.saveMaterials(resultId, user, saveData);
-
       const { response } = await this.getStepThree(resultId);
 
       return this._returnResponse.format({
@@ -399,13 +397,13 @@ export class InnovationPathwayStepThreeService {
           ],
         });
 
-      const ipsr_materials = await this._evidenceRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: 1,
-          evidence_type_id: 4,
-        },
-      });
+      const result_ip_expert_workshop_organized =
+        await this._resultIpExpertWorkshopRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
 
       const returdata: SaveStepTwoThree = {
         innovatonUse: {
@@ -456,7 +454,7 @@ export class InnovationPathwayStepThreeService {
           core_title: core_innovation.title,
           core_result_current_phase: core_innovation.version_id,
         },
-        ipsr_materials,
+        result_ip_expert_workshop_organized,
       };
 
       return {
@@ -750,76 +748,6 @@ export class InnovationPathwayStepThreeService {
           });
         }
       });
-    }
-  }
-
-  async saveMaterials(
-    resultId: number,
-    user: TokenDto,
-    saveStepTwoThree: SaveStepTwoThree,
-  ) {
-    const id = +resultId;
-    try {
-      const allEvidence = await this._evidenceRepository.getMaterials(id);
-      const existingMaterials = allEvidence.map((e) => e.link);
-      const existingIds = allEvidence.map((e) => e.id);
-      const ipsrMaterials = saveStepTwoThree.ipsr_materials;
-      if (!ipsrMaterials.length) {
-        for (const e of existingIds) {
-          await this._evidenceRepository.update(e, {
-            is_active: 0,
-            last_updated_by: user.id,
-            last_updated_date: new Date(),
-          });
-        }
-      }
-
-      const saveMaterial = [];
-
-      for (const entity of allEvidence) {
-        if (ipsrMaterials.find((ip) => ip.link === entity.link)) {
-          if (entity.is_active === 0) {
-            entity.is_active = 1;
-            entity.last_updated_by = user.id;
-            entity.last_updated_date = new Date();
-            saveMaterial.push(await this._evidenceRepository.save(entity));
-          }
-        } else {
-          if (entity.is_active === 1) {
-            entity.is_active = 0;
-            entity.last_updated_by = user.id;
-            entity.last_updated_date = new Date();
-            saveMaterial.push(await this._evidenceRepository.save(entity));
-          }
-        }
-      }
-
-      for (const entity of ipsrMaterials) {
-        const link = entity.link;
-        if (!link) {
-          return {
-            response: { valid: false },
-            message: 'Please provide a link',
-            status: HttpStatus.NOT_ACCEPTABLE,
-          };
-        }
-
-        if (!existingMaterials.includes(entity.link)) {
-          const newMaterials = new Evidence();
-          newMaterials.result_id = resultId;
-          newMaterials.link = entity.link;
-          newMaterials.evidence_type_id = 4;
-          newMaterials.created_by = user.id;
-          newMaterials.creation_date = new Date();
-          newMaterials.last_updated_by = user.id;
-          newMaterials.last_updated_date = new Date();
-          saveMaterial.push(await this._evidenceRepository.save(newMaterials));
-        }
-      }
-
-      return { saveMaterial };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
