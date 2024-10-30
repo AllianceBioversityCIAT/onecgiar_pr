@@ -6,6 +6,13 @@
   <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>
 
+  @if (this.api.dataControlSE.currentResult?.result_type_id === 7 && !validateHasInnoReadinessLevelEvidence()) {
+    <app-alert-status
+      description="Please provide at least one piece of evidence for Innovation Readiness, unless the readiness level is set to 0."
+      status="warning">
+    </app-alert-status>
+  }
+
   <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning"> </app-alert-status>
 
   <div class="evidences">
@@ -26,6 +33,7 @@
   </app-add-button>
 
   <br /><br />
+
   <div
     appFeedbackValidation
     labelText="Evidence"
