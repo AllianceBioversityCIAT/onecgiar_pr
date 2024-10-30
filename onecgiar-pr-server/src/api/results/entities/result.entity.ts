@@ -351,6 +351,34 @@ export class Result {
   // helpers??
   initiative_id!: number;
 
+  // *** QA tracking fields
+  @Column({
+    name: 'qaed_date',
+    type: 'timestamp',
+    nullable: true,
+  })
+  qaed_date: Date;
+
+  @Column({
+    name: 'qaed_comment',
+    type: 'text',
+    nullable: true,
+  })
+  qaed_comment: string;
+
+  @Column({
+    name: 'qaed_user',
+    type: 'int',
+    nullable: true,
+  })
+  qaed_user: number;
+
+  @ManyToOne(() => User, (u) => u.obj_qaed_user, { nullable: true })
+  @JoinColumn({
+    name: 'qaed_user',
+  })
+  obj_qaed_user: User;
+
   @OneToMany(() => ResultsKnowledgeProduct, (rkp) => rkp.result_object)
   result_knowledge_product_array: ResultsKnowledgeProduct[];
 
