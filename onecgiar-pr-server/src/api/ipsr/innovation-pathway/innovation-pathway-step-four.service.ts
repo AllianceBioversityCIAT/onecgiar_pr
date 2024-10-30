@@ -26,6 +26,7 @@ import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-in
 import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { Evidence } from '../../results/evidences/entities/evidence.entity';
 
 @Injectable()
 export class InnovationPathwayStepFourService {
@@ -53,6 +54,14 @@ export class InnovationPathwayStepFourService {
           result_id: resultId,
           is_active: 1,
           evidence_type_id: 3,
+        },
+      });
+
+      const ipsr_materials = await this._evidenceRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 4,
         },
       });
 
@@ -137,6 +146,7 @@ export class InnovationPathwayStepFourService {
       return {
         response: {
           ipsr_pictures,
+          ipsr_materials,
           initiative_expected_investment,
           initiative_unit_time_id: result_ip.initiative_unit_time_id,
           initiative_expected_time: result_ip.initiative_expected_time,
@@ -183,6 +193,11 @@ export class InnovationPathwayStepFourService {
         });
       }
 
+      const materials = await this.saveMaterials(
+        result.id,
+        user,
+        saveStepFourDto,
+      );
       const initiativeInvestment = await this.saveInitiativeInvestment(
         result.id,
         user,
@@ -213,6 +228,7 @@ export class InnovationPathwayStepFourService {
 
       return {
         response: {
+          materials,
           initiativeInvestment,
           billateralInvestment,
           partnertInvestment,
@@ -221,6 +237,76 @@ export class InnovationPathwayStepFourService {
         message: 'Successful response',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveMaterials(
+    resultId: number,
+    user: TokenDto,
+    saveStepFourDto: SaveStepFour,
+  ) {
+    const id = +resultId;
+    try {
+      const allEvidence = await this._evidenceRepository.getMaterials(id);
+      const existingMaterials = allEvidence.map((e) => e.link);
+      const existingIds = allEvidence.map((e) => e.id);
+      const ipsrMaterials = saveStepFourDto.ipsr_materials;
+      if (!ipsrMaterials.length) {
+        for (const e of existingIds) {
+          await this._evidenceRepository.update(e, {
+            is_active: 0,
+            last_updated_by: user.id,
+            last_updated_date: new Date(),
+          });
+        }
+      }
+
+      const saveMaterial = [];
+
+      for (const entity of allEvidence) {
+        if (ipsrMaterials.find((ip) => ip.link === entity.link)) {
+          if (entity.is_active === 0) {
+            entity.is_active = 1;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            saveMaterial.push(await this._evidenceRepository.save(entity));
+          }
+        } else {
+          if (entity.is_active === 1) {
+            entity.is_active = 0;
+            entity.last_updated_by = user.id;
+            entity.last_updated_date = new Date();
+            saveMaterial.push(await this._evidenceRepository.save(entity));
+          }
+        }
+      }
+
+      for (const entity of ipsrMaterials) {
+        const link = entity.link;
+        if (!link) {
+          return {
+            response: { valid: false },
+            message: 'Please provide a link',
+            status: HttpStatus.NOT_ACCEPTABLE,
+          };
+        }
+
+        if (!existingMaterials.includes(entity.link)) {
+          const newMaterials = new Evidence();
+          newMaterials.result_id = resultId;
+          newMaterials.link = entity.link;
+          newMaterials.evidence_type_id = 4;
+          newMaterials.created_by = user.id;
+          newMaterials.creation_date = new Date();
+          newMaterials.last_updated_by = user.id;
+          newMaterials.last_updated_date = new Date();
+          saveMaterial.push(await this._evidenceRepository.save(newMaterials));
+        }
+      }
+
+      return { saveMaterial };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
