@@ -273,7 +273,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}linked/get/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
 
-  POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean) {
+  POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean, showSpinner = true) {
+    if (!showSpinner) {
+      return this.http.post<any>(
+        `${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`,
+        body
+      );
+    }
+
     return this.http
       .post<any>(`${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body)
       .pipe(this.saveButtonSE.isSavingPipe());
