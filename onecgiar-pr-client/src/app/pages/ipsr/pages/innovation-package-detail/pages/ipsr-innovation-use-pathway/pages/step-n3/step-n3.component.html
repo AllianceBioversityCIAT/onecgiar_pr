@@ -66,7 +66,7 @@
 
     <app-alert-status *ngIf="isOptionalUseLevel()" description="As the Innovation use level of the core innovation is zero (0) their usage numbers are not requested."></app-alert-status>
 
-    <app-step-n3-current-use *ngIf="!isOptionalUseLevel()" [body]="this.ipsrStep3Body"></app-step-n3-current-use>
+    <app-step-n3-current-use *ngIf="!isOptionalUseLevel() && !savingSection" [body]="this.ipsrStep3Body"></app-step-n3-current-use>
 
     <div class="step_divider"></div>
     <div class="ipsr-sub-title-2" style="margin-top: 20px; margin-bottom: 30px;">Complementary innovations/ enablers/

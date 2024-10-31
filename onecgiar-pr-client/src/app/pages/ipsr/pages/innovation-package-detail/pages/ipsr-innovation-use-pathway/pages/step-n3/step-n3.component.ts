@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
@@ -17,7 +17,8 @@ export class StepN3Component implements OnInit {
   innoUseLevel: number;
   rangeLevel2Required = true;
   showDetailsOfReadiness = false;
-  showDetailsOfUseLevel = false
+  showDetailsOfUseLevel = false;
+  savingSection = false;
 
   constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
@@ -49,24 +50,32 @@ export class StepN3Component implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      this.ipsrStep3Body = this.openClosed(response);
+    this.savingSection = true;
+    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe({
+      next: ({ response }) => {
+        this.ipsrStep3Body = this.openClosed(response);
 
-      this.convertOrganizations(response?.innovatonUse?.organization);
-      this.result_core_innovation = response.result_core_innovation;
-      this.showDetailsOfReadiness = !!this.ipsrStep3Body?.result_ip_result_core?.readiness_details_of_evidence;
-      this.showDetailsOfUseLevel = !!this.ipsrStep3Body?.result_ip_result_core?.use_details_of_evidence;
+        this.convertOrganizations(response?.innovatonUse?.organization);
+        this.result_core_innovation = response.result_core_innovation;
+        this.showDetailsOfReadiness = !!this.ipsrStep3Body?.result_ip_result_core?.readiness_details_of_evidence;
+        this.showDetailsOfUseLevel = !!this.ipsrStep3Body?.result_ip_result_core?.use_details_of_evidence;
 
-      this.ipsrStep3Body?.result_ip_result_complementary.forEach((item: any) => {
-        item.showDetailsOfReadiness = !!item.readiness_details_of_evidence;
-        item.showDetailsOfUseLevel = !!item.use_details_of_evidence;
-      });
+        this.ipsrStep3Body?.result_ip_result_complementary.forEach((item: any) => {
+          item.showDetailsOfReadiness = !!item.readiness_details_of_evidence;
+          item.showDetailsOfUseLevel = !!item.use_details_of_evidence;
+        });
 
-      if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
-        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
-      }
-      if (this.ipsrStep3Body.innovatonUse.organization.length == 0) {
-        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
+        if (this.ipsrStep3Body.innovatonUse.actors.length === 0) {
+          this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+        }
+        if (this.ipsrStep3Body.innovatonUse.organization.length === 0) {
+          this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
+        }
+        this.savingSection = false;
+      },
+      error: err => {
+        this.savingSection = false;
+        console.error(err);
       }
     });
   }
