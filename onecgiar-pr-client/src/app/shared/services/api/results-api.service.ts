@@ -19,7 +19,11 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
   providedIn: 'root'
 })
 export class ResultsApiService {
-  constructor(public http: HttpClient, private saveButtonSE: SaveButtonService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    public http: HttpClient,
+    private saveButtonSE: SaveButtonService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   currentResultId: number | string = null;
@@ -270,7 +274,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}linked/get/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`);
   }
 
-  POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean) {
+  POST_resultsLinked(body: LinksToResultsBody, isIpsr: boolean, showSpinner = true) {
+    if (!showSpinner) {
+      return this.http.post<any>(
+        `${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`,
+        body
+      );
+    }
+
     return this.http
       .post<any>(`${this.apiBaseUrl}linked/create/${isIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId}`, body)
       .pipe(this.saveButtonSE.isSavingPipe());
