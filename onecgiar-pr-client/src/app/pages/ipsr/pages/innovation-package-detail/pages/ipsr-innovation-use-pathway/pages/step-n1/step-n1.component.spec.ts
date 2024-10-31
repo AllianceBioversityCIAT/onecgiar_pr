@@ -173,12 +173,7 @@ describe('StepN1Component', () => {
       expect(component.ipsrStep1Body.geo_scope_id).toEqual(3);
       expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
-      expect(component.ipsrStep1Body.experts[0].expertises[0]).toEqual({
-        name: 'name',
-        obj_expertises: {
-          name: 'name'
-        }
-      });
+
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
         institutions_name: 'name',
         institutions_type_name: 'name'
@@ -203,7 +198,6 @@ describe('StepN1Component', () => {
       });
       expect(component.ipsrStep1Body.innovatonUse.actors).toHaveLength(1);
       expect(component.ipsrStep1Body.innovatonUse.organization).toHaveLength(1);
-      expect(component.ipsrStep1Body.experts).toHaveLength(1);
     });
   });
 

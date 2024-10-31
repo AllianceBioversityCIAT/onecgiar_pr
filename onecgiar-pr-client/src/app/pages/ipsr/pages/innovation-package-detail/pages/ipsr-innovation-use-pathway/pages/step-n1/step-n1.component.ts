@@ -89,8 +89,6 @@ export class StepN1Component implements OnInit {
         this.ipsrStep1Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
       }
 
-      this.ipsrStep1Body.experts.forEach(expert => expert.expertises.map(expertItem => (expertItem.name = expertItem.obj_expertises.name)));
-
       this.ipsrStep1Body.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
       if (this.ipsrStep1Body.innovatonUse.actors.length == 0) {
@@ -98,9 +96,6 @@ export class StepN1Component implements OnInit {
       }
       if (this.ipsrStep1Body.innovatonUse.organization.length == 0) {
         this.ipsrStep1Body.innovatonUse.organization.push(new Organization());
-      }
-      if (this.ipsrStep1Body.experts.length == 0) {
-        this.ipsrStep1Body.experts.push(new Expert());
       }
     });
   }
