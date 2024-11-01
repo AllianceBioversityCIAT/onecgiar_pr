@@ -1,13 +1,23 @@
 <app-pr-field-header
-  label="Select or specify complementary innovations/ enablers/ solutions"
-  description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
+  label="Please select PRMS-reported Innovation Development that form a bundle with the core innovation"
+  description="Please consider the inclusion of other innovations that CGIAR and partners are already working on and that have been reported in the PRMS."></app-pr-field-header>
 
 <app-table-innovation
-  (selectInnovationEvent)="selectInnovationEvent($event)"
-  [informationComplementaryInnovations]="informationComplementaryInnovations"
+  (selectEvent)="selectInnovationEvent($event)"
+  [dataTable]="informationInnovationDevelopments"
   [columns]="cols"
-  (saveedit)="saveEdit()"
-  (cancelInnovation)="cancelInnovation($event)"></app-table-innovation>
+  (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
+
+<app-pr-field-header
+  label="Please select or specify other complementary innovations / enablers / solutions that form part of the Innovation Package"
+  description="Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
+
+<app-table-innovation
+  (selectEvent)="selectInnovationEvent($event)"
+  [dataTable]="informationComplementaryInnovations"
+  [columns]="cols"
+  (editEvent)="saveEdit()"
+  (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
 
 <app-new-complementary-innovation
   [complementaryInnovationFunction]="complementaryFunction"
@@ -30,7 +40,7 @@
       </div>
 
       @if (!this.api.rolesSE.readOnly) {
-        <i class="material-icons-round" (click)="cancelInnovation(result.result_id)"> cancel </i>
+        <i class="material-icons-round" (click)="cancelInnovation(result)"> cancel </i>
       }
     </div>
   }

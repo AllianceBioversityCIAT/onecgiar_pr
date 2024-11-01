@@ -28,6 +28,12 @@ interface ComplementaryInnovation {
   styleUrls: ['./table-innovation.component.scss']
 })
 export class TableInnovationComponent {
+  @Input() dataTable: any[] = [];
+  @Input() columns: any[];
+  @Output() selectEvent = new EventEmitter<ComplementaryInnovation>();
+  @Output() editEvent = new EventEmitter<any>();
+  @Output() cancelEvent = new EventEmitter<any>();
+
   searchText = '';
   status = false;
   statusAdd = false;
@@ -35,11 +41,11 @@ export class TableInnovationComponent {
   isInitiative: boolean = true;
   informationComplentary: ComplementaryInnovationClass = new ComplementaryInnovationClass();
   columnOrder = [
-    { title: 'Code', attr: 'result_code' },
+    { title: 'Code', attr: 'result_code', width: '61px' },
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Lead', attr: 'initiative_official_code' },
-    { title: 'Innovation Type', attr: 'result_type_name' },
-    { title: 'Creation date', attr: 'created_date' }
+    { title: 'Lead', attr: 'initiative_official_code', width: '70px' },
+    { title: 'Innovation Type', attr: 'result_type_name', width: '150px' },
+    { title: 'Creation date', attr: 'created_date', width: '150px' }
   ];
   awareOptions = [
     { name: 'Yes', value: true },
@@ -48,26 +54,20 @@ export class TableInnovationComponent {
   selectComplementary: any[] = [];
   complementaries = false;
   idInnovation: number;
-  @Input() informationComplementaryInnovations: any[] = [];
-  @Input() columns: any[];
-  @Output() selectInnovationEvent = new EventEmitter<ComplementaryInnovation>();
-  @Output() saveedit = new EventEmitter<any>();
-  @Output() cancelInnovation = new EventEmitter<any>();
 
   constructor(
     public api: ApiService,
     public ipsrDataControlSE: IpsrDataControlService,
-    public manageInnovationsListSE: ManageInnovationsListService,
-    private router: Router
+    public manageInnovationsListSE: ManageInnovationsListService
   ) {}
 
   selectInnovation(result: ComplementaryInnovation) {
     result.selected = true;
-    this.selectInnovationEvent.emit(result);
+    this.selectEvent.emit(result);
   }
 
   cancelInnovationEvent(result_id) {
-    this.cancelInnovation.emit(result_id);
+    this.cancelEvent.emit(result_id);
   }
 
   getComplementaryInnovation(id, isRead, result) {
@@ -123,11 +123,11 @@ export class TableInnovationComponent {
     }
     this.api.resultsSE.PATCHcomplementaryinnovation(this.informationComplentary, this.idInnovation).subscribe(resp => {
       this.status = false;
-      this.saveedit.emit(true);
+      this.editEvent.emit(true);
     });
   }
 
-  Ondelete(id, callback?) {
+  onDelete(id, callback?) {
     this.api.alertsFe.show(
       {
         id: 'confirm-delete-result',
@@ -140,7 +140,7 @@ export class TableInnovationComponent {
         this.api.resultsSE.DELETEcomplementaryinnovation(id).subscribe({
           next: resp => {
             this.status = false;
-            this.saveedit.emit(true);
+            this.editEvent.emit(true);
           },
           error: err => {
             this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });

@@ -144,6 +144,10 @@ tr {
 
 
 .actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
 
     .view {
         background-color: var(--pr-color-secondary) !important;

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { ComplementaryInnovationComponent } from './complementary-innovation.component';
+import { ComplementaryInnovation, ComplementaryInnovationComponent } from './complementary-innovation.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { PrButtonComponent } from '../../../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -123,15 +123,47 @@ describe('ComplementaryInnovationComponent', () => {
   });
 
   it('should cancel innovation correctly', () => {
-    const result_id = '1';
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
     const innovationFind = { result_code: 'code', selected: true };
-    component.innovationPackageCreatorBody = [{ result_id: '1', result_code: 'code' }] as any;
-    component.informationComplementaryInnovations = [innovationFind];
+    component.innovationPackageCreatorBody = [result];
+    component.informationInnovationDevelopments = [innovationFind];
 
-    component.cancelInnovation(result_id);
+    component.cancelInnovation(result);
 
     expect(component.innovationPackageCreatorBody.length).toBe(0);
     expect(innovationFind.selected).toBe(false);
+  });
+
+  it('should cancel complementary innovation correctly', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 11 } as ComplementaryInnovation;
+    const innovationFind = { result_code: 'code', selected: true };
+    component.innovationPackageCreatorBody = [result];
+    component.informationComplementaryInnovations = [innovationFind];
+
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(0);
+    expect(innovationFind.selected).toBe(false);
+  });
+
+  it('should not cancel innovation if result_id is not found', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
+    component.innovationPackageCreatorBody = [{ result_id: '2', result_code: 'code2', result_type_id: 7 } as ComplementaryInnovation];
+
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(1);
+  });
+
+  it('should not change selected property if innovation is not found in the list', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
+    component.innovationPackageCreatorBody = [result];
+    component.informationInnovationDevelopments = [{ result_code: 'code2', selected: true }];
+
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(0);
+    expect(component.informationInnovationDevelopments[0].selected).toBe(true);
   });
 
   it('should register complementary innovations correctly', () => {
@@ -230,9 +262,9 @@ describe('ComplementaryInnovationComponent', () => {
   it('should load information complementary innovations correctly', () => {
     const mockResponse = {
       response: [
-        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1' },
-        { result_code: 'code2', title: 'Title 2', initiative_official_code: 'Initiative 2', lead_contact_person: 'Person 2' },
-        { result_code: 'code3', title: 'Title 3', initiative_official_code: 'Initiative 3', lead_contact_person: 'Person 3' }
+        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1', result_type_id: 7 },
+        { result_code: 'code2', title: 'Title 2', initiative_official_code: 'Initiative 2', lead_contact_person: 'Person 2', result_type_id: 7 },
+        { result_code: 'code3', title: 'Title 3', initiative_official_code: 'Initiative 3', lead_contact_person: 'Person 3', result_type_id: 7 }
       ]
     };
     jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
@@ -241,24 +273,26 @@ describe('ComplementaryInnovationComponent', () => {
 
     component.loadInformationComplementaryInnovations();
 
-    expect(component.informationComplementaryInnovations).toEqual(mockResponse.response);
-    expect(component.informationComplementaryInnovations[0].selected).toBe(true);
-    expect(component.informationComplementaryInnovations[1].selected).toBe(true);
-    expect(component.informationComplementaryInnovations[2].selected).toBeUndefined();
+    expect(component.informationInnovationDevelopments).toEqual(mockResponse.response);
+    expect(component.informationInnovationDevelopments[0].selected).toBe(true);
+    expect(component.informationInnovationDevelopments[1].selected).toBe(true);
+    expect(component.informationInnovationDevelopments[2].selected).toBeUndefined();
   });
 
   it('should set additional properties and validate initiative', () => {
     const mockResponse = {
-      response: [{ result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1' }]
+      response: [
+        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1', result_type_id: 7 }
+      ]
     };
     jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
     jest.spyOn(component.api.rolesSE, 'validateInitiative').mockReturnValue(true);
 
     component.loadInformationComplementaryInnovations();
 
-    expect(component.informationComplementaryInnovations[0].full_name).toBe('code1 Title 1 Initiative 1 Initiative 1 Person 1 yes no');
-    expect(component.informationComplementaryInnovations[0].result_code).toBe('code1');
-    expect(component.informationComplementaryInnovations[0].permissos).toBe(true);
+    expect(component.informationInnovationDevelopments[0].full_name).toBe('code1 Title 1 Initiative 1 Initiative 1 Person 1 yes no');
+    expect(component.informationInnovationDevelopments[0].result_code).toBe('code1');
+    expect(component.informationInnovationDevelopments[0].permissos).toBe(true);
   });
 
   it('should call loadInformationComplementaryInnovations and loadInnovationPackage on saveEdit', () => {

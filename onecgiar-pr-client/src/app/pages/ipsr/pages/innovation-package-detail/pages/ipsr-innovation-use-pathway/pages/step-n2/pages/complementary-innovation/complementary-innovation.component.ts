@@ -34,6 +34,7 @@ export class ComplementaryInnovationComponent implements OnInit {
   complementaryFunction: any;
   status = false;
   informationComplementaryInnovations: any[] = [];
+  informationInnovationDevelopments: any[] = [];
   cols: any[] = [];
   isInitiative = true;
   linksToResultsBody: any;
@@ -66,6 +67,7 @@ export class ComplementaryInnovationComponent implements OnInit {
 
   createInnovationEvent(event: ComplementaryInnovation): void {
     this.innovationPackageCreatorBody.push(event);
+    this.loadInnovationPackage();
     this.loadInformationComplementaryInnovations();
   }
 
@@ -88,11 +90,12 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.cols.push(auxCols);
   }
 
-  cancelInnovation(result_id: string): void {
-    const index = this.innovationPackageCreatorBody.findIndex(resp => resp.result_id === result_id);
+  cancelInnovation(result: ComplementaryInnovation): void {
+    const index = this.innovationPackageCreatorBody.findIndex(item => item.result_id === result.result_id);
     if (index !== -1) {
       const innovation = this.innovationPackageCreatorBody[index];
-      const innovationFind = this.informationComplementaryInnovations.find(resp => innovation.result_code === resp.result_code);
+      const innovationList = innovation.result_type_id === 7 ? this.informationInnovationDevelopments : this.informationComplementaryInnovations;
+      const innovationFind = innovationList.find(item => item.result_code === innovation.result_code);
       if (innovationFind) {
         innovationFind.selected = false;
       }
@@ -174,18 +177,25 @@ export class ComplementaryInnovationComponent implements OnInit {
   }
 
   loadInformationComplementaryInnovations(): void {
-    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe(resp => {
-      this.informationComplementaryInnovations = resp['response'];
-      this.innovationPackageCreatorBody.forEach(selected => {
-        const found = this.informationComplementaryInnovations.find(item => item.result_code === selected.result_code);
-        if (found) {
-          found.selected = true;
-        }
-      });
-      this.informationComplementaryInnovations.forEach(inno => {
+    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp: any) => {
+      resp.response.forEach(inno => {
         inno.full_name = `${inno.result_code} ${inno.title} ${inno.initiative_official_code} ${inno.initiative_official_code} ${inno.lead_contact_person} yes no`;
         this.isInitiative = this.api.rolesSE.validateInitiative(inno.initiative_id);
         inno.permissos = this.isInitiative;
+      });
+
+      this.informationInnovationDevelopments = resp.response.filter((element: any) => element.result_type_id === 7);
+      this.informationComplementaryInnovations = resp.response.filter((element: any) => element.result_type_id === 11);
+
+      this.innovationPackageCreatorBody.forEach(selected => {
+        const foundDevelopment = this.informationInnovationDevelopments.find(item => item.result_code === selected.result_code);
+        if (foundDevelopment) {
+          foundDevelopment.selected = true;
+        }
+        const foundComplementary = this.informationComplementaryInnovations.find(item => item.result_code === selected.result_code);
+        if (foundComplementary) {
+          foundComplementary.selected = true;
+        }
       });
     });
   }

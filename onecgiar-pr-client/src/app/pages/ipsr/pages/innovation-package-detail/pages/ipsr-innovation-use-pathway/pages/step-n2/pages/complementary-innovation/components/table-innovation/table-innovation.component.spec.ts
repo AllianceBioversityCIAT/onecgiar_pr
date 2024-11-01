@@ -49,9 +49,9 @@ describe('TableInnovationComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit selectInnovationEvent when selectInnovation is called', () => {
+  it('should emit selectEvent when selectInnovation is called', () => {
     const result = { selected: false };
-    const selectInnovationSpy = jest.spyOn(component.selectInnovationEvent, 'emit');
+    const selectInnovationSpy = jest.spyOn(component.selectEvent, 'emit');
     component.selectInnovation(result as any);
     expect(selectInnovationSpy).toHaveBeenCalledWith(result);
     expect(result.selected).toBe(true);
@@ -101,24 +101,24 @@ describe('TableInnovationComponent', () => {
     expect(component.statusAdd).toBe(true);
   });
 
-  it('should call PATCHcomplementaryinnovation and emit saveedit when onSave is called', () => {
+  it('should call PATCHcomplementaryinnovation and emit editEvent when onSave is called', () => {
     component.selectComplementary = [1, 2, 3];
     component.idInnovation = 1;
 
     const PatchSpy = jest.spyOn(component.api.resultsSE, 'PATCHcomplementaryinnovation').mockReturnValue(of({}));
-    const emitSpy = jest.spyOn(component.saveedit, 'emit');
+    const emitSpy = jest.spyOn(component.editEvent, 'emit');
     component.onSave();
     expect(PatchSpy).toHaveBeenCalledWith(component.informationComplentary, component.idInnovation);
     expect(component.status).toBe(false);
     expect(emitSpy).toHaveBeenCalledWith(true);
   });
 
-  it('should call DELETEcomplementaryinnovation and emit saveedit when Ondelete is called', () => {
+  it('should call DELETEcomplementaryinnovation and emit editEvent when onDelete is called', () => {
     const id = 1;
     const alertFeSpy = jest.spyOn(mockCustomizedAlertsFeService, 'show');
     const deleteComplementary = jest.spyOn(component.api.resultsSE, 'DELETEcomplementaryinnovation').mockReturnValue(of({}));
-    const emitSpy = jest.spyOn(component.saveedit, 'emit');
-    component.Ondelete(id, () => {
+    const emitSpy = jest.spyOn(component.editEvent, 'emit');
+    component.onDelete(id, () => {
       expect(alertFeSpy).toHaveBeenCalled();
       expect(deleteComplementary).toHaveBeenCalledWith(id);
       expect(component.status).toBe(false);
