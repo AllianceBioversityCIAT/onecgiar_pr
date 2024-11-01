@@ -1,172 +1,219 @@
-<div *ngIf="informationComplementaryInnovations.length != 0">
-    <div class="search_input">
-        <i class="material-icons-round">search</i>
-        <input type="text" placeholder="Find Innovation" [(ngModel)]="searchText">
+<div *ngIf="dataTable.length != 0">
+  <div class="search_input">
+    <i class="material-icons-round">search</i>
+    <input type="text" placeholder="Find Innovation" [(ngModel)]="searchText" />
+  </div>
+
+  <div class="table">
+    <p-table
+      #dt1
+      sortField="result_code"
+      [sortOrder]="-1"
+      [value]="dataTable | filterByText: searchText"
+      responsiveLayout="scroll"
+      [paginator]="!!(dataTable | filterByText: searchText)?.length"
+      [rows]="10"
+      styleClass="p-datatable-gridlines p-datatable-sm"
+      selectionMode="single"
+      [rowsPerPageOptions]="[10, 50, 100]">
+      <ng-template pTemplate="header">
+        <tr>
+          <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 61px">Select</th>
+
+          @for (column of columnOrder; track $index) {
+            <th [id]="column.attr" [pSortableColumn]="column.attr" [style]="{ width: column.width }">
+              <p-sortIcon [field]="column.attr"></p-sortIcon>
+              {{ column.title }}
+            </th>
+          }
+
+          <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 140px">Action</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-result>
+        <tr>
+          @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
+            <td class="actionsSelect" style="min-height: 45px; height: 100%">
+              <div class="link_button" (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result)">
+                <i class="material-icons-round" style="font-size: 20px">
+                  {{ !result.selected ? 'check_circle' : 'remove_circle_outline' }}
+                </i>
+              </div>
+            </td>
+          }
+
+          @for (column of columnOrder; track $index) {
+            <td [class]="column.attr" style="min-height: 45px; height: 100%">
+              <a [class]="column.class">
+                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd') }}
+              </a>
+
+              <div class="transparent_text">
+                {{ result[column.attr] }}
+              </div>
+            </td>
+          }
+
+          @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
+            <td class="actions" style="min-height: 45px; height: 100%">
+              <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
+                <i class="material-icons-round" style="font-size: 20px">visibility</i>
+              </div>
+              @if ((this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11) {
+                <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 1, result)">
+                  <i class="material-icons-round" style="font-size: 20px">edit</i>
+                </div>
+                <div class="link_button" style="background-color: red" (click)="onDelete(result['result_id'])">
+                  <i class="material-icons-round" style="font-size: 20px">delete</i>
+                </div>
+              }
+            </td>
+          }
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <div class="total" *ngIf="(dataTable | filterByText: searchText)?.length">
+      Total:
+      {{ (dataTable | filterByText: searchText)?.length }} / {{ dataTable?.length }}
     </div>
-    <div class="table">
-        <p-table #dt1 sortField="result_code" [sortOrder]="-1"
-            [value]="(informationComplementaryInnovations| filterByText:searchText)" responsiveLayout="scroll"
-            [paginator]="!!((informationComplementaryInnovations| filterByText:searchText)?.length) " [rows]="10"
-            styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10,50,100]">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Select</th>
-                    <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
-                        <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
-                    </th>
-                    <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">Action</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-result>
-                <tr>
-                    <td class="actionsSelect" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
 
-                        <div class="link_button"
-                            (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result.result_id)">
-                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="!result.selected">check_circle</i>
-                            <i class="material-icons-round" style="font-size: 20px;" *ngIf="result.selected">remove_circle_outline</i>
-                        </div>
-                    </td>
-                    <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
-                        <a class="{{column.class}}">
-                            <div class="point"
-                                [style.background]="'var(--pr-color-result-level-'+result?.result_level_id+')'"
-                                *ngIf="column.attr === 'result_type'"></div>
-
-
-                            {{column.attr !=='created_date' ?
-                            column.attr !=='status' ? result[column.attr] : result[column.attr] == 1 ? 'Yes': 'No' :
-                            (result[column.attr] | date: 'YYYY-MM-dd')}}
-                        </a>
-                        <div class="transparent_text">
-                            {{ result[column.attr]}}
-                        </div>
-                    </td>
-                    <td class="actions" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly">
-                        <div class="link_button" (click)="getComplementaryInnovation(result['result_id'], 0, result)">
-                            <i class="material-icons-round" style="font-size: 20px;">visibility</i>
-                        </div>
-                        <div class="link_button"
-                            *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11"
-                            (click)="getComplementaryInnovation(result['result_id'], 1, result)">
-                            <i class="material-icons-round" style="font-size: 20px;">edit</i>
-                        </div>
-                        <div class="link_button"
-                            *ngIf="(this.api.rolesSE.isAdmin || result['permissos']) && result['result_type_id'] == 11"
-                            style="background-color: red;" (click)="Ondelete(result['result_id'])">
-                            <i class="material-icons-round" style="font-size: 20px;">delete</i>
-                        </div>
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
-        <div class="total" *ngIf="((informationComplementaryInnovations| filterByText:searchText))?.length">
-            Total:
-            {{(informationComplementaryInnovations | filterByText:searchText)?.length}} /
-            {{informationComplementaryInnovations?.length}}</div>
-        <div class="noDataText" *ngIf="!(informationComplementaryInnovations| filterByText:searchText)?.length">
-            There are no results for the selected filters.
-        </div>
-    </div>
+    @if (!(dataTable | filterByText: searchText)?.length) {
+      <div class="noDataText">There are no results for the selected filters.</div>
+    }
+  </div>
 </div>
 
-
-
-
-<p-dialog class="support_information" [(visible)]="status" [draggable]="false" [modal]="true" [closeOnEscape]="true"
-    [showHeader]="true" [dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}"
-    [blockScroll]="true" appendTo="body">
-
-    <div style="display: flex; justify-content: center; flex-direction: column;">
-        <div class="modal_title">{{isReadonly ? 'Info':'Edit'}} complementary innovation/ enabler/ solution</div>
-        <div class="modal_container">
-
-            <app-pr-field-header label="Short title" [required]="true"
-                description="
+<p-dialog
+  class="support_information"
+  [(visible)]="status"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="true"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
+  [blockScroll]="true"
+  appendTo="body">
+  <div style="display: flex; justify-content: center; flex-direction: column">
+    <div class="modal_title">{{ isReadonly ? 'Info' : 'Edit' }} complementary innovation/ enabler/ solution</div>
+    <div class="modal_container">
+      <app-pr-field-header
+        label="Short title"
+        [required]="true"
+        description="
             <li> Short title that facilitates clear communication about the innovation/ enabler/ solution </li> 
             <li>Avoid abbreviations or (technical) jargon.</li> 
             <li>Varieties or breeds should be described by their generic traits or characteristics</li> 
             <li>If not essential, avoid making reference to specific countries or regions</li> 
             <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>"></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true"
-                [readOnly]="isReadonly" [(ngModel)]="this.informationComplentary.short_title"></app-pr-input>
+      <app-pr-input
+        placeholder="Complementary innovation short title"
+        [maxWords]="10"
+        [required]="true"
+        [readOnly]="isReadonly"
+        [(ngModel)]="this.informationComplentary.short_title"></app-pr-input>
 
-            <app-pr-field-header label="Long title" [required]="true" description='
+      <app-pr-field-header
+        label="Long title"
+        [required]="true"
+        description='
             <li>More elaborate explanation of "what it is", "what it does" and "for whom"</li>
             <li>Avoid abbreviations or (technical) jargon.</li>'></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true"
-                [readOnly]="isReadonly" [(ngModel)]="this.informationComplentary.title"> </app-pr-input>
+      <app-pr-input
+        placeholder="Complementary innovation long title"
+        [maxWords]="30"
+        [required]="true"
+        [readOnly]="isReadonly"
+        [(ngModel)]="this.informationComplentary.title">
+      </app-pr-input>
 
-            <app-pr-field-header label="Description" [required]="false"
-                description='
-           <li> Ensure the description is understandable for a non-specialist reader.</li>
-           <li> Avoid acronyms and technical jargon</li>
-           <li> Avoid repetition of the title</li>
-           <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
-            <app-pr-textarea placeholder="Description" [readOnly]="isReadonly" [maxWords]="150" [required]="false"
-                [(ngModel)]="this.informationComplentary.description"></app-pr-textarea>
+      <app-pr-field-header
+        label="Description"
+        [required]="false"
+        description="
+          <li> Ensure the description is understandable for a non-specialist reader.</li>
+          <li> Avoid acronyms and technical jargon</li>
+          <li> Avoid repetition of the title</li>
+          <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>"></app-pr-field-header>
+      <app-pr-textarea
+        placeholder="Description"
+        [readOnly]="isReadonly"
+        [maxWords]="150"
+        [required]="false"
+        [(ngModel)]="this.informationComplentary.description"></app-pr-textarea>
 
-
-            <app-pr-field-header label="Function" [required]="true"
-                description='
-            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
-            <div class="container" *ngIf="complementaries">
-                <div class="col{{i}}" *ngFor="let item of columns; let i = index">
-                    <div *ngFor="let subItem of item" style="margin-bottom: 10px;">
-                        <p-checkbox name="name" [value]="subItem.complementary_innovation_functions_id" id="checkbox{{subItem.complementary_innovation_functions_id}}"
-                            [inputId]="subItem.complementary_innovation_functions_id" [(ngModel)]="selectComplementary"
-                            [disabled]="isReadonly"></p-checkbox>
-                        <label for="checkbox{{subItem.complementary_innovation_functions_id}}"> {{ subItem.name }}</label>
-                    </div>
-
-                </div>
-
-            </div>
-            <div style="display: flex; align-content: flex-end; width: 100%;  justify-content: flex-end;"
-                *ngIf="complementaries">
-                <app-pr-input [readOnly]="isReadonly" style="width: 47%;margin-top: -40px;margin-left: 20px;"
-                    label="Other enabler functions" [required]="false"
-                    [(ngModel)]="this.informationComplentary.other_funcions" placeholder=""></app-pr-input>
-            </div>
-
-            <app-pr-field-header label="Reference materials" [required]="false" description='
-            Max 3.'></app-pr-field-header>
-
-
-            <div style="display: flex; flex-direction: row;"
-                *ngFor="let item of this.informationComplentary.referenceMaterials; let i = index">
-
-                <div
-                    style="background-color:aliceblue ; width: 5%; display: flex; align-items: center; justify-content: center; color: black;">
-                    {{i+1}}</div>
-                <div style="width: 95%;"><app-pr-input placeholder="Link" [(ngModel)]="item.link"
-                        [readOnly]="isReadonly"> </app-pr-input></div>
-            </div>
-            <app-pr-button text="Add reference material" padding="medium" *ngIf="isReadonly == false"
-                (click)="addNewInput()" [ngClass]="{'globalDisabled': statusAdd}"></app-pr-button>
-
-
-            <app-pr-radio-button
-                label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
-                [options]="this.awareOptions" optionLabel="name" optionValue="value" [required]="false"
-                [(ngModel)]="this.informationComplentary.projects_organizations_working_on_innovation"
-                (ngModelChange)="this.informationComplentary.specify_projects_organizations = null"
-                [readOnly]="isReadonly">
-            </app-pr-radio-button>
-            <div style="margin-top: 10px;"></div>
-            <app-pr-textarea *ngIf="this.informationComplentary.projects_organizations_working_on_innovation"
-                [readOnly]="isReadonly" placeholder="Please specify..."
-                description="Please specify those projects or organizations."
-                [(ngModel)]="this.informationComplentary.specify_projects_organizations"></app-pr-textarea>
-
+      <app-pr-field-header
+        label="Function"
+        [required]="true"
+        description="
+            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):"></app-pr-field-header>
+      <div class="container" *ngIf="complementaries">
+        <div class="col{{ i }}" *ngFor="let item of columns; let i = index">
+          <div *ngFor="let subItem of item" style="margin-bottom: 10px">
+            <p-checkbox
+              name="name"
+              [value]="subItem.complementary_innovation_functions_id"
+              id="checkbox{{ subItem.complementary_innovation_functions_id }}"
+              [inputId]="subItem.complementary_innovation_functions_id"
+              [(ngModel)]="selectComplementary"
+              [disabled]="isReadonly"></p-checkbox>
+            <label for="checkbox{{ subItem.complementary_innovation_functions_id }}"> {{ subItem.name }}</label>
+          </div>
         </div>
-    </div>
-    <div class="buttons">
+      </div>
+      <div style="display: flex; align-content: flex-end; width: 100%; justify-content: flex-end" *ngIf="complementaries">
+        <app-pr-input
+          [readOnly]="isReadonly"
+          style="width: 47%; margin-top: -40px; margin-left: 20px"
+          label="Other enabler functions"
+          [required]="false"
+          [(ngModel)]="this.informationComplentary.other_funcions"
+          placeholder=""></app-pr-input>
+      </div>
 
-        <app-pr-button text="Save and continue" *ngIf="isReadonly == false" padding="medium" colorType="success"
-            (click)="onSave()"></app-pr-button>
-    </div>
+      <app-pr-field-header
+        label="Reference materials"
+        [required]="false"
+        description="
+            Max 3."></app-pr-field-header>
 
+      <div style="display: flex; flex-direction: row" *ngFor="let item of this.informationComplentary.referenceMaterials; let i = index">
+        <div style="background-color: aliceblue; width: 5%; display: flex; align-items: center; justify-content: center; color: black">
+          {{ i + 1 }}
+        </div>
+        <div style="width: 95%"><app-pr-input placeholder="Link" [(ngModel)]="item.link" [readOnly]="isReadonly"> </app-pr-input></div>
+      </div>
+      <app-pr-button
+        text="Add reference material"
+        padding="medium"
+        *ngIf="isReadonly == false"
+        (click)="addNewInput()"
+        [ngClass]="{ globalDisabled: statusAdd }"></app-pr-button>
+
+      <app-pr-radio-button
+        label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
+        [options]="this.awareOptions"
+        optionLabel="name"
+        optionValue="value"
+        [required]="false"
+        [(ngModel)]="this.informationComplentary.projects_organizations_working_on_innovation"
+        (ngModelChange)="this.informationComplentary.specify_projects_organizations = null"
+        [readOnly]="isReadonly">
+      </app-pr-radio-button>
+      <div style="margin-top: 10px"></div>
+      <app-pr-textarea
+        *ngIf="this.informationComplentary.projects_organizations_working_on_innovation"
+        [readOnly]="isReadonly"
+        placeholder="Please specify..."
+        description="Please specify those projects or organizations."
+        [(ngModel)]="this.informationComplentary.specify_projects_organizations"></app-pr-textarea>
+    </div>
+  </div>
+  <div class="buttons">
+    <app-pr-button text="Save and continue" *ngIf="isReadonly == false" padding="medium" colorType="success" (click)="onSave()"></app-pr-button>
+  </div>
 </p-dialog>
