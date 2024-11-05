@@ -103,9 +103,6 @@ export class User {
   )
   obj_emitter_user_notification: Notification[];
 
-  @OneToMany(
-    () => Result,
-    (r) => r.obj_qaed_user,
-  )
+  @OneToMany(() => Result, (r) => r.obj_qaed_user)
   obj_qaed_user: Result[];
 }
