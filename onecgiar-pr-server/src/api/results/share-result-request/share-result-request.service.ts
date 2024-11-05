@@ -833,10 +833,6 @@ export class ShareResultRequestService {
         relations: { obj_version: true },
       });
 
-      if (!res?.obj_version?.status) {
-        return this.createInactiveResultResponse();
-      }
-
       if (!rr?.share_result_request_id) {
         return this.createInvalidShareRequestResponse();
       }
@@ -860,6 +856,7 @@ export class ShareResultRequestService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
