@@ -390,6 +390,40 @@ describe('RdEvidencesComponent', () => {
 
       expect(result).toBeFalsy();
     });
-
   });
+
+  describe('validateHasInnoReadinessLevelEvidence', () => {
+      it('should return true if isOptionalReadinessLevel is true', () => {
+        component.isOptionalReadinessLevel = true;
+        const result = component.validateHasInnoReadinessLevelEvidence();
+        expect(result).toBe(true);
+      });
+
+      it('should return true if any evidence has innovation_readiness_related set to true', () => {
+        component.isOptionalReadinessLevel = false;
+        component.evidencesBody.evidences = [
+          { innovation_readiness_related: false },
+          { innovation_readiness_related: true },
+        ];
+        const result = component.validateHasInnoReadinessLevelEvidence();
+        expect(result).toBe(true);
+      });
+
+      it('should return false if no evidence has innovation_readiness_related set to true', () => {
+        component.isOptionalReadinessLevel = false;
+        component.evidencesBody.evidences = [
+          { innovation_readiness_related: false },
+          { innovation_readiness_related: false },
+        ];
+        const result = component.validateHasInnoReadinessLevelEvidence();
+        expect(result).toBe(false);
+      });
+
+      it('should return false if evidences array is empty', () => {
+        component.isOptionalReadinessLevel = false;
+        component.evidencesBody.evidences = [];
+        const result = component.validateHasInnoReadinessLevelEvidence();
+        expect(result).toBe(false);
+      });
+    });
 });
