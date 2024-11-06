@@ -1,0 +1,112 @@
+p {
+  margin: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
+  padding: 0;
+
+  .filters_phase {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+
+    .filters_phase_title {
+      margin-top: 20px;
+      margin-bottom: 7px;
+      text-align: left;
+      font-size: 1.1em;
+      font-weight: 500;
+      color: #5569dd;
+    }
+
+    .filters_phase_text {
+      padding: 6px 0;
+      font-size: 15px;
+    }
+  }
+}
+
+.separator_line {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-top: 2px solid #5569dd;
+  // Bottom shadow
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.outcomes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 330px;
+
+  .outcomes_title {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.5rem;
+
+    .outcomes_title_text {
+      font-size: 28px;
+      margin: 0;
+    }
+  }
+
+  .outcomes_desc {
+    font-size: 18px;
+    margin: 0;
+    margin-top: 30px;
+  }
+
+  .outcomes_actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 40px;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    }
+
+    .outcomes_actions_item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      width: 100%;
+      background-color: #f3f5ff;
+      padding: 2rem;
+      border: 1px solid #8a94ce;
+      border-radius: 6px;
+      box-shadow: 4px 4px 4px 0px #00000040;
+      transition: background-color 0.3s;
+
+      &:hover {
+        background-color: #e8eefc;
+        cursor: pointer;
+      }
+
+      .outcomes_actions_item--text {
+        font-size: 20px;
+        margin: 0;
+        color: #5569dd;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+.disabled {
+  cursor: not-allowed !important;
+  opacity: 0.8;
+
+  &:hover {
+    background-color: #f3f5ff !important;
+  }
+}
