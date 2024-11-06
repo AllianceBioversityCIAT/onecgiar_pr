@@ -93,11 +93,17 @@ export class InnovationPathwayStepFourService {
       });
 
       const npp = await this._nonPooledProjectRepository.find({
-        where: {
-          results_id: resultId,
-          is_active: true,
-          non_pooled_project_type_id: 2,
-        },
+        where: [
+          {
+            results_id: resultId,
+            non_pooled_project_type_id: 1,
+          },
+          {
+            results_id: resultId,
+            is_active: true,
+            non_pooled_project_type_id: 2,
+          },
+        ],
       });
 
       const bilateral_expected_investment =
@@ -111,38 +117,80 @@ export class InnovationPathwayStepFourService {
           },
         });
 
-      const institutions: ResultsByInstitution[] =
-        await this._resultByInstitutionsRepository.getGenericAllResultByInstitutionByRole(
-          resultId,
-          7,
-        );
-      const deliveries: ResultByInstitutionsByDeliveriesType[] =
-        await await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
-          institutions?.map((el) => el.id),
-        );
-      institutions?.map((int) => {
-        int['deliveries'] = deliveries
-          ?.filter((del) => del.result_by_institution_id == int.id)
-          .map((del) => del.partner_delivery_type_id);
-      });
+      // const institutions: ResultsByInstitution[] =
+      //   await this._resultByInstitutionsRepository.getGenericAllResultByInstitutionByRole(
+      //     resultId,
+      //     7,
+      //   );
 
-      const intitutins_budget =
+      const institutions = await this._resultByInstitutionsRepository.find({
+        where: [
+          {
+            result_id: resultId,
+            institution_roles_id: 2,
+          },
+          {
+            result_id: resultId,
+            is_active: true,
+            institution_roles_id: 7,
+          },
+        ],
+      });
+      // const deliveries: ResultByInstitutionsByDeliveriesType[] =
+      //   await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+      //     institutions?.map((el) => el.id),
+      //   );
+      // institutions?.map((int) => {
+      //   int['deliveries'] = deliveries
+      //     ?.filter((del) => del.result_by_institution_id == int.id)
+      //     .map((del) => del.partner_delivery_type_id);
+      // });
+
+      // const intitutins_budget =
+      //   await this._resultInstitutionsBudgetRepository.find({
+      //     where: {
+      //       result_institution_id: In(institutions.map((el) => el.id)),
+      //       is_active: true,
+      //     },
+      //   });
+
+      // const institutions_expected_investment = institutions.map((el) => {
+      //   return {
+      //     institution: el,
+      //     budget: intitutins_budget.filter(
+      //       (b) => b.result_institution_id == el.id,
+      //     ),
+      //   };
+      // });
+
+      const institutions_expected_investment =
         await this._resultInstitutionsBudgetRepository.find({
+          select: {
+            result_institutions_budget_id: true,
+            result_institution_id: true,
+            in_kind: true,
+            in_cash: true,
+            is_determined: true,
+            is_active: true,
+          },
           where: {
             result_institution_id: In(institutions.map((el) => el.id)),
             is_active: true,
           },
+          relations: {
+            obj_result_institution: {
+              obj_institutions: {
+                obj_institution_type_code: true,
+              },
+              result_institution_budget_array: true,
+            },
+          },
         });
 
-      const institutions_expected_investment = institutions.map((el) => {
-        return {
-          institution: el,
-          budget: intitutins_budget.filter(
-            (b) => b.result_institution_id == el.id,
-          ),
-        };
-      });
-
+      console.log(
+        '🚀 ~ InnovationPathwayStepFourService ~ getStepFour ~ institutions:',
+        institutions_expected_investment,
+      );
       return {
         response: {
           ipsr_pictures,
@@ -211,7 +259,6 @@ export class InnovationPathwayStepFourService {
       const partnertInvestment = await this.savePartnertInvestment(
         user,
         saveStepFourDto,
-        version,
       );
 
       const investment = await this._resultInnovationPackageRepository.update(
@@ -380,36 +427,43 @@ export class InnovationPathwayStepFourService {
       if (saveStepFourDto?.bilateral_expected_investment?.length) {
         const { bilateral_expected_investment: bei } = saveStepFourDto;
 
-        bei.forEach(async (i) => {
-          if (i?.is_active != undefined && i?.is_active == false) {
-            await this._nonPooledProjectRepository.update(
-              i.non_pooled_projetct_id,
+        for (const i of bei) {
+          const npp = await this._nonPooledProjectRepository.findOne({
+            where: [
               {
-                is_active: false,
-              },
-            );
-            const rbb = await this._resultBilateralBudgetRepository.findOne({
-              where: {
-                non_pooled_projetct_id: i.non_pooled_projetct_id,
-                is_active: true,
-              },
-            });
-            await this._resultBilateralBudgetRepository.update(
-              rbb.non_pooled_projetct_budget_id,
-              {
-                is_active: false,
-              },
-            );
-          } else {
-            const npp = await this._nonPooledProjectRepository.findOne({
-              where: {
-                results_id: resultId,
-                is_active: true,
                 id: i.non_pooled_projetct_id,
               },
-            });
+            ],
+          });
 
-            if (npp) {
+          if (!npp) {
+            return {
+              data: {},
+              message: 'The non-pooled project was not found',
+              status: HttpStatus.NOT_FOUND,
+            };
+          }
+
+          const nppType = +npp.non_pooled_project_type_id;
+
+          if (i?.is_active === false) {
+            if (nppType === 1) {
+              await this._resultBilateralBudgetRepository.update(
+                { non_pooled_projetct_id: npp.id, is_active: true },
+                { is_active: false },
+              );
+            } else if (nppType === 2) {
+              await this._resultBilateralBudgetRepository.update(
+                { non_pooled_projetct_id: npp.id, is_active: true },
+                { is_active: false },
+              );
+              await this._nonPooledProjectRepository.update(
+                { id: npp.id },
+                { is_active: false },
+              );
+            }
+          } else {
+            if (nppType === 2) {
               const rbb = await this._resultBilateralBudgetRepository.findOne({
                 where: {
                   non_pooled_projetct_id: npp.id,
@@ -417,29 +471,31 @@ export class InnovationPathwayStepFourService {
                 },
               });
 
+              const budgetData = {
+                non_pooled_projetct_id: npp.id,
+                in_kind: i.in_kind,
+                in_cash: i.in_cash,
+                is_determined: i.is_determined,
+                last_updated_by: user.id,
+              };
+
               if (rbb) {
                 await this._resultBilateralBudgetRepository.update(
-                  rbb.non_pooled_projetct_budget_id,
                   {
-                    in_kind: i.in_kind,
-                    in_cash: i.in_cash,
-                    is_determined: i.is_determined,
-                    last_updated_by: user.id,
+                    non_pooled_projetct_budget_id:
+                      rbb.non_pooled_projetct_budget_id,
                   },
+                  budgetData,
                 );
               } else {
                 await this._resultBilateralBudgetRepository.save({
-                  non_pooled_projetct_id: npp.id,
-                  in_kind: i.in_kind,
-                  in_cash: i.in_cash,
-                  is_determined: i.is_determined,
+                  ...budgetData,
                   created_by: user.id,
-                  last_updated_by: user.id,
                 });
               }
             }
           }
-        });
+        }
 
         return {
           valid: true,
@@ -450,78 +506,255 @@ export class InnovationPathwayStepFourService {
     }
   }
 
-  async savePartnertInvestment(
-    user: TokenDto,
-    saveStepFourDto: SaveStepFour,
-    version: Version,
-  ) {
+  async savePartnertInvestment(user: TokenDto, saveStepFourDto: SaveStepFour) {
     try {
       if (saveStepFourDto?.institutions_expected_investment?.length) {
         const { institutions_expected_investment: iei } = saveStepFourDto;
 
-        iei.forEach(async (el) => {
-          if (!el?.institution?.is_active) {
-            await this._resultByInstitutionsRepository.update(
-              el.institution.id,
-              { is_active: false },
-            );
-            await this._resultInstitutionsBudgetRepository.update(
-              { result_institution_id: el?.institution?.id },
-              { is_active: false },
-            );
-          } else {
-            const { budget } = el;
-            budget.map(async (i) => {
-              await this.saveDeliveries(
-                el.institution,
-                el.institution.deliveries,
-                user.id,
-                version,
-              );
-              let existBud: ResultInstitutionsBudget = null;
-              if (i?.result_institutions_budget_id) {
-                existBud =
-                  await this._resultInstitutionsBudgetRepository.findOne({
-                    where: {
-                      result_institutions_budget_id:
-                        i?.result_institutions_budget_id,
-                    },
-                  });
-              } else if (!existBud) {
-                existBud =
-                  await this._resultInstitutionsBudgetRepository.findOne({
-                    where: { result_institution_id: el.institution.id },
-                  });
-              }
+        for (const i of iei) {
+          const institution =
+            await this._resultByInstitutionsRepository.findOne({
+              where: [
+                {
+                  id: i.obj_result_institution.id,
+                },
+              ],
+            });
 
-              if (existBud) {
-                await this._resultInstitutionsBudgetRepository.update(
-                  i?.result_institutions_budget_id,
-                  {
-                    last_updated_by: user?.id,
-                    is_determined: i?.is_determined,
-                    in_kind: i?.in_kind,
-                    in_cash: i?.in_cash,
+          if (!institution) {
+            return {
+              data: {},
+              message: 'The institution was not found',
+              status: HttpStatus.NOT_FOUND,
+            };
+          }
+
+          const intitutionRole = +institution.institution_roles_id;
+
+          if (i?.is_active === false) {
+            if (intitutionRole === 2) {
+              await this._resultInstitutionsBudgetRepository.update(
+                { result_institution_id: institution.id, is_active: true },
+                { is_active: false },
+              );
+            } else if (intitutionRole === 2) {
+              await this._resultInstitutionsBudgetRepository.update(
+                { result_institution_id: institution.id, is_active: true },
+                { is_active: false },
+              );
+              await this._resultByInstitutionsRepository.update(
+                { id: institution.id },
+                { is_active: false },
+              );
+            }
+          } else {
+            if (intitutionRole === 2) {
+              const rib =
+                await this._resultInstitutionsBudgetRepository.findOne({
+                  where: {
+                    result_institution_id: institution.id,
+                    is_active: true,
                   },
+                });
+
+              const budgetData = {
+                result_institution_id: institution.id,
+                in_kind: i.in_kind,
+                in_cash: i.in_cash,
+                is_determined: i.is_determined,
+                last_updated_by: user.id,
+              };
+
+              if (rib) {
+                await this._resultInstitutionsBudgetRepository.update(
+                  {
+                    result_institutions_budget_id:
+                      rib.result_institutions_budget_id,
+                  },
+                  budgetData,
                 );
               } else {
                 await this._resultInstitutionsBudgetRepository.save({
-                  result_institution_id: el.institution.id,
-                  last_updated_by: user?.id,
-                  is_determined: i?.is_determined,
-                  in_kind: i?.in_kind,
-                  in_cash: i?.in_cash,
+                  ...budgetData,
                   created_by: user.id,
                 });
               }
-            });
+            }
           }
-        });
+        }
+
+        return {
+          valid: true,
+        };
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  // async savePartnertInvestment(
+  //   user: TokenDto,
+  //   saveStepFourDto: SaveStepFour,
+  //   version: Version,
+  // ) {
+  //   try {
+  //     if (saveStepFourDto?.institutions_expected_investment?.length) {
+  //       const { institutions_expected_investment: iei } = saveStepFourDto;
+
+  //       for (const el of iei) {
+  //         const institution = el.institution;
+  //         const institutionRoleId = +institution.institution_roles_id;
+
+  //         if (!institution.is_active) {
+  //           if (institutionRoleId === 2) {
+  //             await this._resultInstitutionsBudgetRepository.update(
+  //               { result_institution_id: institution.id },
+  //               { is_active: false },
+  //             );
+  //           } else if (institutionRoleId === 7) {
+  //             await this._resultInstitutionsBudgetRepository.update(
+  //               { result_institution_id: institution.id },
+  //               { is_active: false },
+  //             );
+  //             await this._resultByInstitutionsRepository.update(
+  //               { id: institution.id },
+  //               { is_active: false },
+  //             );
+  //           }
+  //         } else {
+  //           const budgets = el.budget;
+
+  //           for (const i of budgets) {
+  //             await this.saveDeliveries(
+  //               institution,
+  //               institution.deliveries,
+  //               user.id,
+  //               version,
+  //             );
+
+  //             let existBud: ResultInstitutionsBudget = null;
+
+  //             if (i?.result_institutions_budget_id) {
+  //               existBud =
+  //                 await this._resultInstitutionsBudgetRepository.findOne({
+  //                   where: {
+  //                     result_institutions_budget_id:
+  //                       i.result_institutions_budget_id,
+  //                   },
+  //                 });
+  //             } else {
+  //               existBud =
+  //                 await this._resultInstitutionsBudgetRepository.findOne({
+  //                   where: {
+  //                     result_institution_id: institution.id,
+  //                   },
+  //                 });
+  //             }
+
+  //             if (existBud) {
+  //               await this._resultInstitutionsBudgetRepository.update(
+  //                 {
+  //                   result_institutions_budget_id:
+  //                     existBud.result_institutions_budget_id,
+  //                 },
+  //                 {
+  //                   last_updated_by: user.id,
+  //                   is_determined: i.is_determined,
+  //                   in_kind: i.in_kind,
+  //                   in_cash: i.in_cash,
+  //                 },
+  //               );
+  //             } else if (institutionRoleId === 7) {
+  //               await this._resultInstitutionsBudgetRepository.save({
+  //                 result_institution_id: institution.id,
+  //                 last_updated_by: user.id,
+  //                 is_determined: i.is_determined,
+  //                 in_kind: i.in_kind,
+  //                 in_cash: i.in_cash,
+  //                 created_by: user.id,
+  //               });
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     return this._handlersError.returnErrorRes({ error, debug: true });
+  //   }
+  // }
+
+  // async savePartnertInvestment(
+  //   user: TokenDto,
+  //   saveStepFourDto: SaveStepFour,
+  //   version: Version,
+  // ) {
+  //   try {
+  //     if (saveStepFourDto?.institutions_expected_investment?.length) {
+  //       const { institutions_expected_investment: iei } = saveStepFourDto;
+
+  //       iei.forEach(async (el) => {
+  //         if (!el?.institution?.is_active) {
+  //           await this._resultByInstitutionsRepository.update(
+  //             el.institution.id,
+  //             { is_active: false },
+  //           );
+  //           await this._resultInstitutionsBudgetRepository.update(
+  //             { result_institution_id: el?.institution?.id },
+  //             { is_active: false },
+  //           );
+  //         } else {
+  //           const { budget } = el;
+  //           budget.map(async (i) => {
+  //             await this.saveDeliveries(
+  //               el.institution,
+  //               el.institution.deliveries,
+  //               user.id,
+  //               version,
+  //             );
+  //             let existBud: ResultInstitutionsBudget = null;
+  //             if (i?.result_institutions_budget_id) {
+  //               existBud =
+  //                 await this._resultInstitutionsBudgetRepository.findOne({
+  //                   where: {
+  //                     result_institutions_budget_id:
+  //                       i?.result_institutions_budget_id,
+  //                   },
+  //                 });
+  //             } else if (!existBud) {
+  //               existBud =
+  //                 await this._resultInstitutionsBudgetRepository.findOne({
+  //                   where: { result_institution_id: el.institution.id },
+  //                 });
+  //             }
+
+  //             if (existBud) {
+  //               await this._resultInstitutionsBudgetRepository.update(
+  //                 i?.result_institutions_budget_id,
+  //                 {
+  //                   last_updated_by: user?.id,
+  //                   is_determined: i?.is_determined,
+  //                   in_kind: i?.in_kind,
+  //                   in_cash: i?.in_cash,
+  //                 },
+  //               );
+  //             } else {
+  //               await this._resultInstitutionsBudgetRepository.save({
+  //                 result_institution_id: el.institution.id,
+  //                 last_updated_by: user?.id,
+  //                 is_determined: i?.is_determined,
+  //                 in_kind: i?.in_kind,
+  //                 in_cash: i?.in_cash,
+  //                 created_by: user.id,
+  //               });
+  //             }
+  //           });
+  //         }
+  //       });
+  //     }
+  //   } catch (error) {
+  //     return this._handlersError.returnErrorRes({ error, debug: true });
+  //   }
+  // }
 
   async savePartners(
     resultId: number,
