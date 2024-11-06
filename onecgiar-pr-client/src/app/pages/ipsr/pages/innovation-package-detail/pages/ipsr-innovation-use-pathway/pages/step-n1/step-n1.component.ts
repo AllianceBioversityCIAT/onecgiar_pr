@@ -62,6 +62,10 @@ export class StepN1Component implements OnInit {
   }
 
   validateParticipantsConsent() {
+    if (this.ipsrStep1Body.result_ip.is_expert_workshop_organized === false) {
+      return false;
+    }
+
     const regex = new RegExp(
       /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
     );
