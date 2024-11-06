@@ -35,6 +35,8 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 
 @Module({
   controllers: [ResultsPackageTocResultController],
@@ -74,6 +76,8 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     UserNotificationSettingRepository,
     GlobalParameterRepository,
     UserRepository,
+    NonPooledProjectBudgetRepository,
+    ResultInstitutionsBudgetRepository
   ],
   exports: [ResultsPackageTocResultService],
 })

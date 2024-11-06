@@ -111,6 +111,8 @@
       <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
       <app-pr-checkbox label="Innovation Readiness" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
       </app-pr-checkbox>
+      <app-pr-checkbox label="Innovation Use" [(ngModel)]="this.evidence.innovation_use_related" *ngIf="this.dataControlSE.isInnoUse">
+      </app-pr-checkbox>
     </div>
     <app-pr-textarea
       [label]="

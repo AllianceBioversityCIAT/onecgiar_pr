@@ -10,14 +10,9 @@ export class SaveStepFour {
   bilateral_expected_investment: BilateralExpectedInvestment[];
   bilateral_unit_time_id: number;
   bilateral_expected_time: string;
-  institutions_expected_investment: InstitutionsFour[];
+  institutions_expected_investment: ResultInstitutionsBudget[];
   partner_unit_time_id: number;
   partner_expected_time: string;
-}
-
-export interface InstitutionsFour {
-  institution: InstitutionsInterface;
-  budget: ResultInstitutionsBudget[];
 }
 
 export class InstitutionsInterface extends PartialType(ResultsByInstitution) {
