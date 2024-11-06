@@ -22,8 +22,6 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
-import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
-import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { Evidence } from '../../results/evidences/entities/evidence.entity';
