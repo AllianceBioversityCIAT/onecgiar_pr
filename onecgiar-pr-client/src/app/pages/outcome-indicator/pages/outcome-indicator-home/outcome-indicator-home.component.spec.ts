@@ -77,11 +77,11 @@ describe('OutcomeIndicatorHomeComponent', () => {
 
   describe('exportToExcel', () => {
     it('should log "Export to Excel"', () => {
-      console.info = jest.fn();
+      console.error = jest.fn();
 
       component.exportToExcel();
 
-      expect(console.info).toHaveBeenCalledWith('Export to Excel');
+      expect(console.error).toHaveBeenCalledWith('Export to Excel');
     });
   });
 });
