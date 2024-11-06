@@ -27,7 +27,9 @@ export class NotificationItemComponent {
       this.requestingReject ||
       this.api.rolesSE.platformIsClosed ||
       this.isQAed ||
-      (!this.api.rolesSE.isAdmin && this.notification?.obj_result?.obj_result_type?.id == 6)
+      (!this.api.rolesSE.isAdmin &&
+        this.notification.obj_result.obj_version.id != this.api.dataControlSE.reportingCurrentPhase.phaseId &&
+        this.notification.obj_result.status_id != 3)
     );
   }
 

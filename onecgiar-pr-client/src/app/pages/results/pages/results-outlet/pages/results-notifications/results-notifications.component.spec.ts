@@ -19,7 +19,7 @@ describe('ResultsNotificationsComponent', () => {
   beforeEach(async () => {
     apiServiceMock = {
       rolesSE: { isAdmin: true },
-      dataControlSE: { myInitiativesList: [] },
+      dataControlSE: { myInitiativesList: [], getCurrentPhases: jest.fn() },
       resultsSE: {
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_versioning: jest.fn().mockReturnValue(of({ response: [] }))
