@@ -580,6 +580,7 @@ export class IpsrRepository
         	r.result_code,
         	r.title,
         	r.description,
+        	r.result_type_id,
         	rbi.inititiative_id as initiative_id,
         	ci.official_code as initiative_official_code,
             rbi.is_active
