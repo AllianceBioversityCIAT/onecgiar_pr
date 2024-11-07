@@ -16,7 +16,7 @@
     <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
         [hidden]="option.is_active == false">
         <td>
-            <div class="name">{{option?.obj_result_institution?.obj_institutions?.institutions_name}}</div>
+            <div class="name">{{option?.obj_result_institution?.obj_institutions?.name}}</div>
             <div class="type"> <strong>Institution type:</strong> {{option?.obj_result_institution?.obj_institutions?.obj_institution_type_code?.name}}</div>
         </td>
         <td>
