@@ -185,10 +185,6 @@ export class InnovationPathwayStepFourService {
           },
         });
 
-      console.log(
-        '🚀 ~ InnovationPathwayStepFourService ~ getStepFour ~ institutions:',
-        institutions_expected_investment,
-      );
       return {
         response: {
           ipsr_pictures,
@@ -809,32 +805,30 @@ export class InnovationPathwayStepFourService {
               obj_institutions: { obj_institution_type_code: true },
             },
           });
-          const deliveries =
-            await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
-              institutions?.map((el) => el.id),
-            );
-          institutions?.map((int) => {
-            int['deliveries'] = deliveries
-              ?.filter((del) => del.result_by_institution_id == int.id)
-              .map((del) => del.partner_delivery_type_id);
-          });
 
-          const intitutins_budget =
-            await this._resultInstitutionsBudgetRepository.find({
+          institutions_expected_investment =
+            await this._resultInstitutionsBudgetRepository.findOne({
+              select: {
+                result_institutions_budget_id: true,
+                result_institution_id: true,
+                in_kind: true,
+                in_cash: true,
+                is_determined: true,
+                is_active: true,
+              },
               where: {
                 result_institution_id: In(institutions.map((el) => el.id)),
                 is_active: true,
               },
+              relations: {
+                obj_result_institution: {
+                  obj_institutions: {
+                    obj_institution_type_code: true,
+                  },
+                  result_institution_budget_array: true,
+                },
+              },
             });
-
-          institutions_expected_investment = institutions.map((el) => {
-            return {
-              institution: el,
-              budget: intitutins_budget.filter(
-                (b) => b.result_institution_id == el.id,
-              ),
-            };
-          });
         }
         const delData = crtr?.deliveries?.length ? crtr?.deliveries : [];
         await this.saveDeliveries(
@@ -844,8 +838,9 @@ export class InnovationPathwayStepFourService {
           version,
         );
       }
+
       return {
-        response: institutions_expected_investment[0],
+        response: institutions_expected_investment,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
