@@ -11,12 +11,18 @@ import { ApiService } from '../../../../../../../../../../../../shared/services/
 })
 export class StepN4AddPartnerComponent {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
+  @Input() disabledOptionsPartners = [];
   visible = false;
   partnerBody = new AddPartnerBody();
   showForm = true;
   requesting = false;
   formIsInvalid = false;
-  constructor(public rolesSE: RolesService, public institutionsSE: InstitutionsService, private api: ApiService) {}
+
+  constructor(
+    public rolesSE: RolesService,
+    public institutionsSE: InstitutionsService,
+    private api: ApiService
+  ) {}
 
   openPartner() {
     this.api.dataControlSE.showPartnersRequest = true;
@@ -27,10 +33,9 @@ export class StepN4AddPartnerComponent {
 
     this.api.resultsSE.PATCHInnovationPathwayStep4Partners(this.partnerBody).subscribe({
       next: ({ response }) => {
-        response.institution.institutions_type_name = response?.institution?.obj_institutions?.obj_institution_type_code?.name;
-        response.institution.institutions_name = response?.institution?.obj_institutions?.name;
         this.requesting = false;
         this.body.institutions_expected_investment.push(response);
+        this.disabledOptionsPartners.push({ institutions_id: response.obj_result_institution.institutions_id });
         this.visible = false;
         this.api.alertsFe.show({ id: 'Partner', title: `Partner has been added.`, status: 'success' });
       },

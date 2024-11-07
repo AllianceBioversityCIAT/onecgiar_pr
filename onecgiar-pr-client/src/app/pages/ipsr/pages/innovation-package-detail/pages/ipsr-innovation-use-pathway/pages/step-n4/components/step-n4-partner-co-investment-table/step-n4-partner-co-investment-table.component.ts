@@ -9,6 +9,7 @@ import { RolesService } from '../../../../../../../../../../shared/services/glob
 })
 export class StepN4PartnerCoInvestmentTableComponent {
   @Input() body = new IpsrStep4Body();
+  @Input() disabledOptionsPartners = [];
 
   constructor(public rolesSE: RolesService) {}
 
