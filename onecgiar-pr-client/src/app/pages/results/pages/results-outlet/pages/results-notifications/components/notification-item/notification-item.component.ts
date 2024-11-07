@@ -15,10 +15,22 @@ export class NotificationItemComponent {
   requestingAccept = false;
   requestingReject = false;
 
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private shareRequestModalSE: ShareRequestModalService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
 
   invalidateRequest() {
-    return this.requestingAccept || this.requestingReject || this.api.rolesSE.platformIsClosed || this.isQAed;
+    return (
+      this.requestingAccept ||
+      this.requestingReject ||
+      this.api.rolesSE.platformIsClosed ||
+      this.isQAed ||
+      (!this.api.rolesSE.isAdmin &&
+        this.notification.obj_result.obj_version.id != this.api.dataControlSE.reportingCurrentPhase.phaseId &&
+        this.notification.obj_result.status_id != 3)
+    );
   }
 
   mapAndAccept(notification) {
