@@ -531,7 +531,7 @@ export class InnovationPathwayStepFourService {
                 { result_institution_id: institution.id, is_active: true },
                 { is_active: false },
               );
-            } else if (intitutionRole === 2) {
+            } else if (intitutionRole === 7) {
               await this._resultInstitutionsBudgetRepository.update(
                 { result_institution_id: institution.id, is_active: true },
                 { is_active: false },
