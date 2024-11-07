@@ -9,7 +9,7 @@
         </app-alert-status>
 
         <app-pr-select [options]="this.institutionsSE.institutionsList" label="Organization" optionLabel="full_name"
-            optionValue="institutions_id" placeholder="Select organization"
+            optionValue="institutions_id" placeholder="Select organization" [disableOptions]="this.disabledOptionsPartners"
             [(ngModel)]="this.partnerBody.institutions_id">
         </app-pr-select>
 

@@ -50,4 +50,4 @@
 </table>
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.institutions_expected_investment)" title="No partners added">
 </app-no-data-text>
-<app-step-n4-add-partner [body]="this.body"></app-step-n4-add-partner>
+<app-step-n4-add-partner [body]="this.body" [disabledOptionsPartners]="disabledOptionsPartners" ></app-step-n4-add-partner>

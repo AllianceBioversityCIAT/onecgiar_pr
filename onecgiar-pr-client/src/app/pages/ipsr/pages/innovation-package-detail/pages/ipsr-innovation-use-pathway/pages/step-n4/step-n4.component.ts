@@ -11,8 +11,13 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
+  disabledOptionsPartners = [];
 
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
+  constructor(
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
@@ -31,6 +36,10 @@ export class StepN4Component implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
       this.ipsrStep4Body = response;
+
+      this.disabledOptionsPartners = this.ipsrStep4Body.institutions_expected_investment.map(item => ({
+        institutions_id: item?.obj_result_institution?.institutions_id
+      }));
     });
   }
 
