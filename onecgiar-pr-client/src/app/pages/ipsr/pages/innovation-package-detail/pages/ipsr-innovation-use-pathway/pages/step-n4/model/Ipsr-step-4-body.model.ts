@@ -15,8 +15,12 @@ export class IpsrStep4Body {
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
+  obj_result_institution: any;
   institution: Institution = new Institution();
   budget: Budget = new Budget();
+  is_determined: number;
+  in_kind: string;
+  in_cash: string;
   is_active: boolean;
 }
 

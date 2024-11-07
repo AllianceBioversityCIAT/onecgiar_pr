@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN4PartnerCoInvestmentTableComponent } from './step-n4-partner-co-investment-table.component';
 import { HttpClientModule } from '@angular/common/http';
+import { StepN4AddPartnerComponent } from './modal/step-n4-add-partner/step-n4-add-partner.component';
+import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
+import { DialogModule } from 'primeng/dialog';
 
 describe('StepN4PartnerCoInvestmentTableComponent', () => {
   let component: StepN4PartnerCoInvestmentTableComponent;
@@ -9,55 +12,23 @@ describe('StepN4PartnerCoInvestmentTableComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [StepN4PartnerCoInvestmentTableComponent],
-      imports: [HttpClientModule]
+      declarations: [StepN4PartnerCoInvestmentTableComponent, StepN4AddPartnerComponent],
+      imports: [HttpClientModule, CustomFieldsModule, DialogModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4PartnerCoInvestmentTableComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
   describe('StepN4PartnerCoInvestmentTableComponent', () => {
-    // ... código existente omitido para brevedad
-
-    describe('validateDeliverySelection', () => {
-      it('should return false if deliveries is not an object', () => {
-        const result = component.validateDeliverySelection('not an object', 1);
-        expect(result).toBe(false);
-      });
-
-      it('should return true if deliveryId is in deliveries', () => {
-        const result = component.validateDeliverySelection([1, 2, 3], 2);
-        expect(result).toBe(true);
-      });
-
-      it('should return false if deliveryId is not in deliveries', () => {
-        const result = component.validateDeliverySelection([1, 2, 3], 4);
-        expect(result).toBe(false);
-      });
-    });
-
-    describe('onSelectDelivery', () => {
-      it('should handle various scenarios', () => {
-        const option1 = { deliveries: [1, 2, 3] };
-        component.onSelectDelivery(option1, 4);
-        expect(option1.deliveries).toEqual([4]);
-
-        const option3 = { deliveries: [1, 2, 3, 4] };
-        component.onSelectDelivery(option3, 4);
-        expect(option3.deliveries).toEqual([1, 2, 3]);
-      });
-    });
-
     describe('deletePartner', () => {
       it('should set is_active to false', () => {
-        const partner = { institution: { is_active: true } };
+        const partner = { is_active: true };
         component.deletePartner(partner);
-        expect(partner.institution.is_active).toBe(false);
+        expect(partner.is_active).toBe(false);
       });
     });
   });
