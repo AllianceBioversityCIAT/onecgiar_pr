@@ -45,24 +45,24 @@ class Result_ip {
   last_updated_by: string = null;
   result_innovation_package_id: string = null;
   experts_is_diverse: boolean = null;
-  is_not_diverse_justification: null = null;
+  is_not_diverse_justification: string = null;
   consensus_initiative_work_package_id: string = null;
   relevant_country_id: string = null;
   regional_leadership_id: string = null;
   regional_integrated_id: string = null;
   active_backstopping_id: string = null;
-  use_level_evidence_based: null = null;
-  readiness_level_evidence_based: null = null;
+  use_level_evidence_based: string = null;
+  readiness_level_evidence_based: string = null;
   is_expert_workshop_organized: boolean = null;
-  initiative_expected_time: null = null;
-  initiative_unit_time_id: null = null;
-  bilateral_expected_time: null = null;
-  bilateral_unit_time_id: null = null;
-  partner_expected_time: null = null;
-  partner_unit_time_id: null = null;
+  initiative_expected_time: string = null;
+  initiative_unit_time_id: string = null;
+  bilateral_expected_time: string = null;
+  bilateral_unit_time_id: string = null;
+  partner_expected_time: string = null;
+  partner_unit_time_id: string = null;
   is_result_ip_published: boolean = null;
-  ipsr_pdf_report: null = null;
-  assessed_during_expert_workshop_id: null = null;
+  ipsr_pdf_report: string = null;
+  assessed_during_expert_workshop_id: string = null;
   scaling_ambition_blurb: string = null;
 }
 

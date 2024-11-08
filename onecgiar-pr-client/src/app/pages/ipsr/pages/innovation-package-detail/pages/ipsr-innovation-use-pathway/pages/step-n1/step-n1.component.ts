@@ -4,7 +4,7 @@ import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from 
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
-import { expert_workshop_organized } from '../step-n3/model/Ipsr-step-3-body.model';
+import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
 
 @Component({
   selector: 'app-step-n1',
@@ -50,7 +50,7 @@ export class StepN1Component implements OnInit {
   }
 
   addExpert() {
-    this.ipsrStep1Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+    this.ipsrStep1Body.result_ip_expert_workshop_organized.push(new ExpertWorkshopOrganized());
   }
 
   workshopDescription() {
@@ -90,7 +90,7 @@ export class StepN1Component implements OnInit {
       }
 
       if (this.ipsrStep1Body?.result_ip_expert_workshop_organized?.length === 0) {
-        this.ipsrStep1Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+        this.ipsrStep1Body.result_ip_expert_workshop_organized.push(new ExpertWorkshopOrganized());
       }
 
       this.ipsrStep1Body.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
