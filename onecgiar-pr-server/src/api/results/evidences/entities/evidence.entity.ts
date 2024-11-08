@@ -36,19 +36,6 @@ export class Evidence {
   description!: string;
 
   @Column({
-    name: 'result_id',
-    type: 'bigint',
-    nullable: true,
-  })
-  result_id: number;
-
-  @ManyToOne(() => Result, (r) => r.id)
-  @JoinColumn({
-    name: 'result_id',
-  })
-  obj_result!: Result;
-
-  @Column({
     name: 'gender_related',
     type: 'boolean',
     nullable: true,
@@ -111,6 +98,60 @@ export class Evidence {
   is_sharepoint: number;
 
   @Column({
+    name: 'innovation_readiness_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  innovation_readiness_related!: boolean;
+
+  @Column({
+    name: 'innovation_use_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  innovation_use_related!: boolean;
+
+  // relations
+
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_id: number;
+
+  @Column({
+    name: 'evidence_type_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  evidence_type_id: number;
+
+  // object relations
+
+  @ManyToOne(() => Result, (r) => r.id)
+  @JoinColumn({
+    name: 'result_id',
+  })
+  obj_result!: Result;
+
+  @ManyToOne(() => EvidenceType, (et) => et.id)
+  @JoinColumn({
+    name: 'evidence_type_id',
+  })
+  evidence_type: EvidenceType;
+
+  @OneToMany(
+    () => EvidenceSharepoint,
+    (evidenceSharepoint) => evidenceSharepoint.evidence_object,
+  )
+  evidenceSharepointArray: EvidenceSharepoint[];
+
+  // audit fields
+
+  @Column({
     name: 'is_active',
     type: 'tinyint',
     nullable: false,
@@ -141,23 +182,4 @@ export class Evidence {
     nullable: true,
   })
   last_updated_date!: Date;
-
-  @Column({
-    name: 'evidence_type_id',
-    type: 'bigint',
-    nullable: true,
-  })
-  evidence_type_id: number;
-
-  @ManyToOne(() => EvidenceType, (et) => et.id)
-  @JoinColumn({
-    name: 'evidence_type_id',
-  })
-  evidence_type: EvidenceType;
-
-  @OneToMany(
-    () => EvidenceSharepoint,
-    (evidenceSharepoint) => evidenceSharepoint.evidence_object,
-  )
-  evidenceSharepointArray: EvidenceSharepoint[];
 }

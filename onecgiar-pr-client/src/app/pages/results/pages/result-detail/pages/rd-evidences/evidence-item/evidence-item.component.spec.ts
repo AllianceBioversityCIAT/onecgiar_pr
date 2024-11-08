@@ -120,6 +120,14 @@ describe('EvidenceItemComponent', () => {
 
       expect(result).toBeFalsy();
     });
+
+    it('should return false when evidence.is_sharepoint is true', () => {
+      component.evidence.is_sharepoint = true;
+
+      const result = component.validateCloudLink();
+
+      expect(result).toBeFalsy();
+    });
   });
 
   describe('isInvalidLink', () => {
@@ -340,6 +348,33 @@ describe('EvidenceItemComponent', () => {
 
       expect(cleanLinkSpy).not.toHaveBeenCalled();
       expect(cleanSPSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getEvidenceRelatedTitle', () => {
+    it('should return the correct title when both isInnoUse and isInnoDev are false', () => {
+      mockDataControlService.isInnoDev = false;
+      mockDataControlService.isInnoUse = false;
+
+      const result = component.getEvidenceRelatedTitle();
+
+      expect(result).toBe('Please indicate for which Impact Area tags this evidence is related to');
+    });
+
+    it('should return the correct title when isInnoDev is true', () => {
+      mockDataControlService.isInnoDev = true;
+
+      const result = component.getEvidenceRelatedTitle();
+
+      expect(result).toBe('Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Readiness level');
+    });
+
+    it('should return the correct title when isInnoUse is true', () => {
+      mockDataControlService.isInnoUse = true;
+
+      const result = component.getEvidenceRelatedTitle();
+
+      expect(result).toBe('Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Use');
     });
   });
 });

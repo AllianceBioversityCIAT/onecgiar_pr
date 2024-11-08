@@ -12,7 +12,13 @@ export class StepN3AssessedExpertWorkshopComponent implements OnInit {
   radioOptions = [];
   readinessList = [];
   useList = [];
-  attrList = ['', 'current_innovation_readiness_level', 'current_innovation_use_level', 'potential_innovation_readiness_level', 'potential_innovation_use_level'];
+  attrList = [
+    '',
+    'current_innovation_readiness_level',
+    'current_innovation_use_level',
+    'potential_innovation_readiness_level',
+    'potential_innovation_use_level'
+  ];
   informationList = [
     {
       title: 'Core innovation',
@@ -28,7 +34,10 @@ export class StepN3AssessedExpertWorkshopComponent implements OnInit {
     }
   ];
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
 
   ngOnInit(): void {
     this.api.resultsSE.getAssessedDuringExpertWorkshop().subscribe(({ response }) => {
@@ -53,14 +62,14 @@ export class StepN3AssessedExpertWorkshopComponent implements OnInit {
   GETAllClarisaInnovationReadinessLevels() {
     this.api.resultsSE.GETAllClarisaInnovationReadinessLevels().subscribe(({ response }) => {
       this.readinessList = response;
-      this.readinessList.map((option, index) => (option.index = String(index)));
+      this.readinessList.forEach((option, index) => (option.index = String(index)));
     });
   }
 
   GETAllClarisaInnovationUseLevels() {
     this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
       this.useList = response;
-      this.useList.map((option, index) => (option.index = String(index)));
+      this.useList.forEach((option, index) => (option.index = String(index)));
     });
   }
 

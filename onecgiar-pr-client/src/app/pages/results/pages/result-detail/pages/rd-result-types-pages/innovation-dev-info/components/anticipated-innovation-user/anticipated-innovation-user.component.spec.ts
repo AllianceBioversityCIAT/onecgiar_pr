@@ -21,12 +21,12 @@ describe('AnticipatedInnovationUserComponent', () => {
     mockApiService = {
       resultsSE: {
         GETAllActorsTypes: () => of({ response: [] }),
-        GETInstitutionsTypeTree: () => of({ response: [] }),
+        GETInstitutionsTypeTree: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
       }
-    }
+    };
     await TestBed.configureTestingModule({
       declarations: [
         AnticipatedInnovationUserComponent,
@@ -36,16 +36,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         FeedbackValidationDirective,
         AddButtonComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        RadioButtonModule,
-        FormsModule
-      ],
-      providers: [
-        { provide: ApiService, useValue: mockApiService },
-      ],
-    })
-      .compileComponents();
+      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
+      providers: [{ provide: ApiService, useValue: mockApiService }]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AnticipatedInnovationUserComponent);
     component = fixture.componentInstance;
@@ -83,7 +76,8 @@ describe('AnticipatedInnovationUserComponent', () => {
           has_men: false,
           has_men_youth: false,
           has_women: false,
-          has_women_youth: false
+          has_women_youth: false,
+          addressing_demands: 'yes'
         }
       ];
       component.body.innovatonUse.organization = [
@@ -95,7 +89,8 @@ describe('AnticipatedInnovationUserComponent', () => {
           other_institution: '',
           graduate_students: '',
           hide: false,
-          id: 1
+          id: 1,
+          addressing_demands: 'yes'
         }
       ];
 
@@ -104,10 +99,11 @@ describe('AnticipatedInnovationUserComponent', () => {
           is_active: true,
           unit_of_measure: '',
           quantity: 1,
-          result_ip_measure_id: 1
+          result_ip_measure_id: 1,
+          addressing_demands: 'yes'
         }
       ];
-      component.body.innovation_user_to_be_determined = false
+      component.body.innovation_user_to_be_determined = false;
 
       const alertNeeded = component.checkAlert();
 
@@ -117,7 +113,7 @@ describe('AnticipatedInnovationUserComponent', () => {
       component.body.innovatonUse.actors = [];
       component.body.innovatonUse.organization = [];
       component.body.innovatonUse.measures = [];
-      component.body.innovation_user_to_be_determined = false
+      component.body.innovation_user_to_be_determined = false;
 
       const alertNeeded = component.checkAlert();
 
@@ -125,7 +121,7 @@ describe('AnticipatedInnovationUserComponent', () => {
     });
 
     it('should check if alert is needed when innovation_user_to_be_determined is true', () => {
-      component.body.innovation_user_to_be_determined = true
+      component.body.innovation_user_to_be_determined = true;
 
       const alertNeeded = component.checkAlert();
 
@@ -179,21 +175,48 @@ describe('AnticipatedInnovationUserComponent', () => {
     it('should return children for a given institution type', () => {
       const institution_types_id = 1;
       const institutionsTypeTreeList = [
-        { code: 1, childrens: [{ id: 11, name: 'Child 1' }, { id: 12, name: 'Child 2' }] },
-        { code: 2, childrens: [{ id: 21, name: 'Child 3' }, { id: 22, name: 'Child 4' }] },
+        {
+          code: 1,
+          childrens: [
+            { id: 11, name: 'Child 1' },
+            { id: 12, name: 'Child 2' }
+          ]
+        },
+        {
+          code: 2,
+          childrens: [
+            { id: 21, name: 'Child 3' },
+            { id: 22, name: 'Child 4' }
+          ]
+        }
       ];
       component.institutionsTypeTreeList = institutionsTypeTreeList;
 
       const result = component.getInstitutionsTypeTreeChildrens(institution_types_id);
 
-      expect(result).toEqual([{ id: 11, name: 'Child 1' }, { id: 12, name: 'Child 2' }]);
+      expect(result).toEqual([
+        { id: 11, name: 'Child 1' },
+        { id: 12, name: 'Child 2' }
+      ]);
     });
 
     it('should return an empty array if institution type is not found', () => {
       const institution_types_id = 3;
       const institutionsTypeTreeList = [
-        { code: 1, childrens: [{ id: 11, name: 'Child 1' }, { id: 12, name: 'Child 2' }] },
-        { code: 2, childrens: [{ id: 21, name: 'Child 3' }, { id: 22, name: 'Child 4' }] },
+        {
+          code: 1,
+          childrens: [
+            { id: 11, name: 'Child 1' },
+            { id: 12, name: 'Child 2' }
+          ]
+        },
+        {
+          code: 2,
+          childrens: [
+            { id: 21, name: 'Child 3' },
+            { id: 22, name: 'Child 4' }
+          ]
+        }
       ];
       component.institutionsTypeTreeList = institutionsTypeTreeList;
 
@@ -235,8 +258,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         other_institution: '',
         graduate_students: '',
         hide: false,
-        is_active: true
-      }
+        is_active: true,
+        addressing_demands: 'yes'
+      };
       component.body.innovatonUse.organization = [organization];
 
       component.removeOrganization(organizationItem, index);
@@ -282,8 +306,9 @@ describe('AnticipatedInnovationUserComponent', () => {
         has_men: false,
         has_men_youth: false,
         has_women: false,
-        has_women_youth: false
-      }
+        has_women_youth: false,
+        addressing_demands: 'yes'
+      };
       component.body.innovatonUse.actors = [actors];
 
       component.removeActor(actorItem, index);
@@ -309,11 +334,7 @@ describe('AnticipatedInnovationUserComponent', () => {
 
   describe('removeOtherInOrg()', () => {
     it('should remove items with code 78 from disableOrganizations', () => {
-      const disableOrganizations = [
-        { code: 123 },
-        { code: 78 },
-        { code: 456 },
-      ];
+      const disableOrganizations = [{ code: 123 }, { code: 78 }, { code: 456 }];
 
       const result = component.removeOtherInOrg(disableOrganizations);
 
@@ -335,7 +356,7 @@ describe('AnticipatedInnovationUserComponent', () => {
 
   describe('disableOrganizations()', () => {
     it('should return a list of disabled organizations', () => {
-      const organization =  {
+      const organization = {
         is_active: true,
         institution_types_id: 1,
         institution_sub_type_id: null,
@@ -343,19 +364,20 @@ describe('AnticipatedInnovationUserComponent', () => {
         other_institution: '',
         graduate_students: '',
         hide: false,
-        id: 1
-      }
+        id: 1,
+        addressing_demands: 'yes'
+      };
       component.body.innovatonUse.organization = [organization];
 
       const result = component.disableOrganizations;
 
-      expect(result).toEqual([{code:1}])
+      expect(result).toEqual([{ code: 1 }]);
     });
   });
 
   describe('getAllSubTypes()', () => {
     it('should return a list of all subtypes', () => {
-      const organization =  {
+      const organization = {
         is_active: true,
         institution_types_id: 1,
         institution_sub_type_id: 2,
@@ -363,13 +385,14 @@ describe('AnticipatedInnovationUserComponent', () => {
         other_institution: '',
         graduate_students: '',
         hide: false,
-        id: 1
-      }
+        id: 1,
+        addressing_demands: 'yes'
+      };
       component.body.innovatonUse.organization = [organization];
 
       const result = component.getAllSubTypes;
 
-      expect(result).toEqual([{code:2}])
+      expect(result).toEqual([{ code: 2 }]);
     });
   });
 
@@ -378,7 +401,7 @@ describe('AnticipatedInnovationUserComponent', () => {
       const list = [
         { id: 1, is_active: true },
         { id: 2, is_active: false },
-        { id: 3, is_active: true },
+        { id: 3, is_active: true }
       ];
 
       const result = component.hasElementsWithId(list, 'id');
@@ -391,7 +414,7 @@ describe('AnticipatedInnovationUserComponent', () => {
       const list = [
         { id: 1, is_active: true },
         { id: 2, is_active: false },
-        { id: 3, is_active: true },
+        { id: 3, is_active: true }
       ];
 
       const result = component.hasElementsWithId(list, 'id');
@@ -405,19 +428,17 @@ describe('AnticipatedInnovationUserComponent', () => {
     it('should return a string with actor description', () => {
       const description = component.actorDescription();
 
-      expect(description).toContain("If the innovation does not target specific groups of actors or people");
+      expect(description).toContain('If the innovation does not target specific groups of actors or people');
       expect(description).toContain("CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years.");
-      expect(description).toContain("We are currently working to include broader diversity dimensions beyond male, female and youth, which will be implemented in future reporting periods.");
+      expect(description).toContain(
+        'We are currently working to include broader diversity dimensions beyond male, female and youth, which will be implemented in future reporting periods.'
+      );
     });
   });
 
   describe('removeOther()', () => {
     it('should remove actors with actor_type_id equal to 5', () => {
-      const actors = [
-        { actor_type_id: 1 },
-        { actor_type_id: 5 },
-        { actor_type_id: 3 },
-      ];
+      const actors = [{ actor_type_id: 1 }, { actor_type_id: 5 }, { actor_type_id: 3 }];
 
       const filteredActors = component.removeOther(actors);
 

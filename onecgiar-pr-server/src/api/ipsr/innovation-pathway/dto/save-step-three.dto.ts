@@ -8,14 +8,13 @@ import { ResultIpExpertWorkshopOrganized } from '../entities/result-ip-expert-wo
 export class SaveStepTwoThree {
   public result_innovation_package: ResultInnovationPackage;
   public result_ip_result_core: Ipsr;
-  public innovatonUse: innovatonUseInterface;
-  public link_workshop_list: string;
+  public innovatonUse: InnovatonUseInterface;
   public result_ip_result_complementary: Ipsr[];
   public result_core_innovation: any;
   public result_ip_expert_workshop_organized: ResultIpExpertWorkshopOrganized[];
 }
 
-class innovatonUseInterface {
+class InnovatonUseInterface {
   public actors: ResultsIpActor[];
   public organization: ResultsIpInstitutionType[];
   public measures: ResultsByIpInnovationUseMeasure[];

@@ -4,6 +4,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import {
   CreateInnovationDevDto,
   Option,
+  SubOption,
 } from './dto/create-innovation-dev.dto';
 import { ResultActor } from '../result-actors/entities/result-actor.entity';
 import { IsNull } from 'typeorm';
@@ -40,78 +41,57 @@ export class InnoDevService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
 
-  saveOptionsAndSubOptions = async (
+  async saveOptionsAndSubOptions(
     resultId: number,
     user: number,
     options: Option[],
-  ) => {
-    for (const optionData of options) {
-      if (optionData.answer_boolean == null && optionData.answer_text == null) {
-        continue;
+  ) {
+    const saveAnswer = async (data: Option | SubOption) => {
+      if (data.answer_boolean == null && data.answer_text == null) {
+        return; // Skip if no valid answer
       }
-      const optionExist = await this._resultAnswerRepository.findOne({
+
+      const existingAnswer = await this._resultAnswerRepository.findOne({
         where: {
           result_id: resultId,
-          result_question_id: optionData.result_question_id,
+          result_question_id: data.result_question_id,
         },
       });
 
-      if (optionExist) {
-        optionExist.answer_boolean = optionData.answer_boolean;
-        optionExist.answer_text = optionData.answer_text;
-        optionExist.last_updated_by = user;
-        await this._resultAnswerRepository.save(optionExist);
+      if (existingAnswer) {
+        existingAnswer.answer_boolean = data.answer_boolean;
+        existingAnswer.answer_text = data.answer_text;
+        existingAnswer.last_updated_by = user;
+        await this._resultAnswerRepository.save(existingAnswer);
       } else {
-        const optionAnswer = new ResultAnswer();
-        optionAnswer.result_question_id = optionData.result_question_id;
-        optionAnswer.answer_boolean = optionData.answer_boolean;
-        optionAnswer.answer_text = optionData.answer_text;
-        optionAnswer.result_id = resultId;
-        optionAnswer.created_by = user;
-        optionAnswer.last_updated_by = user;
+        const newAnswer = new ResultAnswer();
+        newAnswer.result_question_id = data.result_question_id;
+        newAnswer.answer_boolean = data.answer_boolean;
+        newAnswer.answer_text = data.answer_text;
+        newAnswer.result_id = resultId;
+        newAnswer.created_by = user;
+        newAnswer.last_updated_by = user;
 
-        await this._resultAnswerRepository.save(optionAnswer);
+        await this._resultAnswerRepository.save(newAnswer);
       }
+    };
 
-      for (const subOptionData of optionData.subOptions) {
-        if (
-          subOptionData.answer_boolean === null &&
-          subOptionData.answer_text === null
-        ) {
-          continue;
-        }
-        const subOptionExist = await this._resultAnswerRepository.findOne({
-          where: {
-            result_id: resultId,
-            result_question_id: subOptionData.result_question_id,
-          },
-        });
-        if (subOptionExist) {
-          subOptionExist.answer_boolean = subOptionData.answer_boolean;
-          subOptionExist.answer_text = subOptionData.answer_text;
-          subOptionExist.last_updated_by = user;
-          await this._resultAnswerRepository.save(subOptionExist);
-        } else {
-          const subOptionAnswer = new ResultAnswer();
-          subOptionAnswer.result_question_id = subOptionData.result_question_id;
-          subOptionAnswer.answer_boolean = subOptionData.answer_boolean;
-          subOptionAnswer.answer_text = subOptionData.answer_text;
-          subOptionAnswer.result_id = resultId;
-          subOptionAnswer.created_by = user;
-          subOptionAnswer.last_updated_by = user;
+    for (const optionData of options) {
+      await saveAnswer(optionData); // Save main option
 
-          await this._resultAnswerRepository.save(subOptionAnswer);
-        }
+      // Save sub-options
+      for (const subOptionData of optionData.subOptions ?? []) {
+        await saveAnswer(subOptionData);
       }
     }
-  };
+  }
 
-  saveEvidence = async (
+  async saveEvidence(
     resultId: number,
     user: number,
     evidences: Evidence[],
     evidence_type_id: number,
-  ) => {
+  ) {
     const existingEvidences = await this._evidenceRepository.find({
       where: {
         result_id: resultId,
@@ -160,9 +140,9 @@ export class InnoDevService {
         await this._evidenceRepository.save(newEvidence);
       }
     }
-  };
+  }
 
-  async saveAnticepatedInnoUser(
+  async saveAnticipatedInnoUser(
     resultId: number,
     user: number,
     { innovatonUse: crtr }: InnovationUseDto,
@@ -233,6 +213,7 @@ export class InnoDevService {
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
               how_many: el?.how_many,
+              addressing_demands: this.isNullData(el?.addressing_demands),
             },
           );
         } else {
@@ -261,6 +242,7 @@ export class InnoDevService {
             sex_and_age_disaggregation:
               el?.sex_and_age_disaggregation === true ? true : false,
             how_many: el?.how_many,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }
@@ -304,6 +286,7 @@ export class InnoDevService {
               how_many: this.isNullData(el?.how_many),
               is_active: el?.is_active,
               graduate_students: this.isNullData(el?.graduate_students),
+              addressing_demands: this.isNullData(el?.addressing_demands),
             });
           }
         } else {
@@ -323,6 +306,7 @@ export class InnoDevService {
             graduate_students: this.isNullData(el?.graduate_students),
             institution_roles_id: 5,
             how_many: el?.how_many,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }
@@ -371,6 +355,7 @@ export class InnoDevService {
               quantity: this.isNullData(el.quantity),
               last_updated_by: user,
               is_active: el.is_active == undefined ? true : el.is_active,
+              addressing_demands: this.isNullData(el?.addressing_demands),
             },
           );
         } else {
@@ -387,6 +372,7 @@ export class InnoDevService {
             unit_of_measure: this.isNullData(el?.unit_of_measure),
             created_by: user,
             last_updated_by: user,
+            addressing_demands: this.isNullData(el?.addressing_demands),
           });
         }
       }

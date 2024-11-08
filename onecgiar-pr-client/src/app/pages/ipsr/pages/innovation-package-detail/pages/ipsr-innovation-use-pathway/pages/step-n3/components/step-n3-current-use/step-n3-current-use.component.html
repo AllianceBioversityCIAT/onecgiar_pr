@@ -80,7 +80,7 @@
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.evidence_link">
+                    [required]="true" [(ngModel)]="this.actorItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -134,7 +134,7 @@
                 </app-pr-input>
 
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [(ngModel)]="this.organizationItem.evidence_link" [required]="!!organizationItem?.id">
+                    [(ngModel)]="this.organizationItem.evidence_link" [required]="true">
                 </app-pr-input>
             </div>
         </div>
@@ -164,7 +164,7 @@
         </div>
         <div class="right_content">
             <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="this.measuresItem.evidence_link">
+                [required]="true" [(ngModel)]="this.measuresItem.evidence_link">
             </app-pr-input>
         </div>
 

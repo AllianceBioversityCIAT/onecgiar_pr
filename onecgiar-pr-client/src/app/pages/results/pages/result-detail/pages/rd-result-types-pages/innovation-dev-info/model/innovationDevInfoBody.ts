@@ -20,6 +20,7 @@ export class InnovationDevInfoBody {
   public initiative_expected_investment: Initiative_expected_investment[] = [];
   public bilateral_expected_investment: Bilateral_expected_investment[] = [];
   public institutions_expected_investment: Institutions_expected_investment[] = [];
+  public previous_irl: number;
 }
 
 class InnovatonUse {
@@ -33,6 +34,7 @@ export class Measure {
   quantity: number = null;
   is_active: boolean = null;
   result_ip_measure_id: any;
+  addressing_demands: string;
 }
 
 export class Organization {
@@ -45,6 +47,7 @@ export class Organization {
   hide: boolean;
   is_active: boolean;
   id: any;
+  addressing_demands: string;
 }
 
 export class Actor {
@@ -66,6 +69,7 @@ export class Actor {
   has_men_youth: any;
   has_women: any;
   has_women_youth: any;
+  addressing_demands: string;
 }
 
 export class linkType {

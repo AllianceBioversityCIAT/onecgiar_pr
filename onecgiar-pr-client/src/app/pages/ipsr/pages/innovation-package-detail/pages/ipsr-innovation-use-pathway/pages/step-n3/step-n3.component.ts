@@ -1,6 +1,5 @@
-/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
-import { ActorN3, IpsrStep3Body, OrganizationN3, expert_workshop_organized } from './model/Ipsr-step-3-body.model';
+import { ActorN3, IpsrStep3Body, OrganizationN3 } from './model/Ipsr-step-3-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
@@ -14,13 +13,12 @@ export class StepN3Component implements OnInit {
   rangesOptions = [];
   ipsrStep3Body = new IpsrStep3Body();
   innovationUseList = [];
-  radioOptions = [
-    { id: true, name: 'Yes, an expert workshop was organized' },
-    { id: false, name: 'No expert workshop was organized' }
-  ];
   result_core_innovation: any;
   innoUseLevel: number;
   rangeLevel2Required = true;
+  showDetailsOfReadiness = false;
+  showDetailsOfUseLevel = false;
+  savingSection = false;
 
   constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
 
@@ -29,11 +27,6 @@ export class StepN3Component implements OnInit {
     this.GETAllClarisaInnovationUseLevels();
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('Step 3');
-  }
-
-  hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
-    return finalList.length;
   }
 
   openClosed(response) {
@@ -57,20 +50,32 @@ export class StepN3Component implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe(({ response }) => {
-      this.ipsrStep3Body = this.openClosed(response);
+    this.savingSection = true;
+    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe({
+      next: ({ response }) => {
+        this.ipsrStep3Body = this.openClosed(response);
 
-      this.convertOrganizations(response?.innovatonUse?.organization);
-      this.result_core_innovation = response.result_core_innovation;
+        this.convertOrganizations(response?.innovatonUse?.organization);
+        this.result_core_innovation = response.result_core_innovation;
+        this.showDetailsOfReadiness = !!this.ipsrStep3Body?.result_ip_result_core?.readiness_details_of_evidence;
+        this.showDetailsOfUseLevel = !!this.ipsrStep3Body?.result_ip_result_core?.use_details_of_evidence;
 
-      if (this.ipsrStep3Body.innovatonUse.actors.length == 0) {
-        this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
-      }
-      if (this.ipsrStep3Body.innovatonUse.organization.length == 0) {
-        this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
-      }
-      if (this.ipsrStep3Body.result_ip_expert_workshop_organized.length == 0) {
-        this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
+        this.ipsrStep3Body?.result_ip_result_complementary.forEach((item: any) => {
+          item.showDetailsOfReadiness = !!item.readiness_details_of_evidence;
+          item.showDetailsOfUseLevel = !!item.use_details_of_evidence;
+        });
+
+        if (this.ipsrStep3Body.innovatonUse.actors.length === 0) {
+          this.ipsrStep3Body.innovatonUse.actors.push(new ActorN3());
+        }
+        if (this.ipsrStep3Body.innovatonUse.organization.length === 0) {
+          this.ipsrStep3Body.innovatonUse.organization.push(new OrganizationN3());
+        }
+        this.savingSection = false;
+      },
+      error: err => {
+        this.savingSection = false;
+        console.error(err);
       }
     });
   }
@@ -151,25 +156,8 @@ export class StepN3Component implements OnInit {
       }
     });
   }
-  cleanEvidence() {
-    if (this.ipsrStep3Body.result_innovation_package.is_expert_workshop_organized === true) return;
-    this.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based = null;
-    this.ipsrStep3Body.result_innovation_package.use_level_evidence_based = null;
-  }
 
   resultUrl(resultCode, phase) {
     return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
-  }
-
-  workshopDescription() {
-    return `A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>`;
-  }
-
-  addExpert() {
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.push(new expert_workshop_organized());
-  }
-
-  delete(index) {
-    this.ipsrStep3Body.result_ip_expert_workshop_organized.splice(index, 1);
   }
 }

@@ -169,6 +169,14 @@ export class ResultInnovationPackage extends BaseEntity {
   })
   scaling_ambition_blurb!: string;
 
+  @Column({
+    name: 'participants_consent',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  participants_consent: boolean;
+
   @ManyToOne(() => AssessedDuringExpertWorkshop, (adewp) => adewp.id)
   @JoinColumn({
     name: 'assessed_during_expert_workshop_id',

@@ -833,8 +833,12 @@ export class ShareResultRequestService {
         relations: { obj_version: true },
       });
 
-      if (!res?.obj_version?.status) {
-        return this.createInactiveResultResponse();
+      if (!res) {
+        return {
+          response: {},
+          message: 'The result was not found',
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
       if (!rr?.share_result_request_id) {
@@ -860,16 +864,9 @@ export class ShareResultRequestService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  private createInactiveResultResponse() {
-    return {
-      response: {},
-      message: 'The result is not active',
-      status: HttpStatus.BAD_REQUEST,
-    };
   }
 
   private createInvalidShareRequestResponse() {
