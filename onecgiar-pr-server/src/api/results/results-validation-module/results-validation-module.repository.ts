@@ -1186,6 +1186,15 @@ export class resultValidationRepository
 									WHEN (
 										SELECT COUNT(*) 
 										FROM result_answers ra
+										LEFT JOIN result_questions rq345 on ra.result_question_id = rq345.result_question_id
+										WHERE ra.result_id = r.id
+											AND rq345.parent_question_id IN (2, 3)
+											AND ra.result_question_id NOT IN (4,8)
+											AND ra.answer_boolean = TRUE
+									) > 0 THEN 1
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
 										WHERE ra.result_id = r.id
 											AND ra.result_question_id IN (4, 8)
 											AND (ra.answer_boolean IS NULL OR ra.answer_boolean = FALSE)
