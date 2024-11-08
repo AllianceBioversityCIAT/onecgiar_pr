@@ -3,7 +3,7 @@ import {
   ContributorResultTocResult,
   CreateResultsTocResultDto,
 } from './dto/create-results-toc-result.dto';
-import { ResultsTocResultRepository } from './results-toc-results.repository';
+import { ResultsTocResultRepository } from './repositories/results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';

@@ -8,7 +8,7 @@ import { ResultRepository } from '../../api/results/result.repository';
 import { ApplicationModulesRepository } from '../../api/versioning/repositories/application-modules.repository';
 import { NonPooledProjectRepository } from '../../api/results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../../api/results/results-centers/results-centers.repository';
-import { ResultsTocResultRepository } from '../../api/results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../../api/results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultByInitiativesRepository } from '../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -31,16 +31,16 @@ import { ResultsKnowledgeProductAuthorRepository } from '../../api/results/resul
 import { ResultsKnowledgeProductKeywordRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
-import { ResultsTocResultIndicatorsRepository } from '../../api/results/results-toc-results/results-toc-results-indicators.repository';
+import { ResultsTocResultIndicatorsRepository } from '../../api/results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
-import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/results-sdg-targets.respository';
-import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/result-toc-action-area.repository';
-import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/result-toc-result-target-indicator.repository';
+import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../../api/results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../../api/results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../../api/results/evidences/evidences.service';

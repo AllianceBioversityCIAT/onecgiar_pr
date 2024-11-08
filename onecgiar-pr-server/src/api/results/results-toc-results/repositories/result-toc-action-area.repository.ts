@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultTocActionArea } from './entities/result-toc-action-area.entity';
-import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { ResultTocActionArea } from '../entities/result-toc-action-area.entity';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 
 @Injectable()
 export class ResultsActionAreaOutcomeRepository
