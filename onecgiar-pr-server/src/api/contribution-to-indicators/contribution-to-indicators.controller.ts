@@ -23,6 +23,24 @@ export class ContributionToIndicatorsController {
     return this.contributionToIndicatorsService.create(tocId, user);
   }
 
+  @Get('outcomes/:initiativeCode')
+  findAllOutcomesByInitiativeCode(
+    @Param('initiativeCode') initiativeCode: string,
+  ) {
+    return this.contributionToIndicatorsService.findAllToCResultsByInitiativeCode(
+      initiativeCode,
+      true,
+    );
+  }
+
+  @Get('eois/:initiativeCode')
+  findAllEoIsByInitiativeCode(@Param('initiativeCode') initiativeCode: string) {
+    return this.contributionToIndicatorsService.findAllToCResultsByInitiativeCode(
+      initiativeCode,
+      false,
+    );
+  }
+
   @Get('get/:id')
   findOne(@Param('tocId') tocId: string) {
     return this.contributionToIndicatorsService.findOne(tocId);

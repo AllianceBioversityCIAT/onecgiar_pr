@@ -3,7 +3,7 @@ import { ContributionToIndicatorsModule } from './contribution-to-indicators.mod
 
 export const ContributionToIndicatorRoutes: Routes = [
   {
-    path: '',
+    path: '/',
     module: ContributionToIndicatorsModule,
   },
 ];

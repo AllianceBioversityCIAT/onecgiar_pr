@@ -19,6 +19,36 @@ export class ContributionToIndicatorsService {
     private readonly _handlersError: HandlersError,
   ) {}
 
+  async findAllToCResultsByInitiativeCode(
+    initiativeCode: string,
+    isOutcome: boolean,
+  ) {
+    try {
+      if (!initiativeCode?.length) {
+        throw {
+          response: {},
+          message: 'missing data: initiativeCode',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const data =
+        await this._contributionToIndicatorsRepository.findAllToCResultsByInitiativeCode(
+          initiativeCode,
+          isOutcome,
+        );
+
+      return {
+        data,
+        message:
+          'The Contributor to Indicators list has been fetched successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   async create(tocId: string, user: TokenDto) {
     try {
       if (!tocId?.length) {
