@@ -1,18 +1,26 @@
-<app-pr-field-header label="Provide any reference materials that show the Innovation Package in action/ use"
-    [required]="false" description="{{addReferenceDescription()}}"></app-pr-field-header>
+<app-pr-field-header
+  label="Provide any reference materials that show the Innovation Package in action/ use"
+  [required]="false"
+  [description]="addReferenceDescription()"></app-pr-field-header>
 
 <div class="fields">
-    <div class="field" *ngFor="let item of this.body.ipsr_materials; let i=index">
-        <div class="number">{{i+1}}.</div>
-        <app-pr-input [required]="true" placeholder="Link" [(ngModel)]="item.link">
-        </app-pr-input>
-        <div class="delete" (click)="delete(i)" *ngIf="!this.rolesSE.readOnly">
-            <i class="clickEvent material-icons-round ymz-lsi-delete-icon"
-                style="color: red; cursor: pointer;">delete</i>
-        </div>
+  <div class="field" *ngFor="let item of this.body.ipsr_materials; let i = index">
+    <div class="number">{{ i + 1 }}.</div>
+
+    <app-pr-input [required]="true" placeholder="Link" [(ngModel)]="item.link"></app-pr-input>
+
+    <div class="delete" (click)="deleteItem(i)" *ngIf="!this.rolesSE.readOnly">
+      <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer">delete</i>
     </div>
+  </div>
 </div>
-<div style="width: 200px;">
-    <app-pr-button (click)="addItem()" padding="small" text="Add another link to reference material" icon="add_box"
-        type="link" *ngIf="!this.rolesSE.readOnly"></app-pr-button>
+
+<div style="width: 200px">
+  <app-pr-button
+    (click)="addItem()"
+    padding="small"
+    text="Add another link to reference material"
+    icon="add_box"
+    type="link"
+    *ngIf="!this.rolesSE.readOnly"></app-pr-button>
 </div>

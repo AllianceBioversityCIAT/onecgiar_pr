@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { ComplementaryInnovationComponent } from './complementary-innovation.component';
+import { ComplementaryInnovation, ComplementaryInnovationComponent } from './complementary-innovation.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { PrButtonComponent } from '../../../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -33,7 +33,19 @@ describe('ComplementaryInnovationComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [ComplementaryInnovationComponent, PrButtonComponent, PrFieldHeaderComponent, TableInnovationComponent, NewComplementaryInnovationComponent, YesOrNotByBooleanPipe, SaveButtonComponent, PrInputComponent, PrTextareaComponent, PrRadioButtonComponent, PrFieldValidationsComponent],
+      declarations: [
+        ComplementaryInnovationComponent,
+        PrButtonComponent,
+        PrFieldHeaderComponent,
+        TableInnovationComponent,
+        NewComplementaryInnovationComponent,
+        YesOrNotByBooleanPipe,
+        SaveButtonComponent,
+        PrInputComponent,
+        PrTextareaComponent,
+        PrRadioButtonComponent,
+        PrFieldValidationsComponent
+      ],
       imports: [RouterTestingModule, HttpClientTestingModule, DialogModule, FormsModule, TooltipModule, RadioButtonModule],
       providers: [
         ApiService,
@@ -52,50 +64,57 @@ describe('ComplementaryInnovationComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize component properties', () => {
-    expect(component.body).toBeUndefined();
-    expect(component.innovationPackageCreatorBody).toEqual([]);
-    expect(component.complemntaryFunction).toBeUndefined();
-    expect(component.status).toBe(false);
-    expect(component.informationComplementaryInnovations).toEqual([]);
-    expect(component.cols).toEqual([]);
-    expect(component.isInitiative).toBe(true);
-  });
-
-  it('should call API methods on component initialization', () => {
-    const apiService = TestBed.inject(ApiService);
-    jest.spyOn(apiService.resultsSE, 'GETComplementataryInnovationFunctions').mockReturnValue(of({}));
-    jest.spyOn(apiService.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(of({}));
+  it('should load innovation package on initialization', () => {
+    const mockResponse = { response: [] };
+    jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayStepTwoInnovationSelect').mockReturnValue(of(mockResponse));
 
     component.ngOnInit();
 
-    expect(apiService.isStepTwoOne).toBe(true);
-    expect(apiService.isStepTwoTwo).toBe(false);
-    expect(apiService.resultsSE.GETComplementataryInnovationFunctions).toHaveBeenCalled();
-    expect(apiService.resultsSE.GETInnovationPathwayStepTwoInnovationSelect).toHaveBeenCalled();
+    expect(component.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect).toHaveBeenCalled();
+    expect(component.innovationPackageCreatorBody).toEqual(mockResponse.response);
   });
 
-  it('should select innovation event', () => {
-    const e = { result_id: 1 };
-    component.selectInnovationEvent(e);
+  it('should load complementary functions on initialization', () => {
+    const mockResponse = { response: [] };
+    jest.spyOn(component.api.resultsSE, 'GETComplementataryInnovationFunctions').mockReturnValue(of(mockResponse));
 
-    expect(component.innovationPackageCreatorBody).toContain(e);
+    component.ngOnInit();
+
+    expect(component.api.resultsSE.GETComplementataryInnovationFunctions).toHaveBeenCalled();
+    expect(component.complementaryFunction).toEqual(mockResponse.response);
   });
 
-  it('should create innovation event', () => {
-    const e = { result_id: 1 };
-    jest.spyOn(component, 'getInformationInnovationComentary');
+  it('should load linked results on initialization', () => {
+    const mockResponse = { response: [] };
+    jest.spyOn(component.api.resultsSE, 'GET_resultsLinked').mockReturnValue(of(mockResponse));
 
-    component.createInnovationEvent(e);
+    component.ngOnInit();
 
-    expect(component.innovationPackageCreatorBody).toContain(e);
-    expect(component.getInformationInnovationComentary).toHaveBeenCalled();
+    expect(component.api.resultsSE.GET_resultsLinked).toHaveBeenCalled();
+    expect(component.linksToResultsBody).toEqual(mockResponse.response);
   });
 
-  it('should populate cols array correctly', () => {
-    component.complemntaryFunction = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  it('should add event to innovationPackageCreatorBody on selectInnovationEvent', () => {
+    const event = { result_id: 1 };
+    component.selectInnovationEvent(event);
 
-    component.columns();
+    expect(component.innovationPackageCreatorBody).toContain(event);
+  });
+
+  it('should call loadInformationComplementaryInnovations on createInnovationEvent', () => {
+    const event = { result_id: 1 } as any;
+    jest.spyOn(component, 'loadInformationComplementaryInnovations');
+
+    component.createInnovationEvent(event);
+
+    expect(component.innovationPackageCreatorBody).toContain(event);
+    expect(component.loadInformationComplementaryInnovations).toHaveBeenCalled();
+  });
+
+  it('should setup columns correctly', () => {
+    component.complementaryFunction = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    component.setupColumns();
 
     expect(component.cols).toEqual([
       [1, 2, 3, 4, 5],
@@ -103,169 +122,299 @@ describe('ComplementaryInnovationComponent', () => {
     ]);
   });
 
-  it('should populate cols array correctly when complementaryFunction length is less than 5', () => {
-    component.complemntaryFunction = [1, 2, 3];
-
-    component.columns();
-
-    expect(component.cols).toEqual([[1, 2, 3]]);
-  });
-
-  it('should cancel innovation', () => {
-    const result_id = 1;
+  it('should cancel innovation correctly', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
     const innovationFind = { result_code: 'code', selected: true };
-    component.innovationPackageCreatorBody = [{ result_id: '1', result_code: 'code' }] as any;
-    component.informationComplementaryInnovations = [innovationFind];
+    component.innovationPackageCreatorBody = [result];
+    component.informationInnovationDevelopments = [innovationFind];
 
-    component.cancelInnovation(result_id);
+    component.cancelInnovation(result);
 
     expect(component.innovationPackageCreatorBody.length).toBe(0);
     expect(innovationFind.selected).toBe(false);
   });
 
-  it('should return an array of selected innovations with "result_id" property', () => {
-    const complementaryInnovcation = [{ result_id: 1 }, { result_id: 2 }, { result_id: 3 }];
+  it('should cancel complementary innovation correctly', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 11 } as ComplementaryInnovation;
+    const innovationFind = { result_code: 'code', selected: true };
+    component.innovationPackageCreatorBody = [result];
+    component.informationComplementaryInnovations = [innovationFind];
 
-    const result = component.regiterInnovationComplementary(complementaryInnovcation);
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(0);
+    expect(innovationFind.selected).toBe(false);
+  });
+
+  it('should not cancel innovation if result_id is not found', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
+    component.innovationPackageCreatorBody = [{ result_id: '2', result_code: 'code2', result_type_id: 7 } as ComplementaryInnovation];
+
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(1);
+  });
+
+  it('should not change selected property if innovation is not found in the list', () => {
+    const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
+    component.innovationPackageCreatorBody = [result];
+    component.informationInnovationDevelopments = [{ result_code: 'code2', selected: true }];
+
+    component.cancelInnovation(result);
+
+    expect(component.innovationPackageCreatorBody.length).toBe(0);
+    expect(component.informationInnovationDevelopments[0].selected).toBe(true);
+  });
+
+  it('should register complementary innovations correctly', () => {
+    const complementaryInnovations = [{ result_id: 1 }, { result_id: 2 }, { result_id: 3 }] as any[];
+
+    const result = component.registerInnovationComplementary(complementaryInnovations);
 
     expect(result).toEqual([{ result_id: 1 }, { result_id: 2 }, { result_id: 3 }]);
   });
 
-  it('should return an array of selected innovations with "id" property if "result_id" is not available', () => {
-    const complementaryInnovcation = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  it('should use element.id if element.result_id is not defined on registerInnovationComplementary', () => {
+    const complementaryInnovations = [{ id: 1 }, { id: 2 }, { id: 3 }] as any[];
 
-    const result = component.regiterInnovationComplementary(complementaryInnovcation);
+    const result = component.registerInnovationComplementary(complementaryInnovations);
 
     expect(result).toEqual([{ result_id: 1 }, { result_id: 2 }, { result_id: 3 }]);
   });
 
-  it('should return an empty array if no innovations are provided', () => {
-    const complementaryInnovcation = [];
-
-    const result = component.regiterInnovationComplementary(complementaryInnovcation);
-
-    expect(result).toEqual([]);
-  });
-
-  it('should call PATCHComplementaryInnovation API method', () => {
-    const apiService = TestBed.inject(ApiService);
+  it('should call PATCHComplementaryInnovation API method on onSaveSection', () => {
+    component.linksToResultsBody = {
+      links: []
+    };
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '', result_type_id: 7 },
+      { result_id: 2, created_date: '', result_type_id: 11 },
+      { result_id: 3, created_date: '', result_type_id: 7 }
+    ] as any[];
     const mockResponse = {};
-    jest.spyOn(apiService.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of(mockResponse));
 
     component.onSaveSection();
 
-    expect(apiService.resultsSE.PATCHComplementaryInnovation).toHaveBeenCalledWith({ complementaryInovatins: component.body });
+    expect(component.api.resultsSE.PATCHComplementaryInnovation).toHaveBeenCalledWith({ complementaryInovatins: component.body });
   });
 
-  it('should navigate to step 3 when descrip is "next" and user is in read-only mode', () => {
-    const descrip = 'next';
+  it('should navigate to step 3 when description is "next" and user is in read-only mode', () => {
+    component.api.rolesSE.isAdmin = true;
+    component.api.isStepTwoTwo = true;
+    const description = 'next';
     const routerSpy = jest.spyOn(component.router, 'navigate');
     component.api.rolesSE.readOnly = true;
     component.ipsrDataControlSE.resultInnovationCode = '123';
     component.ipsrDataControlSE.resultInnovationPhase = 'phase';
 
-    component.onSavePreviuosNext(descrip);
+    component.onSavePreviousNext(description);
 
     expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-3'], {
       queryParams: { phase: 'phase' }
     });
   });
 
-  it('should navigate to step 1 when descrip is "previous" and user is in read-only mode', () => {
-    const descrip = 'previous';
+  it('should navigate to step 2 - basic info when description is "next" and this.api.isStepTwoTwo is false', () => {
+    component.api.rolesSE.isAdmin = true;
+    component.api.isStepTwoTwo = false;
+    const description = 'next';
     const routerSpy = jest.spyOn(component.router, 'navigate');
     component.api.rolesSE.readOnly = true;
     component.ipsrDataControlSE.resultInnovationCode = '123';
     component.ipsrDataControlSE.resultInnovationPhase = 'phase';
 
-    component.onSavePreviuosNext(descrip);
+    component.onSavePreviousNext(description);
+
+    expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-2/basic-info'], {
+      queryParams: { phase: 'phase' }
+    });
+  });
+
+  it('should navigate to step 1 when description is "previous" and user is in read-only mode', () => {
+    const description = 'previous';
+    const routerSpy = jest.spyOn(component.router, 'navigate');
+    component.api.rolesSE.readOnly = true;
+    component.ipsrDataControlSE.resultInnovationCode = '123';
+    component.ipsrDataControlSE.resultInnovationPhase = 'phase';
+
+    component.onSavePreviousNext(description);
 
     expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-1'], {
       queryParams: { phase: 'phase' }
     });
   });
 
-  it('it should redirect to step-3 if is read-only and descrip is next', () => {
-    const descrip = 'next';
-    const routerSpy = jest.spyOn(mockRouter, 'navigate');
-    component.api.rolesSE.readOnly = true;
-    component.ipsrDataControlSE.resultInnovationCode = '123';
-    component.ipsrDataControlSE.resultInnovationPhase = 'phase';
-
-    component.onSavePreviuosNext(descrip);
-
-    expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-3'], {
-      queryParams: { phase: 'phase' }
-    });
-  });
-
-  it('it should redirect to step-1 if is read-only and descrip is previous', () => {
-    const descrip = 'previous';
-    const routerSpy = jest.spyOn(mockRouter, 'navigate');
-    component.api.rolesSE.readOnly = true;
-    component.ipsrDataControlSE.resultInnovationCode = '123';
-    component.ipsrDataControlSE.resultInnovationPhase = 'phase';
-
-    component.onSavePreviuosNext(descrip);
-
-    expect(routerSpy).toHaveBeenCalledWith(['/ipsr/detail/123/ipsr-innovation-use-pathway/step-1'], {
-      queryParams: { phase: 'phase' }
-    });
-  });
-
-  it('should call PATCHComplementaryInnovationPrevious API method', () => {
-    const apiService = TestBed.inject(ApiService);
+  it('should call PATCHComplementaryInnovationPrevious API method on onSavePreviousNext', () => {
+    component.linksToResultsBody = {
+      links: []
+    };
     const mockResponse = {};
     component.api.rolesSE.readOnly = false;
 
-    jest.spyOn(apiService.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of(mockResponse));
 
-    component.onSavePreviuosNext('next');
+    component.onSavePreviousNext('next');
 
-    expect(apiService.resultsSE.PATCHComplementaryInnovationPrevious).toHaveBeenCalledWith({ complementaryInovatins: component.body }, 'next');
+    expect(component.api.resultsSE.PATCHComplementaryInnovationPrevious).toHaveBeenCalledWith({ complementaryInovatins: component.body }, 'next');
   });
 
-  it('should populate informationComplementaryInnovations and set selected flag to true for matching items', () => {
+  it('should load information complementary innovations correctly', () => {
     const mockResponse = {
       response: [
-        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1' },
-        { result_code: 'code2', title: 'Title 2', initiative_official_code: 'Initiative 2', lead_contact_person: 'Person 2' },
-        { result_code: 'code3', title: 'Title 3', initiative_official_code: 'Initiative 3', lead_contact_person: 'Person 3' }
+        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1', result_type_id: 7 },
+        { result_code: 'code2', title: 'Title 2', initiative_official_code: 'Initiative 2', lead_contact_person: 'Person 2', result_type_id: 7 },
+        { result_code: 'code3', title: 'Title 3', initiative_official_code: 'Initiative 3', lead_contact_person: 'Person 3', result_type_id: 7 }
       ]
     };
     jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
 
     component.innovationPackageCreatorBody = [{ result_code: 'code1' }, { result_code: 'code2' }] as any;
 
-    component.getInformationInnovationComentary('estado');
+    component.loadInformationComplementaryInnovations();
 
-    expect(component.informationComplementaryInnovations).toEqual(mockResponse.response);
-    expect(component.informationComplementaryInnovations[0].selected).toBe(true);
-    expect(component.informationComplementaryInnovations[1].selected).toBe(true);
-    expect(component.informationComplementaryInnovations[2].selected).toBeUndefined();
+    expect(component.informationInnovationDevelopments).toEqual(mockResponse.response);
+    expect(component.informationInnovationDevelopments[0].selected).toBe(true);
+    expect(component.informationInnovationDevelopments[1].selected).toBe(true);
+    expect(component.informationInnovationDevelopments[2].selected).toBeUndefined();
   });
 
   it('should set additional properties and validate initiative', () => {
     const mockResponse = {
-      response: [{ result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1' }]
+      response: [
+        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1', result_type_id: 7 }
+      ]
     };
     jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
     jest.spyOn(component.api.rolesSE, 'validateInitiative').mockReturnValue(true);
 
-    component.getInformationInnovationComentary('estado');
+    component.loadInformationComplementaryInnovations();
 
-    expect(component.informationComplementaryInnovations[0].full_name).toBe('code1 Title 1 Initiative 1 Initiative 1 Person 1 yes no ');
-    expect(component.informationComplementaryInnovations[0].result_code).toBe('code1');
-    expect(component.informationComplementaryInnovations[0].permissos).toBe(true);
+    expect(component.informationInnovationDevelopments[0].full_name).toBe('code1 Title 1 Initiative 1 Initiative 1 Person 1 yes no');
+    expect(component.informationInnovationDevelopments[0].result_code).toBe('code1');
+    expect(component.informationInnovationDevelopments[0].permissos).toBe(true);
   });
 
-  it('should call getInformationInnovationComentary and innovationSving', () => {
-    jest.spyOn(component, 'getInformationInnovationComentary');
-    jest.spyOn(component, 'innovationSving');
+  it('should call loadInformationComplementaryInnovations and loadInnovationPackage on saveEdit', () => {
+    jest.spyOn(component, 'loadInformationComplementaryInnovations');
+    jest.spyOn(component, 'loadInnovationPackage');
 
-    component.saveEdit(true);
+    component.saveEdit();
 
-    expect(component.getInformationInnovationComentary).toHaveBeenCalledWith(true);
-    expect(component.innovationSving).toHaveBeenCalled();
+    expect(component.loadInformationComplementaryInnovations).toHaveBeenCalled();
+    expect(component.loadInnovationPackage).toHaveBeenCalled();
+  });
+
+  it('should filter recent additions correctly in onSaveSection', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 2 }]
+    };
+
+    const recentAdditions = component.innovationPackageCreatorBody.filter(
+      element =>
+        element.created_date && element.result_type_id === 7 && !component.linksToResultsBody.links.some(link => link.result_id === element.result_id)
+    );
+
+    expect(recentAdditions).toEqual([
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ]);
+  });
+
+  it('should filter recent additions correctly in onSavePreviousNext', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 2 }]
+    };
+
+    const recentAdditions = component.innovationPackageCreatorBody.filter(
+      element =>
+        element.created_date && element.result_type_id === 7 && !component.linksToResultsBody.links.some(link => link.result_id === element.result_id)
+    );
+
+    expect(recentAdditions).toEqual([
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ]);
+  });
+
+  it('should call POST_resultsLinked if there are recent additions in onSaveSection', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 2 }]
+    };
+    const mockResponse = {};
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(of(mockResponse));
+
+    component.onSaveSection();
+
+    expect(component.api.resultsSE.POST_resultsLinked).toHaveBeenCalled();
+  });
+
+  it('should not call POST_resultsLinked if there are no recent additions in onSaveSection', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 1 }, { result_id: 2 }]
+    };
+    const mockResponse = {};
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovation').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(of(mockResponse));
+
+    component.onSaveSection();
+
+    expect(component.api.resultsSE.POST_resultsLinked).not.toHaveBeenCalled();
+  });
+
+  it('should call POST_resultsLinked if there are recent additions in onSavePreviousNext', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 },
+      { result_id: 3, created_date: '2023-01-03', result_type_id: 7 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 2 }]
+    };
+    component.api.rolesSE.readOnly = false;
+    const mockResponse = {};
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(of(mockResponse));
+
+    component.onSavePreviousNext('next');
+
+    expect(component.api.resultsSE.POST_resultsLinked).toHaveBeenCalled();
+  });
+
+  it('should not call POST_resultsLinked if there are no recent additions in onSavePreviousNext', () => {
+    component.innovationPackageCreatorBody = [
+      { result_id: 1, created_date: '2023-01-01', result_type_id: 7 },
+      { result_id: 2, created_date: '2023-01-02', result_type_id: 11 }
+    ] as any[];
+    component.linksToResultsBody = {
+      links: [{ result_id: 1 }, { result_id: 2 }]
+    };
+    const mockResponse = {};
+    jest.spyOn(component.api.resultsSE, 'PATCHComplementaryInnovationPrevious').mockReturnValue(of(mockResponse));
+    jest.spyOn(component.api.resultsSE, 'POST_resultsLinked').mockReturnValue(of(mockResponse));
+
+    component.onSavePreviousNext('next');
+
+    expect(component.api.resultsSE.POST_resultsLinked).not.toHaveBeenCalled();
   });
 });

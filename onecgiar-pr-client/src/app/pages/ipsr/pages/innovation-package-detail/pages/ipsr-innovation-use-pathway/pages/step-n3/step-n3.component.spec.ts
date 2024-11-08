@@ -12,6 +12,9 @@ import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-butt
 import { PrFieldValidationsComponent } from '../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
+import { CheckboxModule } from 'primeng/checkbox';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 
 describe('StepN3Component', () => {
   let component: StepN3Component;
@@ -25,8 +28,8 @@ describe('StepN3Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [StepN3Component, PrRadioButtonComponent, PrFieldHeaderComponent, PrRangeLevelComponent, PrInputComponent, PrTextareaComponent, SaveButtonComponent, PrButtonComponent, PrFieldValidationsComponent],
-      imports: [HttpClientTestingModule],
+      declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent, ],
+      imports: [HttpClientTestingModule, CheckboxModule, CustomFieldsModule],
       providers: [
         {
           provide: Router,
@@ -55,22 +58,6 @@ describe('StepN3Component', () => {
     expect(GETAllClarisaInnovationUseLevelsSpy).toHaveBeenCalled();
     expect(getSectionInformationSpy).toHaveBeenCalled();
     expect(detailSectionTitleSpy).toHaveBeenCalledWith('Step 3');
-  });
-
-  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is true', () => {
-    const list = [{ id: 1 }, { id: 2 }, { id: 3 }];
-    const attr = 'id';
-    component.api.rolesSE.readOnly = true;
-    const hasElementsWithId = component.hasElementsWithId(list, attr);
-    expect(hasElementsWithId).toBe(3);
-  });
-
-  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is false and item.is_active is true', () => {
-    const list = [{ is_active: true }, { is_active: true }, { is_active: true }];
-    const attr = 'is_active';
-    component.api.rolesSE.readOnly = false;
-    const hasElementsWithId = component.hasElementsWithId(list, attr);
-    expect(hasElementsWithId).toBe(3);
   });
 
   it('should update the "open" property of response items based on the matching item in ipsrStep3Body', () => {
@@ -150,7 +137,7 @@ describe('StepN3Component', () => {
     expect(updateRangeLevel2).toBe(false);
   });
 
-  it('should call GETInnovationPathwayByRiId and update ipsrStep3Body, convertOrganizations, result_core_innovation, and result_ip_expert_workshop_organized on getSectionInformation', () => {
+  it('should call GETInnovationPathwayByRiId and update ipsrStep3Body, convertOrganizations, result_core_innovation on getSectionInformation', () => {
     const response = {
       result_ip_result_complementary: [
         { result_by_innovation_package_id: 1, open: false },
@@ -161,7 +148,6 @@ describe('StepN3Component', () => {
         organization: [],
         actors: []
       },
-      result_ip_expert_workshop_organized: [],
       result_core_innovation: null
     };
     const GETInnovationPathwayByRiIdSpy = jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(of({ response }));
@@ -176,7 +162,6 @@ describe('StepN3Component', () => {
     expect(component.result_core_innovation).toBeNull();
     expect(component.ipsrStep3Body.innovatonUse.actors.length).toBe(1);
     expect(component.ipsrStep3Body.innovatonUse.organization.length).toBe(1);
-    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
   });
 
   it('should return true if innoUseLevel is 0 based on this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based', () => {
@@ -314,50 +299,8 @@ describe('StepN3Component', () => {
     expect(mapSpy).toHaveBeenCalled();
   });
 
-  it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
-    component.ipsrStep3Body = {
-      result_innovation_package: {
-        is_expert_workshop_organized: true
-      }
-    } as any;
-    const result = component.cleanEvidence();
-    expect(result).toBeUndefined();
-  });
-
-  it('should set readiness_level_evidence_based and use_level_evidence_based  to null if is_expert_workshop_organized is false on cleanEvidence', () => {
-    component.ipsrStep3Body = {
-      result_innovation_package: {
-        is_expert_workshop_organized: false
-      }
-    } as any;
-    component.cleanEvidence();
-    expect(component.ipsrStep3Body.result_innovation_package.readiness_level_evidence_based).toBeNull();
-    expect(component.ipsrStep3Body.result_innovation_package.use_level_evidence_based).toBeNull();
-  });
-
   it('should return the expected url string on resultUrl', () => {
     const url = component.resultUrl('12345', '1');
     expect(url).toBe('/result/result-detail/12345/general-information?phase=1');
-  });
-
-  it('should return expected string on workshopDescription', () => {
-    const result = component.workshopDescription();
-    expect(result).toBe('A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>');
-  });
-
-  it('should add expert to result_ip_expert_workshop_organized when addExpert has been called', () => {
-    component.ipsrStep3Body = {
-      result_ip_expert_workshop_organized: []
-    } as any;
-    component.addExpert();
-    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(1);
-  });
-
-  it('should remove the item at the given index from result_ip_expert_workshop_organized when delete has been called', () => {
-    component.ipsrStep3Body = {
-      result_ip_expert_workshop_organized: [{}, {}, {}]
-    } as any;
-    component.delete(1);
-    expect(component.ipsrStep3Body.result_ip_expert_workshop_organized.length).toBe(2);
   });
 });

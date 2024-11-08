@@ -4,10 +4,9 @@ export class IpsrStep3Body {
   result_ip_result_complementary: Resultipresultcomplementary[] = [];
   result_ip_result_core = new Resultipresultcomplementary();
   link_workshop_list: string;
-  result_ip_expert_workshop_organized: expert_workshop_organized[];
 }
 
-class Resultipresultcomplementary {
+export class Resultipresultcomplementary {
   created_by: string;
   readinees_evidence_link?: any;
   use_evidence_link?: any;
@@ -17,6 +16,8 @@ class Resultipresultcomplementary {
   readiness_details_of_evidence: string;
   use_details_of_evidence: string;
   open: boolean = true;
+  showDetailsOfReadiness: boolean;
+  showDetailsOfUseLevel: boolean;
 }
 
 class Resultinnovationpackage {
@@ -25,12 +26,11 @@ class Resultinnovationpackage {
   is_expert_workshop_organized = null;
 }
 
-export class expert_workshop_organized {
+export class ExpertWorkshopOrganized {
   first_name: string;
   last_name: string;
   email: string;
   workshop_role: string;
-  result_ip_expert_workshop_organized_id: any;
 }
 
 class InnovatonUse {
