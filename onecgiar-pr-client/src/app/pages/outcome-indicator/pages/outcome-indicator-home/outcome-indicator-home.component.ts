@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 
 @Component({
@@ -6,7 +6,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
   templateUrl: './outcome-indicator-home.component.html',
   styleUrl: './outcome-indicator-home.component.scss'
 })
-export class OutcomeIndicatorHomeComponent {
+export class OutcomeIndicatorHomeComponent implements OnInit {
   initiativeIdFilter = null;
   allInitiatives = [];
 
@@ -30,6 +30,6 @@ export class OutcomeIndicatorHomeComponent {
   }
 
   exportToExcel() {
-    console.info('Export to Excel');
+    console.error('Export to Excel');
   }
 }
