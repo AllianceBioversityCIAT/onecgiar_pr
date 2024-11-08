@@ -7,12 +7,18 @@
   <p class="outcomes_desc">Welcome to the Outcome indicators reporting module. Please select an action you would like to do.</p>
 
   <div class="outcomes_actions">
-    <div class="outcomes_actions_item" [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
+    <div
+      class="outcomes_actions_item"
+      routerLink="/outcome-indicator-module/eoi-outcome-home"
+      [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
       <i class="pi pi-sign-in" style="font-size: 4rem"></i>
       <p class="outcomes_actions_item--text">Report progress on End-Of-Initiative Outcomes</p>
     </div>
 
-    <div class="outcomes_actions_item" [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
+    <div
+      class="outcomes_actions_item"
+      routerLink="/outcome-indicator-module/work-package-outcome-home"
+      [ngClass]="{ disabled: !this.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }">
       <i class="pi pi-box" style="font-size: 4rem"></i>
       <p class="outcomes_actions_item--text">Report progress on Work Packages Outcomes</p>
     </div>
