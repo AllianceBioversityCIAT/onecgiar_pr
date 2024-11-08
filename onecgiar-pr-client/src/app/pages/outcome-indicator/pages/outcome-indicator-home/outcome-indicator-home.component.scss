@@ -2,42 +2,6 @@ p {
   margin: 0;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 2rem;
-  padding: 0;
-
-  .filters_phase {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-
-    .filters_phase_title {
-      margin-top: 20px;
-      margin-bottom: 7px;
-      text-align: left;
-      font-size: 1.1em;
-      font-weight: 500;
-      color: #5569dd;
-    }
-
-    .filters_phase_text {
-      padding: 6px 0;
-      font-size: 15px;
-    }
-  }
-}
-
-.separator_line {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  border-top: 2px solid #5569dd;
-  // Bottom shadow
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
-}
-
 .outcomes {
   display: flex;
   flex-direction: column;

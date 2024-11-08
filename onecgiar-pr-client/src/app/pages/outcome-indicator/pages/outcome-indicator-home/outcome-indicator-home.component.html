@@ -1,26 +1,3 @@
-<div class="filters">
-  <app-pr-select
-    [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
-    label="Initiative"
-    [required]="false"
-    [isStatic]="true"
-    optionLabel="full_name"
-    optionValue="initiative_id"
-    placeholder="Select Initiative"
-    labelDescInlineStyles="color: #5569dd"
-    [(ngModel)]="this.initiativeIdFilter">
-  </app-pr-select>
-
-  <div class="filters_phase">
-    <p class="filters_phase_title">Phase:</p>
-    <p class="filters_phase_text">
-      {{ this.api.dataControlSE.reportingCurrentPhase.phaseName }}
-    </p>
-  </div>
-</div>
-
-<div class="separator_line"></div>
-
 <div class="outcomes">
   <div class="outcomes_title">
     <i class="material-icons-outlined" style="font-size: 34px">assessment</i>
