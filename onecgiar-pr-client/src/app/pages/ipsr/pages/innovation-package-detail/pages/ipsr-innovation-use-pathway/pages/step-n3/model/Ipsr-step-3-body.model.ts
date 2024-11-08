@@ -26,7 +26,7 @@ class Resultinnovationpackage {
   is_expert_workshop_organized = null;
 }
 
-export class expert_workshop_organized {
+export class ExpertWorkshopOrganized {
   first_name: string;
   last_name: string;
   email: string;
