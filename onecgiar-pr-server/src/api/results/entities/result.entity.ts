@@ -29,6 +29,7 @@ import { ResultsByInstitution } from '../results_by_institutions/entities/result
 import { ShareResultRequest } from '../share-result-request/entities/share-result-request.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 
 @Entity()
 export class Result {
@@ -392,4 +393,7 @@ export class Result {
 
   @OneToMany(() => Notification, (ra) => ra.obj_result)
   obj_result_notification: Notification[];
+
+  @OneToMany(() => ContributionToIndicatorResult, (r) => r.result_object)
+  contribution_to_indicator_result_array: ContributionToIndicatorResult[];
 }

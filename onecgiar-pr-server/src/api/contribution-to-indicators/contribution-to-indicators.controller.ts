@@ -1,0 +1,41 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { ContributionToIndicatorsService } from './contribution-to-indicators.service';
+import { UserToken } from '../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ContributionToIndicatorsDto } from './dto/contribution-to-indicators.dto';
+
+@Controller()
+export class ContributionToIndicatorsController {
+  constructor(
+    private readonly contributionToIndicatorsService: ContributionToIndicatorsService,
+  ) {}
+
+  @Post()
+  create(@Query() tocId: string, @UserToken() user: TokenDto) {
+    return this.contributionToIndicatorsService.create(tocId, user);
+  }
+
+  @Get('get/:id')
+  findOne(@Param('tocId') tocId: string) {
+    return this.contributionToIndicatorsService.findOne(tocId);
+  }
+
+  @Patch()
+  update(
+    @Body() updateContributionToIndicatorDto: ContributionToIndicatorsDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.contributionToIndicatorsService.update(
+      updateContributionToIndicatorDto,
+      user,
+    );
+  }
+}

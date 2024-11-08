@@ -41,6 +41,7 @@ import { SharePointModule } from './shared/services/share-point/share-point.modu
 import { NotificationModule } from './api/notification/notification.module';
 import { UserNotificationSettingsModule } from './api/user-notification-settings/user-notification-settings.module';
 import { EmailNotificationManagementModule } from './shared/microservices/email-notification-management/email-notification-management.module';
+import { ContributionToIndicatorsModule } from './api/contribution-to-indicators/contribution-to-indicators.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { EmailNotificationManagementModule } from './shared/microservices/email-
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,
     NotificationModule,
+    ContributionToIndicatorsModule,
   ],
   controllers: [AppController],
   providers: [
