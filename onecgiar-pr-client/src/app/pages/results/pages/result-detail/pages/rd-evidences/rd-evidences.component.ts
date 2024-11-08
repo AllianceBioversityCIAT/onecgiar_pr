@@ -3,6 +3,7 @@ import { EvidencesBody } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -12,6 +13,7 @@ export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
+  isOptionalReadinessLevel: boolean;
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct)
@@ -23,6 +25,11 @@ export class RdEvidencesComponent implements OnInit {
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be also uploaded to the PRMS repository.</li>
     <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>`;
+
+    if (this.api.dataControlSE?.currentResult?.result_type_id === 7)
+      mainText +=
+        '<li>Provide evidence/documentation in support of the current innovation readiness level (for level 0 no evidence needs to be provided).</li>';
+
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
       mainText +=
         '<li>Capacity sharing for development does not currently require evidence submission for quality assurance due to the time/resource burden and potential unresolved General Data Protection Regulation (GDPR) issues.</li><li>By submitting a capacity sharing for development result it is understood that you have evidence to support the result submission, and that should a sub-sample be required this evidence could be made available.</li>';
@@ -33,7 +40,8 @@ export class RdEvidencesComponent implements OnInit {
   constructor(
     public api: ApiService,
     public innovationControlListSE: InnovationControlListService,
-    private saveButtonSE: SaveButtonService
+    private saveButtonSE: SaveButtonService,
+    public dataControlSE: DataControlService
   ) {}
 
   ngOnInit(): void {
@@ -46,6 +54,7 @@ export class RdEvidencesComponent implements OnInit {
       this.evidencesBody = response;
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
+      this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
     });
   }
 
@@ -140,6 +149,12 @@ export class RdEvidencesComponent implements OnInit {
     }
 
     return `<ul>${text}</ul>`;
+  }
+
+  validateHasInnoReadinessLevelEvidence() {
+    if (this.isOptionalReadinessLevel) return true;
+
+    return this.evidencesBody.evidences.some(evidence => evidence.innovation_readiness_related);
   }
 
   get validateButtonDisabled() {

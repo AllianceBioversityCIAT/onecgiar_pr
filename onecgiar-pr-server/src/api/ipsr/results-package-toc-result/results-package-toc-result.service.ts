@@ -24,6 +24,8 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -44,6 +46,8 @@ export class ResultsPackageTocResultService {
     private readonly _returnResponse: ReturnResponse,
     private readonly _versioningService: VersioningService,
     private readonly _resultTocResultService: ResultsTocResultsService,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
@@ -166,7 +170,7 @@ export class ResultsPackageTocResultService {
                 grant_title: cpnp.grant_title,
               });
             } else {
-              this._nonPooledProjectRepository.save({
+              const newNpp = await this._nonPooledProjectRepository.save({
                 results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
                 grant_title: cpnp.grant_title,
@@ -175,6 +179,12 @@ export class ResultsPackageTocResultService {
                 created_by: user.id,
                 last_updated_by: user.id,
                 non_pooled_project_type_id: 1,
+              });
+
+              await this._resultBilateralBudgetRepository.save({
+                non_pooled_projetct_id: newNpp.id,
+                created_by: user.id,
+                last_updated_by: user.id,
               });
             }
           }
@@ -208,7 +218,7 @@ export class ResultsPackageTocResultService {
               last_updated_by: user.id,
             });
           } else {
-            this._resultsCenterRepository.save({
+            await this._resultsCenterRepository.save({
               center_id: cenCC.code,
               result_id: rip.id,
               created_by: user.id,
@@ -272,6 +282,12 @@ export class ResultsPackageTocResultService {
               result_id: rip.id,
               created_by: user.id,
               last_updated_by: user.id,
+            });
+
+            await this._resultInstitutionsBudgetRepository.save({
+              result_institution_id: rbi.id,
+              last_updated_by: user?.id,
+              created_by: user.id,
             });
           }
 

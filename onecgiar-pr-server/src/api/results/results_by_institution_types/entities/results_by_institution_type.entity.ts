@@ -20,55 +20,6 @@ export class ResultsByInstitutionType {
   id: number;
 
   @Column({
-    name: 'results_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  results_id: number;
-
-  @ManyToOne(() => Result, (r) => r.id, { nullable: false })
-  @JoinColumn({
-    name: 'results_id',
-  })
-  obj_results: Result;
-
-  @Column({
-    name: 'institution_types_id',
-    type: 'int',
-    nullable: true,
-  })
-  institution_types_id: number;
-
-  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code, {
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'institution_types_id',
-  })
-  obj_institution_types!: ClarisaInstitutionsType;
-
-  @Column({
-    name: 'institution_roles_id',
-    type: 'bigint',
-    nullable: false,
-  })
-  institution_roles_id: number;
-
-  @ManyToOne(() => InstitutionRole, (ir) => ir.id, { nullable: false })
-  @JoinColumn({
-    name: 'institution_roles_id',
-  })
-  obj_institution_roles: InstitutionRole;
-
-  @Column({
-    name: 'is_active',
-    type: 'boolean',
-    nullable: false,
-    default: true,
-  })
-  is_active: boolean;
-
-  @Column({
     name: 'how_many',
     type: 'bigint',
     nullable: true,
@@ -88,6 +39,68 @@ export class ResultsByInstitutionType {
     nullable: true,
   })
   graduate_students!: number;
+
+  @Column({
+    name: 'addressing_demands',
+    type: 'text',
+    nullable: true,
+  })
+  addressing_demands!: string;
+
+  // relations
+
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  results_id: number;
+
+  @Column({
+    name: 'institution_types_id',
+    type: 'int',
+    nullable: true,
+  })
+  institution_types_id: number;
+
+  @Column({
+    name: 'institution_roles_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  institution_roles_id: number;
+
+  // object relations
+
+  @ManyToOne(() => Result, (r) => r.id, { nullable: false })
+  @JoinColumn({
+    name: 'results_id',
+  })
+  obj_results: Result;
+
+  @ManyToOne(() => ClarisaInstitutionsType, (cit) => cit.code, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'institution_types_id',
+  })
+  obj_institution_types!: ClarisaInstitutionsType;
+
+  @ManyToOne(() => InstitutionRole, (ir) => ir.id, { nullable: false })
+  @JoinColumn({
+    name: 'institution_roles_id',
+  })
+  obj_institution_roles: InstitutionRole;
+
+  // audit fields
+
+  @Column({
+    name: 'is_active',
+    type: 'boolean',
+    nullable: false,
+    default: true,
+  })
+  is_active: boolean;
 
   @ManyToOne(() => User, (u) => u.id, { nullable: false })
   @JoinColumn({

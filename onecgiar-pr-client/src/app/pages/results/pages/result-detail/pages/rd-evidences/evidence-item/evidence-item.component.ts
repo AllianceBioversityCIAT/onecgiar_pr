@@ -61,6 +61,14 @@ export class EvidenceItemComponent {
     `;
   }
 
+  getEvidenceRelatedTitle() {
+    if (!this.dataControlSE.isInnoDev && !this.dataControlSE.isInnoUse) {
+      return `Please indicate for which Impact Area tags this evidence is related to`;
+    }
+
+    return `Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation ${this.dataControlSE.isInnoDev ? 'Readiness level' : 'Use'}`;
+  }
+
   validateCloudLink() {
     if (this.evidence.is_sharepoint) {
       return false;
@@ -85,7 +93,7 @@ export class EvidenceItemComponent {
 
   isInvalidLink(value: string) {
     const regex = new RegExp(
-      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/\S*)?$/i
     );
 
     return regex.test(value.trim());

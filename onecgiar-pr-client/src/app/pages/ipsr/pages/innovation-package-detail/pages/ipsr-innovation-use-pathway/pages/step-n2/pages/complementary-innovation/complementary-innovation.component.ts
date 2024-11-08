@@ -20,6 +20,7 @@ export class ComplementaryInnovation {
   result_type_name: string;
   title: string;
   selected: boolean;
+  id: string;
 }
 
 @Component({
@@ -30,147 +31,177 @@ export class ComplementaryInnovation {
 export class ComplementaryInnovationComponent implements OnInit {
   body: any;
   innovationPackageCreatorBody: ComplementaryInnovation[] = [];
-  complemntaryFunction: any;
-  status: boolean = false;
+  complementaryFunction: any;
+  status = false;
   informationComplementaryInnovations: any[] = [];
-  cols = [];
-  isInitiative: boolean = true;
+  informationInnovationDevelopments: any[] = [];
+  cols: any[] = [];
+  isInitiative = true;
+  linksToResultsBody: any;
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, public router: Router) {}
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    public router: Router
+  ) {}
 
   ngOnInit(): void {
     this.api.isStepTwoOne = true;
     this.api.isStepTwoTwo = false;
 
-    this.innovationSving();
-
-    this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe(resp => {
-      this.complemntaryFunction = resp['response'];
-      this.columns();
-    });
-
-    this.getInformationInnovationComentary(false);
+    this.loadInnovationPackage();
+    this.loadComplementaryFunctions();
+    this.loadInformationComplementaryInnovations();
+    this.loadLinkedResults();
   }
 
-  selectInnovationEvent(e) {
-    this.innovationPackageCreatorBody.push(e);
+  selectInnovationEvent(event: any): void {
+    this.innovationPackageCreatorBody.push(event);
   }
 
-  innovationSving() {
+  loadInnovationPackage(): void {
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe(resp => {
-      this.innovationPackageCreatorBody = resp['response'];
+      this.innovationPackageCreatorBody = resp?.response;
     });
   }
 
-  createInnovationEvent(e) {
-    this.innovationPackageCreatorBody.push(e);
-    this.getInformationInnovationComentary(true);
+  createInnovationEvent(event: ComplementaryInnovation): void {
+    this.innovationPackageCreatorBody.push(event);
+    this.loadInnovationPackage();
+    this.loadInformationComplementaryInnovations();
   }
 
-  columns() {
-    let contador = 0;
+  loadComplementaryFunctions(): void {
+    this.api.resultsSE.GETComplementataryInnovationFunctions().subscribe(resp => {
+      this.complementaryFunction = resp?.response;
+      this.setupColumns();
+    });
+  }
+
+  setupColumns(): void {
     let auxCols = [];
-    this.complemntaryFunction.forEach(element => {
-      if (contador < 5) {
-        auxCols.push(element);
-      } else {
-        if (contador == 5) {
-          this.cols.push(auxCols);
-          auxCols = [];
-        }
-
-        auxCols.push(element);
+    this.complementaryFunction.forEach((element, index) => {
+      if (index % 5 === 0 && index !== 0) {
+        this.cols.push(auxCols);
+        auxCols = [];
       }
-
-      contador++;
+      auxCols.push(element);
     });
-
     this.cols.push(auxCols);
   }
 
-  cancelInnovation(result_id: any) {
-    const index = this.innovationPackageCreatorBody.findIndex(resp => resp.result_id == result_id);
-    const innovationFind = this.informationComplementaryInnovations.find(resp => this.innovationPackageCreatorBody[index].result_code == resp.result_code);
-    innovationFind.selected = false;
-    this.innovationPackageCreatorBody.splice(index, 1);
+  cancelInnovation(result: ComplementaryInnovation): void {
+    const index = this.innovationPackageCreatorBody.findIndex(item => item.result_id === result.result_id);
+    if (index !== -1) {
+      const innovation = this.innovationPackageCreatorBody[index];
+      const innovationList = innovation.result_type_id === 7 ? this.informationInnovationDevelopments : this.informationComplementaryInnovations;
+      const innovationFind = innovationList.find(item => item.result_code === innovation.result_code);
+      if (innovationFind) {
+        innovationFind.selected = false;
+      }
+      this.innovationPackageCreatorBody.splice(index, 1);
+    }
   }
 
-  regiterInnovationComplementary(complementaryInnovcation) {
-    const seletedInnovation = [];
-    complementaryInnovcation.forEach(element => {
-      if (element.hasOwnProperty('result_id')) {
-        seletedInnovation.push({
-          result_id: element['result_id']
-        });
-      } else {
-        seletedInnovation.push({
-          result_id: element['id']
-        });
+  registerInnovationComplementary(complementaryInnovations: ComplementaryInnovation[]): any[] {
+    return complementaryInnovations.map(element => ({
+      result_id: element.result_id || element.id
+    }));
+  }
+
+  loadLinkedResults(): void {
+    this.api.resultsSE.GET_resultsLinked(true).subscribe(({ response }) => {
+      this.linksToResultsBody = response;
+    });
+  }
+
+  onSaveSection(): void {
+    const recentAdditions = this.innovationPackageCreatorBody.filter(
+      element =>
+        element.created_date && element.result_type_id === 7 && !this.linksToResultsBody.links.some(link => link.result_id === element.result_id)
+    );
+
+    const updatedLinksBody = {
+      ...this.linksToResultsBody,
+      links: [...this.linksToResultsBody.links, ...recentAdditions]
+    };
+
+    this.body = this.registerInnovationComplementary(this.innovationPackageCreatorBody);
+
+    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(() => {
+      if (recentAdditions.length > 0) {
+        this.api.resultsSE.POST_resultsLinked(updatedLinksBody, true, false).subscribe();
       }
     });
-
-    return seletedInnovation;
   }
 
-  onSaveSection() {
-    this.body = this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
-
-    this.api.resultsSE.PATCHComplementaryInnovation({ complementaryInovatins: this.body }).subscribe(resp => {});
-  }
-
-  onSavePreviuosNext(descrip) {
+  onSavePreviousNext(description: string): void {
     if (this.api.rolesSE.readOnly) {
-      if (descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
-      }
-
-      if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
-      }
+      this.navigateToStep(description);
       return;
     }
-    this.body = this.regiterInnovationComplementary(this.innovationPackageCreatorBody);
-    this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, descrip).subscribe(resp => {
-      if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-2/basic-info'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
-      }
-      if (this.api.isStepTwoTwo && descrip == 'next') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-3'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
-      }
 
-      if (descrip == 'previous') {
-        this.router.navigate(['/ipsr/detail/' + this.ipsrDataControlSE.resultInnovationCode + '/ipsr-innovation-use-pathway/step-1'], {
-          queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase }
-        });
+    const recentAdditions = this.innovationPackageCreatorBody.filter(
+      element =>
+        element.created_date && element.result_type_id === 7 && !this.linksToResultsBody.links.some(link => link.result_id === element.result_id)
+    );
+
+    const updatedLinksBody = {
+      ...this.linksToResultsBody,
+      links: [...this.linksToResultsBody.links, ...recentAdditions]
+    };
+
+    this.body = this.registerInnovationComplementary(this.innovationPackageCreatorBody);
+
+    this.api.resultsSE.PATCHComplementaryInnovationPrevious({ complementaryInovatins: this.body }, description).subscribe(() => {
+      if (recentAdditions.length > 0) {
+        this.api.resultsSE.POST_resultsLinked(updatedLinksBody, true, false).subscribe();
       }
+      this.navigateToStep(description);
     });
   }
 
-  getInformationInnovationComentary(estado) {
-    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe(resp => {
-      this.informationComplementaryInnovations = resp['response'];
-      this.innovationPackageCreatorBody.forEach(seleccionado => {
-        const encontrado = this.informationComplementaryInnovations.find(tablaItem => tablaItem.result_code == seleccionado.result_code);
-        encontrado.selected = true;
-      });
-      this.informationComplementaryInnovations.forEach((inno: any) => {
-        inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.initiative_official_code} ${inno?.initiative_official_code} ${inno?.lead_contact_person} yes no `;
+  navigateToStep(description: string): void {
+    const baseRoute = `/ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/ipsr-innovation-use-pathway`;
+    const queryParams = { queryParams: { phase: this.ipsrDataControlSE.resultInnovationPhase } };
+
+    if (description === 'next') {
+      if (this.api.rolesSE.isAdmin && !this.api.isStepTwoTwo) {
+        this.router.navigate([`${baseRoute}/step-2/basic-info`], queryParams);
+      } else if (this.api.isStepTwoTwo) {
+        this.router.navigate([`${baseRoute}/step-3`], queryParams);
+      }
+    } else if (description === 'previous') {
+      this.router.navigate([`${baseRoute}/step-1`], queryParams);
+    }
+  }
+
+  loadInformationComplementaryInnovations(): void {
+    this.api.resultsSE.GETinnovationpathwayStepTwo().subscribe((resp: any) => {
+      resp.response.forEach(inno => {
+        inno.full_name = `${inno.result_code} ${inno.title} ${inno.initiative_official_code} ${inno.initiative_official_code} ${inno.lead_contact_person} yes no`;
         this.isInitiative = this.api.rolesSE.validateInitiative(inno.initiative_id);
         inno.permissos = this.isInitiative;
       });
+
+      this.informationInnovationDevelopments = resp.response.filter((element: any) => element.result_type_id === 7);
+      this.informationComplementaryInnovations = resp.response.filter((element: any) => element.result_type_id === 11);
+
+      this.innovationPackageCreatorBody.forEach(selected => {
+        const foundDevelopment = this.informationInnovationDevelopments.find(item => item.result_code === selected.result_code);
+        if (foundDevelopment) {
+          foundDevelopment.selected = true;
+        }
+        const foundComplementary = this.informationComplementaryInnovations.find(item => item.result_code === selected.result_code);
+        if (foundComplementary) {
+          foundComplementary.selected = true;
+        }
+      });
     });
   }
 
-  saveEdit(e) {
-    this.getInformationInnovationComentary(true);
-    this.innovationSving();
+  saveEdit(): void {
+    this.loadInformationComplementaryInnovations();
+    this.loadInnovationPackage();
   }
 }

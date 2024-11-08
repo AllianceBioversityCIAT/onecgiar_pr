@@ -23,7 +23,7 @@ import { SaveStepTwoThree } from './dto/save-step-three.dto';
 import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
 import {
   donorInterfaceToc,
-  institutionsInterface,
+  InstitutionsInterface,
   SaveStepFour,
 } from './dto/save-step-four.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
@@ -184,7 +184,7 @@ export class InnovationPathwayController {
   @Patch('save/step-four/partners/:resultId')
   saveFourPartners(
     @Param('resultId') resultId: string,
-    @Body() partners: institutionsInterface,
+    @Body() partners: InstitutionsInterface,
     @UserToken() user: TokenDto,
   ) {
     return this._innovationPathwayStepFourService.savePartners(

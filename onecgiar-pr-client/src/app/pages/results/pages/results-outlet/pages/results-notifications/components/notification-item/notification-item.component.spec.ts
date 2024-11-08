@@ -23,6 +23,9 @@ describe('NotificationItemComponent', () => {
           result_level_id: 1,
           result_type: ''
         },
+        reportingCurrentPhase: {
+          phaseId: '30'
+        },
         currentNotification: '',
         showShareRequest: false
       },

@@ -1,183 +1,240 @@
-<app-pr-field-header label="Anticipated innovation user – Who would be the anticipated user(s) of this innovation?"
-    [useColon]="false" [required]="false"
-    description="Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected."
-    [required]="true"></app-pr-field-header>
+<app-pr-field-header
+  [label]="sectionName()"
+  [useColon]="false"
+  [required]="false"
+  description="Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected."
+  [required]="true"></app-pr-field-header>
 
 <div class="paddingLeft20">
-    <app-pr-radio-button optionLabel="name" optionValue="id"
-        [options]="[{ name: 'This is yet to be determined', id: true }]"
-        [(ngModel)]="this.body.innovation_user_to_be_determined">
-    </app-pr-radio-button>
+  <app-pr-radio-button
+    optionLabel="name"
+    optionValue="id"
+    [options]="[{ name: 'This is yet to be determined', id: true }]"
+    [(ngModel)]="this.body.innovation_user_to_be_determined">
+  </app-pr-radio-button>
 
+  <div appFeedbackValidation labelText="Actor, Organizations or other quantitative measures" [isComplete]="checkAlert()"></div>
 
-    <div appFeedbackValidation labelText="Actor, Organizations or other quantitative measures"
-        [isComplete]="checkAlert()">
+  <div *ngIf="!this.body?.innovation_user_to_be_determined">
+    <app-pr-field-header label="Actors" [useColon]="false" [required]="false" [description]="this.actorDescription()"></app-pr-field-header>
+
+    <!-- Actors section -->
+    <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
+      <div
+        class="fields"
+        appYmzListStructureItem
+        (deleteEvent)="removeActor(actorItem, i)"
+        *ngFor="let actorItem of body?.innovatonUse?.actors; let i = index"
+        [ngClass]="{ hideElement: actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly) }">
+        <div>
+          <div *ngIf="saving">
+            <div style="margin-top: 20px; margin-bottom: 7px">
+              <p-skeleton width="50%" height="20px"></p-skeleton>
+            </div>
+            <div style="margin-top: 6px">
+              <p-skeleton width="100%" height="40px"></p-skeleton>
+            </div>
+          </div>
+          <app-pr-select
+            *ngIf="!this.saving"
+            [options]="this.actorsTypeList"
+            [indexReference]="i"
+            label="Actor type"
+            optionLabel="name"
+            optionValue="actor_type_id"
+            [(ngModel)]="actorItem.actor_type_id"
+            (ngModelChange)="this.actorItem.other_actor_type = null"
+            placeholder="Select type of actor"
+            [disableOptions]="removeOther(body?.innovatonUse?.actors)"
+            [required]="!!this.actorItem?.result_actors_id"
+            [(ngModel)]="actorItem.actor_type_id">
+          </app-pr-select>
+          <div style="margin-top: 13px"></div>
+          <div *ngIf="actorItem.actor_type_id == 5">
+            <div appFeedbackValidation labelText="Specify the other actor type" [isComplete]="!!this.actorItem.other_actor_type"></div>
+            <app-pr-input
+              description="Specify the other actor type in the text box below"
+              placeholder="Specify other.."
+              type="text"
+              [required]="true"
+              [(ngModel)]="this.actorItem.other_actor_type">
+            </app-pr-input>
+          </div>
+        </div>
+
+        <div appFeedbackValidation labelText="Gender disaggregation" [isComplete]="checkGenderAlert(actorItem)"></div>
+
+        <div style="margin: 25px 0">
+          <div *ngIf="!this.actorItem.sex_and_age_disaggregation">
+            <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
+
+            <div style="display: flex; align-items: center; gap: 30px">
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)" [(ngModel)]="this.actorItem.has_women_youth">
+              </app-pr-checkbox>
+
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)" [(ngModel)]="this.actorItem.has_women">
+              </app-pr-checkbox>
+            </div>
+
+            <app-pr-field-header label="Men" [useColon]="false" [required]="false"></app-pr-field-header>
+
+            <div style="display: flex; align-items: center; gap: 30px">
+              <app-pr-checkbox
+                label="Youth"
+                (selectOptionEvent)="cleanActor(this.actorItem)"
+                [(ngModel)]="this.actorItem.has_men_youth"></app-pr-checkbox>
+
+              <app-pr-checkbox
+                label="Non-youth"
+                (selectOptionEvent)="cleanActor(this.actorItem)"
+                [(ngModel)]="this.actorItem.has_men"></app-pr-checkbox>
+            </div>
+          </div>
+
+          <div style="margin-top: 21px"></div>
+
+          <app-pr-checkbox
+            label="Sex and age disaggregation does not apply"
+            (selectOptionEvent)="cleanActor(this.actorItem)"
+            [(ngModel)]="this.actorItem.sex_and_age_disaggregation"></app-pr-checkbox>
+        </div>
+
+        <app-pr-textarea
+          placeholder="Write here..."
+          [required]="true"
+          [maxWords]="50"
+          label="What demand / problem does it address for the user (50 words)"
+          style="grid-column: span 2 / span 2"
+          [(ngModel)]="this.actorItem.addressing_demands">
+        </app-pr-textarea>
+      </div>
     </div>
 
-    <div *ngIf="!this.body?.innovation_user_to_be_determined">
-        <app-pr-field-header label="Actors" [useColon]="false" [required]="false"
-            [description]="this.actorDescription()"></app-pr-field-header>
+    <app-no-data-text *ngIf="!hasElementsWithId(body?.innovatonUse?.actors, 'result_actors_id')" title="No actors provided"> </app-no-data-text>
+    <br />
+    <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
 
-        <!-- Actors section -->
-        <div class="fields_list" *ngIf="this.body.innovatonUse.actors?.length">
-            <div class="fields" appYmzListStructureItem (deleteEvent)="removeActor(actorItem, i)"
-                *ngFor="let actorItem of body?.innovatonUse?.actors; let i=index"
-                [ngClass]="{'hideElement': actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly)}">
-                <div>
-                    <div *ngIf="saving">
-                        <div style="margin-top: 20px; margin-bottom: 7px;">
-                            <p-skeleton width="50%" height="20px"></p-skeleton>
-                        </div>
-                        <div style="margin-top: 6px;">
-                            <p-skeleton width="100%" height="40px"></p-skeleton>
-                        </div>
-                    </div>
-                    <app-pr-select *ngIf="!this.saving" [options]="this.actorsTypeList" [indexReference]="i"
-                        label="Actor type" optionLabel="name" optionValue="actor_type_id"
-                        [(ngModel)]="actorItem.actor_type_id" (ngModelChange)="this.actorItem.other_actor_type = null"
-                        placeholder="Select type of actor" [disableOptions]="removeOther(body?.innovatonUse?.actors)"
-                        [required]="!!this.actorItem?.result_actors_id" [(ngModel)]="actorItem.actor_type_id">
-                    </app-pr-select>
-                    <div style="margin-top: 13px;"></div>
-                    <div *ngIf="actorItem.actor_type_id == 5">
-                        <div appFeedbackValidation labelText="Specify the other actor type"
-                            [isComplete]="!!this.actorItem.other_actor_type">
-                        </div>
-                        <app-pr-input description="Specify the other actor type in the text box below"
-                            placeholder="Specify other.." type="text" [required]="true"
-                            [(ngModel)]="this.actorItem.other_actor_type">
-                        </app-pr-input>
-                    </div>
-                </div>
+    <div class="fragment_section_divider"></div>
 
-                <div appFeedbackValidation labelText="Gender disaggregation" [isComplete]="checkGenderAlert(actorItem)"></div>
+    <!-- Organizations section -->
 
-                <div style="margin: 25px 0;">
-                    <div *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                        <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
+    <app-pr-field-header label="Organizations" [useColon]="false" [required]="false"></app-pr-field-header>
 
-                        <div style="display: flex; align-items: center; gap: 30px;">
-                            <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_women_youth">
-                            </app-pr-checkbox>
-
-                            <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_women">
-                            </app-pr-checkbox>
-                        </div>
-
-                        <app-pr-field-header label="Men" [useColon]="false" [required]="false"></app-pr-field-header>
-
-                        <div style="display: flex; align-items: center; gap: 30px;">
-                            <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_men_youth"></app-pr-checkbox>
-
-                            <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)"
-                                [(ngModel)]="this.actorItem.has_men"></app-pr-checkbox>
-                        </div>
-                    </div>
-
-
-                    <div style="margin-top: 21px;"></div>
-
-                    <app-pr-checkbox label="Sex and age disaggregation does not apply"
-                        (selectOptionEvent)="cleanActor(this.actorItem)"
-                        [(ngModel)]="this.actorItem.sex_and_age_disaggregation"></app-pr-checkbox>
-
-                </div>
-            </div>
+    <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
+      <div
+        class="fields"
+        appYmzListStructureItem
+        (deleteEvent)="removeOrganization(organizationItem, i)"
+        [ngClass]="{ hideElement: organizationItem.is_active == false || (!this.organizationItem?.id && this.api.rolesSE.readOnly) }"
+        *ngFor="let organizationItem of this.body.innovatonUse.organization; let i = index">
+        <div *ngIf="saving">
+          <div style="margin-top: 20px; margin-bottom: 7px">
+            <p-skeleton width="50%" height="20px"></p-skeleton>
+          </div>
+          <div style="margin-top: 6px">
+            <p-skeleton width="100%" height="40px"></p-skeleton>
+          </div>
         </div>
-
-        <app-no-data-text *ngIf="!hasElementsWithId(body?.innovatonUse?.actors,'result_actors_id')"
-            title="No actors provided">
-        </app-no-data-text>
-        <br>
-        <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
-
-        <div class="fragment_section_divider"></div>
-
-        <!-- Organizations section -->
-
-        <app-pr-field-header label="Organizations" [useColon]="false" [required]="false"></app-pr-field-header>
-
-        <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length  ">
-            <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem, i)"
-                [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
-                *ngFor="let organizationItem of this.body.innovatonUse.organization; let i=index">
-                <div *ngIf="saving">
-                    <div style="margin-top: 20px; margin-bottom: 7px;">
-                        <p-skeleton width="50%" height="20px"></p-skeleton>
-                    </div>
-                    <div style="margin-top: 6px;">
-                        <p-skeleton width="100%" height="40px"></p-skeleton>
-                    </div>
-                </div>
-                <div *ngIf="!saving">
-                    <app-pr-select [options]="this.institutionsTypeTreeList" [indexReference]="i"
-                        label="Organization type" [required]="!!organizationItem?.id" optionLabel="name"
-                        optionValue="code" [(ngModel)]="organizationItem.institution_types_id"
-                        placeholder="Select type of organization" (selectOptionEvent)="reloadSelect(organizationItem)"
-                        (ngModelChange)="this.organizationItem.other_institution = null"
-                        [disableOptions]="removeOtherInOrg(disableOrganizations)">
-                    </app-pr-select>
-                    <div style="margin-top: 13px;"></div>
-                    <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
-                        description="Specify the other organization type in the text box below"
-                        placeholder="Specify other.." label="Other organization" type="text"
-                        [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.other_institution">
-                    </app-pr-input>
-                </div>
-                <div *ngIf="saving">
-                    <div style="margin-top: 20px; margin-bottom: 7px;">
-                        <p-skeleton width="50%" height="20px"></p-skeleton>
-                    </div>
-                    <div style="margin-top: 6px;">
-                        <p-skeleton width="100%" height="40px"></p-skeleton>
-                    </div>
-                </div>
-                <div *ngIf="!saving">
-                    <app-pr-select
-                        *ngIf="organizationItem.institution_types_id && !organizationItem.hide && getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length"
-                        [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)"
-                        label="Sub-type" optionLabel="name" optionValue="code"
-                        [(ngModel)]="organizationItem.institution_sub_type_id" [disableOptions]="getAllSubTypes"
-                        placeholder="Select Sub-type" [required]="!!organizationItem?.id">
-                    </app-pr-select>
-                </div>
-            </div>
+        <div *ngIf="!saving">
+          <app-pr-select
+            [options]="this.institutionsTypeTreeList"
+            [indexReference]="i"
+            label="Organization type"
+            [required]="!!organizationItem?.id"
+            optionLabel="name"
+            optionValue="code"
+            [(ngModel)]="organizationItem.institution_types_id"
+            placeholder="Select type of organization"
+            (selectOptionEvent)="reloadSelect(organizationItem)"
+            (ngModelChange)="this.organizationItem.other_institution = null"
+            [disableOptions]="removeOtherInOrg(disableOrganizations)">
+          </app-pr-select>
+          <div style="margin-top: 13px"></div>
+          <app-pr-input
+            *ngIf="organizationItem.institution_types_id == 78"
+            description="Specify the other organization type in the text box below"
+            placeholder="Specify other.."
+            label="Other organization"
+            type="text"
+            [required]="!!organizationItem?.id"
+            [(ngModel)]="this.organizationItem.other_institution">
+          </app-pr-input>
         </div>
-
-        <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization,'id')"
-            title="No organizations provided">
-        </app-no-data-text>
-        <br>
-        <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly"
-            (clickEvent)="addOrganization()"></app-add-button>
-
-        <div class="fragment_section_divider"></div>
-
-        <!-- Mesure section -->
-        <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)"
-            [required]="false"></app-pr-field-header>
-        <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
-            <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
-                *ngFor="let measuresItem of this.body.innovatonUse.measures"
-                [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly)}">
-                <div class="right_content">
-                    <app-pr-input placeholder="e.g. # of projects" label="Unit of measure" type="text"
-                        [required]="!!measuresItem?.result_ip_measure_id"
-                        [(ngModel)]="this.measuresItem.unit_of_measure">
-                    </app-pr-input>
-                </div>
-
-            </div>
+        <div *ngIf="saving">
+          <div style="margin-top: 20px; margin-bottom: 7px">
+            <p-skeleton width="50%" height="20px"></p-skeleton>
+          </div>
+          <div style="margin-top: 6px">
+            <p-skeleton width="100%" height="40px"></p-skeleton>
+          </div>
         </div>
-        <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.measures,'result_ip_measure_id')"
-            title="Other quantitative measures not added">
-        </app-no-data-text>
-        <br>
-        <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly"
-            (clickEvent)="addOtherMesure()"></app-add-button>
-
+        <div *ngIf="!saving">
+          <app-pr-select
+            *ngIf="
+              organizationItem.institution_types_id &&
+              !organizationItem.hide &&
+              getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length
+            "
+            [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)"
+            label="Sub-type"
+            optionLabel="name"
+            optionValue="code"
+            [(ngModel)]="organizationItem.institution_sub_type_id"
+            [disableOptions]="getAllSubTypes"
+            placeholder="Select Sub-type"
+            [required]="!!organizationItem?.id">
+          </app-pr-select>
+        </div>
+        <app-pr-textarea
+          placeholder="Write here..."
+          [required]="true"
+          [maxWords]="50"
+          label="What demand / problem does it address for the user (50 words)"
+          style="grid-column: span 2 / span 2"
+          [(ngModel)]="this.organizationItem.addressing_demands">
+        </app-pr-textarea>
+      </div>
     </div>
+
+    <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization, 'id')" title="No organizations provided"> </app-no-data-text>
+    <br />
+    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOrganization()"></app-add-button>
+
+    <div class="fragment_section_divider"></div>
+
+    <!-- Mesure section -->
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)" [required]="false"></app-pr-field-header>
+    <div class="fields_list" *ngIf="this.body.innovatonUse.measures?.length">
+      <div
+        class="fields"
+        appYmzListStructureItem
+        (deleteEvent)="measuresItem.is_active = false"
+        *ngFor="let measuresItem of this.body.innovatonUse.measures"
+        [ngClass]="{ hideElement: measuresItem.is_active == false || (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly) }">
+        <div class="right_content">
+          <app-pr-input
+            placeholder="e.g. # of projects"
+            label="Unit of measure"
+            type="text"
+            [required]="!!measuresItem?.result_ip_measure_id"
+            [(ngModel)]="this.measuresItem.unit_of_measure">
+          </app-pr-input>
+        </div>
+        <app-pr-textarea
+          placeholder="Write here..."
+          [required]="true"
+          [maxWords]="50"
+          label="What problem / need does this innovation address (50 words)?"
+          style="grid-column: span 2 / span 2"
+          [(ngModel)]="this.measuresItem.addressing_demands">
+        </app-pr-textarea>
+      </div>
+    </div>
+    <app-no-data-text
+      *ngIf="!hasElementsWithId(this.body.innovatonUse.measures, 'result_ip_measure_id')"
+      title="Other quantitative measures not added">
+    </app-no-data-text>
+    <br />
+    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOtherMesure()"></app-add-button>
+  </div>
 </div>

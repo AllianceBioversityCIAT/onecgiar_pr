@@ -86,11 +86,7 @@ export class InnovationPathwayStepTwoService {
         },
       });
       if (!result) {
-        throw {
-          response: result,
-          message: 'The result was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found');
       }
 
       const comInnovation =
@@ -248,19 +244,11 @@ export class InnovationPathwayStepTwoService {
       });
 
       if (!resultIpResults) {
-        throw {
-          response: { valid: false },
-          message: 'The result was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found');
       }
 
       if (!CreateComplementaryInnovationDto) {
-        throw {
-          response: { valid: false },
-          message: 'Missing fields',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('Missing fields');
       }
 
       const version = await this._versioningService.$_findActivePhase(
@@ -274,6 +262,17 @@ export class InnovationPathwayStepTwoService {
       }
 
       const last_code = await this._resultRepository.getLastResultCode();
+
+      if (
+        !CreateComplementaryInnovationDto.title ||
+        !CreateComplementaryInnovationDto.short_title
+      ) {
+        return {
+          response: { valid: false },
+          message: 'The fields Title and Short Title are required',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
 
       const createResult: Result = await this._resultRepository.save({
         title: CreateComplementaryInnovationDto.title,
@@ -309,6 +308,18 @@ export class InnovationPathwayStepTwoService {
           last_updated_by: User.id,
         });
 
+      if (
+        CreateComplementaryInnovationDto.projects_organizations_working_on_innovation ===
+        null
+      ) {
+        return {
+          response: { valid: false },
+          message:
+            'The field Project Organization Working on Innovation answer is required',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const newResultComplemetaryInnovation: ResultsComplementaryInnovation =
         await this._resultComplementaryInnovation.save({
           result_id: newResult,
@@ -318,8 +329,7 @@ export class InnovationPathwayStepTwoService {
           projects_organizations_working_on_innovation:
             CreateComplementaryInnovationDto.projects_organizations_working_on_innovation,
           specify_projects_organizations:
-            CreateComplementaryInnovationDto.projects_organizations_working_on_innovation ==
-            true
+            CreateComplementaryInnovationDto.projects_organizations_working_on_innovation
               ? CreateComplementaryInnovationDto.specify_projects_organizations
               : null,
           last_updated_by: User.id,
@@ -347,37 +357,7 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
-      const referenceMaterials =
-        CreateComplementaryInnovationDto.referenceMaterials.map(
-          (rm) => rm.link,
-        );
-      if (referenceMaterials.length > 3) {
-        return {
-          response: {
-            valid: false,
-          },
-          message: 'The Reference Materials must be three',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const saveEvidence = [];
-      if (referenceMaterials.length > 0) {
-        for (const entity of referenceMaterials) {
-          const newMaterial = new Evidence();
-          newMaterial.result_id = newResult;
-          newMaterial.link = entity;
-          newMaterial.evidence_type_id = 4;
-          newMaterial.created_by = User.id;
-          newMaterial.last_updated_by = User.id;
-          newMaterial.creation_date = new Date();
-          newMaterial.last_updated_date = new Date();
-          saveEvidence.push(this._evidence.save(newMaterial));
-        }
-      }
-
       const resultCF = await Promise.all(saveCF);
-      const resultEvidence = await Promise.all(saveEvidence);
 
       return {
         response: {
@@ -386,7 +366,6 @@ export class InnovationPathwayStepTwoService {
           newResultIpResults,
           newResultComplemetaryInnovation,
           resultCF,
-          resultEvidence,
         },
         message:
           'The Result Complementary Innovation have been saved successfully',
@@ -463,7 +442,6 @@ export class InnovationPathwayStepTwoService {
         description,
         other_funcions,
         complementaryFunctions,
-        referenceMaterials,
         projects_organizations_working_on_innovation,
         specify_projects_organizations,
       } = updateComplementaryInnovationDto;
@@ -574,61 +552,6 @@ export class InnovationPathwayStepTwoService {
         }
       }
 
-      const referenceMaterialsObj = referenceMaterials.map((rm) => rm.link);
-      if (referenceMaterialsObj.length > 3) {
-        return {
-          response: {
-            valid: false,
-          },
-          message: 'The Reference Materials must be three',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const evidenceExist = await this._evidence.find({
-        where: {
-          result_id: complementaryInnovationId,
-          is_active: 1,
-          evidence_type_id: 4,
-        },
-      });
-
-      for (const e of evidenceExist) {
-        const isFound = referenceMaterialsObj.some((rm) => rm === e.link);
-
-        if (!isFound) {
-          await this._evidence.update(e.id, {
-            is_active: 0,
-            last_updated_by: user.id,
-          });
-        }
-      }
-
-      const saveEvidence = [];
-      if (referenceMaterialsObj.length > 0) {
-        for (const entity of referenceMaterials) {
-          const findEvidence: Evidence = await this._evidence.findOne({
-            where: {
-              result_id: complementaryInnovationId,
-              link: entity.link,
-              is_active: 1,
-            },
-          });
-
-          if (!findEvidence) {
-            const newMaterial = new Evidence();
-            newMaterial.result_id = complementaryInnovationId;
-            newMaterial.link = entity.link;
-            newMaterial.evidence_type_id = 4;
-            newMaterial.created_by = user.id;
-            newMaterial.last_updated_by = user.id;
-            newMaterial.creation_date = new Date();
-            newMaterial.last_updated_date = new Date();
-            saveEvidence.push(await this._evidence.save(newMaterial));
-          }
-        }
-      }
-
       const data = await this.getComplementaryInnovationById(
         complementaryInnovationId,
       );
@@ -722,7 +645,7 @@ export class InnovationPathwayStepTwoService {
   }
 }
 
-export class getEnablersType {
+export class GetEnablersType {
   complementary_innovation_enabler_types_id: string;
   group: string;
   type: string;

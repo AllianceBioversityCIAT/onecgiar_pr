@@ -17,6 +17,8 @@ export interface EvidencesCreateInterface {
   youth_related?: boolean;
   nutrition_related?: boolean;
   environmental_biodiversity_related?: boolean;
+  innovation_use_related?: boolean;
+  innovation_readiness_related?: boolean;
   poverty_related?: boolean;
   is_sharepoint?: boolean;
   file?: File;

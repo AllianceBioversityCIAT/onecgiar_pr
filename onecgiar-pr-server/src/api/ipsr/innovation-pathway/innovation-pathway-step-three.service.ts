@@ -27,6 +27,7 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from './repository/result-ip
 import { ResultIpExpertWorkshopOrganized } from './entities/result-ip-expert-workshop-organized.entity';
 import { VersioningService } from '../../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { UpdateInnovationPathwayDto } from './dto/update-innovation-pathway.dto';
 
 @Injectable()
 export class InnovationPathwayStepThreeService {
@@ -45,7 +46,7 @@ export class InnovationPathwayStepThreeService {
     protected readonly _evidenceRepository: EvidencesRepository,
     protected readonly _resultIpExpertWorkshopRepository: ResultIpExpertWorkshopOrganizedRepostory,
     protected readonly _returnResponse: ReturnResponse,
-    private readonly _versioningService: VersioningService,
+    protected readonly _versioningService: VersioningService,
   ) {}
 
   async saveComplementaryinnovation(
@@ -62,11 +63,7 @@ export class InnovationPathwayStepThreeService {
       });
 
       if (!result) {
-        throw {
-          response: resultId,
-          message: 'The result was not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new Error('The result was not found');
       }
 
       const version = await this._versioningService.$_findActivePhase(
@@ -100,17 +97,22 @@ export class InnovationPathwayStepThreeService {
         },
       );
 
-      await this.saveinnovationWorkshop(user, result_ip_core);
-
+      await this.saveinnovationWorkshop(
+        user,
+        result_ip_core,
+        result_ip.assessed_during_expert_workshop_id,
+      );
       await this.saveInnovationUse(user, saveData);
 
       if (result_ip_complementary?.length) {
         for (const ripc of result_ip_complementary) {
-          await this.saveinnovationWorkshop(user, ripc);
+          await this.saveinnovationWorkshop(
+            user,
+            ripc,
+            result_ip.assessed_during_expert_workshop_id,
+          );
         }
       }
-
-      await this.saveWorkshop(result.id, user, saveData);
 
       const { response } = await this.getStepThree(resultId);
 
@@ -125,40 +127,43 @@ export class InnovationPathwayStepThreeService {
     }
   }
 
-  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr) {
+  async saveinnovationWorkshop(user: TokenDto, rbi: Ipsr, data_id: any) {
     try {
       await this._innovationByResultRepository.update(
         rbi.result_by_innovation_package_id,
         {
-          readiness_level_evidence_based: this.isNullData(
-            rbi?.readiness_level_evidence_based,
-          ),
-          readinees_evidence_link: this.isNullData(
-            rbi?.readinees_evidence_link,
-          ),
-          use_level_evidence_based: this.isNullData(
-            rbi?.use_level_evidence_based,
-          ),
-          use_evidence_link: this.isNullData(rbi?.use_evidence_link),
-          use_details_of_evidence: this.isNullData(
-            rbi?.use_details_of_evidence,
-          ),
-          readiness_details_of_evidence: this.isNullData(
-            rbi?.readiness_details_of_evidence,
-          ),
-          potential_innovation_readiness_level: this.isNullData(
+          readiness_level_evidence_based: rbi?.readiness_level_evidence_based,
+
+          readinees_evidence_link: rbi?.readinees_evidence_link,
+
+          use_level_evidence_based: rbi?.use_level_evidence_based,
+
+          use_evidence_link: rbi?.use_evidence_link,
+          use_details_of_evidence: rbi?.use_details_of_evidence,
+
+          readiness_details_of_evidence: rbi?.readiness_details_of_evidence,
+
+          potential_innovation_readiness_level: this.validData(
             rbi?.potential_innovation_readiness_level,
+            data_id,
+            [2],
           ),
-          potential_innovation_use_level: this.isNullData(
+          potential_innovation_use_level: this.validData(
             rbi?.potential_innovation_use_level,
+            data_id,
+            [2],
           ),
-          current_innovation_readiness_level: this.isNullData(
+          current_innovation_readiness_level: this.validData(
             rbi?.current_innovation_readiness_level,
+            data_id,
+            [1, 2],
           ),
-          current_innovation_use_level: this.isNullData(
+          current_innovation_use_level: this.validData(
             rbi?.current_innovation_use_level,
+            data_id,
+            [1, 2],
           ),
-          last_updated_by: this.isNullData(user?.id),
+          last_updated_by: user?.id,
         },
       );
       return;
@@ -167,10 +172,14 @@ export class InnovationPathwayStepThreeService {
     }
   }
 
+  private validData(data: any, data_id: number, valid: number[]) {
+    return valid.includes(parseInt(`${data_id}`)) ? data : null;
+  }
+
   async saveWorkshop(
     resultId: number,
     user: TokenDto,
-    saveStepTwoThree: SaveStepTwoThree,
+    saveStepTwoThree: UpdateInnovationPathwayDto,
   ) {
     const id: number = +resultId;
     try {
@@ -185,7 +194,7 @@ export class InnovationPathwayStepThreeService {
       );
 
       const {
-        result_innovation_package: rip,
+        result_ip: rip,
         link_workshop_list: lwl,
         result_ip_expert_workshop_organized: ripewo,
       } = saveStepTwoThree;
@@ -219,14 +228,6 @@ export class InnovationPathwayStepThreeService {
           message: 'The link workshop list have been inactive successfully',
         };
       }
-
-      // if (rip.is_expert_workshop_organized === true && !lwl) {
-      //   return {
-      //     response: { valid: false },
-      //     message: 'The link workshop list is required',
-      //     status: HttpStatus.BAD_REQUEST,
-      //   };
-      // }
 
       if (!workShopEvidence) {
         await this._evidenceRepository.save({
@@ -345,7 +346,7 @@ export class InnovationPathwayStepThreeService {
         relations: { obj_result_innovation_package: true },
       });
       if (!result_ip) {
-        throw {
+        return {
           response: resultId,
           message: 'The result was not found',
           status: HttpStatus.NOT_FOUND,
@@ -381,14 +382,6 @@ export class InnovationPathwayStepThreeService {
           ],
         });
 
-      const link_workshop_list = await this._evidenceRepository.findOne({
-        where: {
-          result_id: resultId,
-          is_active: 1,
-          evidence_type_id: 5,
-        },
-      });
-
       const result_ip_expert_workshop_organized =
         await this._resultIpExpertWorkshopRepository.find({
           where: {
@@ -398,8 +391,6 @@ export class InnovationPathwayStepThreeService {
         });
 
       const returdata: SaveStepTwoThree = {
-        link_workshop_list: link_workshop_list?.link,
-        result_ip_expert_workshop_organized,
         innovatonUse: {
           actors: (
             await this._resultsIpActorRepository.find({
@@ -448,6 +439,7 @@ export class InnovationPathwayStepThreeService {
           core_title: core_innovation.title,
           core_result_current_phase: core_innovation.version_id,
         },
+        result_ip_expert_workshop_organized,
       };
 
       return {
@@ -745,6 +737,6 @@ export class InnovationPathwayStepThreeService {
   }
 
   isNullData(data: any) {
-    return data == undefined ? null : data;
+    return data ?? null;
   }
 }

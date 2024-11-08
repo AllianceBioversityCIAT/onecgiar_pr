@@ -263,33 +263,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 WHERE
                     rieo.result_by_innovation_package_id = rbip.result_by_innovation_package_id
                     AND rieo.is_active = true
-            ) = 0
-            OR (
-                SELECT
-                    COUNT(*)
-                FROM
-                    result_ip_action_area_outcome riaao
-                WHERE
-                    riaao.result_by_innovation_package_id = rbip.result_by_innovation_package_id
-                    AND riaao.is_active = true
-            ) = 0
-            OR (
-                SELECT
-                    COUNT(*)
-                FROM
-                    result_ip_impact_area_target riiat
-                WHERE
-                    riiat.result_by_innovation_package_id = rbip.result_by_innovation_package_id
-                    AND riiat.is_active = 1
-            ) = 0
-            OR (
-                SELECT
-                    COUNT(*)
-                FROM
-                    result_ip_sdg_targets rist
-                WHERE
-                    rist.result_by_innovation_package_id = rbip.result_by_innovation_package_id
-                    AND rist.is_active = 1
             ) = 0 THEN FALSE
             WHEN (
                 (
@@ -374,6 +347,30 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         AND rim.unit_of_measure IS NOT NULL
                         AND rim.quantity IS NOT NULL
                 ) = 0
+            ) THEN FALSE
+            WHEN rip.is_expert_workshop_organized IS NULL THEN FALSE
+            WHEN (
+                rip.is_expert_workshop_organized = 1
+                AND rip.assessed_during_expert_workshop_id IS NULL
+            ) THEN FALSE
+            WHEN (
+                rip.is_expert_workshop_organized = 1
+                AND (
+                    rip.assessed_during_expert_workshop_id = 1
+                    AND (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            result_by_innovation_package rbip
+                        WHERE
+                            rbip.result_innovation_package_id = r.id
+                            AND rbip.is_active = TRUE
+                            AND (
+                                rbip.current_innovation_readiness_level IS NULL
+                                OR rbip.current_innovation_use_level IS NULL
+                            )
+                    ) > 0
+                )
             ) THEN FALSE
             WHEN(
                 SELECT
@@ -482,10 +479,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                 WHERE
                     rie.is_active = TRUE
                     AND rie.result_id = r.id
-                    AND rie.first_name IS NOT NULL
-                    AND rie.first_name <> ''
-                    AND rie.last_name IS NOT NULL
-                    AND rie.last_name <> ''
                     AND rie.result_ip_expert_id IN (
                         SELECT
                             rie2.result_ip_expert_id
@@ -505,11 +498,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                     rie3.result_id = r.id
                     AND rie3.is_active = TRUE
                     AND (
-                        rie3.first_name IS NULL
-                        OR rie3.last_name IS NULL
-                        OR rie3.first_name = ''
-                        OR rie3.last_name = ''
-                        OR NOT EXISTS (
+                        NOT EXISTS (
                             SELECT
                                 rie4.result_ip_expert_id
                             FROM
@@ -556,6 +545,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
         END AS validation
     FROM
         result r
+        LEFT JOIN result_innovation_package rip ON rip.result_innovation_package_id = r.id
         LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = r.id
         AND rbip.ipsr_role_id = 1
     WHERE
@@ -596,7 +586,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             END AS validation
         FROM
             result r
-            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = 4594
+            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = r.id
             AND rbip.ipsr_role_id = 1
         WHERE
             r.is_active = 1
@@ -620,7 +610,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             END AS validation
         FROM
             result r
-            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = 4594
+            LEFT JOIN result_by_innovation_package rbip ON rbip.result_innovation_package_id = r.id
             AND rbip.ipsr_role_id = 1
         WHERE
             r.is_active = 1
@@ -658,51 +648,6 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
         3 AS step,
         'Step 3' AS sectionName,
         CASE
-            WHEN rip.is_expert_workshop_organized IS NULL THEN FALSE
-            WHEN (
-                rip.is_expert_workshop_organized = 1
-                AND rip.assessed_during_expert_workshop_id IS NULL
-            ) THEN FALSE
-            WHEN (
-                rip.is_expert_workshop_organized = 1
-                AND (
-                    rip.assessed_during_expert_workshop_id = 1
-                    AND (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_by_innovation_package rbip
-                        WHERE
-                            rbip.result_innovation_package_id = r.id
-                            AND rbip.is_active = TRUE
-                            AND (
-                                rbip.current_innovation_readiness_level IS NULL
-                                OR rbip.current_innovation_use_level IS NULL
-                            )
-                    ) > 0
-                )
-            ) THEN FALSE
-            WHEN (
-                rip.is_expert_workshop_organized = 1
-                AND (
-                    rip.assessed_during_expert_workshop_id = 2
-                    AND (
-                        SELECT
-                            COUNT(*)
-                        FROM
-                            result_by_innovation_package rbip
-                        WHERE
-                            rbip.result_innovation_package_id = r.id
-                            AND rbip.is_active = TRUE
-                            AND (
-                                rbip.current_innovation_readiness_level IS NULL
-                                OR rbip.current_innovation_use_level IS NULL
-                                OR rbip.potential_innovation_readiness_level IS NULL
-                                OR rbip.potential_innovation_use_level IS NULL
-                            )
-                    ) > 0
-                )
-            ) THEN FALSE
             WHEN (
                 (
                     rbip.readiness_level_evidence_based IS NULL

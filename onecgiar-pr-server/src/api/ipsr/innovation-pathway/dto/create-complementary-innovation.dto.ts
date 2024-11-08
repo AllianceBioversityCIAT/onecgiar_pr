@@ -9,12 +9,8 @@ export class CreateComplementaryInnovationDto {
   public initiative_id: number;
   public is_active: boolean;
   public complementaryFunctions: ComplementaryFunctionsInterface[];
-  public referenceMaterials: ReferenceMaterialsInterface[];
 }
 
 export interface ComplementaryFunctionsInterface {
   complementary_innovation_functions_id: number;
-}
-export interface ReferenceMaterialsInterface {
-  link: string;
 }

@@ -16,6 +16,8 @@ import { NonPooledInfoComponent } from './components/estimates/components/non-po
 import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
+import { MessageModule } from 'primeng/message';
+import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 
 @NgModule({
   declarations: [
@@ -27,7 +29,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/d
     AnticipatedInnovationUserComponent,
     EstimatesComponent,
     InnovationLinksComponent,
-    NonPooledInfoComponent
+    NonPooledInfoComponent,
+    MegatrendsComponent
   ],
   imports: [
     CommonModule,
@@ -36,7 +39,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/d
     YmzListStructureItemModule,
     DialogModule,
     FeedbackValidationDirectiveModule,
-    SkeletonModule
+    SkeletonModule,
+    MessageModule
   ]
 })
 export class InnovationDevInfoModule {}

@@ -3,17 +3,6 @@
         <app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in"
             [required]="false"></app-pr-field-header>
     </div>
-    <!-- <div class="unitW">
-        <app-pr-input placeholder="Number" type="number" [required]="false" noDataText="#" [readOnly]="true"
-            [(ngModel)]="this.body.partner_expected_time">
-        </app-pr-input>
-    </div>
-    <div>
-        <app-pr-select [options]="this.manageRipUnitTimeSE.unitTimeList" noDataText="Month(s)/Year(s)" [readOnly]="true"
-            optionLabel="name" optionValue="unit_time_id" [(ngModel)]="this.body.partner_unit_time_id"
-            placeholder="Select">
-        </app-pr-select>
-    </div> -->
 </div>
 
 <table>
@@ -25,64 +14,27 @@
         <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
     <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
-        [hidden]="option.institution.is_active == false">
+        [hidden]="option.is_active == false">
         <td>
-            <div class="name">{{option.institution.institutions_name}}</div>
-            <div class="type"> <strong>Institution type:</strong> {{option?.institution?.institutions_type_name}}</div>
-            <!-- <div style="margin-top: -10px;margin-bottom: 5px;">
-                <app-pr-field-header label="Partner role">
-                </app-pr-field-header>
-            </div> -->
-            <!-- 
-            <div class="deliveries" [ngClass]="{'readOnly_deliveries': this.rolesSE.readOnly}">
-                <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution.deliveries,1) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,1)}"
-                    (click)="onSelectDelivery(option?.institution,1)">Scaling</div>
-                <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,2) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,2)}"
-                    (click)="onSelectDelivery(option?.institution,2)">Demand</div>
-                <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,3) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,3)}"
-                    (click)="onSelectDelivery(option?.institution,3)">Innovation</div>
-                <div class="delivery"
-                    *ngIf="this.rolesSE.readOnly ? validateDeliverySelection(option?.institution?.deliveries,4) : true"
-                    [ngClass]="{'active': validateDeliverySelection(option?.institution?.deliveries,4)}"
-                    (click)="onSelectDelivery(option?.institution,4)">Other</div> -->
-
-            <!-- <div class="info_button" (click)="showInfo = true">
-
-                    <i class="material-icons-round">help_outline
-                    </i>
-                </div> -->
-            <!-- </div> -->
-
-
-
-
-
-
-
-
+            <div class="name">{{option?.obj_result_institution?.obj_institutions?.name}}</div>
+            <div class="type"> <strong>Institution type:</strong> {{option?.obj_result_institution?.obj_institutions?.obj_institution_type_code?.name}}</div>
         </td>
         <td>
             <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="option?.budget[0]?.is_determined ? 'Not applicable':'Not provided'"
-                [(ngModel)]="option.budget[0].in_kind">
+                [noDataText]="option?.is_determined ? 'Not applicable':'Not provided'"
+                [(ngModel)]="option.in_kind">
             </app-pr-input>
         </td>
         <td>
             <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="option?.budget[0]?.is_determined ? 'Not applicable':'Not provided'"
-                [(ngModel)]="option.budget[0].in_cash">
+                [noDataText]="option?.is_determined ? 'Not applicable':'Not provided'"
+                [(ngModel)]="option.in_cash">
             </app-pr-input>
         </td>
         <td>
             <app-pr-radio-button optionLabel="name" optionValue="id"
                 [options]="[{name:'This is yet to be determined',id:true}]"
-                [(ngModel)]="option.budget[0].is_determined">
+                [(ngModel)]="option.is_determined">
             </app-pr-radio-button>
         </td>
         <td *ngIf="!this.rolesSE.readOnly">
@@ -98,4 +50,4 @@
 </table>
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.institutions_expected_investment)" title="No partners added">
 </app-no-data-text>
-<app-step-n4-add-partner [body]="this.body"></app-step-n4-add-partner>
+<app-step-n4-add-partner [body]="this.body" [disabledOptionsPartners]="disabledOptionsPartners" ></app-step-n4-add-partner>
