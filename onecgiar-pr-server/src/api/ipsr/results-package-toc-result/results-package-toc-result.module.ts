@@ -75,7 +75,7 @@ import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/
     GlobalParameterRepository,
     UserRepository,
     NonPooledProjectBudgetRepository,
-    ResultInstitutionsBudgetRepository
+    ResultInstitutionsBudgetRepository,
   ],
   exports: [ResultsPackageTocResultService],
 })

@@ -376,7 +376,7 @@ export class EvidencesService {
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
         e.innovation_readiness_related = !!e.innovation_readiness_related;
-        e.innovation_use_related = !!e.innovation_use_related
+        e.innovation_use_related = !!e.innovation_use_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });
