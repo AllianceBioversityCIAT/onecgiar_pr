@@ -119,6 +119,7 @@ export class MQAPResultDto {
   repo: string;
   'Geographic location': CgRegion | CgRegion[];
   agrovoc_keywords: AgrovocKeywords;
+  'AGROVOC Keywords': AgrovocKeywords;
   Commodities: string[];
   handle_altmetric: AltmetricData;
   DOI_Info: DOIInfo;
