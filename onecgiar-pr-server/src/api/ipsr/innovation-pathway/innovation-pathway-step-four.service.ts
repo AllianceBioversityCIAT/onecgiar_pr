@@ -457,36 +457,34 @@ export class InnovationPathwayStepFourService {
               );
             }
           } else {
-            if (nppType === 2) {
-              const rbb = await this._resultBilateralBudgetRepository.findOne({
-                where: {
-                  non_pooled_projetct_id: npp.id,
-                  is_active: true,
-                },
-              });
-
-              const budgetData = {
+            const rbb = await this._resultBilateralBudgetRepository.findOne({
+              where: {
                 non_pooled_projetct_id: npp.id,
-                in_kind: i.in_kind,
-                in_cash: i.in_cash,
-                is_determined: i.is_determined,
-                last_updated_by: user.id,
-              };
+                is_active: true,
+              },
+            });
 
-              if (rbb) {
-                await this._resultBilateralBudgetRepository.update(
-                  {
-                    non_pooled_projetct_budget_id:
-                      rbb.non_pooled_projetct_budget_id,
-                  },
-                  budgetData,
-                );
-              } else {
-                await this._resultBilateralBudgetRepository.save({
-                  ...budgetData,
-                  created_by: user.id,
-                });
-              }
+            const budgetData = {
+              non_pooled_projetct_id: npp.id,
+              in_kind: i.in_kind,
+              in_cash: i.in_cash,
+              is_determined: i.is_determined,
+              last_updated_by: user.id,
+            };
+
+            if (rbb) {
+              await this._resultBilateralBudgetRepository.update(
+                {
+                  non_pooled_projetct_budget_id:
+                    rbb.non_pooled_projetct_budget_id,
+                },
+                budgetData,
+              );
+            } else {
+              await this._resultBilateralBudgetRepository.save({
+                ...budgetData,
+                created_by: user.id,
+              });
             }
           }
         }
@@ -542,37 +540,34 @@ export class InnovationPathwayStepFourService {
               );
             }
           } else {
-            if (intitutionRole === 2) {
-              const rib =
-                await this._resultInstitutionsBudgetRepository.findOne({
-                  where: {
-                    result_institution_id: institution.id,
-                    is_active: true,
-                  },
-                });
-
-              const budgetData = {
+            const rib = await this._resultInstitutionsBudgetRepository.findOne({
+              where: {
                 result_institution_id: institution.id,
-                in_kind: i.in_kind,
-                in_cash: i.in_cash,
-                is_determined: i.is_determined,
-                last_updated_by: user.id,
-              };
+                is_active: true,
+              },
+            });
 
-              if (rib) {
-                await this._resultInstitutionsBudgetRepository.update(
-                  {
-                    result_institutions_budget_id:
-                      rib.result_institutions_budget_id,
-                  },
-                  budgetData,
-                );
-              } else {
-                await this._resultInstitutionsBudgetRepository.save({
-                  ...budgetData,
-                  created_by: user.id,
-                });
-              }
+            const budgetData = {
+              result_institution_id: institution.id,
+              in_kind: i.in_kind,
+              in_cash: i.in_cash,
+              is_determined: i.is_determined,
+              last_updated_by: user.id,
+            };
+
+            if (rib) {
+              await this._resultInstitutionsBudgetRepository.update(
+                {
+                  result_institutions_budget_id:
+                    rib.result_institutions_budget_id,
+                },
+                budgetData,
+              );
+            } else {
+              await this._resultInstitutionsBudgetRepository.save({
+                ...budgetData,
+                created_by: user.id,
+              });
             }
           }
         }
