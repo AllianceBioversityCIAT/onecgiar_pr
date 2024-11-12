@@ -13,7 +13,8 @@ export class InvestmentDiscontinuedOptionsService {
   async findAll(resultTypeId: number) {
     try {
       const res = await this._investmentDiscontinuedOptionRepository.find({
-        where: { result_type_id: resultTypeId },
+        where: { result_type_id: resultTypeId, is_active: true },
+        order: { order: 'ASC' },
       });
       return this._returnResponse.format({
         message: 'InvestmentDiscontinuedOptions found',

@@ -701,6 +701,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
+  GET_globalNarratives(name: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/global-narratives/name/${name}`);
+  }
+
   GET_downloadPDF(resultCode, resultPhase) {
     return this.http.get(`${environment.apiBaseUrl}api/platform-report/result/${resultCode}?phase=${resultPhase}&downloadable=true`, {
       responseType: 'blob',

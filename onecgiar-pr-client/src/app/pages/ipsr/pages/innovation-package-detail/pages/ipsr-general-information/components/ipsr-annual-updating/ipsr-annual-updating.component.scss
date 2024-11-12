@@ -39,3 +39,19 @@
     }
   }
 }
+
+.message {
+  background-color: #eff6ff;
+  border: none;
+  border-width: 0px;
+  color: #2563eb;
+  width: 100%;
+  margin-bottom: 20px;
+  margin-top: 20px;
+  align-items: flex-start;
+  padding: 0.75rem 0.75rem;
+  border-radius: 0.375rem;
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+}

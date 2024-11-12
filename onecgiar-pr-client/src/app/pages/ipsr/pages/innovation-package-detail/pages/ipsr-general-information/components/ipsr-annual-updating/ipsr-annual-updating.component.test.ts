@@ -3,6 +3,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { IpsrAnnualUpdatingComponent } from './ipsr-annual-updating.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrRadioButtonComponent } from '../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
+import { of } from 'rxjs';
 
 describe('IpsrAnnualUpdatingComponent', () => {
   let component: IpsrAnnualUpdatingComponent;
@@ -49,5 +50,32 @@ describe('IpsrAnnualUpdatingComponent', () => {
       ]
     };
     expect(component.isIpsrDiscontinuedOptionsTrue()).toBe(false);
+  });
+
+  describe('ngOnInit', () => {
+    it('should call getAlertNarrativeIPSR', () => {
+      const spy = jest.spyOn(component, 'getAlertNarrativeIPSR');
+      component.ngOnInit();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('IpsrAnnualUpdatingComponent', () => {
+    it('should set alertTextIPSR with the response value from API', () => {
+      const mockResponse = { response: { value: 'Test alert narrative' } };
+      jest.spyOn(component.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of(mockResponse));
+
+      component.getAlertNarrativeIPSR();
+
+      expect(component.alertTextIPSR).toBe('Test alert narrative');
+    });
+
+    it('should call GET_globalNarratives with "updated_ipsr_guidance"', () => {
+      const spy = jest.spyOn(component.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: 'Test alert narrative' } }));
+
+      component.getAlertNarrativeIPSR();
+
+      expect(spy).toHaveBeenCalledWith('updated_ipsr_guidance');
+    });
   });
 });
