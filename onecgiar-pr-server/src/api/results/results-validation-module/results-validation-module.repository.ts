@@ -1198,6 +1198,15 @@ export class resultValidationRepository
 									WHEN (
 										SELECT COUNT(*) 
 										FROM result_answers ra
+										LEFT JOIN result_questions rq345 on ra.result_question_id = rq345.result_question_id
+										WHERE ra.result_id = r.id
+											AND rq345.parent_question_id IN (2, 3)
+											AND ra.result_question_id NOT IN (4,8)
+											AND ra.answer_boolean = TRUE
+									) > 0 THEN 1
+									WHEN (
+										SELECT COUNT(*) 
+										FROM result_answers ra
 										WHERE ra.result_id = r.id
 											AND ra.result_question_id IN (4, 8)
 											AND (ra.answer_boolean IS NULL OR ra.answer_boolean = FALSE)
@@ -1404,21 +1413,39 @@ export class resultValidationRepository
 						)
 						AND (
 							SELECT
-								COUNT(*)
-							FROM
-								result_answers ra
-							LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
-							WHERE
-								ra.result_id = r.id
-								AND ra.result_question_id = 47
-								AND (
-									coalesce(ra.answer_boolean, 0) = 0
-									OR(
-										ra.answer_boolean = TRUE
-										AND COALESCE(TRIM(ra.answer_text), '') <> ''
-									)
-								)
-						) > 0
+								CASE
+									WHEN (
+										SELECT
+											COUNT(*)
+										FROM
+											result_answers ra
+										LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
+										WHERE
+											ra.result_id = r.id
+											AND rq.parent_question_id = 38
+											AND ra.answer_boolean = TRUE
+											AND ra.result_question_id <> 39
+									) > 0 THEN 1
+									WHEN (
+										SELECT
+											COUNT(*)
+										FROM
+											result_answers ra
+										LEFT JOIN result_questions rq ON rq.result_question_id = ra.result_question_id
+										WHERE
+											ra.result_id = r.id
+											AND ra.result_question_id = 47
+											AND (
+												coalesce(ra.answer_boolean, 0) = 0
+												OR(
+													ra.answer_boolean = TRUE
+													AND COALESCE(TRIM(ra.answer_text), '') <> ''
+												)
+											)
+									) > 0 THEN 1
+									ELSE 0
+								END
+						)
 					)
 					AND (
 						#megatrends
