@@ -8,6 +8,7 @@ import { ResultsListService } from '../../../pages/results/pages/results-outlet/
 })
 export class CustomSpinnerComponent {
   @Input() text: string;
+  @Input() showSpinner: boolean = false;
 
   constructor(public resultsListService: ResultsListService) {}
 }

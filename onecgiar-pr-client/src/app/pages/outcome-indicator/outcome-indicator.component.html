@@ -6,10 +6,11 @@
       [required]="false"
       [isStatic]="true"
       optionLabel="full_name"
-      optionValue="initiative_id"
+      optionValue="official_code"
       placeholder="Select Initiative"
       labelDescInlineStyles="color: #5569dd"
-      [(ngModel)]="this.initiativeIdFilter">
+      [(ngModel)]="this.outcomeIService.initiativeIdFilter"
+      (ngModelChange)="this.outcomeIService.getEOIsData(); updateQueryParams()">
     </app-pr-select>
 
     <div class="filters_phase">

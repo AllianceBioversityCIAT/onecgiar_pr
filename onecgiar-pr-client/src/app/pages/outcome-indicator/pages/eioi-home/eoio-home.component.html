@@ -1,2 +1,84 @@
-<p>eioi-home works!</p>
-,
+<header class="eoio_header">
+  <div class="eoio_header_arrow" routerLink="/outcome-indicator-module/home" [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
+    <i class="material-icons-round" style="color: white">arrow_back</i>
+  </div>
+  <h1 class="eoio_header_title">Indicator list</h1>
+</header>
+
+<div class="search_input" style="width: 100%; margin-bottom: 2rem">
+  <i class="material-icons-round">search</i>
+  <input type="text" placeholder="Find indicator..." />
+</div>
+
+<p-table
+  id="resultListTable"
+  #table
+  [value]="this.outcomeIService.eoisData"
+  sortField="toc_result_title"
+  [sortOrder]="1"
+  styleClass="p-datatable-gridlines p-datatable-sm"
+  [rows]="8"
+  responsiveLayout="scroll"
+  [rowsPerPageOptions]="[8, 12, 20]"
+  [loading]="this.outcomeIService.loading()"
+  [showLoader]="false"
+  [first]="this.outcomeIService.searchText && 0"
+  [paginator]="this.outcomeIService.eoisData?.length > 0"
+  [tableStyle]="{ 'min-width': '80rem' }">
+  <ng-template pTemplate="header">
+    <tr>
+      <th pSortableColumn="toc_result_title" style="width: 26%">Outcome <p-sortIcon field="toc_result_title" /></th>
+      <th style="width: 25%">
+        Indicator
+        <!-- <p-sortIcon field="indicators[0].indicator_name" /> -->
+      </th>
+      <th style="width: 20%">
+        Indicator Type
+        <!-- <p-sortIcon field="category" /> -->
+      </th>
+      <th style="width: 8%">Expected Target</th>
+      <th style="width: 8%">Actual target achieved</th>
+      <th style="width: 8%">Achieved status</th>
+      <th style="width: 5%">Reporting status</th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-item>
+    @let indicator = item.indicators?.[0];
+    <tr>
+      <td>{{ item?.toc_result_title }}</td>
+      <td>{{ indicator?.indicator_description }}</td>
+      <td>
+        <span style="font-weight: bold">
+          {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
+        </span>
+        {{ indicator?.indicator_name }}
+      </td>
+      <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
+      <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not defined' }}</td>
+      <td style="text-align: center">
+        {{ achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Achieved' : 'Not Achieved' }}
+      </td>
+      <td>
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%">
+          <div
+            class="circle"
+            [ngClass]="{
+              'circle-success': achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+            }"></div>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="loadingbody">
+    <tr
+      [style]="{
+        height: this.outcomeIService.eoisData?.length ? '100%' : '400px'
+      }">
+      <td colspan="7">
+        <app-custom-spinner text="Loading results" [showSpinner]="this.outcomeIService.loading()"></app-custom-spinner>
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

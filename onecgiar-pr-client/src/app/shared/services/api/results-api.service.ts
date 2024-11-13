@@ -1060,4 +1060,8 @@ export class ResultsApiService {
   GET_cgiarEntityTypes() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
   }
+
+  GET_contributionsToIndicatorsEOIS(initiativeCode: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
+  }
 }
