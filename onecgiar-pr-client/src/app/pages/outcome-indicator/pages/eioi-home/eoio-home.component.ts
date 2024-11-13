@@ -7,11 +7,13 @@ import { TagModule } from 'primeng/tag';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-eioi-home',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, TagModule, CustomSpinnerModule, RouterLink],
+  imports: [CommonModule, TableModule, ButtonModule, TagModule, CustomSpinnerModule, RouterLink, FilterIndicatorBySearchPipe, FormsModule],
   templateUrl: './eoio-home.component.html',
   styleUrl: './eoio-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
