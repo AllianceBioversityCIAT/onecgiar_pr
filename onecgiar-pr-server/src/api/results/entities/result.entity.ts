@@ -395,5 +395,5 @@ export class Result {
   obj_result_notification: Notification[];
 
   @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
-  obj_result_qaed: Notification[];
+  obj_result_qaed: ResultQaedLog[];
 }
