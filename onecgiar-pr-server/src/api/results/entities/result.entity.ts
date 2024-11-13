@@ -29,6 +29,7 @@ import { ResultsByInstitution } from '../results_by_institutions/entities/result
 import { ShareResultRequest } from '../share-result-request/entities/share-result-request.entity';
 import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 
 @Entity()
 export class Result {
@@ -351,34 +352,6 @@ export class Result {
   // helpers??
   initiative_id!: number;
 
-  // *** QA tracking fields
-  @Column({
-    name: 'qaed_date',
-    type: 'timestamp',
-    nullable: true,
-  })
-  qaed_date: Date;
-
-  @Column({
-    name: 'qaed_comment',
-    type: 'text',
-    nullable: true,
-  })
-  qaed_comment: string;
-
-  @Column({
-    name: 'qaed_user',
-    type: 'int',
-    nullable: true,
-  })
-  qaed_user: number;
-
-  @ManyToOne(() => User, (u) => u.obj_qaed_user, { nullable: true })
-  @JoinColumn({
-    name: 'qaed_user',
-  })
-  obj_qaed_user: User;
-
   @OneToMany(() => ResultsKnowledgeProduct, (rkp) => rkp.result_object)
   result_knowledge_product_array: ResultsKnowledgeProduct[];
 
@@ -420,4 +393,7 @@ export class Result {
 
   @OneToMany(() => Notification, (ra) => ra.obj_result)
   obj_result_notification: Notification[];
+
+  @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
+  obj_result_qaed: ResultQaedLog[];
 }
