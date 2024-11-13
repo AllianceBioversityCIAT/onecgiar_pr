@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { Notification } from '../../../../api/notification/entities/notification.entity';
 import { UserNotificationSetting } from '../../../../api/user-notification-settings/entities/user-notification-settings.entity';
-import { Result } from '../../../../api/results/entities/result.entity';
+import { ResultQaedLog } from '../../../../api/result-qaed/entities/result-qaed-log.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -103,6 +103,6 @@ export class User {
   )
   obj_emitter_user_notification: Notification[];
 
-  @OneToMany(() => Result, (r) => r.obj_qaed_user)
-  obj_qaed_user: Result[];
+  @OneToMany(() => ResultQaedLog, (r) => r.obj_qaed_user)
+  obj_qaed_user: ResultQaedLog[];
 }
