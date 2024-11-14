@@ -86,7 +86,11 @@ export class ContributionToIndicatorsService {
         });
       }
 
-      return this.update(contribution, user);
+      return {
+        contribution,
+        message: `The Contributor to Indicator to tocId ${tocId} has been created.`,
+        status: HttpStatus.CREATED,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
