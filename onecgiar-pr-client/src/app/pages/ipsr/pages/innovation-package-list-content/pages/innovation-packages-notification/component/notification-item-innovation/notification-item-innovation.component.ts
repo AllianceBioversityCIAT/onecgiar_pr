@@ -16,7 +16,11 @@ export class NotificationItemInnovationComponent {
   requesting = false;
   submitter = true;
 
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private shareRequestModalSE: ShareRequestModalService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
 
   mapAndAccept(notification) {
     if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {
@@ -59,9 +63,12 @@ export class NotificationItemInnovationComponent {
 
     this.api.dataControlSE.currentResult.result_type = result_type_name;
     this.api.dataControlSE.currentNotification = notification;
-    this.shareRequestModalSE.shareRequestBody.initiative_id = approving_inititiative_id;
-    this.shareRequestModalSE.shareRequestBody.official_code = approving_official_code;
-    this.shareRequestModalSE.shareRequestBody.short_name = approving_short_name;
+    this.shareRequestModalSE.shareRequestBody.initiative_id =
+      approving_inititiative_id !== owner_initiative_id ? approving_inititiative_id : requester_initiative_id;
+    this.shareRequestModalSE.shareRequestBody.official_code =
+      approving_inititiative_id !== owner_initiative_id ? approving_official_code : requester_official_code;
+    this.shareRequestModalSE.shareRequestBody.short_name =
+      approving_inititiative_id !== owner_initiative_id ? approving_short_name : requester_short_name;
 
     this.shareRequestModalSE.shareRequestBody.result_toc_results.push({
       action_area_outcome_id: null,
