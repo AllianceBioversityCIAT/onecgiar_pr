@@ -53,12 +53,14 @@ describe('OutcomeIndicatorComponent', () => {
     component.api.dataControlSE.myInitiativesList = [mockInitiative];
     jest.spyOn(component, 'updateQueryParams');
     jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
 
     component.setDefaultInitiativeForNonAdmin();
 
     expect(component.outcomeIService.initiativeIdFilter).toBe('TEST1');
     expect(component.updateQueryParams).toHaveBeenCalled();
     expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
   });
 
   it('should set default initiative for non-admin user when query param exists', () => {
@@ -67,12 +69,14 @@ describe('OutcomeIndicatorComponent', () => {
     component.activatedRoute.snapshot.queryParams = { init: 'TEST2' };
     jest.spyOn(component, 'updateQueryParams');
     jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
 
     component.setDefaultInitiativeForNonAdmin();
 
     expect(component.outcomeIService.initiativeIdFilter).toBe('TEST2');
     expect(component.updateQueryParams).toHaveBeenCalled();
     expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
   });
 
   it('should load all initiatives', async () => {
@@ -99,11 +103,13 @@ describe('OutcomeIndicatorComponent', () => {
     const mockQueryParams = { init: 'test1' };
     component.activatedRoute.snapshot.queryParams = mockQueryParams;
     jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
 
     component.handleInitiativeQueryParam();
 
     expect(component.outcomeIService.initiativeIdFilter).toBe('TEST1');
     expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
   });
 
   it('should update query params', () => {
@@ -117,5 +123,19 @@ describe('OutcomeIndicatorComponent', () => {
       queryParams: { init: 'TEST1' },
       queryParamsHandling: 'merge'
     });
+  });
+
+  it('should handle initiative change', () => {
+    jest.spyOn(component, 'updateQueryParams');
+    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
+    jest.spyOn(component.outcomeIService.searchText, 'set');
+
+    component.handleInitiativeChange();
+
+    expect(component.updateQueryParams).toHaveBeenCalled();
+    expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
+    expect(component.outcomeIService.searchText.set).toHaveBeenCalledWith('');
   });
 });

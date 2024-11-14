@@ -1068,4 +1068,8 @@ export class ResultsApiService {
   GET_contributionsToIndicatorsEOIS(initiativeCode: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
   }
+
+  GET_contributionsToIndicatorsWPS(initiativeCode: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/outcomes/${initiativeCode}`);
+  }
 }

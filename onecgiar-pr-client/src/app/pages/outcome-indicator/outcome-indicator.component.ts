@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { OutcomeIndicatorService } from './services/outcome-indicator.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { take } from 'rxjs/operators';
 
 @Component({
   selector: 'app-outcome-indicator-module',
@@ -34,6 +33,13 @@ export class OutcomeIndicatorComponent implements OnInit {
     }
   }
 
+  handleInitiativeChange() {
+    this.updateQueryParams();
+    this.outcomeIService.getEOIsData();
+    this.outcomeIService.getWorkPackagesData();
+    this.outcomeIService.searchText.set('');
+  }
+
   setDefaultInitiativeForNonAdmin(): void {
     const defaultInitiative = this.api.dataControlSE.myInitiativesList[0]?.official_code;
     const initParam = this.activatedRoute.snapshot.queryParams[this.QUERY_PARAM_INITIATIVE];
@@ -44,6 +50,7 @@ export class OutcomeIndicatorComponent implements OnInit {
 
     this.updateQueryParams();
     this.outcomeIService.getEOIsData();
+    this.outcomeIService.getWorkPackagesData();
   }
 
   async loadAllInitiatives(): Promise<void> {
@@ -66,6 +73,7 @@ export class OutcomeIndicatorComponent implements OnInit {
       this.updateQueryParams();
     }
     this.outcomeIService.getEOIsData();
+    this.outcomeIService.getWorkPackagesData();
   }
 
   updateQueryParams(): void {

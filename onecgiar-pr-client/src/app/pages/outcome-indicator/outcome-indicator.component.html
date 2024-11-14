@@ -10,7 +10,7 @@
       placeholder="Select Initiative"
       labelDescInlineStyles="color: #5569dd"
       [(ngModel)]="this.outcomeIService.initiativeIdFilter"
-      (ngModelChange)="this.outcomeIService.getEOIsData(); updateQueryParams()">
+      (ngModelChange)="handleInitiativeChange()">
     </app-pr-select>
 
     <div class="filters_phase">
