@@ -76,7 +76,9 @@ export class ResultsKnowledgeProductMapper {
     });
 
     const keywords =
-      dto?.agrovoc_keywords?.results ?? dto?.['AGROVOC Keywords'].results ?? [];
+      dto?.agrovoc_keywords?.results ??
+      dto?.['AGROVOC Keywords']?.results ??
+      [];
     knowledgeProductDto.keywords = (keywords ?? [])
       .filter((k) => !k.is_agrovoc)
       .map((k) => k.keyword);
