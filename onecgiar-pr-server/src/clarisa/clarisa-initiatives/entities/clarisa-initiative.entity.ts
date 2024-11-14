@@ -3,6 +3,7 @@ import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-a
 import { ClarisaCgiarEntityType } from '../../clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
 import { UserNotificationSetting } from '../../../api/user-notification-settings/entities/user-notification-settings.entity';
 import { ResultsByInititiative } from '../../../api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ClarisaInitiativeStage } from '../../clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -75,4 +76,7 @@ export class ClarisaInitiative {
 
   @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_initiative)
   obj_result_by_initiative?: ResultsByInititiative[];
+
+  @OneToMany(() => ClarisaInitiativeStage, (cis) => cis.initiative_object)
+  initiative_stage_array: ClarisaInitiativeStage[];
 }
