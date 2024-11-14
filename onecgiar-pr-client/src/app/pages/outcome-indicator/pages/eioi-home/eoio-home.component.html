@@ -7,14 +7,14 @@
 
 <div class="search_input" style="width: 100%; margin-bottom: 2rem">
   <i class="material-icons-round">search</i>
-  <input type="text" placeholder="Find indicator..." />
+  <input type="text" placeholder="Find indicator..." [(ngModel)]="this.outcomeIService.searchText" />
 </div>
 
 <p-table
   id="resultListTable"
   #table
-  [value]="this.outcomeIService.eoisData"
-  sortField="toc_result_title"
+  [value]="this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText()"
+  sortField="toc_result_description"
   [sortOrder]="1"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [rows]="8"
@@ -23,11 +23,11 @@
   [loading]="this.outcomeIService.loading()"
   [showLoader]="false"
   [first]="this.outcomeIService.searchText && 0"
-  [paginator]="this.outcomeIService.eoisData?.length > 0"
+  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 0"
   [tableStyle]="{ 'min-width': '80rem' }">
   <ng-template pTemplate="header">
     <tr>
-      <th pSortableColumn="toc_result_title" style="width: 26%">Outcome <p-sortIcon field="toc_result_title" /></th>
+      <th pSortableColumn="toc_result_description" style="width: 26%">Outcome <p-sortIcon field="toc_result_description" /></th>
       <th style="width: 25%">
         Indicator
         <!-- <p-sortIcon field="indicators[0].indicator_name" /> -->
@@ -46,7 +46,7 @@
   <ng-template pTemplate="body" let-item>
     @let indicator = item.indicators?.[0];
     <tr>
-      <td>{{ item?.toc_result_title }}</td>
+      <td>{{ item?.toc_result_description }}</td>
       <td>{{ indicator?.indicator_description }}</td>
       <td>
         <span style="font-weight: bold">
@@ -74,7 +74,7 @@
   <ng-template pTemplate="loadingbody">
     <tr
       [style]="{
-        height: this.outcomeIService.eoisData?.length ? '100%' : '400px'
+        height: (this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length ? '100%' : '400px'
       }">
       <td colspan="7">
         <app-custom-spinner text="Loading results" [showSpinner]="this.outcomeIService.loading()"></app-custom-spinner>
