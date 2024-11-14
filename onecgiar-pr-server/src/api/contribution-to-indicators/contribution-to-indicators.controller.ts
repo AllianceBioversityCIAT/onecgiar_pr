@@ -19,7 +19,7 @@ export class ContributionToIndicatorsController {
   ) {}
 
   @Post()
-  create(@Query() tocId: string, @UserToken() user: TokenDto) {
+  create(@Query('tocId') tocId: string, @UserToken() user: TokenDto) {
     return this.contributionToIndicatorsService.create(tocId, user);
   }
 

@@ -54,7 +54,8 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       ) as workpackage
       from ${env.DB_TOC}.toc_results toc_result
       left join ${env.DB_TOC}.work_packages wp on toc_result.work_packages_id = wp.id
-      right join ${env.DB_NAME}.\`version\` v on toc_result.phase = v.toc_pahse_id and v.phase_year = 2024 and v.app_module_id = 1
+      right join ${env.DB_NAME}.\`version\` v on toc_result.phase = v.toc_pahse_id 
+        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
       right join ${env.DB_NAME}.clarisa_initiatives ci on toc_result.id_toc_initiative = ci.toc_id and ci.official_code = ?
       where toc_result.is_active = 1 and toc_result.result_type = ?
       group by wp.id

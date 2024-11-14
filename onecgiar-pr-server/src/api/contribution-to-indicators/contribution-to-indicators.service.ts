@@ -73,6 +73,12 @@ export class ContributionToIndicatorsService {
           };
         }
         contribution.is_active = true;
+        await this._contributionToIndicatorsRepository.update(
+          {
+            id: contribution.id,
+          },
+          contribution,
+        );
       } else {
         contribution = await this._contributionToIndicatorsRepository.save({
           created_by: user.id,
