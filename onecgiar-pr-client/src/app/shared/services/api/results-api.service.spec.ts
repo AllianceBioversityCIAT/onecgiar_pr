@@ -3468,4 +3468,34 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
     });
   });
+
+  describe('GET_contributionsToIndicatorsEOIS', () => {
+    it('should call GET_contributionsToIndicatorsEOIS and return expected data', done => {
+      const initiativeCode = 'INIT_CODE';
+      service.GET_contributionsToIndicatorsEOIS(initiativeCode).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_contributionsToIndicatorsWPS', () => {
+    it('should call GET_contributionsToIndicatorsWPS and return expected data', done => {
+      const initiativeCode = 'INIT_CODE';
+      service.GET_contributionsToIndicatorsWPS(initiativeCode).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/outcomes/${initiativeCode}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
 });

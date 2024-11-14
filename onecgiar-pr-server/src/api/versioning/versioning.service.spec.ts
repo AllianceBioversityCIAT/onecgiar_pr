@@ -14,7 +14,7 @@ import { ApplicationModulesRepository } from './repositories/application-modules
 import { ResultRepository } from '../results/result.repository';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
-import { ResultsTocResultRepository } from '../results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultByIntitutionsRepository } from '../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';

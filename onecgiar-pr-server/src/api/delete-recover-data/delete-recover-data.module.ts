@@ -44,7 +44,7 @@ import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-resu
 import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target-repository';
 import { ResultsSdgTargetRepository } from '../results/results-toc-results/repositories/results-sdg-targets.respository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { ResultsTocResultRepository } from '../results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { resultValidationRepository } from '../results/results-validation-module/results-validation-module.repository';
 import { ResultByEvidencesRepository } from '../results/results_by_evidences/result_by_evidences.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';

@@ -369,15 +369,21 @@ export const OutcomeIndicatorRouting: PrRoute[] = [
     prName: 'Outcome indicators home',
     underConstruction: false,
     path: 'home',
-    loadChildren: () =>
-      import('../../pages/outcome-indicator/pages/outcome-indicator-home/outcome-indicator-home.module').then(m => m.OutcomeIndicatorHomeModule)
+    loadComponent: () =>
+      import('../../pages/outcome-indicator/pages/outcome-indicator-home/outcome-indicator-home.component').then(m => m.OutcomeIndicatorHomeComponent)
   },
-  // {
-  //   prName: 'Report progress on End-of-initiative outcome',
-  //   underConstruction: false,
-  //   path: 'report-progress-eoi-outcome',
-  //   loadChildren: () => import('../../pages/type-one-report/pages/tor-fact-sheet/tor-fact-sheet.module').then(m => m.TorFactSheetModule)
-  // }
+  {
+    prName: 'Report progress on End-of-initiative outcome',
+    underConstruction: false,
+    path: 'eoi-outcome-home',
+    loadComponent: () => import('../../pages/outcome-indicator/pages/eioi-home/eoio-home.component').then(m => m.EoioHomeComponent)
+  },
+  {
+    prName: 'Report progress on Work Packages outcome',
+    underConstruction: false,
+    path: 'work-package-outcome-home',
+    loadComponent: () => import('../../pages/outcome-indicator/pages/wp-home/wp-home.component').then(m => m.WpHomeComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 

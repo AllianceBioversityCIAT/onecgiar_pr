@@ -1,22 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
-import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultsTocResult } from './entities/results-toc-result.entity';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { ResultsTocResult } from '../entities/results-toc-result.entity';
 import {
   ReplicableConfigInterface,
   ReplicableInterface,
-} from '../../../shared/globalInterfaces/replicable.interface';
-import { ResultsTocResultIndicatorsRepository } from './repositories/results-toc-results-indicators.repository';
-import { ResultsTocImpactAreaTargetRepository } from './repositories/result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from './repositories/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from './repositories/results-sdg-targets.respository';
-import { ResultsActionAreaOutcomeRepository } from './repositories/result-toc-action-area.repository';
-import { ResultsTocTargetIndicatorRepository } from './repositories/result-toc-result-target-indicator.repository';
-import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
-import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
-import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
-import { ResultsTocResultIndicatorsService } from './results-toc-result-indicators.service';
+} from '../../../../shared/globalInterfaces/replicable.interface';
+import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
+import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
+import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
+import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
+import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
+import { CreateResultsTocResultDto } from '../dto/create-results-toc-result.dto';
+import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
+import { ResultsTocResultIndicatorsService } from '../results-toc-result-indicators.service';
 
 @Injectable()
 export class ResultsTocResultRepository

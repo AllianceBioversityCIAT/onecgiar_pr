@@ -8,7 +8,7 @@ import { ResultRepository } from '../../api/results/result.repository';
 import { ApplicationModulesRepository } from '../../api/versioning/repositories/application-modules.repository';
 import { NonPooledProjectRepository } from '../../api/results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../../api/results/results-centers/results-centers.repository';
-import { ResultsTocResultRepository } from '../../api/results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../../api/results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultByInitiativesRepository } from '../../api/results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../../api/results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';

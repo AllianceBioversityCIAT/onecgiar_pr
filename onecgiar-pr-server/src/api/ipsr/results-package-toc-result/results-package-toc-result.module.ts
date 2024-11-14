@@ -11,7 +11,7 @@ import { VersionRepository } from '../../versioning/versioning.repository';
 import { IpsrRepository } from '../repository/ipsr.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsTocResultRepository } from '../../results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ShareResultRequestService } from '../../results/share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from '../../results/share-result-request/share-result-request.repository';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
