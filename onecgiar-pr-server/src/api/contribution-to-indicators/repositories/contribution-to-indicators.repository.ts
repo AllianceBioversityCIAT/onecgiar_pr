@@ -52,18 +52,19 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           )
         ))
       ) as workpackage
-      from ${env.DB_TOC}.toc_results toc_result
-      left join ${env.DB_TOC}.work_packages wp on toc_result.work_packages_id = wp.id
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_NAME}.clarisa_initiative_stages cis on cis.initiative_id = ci.id and cis.active
+      left join ${env.DB_TOC}.work_packages wp on wp.initvStgId = cis.id
+      left join ${env.DB_TOC}.toc_results toc_result on toc_result.is_active and toc_result.result_type = ?
       right join ${env.DB_NAME}.\`version\` v on toc_result.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
-      right join ${env.DB_NAME}.clarisa_initiatives ci on toc_result.id_toc_initiative = ci.toc_id and ci.official_code = ?
-      where toc_result.is_active = 1 and toc_result.result_type = ?
+      where ci.official_code = ?
       group by wp.id
       order by wp.id
     `;
 
     return this.dataSource
-      .query(dataQuery, [initiativeCode, isOutcome ? 2 : 3])
+      .query(dataQuery, [isOutcome ? 2 : 3, initiativeCode])
       .then((data) => data.map((item) => item.workpackage))
       .catch((err) => {
         throw this._handlersError.returnErrorRepository({
