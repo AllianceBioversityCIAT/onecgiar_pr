@@ -8,11 +8,12 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { FormsModule } from '@angular/forms';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-eioi-home',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, CustomSpinnerModule, RouterLink, FilterIndicatorBySearchPipe, FormsModule],
+  imports: [CommonModule, TableModule, ButtonModule, CustomSpinnerModule, RouterLink, FilterIndicatorBySearchPipe, FormsModule, TooltipModule],
   templateUrl: './eoio-home.component.html',
   styleUrl: './eoio-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -8,11 +8,12 @@ import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-sea
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-wp-home',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, CustomSpinnerModule, RouterLink, FilterIndicatorBySearchPipe, FormsModule],
+  imports: [CommonModule, TableModule, ButtonModule, CustomSpinnerModule, RouterLink, FilterIndicatorBySearchPipe, FormsModule, TooltipModule],
   templateUrl: './wp-home.component.html',
   styleUrl: './wp-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
