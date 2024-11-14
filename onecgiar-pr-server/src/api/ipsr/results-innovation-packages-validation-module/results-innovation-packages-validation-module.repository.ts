@@ -959,9 +959,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         )
                         AND(
                             ripb.current_year IS NULL
-                            OR ripb.current_year = 0
                             OR ripb.next_year IS NULL
-                            OR ripb.next_year = 0
                         )
                 ) > 0 THEN FALSE
                 WHEN (
@@ -986,9 +984,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         )
                         AND(
                             nppb.in_kind IS NULL
-                            OR nppb.in_kind = 0
                             OR nppb.in_cash IS NULL
-                            OR nppb.in_cash = 0
                         )
                 ) > 0 THEN FALSE
                 WHEN (
@@ -1013,12 +1009,9 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                         )
                         AND (
                             ribu.in_kind IS NULL
-                            OR ribu.in_kind = 0
                             OR ribu.in_cash IS NULL
-                            OR ribu.in_cash = 0
                         )
                 ) > 0 THEN FALSE
-                WHEN rip.is_result_ip_published IS NULL THEN FALSE
                 ELSE TRUE
             END AS validation
         FROM
