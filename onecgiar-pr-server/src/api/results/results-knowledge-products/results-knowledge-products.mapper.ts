@@ -94,12 +94,15 @@ export class ResultsKnowledgeProductMapper {
       new ResultsKnowledgeProductMetadataDto();
 
     metadataCGSpace.source = 'CGSpace';
-    metadataCGSpace.accessibility = String(
-      StringContentComparator.contentCompare(
-        'Open Access',
-        dto?.['Open Access'],
-      ) == 0,
-    );
+
+    if (dto?.['Open Access']) {
+      metadataCGSpace.accessibility =
+        StringContentComparator.contentCompare(
+          'Open Access',
+          dto?.['Open Access'],
+        ) == 0;
+    }
+
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi =
       StringContentComparator.contentCompare('ISI Journal', dto?.ISI) == 0;
@@ -124,7 +127,13 @@ export class ResultsKnowledgeProductMapper {
         new ResultsKnowledgeProductMetadataDto();
 
       metadataWoS.source = mqapDOIData.source;
-      metadataWoS.accessibility = mqapDOIData.is_oa?.toLocaleLowerCase();
+
+      if (mqapDOIData.is_oa) {
+        metadataWoS.accessibility = mqapDOIData.is_oa
+          ?.toLocaleLowerCase()
+          ?.includes('yes');
+      }
+
       metadataWoS.doi = mqapDOIData.doi;
       metadataWoS.is_isi = mqapDOIData.is_isi
         ?.toLocaleLowerCase()
@@ -398,7 +407,9 @@ export class ResultsKnowledgeProductMapper {
 
       metadataDto.source = m.source;
 
-      metadataDto.accessibility = m.accesibility;
+      metadataDto.accessibility = m.accesibility
+        ? m.accesibility === 'yes'
+        : null;
       metadataDto.doi = m.doi;
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
