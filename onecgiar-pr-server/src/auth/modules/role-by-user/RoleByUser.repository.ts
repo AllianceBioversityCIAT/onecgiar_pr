@@ -29,7 +29,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     try {
       const isAdmin = await this.query(queryData, [userId]);
       if (isAdmin?.length > 0) {
-        return Boolean(isAdmin[0].is_admin);
+        return !!parseInt(isAdmin[0].is_admin);
       }
 
       return null;
