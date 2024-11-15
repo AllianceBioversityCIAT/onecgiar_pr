@@ -18,6 +18,13 @@ export class KnowledgeProductSelectorComponent {
 
   alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
 
+  deliveryOptions = [
+    { id: 1, name: 'Scaling' },
+    { id: 2, name: 'Demand' },
+    { id: 3, name: 'Innovation' },
+    { id: 4, name: 'Other' }
+  ];
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
