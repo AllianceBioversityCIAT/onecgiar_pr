@@ -41,9 +41,9 @@ export class ContributionToIndicatorsController {
     );
   }
 
-  @Get('get/:tocId')
-  findOne(@Param('tocId') tocId: string) {
-    return this.contributionToIndicatorsService.findOne(tocId);
+  @Get('get/indicator/:tocId')
+  findOneCoIResultByTocId(@Param('tocId') tocId: string) {
+    return this.contributionToIndicatorsService.findOneCoIResultByTocId(tocId);
   }
 
   @Patch()

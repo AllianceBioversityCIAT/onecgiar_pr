@@ -96,7 +96,7 @@ export class ContributionToIndicatorsService {
     }
   }
 
-  async findOne(tocId: string) {
+  async findOneCoIResultByTocId(tocId: string) {
     try {
       if (!tocId?.length) {
         throw {
@@ -106,13 +106,12 @@ export class ContributionToIndicatorsService {
         };
       }
 
-      const contributionToIndicator =
-        await (this._contributionToIndicatorsRepository.findOneBy({
-          toc_result_id: tocId,
-          is_active: true,
-        }) as Promise<ContributionToIndicatorsDto>);
+      const exists = await this._contributionToIndicatorsRepository.existsBy({
+        toc_result_id: tocId,
+        is_active: true,
+      });
 
-      if (!contributionToIndicator) {
+      if (!exists) {
         throw {
           response: {},
           message: `Contribution to indicator with tocId "${tocId}" not found`,
@@ -120,9 +119,14 @@ export class ContributionToIndicatorsService {
         };
       }
 
+      const contributionToIndicator =
+        await this._contributionToIndicatorResultsRepository.findBasicContributionIndicatorDataByTocId(
+          tocId,
+        );
+
       contributionToIndicator.contributing_results =
         await this._contributionToIndicatorResultsRepository.findResultContributionsByTocId(
-          contributionToIndicator.toc_result_id,
+          tocId,
         );
 
       return {
@@ -140,7 +144,7 @@ export class ContributionToIndicatorsService {
     userDto: TokenDto,
   ) {
     try {
-      if (!contributionToIndicatorDto.id) {
+      if (!contributionToIndicatorDto.contribution_id) {
         throw {
           response: {},
           message: 'missing data: id',
@@ -150,20 +154,23 @@ export class ContributionToIndicatorsService {
 
       const contributionToIndicator =
         await this._contributionToIndicatorsRepository.findOne({
-          where: { id: contributionToIndicatorDto.id, is_active: true },
+          where: {
+            id: contributionToIndicatorDto.contribution_id,
+            is_active: true,
+          },
           relations: { contribution_to_indicator_result_array: true },
         });
 
       if (!contributionToIndicator) {
         throw {
           response: {},
-          message: `Contribution to indicator with id "${contributionToIndicatorDto.id}" not found`,
+          message: `Contribution to indicator with id "${contributionToIndicatorDto.contribution_id}" not found`,
           status: HttpStatus.NOT_FOUND,
         };
       }
 
       await this._contributionToIndicatorsRepository.update(
-        contributionToIndicatorDto.id,
+        contributionToIndicatorDto.contribution_id,
         {
           last_updated_by: userDto.id,
           achieved_in_2024: contributionToIndicatorDto.achieved_in_2024,
@@ -203,7 +210,8 @@ export class ContributionToIndicatorsService {
           contributingResult =
             this._contributionToIndicatorResultsRepository.create({
               created_by: userDto.id,
-              contribution_to_indicator_id: contributionToIndicatorDto.id,
+              contribution_to_indicator_id:
+                contributionToIndicatorDto.contribution_id,
               result_id: result.result_id,
             });
         } else {
