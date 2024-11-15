@@ -80,34 +80,19 @@
           <div class="type">Partner role: <span style="color: #f00">*</span></div>
 
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
-            <button
-              class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 1) }"
-              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 1)">
-              Scaling
-            </button>
-            <button
-              class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 2) }"
-              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 2)">
-              Demand
-            </button>
-            <button
-              class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 3) }"
-              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 3)">
-              Innovation
-            </button>
-            <button
-              class="delivery"
-              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) : true"
-              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, 4) }"
-              (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, 4)">
-              Other
-            </button>
+            @for (delivery of deliveryOptions; track $index) {
+              <ng-container>
+                <button
+                  class="delivery"
+                  [ngClass]="{
+                    active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, delivery.id),
+                    globalDisabled: this.rolesSE.readOnly
+                  }"
+                  (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, delivery.id)">
+                  {{ delivery.name }}
+                </button>
+              </ng-container>
+            }
           </div>
         </div>
       </div>
