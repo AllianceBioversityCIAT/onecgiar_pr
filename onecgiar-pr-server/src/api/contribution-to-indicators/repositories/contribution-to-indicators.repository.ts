@@ -17,19 +17,68 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     super(ContributionToIndicator, dataSource.createEntityManager());
   }
 
-  async findAllToCResultsByInitiativeCode(
-    initiativeCode: string,
-    isOutcome: boolean,
-  ) {
+  async findAllOutcomesByInitiativeCode(initiativeCode: string) {
+    const relationName = 'outcome';
     const dataQuery = `
       select json_object(
         "workpackage_code", wp.wp_official_code,
         "workpackage_name", wp.name,
-        "toc_results", json_arrayagg(json_object(
-          "toc_result_id", toc_result.id,
-          "roc_result_uuid", toc_result.toc_result_id,
-          "toc_result_title", REGEXP_REPLACE(toc_result.result_title, '^[\s\n\r]+|[\s\n\r]+$', ''),
-          "toc_result_description", REGEXP_REPLACE(toc_result.result_description, '^[\s\n\r]+|[\s\n\r]+$', ''),
+        "toc_results", json_arrayagg(${this._getTocResultSubquery(relationName)})
+      ) as workpackage
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_NAME}.clarisa_initiative_stages cis on cis.initiative_id = ci.id and cis.active
+      left join ${env.DB_TOC}.work_packages wp on wp.initvStgId = cis.id
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 2
+	      and ${relationName}.id_toc_initiative = ci.toc_id and ${relationName}.work_packages_id = wp.id
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
+      where ci.official_code = ?
+      group by wp.id
+      order by wp.id
+    `;
+
+    return this.dataSource
+      .query(dataQuery, [initiativeCode])
+      .then((data) => data.map((item) => item.workpackage))
+      .catch((err) => {
+        throw this._handlersError.returnErrorRepository({
+          error: err,
+          className: ContributionToIndicatorsRepository.name,
+          debug: true,
+        });
+      });
+  }
+
+  async findAllEoisByInitiativeCode(initiativeCode: string) {
+    const relationName = 'eoi';
+    const dataQuery = `
+      select ${this._getTocResultSubquery(relationName)} as eois
+      from prdb.clarisa_initiatives ci
+      left join Integration_information.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 3
+        and ${relationName}.id_toc_initiative = ci.toc_id
+      right join prdb.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
+      where ci.official_code = ?
+    `;
+
+    return this.dataSource
+      .query(dataQuery, [initiativeCode])
+      .then((data) => data.map((item) => item.eois))
+      .catch((err) => {
+        throw this._handlersError.returnErrorRepository({
+          error: err,
+          className: ContributionToIndicatorsRepository.name,
+          debug: true,
+        });
+      });
+  }
+
+  private _getTocResultSubquery(outerRelationName: string): string {
+    return `json_object(
+          "toc_result_id", ${outerRelationName}.id,
+          "toc_result_uuid", ${outerRelationName}.toc_result_id,
+          "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[\s\n\r]+|[\s\n\r]+$', ''),
+          "toc_result_description", REGEXP_REPLACE(${outerRelationName}.result_description, '^[\s\n\r]+|[\s\n\r]+$', ''),
           "indicators", (
             select json_arrayagg(json_object(
               "indicator_id", oi.id,
@@ -47,32 +96,9 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
               on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
             left join ${env.DB_NAME}.contribution_to_indicators cti on cti.is_active
               and convert(cti.toc_result_id using utf8mb3) = convert(oi.toc_result_indicator_id using utf8mb3)
-            where oi.toc_results_id = toc_result.id and oi.is_active
-            group by toc_result.id
+            where oi.toc_results_id = ${outerRelationName}.id and oi.is_active
+            group by ${outerRelationName}.id
           )
-        ))
-      ) as workpackage
-      from ${env.DB_NAME}.clarisa_initiatives ci
-      left join ${env.DB_NAME}.clarisa_initiative_stages cis on cis.initiative_id = ci.id and cis.active
-      left join ${env.DB_TOC}.work_packages wp on wp.initvStgId = cis.id
-      left join ${env.DB_TOC}.toc_results toc_result on toc_result.is_active and toc_result.result_type = ?
-	      and toc_result.id_toc_initiative = ci.toc_id and toc_result.work_packages_id = wp.id
-      right join ${env.DB_NAME}.\`version\` v on toc_result.phase = v.toc_pahse_id 
-        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
-      where ci.official_code = ?
-      group by wp.id
-      order by wp.id
-    `;
-
-    return this.dataSource
-      .query(dataQuery, [isOutcome ? 2 : 3, initiativeCode])
-      .then((data) => data.map((item) => item.workpackage))
-      .catch((err) => {
-        throw this._handlersError.returnErrorRepository({
-          error: err,
-          className: ContributionToIndicatorsRepository.name,
-          debug: true,
-        });
-      });
+        )`;
   }
 }

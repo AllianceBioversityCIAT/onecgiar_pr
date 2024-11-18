@@ -32,11 +32,13 @@ export class ContributionToIndicatorsService {
         };
       }
 
-      const data =
-        await this._contributionToIndicatorsRepository.findAllToCResultsByInitiativeCode(
-          initiativeCode,
-          isOutcome,
-        );
+      const data = isOutcome
+        ? await this._contributionToIndicatorsRepository.findAllOutcomesByInitiativeCode(
+            initiativeCode,
+          )
+        : await this._contributionToIndicatorsRepository.findAllEoisByInitiativeCode(
+            initiativeCode,
+          );
 
       return {
         data,
