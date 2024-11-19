@@ -74,6 +74,7 @@ export class ContributionToIndicatorsService {
             status: HttpStatus.CONFLICT,
           };
         }
+
         contribution.is_active = true;
         await this._contributionToIndicatorsRepository.update(
           {
