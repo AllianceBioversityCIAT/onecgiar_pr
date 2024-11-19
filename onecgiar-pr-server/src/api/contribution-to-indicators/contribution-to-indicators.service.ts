@@ -181,7 +181,7 @@ export class ContributionToIndicatorsService {
         },
       );
 
-      await this.handleContributingResults(
+      await this._handleContributingResults(
         contributionToIndicatorDto,
         userDto,
         contributionToIndicator,
@@ -197,7 +197,7 @@ export class ContributionToIndicatorsService {
     }
   }
 
-  private async handleContributingResults(
+  private async _handleContributingResults(
     contributionToIndicatorDto: ContributionToIndicatorsDto,
     userDto: TokenDto,
     contributionToIndicator: ContributionToIndicator,
@@ -215,6 +215,7 @@ export class ContributionToIndicatorsService {
               contribution_to_indicator_id:
                 contributionToIndicatorDto.contribution_id,
               result_id: result.result_id,
+              is_active: result.is_active ?? true,
             });
         } else {
           contributingResult =
@@ -231,7 +232,9 @@ export class ContributionToIndicatorsService {
           };
         }
 
-        contributingResult.is_active = true;
+        if (result.is_active) {
+          contributingResult.is_active = true;
+        }
         contributingResult.last_updated_by = userDto.id;
 
         processedContributingResults.push(contributingResult);
