@@ -205,24 +205,25 @@ export class ContributionToIndicatorsService {
   ) {
     function recursive(
       contributingResults: ContributionToIndicatorResultsDto[],
+      contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
       processedContributingResults: ContributionToIndicatorResult[] = [],
     ): ContributionToIndicatorResult[] {
       for (const result of contributingResults) {
-        let contributingResult: ContributionToIndicatorResult = null;
-        if (!result.contribution_id) {
-          contributingResult =
-            this._contributionToIndicatorResultsRepository.create({
-              created_by: userDto.id,
-              contribution_to_indicator_id:
-                contributionToIndicatorDto.contribution_id,
-              result_id: result.result_id,
-              is_active: result.is_active ?? true,
-            });
-        } else {
-          contributingResult =
-            contributionToIndicator.contribution_to_indicator_result_array.find(
-              (ctir) => ctir.id === result.contribution_id,
-            );
+        let contributingResult: ContributionToIndicatorResult =
+          contributionToIndicator.contribution_to_indicator_result_array.find(
+            (ctir) =>
+              result.contribution_id
+                ? ctir.id === result.contribution_id
+                : ctir.result_id === result.result_id,
+          );
+        if (!contributingResult) {
+          contributingResult = contributionToIndicatorResultsRepository.create({
+            created_by: userDto.id,
+            contribution_to_indicator_id:
+              contributionToIndicatorDto.contribution_id,
+            result_id: result.result_id,
+            is_active: result.is_active ?? true,
+          });
         }
 
         if (!contributingResult) {
@@ -242,16 +243,21 @@ export class ContributionToIndicatorsService {
 
         if (result.linked_results) {
           processedContributingResults.push(
-            ...recursive(result.linked_results, processedContributingResults),
+            ...recursive(
+              result.linked_results,
+              this._contributionToIndicatorResultsRepository,
+              processedContributingResults,
+            ),
           );
         }
-
-        return processedContributingResults;
       }
+
+      return processedContributingResults;
     }
 
     const contributingResultArray: ContributionToIndicatorResult[] = recursive(
       contributionToIndicatorDto.contributing_results,
+      this._contributionToIndicatorResultsRepository,
     );
 
     await this._contributionToIndicatorResultsRepository.save(
