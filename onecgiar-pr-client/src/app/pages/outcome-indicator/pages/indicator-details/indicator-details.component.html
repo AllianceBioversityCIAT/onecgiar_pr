@@ -68,12 +68,12 @@
           [plain]="true"
           [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
       </td>
-      <td style="text-align: center">{{ item?.result_code }}</td>
-      <td>{{ item?.result_title }}</td>
-      <td style="text-align: center">{{ item?.phase_name }}</td>
-      <td style="text-align: center">{{ item?.result_type }}</td>
-      <td style="text-align: center">{{ item?.result_status }}</td>
-      <td style="text-align: center">{{ item?.result_creation_date }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_code }}</td>
+      <td [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_title }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.phase_name }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_type }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_status }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_creation_date }}</td>
       <td>
         <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
           <app-pr-button
@@ -81,7 +81,12 @@
             colorType="secondary"
             [verticalMargin]="0"
             (click)="openInNewPage(item?.result_code, item?.phase_id)"></app-pr-button>
-          <app-pr-button text="Remove" colorType="danger" [verticalMargin]="0"></app-pr-button>
+          <app-pr-button
+            text="Remove"
+            colorType="danger"
+            [verticalMargin]="0"
+            (click)="handleRemoveIndicator(item, 'result')"
+            [ngClass]="{ globalDisabled: item?.is_active === false }"></app-pr-button>
         </div>
       </td>
     </tr>
@@ -106,13 +111,15 @@
           </ng-template>
           <ng-template pTemplate="body" let-result>
             <tr>
-              <td style="text-align: center">{{ result?.result_code }}</td>
-              <td>{{ result?.result_title }}</td>
-              <td style="text-align: center">{{ result?.phase_name }}</td>
-              <td style="text-align: center">{{ result?.result_type }}</td>
-              <td style="text-align: center">{{ result?.result_submitter }}</td>
-              <td style="text-align: center">{{ result?.result_status }}</td>
-              <td style="text-align: center">{{ result?.result_creation_date }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">
+                {{ result?.result_code }}
+              </td>
+              <td [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_title }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.phase_name }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_type }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_submitter }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_status }}</td>
+              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_creation_date }}</td>
               <td>
                 <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
                   <app-pr-button
@@ -120,7 +127,12 @@
                     colorType="secondary"
                     [verticalMargin]="0"
                     (click)="openInNewPage(result?.result_code, result?.phase_id)"></app-pr-button>
-                  <app-pr-button text="Remove" colorType="danger" [verticalMargin]="0"></app-pr-button>
+                  <app-pr-button
+                    text="Remove"
+                    colorType="danger"
+                    [verticalMargin]="0"
+                    (click)="handleRemoveIndicator(result, 'linked')"
+                    [ngClass]="{ globalDisabled: item?.is_active === false }"></app-pr-button>
                 </div>
               </td>
             </tr>

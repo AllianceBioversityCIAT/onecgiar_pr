@@ -145,6 +145,14 @@ export class IndicatorDetailsComponent implements OnInit {
     });
   }
 
+  handleRemoveIndicator(result, type: 'result' | 'linked') {
+    if (type === 'result' && !!result.linked_results) {
+      result.linked_results.forEach(linked => (linked.is_active = false));
+    }
+
+    result.is_active = false;
+  }
+
   goBack() {
     this.location.back();
   }

@@ -201,4 +201,28 @@ describe('IndicatorDetailsComponent', () => {
     expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorData, '123');
     expect(component.handleError).toHaveBeenCalledWith(error);
   });
+
+  it('should set is_active to false for result in handleRemoveIndicator', () => {
+    const result = { is_active: true };
+    component.handleRemoveIndicator(result, 'result');
+    expect(result.is_active).toBe(false);
+  });
+
+  it('should set is_active to false for linked results in handleRemoveIndicator', () => {
+    const result = {
+      is_active: true,
+      linked_results: [{ is_active: true }, { is_active: true }]
+    };
+    component.handleRemoveIndicator(result, 'result');
+    expect(result.is_active).toBe(false);
+    result.linked_results.forEach(linked => {
+      expect(linked.is_active).toBe(false);
+    });
+  });
+
+  it('should set is_active to false for linked type in handleRemoveIndicator', () => {
+    const result = { is_active: true };
+    component.handleRemoveIndicator(result, 'linked');
+    expect(result.is_active).toBe(false);
+  });
 });
