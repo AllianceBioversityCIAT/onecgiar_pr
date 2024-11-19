@@ -1,27 +1,29 @@
 <div class="local_container section_container">
-  <div class="filters">
-    <app-pr-select
-      [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
-      label="Initiative"
-      [required]="false"
-      [isStatic]="true"
-      optionLabel="full_name"
-      optionValue="official_code"
-      placeholder="Select Initiative"
-      labelDescInlineStyles="color: #5569dd"
-      [(ngModel)]="this.outcomeIService.initiativeIdFilter"
-      (ngModelChange)="handleInitiativeChange()">
-    </app-pr-select>
+  @if (!router.url.includes('/outcome-indicator-module/indicator-details')) {
+    <div class="filters">
+      <app-pr-select
+        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
+        label="Initiative"
+        [required]="false"
+        [isStatic]="true"
+        optionLabel="full_name"
+        optionValue="official_code"
+        placeholder="Select Initiative"
+        labelDescInlineStyles="color: #5569dd"
+        [(ngModel)]="this.outcomeIService.initiativeIdFilter"
+        (ngModelChange)="handleInitiativeChange()">
+      </app-pr-select>
 
-    <div class="filters_phase">
-      <p class="filters_phase_title">Phase:</p>
-      <p class="filters_phase_text">
-        {{ this.api.dataControlSE.reportingCurrentPhase.phaseName }}
-      </p>
+      <div class="filters_phase">
+        <p class="filters_phase_title">Phase:</p>
+        <p class="filters_phase_text">
+          {{ this.api.dataControlSE.reportingCurrentPhase.phaseName }}
+        </p>
+      </div>
     </div>
-  </div>
 
-  <div class="separator_line"></div>
+    <div class="separator_line"></div>
+  }
 
   <router-outlet></router-outlet>
 </div>

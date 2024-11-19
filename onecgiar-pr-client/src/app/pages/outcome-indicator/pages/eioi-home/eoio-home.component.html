@@ -41,7 +41,12 @@
     @let indicator = item.indicators?.[0];
     <tr>
       <td>{{ item?.toc_result_description ?? 'No data found.' }}</td>
-      <td>{{ indicator?.indicator_description ?? 'No data found.' }}</td>
+      <td
+        routerLink="/outcome-indicator-module/indicator-details"
+        [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter }"
+        class="indicator_link">
+        {{ indicator?.indicator_description ?? 'No data found.' }}
+      </td>
       <td>
         <span style="font-weight: bold">
           {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}

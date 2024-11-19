@@ -1072,4 +1072,12 @@ export class ResultsApiService {
   GET_contributionsToIndicatorsWPS(initiativeCode: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/outcomes/${initiativeCode}`);
   }
+
+  GET_contributionsToIndicators_indicator(tocId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/get/indicator/${tocId}`);
+  }
+
+  POST_contributionsToIndicators(tocId) {
+    return this.http.post<any>(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`, {});
+  }
 }
