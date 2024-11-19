@@ -384,6 +384,13 @@ export const OutcomeIndicatorRouting: PrRoute[] = [
     path: 'work-package-outcome-home',
     loadComponent: () => import('../../pages/outcome-indicator/pages/wp-home/wp-home.component').then(m => m.WpHomeComponent)
   },
+  {
+    prName: 'Indicator details',
+    underConstruction: false,
+    path: 'indicator-details',
+    loadComponent: () =>
+      import('../../pages/outcome-indicator/pages/indicator-details/indicator-details.component').then(m => m.IndicatorDetailsComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 

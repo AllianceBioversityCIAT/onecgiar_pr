@@ -62,7 +62,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
   ): Promise<ContributionToIndicatorResultsDto[]> {
     const dataQuery = `
       select main_ctir.id as contribution_id, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-          main_v.phase_name, main_rt.name as result_type, main_ci.official_code as result_submitter, 
+          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
           main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date,
           (
               select json_arrayagg(json_object(
@@ -71,6 +71,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
                   "result_code", linked_r.result_code,
                   "result_title", linked_r.title,
                   "phase_name", linked_v.phase_name,
+                  "phase_id", linked_v.id,
                   "result_type", linked_rt.name,
                   "result_submitter", linked_ci.official_code,
                   "result_status", linked_rs.status_name,

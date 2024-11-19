@@ -27,7 +27,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should set eoisData and loading to false on successful response', () => {
-    const response = { data: [{ toc_results: ['result1', 'result2'] }] };
+    const response = { data: ['result1', 'result2'] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
 

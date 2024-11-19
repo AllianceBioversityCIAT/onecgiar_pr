@@ -1,0 +1,158 @@
+<header class="indicator_header" (click)="goBack()">
+  <i class="pi pi-arrow-circle-left" style="font-size: 20px"></i>
+  <h1 class="indicator_header_title">Back to Indicators list</h1>
+</header>
+
+<h1 class="indicator_title">
+  Indicator:
+  <span style="color: var(--pr-color-primary)">
+    {{ this.indicatorData?.indicator_name }}
+  </span>
+</h1>
+
+<div class="indicator_info">
+  @for (item of indicatorInfoItems; track $index) {
+    <div class="indicator_info_item">
+      <div class="indicator_info_item_header">
+        <i [class]="item?.iconClass" style="font-size: 20px">{{ item?.icon }}</i>
+
+        <p class="indicator_info_item_label">{{ item?.label }}</p>
+      </div>
+
+      <p class="indicator_info_item_value">{{ this.indicatorData[item?.value] }}</p>
+    </div>
+  }
+</div>
+
+<app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
+<p-inputNumber [(ngModel)]="this.indicatorData.achieved_in_2024" [inputStyle]="{ width: '44px' }" [min]="0" placeholder="100"></p-inputNumber>
+
+<app-pr-textarea
+  label="Narrative explaining value achievement"
+  [(ngModel)]="this.indicatorData.narrative_achieved_in_2024"
+  [required]="true"
+  [maxWords]="200"
+  placeholder="Enter narrative explaining value achievement"></app-pr-textarea>
+
+<app-pr-field-header label="Which results are evidencing the achieved value for this indicator?" [required]="true"></app-pr-field-header>
+<app-alert-status
+  inlineStyles="margin: 0"
+  description="If a result is missing , please ensure it is either reported against this outcome or linked to it. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
+
+<p-table
+  id="linkedResultsTableList"
+  [value]="this.indicatorData?.contributing_results"
+  dataKey="result_code"
+  [tableStyle]="{ 'min-width': '60rem', 'margin-top': '2rem' }">
+  <ng-template pTemplate="header">
+    <tr>
+      <th style="width: 5rem"></th>
+      <th pSortableColumn="result_code">Result code <p-sortIcon field="result_code" /></th>
+      <th pSortableColumn="result_title">Title <p-sortIcon field="result_title" /></th>
+      <th pSortableColumn="phase_name">Phase <p-sortIcon field="phase_name" /></th>
+      <th pSortableColumn="result_type">Indicator category <p-sortIcon field="result_type" /></th>
+      <th pSortableColumn="result_status">Status <p-sortIcon field="result_status" /></th>
+      <th pSortableColumn="result_creation_date">Creation date <p-sortIcon field="result_creation_date" /></th>
+      <th>Action</th>
+    </tr>
+  </ng-template>
+  <ng-template pTemplate="body" let-item let-expanded="expanded">
+    <tr>
+      <td>
+        <p-button
+          type="button"
+          pRipple
+          [pRowToggler]="item"
+          [text]="true"
+          [rounded]="true"
+          [plain]="true"
+          [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
+      </td>
+      <td style="text-align: center">{{ item?.result_code }}</td>
+      <td>{{ item?.result_title }}</td>
+      <td style="text-align: center">{{ item?.phase_name }}</td>
+      <td style="text-align: center">{{ item?.result_type }}</td>
+      <td style="text-align: center">{{ item?.result_status }}</td>
+      <td style="text-align: center">{{ item?.result_creation_date }}</td>
+      <td>
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
+          <app-pr-button
+            text="View"
+            colorType="secondary"
+            [verticalMargin]="0"
+            (click)="openInNewPage(item?.result_code, item?.phase_id)"></app-pr-button>
+          <app-pr-button text="Remove" colorType="danger" [verticalMargin]="0"></app-pr-button>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="rowexpansion" let-item>
+    <tr>
+      <td></td>
+      <td colspan="7" style="padding: 0">
+        <p-table [value]="item?.linked_results" dataKey="id">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Linked result code</th>
+              <th>Linked result name</th>
+              <th>Phase</th>
+              <th>Indicator category</th>
+              <th>Submitter</th>
+              <th>Status</th>
+              <th>Creation date</th>
+              <th>Action</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-result>
+            <tr>
+              <td style="text-align: center">{{ result?.result_code }}</td>
+              <td>{{ result?.result_title }}</td>
+              <td style="text-align: center">{{ result?.phase_name }}</td>
+              <td style="text-align: center">{{ result?.result_type }}</td>
+              <td style="text-align: center">{{ result?.result_submitter }}</td>
+              <td style="text-align: center">{{ result?.result_status }}</td>
+              <td style="text-align: center">{{ result?.result_creation_date }}</td>
+              <td>
+                <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
+                  <app-pr-button
+                    text="View"
+                    colorType="secondary"
+                    [verticalMargin]="0"
+                    (click)="openInNewPage(result?.result_code, result?.phase_id)"></app-pr-button>
+                  <app-pr-button text="Remove" colorType="danger" [verticalMargin]="0"></app-pr-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="8" class="noDataText">There are no linked results for this result.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 100px">
+      <td colspan="8" class="noDataText">There are no results.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+<div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; gap: 1rem; margin-top: 2rem">
+  <app-pr-button text="Save" colorType="success" padding="big"></app-pr-button>
+  <app-pr-button text="Submit" colorType="primary" padding="big" [ngClass]="{ globalDisabled: true }"></app-pr-button>
+</div>
+
+@if (this.loading) {
+  <div class="spinner">
+    <div class="info">
+      <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
+      <div class="text">Loading section...</div>
+    </div>
+  </div>
+}
