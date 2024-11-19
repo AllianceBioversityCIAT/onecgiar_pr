@@ -10,6 +10,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ActivatedRoute } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 
 @Component({
   selector: 'app-indicator-details',
@@ -24,6 +25,7 @@ export class IndicatorDetailsComponent implements OnInit {
   indicatorData = new IndicatorData();
 
   indicatorId: string;
+  platformId: string;
   loading = true;
 
   indicatorInfoItems = [
@@ -63,7 +65,8 @@ export class IndicatorDetailsComponent implements OnInit {
     private location: Location,
     public api: ApiService,
     public activatedRoute: ActivatedRoute,
-    public messageService: MessageService
+    public messageService: MessageService,
+    public outcomeIService: OutcomeIndicatorService
   ) {}
 
   ngOnInit() {
@@ -116,6 +119,7 @@ export class IndicatorDetailsComponent implements OnInit {
   getQueryParams() {
     this.activatedRoute.queryParams.subscribe(params => {
       this.indicatorId = params['indicatorId'];
+      this.platformId = params['platform'];
     });
   }
 
@@ -124,6 +128,17 @@ export class IndicatorDetailsComponent implements OnInit {
     this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
       next: () => {
         this.getIndicatorData();
+
+        if (this.platformId) {
+          if (this.platformId === 'eoi') {
+            this.outcomeIService.getEOIsData();
+          }
+
+          if (this.platformId === 'wps') {
+            this.outcomeIService.getWorkPackagesData();
+          }
+        }
+
         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
       },
       error: error => this.handleError(error)

@@ -43,7 +43,7 @@
       <td>{{ item?.toc_result_description ?? 'No data found.' }}</td>
       <td
         routerLink="/outcome-indicator-module/indicator-details"
-        [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter, platform: 'eoi' }"
+        [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
         class="indicator_link">
         {{ indicator?.indicator_description ?? 'No data found.' }}
       </td>

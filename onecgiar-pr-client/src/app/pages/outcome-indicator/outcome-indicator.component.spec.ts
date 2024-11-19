@@ -138,4 +138,28 @@ describe('OutcomeIndicatorComponent', () => {
     expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
     expect(component.outcomeIService.searchText.set).toHaveBeenCalledWith('');
   });
+
+  it('should update query params when not in indicator details route', () => {
+    component.outcomeIService.initiativeIdFilter = 'TEST1';
+    jest.spyOn(component.router, 'navigate');
+    jest.spyOn(component.router, 'url', 'get').mockReturnValue('/outcome-indicator-module');
+
+    component.updateQueryParams();
+
+    expect(component.router.navigate).toHaveBeenCalledWith([], {
+      relativeTo: component.activatedRoute,
+      queryParams: { init: 'TEST1' },
+      queryParamsHandling: 'merge'
+    });
+  });
+
+  it('should not update query params when in indicator details route', () => {
+    component.outcomeIService.initiativeIdFilter = 'TEST1';
+    jest.spyOn(component.router, 'navigate');
+    jest.spyOn(component.router, 'url', 'get').mockReturnValue('/outcome-indicator-module/indicator-details');
+
+    component.updateQueryParams();
+
+    expect(component.router.navigate).not.toHaveBeenCalled();
+  });
 });

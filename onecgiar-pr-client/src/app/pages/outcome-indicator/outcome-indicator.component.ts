@@ -77,6 +77,10 @@ export class OutcomeIndicatorComponent implements OnInit {
   }
 
   updateQueryParams(): void {
+    if (this.router.url.includes('/outcome-indicator-module/indicator-details')) {
+      return;
+    }
+
     this.router.navigate([], {
       relativeTo: this.activatedRoute,
       queryParams: { [this.QUERY_PARAM_INITIATIVE]: this.outcomeIService.initiativeIdFilter },

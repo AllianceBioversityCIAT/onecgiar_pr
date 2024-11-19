@@ -159,6 +159,36 @@ describe('IndicatorDetailsComponent', () => {
     });
   });
 
+  it('should handle save indicator data successfully when platformId is eoi', () => {
+    component.indicatorId = '123';
+    component.indicatorData = { someData: 'data' } as any;
+    component.platformId = 'eoi';
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
+    jest.spyOn(component, 'getIndicatorData');
+    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.messageService, 'add');
+
+    component.handleSaveIndicatorData();
+
+    expect(component.getIndicatorData).toHaveBeenCalled();
+    expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+  });
+
+  it('should handle save indicator data successfully when platformId is wps', () => {
+    component.indicatorId = '123';
+    component.indicatorData = { someData: 'data' } as any;
+    component.platformId = 'wps';
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
+    jest.spyOn(component, 'getIndicatorData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
+    jest.spyOn(component.messageService, 'add');
+
+    component.handleSaveIndicatorData();
+
+    expect(component.getIndicatorData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
+  });
+
   it('should handle error when saving indicator data', () => {
     component.indicatorId = '123';
     component.indicatorData = { someData: 'data' } as any;
