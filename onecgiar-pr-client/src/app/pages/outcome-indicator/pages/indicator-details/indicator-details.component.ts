@@ -8,11 +8,14 @@ import { ButtonModule } from 'primeng/button';
 import { IndicatorData } from './models/indicator-data.model';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ActivatedRoute } from '@angular/router';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-indicator-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomFieldsModule, InputNumberModule, TableModule, ButtonModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, InputNumberModule, TableModule, ButtonModule, ToastModule],
+  providers: [MessageService],
   templateUrl: './indicator-details.component.html',
   styleUrl: './indicator-details.component.scss',
   changeDetection: ChangeDetectionStrategy.Default
@@ -59,7 +62,8 @@ export class IndicatorDetailsComponent implements OnInit {
   constructor(
     private location: Location,
     public api: ApiService,
-    public activatedRoute: ActivatedRoute
+    public activatedRoute: ActivatedRoute,
+    public messageService: MessageService
   ) {}
 
   ngOnInit() {
@@ -106,11 +110,23 @@ export class IndicatorDetailsComponent implements OnInit {
   handleError(error: any) {
     console.error('Error loading initiatives:', error);
     this.loading = false;
+    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'An error occurred', key: 'br' });
   }
 
   getQueryParams() {
     this.activatedRoute.queryParams.subscribe(params => {
       this.indicatorId = params['indicatorId'];
+    });
+  }
+
+  handleSaveIndicatorData() {
+    this.loading = true;
+    this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
+      next: () => {
+        this.getIndicatorData();
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
+      },
+      error: error => this.handleError(error)
     });
   }
 

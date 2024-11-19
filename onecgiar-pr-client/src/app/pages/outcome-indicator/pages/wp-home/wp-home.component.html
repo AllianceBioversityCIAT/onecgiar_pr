@@ -74,7 +74,7 @@
             <td
               class="indicator_link"
               routerLink="/outcome-indicator-module/indicator-details"
-              [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter }">
+              [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter, platform: 'wps' }">
               {{ indicator?.indicator_description }}
             </td>
             <td>
@@ -105,7 +105,7 @@
                 <div
                   class="circle"
                   [ngClass]="{
-                    'circle-success': this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+                    'circle-success': false
                   }"></div>
               </div>
             </td>

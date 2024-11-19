@@ -43,7 +43,7 @@
       <td>{{ item?.toc_result_description ?? 'No data found.' }}</td>
       <td
         routerLink="/outcome-indicator-module/indicator-details"
-        [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter }"
+        [queryParams]="{ indicatorId: indicator?.indicator_uuid, init: this.outcomeIService.initiativeIdFilter, platform: 'eoi' }"
         class="indicator_link">
         {{ indicator?.indicator_description ?? 'No data found.' }}
       </td>
@@ -63,15 +63,13 @@
       <td>
         <div
           style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
-          [pTooltip]="
-            this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Submitted' : 'Editing'
-          "
+          [pTooltip]="false ? 'Submitted' : 'Editing'"
           tooltipPosition="top"
           positionTop="-5">
           <div
             class="circle"
             [ngClass]="{
-              'circle-success': this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+              'circle-success': false
             }"></div>
         </div>
       </td>

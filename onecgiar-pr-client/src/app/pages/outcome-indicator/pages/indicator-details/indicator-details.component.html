@@ -19,7 +19,7 @@
         <p class="indicator_info_item_label">{{ item?.label }}</p>
       </div>
 
-      <p class="indicator_info_item_value">{{ this.indicatorData[item?.value] }}</p>
+      <p class="indicator_info_item_value">{{ this.indicatorData[item?.value] ?? 'Not specified' }}</p>
     </div>
   }
 </div>
@@ -144,9 +144,11 @@
 </p-table>
 
 <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; gap: 1rem; margin-top: 2rem">
-  <app-pr-button text="Save" colorType="success" padding="big"></app-pr-button>
+  <app-pr-button text="Save" colorType="success" padding="big" (click)="handleSaveIndicatorData()"></app-pr-button>
   <app-pr-button text="Submit" colorType="primary" padding="big" [ngClass]="{ globalDisabled: true }"></app-pr-button>
 </div>
+
+<p-toast position="bottom-right" key="br" />
 
 @if (this.loading) {
   <div class="spinner">

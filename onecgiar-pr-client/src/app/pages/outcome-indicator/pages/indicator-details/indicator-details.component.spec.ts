@@ -18,7 +18,8 @@ describe('IndicatorDetailsComponent', () => {
     const apiServiceMock = {
       resultsSE: {
         GET_contributionsToIndicators_indicator: jest.fn().mockReturnValue(of({})),
-        POST_contributionsToIndicators: jest.fn().mockReturnValue(of({}))
+        POST_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
+        PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({}))
       }
     };
 
@@ -138,5 +139,36 @@ describe('IndicatorDetailsComponent', () => {
     jest.spyOn(window, 'open');
     component.openInNewPage(result_code, version_id);
     expect(window.open).toHaveBeenCalledWith(url, '_blank');
+  });
+
+  it('should handle save indicator data successfully', () => {
+    component.indicatorId = '123';
+    component.indicatorData = { someData: 'data' } as any;
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
+    jest.spyOn(component, 'getIndicatorData');
+    jest.spyOn(component.messageService, 'add');
+
+    component.handleSaveIndicatorData();
+
+    expect(component.getIndicatorData).toHaveBeenCalled();
+    expect(component.messageService.add).toHaveBeenCalledWith({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Indicator data saved successfully',
+      key: 'br'
+    });
+  });
+
+  it('should handle error when saving indicator data', () => {
+    component.indicatorId = '123';
+    component.indicatorData = { someData: 'data' } as any;
+    const error = { message: 'Error' };
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(throwError(() => error));
+    jest.spyOn(component, 'handleError');
+
+    component.handleSaveIndicatorData();
+
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorData, '123');
+    expect(component.handleError).toHaveBeenCalledWith(error);
   });
 });

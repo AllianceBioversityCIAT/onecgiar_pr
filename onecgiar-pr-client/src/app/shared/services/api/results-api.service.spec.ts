@@ -3528,4 +3528,19 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('PATCH_contributionsToIndicators', () => {
+    it('should call PATCH_contributionsToIndicators and return expected data', done => {
+      const tocId = '123';
+      service.PATCH_contributionsToIndicators({}, tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`);
+      expect(req.request.method).toBe('PATCH');
+
+      req.flush(mockResponse);
+    });
+  });
 });
