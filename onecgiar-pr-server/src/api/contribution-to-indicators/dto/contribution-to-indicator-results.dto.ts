@@ -9,5 +9,6 @@ export class ContributionToIndicatorResultsDto {
   result_status: string;
   result_creation_date: string;
   result_link: string;
+  is_active?: boolean;
   linked_results?: ContributionToIndicatorResultsDto[];
 }
