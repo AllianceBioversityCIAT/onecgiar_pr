@@ -101,6 +101,22 @@ export class ContributionToIndicatorsService {
 
   async findOneCoIResultByTocId(tocId: string) {
     try {
+      function removeInactives(list: ContributionToIndicatorResultsDto[]) {
+        return list
+          .filter((contribution) =>
+            contribution.contribution_id ? contribution.is_active : true,
+          )
+          .map((contribution) => {
+            if (contribution.linked_results?.length) {
+              contribution.linked_results = removeInactives(
+                contribution.linked_results,
+              );
+            }
+
+            return contribution;
+          });
+      }
+
       if (!tocId?.length) {
         throw {
           response: {},
@@ -127,10 +143,12 @@ export class ContributionToIndicatorsService {
           tocId,
         );
 
-      contributionToIndicator.contributing_results =
+      const contributingResults =
         await this._contributionToIndicatorResultsRepository.findResultContributionsByTocId(
           tocId,
         );
+      contributionToIndicator.contributing_results =
+        removeInactives(contributingResults);
 
       return {
         contributionToIndicator,
@@ -210,7 +228,7 @@ export class ContributionToIndicatorsService {
     ): ContributionToIndicatorResult[] {
       for (const result of contributingResults) {
         let contributingResult: ContributionToIndicatorResult =
-          contributionToIndicator.contribution_to_indicator_result_array.find(
+          contributionToIndicator.contribution_to_indicator_result_array?.find(
             (ctir) =>
               result.contribution_id
                 ? ctir.id === result.contribution_id
@@ -234,20 +252,16 @@ export class ContributionToIndicatorsService {
           };
         }
 
-        if (result.is_active) {
-          contributingResult.is_active = true;
-        }
+        contributingResult.is_active = result.is_active;
         contributingResult.last_updated_by = userDto.id;
 
         processedContributingResults.push(contributingResult);
 
         if (result.linked_results) {
-          processedContributingResults.push(
-            ...recursive(
-              result.linked_results,
-              this._contributionToIndicatorResultsRepository,
-              processedContributingResults,
-            ),
+          processedContributingResults = recursive(
+            result.linked_results ?? [],
+            contributionToIndicatorResultsRepository,
+            processedContributingResults,
           );
         }
       }
@@ -263,9 +277,5 @@ export class ContributionToIndicatorsService {
     await this._contributionToIndicatorResultsRepository.save(
       contributingResultArray,
     );
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} contributionToIndicator`;
   }
 }
