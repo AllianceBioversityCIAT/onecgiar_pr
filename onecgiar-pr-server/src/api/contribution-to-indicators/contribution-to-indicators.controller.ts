@@ -23,7 +23,7 @@ export class ContributionToIndicatorsController {
     return this.contributionToIndicatorsService.create(tocId, user);
   }
 
-  @Post()
+  @Post('change-submission-state')
   changeSubmissionState(
     @Query('tocId') tocId: string,
     @UserToken() user: TokenDto,
