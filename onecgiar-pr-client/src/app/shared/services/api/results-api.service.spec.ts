@@ -3498,4 +3498,49 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_contributionsToIndicators_indicator', () => {
+    it('should call GET_contributionsToIndicators_indicator and return expected data', done => {
+      const tocId = '123';
+      service.GET_contributionsToIndicators_indicator(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/get/indicator/${tocId}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_contributionsToIndicators', () => {
+    it('should call POST_contributionsToIndicators and return expected data', done => {
+      const tocId = '123';
+      service.POST_contributionsToIndicators(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`);
+      expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_contributionsToIndicators', () => {
+    it('should call PATCH_contributionsToIndicators and return expected data', done => {
+      const tocId = '123';
+      service.PATCH_contributionsToIndicators({}, tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`);
+      expect(req.request.method).toBe('PATCH');
+
+      req.flush(mockResponse);
+    });
+  });
 });

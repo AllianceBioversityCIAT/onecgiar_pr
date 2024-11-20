@@ -34,7 +34,7 @@ export class OutcomeIndicatorService {
     this.loading.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsEOIS(this.initiativeIdFilter).subscribe({
       next: res => {
-        this.eoisData = res?.data?.[0]?.toc_results;
+        this.eoisData = res?.data;
         this.loading.set(false);
       },
       error: error => {

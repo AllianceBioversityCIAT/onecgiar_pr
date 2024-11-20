@@ -40,6 +40,7 @@ import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-level
 import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
 import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clarisa-subnational-scope.module';
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
+import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clar
     ClarisaTocPhasesModule,
     ClarisaSubnationalScopeModule,
     ClarisaCgiarEntityTypesModule,
+    ClarisaInitiativeStageModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
@@ -104,6 +106,7 @@ import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clar
     ClarisaTaskService,
     ClarisaSdgsModule,
     ClarisaSdgsTargetsModule,
+    ClarisaInitiativeStageModule,
   ],
 })
 export class ClarisaModule {}

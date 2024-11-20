@@ -71,7 +71,12 @@
             @if ($index === 0) {
               <td [attr.rowspan]="result.indicators.length">{{ result?.toc_result_description }}</td>
             }
-            <td>{{ indicator?.indicator_description }}</td>
+            <td
+              class="indicator_link"
+              routerLink="/outcome-indicator-module/indicator-details"
+              [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'wps' }">
+              {{ indicator?.indicator_description }}
+            </td>
             <td>
               <span style="font-weight: bold">
                 {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
@@ -100,7 +105,7 @@
                 <div
                   class="circle"
                   [ngClass]="{
-                    'circle-success': this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+                    'circle-success': false
                   }"></div>
               </div>
             </td>
