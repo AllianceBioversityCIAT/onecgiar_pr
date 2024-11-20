@@ -7,6 +7,9 @@ import { ContributionToIndicatorsDto } from './dto/contribution-to-indicators.dt
 import { ContributionToIndicatorResult } from './entities/contribution-to-indicator-result.entity';
 import { ContributionToIndicator } from './entities/contribution-to-indicator.entity';
 import { ContributionToIndicatorResultsDto } from './dto/contribution-to-indicator-results.dto';
+import { ContributionToIndicatorSubmissionRepository } from './repositories/contribution-to-indicator-result-submission.repository';
+import { ContributionToIndicatorSubmission } from './entities/contribution-to-indicator-submission.entity';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
 @Injectable()
 export class ContributionToIndicatorsService {
@@ -16,6 +19,7 @@ export class ContributionToIndicatorsService {
   constructor(
     private readonly _contributionToIndicatorsRepository: ContributionToIndicatorsRepository,
     private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
+    private readonly _contributionToIndicatorSubmissionRepository: ContributionToIndicatorSubmissionRepository,
     private readonly _handlersError: HandlersError,
   ) {}
 
@@ -87,6 +91,20 @@ export class ContributionToIndicatorsService {
           created_by: user.id,
           toc_result_id: tocId,
         });
+      }
+
+      const addSubmission = await this.changeSubmissionState(
+        user,
+        null,
+        contribution,
+      );
+
+      if (addSubmission.status !== HttpStatus.OK) {
+        throw {
+          response: {},
+          message: `Error creating submission for Contribution to Indicator with tocId "${tocId}"`,
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
       }
 
       return {
@@ -279,5 +297,79 @@ export class ContributionToIndicatorsService {
     await this._contributionToIndicatorResultsRepository.save(
       contributingResultArray,
     );
+  }
+
+  async changeSubmissionState(
+    user: TokenDto,
+    tocId?: string,
+    incomingContributionToIndicator?: ContributionToIndicator,
+  ) {
+    try {
+      let contributionToIndicator: ContributionToIndicator =
+        incomingContributionToIndicator;
+      const isNew: boolean = !!incomingContributionToIndicator;
+      if (!contributionToIndicator?.id) {
+        if (!tocId?.length) {
+          throw {
+            response: {},
+            message: 'missing data: tocId',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        contributionToIndicator =
+          await this._contributionToIndicatorsRepository.findOne({
+            where: {
+              toc_result_id: tocId,
+              is_active: true,
+            },
+            relations: { contribution_to_indicator_submission_array: true },
+          });
+
+        if (!contributionToIndicator) {
+          throw {
+            response: {},
+            message: `Contribution to indicator with tocId "${tocId}" not found`,
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+      }
+
+      const lastSubmissionStatus = ResultStatusData.getFromValue(
+        contributionToIndicator.contribution_to_indicator_submission_array?.find(
+          (submission) => submission.is_active,
+        )?.status_id,
+      );
+      if (!isNew && !lastSubmissionStatus) {
+        throw {
+          response: {},
+          message: `Contribution to indicator with tocId "${tocId}" has no active submissions`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const newStatus: ResultStatusData =
+        isNew || lastSubmissionStatus !== ResultStatusData.Editing
+          ? ResultStatusData.Editing
+          : ResultStatusData.Submitted;
+
+      const newSubmission: ContributionToIndicatorSubmission =
+        await this._contributionToIndicatorSubmissionRepository.save({
+          created_by: user.id,
+          contribution_to_indicator_id: contributionToIndicator.id,
+          status_id: newStatus.value,
+        });
+
+      return {
+        contributionToIndicator,
+        newSubmission,
+        message: `The Contributor to Indicator with tocId ${tocId} has been ${
+          newStatus === ResultStatusData.Editing ? 'unsubmitted' : 'submitted'
+        }.`,
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 }
