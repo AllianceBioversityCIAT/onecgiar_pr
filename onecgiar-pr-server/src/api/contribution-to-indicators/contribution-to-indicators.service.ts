@@ -252,7 +252,7 @@ export class ContributionToIndicatorsService {
           };
         }
 
-        if (result.is_active !== undefined) {
+        if (result.is_active != undefined) {
           contributingResult.is_active = result.is_active;
         }
         contributingResult.last_updated_by = userDto.id;
