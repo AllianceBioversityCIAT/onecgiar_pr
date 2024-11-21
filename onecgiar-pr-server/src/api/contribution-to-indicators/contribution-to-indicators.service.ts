@@ -122,7 +122,7 @@ export class ContributionToIndicatorsService {
       function removeInactives(list: ContributionToIndicatorResultsDto[]) {
         return list
           .filter((contribution) =>
-            contribution.contribution_id ? contribution.is_active : true,
+            contribution.contribution_id ? !!contribution.is_active : true,
           )
           .map((contribution) => {
             if (contribution.linked_results?.length) {
