@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ContributionToIndicatorResult } from '../entities/contribution-to-indicator-result.entity';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ContributionToIndicatorSubmission } from '../entities/contribution-to-indicator-submission.entity';
@@ -14,6 +13,6 @@ export class ContributionToIndicatorSubmissionRepository extends Repository<Cont
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
-    super(ContributionToIndicatorResult, dataSource.createEntityManager());
+    super(ContributionToIndicatorSubmission, dataSource.createEntityManager());
   }
 }

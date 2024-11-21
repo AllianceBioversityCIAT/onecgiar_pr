@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -18,51 +18,25 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
   imports: [CommonModule, FormsModule, CustomFieldsModule, InputNumberModule, TableModule, ButtonModule, ToastModule],
   providers: [MessageService],
   templateUrl: './indicator-details.component.html',
-  styleUrl: './indicator-details.component.scss',
+  styleUrls: ['./indicator-details.component.scss'],
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class IndicatorDetailsComponent implements OnInit {
   indicatorData = new IndicatorData();
-
   indicatorId: string;
   platformId: string;
   loading = true;
 
   indicatorInfoItems = [
-    {
-      icon: '',
-      label: 'Work Package',
-      value: 'workpackage_name',
-      iconClass: 'pi pi-box'
-    },
-    {
-      icon: 'login',
-      label: 'Outcome',
-      value: 'outcome_description',
-      iconClass: 'material-icons-round'
-    },
-    {
-      icon: 'show_chart',
-      label: 'Unit of measurement',
-      value: 'unit_measurement',
-      iconClass: 'material-icons-round'
-    },
-    {
-      icon: '',
-      label: 'Baseline',
-      value: 'indicator_baseline',
-      iconClass: 'pi pi-chart-bar'
-    },
-    {
-      icon: '',
-      label: 'Target',
-      value: 'indicator_target',
-      iconClass: 'pi pi-bullseye'
-    }
+    { icon: '', label: 'Work Package', value: 'workpackage_name', iconClass: 'pi pi-box' },
+    { icon: 'login', label: 'Outcome', value: 'outcome_description', iconClass: 'material-icons-round' },
+    { icon: 'show_chart', label: 'Unit of measurement', value: 'unit_measurement', iconClass: 'material-icons-round' },
+    { icon: '', label: 'Baseline', value: 'indicator_baseline', iconClass: 'pi pi-chart-bar' },
+    { icon: '', label: 'Target', value: 'indicator_target', iconClass: 'pi pi-bullseye' }
   ];
 
   constructor(
-    private location: Location,
+    public location: Location,
     public api: ApiService,
     public activatedRoute: ActivatedRoute,
     public messageService: MessageService,
@@ -71,8 +45,16 @@ export class IndicatorDetailsComponent implements OnInit {
 
   ngOnInit() {
     this.getQueryParams();
-
     this.getIndicatorData();
+  }
+
+  goBack() {
+    this.location.back();
+  }
+
+  openInNewPage(result_code: string, version_id: string) {
+    const url = `/result/result-detail/${result_code}/general-information?phase=${version_id}`;
+    window.open(url, '_blank');
   }
 
   getIndicatorData() {
@@ -128,17 +110,7 @@ export class IndicatorDetailsComponent implements OnInit {
     this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
       next: () => {
         this.getIndicatorData();
-
-        if (this.platformId) {
-          if (this.platformId === 'eoi') {
-            this.outcomeIService.getEOIsData();
-          }
-
-          if (this.platformId === 'wps') {
-            this.outcomeIService.getWorkPackagesData();
-          }
-        }
-
+        this.updatePlatformData();
         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
       },
       error: error => this.handleError(error)
@@ -146,6 +118,10 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   handleRemoveIndicator(result, type: 'result' | 'linked') {
+    if (this.indicatorData?.submission_status == '1') {
+      return;
+    }
+
     if (type === 'result' && !!result.linked_results) {
       result.linked_results.forEach(linked => (linked.is_active = false));
     }
@@ -153,12 +129,60 @@ export class IndicatorDetailsComponent implements OnInit {
     result.is_active = false;
   }
 
-  goBack() {
-    this.location.back();
+  private updatePlatformData() {
+    if (this.platformId) {
+      if (this.platformId === 'eoi') {
+        this.outcomeIService.getEOIsData();
+      } else if (this.platformId === 'wps') {
+        this.outcomeIService.getWorkPackagesData();
+      }
+    }
   }
 
-  openInNewPage(result_code: string, version_id: string) {
-    const url = `/result/result-detail/${result_code}/general-information?phase=${version_id}`;
-    window.open(url, '_blank');
+  handleSubmitIndicator() {
+    if (this.indicatorData?.submission_status == '0' && this.isSubmitDisabled()) {
+      return;
+    }
+
+    this.loading = true;
+
+    this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
+      next: () => this.onSubmitIndicator(),
+      error: error => this.handleError(error)
+    });
+  }
+
+  onSubmitIndicator() {
+    this.api.resultsSE.POST_contributionsToIndicatorsSubmit(this.indicatorId).subscribe({
+      next: () => {
+        this.getIndicatorData();
+        this.updatePlatformData();
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator submitted successfully', key: 'br' });
+      },
+      error: error => this.handleError(error)
+    });
+  }
+
+  handleUnsubmitIndicator() {
+    this.api.alertsFe.show(
+      {
+        id: 'confirm-delete-result',
+        title: `Are you sure you want to un-submit?`,
+        status: 'success',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.loading = true;
+        this.onSubmitIndicator();
+      }
+    );
+  }
+
+  isSubmitDisabled() {
+    return (
+      this.indicatorData.achieved_in_2024 === null ||
+      !this.indicatorData.narrative_achieved_in_2024 ||
+      !this.indicatorData.contributing_results?.length
+    );
   }
 }

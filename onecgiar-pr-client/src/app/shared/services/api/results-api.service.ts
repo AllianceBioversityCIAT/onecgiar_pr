@@ -1083,4 +1083,8 @@ export class ResultsApiService {
   PATCH_contributionsToIndicators(body, tocId) {
     return this.http.patch<any>(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`, body);
   }
+
+  POST_contributionsToIndicatorsSubmit(tocId) {
+    return this.http.post<any>(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`, {});
+  }
 }

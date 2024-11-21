@@ -1,3 +1,5 @@
+@let isSubmitted = this.indicatorData?.submission_status == '1';
+
 <header class="indicator_header" (click)="goBack()">
   <i class="pi pi-arrow-circle-left" style="font-size: 20px"></i>
   <h1 class="indicator_header_title">Back to Indicators list</h1>
@@ -25,13 +27,19 @@
 </div>
 
 <app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
-<p-inputNumber [(ngModel)]="this.indicatorData.achieved_in_2024" [inputStyle]="{ width: '44px' }" [min]="0" placeholder="100"></p-inputNumber>
+<p-inputNumber
+  [(ngModel)]="this.indicatorData.achieved_in_2024"
+  [inputStyle]="{ width: '44px' }"
+  [min]="0"
+  placeholder="100"
+  [readonly]="isSubmitted"></p-inputNumber>
 
 <app-pr-textarea
   label="Narrative explaining value achievement"
   [(ngModel)]="this.indicatorData.narrative_achieved_in_2024"
   [required]="true"
   [maxWords]="200"
+  [readOnly]="isSubmitted"
   placeholder="Enter narrative explaining value achievement"></app-pr-textarea>
 
 <app-pr-field-header label="Which results are evidencing the achieved value for this indicator?" [required]="true"></app-pr-field-header>
@@ -86,7 +94,7 @@
             colorType="danger"
             [verticalMargin]="0"
             (click)="handleRemoveIndicator(item, 'result')"
-            [ngClass]="{ globalDisabled: item?.is_active === false }"></app-pr-button>
+            [ngClass]="{ globalDisabled: item?.is_active === false || isSubmitted }"></app-pr-button>
         </div>
       </td>
     </tr>
@@ -132,7 +140,7 @@
                     colorType="danger"
                     [verticalMargin]="0"
                     (click)="handleRemoveIndicator(result, 'linked')"
-                    [ngClass]="{ globalDisabled: item?.is_active === false }"></app-pr-button>
+                    [ngClass]="{ globalDisabled: item?.is_active === false || isSubmitted }"></app-pr-button>
                 </div>
               </td>
             </tr>
@@ -156,14 +164,27 @@
 </p-table>
 
 <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; gap: 1rem; margin-top: 2rem">
-  <app-pr-button text="Save" colorType="success" padding="big" (click)="handleSaveIndicatorData()"></app-pr-button>
-  <app-pr-button text="Submit" colorType="primary" padding="big" [ngClass]="{ globalDisabled: true }"></app-pr-button>
+  <app-pr-button
+    text="Save"
+    colorType="success"
+    padding="big"
+    (click)="handleSaveIndicatorData()"
+    [ngClass]="{ globalDisabled: isSubmitted }"></app-pr-button>
+  <app-pr-button
+    [text]="isSubmitted ? 'Un-submit' : 'Submit'"
+    colorType="primary"
+    padding="big"
+    [disabled]="!isSubmitted && isSubmitDisabled()"
+    (click)="isSubmitted ? handleUnsubmitIndicator() : handleSubmitIndicator()"
+    [tooltipText]="!isSubmitted && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
 </div>
+
+{{ indicatorData?.submission_status }}
 
 <p-toast position="bottom-right" key="br" />
 
 @if (this.loading) {
-  <div class="spinner">
+  <div class="spinner" style="position: fixed">
     <div class="info">
       <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
       <div class="text">Loading section...</div>
