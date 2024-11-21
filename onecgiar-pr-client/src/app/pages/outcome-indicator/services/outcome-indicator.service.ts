@@ -10,10 +10,19 @@ export class OutcomeIndicatorService {
   initiativeIdFilter = '';
   loading = signal(false);
   loadingWPs = signal(false);
+  expandedRows = {};
 
   searchText = signal<string>('');
 
   constructor(public api: ApiService) {}
+
+  expandAll() {
+    this.expandedRows = this.wpsData.reduce((acc, p) => (acc[p.workpackage_name] = true) && acc, {});
+  }
+
+  collapseAll() {
+    this.expandedRows = {};
+  }
 
   achievedStatus(expectedTarget: number | null, achievedTarget: number | null): boolean {
     if (expectedTarget === null || achievedTarget === null) {
@@ -50,6 +59,7 @@ export class OutcomeIndicatorService {
       next: res => {
         this.wpsData = res.data;
         this.loadingWPs.set(false);
+        this.expandAll();
       },
       error: error => {
         console.error(error);
