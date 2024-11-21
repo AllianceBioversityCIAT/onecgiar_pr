@@ -166,10 +166,10 @@ export class IndicatorDetailsComponent implements OnInit {
   handleUnsubmitIndicator() {
     this.api.alertsFe.show(
       {
-        id: 'confirm-delete-result',
+        id: 'confirm-unsubmit-indicator',
         title: `Are you sure you want to un-submit?`,
         status: 'success',
-        confirmText: 'Yes, delete'
+        confirmText: 'Yes, un-submit'
       },
       () => {
         this.loading = true;
