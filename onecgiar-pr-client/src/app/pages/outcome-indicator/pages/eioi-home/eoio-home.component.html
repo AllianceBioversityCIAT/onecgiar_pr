@@ -23,7 +23,7 @@
   [loading]="this.outcomeIService.loading()"
   [showLoader]="false"
   [first]="this.outcomeIService.searchText && 0"
-  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 0"
+  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 8"
   [tableStyle]="{ 'min-width': '80rem' }">
   <ng-template pTemplate="header">
     <tr>
