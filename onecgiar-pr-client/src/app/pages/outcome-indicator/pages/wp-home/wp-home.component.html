@@ -12,7 +12,6 @@
 
 <p-table
   id="resultListTable"
-  #table
   [value]="this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true"
   sortField="workpackage_name"
   [sortOrder]="1"
@@ -22,13 +21,14 @@
   [rowsPerPageOptions]="[8, 12, 20]"
   [loading]="this.outcomeIService.loadingWPs()"
   [showLoader]="false"
-  [first]="this.outcomeIService.searchText && 0"
-  [paginator]="(this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length > 0"
+  [first]="this.outcomeIService.searchText() && 0"
+  [paginator]="(this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length > 8"
   [tableStyle]="{ 'min-width': '80rem' }"
   dataKey="workpackage_name"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="workpackage_name">
+  groupRowsBy="workpackage_name"
+  [expandedRowKeys]="this.outcomeIService.expandedRows">
   <ng-template pTemplate="header">
     <tr>
       <th pSortableColumn="workpackage_name" style="width: 26%">Outcome <p-sortIcon field="workpackage_name" /></th>

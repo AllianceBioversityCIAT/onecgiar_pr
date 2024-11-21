@@ -23,6 +23,17 @@ export class ContributionToIndicatorsController {
     return this.contributionToIndicatorsService.create(tocId, user);
   }
 
+  @Post('change-submission-state')
+  changeSubmissionState(
+    @Query('tocId') tocId: string,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.contributionToIndicatorsService.changeSubmissionState(
+      user,
+      tocId,
+    );
+  }
+
   @Get('outcomes/:initiativeCode')
   findAllOutcomesByInitiativeCode(
     @Param('initiativeCode') initiativeCode: string,
