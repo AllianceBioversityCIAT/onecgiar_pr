@@ -335,11 +335,14 @@ export class ContributionToIndicatorsService {
         }
       }
 
-      const lastSubmissionStatus = ResultStatusData.getFromValue(
+      const lastSubmission =
         contributionToIndicator.contribution_to_indicator_submission_array?.find(
           (submission) => submission.is_active,
-        )?.status_id,
+        );
+      const lastSubmissionStatus = ResultStatusData.getFromValue(
+        Number(lastSubmission?.status_id),
       );
+
       if (!isNew && !lastSubmissionStatus) {
         throw {
           response: {},
@@ -355,10 +358,20 @@ export class ContributionToIndicatorsService {
 
       const newSubmission: ContributionToIndicatorSubmission =
         await this._contributionToIndicatorSubmissionRepository.save({
-          created_by: user.id,
+          user_id: user.id,
           contribution_to_indicator_id: contributionToIndicator.id,
           status_id: newStatus.value,
         });
+
+      await this._contributionToIndicatorSubmissionRepository.update(
+        {
+          id: lastSubmission.id,
+        },
+        {
+          is_active: false,
+          last_updated_by: user.id,
+        },
+      );
 
       return {
         contributionToIndicator,

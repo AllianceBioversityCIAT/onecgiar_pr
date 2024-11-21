@@ -89,13 +89,23 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
               "indicator_baseline", oi.baseline_value,
               "indicator_target_value", trit.target_value,
               "indicator_target_date", trit.target_date,
-              "indicator_achieved_value", cti.achieved_in_2024
+              "indicator_achieved_value", cti.achieved_in_2024,
+              "indicator_submission_status", if(cti.id is null, 0, (
+               	CASE
+               		when indicator_s.result_status_id = 1 then 0
+               		when indicator_s.result_status_id = 3 then 1
+               		else null
+               	END
+              ))
             ))
             from ${env.DB_TOC}.toc_results_indicators oi
             left join ${env.DB_TOC}.toc_result_indicator_target trit 
               on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
             left join ${env.DB_NAME}.contribution_to_indicators cti on cti.is_active
-              and convert(cti.toc_result_id using utf8mb3) = convert(oi.toc_result_indicator_id using utf8mb3)
+              and convert(cti.toc_result_id using utf8mb4) = convert(oi.toc_result_indicator_id using utf8mb4)
+            left join ${env.DB_NAME}.contribution_to_indicator_submissions ctis on ctis.contribution_to_indicator_id = cti.id
+            	and ctis.is_active
+            left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
             where oi.toc_results_id = ${outerRelationName}.id and oi.is_active
             group by ${outerRelationName}.id
           )

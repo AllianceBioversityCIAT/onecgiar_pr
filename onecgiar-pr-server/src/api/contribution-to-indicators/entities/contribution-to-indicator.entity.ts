@@ -37,8 +37,8 @@ export class ContributionToIndicator extends BaseEntity {
   )
   contribution_to_indicator_result_array: ContributionToIndicatorResult[];
   @OneToMany(
-    () => ContributionToIndicatorResult,
-    (ctir) => ctir.contribution_to_indicator_object,
+    () => ContributionToIndicatorSubmission,
+    (ctis) => ctis.contribution_to_indicator_object,
   )
   contribution_to_indicator_submission_array: ContributionToIndicatorSubmission[];
 }

@@ -27,10 +27,20 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
         cti.toc_result_id, REGEXP_REPLACE(tri.type_name, '^[\s\n\r]+|[\s\n\r]+$', '') as indicator_name, 
         tri.unit_messurament as unit_measurement, tri.baseline_value as indicator_baseline,
         trit.target_value as indicator_target, REGEXP_REPLACE(tr.result_title, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_name,
-        REGEXP_REPLACE(tr.result_description, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_description, wp.name as workpackage_name
-      from ${env.DB_NAME}.contribution_to_indicators cti 
+        REGEXP_REPLACE(tr.result_description, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_description, wp.name as workpackage_name,
+        (
+        	CASE
+            when indicator_s.result_status_id = 1 then 0
+            when indicator_s.result_status_id = 3 then 1
+            else null
+			    END
+        ) submission_status
+      from ${env.DB_NAME}.contribution_to_indicators cti
+      left join ${env.DB_NAME}.contribution_to_indicator_submissions ctis on ctis.contribution_to_indicator_id = cti.id
+      	and ctis.is_active
+      left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
       left join ${env.DB_TOC}.toc_results_indicators tri on tri.is_active
-        and convert(tri.toc_result_indicator_id using utf8mb3) = convert(cti.toc_result_id using utf8mb3) 
+        and convert(tri.toc_result_indicator_id using utf8mb4) = convert(cti.toc_result_id using utf8mb4) 
       left join ${env.DB_TOC}.toc_result_indicator_target trit 
         on tri.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
       right join ${env.DB_TOC}.toc_results tr on tr.id = tri.toc_results_id
