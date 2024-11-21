@@ -124,4 +124,46 @@ describe('OutcomeIndicatorService', () => {
     const achievedTarget = NaN;
     expect(service.achievedStatus(expectedTarget, achievedTarget)).toBe(false);
   });
+
+  it('should expand all rows', () => {
+    service.wpsData = [{ workpackage_name: 'WP1' }, { workpackage_name: 'WP2' }, { workpackage_name: 'WP3' }];
+
+    service.expandAll();
+
+    expect(service.expandedRows).toEqual({
+      WP1: true,
+      WP2: true,
+      WP3: true
+    });
+  });
+
+  it('should not expand any rows if wpsData is empty', () => {
+    service.wpsData = [];
+
+    service.expandAll();
+
+    expect(service.expandedRows).toEqual({});
+  });
+
+  it('should collapse all rows', () => {
+    service.wpsData = [{ workpackage_name: 'WP1' }, { workpackage_name: 'WP2' }, { workpackage_name: 'WP3' }];
+    service.expandedRows = {
+      WP1: true,
+      WP2: true,
+      WP3: true
+    };
+
+    service.collapseAll();
+
+    expect(service.expandedRows).toEqual({});
+  });
+
+  it('should keep expandedRows empty if wpsData is empty', () => {
+    service.wpsData = [];
+    service.expandedRows = {};
+
+    service.collapseAll();
+
+    expect(service.expandedRows).toEqual({});
+  });
 });
