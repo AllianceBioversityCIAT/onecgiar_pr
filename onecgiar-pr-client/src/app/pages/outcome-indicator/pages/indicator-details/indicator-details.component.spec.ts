@@ -19,7 +19,13 @@ describe('IndicatorDetailsComponent', () => {
       resultsSE: {
         GET_contributionsToIndicators_indicator: jest.fn().mockReturnValue(of({})),
         POST_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
-        PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({}))
+        PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
+        POST_contributionsToIndicatorsSubmit: jest.fn().mockReturnValue(of({}))
+      },
+      alertsFe: {
+        show: jest.fn().mockImplementationOnce((config, callback) => {
+          callback();
+        })
       }
     };
 
@@ -224,5 +230,121 @@ describe('IndicatorDetailsComponent', () => {
     const result = { is_active: true };
     component.handleRemoveIndicator(result, 'linked');
     expect(result.is_active).toBe(false);
+  });
+
+  it('should return  when indicatorData?.submission_status == 1 in handleRemoveIndicator', () => {
+    const result = { is_active: true };
+    component.indicatorData = { submission_status: '1' } as any;
+    component.handleRemoveIndicator(result, 'result');
+    expect(result.is_active).toBe(true);
+  });
+
+  it('should handle submit indicator successfully', () => {
+    component.indicatorId = '123';
+    component.indicatorData = {
+      someData: 'data',
+      submission_status: '0',
+      achieved_in_2024: '10',
+      narrative_achieved_in_2024: 'Testing narrative',
+      contributing_results: [{ result_id: '1' } as any]
+    } as any;
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({}));
+    jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicatorsSubmit').mockReturnValue(of({}));
+    jest.spyOn(component, 'getIndicatorData');
+    jest.spyOn(component.messageService, 'add');
+
+    component.handleSubmitIndicator();
+
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalled();
+    expect(apiService.resultsSE.POST_contributionsToIndicatorsSubmit).toHaveBeenCalledWith('123');
+    expect(component.getIndicatorData).toHaveBeenCalled();
+    expect(component.messageService.add).toHaveBeenCalledWith({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Indicator submitted successfully',
+      key: 'br'
+    });
+  });
+
+  it('should handle error when submitting indicator', () => {
+    component.indicatorId = '123';
+    component.indicatorData = { someData: 'data' } as any;
+    const error = { message: 'Error' };
+    jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(throwError(() => error));
+    jest.spyOn(component, 'handleError');
+
+    component.handleSubmitIndicator();
+
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorData, '123');
+    expect(component.handleError).toHaveBeenCalledWith(error);
+  });
+
+  it('should return if there indicatorData?.submission_status == 0 and isSubmitDisabled is true', () => {
+    component.indicatorData = { submission_status: '0' } as any;
+    jest.spyOn(component, 'isSubmitDisabled').mockReturnValue(true);
+    component.handleSubmitIndicator();
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).not.toHaveBeenCalled();
+  });
+
+  it('should handle unsubmit indicator successfully', () => {
+    component.indicatorId = '123';
+    component.indicatorData = {
+      someData: 'data',
+      submission_status: '0',
+      achieved_in_2024: '10',
+      narrative_achieved_in_2024: 'Testing narrative',
+      contributing_results: [{ result_id: '1' } as any]
+    } as any;
+    const spyShow = jest.spyOn(apiService.alertsFe, 'show');
+
+    jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicatorsSubmit').mockReturnValue(of({}));
+    jest.spyOn(component, 'getIndicatorData');
+    jest.spyOn(component.messageService, 'add');
+
+    component.handleUnsubmitIndicator();
+
+    expect(spyShow).toHaveBeenCalled();
+    expect(apiService.resultsSE.POST_contributionsToIndicatorsSubmit).toHaveBeenCalledWith('123');
+    expect(component.messageService.add).toHaveBeenCalledWith({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Indicator submitted successfully',
+      key: 'br'
+    });
+  });
+
+  it('should handle error when unsubmitting indicator', () => {
+    component.indicatorId = '123';
+    const error = { message: 'Error' };
+    const spyShow = jest.spyOn(apiService.alertsFe, 'show');
+
+    jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicatorsSubmit').mockReturnValue(throwError(() => error));
+    jest.spyOn(component, 'handleError');
+
+    component.handleUnsubmitIndicator();
+
+    expect(spyShow).toHaveBeenCalled();
+    expect(apiService.resultsSE.POST_contributionsToIndicatorsSubmit).toHaveBeenCalled();
+    expect(component.handleError).toHaveBeenCalledWith(error);
+  });
+
+  it('should disable submit button when required fields are missing', () => {
+    component.indicatorData = {
+      achieved_in_2024: null,
+      narrative_achieved_in_2024: '',
+      contributing_results: []
+    } as any;
+
+    expect(component.isSubmitDisabled()).toBe(true);
+  });
+
+  it('should enable submit button when required fields are present', () => {
+    component.indicatorData = {
+      achieved_in_2024: 10,
+      narrative_achieved_in_2024: 'Some narrative',
+      contributing_results: [{ id: 1 }]
+    } as any;
+
+    expect(component.isSubmitDisabled()).toBe(false);
   });
 });

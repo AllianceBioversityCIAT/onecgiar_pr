@@ -42,7 +42,7 @@
     <tr>
       <td>{{ item?.toc_result_description ?? 'No data found.' }}</td>
       @if (!indicator) {
-        <td colspan="5" style="text-align: center">No indicator data found.</td>
+        <td colspan="6" style="text-align: center">No indicator data found.</td>
       } @else {
         <td
           routerLink="/outcome-indicator-module/indicator-details"
@@ -63,21 +63,20 @@
             this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Achieved' : 'Not Achieved'
           }}
         </td>
-      }
-
-      <td>
-        <div
-          style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
-          [pTooltip]="false ? 'Submitted' : 'Editing'"
-          tooltipPosition="top"
-          positionTop="-5">
+        <td>
           <div
-            class="circle"
-            [ngClass]="{
-              'circle-success': false
-            }"></div>
-        </div>
-      </td>
+            style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
+            [pTooltip]="indicator?.indicator_submission_status ? 'Submitted' : 'Editing'"
+            tooltipPosition="top"
+            positionTop="-5">
+            <div
+              class="circle"
+              [ngClass]="{
+                'circle-success': indicator?.indicator_submission_status
+              }"></div>
+          </div>
+        </td>
+      }
     </tr>
   </ng-template>
 

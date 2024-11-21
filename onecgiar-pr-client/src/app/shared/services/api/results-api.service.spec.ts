@@ -3543,4 +3543,19 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('POST_contributionsToIndicatorsSubmit', () => {
+    it('should call POST_contributionsToIndicatorsSubmit and return expected data', done => {
+      const tocId = '123';
+      service.POST_contributionsToIndicatorsSubmit(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`);
+      expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
+    });
+  });
 });
