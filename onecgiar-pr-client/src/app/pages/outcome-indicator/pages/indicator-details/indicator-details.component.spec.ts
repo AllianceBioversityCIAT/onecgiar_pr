@@ -308,7 +308,7 @@ describe('IndicatorDetailsComponent', () => {
     expect(component.messageService.add).toHaveBeenCalledWith({
       severity: 'success',
       summary: 'Success',
-      detail: 'Indicator submitted successfully',
+      detail: 'Indicator un-submitted successfully',
       key: 'br'
     });
   });

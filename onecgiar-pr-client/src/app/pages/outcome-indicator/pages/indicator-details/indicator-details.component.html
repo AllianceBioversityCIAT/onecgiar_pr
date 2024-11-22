@@ -176,7 +176,7 @@
     padding="big"
     [disabled]="!isSubmitted && isSubmitDisabled()"
     (click)="isSubmitted ? handleUnsubmitIndicator() : handleSubmitIndicator()"
-    [tooltipText]="!isSubmitted && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
+    [tooltipText]="!isSubmitted && isSubmitDisabled() && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
 </div>
 
 <p-toast position="bottom-right" key="br" />

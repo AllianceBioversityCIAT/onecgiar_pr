@@ -152,12 +152,17 @@ export class IndicatorDetailsComponent implements OnInit {
     });
   }
 
-  onSubmitIndicator() {
+  onSubmitIndicator(isUnsubmit = false) {
     this.api.resultsSE.POST_contributionsToIndicatorsSubmit(this.indicatorId).subscribe({
       next: () => {
         this.getIndicatorData();
         this.updatePlatformData();
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator submitted successfully', key: 'br' });
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `Indicator ${isUnsubmit ? 'un-submitted' : 'submitted'} successfully`,
+          key: 'br'
+        });
       },
       error: error => this.handleError(error)
     });
@@ -173,7 +178,7 @@ export class IndicatorDetailsComponent implements OnInit {
       },
       () => {
         this.loading = true;
-        this.onSubmitIndicator();
+        this.onSubmitIndicator(true);
       }
     );
   }
