@@ -10,6 +10,8 @@
       placeholder="Select Initiative"
       labelDescInlineStyles="color: #5569dd"
       [(ngModel)]="this.outcomeIService.initiativeIdFilter"
+      inlineStylesContainer="display: flex; flex-direction: row; gap: 10px; align-items: center; width: 100%; margin-top: 20px;"
+      labelDescInlineStyles="color: #5569dd; margin: 0;"
       (ngModelChange)="handleInitiativeChange()">
     </app-pr-select>
 
