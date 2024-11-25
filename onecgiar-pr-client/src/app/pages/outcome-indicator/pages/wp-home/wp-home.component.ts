@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnDestroy } from '@angular/core';
-import { ActivatedRoute, RouterLink, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { FormsModule } from '@angular/forms';

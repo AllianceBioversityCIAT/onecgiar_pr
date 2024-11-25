@@ -55,14 +55,14 @@
   [tableStyle]="{ 'min-width': '60rem', 'margin-top': '2rem' }">
   <ng-template pTemplate="header">
     <tr>
-      <th style="width: 5rem"></th>
-      <th pSortableColumn="result_code">Result code <p-sortIcon field="result_code" /></th>
-      <th pSortableColumn="result_title">Title <p-sortIcon field="result_title" /></th>
-      <th pSortableColumn="phase_name">Phase <p-sortIcon field="phase_name" /></th>
-      <th pSortableColumn="result_type">Indicator category <p-sortIcon field="result_type" /></th>
-      <th pSortableColumn="result_status">Status <p-sortIcon field="result_status" /></th>
-      <th pSortableColumn="result_creation_date">Creation date <p-sortIcon field="result_creation_date" /></th>
-      <th>Action</th>
+      <th style="width: 5rem" id="trigger-header"></th>
+      <th pSortableColumn="result_code" id="result-code-header">Result code <p-sortIcon field="result_code" /></th>
+      <th pSortableColumn="result_title" id="result-title-header">Title <p-sortIcon field="result_title" /></th>
+      <th pSortableColumn="phase_name" id="phase-name-header">Phase <p-sortIcon field="phase_name" /></th>
+      <th pSortableColumn="result_type" id="result-type-header">Indicator category <p-sortIcon field="result_type" /></th>
+      <th pSortableColumn="result_status" id="result-status-header">Status <p-sortIcon field="result_status" /></th>
+      <th pSortableColumn="result_creation_date" id="result-creation-date-header">Creation date <p-sortIcon field="result_creation_date" /></th>
+      <th id="action-header">Action</th>
     </tr>
   </ng-template>
   <ng-template pTemplate="body" let-item let-expanded="expanded">
@@ -108,14 +108,14 @@
         <p-table [value]="item?.linked_results" dataKey="id">
           <ng-template pTemplate="header">
             <tr>
-              <th>Linked result code</th>
-              <th>Linked result name</th>
-              <th>Phase</th>
-              <th>Indicator category</th>
-              <th>Submitter</th>
-              <th>Status</th>
-              <th>Creation date</th>
-              <th>Action</th>
+              <th id="linked-result-code-header">Linked result code</th>
+              <th id="linked-result-name-header">Linked result name</th>
+              <th id="phase-header">Phase</th>
+              <th id="indicator-category-header">Indicator category</th>
+              <th id="submitter-header">Submitter</th>
+              <th id="status-header">Status</th>
+              <th id="creation-date-header">Creation date</th>
+              <th id="action-header">Action</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-result>
