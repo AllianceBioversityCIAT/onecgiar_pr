@@ -28,9 +28,11 @@
     <div
       class="outcomes_actions_item"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
-      (click)="exportToExcel()">
+      (click)="exportIndicatorsToExcel()">
       <i class="pi pi-file-export" style="font-size: 4rem"></i>
       <p class="outcomes_actions_item--text">Export all the progress reported by indicators</p>
     </div>
   </div>
 </div>
+
+<p-toast position="bottom-right" key="outcomeIndicators" />
