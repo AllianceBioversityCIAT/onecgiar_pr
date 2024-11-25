@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -43,6 +43,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() optionsInlineStyles?: string = '';
   @Input() showDescriptionLabel?: boolean = false;
   @Input() truncateSelectionText?: boolean = false;
+  @Input() inlineStylesContainer?: string = '';
   @Input() _value: string;
 
   @Output() selectOptionEvent = new EventEmitter();
@@ -82,7 +83,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const element: any = document.getElementById(this.optionValue + this.indexReference ?? '');
+    const element: any = document.getElementById(this.optionValue + (this.indexReference || ''));
     element.blur();
   }
   get optionsIntance() {
