@@ -13,7 +13,7 @@
 <p-table
   id="resultListTable"
   [value]="this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true"
-  sortField="workpackage_name"
+  sortField="workpackage_short_name"
   [sortOrder]="1"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [rows]="8"
@@ -24,14 +24,14 @@
   [first]="this.outcomeIService.searchText() && 0"
   [paginator]="(this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length > 8"
   [tableStyle]="{ 'min-width': '80rem' }"
-  dataKey="workpackage_name"
+  dataKey="workpackage_short_name"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="workpackage_name"
+  groupRowsBy="workpackage_short_name"
   [expandedRowKeys]="this.outcomeIService.expandedRows">
   <ng-template pTemplate="header">
     <tr>
-      <th pSortableColumn="workpackage_name" style="width: 26%" id="outcome_header">Outcome <p-sortIcon field="workpackage_name" /></th>
+      <th pSortableColumn="workpackage_short_name" style="width: 26%" id="outcome_header">Outcome <p-sortIcon field="workpackage_short_name" /></th>
       <th style="width: 25%" id="indicator_header">Indicator</th>
       <th style="width: 20%" id="indicator_type_header">Indicator Type</th>
       <th style="width: 8%" id="expected_target_header">Expected Target</th>
@@ -52,7 +52,7 @@
             style="border: none; box-shadow: none !important"
             [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
 
-          <span class="font-bold ml-2">{{ item.workpackage_name }}</span>
+          <span style="font-weight: bold">{{ item.workpackage_short_name }}: {{ item.workpackage_name }}</span>
         </div>
       </td>
     </tr>
