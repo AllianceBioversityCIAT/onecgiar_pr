@@ -24,7 +24,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
   ): Promise<ContributionToIndicatorsDto> {
     const dataQuery = `
       select cti.id as contribution_id, cti.achieved_in_2024, cti.narrative_achieved_in_2024,
-        cti.toc_result_id, REGEXP_REPLACE(tri.type_name, '^[\s\n\r]+|[\s\n\r]+$', '') as indicator_name, 
+        cti.toc_result_id, REGEXP_REPLACE(tri.indicator_description, '^[\s\n\r]+|[\s\n\r]+$', '') as indicator_name, 
         tri.unit_messurament as unit_measurement, tri.baseline_value as indicator_baseline,
         trit.target_value as indicator_target, REGEXP_REPLACE(tr.result_title, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_name,
         REGEXP_REPLACE(tr.result_description, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_description, wp.name as workpackage_name,

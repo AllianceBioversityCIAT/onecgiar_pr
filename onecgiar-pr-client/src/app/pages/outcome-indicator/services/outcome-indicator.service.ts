@@ -18,7 +18,7 @@ export class OutcomeIndicatorService {
 
   expandAll() {
     this.expandedRows = this.wpsData.reduce((acc, p) => {
-      acc[p.workpackage_name] = true;
+      acc[p.workpackage_short_name] = true;
       return acc;
     }, {});
   }

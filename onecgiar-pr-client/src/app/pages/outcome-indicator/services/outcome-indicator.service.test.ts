@@ -126,7 +126,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should expand all rows', () => {
-    service.wpsData = [{ workpackage_name: 'WP1' }, { workpackage_name: 'WP2' }, { workpackage_name: 'WP3' }];
+    service.wpsData = [{ workpackage_short_name: 'WP1' }, { workpackage_short_name: 'WP2' }, { workpackage_short_name: 'WP3' }];
 
     service.expandAll();
 
@@ -146,7 +146,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should collapse all rows', () => {
-    service.wpsData = [{ workpackage_name: 'WP1' }, { workpackage_name: 'WP2' }, { workpackage_name: 'WP3' }];
+    service.wpsData = [{ workpackage_short_name: 'WP1' }, { workpackage_short_name: 'WP2' }, { workpackage_short_name: 'WP3' }];
     service.expandedRows = {
       WP1: true,
       WP2: true,

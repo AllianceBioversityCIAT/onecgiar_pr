@@ -23,6 +23,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       select json_object(
         "workpackage_code", wp.wp_official_code,
         "workpackage_name", wp.name,
+        "workpackage_short_name", wp.acronym,
         "toc_results", json_arrayagg(${this._getTocResultSubquery(relationName)})
       ) as workpackage
       from ${env.DB_NAME}.clarisa_initiatives ci
