@@ -51,6 +51,7 @@ export class PlatformReportService implements OnModuleInit {
   ) {
     try {
       const cleanResultCodeInput = Number(result_code);
+      this._logger.log(`Result to be processed: ${cleanResultCodeInput}`);
       if (Number.isNaN(cleanResultCodeInput)) {
         const error: returnErrorDto = {
           status: 404,
