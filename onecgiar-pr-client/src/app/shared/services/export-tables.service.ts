@@ -258,7 +258,7 @@ export class ExportTablesService {
         }
 
         worksheet.addRow({
-          workpackage_name: data.workpackage_name ?? 'Not defined',
+          workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
           toc_result_description: result.toc_result_description ?? 'Not defined',
           indicator_name: indicator.indicator_description ?? 'Not defined',
           indicator_type: indicatorType,
