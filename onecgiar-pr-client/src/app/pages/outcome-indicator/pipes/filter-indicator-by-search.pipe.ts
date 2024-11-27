@@ -38,7 +38,6 @@ export class FilterIndicatorBySearchPipe implements PipeTransform {
   }
 
   private isIndicatorVisible(indicator: any, searchUpper: string, result: any): boolean {
-    // return indicator.indicator_description.toUpperCase().includes(searchUpper);
     return (
       !searchUpper ||
       indicator.indicator_description.toUpperCase().includes(searchUpper) ||
