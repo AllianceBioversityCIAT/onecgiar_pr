@@ -77,6 +77,14 @@ describe('OutcomeIndicatorService', () => {
     expect(service.loadingWPs()).toBe(false);
   });
 
+  it('should set wpsData with indicators when indicators are null', () => {
+    const response = { data: [{ toc_results: [{ indicators: null }] }] };
+    const subscribeMock = jest.fn(({ next }) => next(response));
+    apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
+
+    service.getWorkPackagesData();
+  });
+
   it('should return true when achievedTarget is greater than or equal to expectedTarget', () => {
     const expectedTarget = 10;
     const achievedTarget = 15;
