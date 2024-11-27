@@ -60,7 +60,14 @@ export class OutcomeIndicatorService {
     this.loadingWPs.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsWPS(this.initiativeIdFilter).subscribe({
       next: res => {
-        this.wpsData = res.data;
+        this.wpsData = res.data.map(item => {
+          item.toc_results.forEach(result => {
+            if (result.indicators === null) {
+              result.indicators = [];
+            }
+          });
+          return item;
+        });
         this.loadingWPs.set(false);
         this.expandAll();
       },
