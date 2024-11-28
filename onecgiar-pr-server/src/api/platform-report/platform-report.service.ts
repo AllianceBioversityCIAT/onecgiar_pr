@@ -258,7 +258,7 @@ export class PlatformReportService implements OnModuleInit {
 
       const fileName =
         'PRMS-Result-' +
-        data.result_code +
+        cleanResultCodeInput +
         '_' +
         data.generation_date_filename +
         '.pdf';
