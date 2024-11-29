@@ -54,10 +54,10 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     const relationName = 'eoi';
     const dataQuery = `
       select ${this._getTocResultSubquery(relationName)} as eois
-      from prdb.clarisa_initiatives ci
-      left join Integration_information.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 3
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 3
         and ${relationName}.id_toc_initiative = ci.toc_id
-      right join prdb.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
       where ci.official_code = ?
     `;
@@ -97,7 +97,9 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
                		when indicator_s.result_status_id = 3 then 1
                		else null
                	END
-              ))
+              )),
+              "indicator_supporting_results", (${this._flattenedResultsQuery('oi.toc_result_indicator_id')}),
+              "indicator_achieved_narrative", cti.narrative_achieved_in_2024
             ))
             from ${env.DB_TOC}.toc_results_indicators oi
             left join ${env.DB_TOC}.toc_result_indicator_target trit 
@@ -111,5 +113,70 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
             group by ${outerRelationName}.id
           )
         )`;
+  }
+
+  private _flattenedResultsQuery(tocId: string) {
+    return `
+      select json_arrayagg(json_object(
+        "contribution_id", contribution_id,
+        "is_active", is_active,
+        "result_id", result_id,
+        "result_code", result_code,
+        "result_title", result_title,
+        "phase_name", phase_name,
+        "phase_id", phase_id,
+        "result_type", result_type,
+        "result_submitter", result_submitter,
+        "result_status", result_status,
+        "result_creation_date", result_creation_date,
+        "original_linked_result_code", original_linked_result_code,
+        "original_linked_result_phase", original_linked_result_phase
+      ))
+      from (
+        select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
+          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
+          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date,
+          null as original_linked_result_code, null as original_linked_result_phase
+        from ${env.DB_TOC}.toc_results_indicators tri
+        right join ${env.DB_TOC}.toc_results outcomes on tri.toc_results_id = outcomes.id
+        right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
+        left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
+        left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
+        left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
+        left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
+        left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
+          and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
+        left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
+        left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
+        where tri.toc_result_indicator_id = ${tocId} and tri.is_active
+        
+        union all
+        
+        select linked_ctir.id as contribution_id, linked_ctir.is_active as is_active, linked_r.id as result_id, 
+          linked_r.result_code as result_code, linked_r.title as result_title, linked_v.phase_name as phase_name,
+          linked_v.id as phase_id, linked_rt.name as result_type, linked_ci.official_code as result_submitter,
+          linked_rs.status_name as result_status, date_format(linked_r.created_date, '%Y-%m-%d') as result_creation_date,
+          original_results.result_code as original_linked_result_code, original_results.phase_id as original_linked_result_phase
+        from (
+          select main_r.id as result_id, main_r.result_code, main_r.version_id as phase_id
+          from ${env.DB_TOC}.toc_results_indicators tri
+          right join ${env.DB_TOC}.toc_results outcomes on tri.toc_results_id = outcomes.id
+          right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
+          left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
+          left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
+            and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
+          where tri.toc_result_indicator_id = ${tocId} and tri.is_active
+        ) as original_results 
+        left join ${env.DB_NAME}.linked_result lr on lr.is_active and lr.origin_result_id = original_results.result_id
+        left join ${env.DB_NAME}.result linked_r on linked_r.id = lr.linked_results_id and linked_r.is_active
+        left join ${env.DB_NAME}.contribution_to_indicator_results linked_ctir on linked_ctir.result_id = linked_r.id 
+        left join ${env.DB_NAME}.\`version\` linked_v on linked_r.version_id = linked_v.id
+        left join ${env.DB_NAME}.result_type linked_rt on linked_r.result_type_id = linked_rt.id
+        left join ${env.DB_NAME}.results_by_inititiative linked_rbi on linked_rbi.result_id = linked_r.id and linked_rbi.initiative_role_id = 1
+        left join ${env.DB_NAME}.clarisa_initiatives linked_ci on linked_ci.id = linked_rbi.inititiative_id
+        left join ${env.DB_NAME}.result_status linked_rs on linked_rs.result_status_id = linked_r.status_id
+        where linked_r.id is not null
+      ) inner_q
+    `;
   }
 }
