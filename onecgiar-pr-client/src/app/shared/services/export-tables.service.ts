@@ -235,6 +235,10 @@ export class ExportTablesService {
       indicatorType = `${prefix} ${data.indicators[0]?.indicator_name}`;
     }
 
+    const supportingResults = !data.indicators[0]?.indicator_supporting_results
+      ? 'Not defined'
+      : data.indicators[0]?.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
+
     worksheet.addRow({
       toc_result_title: data.toc_result_description ?? 'Not defined',
       indicator_name: data.indicators[0]?.indicator_description ?? 'Not defined',
@@ -244,7 +248,9 @@ export class ExportTablesService {
       achieved_status: this.outcomeIService.achievedStatus(data.indicators[0]?.indicator_target_value, data.indicators[0]?.indicator_achieved_value)
         ? 'Yes'
         : 'No',
-      reporting_status: data.indicators[0]?.indicator_submission_status ? 'Submitted' : 'Editing'
+      reporting_status: data.indicators[0]?.indicator_submission_status ? 'Submitted' : 'Editing',
+      indicator_achieved_narrative: data.indicators[0]?.indicator_achieved_narrative ?? 'Not defined',
+      indicator_supporting_results: supportingResults
     });
   }
 
@@ -256,6 +262,9 @@ export class ExportTablesService {
           const prefix = indicator.is_indicator_custom ? 'Custom - ' : 'Standard - ';
           indicatorType = `${prefix} ${indicator.indicator_name}`;
         }
+        const supportingResults = !indicator.indicator_supporting_results
+          ? 'Not defined'
+          : indicator.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
 
         worksheet.addRow({
           workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
@@ -265,7 +274,9 @@ export class ExportTablesService {
           expected_target: indicator.indicator_target_value ?? 'Not defined',
           actual_target_achieved: indicator.indicator_achieved_value ?? 'Not defined',
           achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
-          reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing'
+          reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
+          indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not defined',
+          indicator_supporting_results: supportingResults
         });
       });
     });
