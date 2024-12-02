@@ -77,7 +77,6 @@ export class OutcomeIndicatorService {
           });
           return item;
         });
-        console.log(this.wpsData);
 
         this.loadingWPs.set(false);
         this.expandAll();
