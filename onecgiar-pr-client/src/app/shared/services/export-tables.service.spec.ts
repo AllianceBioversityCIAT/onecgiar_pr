@@ -161,7 +161,7 @@ describe('ExportTablesService', () => {
         month = '0' + month;
       }
 
-      const dateCET = month + day + year;
+      const dateCET = year + month + day;
 
       const timeCET = dateCETTime.split(',')[1].trim().replace(':', '').slice(0, 4);
 
