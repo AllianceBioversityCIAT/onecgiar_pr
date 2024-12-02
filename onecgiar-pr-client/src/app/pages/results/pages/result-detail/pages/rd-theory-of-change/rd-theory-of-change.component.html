@@ -19,7 +19,9 @@
       placeholder="Select Initiative"
       description="Select an initiative or platform"
       [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
-      [fieldDisabled]="true">
+      [fieldDisabled]="
+        !!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)
+      ">
     </app-pr-select>
 
     <div
