@@ -1351,7 +1351,7 @@ export class resultValidationRepository
 							# validate that question 29 have been answered if question 33 or 34 have been marked as yes
 							IF(
 								(
-									SELECT 1
+									SELECT DISTINCT 1
 									FROM result_questions rq2
 									JOIN result_answers ra2 ON rq2.result_question_id = ra2.result_question_id
 									WHERE ra2.result_id = r.id
