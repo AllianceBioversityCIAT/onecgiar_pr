@@ -27,7 +27,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should set eoisData and loading to false on successful response', () => {
-    const response = { data: [{ toc_results: ['result1', 'result2'] }] };
+    const response = { data: ['result1', 'result2'] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
 
@@ -77,6 +77,14 @@ describe('OutcomeIndicatorService', () => {
     expect(service.loadingWPs()).toBe(false);
   });
 
+  it('should set wpsData with indicators when indicators are null', () => {
+    const response = { data: [{ toc_results: [{ indicators: null }] }] };
+    const subscribeMock = jest.fn(({ next }) => next(response));
+    apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
+
+    service.getWorkPackagesData();
+  });
+
   it('should return true when achievedTarget is greater than or equal to expectedTarget', () => {
     const expectedTarget = 10;
     const achievedTarget = 15;
@@ -123,5 +131,47 @@ describe('OutcomeIndicatorService', () => {
     const expectedTarget = NaN;
     const achievedTarget = NaN;
     expect(service.achievedStatus(expectedTarget, achievedTarget)).toBe(false);
+  });
+
+  it('should expand all rows', () => {
+    service.wpsData = [{ workpackage_short_name: 'WP1' }, { workpackage_short_name: 'WP2' }, { workpackage_short_name: 'WP3' }];
+
+    service.expandAll();
+
+    expect(service.expandedRows).toEqual({
+      WP1: true,
+      WP2: true,
+      WP3: true
+    });
+  });
+
+  it('should not expand any rows if wpsData is empty', () => {
+    service.wpsData = [];
+
+    service.expandAll();
+
+    expect(service.expandedRows).toEqual({});
+  });
+
+  it('should collapse all rows', () => {
+    service.wpsData = [{ workpackage_short_name: 'WP1' }, { workpackage_short_name: 'WP2' }, { workpackage_short_name: 'WP3' }];
+    service.expandedRows = {
+      WP1: true,
+      WP2: true,
+      WP3: true
+    };
+
+    service.collapseAll();
+
+    expect(service.expandedRows).toEqual({});
+  });
+
+  it('should keep expandedRows empty if wpsData is empty', () => {
+    service.wpsData = [];
+    service.expandedRows = {};
+
+    service.collapseAll();
+
+    expect(service.expandedRows).toEqual({});
   });
 });

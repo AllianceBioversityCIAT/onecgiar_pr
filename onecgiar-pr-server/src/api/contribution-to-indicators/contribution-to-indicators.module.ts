@@ -5,6 +5,7 @@ import { ContributionToIndicatorsRepository } from './repositories/contribution-
 import { ContributionToIndicatorResultsRepository } from './repositories/contribution-to-indicator-result.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ContributionToIndicatorSubmissionRepository } from './repositories/contribution-to-indicator-result-submission.repository';
 
 @Module({
   controllers: [ContributionToIndicatorsController],
@@ -14,6 +15,7 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     ContributionToIndicatorResultsRepository,
     HandlersError,
     UserRepository,
+    ContributionToIndicatorSubmissionRepository,
   ],
 })
 export class ContributionToIndicatorsModule {}

@@ -10,10 +10,22 @@ export class OutcomeIndicatorService {
   initiativeIdFilter = '';
   loading = signal(false);
   loadingWPs = signal(false);
+  expandedRows = {};
 
   searchText = signal<string>('');
 
   constructor(public api: ApiService) {}
+
+  expandAll() {
+    this.expandedRows = this.wpsData.reduce((acc, p) => {
+      acc[p.workpackage_short_name] = true;
+      return acc;
+    }, {});
+  }
+
+  collapseAll() {
+    this.expandedRows = {};
+  }
 
   achievedStatus(expectedTarget: number | null, achievedTarget: number | null): boolean {
     if (expectedTarget === null || achievedTarget === null) {
@@ -34,7 +46,12 @@ export class OutcomeIndicatorService {
     this.loading.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsEOIS(this.initiativeIdFilter).subscribe({
       next: res => {
-        this.eoisData = res?.data?.[0]?.toc_results;
+        this.eoisData = res?.data.map(item => {
+          if (item.indicators === null) {
+            item.indicators = [];
+          }
+          return item;
+        });
         this.loading.set(false);
       },
       error: error => {
@@ -48,8 +65,16 @@ export class OutcomeIndicatorService {
     this.loadingWPs.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsWPS(this.initiativeIdFilter).subscribe({
       next: res => {
-        this.wpsData = res.data;
+        this.wpsData = res.data.map(item => {
+          item.toc_results.forEach(result => {
+            if (result.indicators === null) {
+              result.indicators = [];
+            }
+          });
+          return item;
+        });
         this.loadingWPs.set(false);
+        this.expandAll();
       },
       error: error => {
         console.error(error);

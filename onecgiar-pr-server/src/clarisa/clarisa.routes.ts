@@ -26,6 +26,7 @@ import { ClarisaInnovationUseLevelsModule } from './clarisa-innovation-use-level
 import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.module';
 import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clarisa-subnational-scope.module';
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
+import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -135,5 +136,9 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'cgiar-entity-types',
     module: ClarisaCgiarEntityTypesModule,
+  },
+  {
+    path: 'initiative-stages',
+    module: ClarisaInitiativeStageModule,
   },
 ];

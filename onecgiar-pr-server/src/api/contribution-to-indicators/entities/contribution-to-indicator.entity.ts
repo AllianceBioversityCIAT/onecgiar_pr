@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from '../../../shared/entities/base-entity';
 import { ContributionToIndicatorResult } from './contribution-to-indicator-result.entity';
+import { ContributionToIndicatorSubmission } from './contribution-to-indicator-submission.entity';
 
 @Entity('contribution_to_indicators')
 export class ContributionToIndicator extends BaseEntity {
@@ -35,4 +36,9 @@ export class ContributionToIndicator extends BaseEntity {
     (ctir) => ctir.contribution_to_indicator_object,
   )
   contribution_to_indicator_result_array: ContributionToIndicatorResult[];
+  @OneToMany(
+    () => ContributionToIndicatorSubmission,
+    (ctis) => ctis.contribution_to_indicator_object,
+  )
+  contribution_to_indicator_submission_array: ContributionToIndicatorSubmission[];
 }

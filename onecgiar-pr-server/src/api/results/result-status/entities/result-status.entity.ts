@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Result } from '../../entities/result.entity';
+import { ContributionToIndicatorSubmission } from '../../../contribution-to-indicators/entities/contribution-to-indicator-submission.entity';
 
 @Entity('result_status')
 export class ResultStatus {
@@ -25,4 +26,10 @@ export class ResultStatus {
 
   @OneToMany(() => Result, (r) => r.obj_status)
   result_status_list: Result[];
+
+  @OneToMany(
+    () => ContributionToIndicatorSubmission,
+    (ctis) => ctis.status_object,
+  )
+  contribution_to_indicator_submission_array: ContributionToIndicatorSubmission[];
 }

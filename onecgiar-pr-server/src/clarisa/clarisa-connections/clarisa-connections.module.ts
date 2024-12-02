@@ -31,6 +31,7 @@ import { ClarisaSdgsTargetsRepository } from '../clarisa-sdgs-targets/clarisa-sd
 import { ClarisaTocPhaseRepository } from '../clarisa-toc-phases/clarisa-toc-phases.repository';
 import { ClarisaSubnationalScopeRepository } from '../clarisa-subnational-scope/clarisa-subnational-scope.repository';
 import { ClarisaCgiarEntityTypesModule } from '../clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
+import { ClarisaInitiativeStageRepository } from '../clarisa-initiative-stage/repositories/clarisa-initiative-stage.repository';
 
 @Module({
   controllers: [ClarisaConnectionsController],
@@ -64,6 +65,7 @@ import { ClarisaCgiarEntityTypesModule } from '../clarisa-cgiar-entity-types/cla
     ClarisaSdgsTargetsRepository,
     ClarisaTocPhaseRepository,
     ClarisaSubnationalScopeRepository,
+    ClarisaInitiativeStageRepository,
   ],
   imports: [HttpModule, ClarisaCgiarEntityTypesModule],
 })
