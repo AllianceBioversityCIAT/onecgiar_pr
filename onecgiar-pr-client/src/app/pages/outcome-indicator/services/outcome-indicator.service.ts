@@ -52,7 +52,6 @@ export class OutcomeIndicatorService {
           }
           return item;
         });
-        console.log(this.eoisData);
         this.loading.set(false);
       },
       error: error => {
