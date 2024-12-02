@@ -236,20 +236,20 @@ export class ExportTablesService {
     }
 
     const supportingResults = !data.indicators[0]?.indicator_supporting_results
-      ? 'Not defined'
+      ? 'Not provided'
       : data.indicators[0]?.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
 
     worksheet.addRow({
-      toc_result_title: data.toc_result_description ?? 'Not defined',
+      toc_result_title: data.toc_result_title ?? 'Not defined',
       indicator_name: data.indicators[0]?.indicator_description ?? 'Not defined',
       indicator_type: indicatorType,
       expected_target: data.indicators[0]?.indicator_target_value ?? 'Not defined',
-      actual_target_achieved: data.indicators[0]?.indicator_achieved_value ?? 'Not defined',
+      actual_target_achieved: data.indicators[0]?.indicator_achieved_value ?? 'Not provided',
       achieved_status: this.outcomeIService.achievedStatus(data.indicators[0]?.indicator_target_value, data.indicators[0]?.indicator_achieved_value)
         ? 'Yes'
         : 'No',
       reporting_status: data.indicators[0]?.indicator_submission_status ? 'Submitted' : 'Editing',
-      indicator_achieved_narrative: data.indicators[0]?.indicator_achieved_narrative ?? 'Not defined',
+      indicator_achieved_narrative: data.indicators[0]?.indicator_achieved_narrative ?? 'Not provided',
       indicator_supporting_results: supportingResults
     });
   }
@@ -264,34 +264,34 @@ export class ExportTablesService {
             indicatorType = `${prefix} ${indicator.indicator_name}`;
           }
           const supportingResults = !indicator.indicator_supporting_results
-            ? 'Not defined'
+            ? 'Not provided'
             : indicator.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
 
           worksheet.addRow({
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
-            toc_result_description: result.toc_result_description ?? 'Not defined',
+            toc_result_title: result.toc_result_title ?? 'Not defined',
             indicator_name: indicator.indicator_description ?? 'Not defined',
             indicator_type: indicatorType,
             expected_target: indicator.indicator_target_value ?? 'Not defined',
-            actual_target_achieved: indicator.indicator_achieved_value ?? 'Not defined',
+            actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
             achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
             reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
-            indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not defined',
+            indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
             indicator_supporting_results: supportingResults
           });
         });
       } else {
         worksheet.addRow({
           workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
-          toc_result_description: result.toc_result_description ?? 'Not defined',
+          toc_result_title: result.toc_result_title ?? 'Not defined',
           indicator_name: 'Not defined',
           indicator_type: 'Not defined',
           expected_target: 'Not defined',
-          actual_target_achieved: 'Not defined',
+          actual_target_achieved: 'Not provided',
           achieved_status: 'No',
           reporting_status: 'Editing',
-          indicator_achieved_narrative: 'Not defined',
-          indicator_supporting_results: 'Not defined'
+          indicator_achieved_narrative: 'Not provided',
+          indicator_supporting_results: 'Not provided'
         });
       }
     });

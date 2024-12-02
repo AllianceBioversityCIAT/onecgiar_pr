@@ -66,7 +66,7 @@
     @for (result of item.toc_results; track $index) {
       @if (result.indicators.length === 0 && result.isVisible) {
         <tr style="height: 50px">
-          <td>{{ result?.toc_result_description }}</td>
+          <td>{{ result?.toc_result_title }}</td>
           <td colspan="6" style="text-align: center">No indicator data found</td>
         </tr>
       } @else {
@@ -74,7 +74,7 @@
           @if (indicator.isVisible) {
             <tr>
               @if ($index === 0) {
-                <td [attr.rowspan]="result.indicators.length">{{ result?.toc_result_description }}</td>
+                <td [attr.rowspan]="result.indicators.length">{{ result?.toc_result_title }}</td>
               }
               <td
                 class="indicator_link"
@@ -89,12 +89,12 @@
                 {{ indicator?.indicator_name }}
               </td>
               <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
-              <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not defined' }}</td>
+              <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
               <td style="text-align: center">
                 {{
                   this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
                     ? 'Achieved'
-                    : 'Not Achieved'
+                    : 'Not achieved'
                 }}
               </td>
               <td>
