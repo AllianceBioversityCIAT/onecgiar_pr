@@ -19,7 +19,7 @@ describe('FilterIndicatorBySearchPipe', () => {
   describe('Default filtering (non-WPsTable)', () => {
     const mockList = [
       {
-        toc_result_description: 'Result 1',
+        toc_result_title: 'Result 1',
         indicators: [
           {
             indicator_name: 'Indicator 1',
@@ -29,7 +29,7 @@ describe('FilterIndicatorBySearchPipe', () => {
         ]
       },
       {
-        toc_result_description: 'Result 2',
+        toc_result_title: 'Result 2',
         indicators: [
           {
             indicator_name: 'Indicator 2',
@@ -48,13 +48,13 @@ describe('FilterIndicatorBySearchPipe', () => {
     it('should filter by result description', () => {
       const result = pipe.transform(mockList, 'Result 1', false);
       expect(result.length).toBe(1);
-      expect(result[0].toc_result_description).toBe('Result 1');
+      expect(result[0].toc_result_title).toBe('Result 1');
     });
 
     it('should be case insensitive', () => {
       const result = pipe.transform(mockList, 'result 1', false);
       expect(result.length).toBe(1);
-      expect(result[0].toc_result_description).toBe('Result 1');
+      expect(result[0].toc_result_title).toBe('Result 1');
     });
   });
 
@@ -63,7 +63,7 @@ describe('FilterIndicatorBySearchPipe', () => {
       {
         toc_results: [
           {
-            toc_result_description: 'WP Result 1',
+            toc_result_title: 'WP Result 1',
             indicators: [{ indicator_description: 'WP Indicator 1' }, { indicator_description: 'WP Indicator 2' }]
           }
         ]
@@ -71,7 +71,7 @@ describe('FilterIndicatorBySearchPipe', () => {
       {
         toc_results: [
           {
-            toc_result_description: 'WP Result 2',
+            toc_result_title: 'WP Result 2',
             indicators: [{ indicator_description: 'WP Indicator 3' }]
           }
         ]
@@ -86,7 +86,7 @@ describe('FilterIndicatorBySearchPipe', () => {
     it('should filter by result description in WPsTable mode', () => {
       const result = pipe.transform(mockWPsList, 'WP Result 1', true);
       expect(result.length).toBe(1);
-      expect(result[0].toc_results[0].toc_result_description).toBe('WP Result 1');
+      expect(result[0].toc_results[0].toc_result_title).toBe('WP Result 1');
     });
 
     it('should filter by indicator description in WPsTable mode', () => {
@@ -121,7 +121,7 @@ describe('FilterIndicatorBySearchPipe', () => {
     });
 
     it('should handle undefined search filter', () => {
-      const mockList = [{ toc_result_description: 'Test' }];
+      const mockList = [{ toc_result_title: 'Test' }];
       expect(() => pipe.transform(mockList, undefined as any, false)).not.toThrow();
     });
   });

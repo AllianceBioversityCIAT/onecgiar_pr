@@ -41,12 +41,12 @@ export class FilterIndicatorBySearchPipe implements PipeTransform {
     return (
       !searchUpper ||
       indicator.indicator_description.toUpperCase().includes(searchUpper) ||
-      result.toc_result_description.toUpperCase().includes(searchUpper)
+      result.toc_result_title.toUpperCase().includes(searchUpper)
     );
   }
 
   private isResultVisible(result: any, searchUpper: string): boolean {
-    return result.toc_result_description.toUpperCase().includes(searchUpper);
+    return result.toc_result_title.toUpperCase().includes(searchUpper);
   }
 
   private resetIndicators(list: any[]): void {
@@ -83,7 +83,7 @@ export class FilterIndicatorBySearchPipe implements PipeTransform {
   }
 
   private createWPsTableString(item: any): string {
-    return item.toc_results.map(result => result.toc_result_description).join(', ');
+    return item.toc_results.map(result => result.toc_result_title).join(', ');
   }
 
   private createDefaultString(item: any): string {
@@ -95,6 +95,6 @@ export class FilterIndicatorBySearchPipe implements PipeTransform {
       indicatorType = indicator.is_indicator_custom ? 'Custom -' : 'Standard -';
     }
 
-    return `${item?.toc_result_description || ''} ${indicator.indicator_description || ''} ${indicatorType} ${indicatorName}`;
+    return `${item?.toc_result_title || ''} ${indicator.indicator_description || ''} ${indicatorType} ${indicatorName}`;
   }
 }
