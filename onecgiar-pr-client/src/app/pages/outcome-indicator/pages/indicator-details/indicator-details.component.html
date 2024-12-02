@@ -29,8 +29,9 @@
 <app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
 <p-inputNumber
   [(ngModel)]="this.indicatorData.achieved_in_2024"
-  [inputStyle]="{ width: '44px' }"
+  [inputStyle]="{ width: '103px' }"
   [min]="0"
+  [max]="999999999999999"
   placeholder="100"
   [readonly]="isSubmitted"></p-inputNumber>
 
