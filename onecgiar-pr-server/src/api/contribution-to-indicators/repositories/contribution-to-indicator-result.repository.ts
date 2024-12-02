@@ -91,6 +91,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
           from ${env.DB_NAME}.linked_result lr
           left join ${env.DB_NAME}.result linked_r on linked_r.id = lr.linked_results_id and linked_r.is_active
           left join ${env.DB_NAME}.contribution_to_indicator_results linked_ctir on linked_ctir.result_id = linked_r.id 
+            and linked_ctir.contribution_to_indicator_id = cti.id 
           left join ${env.DB_NAME}.\`version\` linked_v on linked_r.version_id = linked_v.id
           left join ${env.DB_NAME}.result_type linked_rt on linked_r.result_type_id = linked_rt.id
           left join ${env.DB_NAME}.results_by_inititiative linked_rbi on linked_rbi.result_id = linked_r.id and linked_rbi.initiative_role_id = 1
@@ -102,8 +103,11 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       from ${env.DB_TOC}.toc_results_indicators tri
       right join ${env.DB_TOC}.toc_results outcomes on tri.toc_results_id = outcomes.id
       right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
+      left join ${env.DB_NAME}.contribution_to_indicators cti on 
+        convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and cti.is_active
       left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
       left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
+        and main_ctir.contribution_to_indicator_id = cti.id
       left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
       left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
       left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
