@@ -66,6 +66,10 @@ export class OutcomeIndicatorService {
     this.api.resultsSE.GET_contributionsToIndicatorsWPS(this.initiativeIdFilter).subscribe({
       next: res => {
         this.wpsData = res.data.map(item => {
+          item.toc_results.sort((a, b) => {
+            return (a.toc_result_title || '').localeCompare(b.toc_result_title || '');
+          });
+
           item.toc_results.forEach(result => {
             if (result.indicators === null) {
               result.indicators = [];
@@ -73,6 +77,8 @@ export class OutcomeIndicatorService {
           });
           return item;
         });
+        console.log(this.wpsData);
+
         this.loadingWPs.set(false);
         this.expandAll();
       },

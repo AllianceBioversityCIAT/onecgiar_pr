@@ -14,7 +14,7 @@
   id="resultListTable"
   #table
   [value]="this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText()"
-  sortField="toc_result_description"
+  sortField="toc_result_title"
   [sortOrder]="1"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [rows]="8"
@@ -27,7 +27,7 @@
   [tableStyle]="{ 'min-width': '80rem' }">
   <ng-template pTemplate="header">
     <tr>
-      <th pSortableColumn="toc_result_description" style="width: 26%" id="outcome-header">Outcome <p-sortIcon field="toc_result_description" /></th>
+      <th pSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">Outcome <p-sortIcon field="toc_result_title" /></th>
       <th style="width: 25%" id="indicator-header">Indicator</th>
       <th style="width: 20%" id="indicator-type-header">Indicator Type</th>
       <th style="width: 8%" id="expected-target-header">Expected Target</th>
@@ -40,7 +40,7 @@
   <ng-template pTemplate="body" let-item>
     @let indicator = item.indicators?.[0];
     <tr>
-      <td>{{ item?.toc_result_description ?? 'No data found.' }}</td>
+      <td>{{ item?.toc_result_title ?? 'No data found.' }}</td>
       @if (!indicator) {
         <td colspan="6" style="text-align: center">No indicator data found.</td>
       } @else {

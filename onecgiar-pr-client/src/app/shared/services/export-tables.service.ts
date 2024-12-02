@@ -240,7 +240,7 @@ export class ExportTablesService {
       : data.indicators[0]?.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
 
     worksheet.addRow({
-      toc_result_title: data.toc_result_description ?? 'Not defined',
+      toc_result_title: data.toc_result_title ?? 'Not defined',
       indicator_name: data.indicators[0]?.indicator_description ?? 'Not defined',
       indicator_type: indicatorType,
       expected_target: data.indicators[0]?.indicator_target_value ?? 'Not defined',
@@ -269,7 +269,7 @@ export class ExportTablesService {
 
           worksheet.addRow({
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
-            toc_result_description: result.toc_result_description ?? 'Not defined',
+            toc_result_title: result.toc_result_title ?? 'Not defined',
             indicator_name: indicator.indicator_description ?? 'Not defined',
             indicator_type: indicatorType,
             expected_target: indicator.indicator_target_value ?? 'Not defined',
@@ -283,7 +283,7 @@ export class ExportTablesService {
       } else {
         worksheet.addRow({
           workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
-          toc_result_description: result.toc_result_description ?? 'Not defined',
+          toc_result_title: result.toc_result_title ?? 'Not defined',
           indicator_name: 'Not defined',
           indicator_type: 'Not defined',
           expected_target: 'Not defined',

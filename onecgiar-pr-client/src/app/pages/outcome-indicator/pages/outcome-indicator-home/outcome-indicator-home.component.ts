@@ -36,7 +36,7 @@ export class OutcomeIndicatorHomeComponent {
 
     const wscolsWPs = [
       { header: 'Workpackage name', key: 'workpackage_name', width: 50 },
-      { header: 'Outcome', key: 'toc_result_description', width: 50 },
+      { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },
       { header: 'Indicator Type', key: 'indicator_type', width: 50 },
       { header: 'Expected target', key: 'expected_target', width: 22 },
