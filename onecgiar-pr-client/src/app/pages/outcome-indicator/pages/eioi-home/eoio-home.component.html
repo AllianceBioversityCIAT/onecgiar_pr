@@ -57,10 +57,10 @@
           {{ indicator?.indicator_name ?? 'No data found.' }}
         </td>
         <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
-        <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not defined' }}</td>
+        <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
         <td style="text-align: center">
           {{
-            this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Achieved' : 'Not Achieved'
+            this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Achieved' : 'Not achieved'
           }}
         </td>
         <td>
