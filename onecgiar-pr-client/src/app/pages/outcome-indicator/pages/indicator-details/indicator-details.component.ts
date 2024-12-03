@@ -88,6 +88,13 @@ export class IndicatorDetailsComponent implements OnInit {
 
   updateIndicatorData(response: any) {
     this.indicatorData = response?.contributionToIndicator;
+
+    if (this.outcomeIService.initiativeIdFilter !== this.indicatorData.initiative_official_code) {
+      this.outcomeIService.initiativeIdFilter = this.indicatorData.initiative_official_code;
+      this.outcomeIService.getWorkPackagesData();
+      this.outcomeIService.getEOIsData();
+    }
+
     this.loading = false;
   }
 
