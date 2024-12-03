@@ -28,6 +28,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
         tri.unit_messurament as unit_measurement, tri.baseline_value as indicator_baseline,
         trit.target_value as indicator_target, REGEXP_REPLACE(tr.result_title, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_name,
         REGEXP_REPLACE(tr.result_description, '^[\s\n\r]+|[\s\n\r]+$', '') as outcome_description, wp.name as workpackage_name,
+        wp.acronym as workpackage_short_name, concat(ci.official_code, ' - <b>', ci.short_name, '</b> - ', ci.name) as indicator_initiative, ci.official_code as initiative_official_code,
         (
         	CASE
             when indicator_s.result_status_id = 1 then 0
@@ -44,6 +45,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_TOC}.toc_result_indicator_target trit 
         on tri.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
       right join ${env.DB_TOC}.toc_results tr on tr.id = tri.toc_results_id
+      left join ${env.DB_NAME}.clarisa_initiatives ci on ci.toc_id = tr.id_toc_initiative
       left join ${env.DB_TOC}.work_packages wp on tr.work_packages_id = wp.id
       where cti.toc_result_id = ? and cti.is_active
     `;
