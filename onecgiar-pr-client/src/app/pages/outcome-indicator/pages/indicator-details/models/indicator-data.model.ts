@@ -12,6 +12,8 @@ export class IndicatorData {
   workpackage_name: string;
   workpackage_short_name: string;
   submission_status: string;
+  initiative_official_code: string;
+  indicator_initiative: string;
   contributing_results: ContributingResult[];
 }
 
