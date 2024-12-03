@@ -13,6 +13,18 @@
 </h1>
 
 <div class="indicator_info">
+  <div class="indicator_info_item">
+    <div class="indicator_info_item_header">
+      <i class="pi pi-box" style="font-size: 20px"></i>
+
+      <p class="indicator_info_item_label">Work Package</p>
+    </div>
+
+    <p class="indicator_info_item_value">
+      {{ this.indicatorData?.workpackage_short_name ? this.indicatorData.workpackage_short_name + ': ' : '' }}
+      {{ this.indicatorData?.workpackage_name ?? 'Not specified' }}
+    </p>
+  </div>
   @for (item of indicatorInfoItems; track $index) {
     <div class="indicator_info_item">
       <div class="indicator_info_item_header">
