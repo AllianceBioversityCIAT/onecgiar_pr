@@ -1064,4 +1064,28 @@ export class ResultsApiService {
   GET_cgiarEntityTypes() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
   }
+
+  GET_contributionsToIndicatorsEOIS(initiativeCode: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
+  }
+
+  GET_contributionsToIndicatorsWPS(initiativeCode: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/outcomes/${initiativeCode}`);
+  }
+
+  GET_contributionsToIndicators_indicator(tocId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/get/indicator/${tocId}`);
+  }
+
+  POST_contributionsToIndicators(tocId) {
+    return this.http.post<any>(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`, {});
+  }
+
+  PATCH_contributionsToIndicators(body, tocId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`, body);
+  }
+
+  POST_contributionsToIndicatorsSubmit(tocId) {
+    return this.http.post<any>(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`, {});
+  }
 }

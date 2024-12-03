@@ -9,6 +9,9 @@ import { ClarisaInitiative } from './clarisa-initiatives/entities/clarisa-initia
 import { OstTocIdDto } from './clarisa-initiatives/dto/ost-toc-id.dto';
 import { ClarisaInstitutionsRepository } from './clarisa-institutions/ClariasaInstitutions.repository';
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
+import { ClarisaInitiativeStageRepository } from './clarisa-initiative-stage/repositories/clarisa-initiative-stage.repository';
+import { ClarisaInitiativeStageDto } from './clarisa-initiative-stage/dto/clarisa-initiative-stage.dto';
+import { ClarisaInitiativeStage } from './clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -19,6 +22,7 @@ export class ClarisaTaskService {
     private readonly dataSource: DataSource,
     private readonly _httpService: HttpService,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _clarisaInitiativeStageRepository: ClarisaInitiativeStageRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _tocResultsRepository: TocResultsRepository,
   ) {
@@ -246,6 +250,10 @@ export class ClarisaTaskService {
 
     const mappedInitiatives: DeepPartial<ClarisaInitiative>[] =
       this.initiativeMapper(data, tocIds);
+    const initiativeStages: DeepPartial<ClarisaInitiativeStage>[] =
+      mappedInitiatives.flatMap((init) => init.initiative_stage_array);
+
+    await this._clarisaInitiativeStageRepository.save(initiativeStages);
 
     return await this.dataSource
       .getRepository(initiativesEndpoint.entity)
@@ -274,6 +282,20 @@ export class ClarisaTaskService {
         active: item.active,
         toc_id: tocData?.[0]?.toc_id || null,
         cgiar_entity_type_id: item.type_id,
+        initiative_stage_array: this.initiativeStageMapper(item.stages),
+      };
+    });
+  }
+
+  private initiativeStageMapper(
+    data: ClarisaInitiativeStageDto[],
+  ): DeepPartial<ClarisaInitiativeStage>[] {
+    return data.map((item) => {
+      return {
+        active: item.active,
+        id: item.initvStgId,
+        initiative_id: item.id,
+        stage_id: item.stageId,
       };
     });
   }

@@ -12,6 +12,7 @@ import {
 import { Notification } from '../../../../api/notification/entities/notification.entity';
 import { UserNotificationSetting } from '../../../../api/user-notification-settings/entities/user-notification-settings.entity';
 import { ResultQaedLog } from '../../../../api/result-qaed/entities/result-qaed-log.entity';
+import { ContributionToIndicatorSubmission } from '../../../../api/contribution-to-indicators/entities/contribution-to-indicator-submission.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -105,4 +106,10 @@ export class User {
 
   @OneToMany(() => ResultQaedLog, (r) => r.obj_qaed_user)
   obj_qaed_user: ResultQaedLog[];
+
+  @OneToMany(
+    () => ContributionToIndicatorSubmission,
+    (ctis) => ctis.user_object,
+  )
+  contribution_to_indicator_submission_array: ContributionToIndicatorSubmission[];
 }

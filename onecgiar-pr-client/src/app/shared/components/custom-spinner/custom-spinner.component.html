@@ -1,4 +1,4 @@
-<div class="custom-spinner" *ngIf="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner">
+<div class="custom-spinner" *ngIf="this.resultsListService.showDeletingResultSpinner || this.resultsListService.showLoadingResultSpinner || showSpinner">
     <div class="info" id="custom-spinner">
         <img src="assets/icons/spinner.png" class="rotating-right" alt="" srcset="">
         <div class="text">{{text||'Please wait'}}...</div>

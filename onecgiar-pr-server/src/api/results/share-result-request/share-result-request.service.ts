@@ -13,7 +13,7 @@ import { ShareResultRequest } from './entities/share-result-request.entity';
 import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsTocResultRepository } from '../results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../results-toc-results/repositories/results-toc-results.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';

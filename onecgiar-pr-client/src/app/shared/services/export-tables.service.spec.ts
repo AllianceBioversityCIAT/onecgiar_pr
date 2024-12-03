@@ -2,6 +2,7 @@ import { ExportTablesService } from './export-tables.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import * as FileSaver from 'file-saver';
 import * as ExcelJS from 'exceljs';
+import { OutcomeIndicatorService } from '../../pages/outcome-indicator/services/outcome-indicator.service';
 
 jest.mock('file-saver', () => ({
   saveAs: jest.fn()
@@ -29,10 +30,12 @@ jest.mock('exceljs', () => ({
 describe('ExportTablesService', () => {
   let service: ExportTablesService;
   let customAlertService: CustomizedAlertsFeService;
+  let outcomeIService: OutcomeIndicatorService;
 
   beforeEach(() => {
     customAlertService = { show: jest.fn() } as any;
-    service = new ExportTablesService(customAlertService);
+    outcomeIService = { eoisData: [], wpsData: [], initiativeIdFilter: 'test' } as any;
+    service = new ExportTablesService(customAlertService, outcomeIService);
   });
 
   afterEach(() => {
@@ -180,7 +183,7 @@ describe('ExportTablesService', () => {
 
       service.saveAsExcelFile(buffer, fileName, isIPSR);
 
-      const time = new Date().getTime().toString().slice(0, -1) + '0';
+      const time = new Date().getTime().toString().slice(0, -3) + '0';
       const expectedFileName = fileName + '_' + time + '.xlsx';
 
       expect(FileSaver.saveAs).toHaveBeenCalledWith(

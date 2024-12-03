@@ -41,6 +41,7 @@ import { SharePointModule } from './shared/services/share-point/share-point.modu
 import { NotificationModule } from './api/notification/notification.module';
 import { UserNotificationSettingsModule } from './api/user-notification-settings/user-notification-settings.module';
 import { EmailNotificationManagementModule } from './shared/microservices/email-notification-management/email-notification-management.module';
+import { ContributionToIndicatorsModule } from './api/contribution-to-indicators/contribution-to-indicators.module';
 import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 
 @Module({
@@ -79,6 +80,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,
     NotificationModule,
+    ContributionToIndicatorsModule,
     ResultQaedModule,
   ],
   controllers: [AppController],

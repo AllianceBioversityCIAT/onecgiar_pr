@@ -1,3 +1,5 @@
+import { ClarisaInitiativeStageDto } from '../clarisa-initiative-stage/dto/clarisa-initiative-stage.dto';
+
 export class ClarisaInitiativeDto {
   id: number;
   name: string;
@@ -10,4 +12,5 @@ export class ClarisaInitiativeDto {
   description: string;
   action_area_id: number;
   action_area_description: string;
+  stages?: ClarisaInitiativeStageDto[];
 }
