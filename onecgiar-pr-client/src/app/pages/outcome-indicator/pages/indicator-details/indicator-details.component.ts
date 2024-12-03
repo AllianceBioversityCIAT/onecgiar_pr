@@ -28,8 +28,7 @@ export class IndicatorDetailsComponent implements OnInit {
   loading = true;
 
   indicatorInfoItems = [
-    { icon: '', label: 'Work Package', value: 'workpackage_name', iconClass: 'pi pi-box' },
-    { icon: 'login', label: 'Outcome', value: 'outcome_description', iconClass: 'material-icons-round' },
+    { icon: 'login', label: 'Outcome', value: 'outcome_name', iconClass: 'material-icons-round' },
     { icon: 'show_chart', label: 'Unit of measurement', value: 'unit_measurement', iconClass: 'material-icons-round' },
     { icon: '', label: 'Baseline', value: 'indicator_baseline', iconClass: 'pi pi-chart-bar' },
     { icon: '', label: 'Target', value: 'indicator_target', iconClass: 'pi pi-bullseye' }

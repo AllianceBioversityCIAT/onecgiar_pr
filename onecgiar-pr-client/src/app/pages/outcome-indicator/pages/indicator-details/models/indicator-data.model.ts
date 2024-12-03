@@ -10,6 +10,7 @@ export class IndicatorData {
   outcome_name: string;
   outcome_description: string;
   workpackage_name: string;
+  workpackage_short_name: string;
   submission_status: string;
   contributing_results: ContributingResult[];
 }
