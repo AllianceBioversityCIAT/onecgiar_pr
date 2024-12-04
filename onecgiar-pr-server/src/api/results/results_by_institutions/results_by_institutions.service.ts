@@ -227,7 +227,12 @@ export class ResultsByInstitutionsService {
     try {
       const incomingResult = await this._resultRepository.findOne({
         where: { id: data.result_id },
-        relations: { result_by_institution_array: { delivery: true } },
+        relations: {
+          result_by_institution_array: {
+            delivery: true,
+            result_institution_budget_array: true,
+          },
+        },
       });
       if (!incomingResult) {
         throw {
@@ -660,6 +665,7 @@ export class ResultsByInstitutionsService {
     const toUpdate = oldInstitutions.filter(
       (i) => !removed.some((r) => r.id === i.id),
     );
+    const updatedNewBudgets: ResultInstitutionsBudget[] = [];
 
     for (const institutionToUpdate of toUpdate) {
       const newData = incomingInstitutions.find(
@@ -671,9 +677,46 @@ export class ResultsByInstitutionsService {
         institutionToUpdate.institutions_id = newData.institutions_id;
         institutionToUpdate.is_leading_result = newData.is_leading_result;
       }
+
+      if (isInnoDev) {
+        if (institutionToUpdate.result_institution_budget_array?.length > 0) {
+          const activeBudgets =
+            institutionToUpdate.result_institution_budget_array.filter(
+              (b) => b.is_active,
+            );
+          let workingBudget: ResultInstitutionsBudget;
+          if (activeBudgets?.length > 0) {
+            workingBudget = activeBudgets.shift();
+
+            activeBudgets.forEach((b) => {
+              b.is_active = false;
+              b.last_updated_by = userId;
+              updatedNewBudgets.push(b);
+            });
+          } else {
+            workingBudget = new ResultInstitutionsBudget();
+
+            workingBudget.created_by = userId;
+            workingBudget.result_institution_id = institutionToUpdate.id;
+          }
+
+          workingBudget.is_active = true;
+          workingBudget.last_updated_by = userId;
+          updatedNewBudgets.push(workingBudget);
+        } else {
+          const newBudget = new ResultInstitutionsBudget();
+
+          newBudget.created_by = userId;
+          newBudget.result_institution_id = institutionToUpdate.id;
+          newBudget.is_active = true;
+
+          updatedNewBudgets.push(newBudget);
+        }
+      }
     }
 
     await this._resultByIntitutionsRepository.save(toUpdate);
+    await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
 
     //handling deliveries from added and updated result_by_institutions
     for (const toUpdateDeliveries of toUpdate.concat(added)) {
