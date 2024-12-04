@@ -42,15 +42,15 @@ export const routingApp: PrRoute[] = [
     path: 'init-admin-module',
     loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule)
   },
-  {
-    prName: 'Outcome Indicator Module',
-    onlytest: false,
-    prHide: false,
-    underConstruction: true,
-    canActivate: [CheckLoginGuard],
-    path: 'outcome-indicator-module',
-    loadChildren: () => import('../../pages/outcome-indicator/outcome-indicator.module').then(m => m.OutcomeIndicatorModule)
-  },
+  // {
+  //   prName: 'Outcome Indicator Module',
+  //   onlytest: false,
+  //   prHide: false,
+  //   underConstruction: true,
+  //   canActivate: [CheckLoginGuard],
+  //   path: 'outcome-indicator-module',
+  //   loadChildren: () => import('../../pages/outcome-indicator/outcome-indicator.module').then(m => m.OutcomeIndicatorModule)
+  // },
   {
     prName: 'reports',
     prHide: true,
