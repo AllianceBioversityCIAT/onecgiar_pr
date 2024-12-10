@@ -20,7 +20,9 @@ describe('IndicatorDetailsComponent', () => {
         GET_contributionsToIndicators_indicator: jest.fn().mockReturnValue(of({})),
         POST_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
         PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
-        POST_contributionsToIndicatorsSubmit: jest.fn().mockReturnValue(of({}))
+        POST_contributionsToIndicatorsSubmit: jest.fn().mockReturnValue(of({})),
+        GET_contributionsToIndicatorsWPS: jest.fn().mockReturnValue(of({})),
+        GET_contributionsToIndicatorsEOIS: jest.fn().mockReturnValue(of({}))
       },
       alertsFe: {
         show: jest.fn().mockImplementationOnce((config, callback) => {
@@ -96,6 +98,34 @@ describe('IndicatorDetailsComponent', () => {
     jest.spyOn(component, 'updateIndicatorData');
     component.handleGetIndicatorResponse(response);
     expect(component.updateIndicatorData).toHaveBeenCalledWith(response);
+  });
+
+  it('should update indicator data and set loading to false in updateIndicatorData', () => {
+    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
+    component.updateIndicatorData(response);
+    expect(component.indicatorData).toEqual(response.contributionToIndicator);
+    expect(component.loading).toBe(false);
+  });
+
+  it('should call getWorkPackagesData and getEOIsData if initiativeIdFilter is different', () => {
+    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
+    component.outcomeIService.initiativeIdFilter = '456';
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
+    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    component.updateIndicatorData(response);
+    expect(component.outcomeIService.initiativeIdFilter).toBe('123');
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
+    expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+  });
+
+  it('should not call getWorkPackagesData and getEOIsData if initiativeIdFilter is the same', () => {
+    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
+    component.outcomeIService.initiativeIdFilter = '123';
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
+    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    component.updateIndicatorData(response);
+    expect(component.outcomeIService.getWorkPackagesData).not.toHaveBeenCalled();
+    expect(component.outcomeIService.getEOIsData).not.toHaveBeenCalled();
   });
 
   it('should handle 404 response in handleGetIndicatorResponse', () => {
