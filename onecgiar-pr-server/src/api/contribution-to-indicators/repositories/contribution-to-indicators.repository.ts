@@ -138,7 +138,8 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date,
           null as original_linked_result_code, null as original_linked_result_phase
         from ${env.DB_TOC}.toc_results_indicators tri
-        right join ${env.DB_TOC}.toc_results outcomes on tri.toc_results_id = outcomes.id
+        right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
+        right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
         right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
         left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
         left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
@@ -148,7 +149,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where tri.toc_result_indicator_id = ${tocId} and tri.is_active
+        where tri.toc_result_indicator_id = ${tocId} and tri.is_active and main_r.id is not null
         
         union all
         
