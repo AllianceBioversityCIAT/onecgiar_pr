@@ -63,8 +63,11 @@ export class ResultsController {
   }
 
   @Get('get/all/roles/:userId')
-  findAllResultRoles(@Param('userId') userId: number) {
-    return this.resultsService.findAllByRole(userId);
+  findAllResultRoles(
+    @Param('userId') userId: number,
+    @Query('initiative') init?: string,
+  ) {
+    return this.resultsService.findAllByRole(userId, init);
   }
 
   @Get('get/depth-search/:title')
