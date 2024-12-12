@@ -885,10 +885,14 @@ export class ResultsService {
     }
   }
 
-  async findAllByRole(userId: number) {
+  async findAllByRole(userId: number, initiativeCode?: string) {
     try {
       const result: any[] =
-        await this._customResultRepository.AllResultsByRoleUsers(userId);
+        await this._customResultRepository.AllResultsByRoleUserAndInitiative(
+          userId,
+          undefined,
+          initiativeCode,
+        );
 
       if (!result.length) {
         throw {

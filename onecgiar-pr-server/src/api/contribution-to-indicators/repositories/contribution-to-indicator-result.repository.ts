@@ -99,11 +99,12 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
           left join ${env.DB_NAME}.results_by_inititiative linked_rbi on linked_rbi.result_id = linked_r.id and linked_rbi.initiative_role_id = 1
           left join ${env.DB_NAME}.clarisa_initiatives linked_ci on linked_ci.id = linked_rbi.inititiative_id
           left join ${env.DB_NAME}.result_status linked_rs on linked_rs.result_status_id = linked_r.status_id
-          where lr.origin_result_id = main_r.id and lr.is_active
+          where lr.origin_result_id = main_r.id and lr.is_active and linked_r.id is not null
           group by main_r.id
         ) as linked_results
       from ${env.DB_TOC}.toc_results_indicators tri
-      right join ${env.DB_TOC}.toc_results outcomes on tri.toc_results_id = outcomes.id
+      right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
+      right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
       right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
       left join ${env.DB_NAME}.contribution_to_indicators cti on 
         convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and cti.is_active
@@ -116,7 +117,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
         and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-      where tri.toc_result_indicator_id = ? and tri.is_active
+      where tri.toc_result_indicator_id = ? and tri.is_active and main_r.id is not null
     `;
 
     return this.dataSource
