@@ -1,6 +1,6 @@
 <div class="outcomes">
   <div class="outcomes_title">
-    <i class="material-icons-outlined" style="font-size: 34px">assessment</i>
+    <i class="material-icons-outlined" style="font-size: 30px">assessment</i>
     <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
   </div>
 
@@ -12,7 +12,7 @@
       routerLink="/outcome-indicator-module/eoi-outcome-home"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
-      <i class="pi pi-sign-in" style="font-size: 4rem"></i>
+      <i class="pi pi-sign-in" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Report progress on End-Of-Initiative Outcomes</p>
     </div>
 
@@ -21,15 +21,21 @@
       routerLink="/outcome-indicator-module/work-package-outcome-home"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
-      <i class="pi pi-box" style="font-size: 4rem"></i>
+      <i class="pi pi-box" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Report progress on Work Packages Outcomes</p>
     </div>
 
     <div
       class="outcomes_actions_item"
-      [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
+      [ngClass]="{
+        disabled:
+          !this.outcomeIService.initiativeIdFilter ||
+          !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
+          !this.outcomeIService.eoisData.length ||
+          !this.outcomeIService.wpsData.length
+      }"
       (click)="exportIndicatorsToExcel()">
-      <i class="pi pi-file-export" style="font-size: 4rem"></i>
+      <i class="pi pi-file-export" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Export all the progress reported by indicators</p>
     </div>
   </div>

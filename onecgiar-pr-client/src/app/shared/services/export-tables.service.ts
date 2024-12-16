@@ -204,8 +204,8 @@ export class ExportTablesService {
     try {
       await import('exceljs').then(async ExcelJS => {
         const workbook = new ExcelJS.Workbook();
-        const eoisWorksheet = workbook.addWorksheet('EOIO');
-        const wpsWorksheet = workbook.addWorksheet('WP');
+        const eoisWorksheet = workbook.addWorksheet('EoI outcomes');
+        const wpsWorksheet = workbook.addWorksheet('WP outcomes');
 
         if (wscolsEOIs) eoisWorksheet.columns = wscolsEOIs;
         if (wscolsWPs) wpsWorksheet.columns = wscolsWPs;
@@ -237,7 +237,7 @@ export class ExportTablesService {
 
     const supportingResults = !data.indicators[0]?.indicator_supporting_results
       ? 'Not provided'
-      : data.indicators[0]?.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
+      : data.indicators[0]?.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.title}`).join('\n');
 
     worksheet.addRow({
       toc_result_title: data.toc_result_title ?? 'Not defined',
@@ -265,7 +265,7 @@ export class ExportTablesService {
           }
           const supportingResults = !indicator.indicator_supporting_results
             ? 'Not provided'
-            : indicator.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.result_title}`).join('\n');
+            : indicator.indicator_supporting_results.map(item => `• ${item.result_type} ${item.result_code} - ${item.title}`).join('\n');
 
           worksheet.addRow({
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,

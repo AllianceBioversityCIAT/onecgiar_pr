@@ -119,6 +119,8 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   handleSaveIndicatorData() {
+    this.loading.set(true);
+
     this.api.resultsSE
       .PATCH_contributionsToIndicators(this.indicatorDetailsService.indicatorData(), this.indicatorDetailsService.indicatorId())
       .subscribe({
