@@ -31,12 +31,15 @@
       sortField="result_code"
       [sortOrder]="-1"
       responsiveLayout="scroll"
-      [value]="this.indicatorDetailsService.indicatorResults()"
-      [paginator]="this.indicatorDetailsService.indicatorResults()?.length"
+      [value]="this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value"
+      [paginator]="
+        (this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length
+      "
       [rows]="10"
       styleClass="p-datatable-gridlines p-datatable-sm"
       selectionMode="single"
-      [rowsPerPageOptions]="[10, 50, 100]">
+      [rowsPerPageOptions]="[10, 50, 100]"
+      [first]="this.indicatorDetailsService.textToSearch().value && 0">
       <ng-template pTemplate="header">
         <tr>
           @for (column of columnOrder; track column.attr) {
@@ -69,7 +72,7 @@
           }
 
           <td>
-            <div style="display: flex; justify-content: center; align-items: center; width: 120px; height: 100%; gap: 1rem">
+            <div style="display: flex; justify-content: center; align-items: center; width: 135px; height: 100%; gap: 1rem">
               <app-pr-button
                 text="View"
                 colorType="secondary"
@@ -90,14 +93,17 @@
       </ng-template>
     </p-table>
 
-    <!-- <div class="total" *ngIf="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter: text_to_search)?.length">
-      Total: {{ (this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter: text_to_search)?.length }}/{{
-        this.ipsrDataControlSE.ipsrResultList?.length
-      }}
-    </div> -->
+    @if ((this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length) {
+      <div class="modal_total">
+        Total:
+        {{
+          (this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length
+        }}/{{ this.indicatorDetailsService.indicatorResults()?.length }}
+      </div>
+    }
 
-    <!-- <div class="ipsr_modal_noDataText" *ngIf="!(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter: text_to_search)?.length">
-      There are no results for the selected filters.
-    </div> -->
+    @if (!(this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length) {
+      <div class="modal_noDataText">There are no results for the selected filters.</div>
+    }
   </div>
 </p-dialog>

@@ -14,7 +14,7 @@ export class IndicatorDetailsService {
   // Modal
   indicatorResultsModal = signal<{ value: boolean }>({ value: false });
   textToSearch = signal<{ value: string }>({ value: '' });
-  indicatorResults = signal<any[]>([]);
+  indicatorResults = signal<any[] | null>(null);
 
   constructor(
     private readonly resultsApiService: ResultsApiService,

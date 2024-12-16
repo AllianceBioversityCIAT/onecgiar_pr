@@ -5,11 +5,12 @@ import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 import { RouterModule } from '@angular/router';
+import { FilterIndicatorResultsPipe } from './pipes/filter-indicator-results.pipe';
 
 @Component({
   selector: 'app-indicator-results-modal',
   standalone: true,
-  imports: [CommonModule, TableModule, DialogModule, CustomFieldsModule, RouterModule],
+  imports: [CommonModule, TableModule, DialogModule, CustomFieldsModule, RouterModule, FilterIndicatorResultsPipe],
   templateUrl: './indicator-results-modal.component.html',
   styleUrl: './indicator-results-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

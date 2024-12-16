@@ -65,16 +65,16 @@
   inlineStyles="margin: 0"
   description="If a result is missing , please ensure it is either reported against this outcome or linked to it. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
 
-@if (this.indicatorDetailsService.indicatorResults().length > 0) {
-  <div class="indicator_add_result_container">
-    <app-pr-button
-      text="Add result"
-      colorType="primary"
-      padding="big"
-      [ngClass]="{ globalDisabled: this.indicatorDetailsService.indicatorResults().length === 0 }"
-      (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"></app-pr-button>
-  </div>
-}
+<div class="indicator_add_result_container">
+  <app-pr-button
+    text="Add result"
+    colorType="primary"
+    padding="big"
+    [ngClass]="{
+      globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
+    }"
+    (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"></app-pr-button>
+</div>
 
 <app-details-table></app-details-table>
 

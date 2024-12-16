@@ -19,7 +19,6 @@
 
 .description {
   font-weight: 700;
-  text-align: left;
   color: var(--pr-color-secondary);
   font-size: 1.2rem;
   margin-top: 10px;
@@ -34,4 +33,16 @@
 .modal_close_icon {
   cursor: pointer;
   color: #fff;
+}
+
+.modal_total {
+  margin-top: 20px;
+}
+
+.modal_noDataText {
+  text-align: center;
+  padding: 50px 0px;
+  font-size: 1.3em;
+  font-weight: 500;
+  color: var(--pr-color-primary);
 }
