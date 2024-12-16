@@ -12,6 +12,10 @@
   </span>
 </h1>
 
+<div class="indicator_info_container">
+  {{ this.indicatorDetailsService.indicatorData().indicator_initiative_short }}
+</div>
+
 <div class="indicator_info">
   <div class="indicator_info_item">
     <div class="indicator_info_item_header">
@@ -63,7 +67,7 @@
 <app-pr-field-header label="Which results are evidencing the achieved value for this indicator?" [required]="true"></app-pr-field-header>
 <app-alert-status
   inlineStyles="margin: 0"
-  description="If a result is missing , please ensure it is either reported against this outcome or linked to it. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
+  description="Please ensure it is either reported against this outcome or linked <span class='text-underline'>a result which is reported against this outcome</span>. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
 
 <div class="indicator_add_result_container">
   <app-pr-button
