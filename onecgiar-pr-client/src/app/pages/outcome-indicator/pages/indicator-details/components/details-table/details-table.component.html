@@ -7,13 +7,7 @@
   [tableStyle]="{ 'min-width': '60rem', 'margin-top': '1rem' }"
   [rows]="10"
   [rowsPerPageOptions]="[10, 20, 30, 40, 50]"
-  [paginator]="true"
-  [showCurrentPageReport]="true"
-  currentPageReportTemplate="Showing {first} to {last} of {totalRecords} results"
-  [rowsPerPageOptions]="[10, 20, 30, 40, 50]"
-  [paginator]="true"
-  [showCurrentPageReport]="true"
-  currentPageReportTemplate="Showing {first} to {last} of {totalRecords} results">
+  [paginator]="true">
   <ng-template pTemplate="header">
     <tr>
       <th pSortableColumn="result_code" id="result-code-header">Result code <p-sortIcon field="result_code" /></th>
@@ -69,3 +63,10 @@
     </tr>
   </ng-template>
 </p-table>
+
+@if (this.indicatorDetailsService.indicatorData().contributing_results?.length) {
+  <div class="total">
+    Total:
+    {{ this.indicatorDetailsService.indicatorData().contributing_results?.length }}
+  </div>
+}

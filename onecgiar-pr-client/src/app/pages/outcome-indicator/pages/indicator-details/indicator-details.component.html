@@ -70,14 +70,13 @@
   description="Please ensure it is either reported against this outcome or linked <span class='text-underline'>a result which is reported against this outcome</span>. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
 
 <div class="indicator_add_result_container">
-  <app-pr-button
-    text="Add result"
-    colorType="primary"
-    padding="big"
+  <p-button
+    icon="pi pi-file-plus"
+    label="Add result"
+    (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"
     [ngClass]="{
       globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
-    }"
-    (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"></app-pr-button>
+    }"></p-button>
 </div>
 
 <app-details-table></app-details-table>

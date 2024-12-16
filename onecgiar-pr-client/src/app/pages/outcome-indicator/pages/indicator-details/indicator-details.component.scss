@@ -76,10 +76,6 @@ p {
   }
 }
 
-.removed {
-  text-decoration: line-through;
-}
-
 .indicator_add_result_container {
   display: flex;
   justify-content: flex-end;
@@ -98,4 +94,11 @@ p {
   border-bottom-left-radius: 10px;
   font-weight: 500;
   font-size: 12px;
+}
+
+::ng-deep .p-button {
+  background-color: var(--pr-color-primary);
+  color: #fff;
+  border: none;
+  box-shadow: none;
 }
