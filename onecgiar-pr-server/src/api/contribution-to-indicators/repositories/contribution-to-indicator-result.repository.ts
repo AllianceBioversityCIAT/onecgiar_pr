@@ -73,35 +73,9 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     tocId: string,
   ): Promise<ContributionToIndicatorResultsDto[]> {
     const dataQuery = `
-      select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-        main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-        main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date,
-        (
-          select json_arrayagg(json_object(
-            "contribution_id", linked_ctir.id,
-            "is_active", linked_ctir.is_active,
-            "result_id", linked_r.id,
-            "result_code", linked_r.result_code,
-            "result_title", linked_r.title,
-            "phase_name", linked_v.phase_name,
-            "phase_id", linked_v.id,
-            "result_type", linked_rt.name,
-            "result_submitter", linked_ci.official_code,
-            "result_status", linked_rs.status_name,
-            "result_creation_date", date_format(linked_r.created_date, '%Y-%m-%d')
-          ))
-          from ${env.DB_NAME}.linked_result lr
-          left join ${env.DB_NAME}.result linked_r on linked_r.id = lr.linked_results_id and linked_r.is_active
-          left join ${env.DB_NAME}.contribution_to_indicator_results linked_ctir on linked_ctir.result_id = linked_r.id 
-            and linked_ctir.contribution_to_indicator_id = cti.id 
-          left join ${env.DB_NAME}.\`version\` linked_v on linked_r.version_id = linked_v.id
-          left join ${env.DB_NAME}.result_type linked_rt on linked_r.result_type_id = linked_rt.id
-          left join ${env.DB_NAME}.results_by_inititiative linked_rbi on linked_rbi.result_id = linked_r.id and linked_rbi.initiative_role_id = 1
-          left join ${env.DB_NAME}.clarisa_initiatives linked_ci on linked_ci.id = linked_rbi.inititiative_id
-          left join ${env.DB_NAME}.result_status linked_rs on linked_rs.result_status_id = linked_r.status_id
-          where lr.origin_result_id = main_r.id and lr.is_active and linked_r.id is not null
-          group by main_r.id
-        ) as linked_results
+      select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
+        main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
+        main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date
       from ${env.DB_TOC}.toc_results_indicators tri
       right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
       right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
