@@ -22,6 +22,15 @@ export class OutcomeIndicatorHomeComponent {
   ) {}
 
   exportIndicatorsToExcel() {
+    if (
+      !this.outcomeIService.initiativeIdFilter ||
+      !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
+      !this.outcomeIService.eoisData.length ||
+      !this.outcomeIService.wpsData.length
+    ) {
+      return;
+    }
+
     const wscolsEOIs = [
       { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },

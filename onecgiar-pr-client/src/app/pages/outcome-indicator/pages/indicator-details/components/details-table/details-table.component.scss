@@ -25,3 +25,14 @@
   background-color: var(--pr-color-primary);
   white-space: nowrap;
 }
+
+.total {
+  font-weight: 500;
+  color: #808080;
+  font-size: 12px;
+  margin-top: 1rem;
+}
+
+.removed {
+  text-decoration: line-through;
+}
