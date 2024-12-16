@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ButtonModule } from 'primeng/button';

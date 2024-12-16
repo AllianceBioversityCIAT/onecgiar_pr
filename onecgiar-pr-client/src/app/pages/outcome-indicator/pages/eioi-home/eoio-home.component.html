@@ -2,7 +2,7 @@
   <div class="eoio_header_arrow" routerLink="/outcome-indicator-module/home" [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
     <i class="material-icons-round" style="color: white">arrow_back</i>
   </div>
-  <h1 class="eoio_header_title">Indicator list</h1>
+  <h1 class="eoio_header_title">End of Initiative Outcome Indicators List</h1>
 </header>
 
 <div class="search_input" style="width: 100%; margin-bottom: 2rem">
@@ -27,7 +27,7 @@
   [tableStyle]="{ 'min-width': '80rem' }">
   <ng-template pTemplate="header">
     <tr>
-      <th pSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">Outcome <p-sortIcon field="toc_result_title" /></th>
+      <th pSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">EOI Outcome <p-sortIcon field="toc_result_title" /></th>
       <th style="width: 25%" id="indicator-header">Indicator</th>
       <th style="width: 20%" id="indicator-type-header">Indicator Type</th>
       <th style="width: 8%" id="expected-target-header">Expected Target</th>

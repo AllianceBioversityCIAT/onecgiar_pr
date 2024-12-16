@@ -2,7 +2,7 @@
   <div class="wp_header_arrow" routerLink="/outcome-indicator-module/home" [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
     <i class="material-icons-round" style="color: white">arrow_back</i>
   </div>
-  <h1 class="wp_header_title">Indicator list</h1>
+  <h1 class="wp_header_title">Work Package Outcome Indicators List</h1>
 </header>
 
 <div class="search_input" style="width: 100%; margin-bottom: 2rem">
@@ -35,7 +35,9 @@
   [expandedRowKeys]="this.outcomeIService.expandedRows">
   <ng-template pTemplate="header">
     <tr>
-      <th pSortableColumn="workpackage_short_name" style="width: 26%" id="outcome_header">Outcome <p-sortIcon field="workpackage_short_name" /></th>
+      <th pSortableColumn="workpackage_short_name" style="width: 26%" id="outcome_header">
+        Work Package Outcome <p-sortIcon field="workpackage_short_name" />
+      </th>
       <th style="width: 25%" id="indicator_header">Indicator</th>
       <th style="width: 20%" id="indicator_type_header">Indicator Type</th>
       <th style="width: 8%" id="expected_target_header">Expected Target</th>
