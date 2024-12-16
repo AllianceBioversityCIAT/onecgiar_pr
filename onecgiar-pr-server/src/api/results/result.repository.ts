@@ -544,7 +544,9 @@ WHERE
     try {
       const results = await this.query(
         queryData,
-        ([userid] as any[]).concat(initiativeCode ? [initiativeCode] : []),
+        ([userid] as (string | number)[]).concat(
+          initiativeCode ? [initiativeCode] : [],
+        ),
       );
       return results;
     } catch (error) {

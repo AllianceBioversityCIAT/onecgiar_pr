@@ -1,4 +1,4 @@
-@let isSubmitted = this.indicatorData?.submission_status == '1';
+@let isSubmitted = this.indicatorDetailsService.indicatorData()?.submission_status == '1';
 
 <header class="indicator_header" (click)="goBack()">
   <i class="pi pi-arrow-circle-left" style="font-size: 20px"></i>
@@ -8,7 +8,7 @@
 <h1 class="indicator_title">
   Indicator:
   <span style="color: var(--pr-color-primary)">
-    {{ this.indicatorData?.indicator_name }}
+    {{ this.indicatorDetailsService.indicatorData()?.indicator_name }}
   </span>
 </h1>
 
@@ -21,8 +21,12 @@
     </div>
 
     <p class="indicator_info_item_value">
-      {{ this.indicatorData?.workpackage_short_name ? this.indicatorData.workpackage_short_name + ': ' : '' }}
-      {{ this.indicatorData?.workpackage_name ?? 'Not specified' }}
+      {{
+        this.indicatorDetailsService.indicatorData()?.workpackage_short_name
+          ? this.indicatorDetailsService.indicatorData().workpackage_short_name + ': '
+          : ''
+      }}
+      {{ this.indicatorDetailsService.indicatorData()?.workpackage_name ?? 'Not specified' }}
     </p>
   </div>
   @for (item of indicatorInfoItems; track $index) {
@@ -33,14 +37,14 @@
         <p class="indicator_info_item_label">{{ item?.label }}</p>
       </div>
 
-      <p class="indicator_info_item_value">{{ this.indicatorData[item?.value] ?? 'Not specified' }}</p>
+      <p class="indicator_info_item_value">{{ this.indicatorDetailsService.indicatorData()[item?.value] ?? 'Not specified' }}</p>
     </div>
   }
 </div>
 
 <app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
 <p-inputNumber
-  [(ngModel)]="this.indicatorData.achieved_in_2024"
+  [(ngModel)]="this.indicatorDetailsService.indicatorData().achieved_in_2024"
   [inputStyle]="{ width: '103px' }"
   [min]="0"
   [maxlength]="16"
@@ -49,7 +53,7 @@
 
 <app-pr-textarea
   label="Narrative explaining value achievement"
-  [(ngModel)]="this.indicatorData.narrative_achieved_in_2024"
+  [(ngModel)]="this.indicatorDetailsService.indicatorData().narrative_achieved_in_2024"
   [required]="true"
   [maxWords]="200"
   [readOnly]="isSubmitted"
@@ -61,121 +65,18 @@
   inlineStyles="margin: 0"
   description="If a result is missing , please ensure it is either reported against this outcome or linked to it. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024."></app-alert-status>
 
-<p-table
-  id="linkedResultsTableList"
-  [value]="this.indicatorData?.contributing_results"
-  dataKey="result_code"
-  [tableStyle]="{ 'min-width': '60rem', 'margin-top': '2rem' }">
-  <ng-template pTemplate="header">
-    <tr>
-      <th style="width: 5rem" id="trigger-header"></th>
-      <th pSortableColumn="result_code" id="result-code-header">Result code <p-sortIcon field="result_code" /></th>
-      <th pSortableColumn="result_title" id="result-title-header">Title <p-sortIcon field="result_title" /></th>
-      <th pSortableColumn="phase_name" id="phase-name-header">Phase <p-sortIcon field="phase_name" /></th>
-      <th pSortableColumn="result_type" id="result-type-header">Indicator category <p-sortIcon field="result_type" /></th>
-      <th pSortableColumn="result_status" id="result-status-header">Status <p-sortIcon field="result_status" /></th>
-      <th pSortableColumn="result_creation_date" id="result-creation-date-header">Creation date <p-sortIcon field="result_creation_date" /></th>
-      <th id="action-header">Action</th>
-    </tr>
-  </ng-template>
-  <ng-template pTemplate="body" let-item let-expanded="expanded">
-    <tr>
-      <td>
-        <p-button
-          type="button"
-          pRipple
-          [pRowToggler]="item"
-          [text]="true"
-          [rounded]="true"
-          [plain]="true"
-          [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
-      </td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_code }}</td>
-      <td [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_title }}</td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.phase_name }}</td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_type }}</td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_status }}</td>
-      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_creation_date }}</td>
-      <td>
-        <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
-          <app-pr-button
-            text="View"
-            colorType="secondary"
-            [verticalMargin]="0"
-            (click)="openInNewPage(item?.result_code, item?.phase_id)"></app-pr-button>
-          <app-pr-button
-            text="Remove"
-            colorType="danger"
-            [verticalMargin]="0"
-            (click)="handleRemoveIndicator(item, 'result')"
-            [ngClass]="{ globalDisabled: item?.is_active === false || isSubmitted }"></app-pr-button>
-        </div>
-      </td>
-    </tr>
-  </ng-template>
+<div class="indicator_add_result_container">
+  <app-pr-button
+    text="Add result"
+    colorType="primary"
+    padding="big"
+    [ngClass]="{
+      globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
+    }"
+    (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"></app-pr-button>
+</div>
 
-  <ng-template pTemplate="rowexpansion" let-item>
-    <tr>
-      <td></td>
-      <td colspan="7" style="padding: 0">
-        <p-table [value]="item?.linked_results" dataKey="id">
-          <ng-template pTemplate="header">
-            <tr>
-              <th id="linked-result-code-header">Linked result code</th>
-              <th id="linked-result-name-header">Linked result name</th>
-              <th id="phase-header">Phase</th>
-              <th id="indicator-category-header">Indicator category</th>
-              <th id="submitter-header">Submitter</th>
-              <th id="status-header">Status</th>
-              <th id="creation-date-header">Creation date</th>
-              <th id="action-header">Action</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-result>
-            <tr>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">
-                {{ result?.result_code }}
-              </td>
-              <td [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_title }}</td>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.phase_name }}</td>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_type }}</td>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_submitter }}</td>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_status }}</td>
-              <td class="text-center" [ngClass]="{ removed: result?.is_active === false }">{{ result?.result_creation_date }}</td>
-              <td>
-                <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
-                  <app-pr-button
-                    text="View"
-                    colorType="secondary"
-                    [verticalMargin]="0"
-                    (click)="openInNewPage(result?.result_code, result?.phase_id)"></app-pr-button>
-                  <app-pr-button
-                    text="Remove"
-                    colorType="danger"
-                    [verticalMargin]="0"
-                    (click)="handleRemoveIndicator(result, 'linked')"
-                    [ngClass]="{ globalDisabled: item?.is_active === false || isSubmitted }"></app-pr-button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="8" class="noDataText">There are no linked results for this result.</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </td>
-    </tr>
-  </ng-template>
-
-  <ng-template pTemplate="emptymessage">
-    <tr style="height: 100px">
-      <td colspan="8" class="noDataText">There are no results.</td>
-    </tr>
-  </ng-template>
-</p-table>
+<app-details-table></app-details-table>
 
 <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; gap: 1rem; margin-top: 2rem">
   <app-pr-button
@@ -195,7 +96,7 @@
 
 <p-toast position="bottom-right" key="br" />
 
-@if (this.loading) {
+@if (this.loading()) {
   <div class="spinner" style="position: fixed">
     <div class="info">
       <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
@@ -203,3 +104,5 @@
     </div>
   </div>
 }
+
+<app-indicator-results-modal></app-indicator-results-modal>

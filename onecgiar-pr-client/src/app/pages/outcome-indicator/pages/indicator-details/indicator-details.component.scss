@@ -76,18 +76,12 @@ p {
   }
 }
 
-.noDataText {
-  text-align: center;
-  padding: 20px 0px;
-  font-size: 1.3em;
-  font-weight: 500;
-  color: var(--pr-color-primary);
-}
-
 .removed {
   text-decoration: line-through;
 }
 
-.text-center {
-  text-align: center;
+.indicator_add_result_container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
 }
