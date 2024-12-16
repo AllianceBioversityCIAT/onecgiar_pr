@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -40,6 +40,8 @@ export class IndicatorDetailsComponent implements OnInit {
     { icon: '', label: 'Baseline', value: 'indicator_baseline', iconClass: 'pi pi-chart-bar' },
     { icon: '', label: 'Target', value: 'indicator_target', iconClass: 'pi pi-bullseye' }
   ];
+
+  loading = signal<boolean>(true);
 
   constructor(
     public location: Location,
@@ -91,7 +93,6 @@ export class IndicatorDetailsComponent implements OnInit {
 
   updateIndicatorData(response: any) {
     this.indicatorDetailsService.indicatorData.set(response?.contributionToIndicator);
-    console.log(this.indicatorDetailsService.indicatorData());
     this.indicatorDetailsService.getIndicatorDetailsResults(this.indicatorDetailsService.indicatorData().initiative_official_code);
 
     if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
@@ -101,12 +102,12 @@ export class IndicatorDetailsComponent implements OnInit {
         this.outcomeIService.getEOIsData();
       }, 800);
     }
-    this.indicatorDetailsService.loading.set(false);
+    this.loading.set(false);
   }
 
   handleError(error: any) {
     console.error('Error loading initiatives:', error);
-    this.indicatorDetailsService.loading.set(false);
+    this.loading.set(false);
     this.messageService.add({ severity: 'error', summary: 'Error', detail: 'An error occurred', key: 'br' });
   }
 
@@ -118,7 +119,6 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   handleSaveIndicatorData() {
-    this.indicatorDetailsService.loading.set(true);
     this.api.resultsSE
       .PATCH_contributionsToIndicators(this.indicatorDetailsService.indicatorData(), this.indicatorDetailsService.indicatorId())
       .subscribe({
@@ -146,7 +146,7 @@ export class IndicatorDetailsComponent implements OnInit {
       return;
     }
 
-    this.indicatorDetailsService.loading.set(true);
+    this.loading.set(true);
 
     this.api.resultsSE
       .PATCH_contributionsToIndicators(this.indicatorDetailsService.indicatorData(), this.indicatorDetailsService.indicatorId())
@@ -181,7 +181,7 @@ export class IndicatorDetailsComponent implements OnInit {
         confirmText: 'Yes, un-submit'
       },
       () => {
-        this.indicatorDetailsService.loading.set(true);
+        this.loading.set(true);
         this.onSubmitIndicator(true);
       }
     );

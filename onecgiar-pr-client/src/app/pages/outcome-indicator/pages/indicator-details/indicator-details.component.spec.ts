@@ -61,8 +61,6 @@ describe('IndicatorDetailsComponent', () => {
     component = fixture.componentInstance;
     apiService = TestBed.inject(ApiService);
     location = TestBed.inject(Location);
-    activatedRoute = TestBed.inject(ActivatedRoute);
-    authService = TestBed.inject(AuthService);
   });
 
   it('should create', () => {
@@ -114,7 +112,7 @@ describe('IndicatorDetailsComponent', () => {
     const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
     component.updateIndicatorData(response);
     expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
-    expect(component.indicatorDetailsService.loading()).toBe(false);
+    expect(component.loading()).toBe(false);
   });
 
   it('should not call getWorkPackagesData and getEOIsData if initiativeIdFilter is the same', () => {
@@ -159,7 +157,7 @@ describe('IndicatorDetailsComponent', () => {
     const response = { contributionToIndicator: { someData: 'data' } };
     component.updateIndicatorData(response);
     expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
-    expect(component.indicatorDetailsService.loading()).toBe(false);
+    expect(component.loading()).toBe(false);
   });
 
   it('should go back when goBack is called', () => {
