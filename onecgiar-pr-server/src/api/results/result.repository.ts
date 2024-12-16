@@ -484,7 +484,11 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(userid: number, excludeType = [10, 11]) {
+  async AllResultsByRoleUserAndInitiative(
+    userid: number,
+    excludeType = [10, 11],
+    initiativeCode?: string,
+  ) {
     const queryData = `
     SELECT
     r.id,
@@ -533,11 +537,17 @@ WHERE
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND rt.id not in (${excludeType.toString()});
+    AND rt.id not in (${excludeType.toString()})
+    ${initiativeCode ? 'AND ci.official_code = ?' : ''};
     `;
 
     try {
-      const results = await this.query(queryData, [userid]);
+      const results = await this.query(
+        queryData,
+        ([userid] as (string | number)[]).concat(
+          initiativeCode ? [initiativeCode] : [],
+        ),
+      );
       return results;
     } catch (error) {
       throw {
