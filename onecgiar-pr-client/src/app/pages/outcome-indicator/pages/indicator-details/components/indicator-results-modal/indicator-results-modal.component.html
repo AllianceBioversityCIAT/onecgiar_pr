@@ -86,6 +86,7 @@
                 [disabled]="result?.is_saved"
                 [tooltipText]="result?.is_saved ? 'This result is already saved in the indicator' : ''"
                 tooltipTextPosition="top"
+                [style]="{ width: '65px' }"
                 (click)="handleAddIndicator(result)"></app-pr-button>
             </div>
           </td>
