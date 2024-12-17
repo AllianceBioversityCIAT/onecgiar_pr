@@ -83,7 +83,8 @@ describe('IndicatorResultsModalComponent', () => {
       expect(newState.contributing_results).toHaveLength(1);
       expect(newState.contributing_results[0]).toEqual({
         ...result,
-        result_id: result.id
+        result_id: result.id,
+        is_active: true
       });
     });
 

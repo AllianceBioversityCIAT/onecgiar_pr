@@ -16,23 +16,28 @@
   {{ this.indicatorDetailsService.indicatorData().indicator_initiative_short }}
 </div>
 
-<div class="indicator_info">
-  <div class="indicator_info_item">
-    <div class="indicator_info_item_header">
-      <i class="pi pi-box" style="font-size: 20px"></i>
+<div
+  class="indicator_info"
+  [ngStyle]="{ 'grid-template-columns': this.indicatorDetailsService.platformId() === 'wps' ? '1fr 1fr 245px 135px 125px' : '1fr 1fr 245px 135px' }">
+  @if (this.indicatorDetailsService.platformId() === 'wps') {
+    <div class="indicator_info_item">
+      <div class="indicator_info_item_header">
+        <i class="pi pi-box" style="font-size: 20px"></i>
 
-      <p class="indicator_info_item_label">Work Package</p>
+        <p class="indicator_info_item_label">Work Package</p>
+      </div>
+
+      <p class="indicator_info_item_value">
+        {{
+          this.indicatorDetailsService.indicatorData()?.workpackage_short_name
+            ? this.indicatorDetailsService.indicatorData().workpackage_short_name + ': '
+            : ''
+        }}
+        {{ this.indicatorDetailsService.indicatorData()?.workpackage_name ?? 'Not specified' }}
+      </p>
     </div>
+  }
 
-    <p class="indicator_info_item_value">
-      {{
-        this.indicatorDetailsService.indicatorData()?.workpackage_short_name
-          ? this.indicatorDetailsService.indicatorData().workpackage_short_name + ': '
-          : ''
-      }}
-      {{ this.indicatorDetailsService.indicatorData()?.workpackage_name ?? 'Not specified' }}
-    </p>
-  </div>
   @for (item of indicatorInfoItems; track $index) {
     <div class="indicator_info_item">
       <div class="indicator_info_item_header">

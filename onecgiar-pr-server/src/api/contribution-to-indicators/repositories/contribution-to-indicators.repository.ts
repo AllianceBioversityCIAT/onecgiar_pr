@@ -3,6 +3,8 @@ import { ContributionToIndicator } from '../entities/contribution-to-indicator.e
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { env } from 'process';
+import { ContributionToWpOutcomeDto } from '../dto/contribution-to-wp-outcome.dto';
+import { ContributionToEoiOutcomeDto } from '../dto/contribution-to-eoi-outcome.dto';
 
 @Injectable()
 export class ContributionToIndicatorsRepository extends Repository<ContributionToIndicator> {
@@ -38,9 +40,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       order by wp.id
     `;
 
-    return this.dataSource
+    const result = await this.dataSource
       .query(dataQuery, [initiativeCode])
-      .then((data) => data.map((item) => item.workpackage))
+      .then((data: ContributionToWpOutcomeDto[]) =>
+        data.map((item) => item.workpackage),
+      )
       .catch((err) => {
         throw this._handlersError.returnErrorRepository({
           error: err,
@@ -48,6 +52,27 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           debug: true,
         });
       });
+
+    for (const wp of result) {
+      for (const tocResult of wp.toc_results ?? []) {
+        for (const indicator of tocResult.indicators ?? []) {
+          const results = await this.dataSource
+            .query(this._flattenedResultsQuery(indicator.indicator_uuid))
+            .then((data) => data[0].results)
+            .catch((err) => {
+              throw this._handlersError.returnErrorRepository({
+                error: err,
+                className: ContributionToIndicatorsRepository.name,
+                debug: true,
+              });
+            });
+
+          indicator.indicator_supporting_results = results;
+        }
+      }
+    }
+
+    return result;
   }
 
   async findAllEoisByInitiativeCode(initiativeCode: string) {
@@ -62,9 +87,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       where ci.official_code = ?
     `;
 
-    return this.dataSource
+    const result = await this.dataSource
       .query(dataQuery, [initiativeCode])
-      .then((data) => data.map((item) => item.eois))
+      .then((data: ContributionToEoiOutcomeDto[]) =>
+        data.flatMap((item) => item.eois),
+      )
       .catch((err) => {
         throw this._handlersError.returnErrorRepository({
           error: err,
@@ -72,6 +99,25 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           debug: true,
         });
       });
+
+    for (const eoi of result) {
+      for (const indicator of eoi.indicators ?? []) {
+        const results = await this.dataSource
+          .query(this._flattenedResultsQuery(indicator.indicator_uuid))
+          .then((data) => data[0].results)
+          .catch((err) => {
+            throw this._handlersError.returnErrorRepository({
+              error: err,
+              className: ContributionToIndicatorsRepository.name,
+              debug: true,
+            });
+          });
+
+        indicator.indicator_supporting_results = results;
+      }
+    }
+
+    return result;
   }
 
   private _getTocResultSubquery(outerRelationName: string): string {
@@ -98,7 +144,6 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
                		else null
                	END
               )),
-              "indicator_supporting_results", (${this._flattenedResultsQuery('oi.toc_result_indicator_id')}),
               "indicator_achieved_narrative", cti.narrative_achieved_in_2024
             ))
             from ${env.DB_TOC}.toc_results_indicators oi
@@ -130,7 +175,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         "status_name", result_status,
         "created_date", result_creation_date,
         "is_manually_mapped", is_manually_mapped
-      ))
+      )) as results
       from (
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
           main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
@@ -147,7 +192,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where tri.toc_result_indicator_id = ${tocId} and tri.is_active and main_r.id is not null
+        where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null
         union all
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
           main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
@@ -161,7 +206,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           and main_rbi.initiative_role_id = 1
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where convert(cti.toc_result_id using utf8mb4) = convert(${tocId} using utf8mb4) and main_ctir.result_id not in (
+        where convert(cti.toc_result_id using utf8mb4) = convert('${tocId}' using utf8mb4) and main_ctir.result_id not in (
           select rtr.results_id
           from ${env.DB_NAME}.results_toc_result rtr
           where rtr.is_active and rtr.toc_result_id in (
