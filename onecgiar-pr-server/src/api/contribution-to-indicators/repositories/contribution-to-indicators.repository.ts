@@ -179,7 +179,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       from (
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
           main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, true as is_manually_mapped
+          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, false as is_manually_mapped
         from ${env.DB_TOC}.toc_results_indicators tri
         right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
         right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
@@ -196,7 +196,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         union all
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
           main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, false as is_manually_mapped
+          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, true as is_manually_mapped
         from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
         left join ${env.DB_NAME}.contribution_to_indicators cti on main_ctir.contribution_to_indicator_id = cti.id and cti.is_active
         left join ${env.DB_NAME}.result main_r on main_r.id = main_ctir.result_id and main_r.is_active
