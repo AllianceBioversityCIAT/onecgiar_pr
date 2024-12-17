@@ -48,14 +48,15 @@ export class IndicatorResultsModalComponent {
           ...state.contributing_results,
           {
             ...result,
-            result_id: result.id
+            result_id: result.id,
+            is_active: true
           }
         ]
       }));
     } else {
       this.indicatorDetailsService.indicatorData.update(state => ({
         ...state,
-        contributing_results: state.contributing_results.filter(r => r.result_id !== result.result_id)
+        contributing_results: state.contributing_results.filter(r => r.result_id != result.id)
       }));
     }
   }
