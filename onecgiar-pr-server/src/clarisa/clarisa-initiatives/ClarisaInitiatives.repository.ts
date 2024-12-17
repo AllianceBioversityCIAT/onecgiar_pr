@@ -31,6 +31,7 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
       return this.find({
         where: { active: true },
         relations: { obj_cgiar_entity_type: true },
+        order: { official_code: 'ASC' },
       });
     } catch (error) {
       throw {
