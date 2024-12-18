@@ -189,7 +189,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
         left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
         left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
-          and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
+          and rtr.initiative_id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
         where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null and main_ctir.is_active
@@ -202,8 +202,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         left join ${env.DB_NAME}.result main_r on main_r.id = main_ctir.result_id and main_r.is_active
         left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
         left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
-        left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
-          and main_rbi.initiative_role_id = 1
+        left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
         where convert(cti.toc_result_id using utf8mb4) = convert('${tocId}' using utf8mb4) and main_ctir.is_active

@@ -1088,7 +1088,7 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`, {});
   }
 
-  GET_contributionsDetailsResults(resultId: number, initiativeId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/get/all/roles/${resultId}?initiative=${initiativeId}`);
+  GET_contributionsDetailsResults(userId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/get/all/roles/${userId}`);
   }
 }
