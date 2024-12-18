@@ -34,6 +34,8 @@ describe('OutcomeIndicatorHomeComponent', () => {
       const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
       outcomeIndicatorService.eoisData = [{ indicators: [{ indicator_name: 'test' }] }];
       outcomeIndicatorService.wpsData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.loading.set(false);
+      outcomeIndicatorService.loadingWPs.set(false);
       outcomeIndicatorService.initiativeIdFilter = 'test';
       component.api.dataControlSE.reportingCurrentPhase.phaseName = 'test';
 
@@ -52,7 +54,8 @@ describe('OutcomeIndicatorHomeComponent', () => {
       const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
       outcomeIndicatorService.eoisData = [];
       outcomeIndicatorService.wpsData = [];
-      outcomeIndicatorService.initiativeIdFilter = 'test';
+      outcomeIndicatorService.loading.set(true);
+      outcomeIndicatorService.loadingWPs.set(true);
 
       component.exportIndicatorsToExcel();
 

@@ -80,21 +80,25 @@ describe('OutcomeIndicatorComponent', () => {
   });
 
   it('should load all initiatives', async () => {
+    component.api.rolesSE.isAdmin = true;
     const mockResponse = { response: [{ official_code: 'TEST1' }] };
+    const mockEntityTypesResponse = [{ code: 'TEST', name: 'Test Entity' }];
     jest.spyOn(component.api.resultsSE, 'GET_AllInitiatives').mockReturnValue(of(mockResponse));
+    jest.spyOn(component, 'GET_cgiarEntityTypes').mockImplementation(callback => callback(mockEntityTypesResponse));
     jest.spyOn(component, 'handleInitiativeQueryParam');
 
     await component.loadAllInitiatives();
 
-    expect(component.allInitiatives).toEqual(mockResponse.response);
+    expect(component.GET_cgiarEntityTypes).toHaveBeenCalled();
     expect(component.handleInitiativeQueryParam).toHaveBeenCalled();
   });
 
-  it('should handle error when loading initiatives', () => {
+  it('should handle error when loading initiatives', async () => {
+    component.api.rolesSE.isAdmin = true;
     jest.spyOn(console, 'error');
     jest.spyOn(component.api.resultsSE, 'GET_AllInitiatives').mockReturnValue(throwError(() => 'Test error'));
 
-    component.loadAllInitiatives();
+    await component.loadAllInitiatives();
 
     expect(console.error).toHaveBeenCalledWith('Error loading initiatives:', 'Test error');
   });
@@ -161,5 +165,26 @@ describe('OutcomeIndicatorComponent', () => {
     component.updateQueryParams();
 
     expect(component.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('should get CGIAR entity types', () => {
+    const mockResponse = { response: [{ code: 'TEST', name: 'Test Entity' }] };
+    const callback = jest.fn();
+    jest.spyOn(component.api.resultsSE, 'GET_cgiarEntityTypes').mockReturnValue(of(mockResponse));
+
+    component.GET_cgiarEntityTypes(callback);
+
+    expect(component.api.resultsSE.GET_cgiarEntityTypes).toHaveBeenCalled();
+    expect(callback).toHaveBeenCalledWith(mockResponse.response);
+  });
+
+  it('should handle error when getting CGIAR entity types', () => {
+    const callback = jest.fn();
+    jest.spyOn(component.api.resultsSE, 'GET_cgiarEntityTypes').mockReturnValue(throwError(() => 'Test error'));
+
+    component.GET_cgiarEntityTypes(callback);
+
+    expect(component.api.resultsSE.GET_cgiarEntityTypes).toHaveBeenCalled();
+    expect(callback).toHaveBeenCalled();
   });
 });

@@ -53,11 +53,42 @@ export class OutcomeIndicatorComponent implements OnInit {
     this.outcomeIService.getWorkPackagesData();
   }
 
+  GET_cgiarEntityTypes(callback) {
+    this.api.resultsSE.GET_cgiarEntityTypes().subscribe({
+      next: ({ response }) => {
+        response.forEach(element => {
+          element.isLabel = true;
+        });
+        callback(response);
+      },
+      error: err => {
+        callback?.();
+      }
+    });
+  }
+
   async loadAllInitiatives(): Promise<void> {
+    if (!this.api.rolesSE.isAdmin) return;
+
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
-        this.allInitiatives = response;
-        this.handleInitiativeQueryParam();
+        this.GET_cgiarEntityTypes(entityTypesResponse => {
+          this.allInitiatives = response.map(initiative => {
+            const { code, name } = initiative?.obj_cgiar_entity_type || {};
+            return { ...initiative, typeCode: code, typeName: name };
+          });
+
+          const groupedInitiatives = entityTypesResponse.reduce((acc, groupItem) => {
+            const initsGroup = this.allInitiatives.filter(item => item.typeCode === groupItem.code);
+            if (initsGroup.length) {
+              acc.push(groupItem, ...initsGroup);
+            }
+            return acc;
+          }, []);
+
+          this.allInitiatives = groupedInitiatives;
+          this.handleInitiativeQueryParam();
+        });
       },
       error: error => console.error('Error loading initiatives:', error)
     });
@@ -69,7 +100,7 @@ export class OutcomeIndicatorComponent implements OnInit {
     if (initParam) {
       this.outcomeIService.initiativeIdFilter = initParam.toUpperCase();
     } else if (this.allInitiatives.length > 0) {
-      this.outcomeIService.initiativeIdFilter = this.allInitiatives[0].official_code;
+      this.outcomeIService.initiativeIdFilter = this.allInitiatives[1].official_code;
       this.updateQueryParams();
     }
     this.outcomeIService.getEOIsData();

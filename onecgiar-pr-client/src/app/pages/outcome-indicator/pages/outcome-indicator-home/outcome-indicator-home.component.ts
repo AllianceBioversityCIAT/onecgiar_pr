@@ -25,8 +25,8 @@ export class OutcomeIndicatorHomeComponent {
     if (
       !this.outcomeIService.initiativeIdFilter ||
       !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
-      !this.outcomeIService.eoisData.length ||
-      !this.outcomeIService.wpsData.length
+      this.outcomeIService.loading() ||
+      this.outcomeIService.loadingWPs()
     ) {
       return;
     }
