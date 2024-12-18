@@ -1,0 +1,79 @@
+@let isSubmitted = this.indicatorDetailsService.indicatorData()?.submission_status == '1';
+
+<p-table
+  id="linkedResultsTableList"
+  [value]="this.indicatorDetailsService.indicatorData().contributing_results"
+  dataKey="result_code"
+  [tableStyle]="{ 'min-width': '60rem', 'margin-top': '1rem' }"
+  [rows]="10"
+  [rowsPerPageOptions]="[10, 20, 30, 40, 50]"
+  [paginator]="this.indicatorDetailsService.indicatorData().contributing_results?.length > 10">
+  <ng-template pTemplate="header">
+    <tr>
+      <th pSortableColumn="result_code" id="result-code-header">Result code <p-sortIcon field="result_code" /></th>
+      <th pSortableColumn="title" id="result-title-header">Title <p-sortIcon field="title" /></th>
+      <th pSortableColumn="phase_name" id="phase-name-header">Phase <p-sortIcon field="phase_name" /></th>
+      <th pSortableColumn="result_type" id="result-type-header">Indicator category <p-sortIcon field="result_type" /></th>
+      <th pSortableColumn="result_submitter" id="submitter-header">Submitter <p-sortIcon field="result_submitter" /></th>
+      <th pSortableColumn="status_name" id="result-status-header">Status <p-sortIcon field="status_name" /></th>
+      <th pSortableColumn="created_date" id="result-creation-date-header">Creation date <p-sortIcon field="created_date" /></th>
+      <th id="action-header">Action</th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-item let-expanded="expanded">
+    <tr>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_code }}</td>
+      <td [ngClass]="{ removed: item?.is_active === false }">
+        <div class="title-container">
+          @if (item?.is_added) {
+            <span class="not-saved">Not saved</span>
+          }
+          @if (item?.is_manually_mapped == '0') {
+            <img src="assets/icons/toc_icon.png" alt="TOC icon" style="width: 16px; height: 16px" />
+          }
+          {{ item?.title }}
+        </div>
+      </td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.phase_name }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_type }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_submitter }}</td>
+      <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.status_name }}</td>
+      @if (item?.is_added) {
+        <td class="text-center" style="white-space: nowrap" [ngClass]="{ removed: item?.is_active === false }">
+          {{ item?.created_date | date: 'YYYY-MM-dd' }}
+        </td>
+      } @else {
+        <td class="text-center" style="white-space: nowrap" [ngClass]="{ removed: item?.is_active === false }">{{ item?.created_date }}</td>
+      }
+      <td>
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1rem">
+          <app-pr-button
+            text="View"
+            colorType="secondary"
+            [verticalMargin]="0"
+            (click)="openInNewPage(item?.result_code, item?.version_id)"></app-pr-button>
+          <app-pr-button
+            text="Remove"
+            colorType="danger"
+            [verticalMargin]="0"
+            (click)="handleRemoveIndicator(item)"
+            [ngClass]="{ globalDisabled: item?.is_active === false || isSubmitted }"></app-pr-button>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 100px">
+      <td colspan="8" class="noDataText">There are no results.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+@if (this.indicatorDetailsService.indicatorData().contributing_results?.length) {
+  <div class="total">
+    Total:
+    {{ this.indicatorDetailsService.indicatorData().contributing_results?.length }}
+  </div>
+}

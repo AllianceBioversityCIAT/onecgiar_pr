@@ -6,12 +6,14 @@ import { of, throwError } from 'rxjs';
 import { Location } from '@angular/common';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
+import { AuthService } from '../../../../shared/services/api/auth.service';
 
 describe('IndicatorDetailsComponent', () => {
   let component: IndicatorDetailsComponent;
   let fixture: ComponentFixture<IndicatorDetailsComponent>;
   let apiService: ApiService;
   let location: Location;
+  let authService: AuthService;
   let activatedRoute: ActivatedRoute;
 
   beforeEach(async () => {
@@ -21,13 +23,19 @@ describe('IndicatorDetailsComponent', () => {
         POST_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
         PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
         POST_contributionsToIndicatorsSubmit: jest.fn().mockReturnValue(of({})),
-        GET_contributionsToIndicatorsWPS: jest.fn().mockReturnValue(of({})),
-        GET_contributionsToIndicatorsEOIS: jest.fn().mockReturnValue(of({}))
+        GET_contributionsToIndicatorsWPS: jest.fn().mockReturnValue(of({ data: [{ toc_results: ['result1', 'result2'] }] })),
+        GET_contributionsToIndicatorsEOIS: jest.fn().mockReturnValue(of({ data: ['result1', 'result2'] }))
       },
       alertsFe: {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
+      }
+    };
+
+    const authServiceMock = {
+      localStorageUser: {
+        id: 1
       }
     };
 
@@ -44,7 +52,8 @@ describe('IndicatorDetailsComponent', () => {
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
-        { provide: Location, useValue: locationMock }
+        { provide: Location, useValue: locationMock },
+        { provide: AuthService, useValue: authServiceMock }
       ]
     }).compileComponents();
 
@@ -52,7 +61,6 @@ describe('IndicatorDetailsComponent', () => {
     component = fixture.componentInstance;
     apiService = TestBed.inject(ApiService);
     location = TestBed.inject(Location);
-    activatedRoute = TestBed.inject(ActivatedRoute);
   });
 
   it('should create', () => {
@@ -61,7 +69,7 @@ describe('IndicatorDetailsComponent', () => {
 
   it('should get query params on init', () => {
     component.ngOnInit();
-    expect(component.indicatorId).toBe('123');
+    expect(component.indicatorDetailsService.indicatorId()).toBe('123');
   });
 
   it('should call getIndicatorData on init', () => {
@@ -71,21 +79,21 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle getIndicatorData when indicatorId is not present', () => {
-    component.indicatorId = '';
+    component.indicatorDetailsService.indicatorId.set('');
     jest.spyOn(component, 'goBack');
     component.getIndicatorData();
     expect(component.goBack).toHaveBeenCalled();
   });
 
   it('should handle getIndicatorData when indicatorId is present', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     jest.spyOn(apiService.resultsSE, 'GET_contributionsToIndicators_indicator').mockReturnValue(of({}));
     component.getIndicatorData();
     expect(apiService.resultsSE.GET_contributionsToIndicators_indicator).toHaveBeenCalledWith('123');
   });
 
   it('should handle error in getIndicatorData', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'GET_contributionsToIndicators_indicator').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
@@ -103,19 +111,8 @@ describe('IndicatorDetailsComponent', () => {
   it('should update indicator data and set loading to false in updateIndicatorData', () => {
     const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
     component.updateIndicatorData(response);
-    expect(component.indicatorData).toEqual(response.contributionToIndicator);
-    expect(component.loading).toBe(false);
-  });
-
-  it('should call getWorkPackagesData and getEOIsData if initiativeIdFilter is different', () => {
-    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
-    component.outcomeIService.initiativeIdFilter = '456';
-    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
-    jest.spyOn(component.outcomeIService, 'getEOIsData');
-    component.updateIndicatorData(response);
-    expect(component.outcomeIService.initiativeIdFilter).toBe('123');
-    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
-    expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
+    expect(component.loading()).toBe(false);
   });
 
   it('should not call getWorkPackagesData and getEOIsData if initiativeIdFilter is the same', () => {
@@ -129,7 +126,7 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle 404 response in handleGetIndicatorResponse', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     const response = { status: 404 };
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicators').mockReturnValue(of({}));
     jest.spyOn(component, 'retryGetIndicatorData');
@@ -139,7 +136,7 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle error in handleGetIndicatorResponse', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicators').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
@@ -148,7 +145,7 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle error in retryGetIndicatorData', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'GET_contributionsToIndicators_indicator').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
@@ -159,8 +156,8 @@ describe('IndicatorDetailsComponent', () => {
   it('should update indicator data in updateIndicatorData', () => {
     const response = { contributionToIndicator: { someData: 'data' } };
     component.updateIndicatorData(response);
-    expect(component.indicatorData).toEqual(response.contributionToIndicator);
-    expect(component.loading).toBe(false);
+    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
+    expect(component.loading()).toBe(false);
   });
 
   it('should go back when goBack is called', () => {
@@ -168,18 +165,9 @@ describe('IndicatorDetailsComponent', () => {
     expect(location.back).toHaveBeenCalled();
   });
 
-  it('should open new page when openInNewPage is called', () => {
-    const result_code = 'result123';
-    const version_id = 'version123';
-    const url = `/result/result-detail/${result_code}/general-information?phase=${version_id}`;
-    jest.spyOn(window, 'open');
-    component.openInNewPage(result_code, version_id);
-    expect(window.open).toHaveBeenCalledWith(url, '_blank');
-  });
-
   it('should handle save indicator data successfully', () => {
-    component.indicatorId = '123';
-    component.indicatorData = { someData: 'data' } as any;
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({ someData: 'data' } as any);
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
     jest.spyOn(component, 'getIndicatorData');
     jest.spyOn(component.messageService, 'add');
@@ -196,9 +184,9 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle save indicator data successfully when platformId is eoi', () => {
-    component.indicatorId = '123';
-    component.indicatorData = { someData: 'data' } as any;
-    component.platformId = 'eoi';
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({ someData: 'data' } as any);
+    component.indicatorDetailsService.platformId.set('eoi');
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
     jest.spyOn(component, 'getIndicatorData');
     jest.spyOn(component.outcomeIService, 'getEOIsData');
@@ -211,9 +199,9 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle save indicator data successfully when platformId is wps', () => {
-    component.indicatorId = '123';
-    component.indicatorData = { someData: 'data' } as any;
-    component.platformId = 'wps';
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({ someData: 'data' } as any);
+    component.indicatorDetailsService.platformId.set('wps');
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({ someData: 'data' }));
     jest.spyOn(component, 'getIndicatorData');
     jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
@@ -226,58 +214,27 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle error when saving indicator data', () => {
-    component.indicatorId = '123';
-    component.indicatorData = { someData: 'data' } as any;
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({ someData: 'data' } as any);
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
 
     component.handleSaveIndicatorData();
 
-    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorData, '123');
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorDetailsService.indicatorData(), '123');
     expect(component.handleError).toHaveBeenCalledWith(error);
   });
 
-  it('should set is_active to false for result in handleRemoveIndicator', () => {
-    const result = { is_active: true };
-    component.handleRemoveIndicator(result, 'result');
-    expect(result.is_active).toBe(false);
-  });
-
-  it('should set is_active to false for linked results in handleRemoveIndicator', () => {
-    const result = {
-      is_active: true,
-      linked_results: [{ is_active: true }, { is_active: true }]
-    };
-    component.handleRemoveIndicator(result, 'result');
-    expect(result.is_active).toBe(false);
-    result.linked_results.forEach(linked => {
-      expect(linked.is_active).toBe(false);
-    });
-  });
-
-  it('should set is_active to false for linked type in handleRemoveIndicator', () => {
-    const result = { is_active: true };
-    component.handleRemoveIndicator(result, 'linked');
-    expect(result.is_active).toBe(false);
-  });
-
-  it('should return  when indicatorData?.submission_status == 1 in handleRemoveIndicator', () => {
-    const result = { is_active: true };
-    component.indicatorData = { submission_status: '1' } as any;
-    component.handleRemoveIndicator(result, 'result');
-    expect(result.is_active).toBe(true);
-  });
-
   it('should handle submit indicator successfully', () => {
-    component.indicatorId = '123';
-    component.indicatorData = {
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({
       someData: 'data',
       submission_status: '0',
       achieved_in_2024: '10',
       narrative_achieved_in_2024: 'Testing narrative',
       contributing_results: [{ result_id: '1' } as any]
-    } as any;
+    } as any);
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(of({}));
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicatorsSubmit').mockReturnValue(of({}));
     jest.spyOn(component, 'getIndicatorData');
@@ -297,34 +254,34 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle error when submitting indicator', () => {
-    component.indicatorId = '123';
-    component.indicatorData = { someData: 'data' } as any;
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({ someData: 'data' } as any);
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'PATCH_contributionsToIndicators').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
 
     component.handleSubmitIndicator();
 
-    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorData, '123');
+    expect(apiService.resultsSE.PATCH_contributionsToIndicators).toHaveBeenCalledWith(component.indicatorDetailsService.indicatorData(), '123');
     expect(component.handleError).toHaveBeenCalledWith(error);
   });
 
   it('should return if there indicatorData?.submission_status == 0 and isSubmitDisabled is true', () => {
-    component.indicatorData = { submission_status: '0' } as any;
+    component.indicatorDetailsService.indicatorData.set({ submission_status: '0' } as any);
     jest.spyOn(component, 'isSubmitDisabled').mockReturnValue(true);
     component.handleSubmitIndicator();
     expect(apiService.resultsSE.PATCH_contributionsToIndicators).not.toHaveBeenCalled();
   });
 
   it('should handle unsubmit indicator successfully', () => {
-    component.indicatorId = '123';
-    component.indicatorData = {
+    component.indicatorDetailsService.indicatorId.set('123');
+    component.indicatorDetailsService.indicatorData.set({
       someData: 'data',
       submission_status: '0',
       achieved_in_2024: '10',
       narrative_achieved_in_2024: 'Testing narrative',
       contributing_results: [{ result_id: '1' } as any]
-    } as any;
+    } as any);
     const spyShow = jest.spyOn(apiService.alertsFe, 'show');
 
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicatorsSubmit').mockReturnValue(of({}));
@@ -344,7 +301,7 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle error when unsubmitting indicator', () => {
-    component.indicatorId = '123';
+    component.indicatorDetailsService.indicatorId.set('123');
     const error = { message: 'Error' };
     const spyShow = jest.spyOn(apiService.alertsFe, 'show');
 
@@ -359,21 +316,21 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should disable submit button when required fields are missing', () => {
-    component.indicatorData = {
+    component.indicatorDetailsService.indicatorData.set({
       achieved_in_2024: null,
       narrative_achieved_in_2024: '',
       contributing_results: []
-    } as any;
+    } as any);
 
     expect(component.isSubmitDisabled()).toBe(true);
   });
 
   it('should enable submit button when required fields are present', () => {
-    component.indicatorData = {
+    component.indicatorDetailsService.indicatorData.set({
       achieved_in_2024: 10,
       narrative_achieved_in_2024: 'Some narrative',
       contributing_results: [{ id: 1 }]
-    } as any;
+    } as any);
 
     expect(component.isSubmitDisabled()).toBe(false);
   });

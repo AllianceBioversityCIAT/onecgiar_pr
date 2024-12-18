@@ -1,32 +1,39 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { IndicatorData } from './models/indicator-data.model';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ActivatedRoute } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
+import { IndicatorDetailsService } from './services/indicator-details.service';
+import { DetailsTableComponent } from './components/details-table/details-table.component';
+import { IndicatorResultsModalComponent } from './components/indicator-results-modal/indicator-results-modal.component';
 
 @Component({
   selector: 'app-indicator-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomFieldsModule, InputNumberModule, TableModule, ButtonModule, ToastModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CustomFieldsModule,
+    InputNumberModule,
+    TableModule,
+    ButtonModule,
+    ToastModule,
+    DetailsTableComponent,
+    IndicatorResultsModalComponent
+  ],
   providers: [MessageService],
   templateUrl: './indicator-details.component.html',
   styleUrls: ['./indicator-details.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Default
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IndicatorDetailsComponent implements OnInit {
-  indicatorData = new IndicatorData();
-  indicatorId: string;
-  platformId: string;
-  loading = true;
-
   indicatorInfoItems = [
     { icon: 'login', label: 'Outcome', value: 'outcome_name', iconClass: 'material-icons-round' },
     { icon: 'show_chart', label: 'Unit of measurement', value: 'unit_measurement', iconClass: 'material-icons-round' },
@@ -34,12 +41,15 @@ export class IndicatorDetailsComponent implements OnInit {
     { icon: '', label: 'Target', value: 'indicator_target', iconClass: 'pi pi-bullseye' }
   ];
 
+  loading = signal<boolean>(true);
+
   constructor(
     public location: Location,
     public api: ApiService,
     public activatedRoute: ActivatedRoute,
     public messageService: MessageService,
-    public outcomeIService: OutcomeIndicatorService
+    public outcomeIService: OutcomeIndicatorService,
+    public indicatorDetailsService: IndicatorDetailsService
   ) {}
 
   ngOnInit() {
@@ -51,18 +61,13 @@ export class IndicatorDetailsComponent implements OnInit {
     this.location.back();
   }
 
-  openInNewPage(result_code: string, version_id: string) {
-    const url = `/result/result-detail/${result_code}/general-information?phase=${version_id}`;
-    window.open(url, '_blank');
-  }
-
   getIndicatorData() {
-    if (!this.indicatorId) {
+    if (!this.indicatorDetailsService.indicatorId()) {
       this.goBack();
       return;
     }
 
-    this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorId).subscribe({
+    this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
       next: response => this.handleGetIndicatorResponse(response),
       error: error => this.handleError(error)
     });
@@ -70,7 +75,7 @@ export class IndicatorDetailsComponent implements OnInit {
 
   handleGetIndicatorResponse(response: any) {
     if (response?.status === 404) {
-      this.api.resultsSE.POST_contributionsToIndicators(this.indicatorId).subscribe({
+      this.api.resultsSE.POST_contributionsToIndicators(this.indicatorDetailsService.indicatorId()).subscribe({
         next: () => this.retryGetIndicatorData(),
         error: error => this.handleError(error)
       });
@@ -80,86 +85,84 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   retryGetIndicatorData() {
-    this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorId).subscribe({
-      next: response => this.updateIndicatorData(response),
-      error: error => this.handleError(error)
-    });
-  }
-
-  updateIndicatorData(response: any) {
-    this.indicatorData = response?.contributionToIndicator;
-
-    if (this.outcomeIService.initiativeIdFilter !== this.indicatorData.initiative_official_code) {
-      this.outcomeIService.initiativeIdFilter = this.indicatorData.initiative_official_code;
-      this.outcomeIService.getWorkPackagesData();
-      this.outcomeIService.getEOIsData();
-    }
-
-    this.loading = false;
-  }
-
-  handleError(error: any) {
-    console.error('Error loading initiatives:', error);
-    this.loading = false;
-    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'An error occurred', key: 'br' });
-  }
-
-  getQueryParams() {
-    this.activatedRoute.queryParams.subscribe(params => {
-      this.indicatorId = params['indicatorId'];
-      this.platformId = params['platform'];
-    });
-  }
-
-  handleSaveIndicatorData() {
-    this.loading = true;
-    this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
-      next: () => {
-        this.getIndicatorData();
-        this.updatePlatformData();
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
+    this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
+      next: response => {
+        this.updateIndicatorData(response);
+        this.handleSaveIndicatorData();
       },
       error: error => this.handleError(error)
     });
   }
 
-  handleRemoveIndicator(result, type: 'result' | 'linked') {
-    if (this.indicatorData?.submission_status == '1') {
-      return;
-    }
+  updateIndicatorData(response: any) {
+    this.indicatorDetailsService.indicatorData.set(response?.contributionToIndicator);
+    this.indicatorDetailsService.getIndicatorDetailsResults();
 
-    if (type === 'result' && !!result.linked_results) {
-      result.linked_results.forEach(linked => (linked.is_active = false));
+    if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
+      this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData().initiative_official_code;
+      setTimeout(() => {
+        this.outcomeIService.getWorkPackagesData();
+        this.outcomeIService.getEOIsData();
+      }, 800);
     }
+    this.loading.set(false);
+  }
 
-    result.is_active = false;
+  handleError(error: any) {
+    console.error('Error loading initiatives:', error);
+    this.loading.set(false);
+    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'An error occurred', key: 'br' });
+  }
+
+  getQueryParams() {
+    this.activatedRoute.queryParams.subscribe(params => {
+      this.indicatorDetailsService.indicatorId.set(params['indicatorId']);
+      this.indicatorDetailsService.platformId.set(params['platform']);
+    });
+  }
+
+  handleSaveIndicatorData() {
+    this.loading.set(true);
+
+    this.api.resultsSE
+      .PATCH_contributionsToIndicators(this.indicatorDetailsService.indicatorData(), this.indicatorDetailsService.indicatorId())
+      .subscribe({
+        next: () => {
+          this.getIndicatorData();
+          this.updatePlatformData();
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
+        },
+        error: error => this.handleError(error)
+      });
   }
 
   private updatePlatformData() {
-    if (this.platformId) {
-      if (this.platformId === 'eoi') {
+    if (this.indicatorDetailsService.platformId()) {
+      if (this.indicatorDetailsService.platformId() === 'eoi') {
         this.outcomeIService.getEOIsData();
-      } else if (this.platformId === 'wps') {
+      } else if (this.indicatorDetailsService.platformId() === 'wps') {
         this.outcomeIService.getWorkPackagesData();
       }
     }
   }
 
   handleSubmitIndicator() {
-    if (this.indicatorData?.submission_status == '0' && this.isSubmitDisabled()) {
+    if (this.indicatorDetailsService.indicatorData().submission_status == '0' && this.isSubmitDisabled()) {
       return;
     }
 
-    this.loading = true;
+    this.loading.set(true);
 
-    this.api.resultsSE.PATCH_contributionsToIndicators(this.indicatorData, this.indicatorId).subscribe({
-      next: () => this.onSubmitIndicator(),
-      error: error => this.handleError(error)
-    });
+    this.api.resultsSE
+      .PATCH_contributionsToIndicators(this.indicatorDetailsService.indicatorData(), this.indicatorDetailsService.indicatorId())
+      .subscribe({
+        next: () => this.onSubmitIndicator(),
+        error: error => this.handleError(error)
+      });
   }
 
   onSubmitIndicator(isUnsubmit = false) {
-    this.api.resultsSE.POST_contributionsToIndicatorsSubmit(this.indicatorId).subscribe({
+    this.api.resultsSE.POST_contributionsToIndicatorsSubmit(this.indicatorDetailsService.indicatorId()).subscribe({
       next: () => {
         this.getIndicatorData();
         this.updatePlatformData();
@@ -183,7 +186,7 @@ export class IndicatorDetailsComponent implements OnInit {
         confirmText: 'Yes, un-submit'
       },
       () => {
-        this.loading = true;
+        this.loading.set(true);
         this.onSubmitIndicator(true);
       }
     );
@@ -191,9 +194,9 @@ export class IndicatorDetailsComponent implements OnInit {
 
   isSubmitDisabled() {
     return (
-      this.indicatorData.achieved_in_2024 === null ||
-      !this.indicatorData.narrative_achieved_in_2024 ||
-      !this.indicatorData.contributing_results?.length
+      this.indicatorDetailsService.indicatorData().achieved_in_2024 === null ||
+      !this.indicatorDetailsService.indicatorData().narrative_achieved_in_2024 ||
+      !this.indicatorDetailsService.indicatorData().contributing_results?.length
     );
   }
 }

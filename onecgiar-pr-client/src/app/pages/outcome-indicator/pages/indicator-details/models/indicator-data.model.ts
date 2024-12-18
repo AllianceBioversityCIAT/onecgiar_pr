@@ -14,6 +14,8 @@ export class IndicatorData {
   submission_status: string;
   initiative_official_code: string;
   indicator_initiative: string;
+  indicator_initiative_short: string;
+  is_manually_mapped: boolean;
   contributing_results: ContributingResult[];
 }
 
@@ -21,23 +23,10 @@ export class ContributingResult {
   contribution_id: string;
   result_id: string;
   result_code: string;
-  result_title: string;
+  title: string;
   phase_name: string;
   result_type: string;
   result_submitter: string;
-  result_status: string;
-  result_creation_date: Date;
-  linked_results: LinkedResult[];
-}
-
-export class LinkedResult {
-  result_id: number;
-  phase_name: string;
-  result_code: number;
-  result_type: string;
-  result_title: string;
-  result_status: string;
-  contribution_id: string;
-  result_submitter: string;
-  result_creation_date: Date;
+  status_name: string;
+  created_date: Date;
 }

@@ -76,18 +76,29 @@ p {
   }
 }
 
-.noDataText {
-  text-align: center;
-  padding: 20px 0px;
-  font-size: 1.3em;
+.indicator_add_result_container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.indicator_info_container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 8px 1.2rem;
+  color: #fff;
+  background-color: #5569dd;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 10px;
   font-weight: 500;
-  color: var(--pr-color-primary);
+  font-size: 12px;
 }
 
-.removed {
-  text-decoration: line-through;
-}
-
-.text-center {
-  text-align: center;
+::ng-deep .p-button {
+  background-color: var(--pr-color-primary);
+  color: #fff;
+  border: none;
+  box-shadow: none;
 }

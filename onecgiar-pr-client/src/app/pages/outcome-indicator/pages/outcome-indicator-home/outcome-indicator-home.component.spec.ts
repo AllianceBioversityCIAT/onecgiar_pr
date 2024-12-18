@@ -32,9 +32,12 @@ describe('OutcomeIndicatorHomeComponent', () => {
   describe('exportIndicatorsToExcel', () => {
     it('should call exportOutcomesIndicatorsToExcel with correct parameters', () => {
       const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
-      outcomeIndicatorService.eoisData = [];
-      outcomeIndicatorService.wpsData = [];
+      outcomeIndicatorService.eoisData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.wpsData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.loading.set(false);
+      outcomeIndicatorService.loadingWPs.set(false);
       outcomeIndicatorService.initiativeIdFilter = 'test';
+      component.api.dataControlSE.reportingCurrentPhase.phaseName = 'test';
 
       component.exportIndicatorsToExcel();
 
@@ -45,6 +48,18 @@ describe('OutcomeIndicatorHomeComponent', () => {
         expect.any(Array),
         expect.any(Array)
       );
+    });
+
+    it('should not call exportOutcomesIndicatorsToExcel if the conditions are not met', () => {
+      const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
+      outcomeIndicatorService.eoisData = [];
+      outcomeIndicatorService.wpsData = [];
+      outcomeIndicatorService.loading.set(true);
+      outcomeIndicatorService.loadingWPs.set(true);
+
+      component.exportIndicatorsToExcel();
+
+      expect(exportSpy).not.toHaveBeenCalled();
     });
   });
 });
