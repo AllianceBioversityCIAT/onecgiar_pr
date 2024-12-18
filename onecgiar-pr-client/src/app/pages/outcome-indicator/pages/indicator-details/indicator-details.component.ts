@@ -86,7 +86,10 @@ export class IndicatorDetailsComponent implements OnInit {
 
   retryGetIndicatorData() {
     this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
-      next: response => this.updateIndicatorData(response),
+      next: response => {
+        this.updateIndicatorData(response);
+        this.handleSaveIndicatorData();
+      },
       error: error => this.handleError(error)
     });
   }
