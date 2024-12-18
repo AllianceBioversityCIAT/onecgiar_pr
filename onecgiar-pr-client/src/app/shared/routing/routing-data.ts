@@ -45,8 +45,8 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Outcome Indicator Module',
     onlytest: false,
-    prHide: true,
-    underConstruction: true,
+    prHide: false,
+    underConstruction: false,
     canActivate: [CheckLoginGuard],
     path: 'outcome-indicator-module',
     loadChildren: () => import('../../pages/outcome-indicator/outcome-indicator.module').then(m => m.OutcomeIndicatorModule)
