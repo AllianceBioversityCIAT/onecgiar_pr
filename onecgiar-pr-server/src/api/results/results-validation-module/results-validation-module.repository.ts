@@ -1480,7 +1480,7 @@ export class resultValidationRepository
 								rbi.result_id = r.id AND rbi.is_active
 								AND IF(
 									coalesce(rib.is_determined, 0) = 0,
-									COALESCE(rib.kind_cash, 0) > 0,
+									COALESCE(rib.kind_cash, 0) >= 0,
 									TRUE
 								)
 						) = (
@@ -1508,7 +1508,7 @@ export class resultValidationRepository
 								npp.results_id = r.id AND npp.is_active
 								AND IF(
 									coalesce(nppb.is_determined, 0) = 0,
-									COALESCE(nppb.kind_cash, 0) > 0,
+									COALESCE(nppb.kind_cash, 0) >= 0,
 									TRUE
 								)
 						) = (
@@ -1536,7 +1536,7 @@ export class resultValidationRepository
 								rbi.result_id = r.id AND rbi.is_active
 								AND IF(
 									coalesce(ribu.is_determined, 0) = 0,
-									COALESCE(ribu.kind_cash, 0) > 0,
+									COALESCE(ribu.kind_cash, 0) >= 0,
 									TRUE
 								)
 						) = (
