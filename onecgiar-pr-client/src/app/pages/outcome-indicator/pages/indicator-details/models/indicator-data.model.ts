@@ -15,6 +15,7 @@ export class IndicatorData {
   initiative_official_code: string;
   indicator_initiative: string;
   indicator_initiative_short: string;
+  is_manually_mapped: boolean;
   contributing_results: ContributingResult[];
 }
 

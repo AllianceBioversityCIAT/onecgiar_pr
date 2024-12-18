@@ -31,8 +31,8 @@
         disabled:
           !this.outcomeIService.initiativeIdFilter ||
           !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
-          !this.outcomeIService.eoisData.length ||
-          !this.outcomeIService.wpsData.length
+          this.outcomeIService.loading() ||
+          this.outcomeIService.loadingWPs()
       }"
       (click)="exportIndicatorsToExcel()">
       <i class="pi pi-file-export" style="font-size: 3rem"></i>

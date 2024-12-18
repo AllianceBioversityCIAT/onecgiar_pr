@@ -28,6 +28,9 @@
           @if (item?.is_added) {
             <span class="not-saved">Not saved</span>
           }
+          @if (item?.is_manually_mapped == '0') {
+            <img src="assets/icons/toc_icon.png" alt="TOC icon" style="width: 16px; height: 16px" />
+          }
           {{ item?.title }}
         </div>
       </td>
