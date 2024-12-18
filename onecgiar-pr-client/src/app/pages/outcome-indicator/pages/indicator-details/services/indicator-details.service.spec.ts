@@ -55,9 +55,9 @@ describe('IndicatorDetailsService', () => {
       contributing_results: [{ result_id: 'result1' }]
     } as IndicatorData);
 
-    service.getIndicatorDetailsResults('initiative123');
+    service.getIndicatorDetailsResults();
 
-    expect(resultsApiServiceMock.GET_contributionsDetailsResults).toHaveBeenCalledWith(123, 'initiative123');
+    expect(resultsApiServiceMock.GET_contributionsDetailsResults).toHaveBeenCalledWith(123);
     expect(service.indicatorResults().length).toBe(2);
     expect(service.indicatorResults()[0].is_added).toBe(true);
     expect(service.indicatorResults()[0].is_saved).toBe(true);

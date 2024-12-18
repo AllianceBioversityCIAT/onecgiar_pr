@@ -21,8 +21,8 @@ export class IndicatorDetailsService {
     private readonly authSE: AuthService
   ) {}
 
-  getIndicatorDetailsResults(initiativeId: string) {
-    this.resultsApiService.GET_contributionsDetailsResults(this.authSE.localStorageUser.id, initiativeId).subscribe(res => {
+  getIndicatorDetailsResults() {
+    this.resultsApiService.GET_contributionsDetailsResults(this.authSE.localStorageUser.id).subscribe(res => {
       res.response.forEach(result => {
         if (this.indicatorData().contributing_results.some(r => r.result_id === result.id)) {
           result.is_added = true;

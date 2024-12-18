@@ -96,7 +96,7 @@ export class IndicatorDetailsComponent implements OnInit {
 
   updateIndicatorData(response: any) {
     this.indicatorDetailsService.indicatorData.set(response?.contributionToIndicator);
-    this.indicatorDetailsService.getIndicatorDetailsResults(this.indicatorDetailsService.indicatorData().initiative_official_code);
+    this.indicatorDetailsService.getIndicatorDetailsResults();
 
     if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
       this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData().initiative_official_code;
