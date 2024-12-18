@@ -192,7 +192,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           and main_rbi.initiative_role_id = 1 and rtr.initiative_id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null
+        where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null and main_ctir.is_active
         union all
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
           main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
@@ -206,17 +206,18 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           and main_rbi.initiative_role_id = 1
         left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
         left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where convert(cti.toc_result_id using utf8mb4) = convert('${tocId}' using utf8mb4) and main_ctir.result_id not in (
-          select rtr.results_id
-          from ${env.DB_NAME}.results_toc_result rtr
-          where rtr.is_active and rtr.toc_result_id in (
-            select outcomes.id
-            from ${env.DB_TOC}.toc_results_indicators tri
-            right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
-            right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-            where convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and tri.is_active
+        where convert(cti.toc_result_id using utf8mb4) = convert('${tocId}' using utf8mb4) and main_ctir.is_active
+          and main_ctir.result_id not in (
+            select rtr.results_id
+            from ${env.DB_NAME}.results_toc_result rtr
+            where rtr.is_active and rtr.toc_result_id in (
+              select outcomes.id
+              from ${env.DB_TOC}.toc_results_indicators tri
+              right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
+              right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
+              where convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and tri.is_active
+            )
           )
-        )
       ) inner_q
     `;
   }
