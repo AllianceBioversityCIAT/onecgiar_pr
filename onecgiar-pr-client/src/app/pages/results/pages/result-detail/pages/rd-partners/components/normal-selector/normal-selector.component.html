@@ -7,7 +7,7 @@
     <app-pr-checkbox
       label="This section is not applicable."
       [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
-      (selectOptionEvent)="this.updateLeadData()">
+      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
     </app-pr-checkbox>
   </div>
 </div>
@@ -96,7 +96,7 @@
       label="Partner types"
       labelDescInlineStyles="margin-top: 0 !important;"
       [description]="
-        'Total partner(s) type (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes : this.rdPartnersSE.toggle)?.length + '):'
+        'Total partner(s) type (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + '):'
       "
       [required]="false">
     </app-pr-field-header>
@@ -104,7 +104,7 @@
     <div class="chips_container custom_scroll">
       <div
         class="pr_chip_selected"
-        *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes : this.rdPartnersSE.toggle; let i = index">
+        *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
         <div class="name">{{ option?.count_name }}</div>
         <i class="material-icons-round" *ngIf="false">remove_circle </i>
       </div>
