@@ -41,46 +41,51 @@
   </ng-template>
 
   <ng-template pTemplate="body" let-item>
-    @let indicator = item.indicators?.[0];
-    <tr>
-      <td>{{ item?.toc_result_title ?? 'No data found.' }}</td>
-      @if (!indicator) {
-        <td colspan="6" style="text-align: center">No indicator data found.</td>
-      } @else {
-        <td
-          routerLink="/outcome-indicator-module/indicator-details"
-          [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
-          class="indicator_link">
-          {{ indicator?.indicator_description ?? 'No data found.' }}
-        </td>
-        <td>
-          <span style="font-weight: bold">
-            {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
-          </span>
-          {{ indicator?.indicator_name ?? 'No data found.' }}
-        </td>
-        <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
-        <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
-        <td style="text-align: center">
-          {{
-            this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value) ? 'Achieved' : 'Not achieved'
-          }}
-        </td>
-        <td>
-          <div
-            style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
-            [pTooltip]="indicator?.indicator_submission_status ? 'Submitted' : 'Editing'"
-            tooltipPosition="top"
-            positionTop="-5">
+    @for (indicator of item.indicators; track $index) {
+      <tr>
+        @if ($index === 0) {
+          <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
+        }
+        @if (!indicator) {
+          <td colspan="6" style="text-align: center">No indicator data found.</td>
+        } @else {
+          <td
+            routerLink="/outcome-indicator-module/indicator-details"
+            [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
+            class="indicator_link">
+            {{ indicator?.indicator_description ?? 'No data found.' }}
+          </td>
+          <td>
+            <span style="font-weight: bold">
+              {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
+            </span>
+            {{ indicator?.indicator_name ?? 'No data found.' }}
+          </td>
+          <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
+          <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
+          <td style="text-align: center">
+            {{
+              this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+                ? 'Achieved'
+                : 'Not achieved'
+            }}
+          </td>
+          <td>
             <div
-              class="circle"
-              [ngClass]="{
-                'circle-success': indicator?.indicator_submission_status
-              }"></div>
-          </div>
-        </td>
-      }
-    </tr>
+              style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
+              [pTooltip]="indicator?.indicator_submission_status ? 'Submitted' : 'Editing'"
+              tooltipPosition="top"
+              positionTop="-5">
+              <div
+                class="circle"
+                [ngClass]="{
+                  'circle-success': indicator?.indicator_submission_status
+                }"></div>
+            </div>
+          </td>
+        }
+      </tr>
+    }
   </ng-template>
 
   <ng-template pTemplate="emptymessage">
