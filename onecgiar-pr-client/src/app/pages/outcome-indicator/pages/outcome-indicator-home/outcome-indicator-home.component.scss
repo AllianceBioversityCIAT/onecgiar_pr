@@ -27,6 +27,18 @@ p {
     margin-top: 20px;
   }
 
+  .outcomes_desc_link {
+    color: #5569dd;
+    text-decoration: underline;
+
+    &:hover {
+      color: #26337c;
+      text-decoration: underline;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+  }
+
   .outcomes_actions {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
