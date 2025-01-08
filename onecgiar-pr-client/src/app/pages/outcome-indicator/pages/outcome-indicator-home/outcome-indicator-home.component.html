@@ -5,6 +5,22 @@
   </div>
 
   <p class="outcomes_desc">Welcome to the Outcome indicators reporting module. Please select an action you would like to do.</p>
+  <p class="outcomes_desc">
+    This module enables progress assessment against 2022-2024 cumulative targets for Work Package Outcome (WP-O) and End-of-Initiative Outcome (EOI-O)
+    indicators. It supports a comprehensive overview of achievements under the previous portfolio as we embark on the next one, aligning results with
+    targets and informing Sections 2 and 3 of the Type 1 report narrative.
+  </p>
+  <p class="outcomes_desc">
+    Please select what you would like to report or if you would like to generate a report of what has already been reported. Guidance is available on
+    the P&amp;R Hub
+    <a
+      href="https://drive.google.com/file/d/1qHZ6o_gbI0CXrvDiJRcJZMPT_xdQktV_/view"
+      rel="noopener noreferrer"
+      target="_blank"
+      class="outcomes_desc_link">
+      here</a
+    >.
+  </p>
 
   <div class="outcomes_actions">
     <div
@@ -13,7 +29,7 @@
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
       <i class="pi pi-sign-in" style="font-size: 3rem"></i>
-      <p class="outcomes_actions_item--text">Report progress on End-Of-Initiative Outcomes</p>
+      <p class="outcomes_actions_item--text">Report progress on End-of-Initiative outcomes</p>
     </div>
 
     <div
@@ -22,7 +38,7 @@
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
       <i class="pi pi-box" style="font-size: 3rem"></i>
-      <p class="outcomes_actions_item--text">Report progress on Work Packages Outcomes</p>
+      <p class="outcomes_actions_item--text">Report progress on Work Package outcomes </p>
     </div>
 
     <div
@@ -36,7 +52,7 @@
       }"
       (click)="exportIndicatorsToExcel()">
       <i class="pi pi-file-export" style="font-size: 3rem"></i>
-      <p class="outcomes_actions_item--text">Export all the progress reported by indicators</p>
+      <p class="outcomes_actions_item--text">Export progress reported by indicator </p>
     </div>
   </div>
 </div>
