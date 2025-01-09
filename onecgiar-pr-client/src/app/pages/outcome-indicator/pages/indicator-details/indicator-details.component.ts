@@ -55,10 +55,14 @@ export class IndicatorDetailsComponent implements OnInit {
   ngOnInit() {
     this.getQueryParams();
     this.getIndicatorData();
+    this.api.dataControlSE.detailSectionTitle('Indicator details');
   }
 
   goBack() {
     this.location.back();
+    this.indicatorDetailsService.platformId() === 'wps'
+      ? this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list')
+      : this.api.dataControlSE.detailSectionTitle('End of initiative outcome indicators list');
   }
 
   getIndicatorData() {

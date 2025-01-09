@@ -27,7 +27,8 @@
       class="outcomes_actions_item"
       routerLink="/outcome-indicator-module/eoi-outcome-home"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
-      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
+      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+      (click)="this.api.dataControlSE.detailSectionTitle('End of Initiative Outcome Indicators List')">
       <i class="pi pi-sign-in" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Report progress on End-of-Initiative outcomes</p>
     </div>
@@ -36,7 +37,8 @@
       class="outcomes_actions_item"
       routerLink="/outcome-indicator-module/work-package-outcome-home"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
-      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
+      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+      (click)="this.api.dataControlSE.detailSectionTitle('Work Package Outcome Indicators List')">
       <i class="pi pi-box" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Report progress on Work Package outcomes </p>
     </div>
