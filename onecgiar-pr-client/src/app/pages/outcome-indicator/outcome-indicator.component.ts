@@ -21,6 +21,7 @@ export class OutcomeIndicatorComponent implements OnInit {
 
   ngOnInit(): void {
     this.initializeComponent();
+    this.api.dataControlSE.detailSectionTitle('Outcome indicator module');
   }
 
   async initializeComponent(): Promise<void> {

@@ -2,7 +2,8 @@
   <i
     class="material-icons-round eoio_header_arrow"
     routerLink="/outcome-indicator-module/home"
-    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
+    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
     arrow_back
   </i>
   <h1 class="eoio_header_title">End of Initiative Outcome Indicators List</h1>
