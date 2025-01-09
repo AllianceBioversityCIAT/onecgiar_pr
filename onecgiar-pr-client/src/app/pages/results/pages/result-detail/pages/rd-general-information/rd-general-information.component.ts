@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
@@ -105,7 +103,7 @@ export class RdGeneralInformationComponent implements OnInit {
 
     <strong>0 = Not targeted:</strong> The result has been screened against the IA but it has not been found to directly contribute to any aspect of the IA as it is outlined in the CGIAR 2030 Research and Innovation Strategy. <br/>
     <strong>1 = Significant:</strong> The result directly contributes to one or more aspects of the IA. However, contributing to the IA is not the principal objective of the result. <br/>
-    <strong>2 = Principal:</strong> Contributing to one or more aspects of the IA is the principalobjective of the result. The IA is fundamental to the design of the activity leading to the result; the activity would not have been undertaken without this objective.
+    <strong>2 = Principal:</strong> Contributing to one or more aspects of the IA is the principal objective of the result. The IA is fundamental to the design of the activity leading to the result; the activity would not have been undertaken without this objective.
 
     <br/>
     <br/>
