@@ -40,6 +40,9 @@
   <app-pr-input placeholder="Enter text" label="Lead contact person" type="text" [required]="false"
     [(ngModel)]="this.generalInfoBody.lead_contact_person"> </app-pr-input>
 
+  <h1 class="segment_title pr_label">Impact Area Scores</h1>
+  <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+
   <div class="block_container">
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
