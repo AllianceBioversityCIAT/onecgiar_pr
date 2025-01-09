@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ButtonModule } from 'primeng/button';
@@ -18,10 +18,14 @@ import { TooltipModule } from 'primeng/tooltip';
   styleUrl: './eoio-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EoioHomeComponent implements OnDestroy {
+export class EoioHomeComponent implements OnDestroy, OnInit {
   api = inject(ApiService);
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
+
+  ngOnInit(): void {
+    this.api.dataControlSE.detailSectionTitle('End of initiative outcome indicators list');
+  }
 
   ngOnDestroy(): void {
     this.outcomeIService.searchText.set('');

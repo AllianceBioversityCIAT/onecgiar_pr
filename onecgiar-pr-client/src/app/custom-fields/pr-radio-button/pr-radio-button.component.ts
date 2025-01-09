@@ -1,7 +1,6 @@
 import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
-import { GreenChecksService } from '../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
   selector: 'app-pr-radio-button',
