@@ -30,6 +30,9 @@ describe('IndicatorDetailsComponent', () => {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
+      },
+      dataControlSE: {
+        detailSectionTitle: jest.fn()
       }
     };
 
