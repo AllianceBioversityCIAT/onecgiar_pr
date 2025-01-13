@@ -55,10 +55,14 @@ export class IndicatorDetailsComponent implements OnInit {
   ngOnInit() {
     this.getQueryParams();
     this.getIndicatorData();
+    this.api.dataControlSE.detailSectionTitle('Indicator details');
   }
 
   goBack() {
     this.location.back();
+    this.indicatorDetailsService.platformId() === 'wps'
+      ? this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list')
+      : this.api.dataControlSE.detailSectionTitle('End of initiative outcome indicators list');
   }
 
   getIndicatorData() {
@@ -99,11 +103,11 @@ export class IndicatorDetailsComponent implements OnInit {
     this.indicatorDetailsService.getIndicatorDetailsResults();
 
     if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
-      this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData().initiative_official_code;
       setTimeout(() => {
+        this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData().initiative_official_code;
         this.outcomeIService.getWorkPackagesData();
         this.outcomeIService.getEOIsData();
-      }, 800);
+      }, 500);
     }
     this.loading.set(false);
   }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
@@ -18,10 +18,14 @@ import { TooltipModule } from 'primeng/tooltip';
   styleUrl: './wp-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WpHomeComponent implements OnDestroy {
+export class WpHomeComponent implements OnDestroy, OnInit {
   api = inject(ApiService);
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
+
+  ngOnInit(): void {
+    this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list');
+  }
 
   ngOnDestroy(): void {
     this.outcomeIService.searchText.set('');

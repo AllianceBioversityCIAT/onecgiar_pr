@@ -31,6 +31,7 @@
   <div *ngIf="this.innovationDevInfoBody.innovation_nature_id == 12">
     <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?" [(ngModel)]="innovationDevInfoBody.is_new_variety">
     </app-pr-yes-or-not>
+    <div appFeedbackValidation labelText="Innovation package" [isComplete]="this.innovationDevInfoBody.is_new_variety !== null"></div>
     <app-pr-input
       *ngIf="innovationDevInfoBody.is_new_variety"
       label="Indicate the number of individual new or improved lines/ varieties"

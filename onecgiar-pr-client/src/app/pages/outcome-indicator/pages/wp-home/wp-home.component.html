@@ -2,7 +2,8 @@
   <i
     class="material-icons-round wp_header_arrow"
     routerLink="/outcome-indicator-module/home"
-    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }">
+    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
     arrow_back
   </i>
   <h1 class="wp_header_title">Work Package Outcome Indicators List</h1>
