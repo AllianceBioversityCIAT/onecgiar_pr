@@ -45,8 +45,8 @@ export class OutcomeIndicatorService {
   getEOIsData() {
     this.loading.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsEOIS(this.initiativeIdFilter).subscribe({
-      next: res => {
-        this.eoisData = res?.data.map(item => {
+      next: ({ response }) => {
+        this.eoisData = response?.map(item => {
           if (item.indicators === null) {
             item.indicators = [];
           }
@@ -64,8 +64,8 @@ export class OutcomeIndicatorService {
   getWorkPackagesData() {
     this.loadingWPs.set(true);
     this.api.resultsSE.GET_contributionsToIndicatorsWPS(this.initiativeIdFilter).subscribe({
-      next: res => {
-        this.wpsData = res.data.map(item => {
+      next: ({ response }) => {
+        this.wpsData = response.map(item => {
           item.toc_results.sort((a, b) => {
             return (a.toc_result_title || '').localeCompare(b.toc_result_title || '');
           });

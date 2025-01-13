@@ -6,13 +6,16 @@ import {
   Patch,
   Param,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ContributionToIndicatorsService } from './contribution-to-indicators.service';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ContributionToIndicatorsDto } from './dto/contribution-to-indicators.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class ContributionToIndicatorsController {
   constructor(
     private readonly contributionToIndicatorsService: ContributionToIndicatorsService,

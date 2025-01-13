@@ -45,7 +45,7 @@ export class ContributionToIndicatorsService {
           );
 
       return {
-        data,
+        response: data,
         message:
           'The Contributor to Indicators list has been fetched successfully.',
         status: HttpStatus.OK,
@@ -108,7 +108,7 @@ export class ContributionToIndicatorsService {
       }
 
       return {
-        contribution,
+        response: contribution,
         message: `The Contributor to Indicator to tocId ${tocId} has been created.`,
         status: HttpStatus.CREATED,
       };
@@ -169,7 +169,7 @@ export class ContributionToIndicatorsService {
         removeInactives(contributingResults);
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         message: 'The Contributor to Indicator has been found.',
         status: HttpStatus.OK,
       };
@@ -225,7 +225,7 @@ export class ContributionToIndicatorsService {
       );
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         message: 'The Contributor to Indicator has been updated.',
         status: HttpStatus.OK,
       };
@@ -374,7 +374,7 @@ export class ContributionToIndicatorsService {
       );
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         newSubmission,
         message: `The Contributor to Indicator with tocId ${tocId} has been ${
           newStatus === ResultStatusData.Editing ? 'unsubmitted' : 'submitted'

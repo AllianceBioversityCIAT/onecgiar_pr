@@ -105,21 +105,21 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should handle successful response in handleGetIndicatorResponse', () => {
-    const response = { contributionToIndicator: { someData: 'data' } };
+    const response = { response: { someData: 'data' } };
     jest.spyOn(component, 'updateIndicatorData');
     component.handleGetIndicatorResponse(response);
     expect(component.updateIndicatorData).toHaveBeenCalledWith(response);
   });
 
   it('should update indicator data and set loading to false in updateIndicatorData', () => {
-    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
+    const response = { response: { someData: 'data', initiative_official_code: '123' } };
     component.updateIndicatorData(response);
-    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
+    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.response);
     expect(component.loading()).toBe(false);
   });
 
   it('should not call getWorkPackagesData and getEOIsData if initiativeIdFilter is the same', () => {
-    const response = { contributionToIndicator: { someData: 'data', initiative_official_code: '123' } };
+    const response = { response: { someData: 'data', initiative_official_code: '123' } };
     component.outcomeIService.initiativeIdFilter = '123';
     jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
     jest.spyOn(component.outcomeIService, 'getEOIsData');
@@ -130,7 +130,7 @@ describe('IndicatorDetailsComponent', () => {
 
   it('should handle 404 response in handleGetIndicatorResponse', () => {
     component.indicatorDetailsService.indicatorId.set('123');
-    const response = { status: 404 };
+    const response = { statusCode: 404 };
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicators').mockReturnValue(of({}));
     jest.spyOn(component, 'retryGetIndicatorData');
     component.handleGetIndicatorResponse(response);
@@ -143,7 +143,7 @@ describe('IndicatorDetailsComponent', () => {
     const error = { message: 'Error' };
     jest.spyOn(apiService.resultsSE, 'POST_contributionsToIndicators').mockReturnValue(throwError(() => error));
     jest.spyOn(component, 'handleError');
-    component.handleGetIndicatorResponse({ status: 404 });
+    component.handleGetIndicatorResponse({ statusCode: 404 });
     expect(component.handleError).toHaveBeenCalledWith(error);
   });
 
@@ -157,9 +157,9 @@ describe('IndicatorDetailsComponent', () => {
   });
 
   it('should update indicator data in updateIndicatorData', () => {
-    const response = { contributionToIndicator: { someData: 'data' } };
+    const response = { response: { someData: 'data' } };
     component.updateIndicatorData(response);
-    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.contributionToIndicator);
+    expect(component.indicatorDetailsService.indicatorData()).toEqual(response.response);
     expect(component.loading()).toBe(false);
   });
 

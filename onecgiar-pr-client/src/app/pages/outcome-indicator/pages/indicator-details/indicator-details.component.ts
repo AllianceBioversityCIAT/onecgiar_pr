@@ -78,7 +78,7 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   handleGetIndicatorResponse(response: any) {
-    if (response?.status === 404) {
+    if (response?.statusCode === 404) {
       this.api.resultsSE.POST_contributionsToIndicators(this.indicatorDetailsService.indicatorId()).subscribe({
         next: () => this.retryGetIndicatorData(),
         error: error => this.handleError(error)
@@ -99,7 +99,7 @@ export class IndicatorDetailsComponent implements OnInit {
   }
 
   updateIndicatorData(response: any) {
-    this.indicatorDetailsService.indicatorData.set(response?.contributionToIndicator);
+    this.indicatorDetailsService.indicatorData.set(response?.response);
     this.indicatorDetailsService.getIndicatorDetailsResults();
 
     if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
