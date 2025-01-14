@@ -1,7 +1,10 @@
 <div class="local_container">
-  <div class="tor_sub_title">
-    Portfolio Linkages
-  </div>
-  <iframe title="tor-portfolio-linkages"  allowfullscreen *ngIf="this.typeOneReportSE.currentBiPage && this.typeOneReportSE.initiativeSelected" [src]="this.typeOneReportSE.sanitizedUrl"></iframe>
+  <div class="tor_sub_title">Portfolio Linkages</div>
 
+  <app-alert-status description="This section provides cumulative information on internal collaborations for the period 2022-2024">
+  </app-alert-status>
+
+  @if (this.typeOneReportSE.currentBiPage && this.typeOneReportSE.initiativeSelected) {
+    <iframe title="tor-portfolio-linkages" allowfullscreen [src]="this.typeOneReportSE.sanitizedUrl"></iframe>
+  }
 </div>
