@@ -27,7 +27,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should set eoisData and loading to false on successful response', () => {
-    const response = { data: ['result1', 'result2'] };
+    const response = { response: ['result1', 'result2'] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
 
@@ -58,7 +58,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should set wpsData and loadingWPs to false on successful response', () => {
-    const response = { data: [{ toc_results: ['result1', 'result2'] }] };
+    const response = { response: [{ toc_results: ['result1', 'result2'] }] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
 
@@ -78,7 +78,7 @@ describe('OutcomeIndicatorService', () => {
   });
 
   it('should set wpsData with indicators when indicators are null', () => {
-    const response = { data: [{ toc_results: [{ indicators: null }] }] };
+    const response = { response: [{ toc_results: [{ indicators: null }] }] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
 

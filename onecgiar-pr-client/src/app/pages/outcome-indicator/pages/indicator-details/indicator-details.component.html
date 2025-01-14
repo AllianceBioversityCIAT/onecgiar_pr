@@ -86,17 +86,19 @@
 
 <app-details-table></app-details-table>
 
-<div style="display: flex; justify-content: flex-end; align-items: center; width: 100%; height: 100%; gap: 1rem; margin-top: 2rem">
+<div class="buttons_container">
   <app-pr-button
     text="Save"
     colorType="success"
     padding="big"
+    [verticalMargin]="0"
     (click)="handleSaveIndicatorData()"
     [ngClass]="{ globalDisabled: isSubmitted }"></app-pr-button>
   <app-pr-button
     [text]="isSubmitted ? 'Un-submit' : 'Submit'"
     colorType="primary"
     padding="big"
+    [verticalMargin]="0"
     [disabled]="!isSubmitted && isSubmitDisabled()"
     (click)="isSubmitted ? handleUnsubmitIndicator() : handleSubmitIndicator()"
     [tooltipText]="!isSubmitted && isSubmitDisabled() && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
