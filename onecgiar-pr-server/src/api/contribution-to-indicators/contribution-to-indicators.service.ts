@@ -101,7 +101,7 @@ export class ContributionToIndicatorsService {
 
       if (addSubmission.status !== HttpStatus.OK) {
         throw {
-          response: {},
+          response: addSubmission.message,
           message: `Error creating submission for Contribution to Indicator with tocId "${tocId}"`,
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         };
@@ -363,15 +363,17 @@ export class ContributionToIndicatorsService {
           status_id: newStatus.value,
         });
 
-      await this._contributionToIndicatorSubmissionRepository.update(
-        {
-          id: lastSubmission.id,
-        },
-        {
-          is_active: false,
-          last_updated_by: user.id,
-        },
-      );
+      if (!isNew) {
+        await this._contributionToIndicatorSubmissionRepository.update(
+          {
+            id: lastSubmission.id,
+          },
+          {
+            is_active: false,
+            last_updated_by: user.id,
+          },
+        );
+      }
 
       return {
         response: contributionToIndicator,
