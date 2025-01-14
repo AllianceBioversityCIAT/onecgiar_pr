@@ -1,34 +1,49 @@
 <div class="local_container">
   <app-tor-panel-menu [hideIndex]="true" [options]="this.sections" panelName="Type 1 Report"></app-tor-panel-menu>
+
   <div class="router">
     <div class="tor_section_container shadow-1">
       <div class="initiative">
         <div class="dropdown">
           <div class="label">Select Initiative:</div>
-          <div class="select {{this.api.dataControlSE.showT1RSelectPhase?'two':'one'}}" >
-            <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
-              [isStatic]="true" optionLabel="full_name" optionValue="official_code"
-              (selectOptionEvent)="selectInitiativeEvent()" placeholder="Select Initiative"
+
+          <div class="select {{ this.api.dataControlSE.showT1RSelectPhase ? 'two' : 'one' }}">
+            <app-pr-select
+              [options]="!this.api.rolesSE.isAdmin ? this.api.dataControlSE.myInitiativesList : this.typeOneReportSE.allInitiatives"
+              [isStatic]="true"
+              optionLabel="full_name"
+              optionValue="official_code"
+              (selectOptionEvent)="selectInitiativeEvent()"
+              placeholder="Select Initiative"
               [(ngModel)]="typeOneReportSE.initiativeSelected">
             </app-pr-select>
-            <app-pr-select [options]="this.typeOneReportSE.allInitiatives" [isStatic]="true"
-              *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
-              placeholder="Select Initiative" (selectOptionEvent)="selectInitiativeEvent()"
-              [(ngModel)]="typeOneReportSE.initiativeSelected">
-            </app-pr-select>
-            <app-pr-select *ngIf="this.api.dataControlSE.showT1RSelectPhase;"
-              (selectOptionEvent)="selectInitiativeEvent()" [options]="this.typeOneReportSE.reportingPhases"
-              [isStatic]="true" [required]="false" optionLabel="phase_name_status" optionValue="id"
-              placeholder="Select phase" [(ngModel)]="this.typeOneReportSE.phaseSelected">
-            </app-pr-select>
+
+            @if (this.api.dataControlSE.showT1RSelectPhase) {
+              <app-pr-select
+                (selectOptionEvent)="selectInitiativeEvent()"
+                [options]="this.typeOneReportSE.reportingPhases"
+                [isStatic]="true"
+                [required]="false"
+                optionLabel="phase_name_status"
+                optionValue="id"
+                placeholder="Select phase"
+                [(ngModel)]="this.typeOneReportSE.phaseSelected">
+              </app-pr-select>
+            }
           </div>
         </div>
       </div>
+
       <div class="router_outlet_container">
-          <div class="phaseLoaded" *ngIf="!this.api.dataControlSE.showT1RSelectPhase">
-            {{this.phaseNameLoaded}}
+        @if (!this.api.dataControlSE.showT1RSelectPhase) {
+          <div class="phaseLoaded">
+            {{ this.phaseNameLoaded }}
           </div>
-        <router-outlet *ngIf="typeOneReportSE.initiativeSelected && this.typeOneReportSE.phaseSelected"></router-outlet>
+        }
+
+        @if (this.typeOneReportSE.initiativeSelected && this.typeOneReportSE.phaseSelected) {
+          <router-outlet></router-outlet>
+        }
       </div>
     </div>
   </div>
