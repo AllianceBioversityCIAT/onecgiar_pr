@@ -70,22 +70,33 @@ export class IndicatorDetailsComponent implements OnInit {
       this.goBack();
       return;
     }
-
+    console.log(this.indicatorDetailsService.indicatorId());
     this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
-      next: response => this.handleGetIndicatorResponse(response),
-      error: error => this.handleError(error)
+      next: response => {
+        this.handleGetIndicatorResponse(response);
+      },
+      error: error => {
+        if (error?.status === 404) {
+          this.api.resultsSE.POST_contributionsToIndicators(this.indicatorDetailsService.indicatorId()).subscribe({
+            next: res => {
+              console.log('res', res);
+              this.retryGetIndicatorData();
+            },
+            error: error => {
+              console.error('error', error);
+              this.handleError(error);
+            }
+          });
+        } else {
+          console.log('otro que no es 404');
+          this.handleError(error);
+        }
+      }
     });
   }
 
   handleGetIndicatorResponse(response: any) {
-    if (response?.statusCode === 404) {
-      this.api.resultsSE.POST_contributionsToIndicators(this.indicatorDetailsService.indicatorId()).subscribe({
-        next: () => this.retryGetIndicatorData(),
-        error: error => this.handleError(error)
-      });
-    } else {
-      this.updateIndicatorData(response);
-    }
+    this.updateIndicatorData(response);
   }
 
   retryGetIndicatorData() {
