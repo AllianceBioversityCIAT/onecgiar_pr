@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -33,7 +33,7 @@ import { IndicatorResultsModalComponent } from './components/indicator-results-m
   styleUrls: ['./indicator-details.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class IndicatorDetailsComponent implements OnInit {
+export class IndicatorDetailsComponent implements OnInit, OnDestroy {
   indicatorInfoItems = [
     { icon: 'login', label: 'Outcome', value: 'outcome_name', iconClass: 'material-icons-round' },
     { icon: 'show_chart', label: 'Unit of measurement', value: 'unit_measurement', iconClass: 'material-icons-round' },
@@ -70,33 +70,25 @@ export class IndicatorDetailsComponent implements OnInit {
       this.goBack();
       return;
     }
-    console.log(this.indicatorDetailsService.indicatorId());
     this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
       next: response => {
-        this.handleGetIndicatorResponse(response);
+        this.updateIndicatorData(response);
       },
       error: error => {
         if (error?.status === 404) {
           this.api.resultsSE.POST_contributionsToIndicators(this.indicatorDetailsService.indicatorId()).subscribe({
             next: res => {
-              console.log('res', res);
               this.retryGetIndicatorData();
             },
             error: error => {
-              console.error('error', error);
               this.handleError(error);
             }
           });
         } else {
-          console.log('otro que no es 404');
           this.handleError(error);
         }
       }
     });
-  }
-
-  handleGetIndicatorResponse(response: any) {
-    this.updateIndicatorData(response);
   }
 
   retryGetIndicatorData() {
@@ -113,9 +105,9 @@ export class IndicatorDetailsComponent implements OnInit {
     this.indicatorDetailsService.indicatorData.set(response?.response);
     this.indicatorDetailsService.getIndicatorDetailsResults();
 
-    if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData().initiative_official_code) {
+    if (this.outcomeIService.initiativeIdFilter !== this.indicatorDetailsService.indicatorData()?.initiative_official_code) {
       setTimeout(() => {
-        this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData().initiative_official_code;
+        this.outcomeIService.initiativeIdFilter = this.indicatorDetailsService.indicatorData()?.initiative_official_code;
         this.outcomeIService.getWorkPackagesData();
         this.outcomeIService.getEOIsData();
       }, 500);
@@ -213,5 +205,9 @@ export class IndicatorDetailsComponent implements OnInit {
       !this.indicatorDetailsService.indicatorData().narrative_achieved_in_2024 ||
       !this.indicatorDetailsService.indicatorData().contributing_results?.length
     );
+  }
+
+  ngOnDestroy(): void {
+    this.api.dataControlSE.detailSectionTitle('Outcome indicator module');
   }
 }

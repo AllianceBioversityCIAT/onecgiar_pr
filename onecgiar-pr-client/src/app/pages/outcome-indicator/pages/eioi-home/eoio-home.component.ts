@@ -29,5 +29,6 @@ export class EoioHomeComponent implements OnDestroy, OnInit {
 
   ngOnDestroy(): void {
     this.outcomeIService.searchText.set('');
+    this.api.dataControlSE.detailSectionTitle('Outcome indicator module');
   }
 }
