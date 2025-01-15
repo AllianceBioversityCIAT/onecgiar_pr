@@ -1,3 +1,9 @@
+h1,
+p,
+ul {
+  margin: 0;
+}
+
 .local_container {
   padding: 20px;
 
@@ -8,18 +14,23 @@
 
   .box_container {
     background-color: #f8f8f8;
-    padding: 20px;
+    padding: 20px 0;
 
     .desc {
-      padding: 20px 50px;
+      padding: 20px 30px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-direction: column;
       gap: 10px;
-      background-color: #F3F3F3;
+      background-color: #f3f3f3;
       border-radius: 10px;
-      margin-bottom: 20px;
     }
   }
+}
+
+.tor_sub_title_container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }

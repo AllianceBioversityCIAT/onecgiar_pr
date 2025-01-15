@@ -326,15 +326,14 @@ export const TypePneReportRouting: PrRoute[] = [
   {
     prName: 'Progress towards End of Initiative Outcomes (EOI-O)',
     underConstruction: false,
-    path: 'toc-diagrams',
-    loadChildren: () => import('../../pages/type-one-report/pages/tor-toc-diagrams/tor-toc-diagrams.module').then(m => m.TorTocDiagramsModule)
+    path: 'progress-eoio',
+    loadChildren: () => import('../../pages/type-one-report/pages/tor-progress-eoio/tor-progress-eoio.module').then(m => m.TorProgressEoioModule)
   },
   {
     prName: 'Work Package progress',
     underConstruction: false,
-    path: 'key-result-story',
-    loadChildren: () =>
-      import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule)
+    path: 'progress-wp',
+    loadChildren: () => import('../../pages/type-one-report/pages/tor-progress-wps/tor-progress-wps.module').then(m => m.TorProgressWpsModule)
   },
   {
     prName: 'Key results',

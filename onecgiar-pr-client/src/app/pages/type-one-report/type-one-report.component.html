@@ -7,7 +7,7 @@
         <div class="dropdown">
           <div class="label">Select Initiative:</div>
 
-          <div class="select {{ this.api.dataControlSE.showT1RSelectPhase ? 'two' : 'one' }}">
+          <div class="select one">
             <app-pr-select
               [options]="!this.api.rolesSE.isAdmin ? this.api.dataControlSE.myInitiativesList : this.typeOneReportSE.allInitiatives"
               [isStatic]="true"
@@ -17,29 +17,14 @@
               placeholder="Select Initiative"
               [(ngModel)]="typeOneReportSE.initiativeSelected">
             </app-pr-select>
-
-            @if (this.api.dataControlSE.showT1RSelectPhase) {
-              <app-pr-select
-                (selectOptionEvent)="selectInitiativeEvent()"
-                [options]="this.typeOneReportSE.reportingPhases"
-                [isStatic]="true"
-                [required]="false"
-                optionLabel="phase_name_status"
-                optionValue="id"
-                placeholder="Select phase"
-                [(ngModel)]="this.typeOneReportSE.phaseSelected">
-              </app-pr-select>
-            }
           </div>
         </div>
       </div>
 
       <div class="router_outlet_container">
-        @if (!this.api.dataControlSE.showT1RSelectPhase) {
-          <div class="phaseLoaded">
-            {{ this.phaseNameLoaded }}
-          </div>
-        }
+        <div class="phaseLoaded">
+          {{ this.phaseNameLoaded }}
+        </div>
 
         @if (this.typeOneReportSE.initiativeSelected && this.typeOneReportSE.phaseSelected) {
           <router-outlet></router-outlet>

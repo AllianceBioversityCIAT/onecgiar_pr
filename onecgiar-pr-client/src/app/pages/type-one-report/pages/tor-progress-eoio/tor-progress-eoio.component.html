@@ -1,0 +1,28 @@
+<div class="local_container">
+  <div class="tor_sub_title">Progress towards EOI-O</div>
+
+  <div class="box_container">
+    <div class="desc">
+      You can access the Theory of Change (ToC) diagram for Section #2 of the Type 1 report using the Go to Folder link below. This version, which may
+      be slightly formatted by our designer (if needed) to ensure it fits properly within the two dedicated pages of the Type 1 report, will be
+      included in the final version of your 2024 Type 1 report.
+
+      <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
+    </div>
+  </div>
+
+  <div class="tor_sub_title_container">
+    <div class="tor_sub_title">Progress against EOI Outcomes</div>
+
+    <app-pr-button
+      [text]="this.requesting ? 'Downloading excel file' : 'Download excel file'"
+      [ngClass]="{ globalDisabled: this.requesting }"
+      [icon]="this.requesting ? 'loop' : 'excel_white'"
+      [rotating]="this.requesting"
+      (click)="exportExcel()"></app-pr-button>
+  </div>
+
+  <app-progress-against-outcome
+    [loadingStatus]="this.outcomeIService.loading()"
+    [progressData]="this.outcomeIService.eoisData"></app-progress-against-outcome>
+</div>

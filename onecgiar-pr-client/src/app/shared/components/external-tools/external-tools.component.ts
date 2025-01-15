@@ -11,12 +11,15 @@ declare let gtag: (property: string, value: any, configs: any) => {};
   styleUrls: ['./external-tools.component.scss']
 })
 export class ExternalToolsComponent implements OnInit {
-  constructor(private router: Router, private pusherSE: PusherService, private api: ApiService) {}
+  constructor(
+    private readonly router: Router,
+    private readonly pusherSE: PusherService,
+    private readonly api: ApiService
+  ) {}
 
   ngOnInit(): void {
     this.router.events.subscribe((event: NavigationEvent) => {
       if (event instanceof NavigationStart) {
-        this.validateShowT1RSelectPhase(event.url);
         this.api.dataControlSE.inNotifications = event.url.indexOf('results-notifications') > 0;
         window.scrollTo(0, 0);
         this.pusherSE.start(event.url, event.url.split('/')[3]);
@@ -33,10 +36,5 @@ export class ExternalToolsComponent implements OnInit {
         }
       }
     });
-  }
-
-  validateShowT1RSelectPhase(url: string): void {
-    const lastPath = url.split('/').pop();
-    this.api.dataControlSE.showT1RSelectPhase = lastPath === 'toc-diagrams';
   }
 }
