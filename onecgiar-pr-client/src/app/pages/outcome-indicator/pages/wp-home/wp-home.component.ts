@@ -29,5 +29,6 @@ export class WpHomeComponent implements OnDestroy, OnInit {
 
   ngOnDestroy(): void {
     this.outcomeIService.searchText.set('');
+    this.api.dataControlSE.detailSectionTitle('Outcome indicator module');
   }
 }
