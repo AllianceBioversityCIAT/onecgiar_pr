@@ -21,10 +21,10 @@
 
     <app-pr-button
       [text]="this.requesting ? 'Downloading excel file' : 'Download excel file'"
-      [ngClass]="{ globalDisabled: this.requesting }"
+      [ngClass]="{ globalDisabled: this.requesting || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData }"
       [icon]="this.requesting ? 'loop' : 'excel_white'"
       [rotating]="this.requesting"
-      (click)="exportExcel()"></app-pr-button>
+      (click)="exportProgressWpsExcel()"></app-pr-button>
   </div>
 
   <app-progress-against-outcome

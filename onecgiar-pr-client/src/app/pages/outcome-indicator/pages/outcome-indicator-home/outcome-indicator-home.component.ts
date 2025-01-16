@@ -56,13 +56,22 @@ export class OutcomeIndicatorHomeComponent {
       { header: 'Supporting results', key: 'indicator_supporting_results', width: 60 }
     ];
 
-    this.exportTablesSE.exportOutcomesIndicatorsToExcel(
-      this.outcomeIService.eoisData,
-      this.outcomeIService.wpsData,
-      `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
-      wscolsEOIs,
-      wscolsWPs
-    );
+    this.exportTablesSE.exportOutcomesIndicatorsToExcel({
+      fileName: `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
+      EOIsConfig: {
+        data: this.outcomeIService.eoisData,
+        wscols: wscolsEOIs,
+        cellToCenter: [4, 5, 6, 7],
+        worksheetName: 'EoI outcomes'
+      },
+      WPsConfig: {
+        data: this.outcomeIService.wpsData,
+        wscols: wscolsWPs,
+        cellToCenter: [5, 6, 7, 8],
+        worksheetName: 'WP outcomes'
+      },
+      isT1R: false
+    });
 
     this.messageService.add({
       severity: 'success',

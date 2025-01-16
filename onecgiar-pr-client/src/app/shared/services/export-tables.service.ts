@@ -3,9 +3,21 @@ import * as FileSaver from 'file-saver';
 import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import { OutcomeIndicatorService } from '../../pages/outcome-indicator/services/outcome-indicator.service';
-interface Wscols {
-  wpx: number;
+
+interface EOIsConfig {
+  data: any[];
+  wscols?: any[];
+  cellToCenter?: number[];
+  worksheetName: string;
 }
+
+interface WPsConfig {
+  data: any[];
+  wscols?: any[];
+  cellToCenter?: number[];
+  worksheetName: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -200,21 +212,50 @@ export class ExportTablesService {
     }
   }
 
-  async exportOutcomesIndicatorsToExcel(eoisData: any[], wpsData: any[], fileName: string, wscolsEOIs?: any[], wscolsWPs?: any[], callback?) {
+  async exportOutcomesIndicatorsToExcel({
+    fileName,
+    EOIsConfig,
+    WPsConfig,
+    isT1R = false,
+    callback
+  }: {
+    fileName: string;
+    EOIsConfig?: EOIsConfig;
+    WPsConfig?: WPsConfig;
+    isT1R?: boolean;
+    callback?;
+  }) {
     try {
       await import('exceljs').then(async ExcelJS => {
         const workbook = new ExcelJS.Workbook();
-        const eoisWorksheet = workbook.addWorksheet('EoI outcomes');
-        const wpsWorksheet = workbook.addWorksheet('WP outcomes');
 
-        if (wscolsEOIs) eoisWorksheet.columns = wscolsEOIs;
-        if (wscolsWPs) wpsWorksheet.columns = wscolsWPs;
+        if (EOIsConfig?.data?.length > 0) {
+          const eoisWorksheet = workbook.addWorksheet(EOIsConfig.worksheetName);
+          if (EOIsConfig.wscols) eoisWorksheet.columns = EOIsConfig.wscols;
 
-        eoisData.forEach(data => this.addEOISRow(eoisWorksheet, data));
-        wpsData.forEach(data => this.addWPSRow(wpsWorksheet, data));
+          EOIsConfig?.data?.forEach(data =>
+            this.addEOISRow({
+              worksheet: eoisWorksheet,
+              data,
+              isT1R
+            })
+          );
+          this.formatWorksheet(eoisWorksheet, EOIsConfig.cellToCenter);
+        }
 
-        this.formatWorksheet(eoisWorksheet, [4, 5, 6, 7]);
-        this.formatWorksheet(wpsWorksheet, [5, 6, 7, 8]);
+        if (WPsConfig?.data?.length > 0) {
+          const wpsWorksheet = workbook.addWorksheet(WPsConfig.worksheetName);
+          if (WPsConfig.wscols) wpsWorksheet.columns = WPsConfig.wscols;
+
+          WPsConfig?.data?.forEach(data =>
+            this.addWPSRow({
+              worksheet: wpsWorksheet,
+              data,
+              isT1R
+            })
+          );
+          this.formatWorksheet(wpsWorksheet, WPsConfig.cellToCenter);
+        }
 
         const buffer = await workbook.xlsx.writeBuffer();
         this.saveAsExcelFile(buffer, fileName, false, true, true);
@@ -228,35 +269,59 @@ export class ExportTablesService {
     }
   }
 
-  private addEOISRow(worksheet: ExcelJS.Worksheet, data: any) {
-    let indicatorType = 'Not defined';
-    if (data.indicators[0]?.indicator_name) {
-      const prefix = data.indicators[0]?.is_indicator_custom ? 'Custom - ' : 'Standard - ';
-      indicatorType = `${prefix} ${data.indicators[0]?.indicator_name}`;
+  private addEOISRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
+    if (data.indicators.length > 0) {
+      data.indicators.forEach(indicator => {
+        let indicatorType = 'Not defined';
+        if (indicator.indicator_name) {
+          const prefix = indicator.is_indicator_custom ? 'Custom - ' : 'Standard - ';
+          indicatorType = `${prefix} ${indicator.indicator_name}`;
+        }
+
+        const supportingResults = !indicator.indicator_supporting_results
+          ? 'Not provided'
+          : indicator.indicator_supporting_results
+              .map(item => `• ${item.result_type} ${item.result_code} - ${item.title} (${item.result_submitter} - ${item.phase_name})`)
+              .join('\n');
+
+        const rowData = {
+          toc_result_title: data.toc_result_title ?? 'Not defined',
+          indicator_name: indicator.indicator_description ?? 'Not defined',
+          indicator_type: indicatorType,
+          expected_target: indicator.indicator_target_value ?? 'Not defined',
+          actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
+          achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
+          ...(isT1R
+            ? {}
+            : {
+                reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
+                indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
+                indicator_supporting_results: supportingResults
+              })
+        };
+
+        worksheet.addRow(rowData);
+      });
+    } else {
+      worksheet.addRow({
+        toc_result_title: data.toc_result_title ?? 'Not defined',
+        indicator_name: 'Not defined',
+        indicator_type: 'Not defined',
+        expected_target: 'Not defined',
+        actual_target_achieved: 'Not provided',
+        achieved_status: 'No',
+        ...(isT1R
+          ? {}
+          : {
+              reporting_status: 'Editing',
+              indicator_achieved_narrative: 'Not provided',
+              indicator_supporting_results: 'Not provided'
+            })
+      });
     }
-
-    const supportingResults = !data.indicators[0]?.indicator_supporting_results
-      ? 'Not provided'
-      : data.indicators[0]?.indicator_supporting_results
-          .map(item => `• ${item.result_type} ${item.result_code} - ${item.title} (${item.result_submitter} - ${item.phase_name})`)
-          .join('\n');
-
-    worksheet.addRow({
-      toc_result_title: data.toc_result_title ?? 'Not defined',
-      indicator_name: data.indicators[0]?.indicator_description ?? 'Not defined',
-      indicator_type: indicatorType,
-      expected_target: data.indicators[0]?.indicator_target_value ?? 'Not defined',
-      actual_target_achieved: data.indicators[0]?.indicator_achieved_value ?? 'Not provided',
-      achieved_status: this.outcomeIService.achievedStatus(data.indicators[0]?.indicator_target_value, data.indicators[0]?.indicator_achieved_value)
-        ? 'Yes'
-        : 'No',
-      reporting_status: data.indicators[0]?.indicator_submission_status ? 'Submitted' : 'Editing',
-      indicator_achieved_narrative: data.indicators[0]?.indicator_achieved_narrative ?? 'Not provided',
-      indicator_supporting_results: supportingResults
-    });
   }
 
-  private addWPSRow(worksheet: ExcelJS.Worksheet, data: any) {
+  private addWPSRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
     data.toc_results.forEach(result => {
       if (result.indicators.length > 0) {
         result.indicators.forEach(indicator => {
@@ -271,7 +336,7 @@ export class ExportTablesService {
                 .map(item => `• ${item.result_type} ${item.result_code} - ${item.title} (${item.result_submitter} - ${item.phase_name})`)
                 .join('\n');
 
-          worksheet.addRow({
+          const rowData = {
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
             toc_result_title: result.toc_result_title ?? 'Not defined',
             indicator_name: indicator.indicator_description ?? 'Not defined',
@@ -280,9 +345,15 @@ export class ExportTablesService {
             actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
             achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
             reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
-            indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
-            indicator_supporting_results: supportingResults
-          });
+            ...(isT1R
+              ? {}
+              : {
+                  indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
+                  indicator_supporting_results: supportingResults
+                })
+          };
+
+          worksheet.addRow(rowData);
         });
       } else {
         worksheet.addRow({
@@ -294,8 +365,13 @@ export class ExportTablesService {
           actual_target_achieved: 'Not provided',
           achieved_status: 'No',
           reporting_status: 'Editing',
-          indicator_achieved_narrative: 'Not provided',
-          indicator_supporting_results: 'Not provided'
+
+          ...(isT1R
+            ? {}
+            : {
+                indicator_achieved_narrative: 'Not provided',
+                indicator_supporting_results: 'Not provided'
+              })
         });
       }
     });
