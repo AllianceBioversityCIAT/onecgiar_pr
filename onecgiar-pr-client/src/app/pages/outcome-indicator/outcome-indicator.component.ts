@@ -68,28 +68,37 @@ export class OutcomeIndicatorComponent implements OnInit {
     });
   }
 
+  private processEntityTypes(entityTypesResponse: any[]): void {
+    entityTypesResponse.forEach(element => {
+      element.isLabel = true;
+    });
+    this.groupInitiativesByType(entityTypesResponse);
+  }
+
+  private mapInitiativeData(initiative: any) {
+    const { code, name } = initiative?.obj_cgiar_entity_type || {};
+    return { ...initiative, typeCode: code, typeName: name };
+  }
+
+  private groupInitiativesByType(entityTypesResponse: any[]): void {
+    this.allInitiatives = entityTypesResponse.reduce((acc, groupItem) => {
+      const initsGroup = this.allInitiatives.filter(item => item.typeCode === groupItem.code);
+      if (initsGroup.length) {
+        acc.push(groupItem, ...initsGroup);
+      }
+      return acc;
+    }, []);
+
+    this.handleInitiativeQueryParam();
+  }
+
   async loadAllInitiatives(): Promise<void> {
     if (!this.api.rolesSE.isAdmin) return;
 
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
-        this.GET_cgiarEntityTypes(entityTypesResponse => {
-          this.allInitiatives = response.map(initiative => {
-            const { code, name } = initiative?.obj_cgiar_entity_type || {};
-            return { ...initiative, typeCode: code, typeName: name };
-          });
-
-          const groupedInitiatives = entityTypesResponse.reduce((acc, groupItem) => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode === groupItem.code);
-            if (initsGroup.length) {
-              acc.push(groupItem, ...initsGroup);
-            }
-            return acc;
-          }, []);
-
-          this.allInitiatives = groupedInitiatives;
-          this.handleInitiativeQueryParam();
-        });
+        this.allInitiatives = response.map(this.mapInitiativeData);
+        this.GET_cgiarEntityTypes(response => this.processEntityTypes(response));
       },
       error: error => console.error('Error loading initiatives:', error)
     });
