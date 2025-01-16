@@ -23,8 +23,8 @@ describe('IndicatorDetailsComponent', () => {
         POST_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
         PATCH_contributionsToIndicators: jest.fn().mockReturnValue(of({})),
         POST_contributionsToIndicatorsSubmit: jest.fn().mockReturnValue(of({})),
-        GET_contributionsToIndicatorsWPS: jest.fn().mockReturnValue(of({ data: [{ toc_results: ['result1', 'result2'] }] })),
-        GET_contributionsToIndicatorsEOIS: jest.fn().mockReturnValue(of({ data: ['result1', 'result2'] })),
+        GET_contributionsToIndicatorsWPS: jest.fn().mockReturnValue(of({ response: [{ toc_results: ['result1', 'result2'] }] })),
+        GET_contributionsToIndicatorsEOIS: jest.fn().mockReturnValue(of({ response: ['result1', 'result2'] })),
         GET_platformGlobalVariablesByCategoryId: jest.fn().mockReturnValue(of({ data: ['result1', 'result2'] }))
       },
       alertsFe: {
