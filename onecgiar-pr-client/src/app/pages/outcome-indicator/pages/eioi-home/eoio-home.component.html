@@ -42,14 +42,17 @@
   </ng-template>
 
   <ng-template pTemplate="body" let-item>
-    @for (indicator of item.indicators; track $index) {
-      <tr>
-        @if ($index === 0) {
-          <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
-        }
-        @if (!indicator) {
-          <td colspan="6" style="text-align: center">No indicator data found.</td>
-        } @else {
+    @if (!item.indicators.length) {
+      <tr style="height: 50px">
+        <td>{{ item?.toc_result_title }}</td>
+        <td colspan="6" style="text-align: center">No indicator data found</td>
+      </tr>
+    } @else {
+      @for (indicator of item.indicators; track $index) {
+        <tr>
+          @if ($index === 0) {
+            <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
+          }
           <td
             routerLink="/outcome-indicator-module/indicator-details"
             [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
@@ -84,8 +87,8 @@
                 }"></div>
             </div>
           </td>
-        }
-      </tr>
+        </tr>
+      }
     }
   </ng-template>
 

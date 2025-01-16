@@ -3,22 +3,29 @@
     <div>
       <div class="back_button">
         <a routerLink="/result/results-list" class="open_link_in_new_page">
-          <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
-          </app-pr-button>
+          <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"></app-pr-button>
         </a>
       </div>
+
       <div class="segment">
-        <br>
+        <br />
+
         <div class="sections">
-          <a *ngFor="let option of options; let i=index" [routerLink]="option.path" routerLinkActive="section_active">
-            <span *ngIf="!this.hideIndex">{{i+1}}.</span> {{option.name }}
-            <img *ngIf="option.underConstruction" class="under_construction" src="assets/work-in-progress.png" alt=""
-              srcset="">
-          </a>
+          @for (option of options; track $index) {
+            <a [routerLink]="option.path" routerLinkActive="section_active">
+              @if (!this.hideIndex) {
+                <span>{{ $index + 1 }}.</span>
+              }
+
+              {{ option.name }}
+
+              @if (option.underConstruction) {
+                <img class="under_construction" src="assets/work-in-progress.png" alt="under construction icon" />
+              }
+            </a>
+          }
         </div>
       </div>
     </div>
-
-
   </div>
 </div>

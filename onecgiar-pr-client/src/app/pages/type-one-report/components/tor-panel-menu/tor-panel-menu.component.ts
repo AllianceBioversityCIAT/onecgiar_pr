@@ -9,5 +9,4 @@ export class TorPanelMenuComponent {
   @Input() options: any;
   @Input() panelName: string;
   @Input() hideIndex: boolean = false;
-  constructor() {}
 }
