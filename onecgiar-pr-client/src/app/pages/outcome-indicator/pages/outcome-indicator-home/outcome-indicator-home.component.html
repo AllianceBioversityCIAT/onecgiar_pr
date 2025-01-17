@@ -38,7 +38,7 @@
       routerLink="/outcome-indicator-module/work-package-outcome-home"
       [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
-      (click)="this.api.dataControlSE.detailSectionTitle('Work Package Outcome Indicators List')">
+      (click)="this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list')">
       <i class="pi pi-box" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Report progress on Work Package outcomes </p>
     </div>

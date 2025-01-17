@@ -45,7 +45,7 @@ export class ContributionToIndicatorsService {
           );
 
       return {
-        data,
+        response: data,
         message:
           'The Contributor to Indicators list has been fetched successfully.',
         status: HttpStatus.OK,
@@ -101,14 +101,14 @@ export class ContributionToIndicatorsService {
 
       if (addSubmission.status !== HttpStatus.OK) {
         throw {
-          response: {},
+          response: addSubmission.message,
           message: `Error creating submission for Contribution to Indicator with tocId "${tocId}"`,
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
 
       return {
-        contribution,
+        response: contribution,
         message: `The Contributor to Indicator to tocId ${tocId} has been created.`,
         status: HttpStatus.CREATED,
       };
@@ -169,7 +169,7 @@ export class ContributionToIndicatorsService {
         removeInactives(contributingResults);
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         message: 'The Contributor to Indicator has been found.',
         status: HttpStatus.OK,
       };
@@ -225,7 +225,7 @@ export class ContributionToIndicatorsService {
       );
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         message: 'The Contributor to Indicator has been updated.',
         status: HttpStatus.OK,
       };
@@ -363,18 +363,20 @@ export class ContributionToIndicatorsService {
           status_id: newStatus.value,
         });
 
-      await this._contributionToIndicatorSubmissionRepository.update(
-        {
-          id: lastSubmission.id,
-        },
-        {
-          is_active: false,
-          last_updated_by: user.id,
-        },
-      );
+      if (!isNew) {
+        await this._contributionToIndicatorSubmissionRepository.update(
+          {
+            id: lastSubmission.id,
+          },
+          {
+            is_active: false,
+            last_updated_by: user.id,
+          },
+        );
+      }
 
       return {
-        contributionToIndicator,
+        response: contributionToIndicator,
         newSubmission,
         message: `The Contributor to Indicator with tocId ${tocId} has been ${
           newStatus === ResultStatusData.Editing ? 'unsubmitted' : 'submitted'
