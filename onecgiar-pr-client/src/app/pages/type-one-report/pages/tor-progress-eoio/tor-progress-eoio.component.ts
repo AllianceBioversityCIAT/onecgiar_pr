@@ -40,7 +40,7 @@ export class TorProgressEoioComponent implements OnInit, OnDestroy {
     ];
 
     this.exportTablesSE.exportOutcomesIndicatorsToExcel({
-      fileName: `${this.typeOneReportSE.initiativeSelected}_T1R_Progress_EOIs_`,
+      fileName: `${this.typeOneReportSE.initiativeSelected}_T1R_Progress_EOIO_`,
       EOIsConfig: {
         data: this.outcomeIService.eoisData,
         wscols: wscolsEOIs,

@@ -60,7 +60,7 @@ describe('TorProgressEoioComponent', () => {
       jest.runAllTimers();
 
       expect(exportSpy).toHaveBeenCalledWith({
-        fileName: `test_T1R_Progress_EOIs_`,
+        fileName: `test_T1R_Progress_EOIO_`,
         EOIsConfig: {
           data: outcomeIndicatorService.eoisData,
           wscols: wscolsEOIs,
