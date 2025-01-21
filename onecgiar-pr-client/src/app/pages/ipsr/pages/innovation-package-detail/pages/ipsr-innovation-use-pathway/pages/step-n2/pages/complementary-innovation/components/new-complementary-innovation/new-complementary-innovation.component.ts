@@ -33,16 +33,24 @@ export class NewComplementaryInnovationComponent implements OnInit {
   selectedValues: any[] = [];
   @Output() createInnovationEvent = new EventEmitter<any>();
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    public api: ApiService,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
 
   ngOnInit(): void {
     this.linksComplemntaryInnovation = [{ link: '' }, { link: '' }, { link: '' }];
   }
 
   disableSaveButton(): boolean {
-    const { short_title, title, projects_organizations_working_on_innovation } = this.bodyNewComplementaryInnovation;
+    const { short_title, title, projects_organizations_working_on_innovation, other_funcions } = this.bodyNewComplementaryInnovation;
 
-    return !short_title?.trim() || !title?.trim() || !this.selectedValues?.length || projects_organizations_working_on_innovation == null;
+    return (
+      !short_title?.trim() ||
+      !title?.trim() ||
+      (!this.selectedValues?.length && !other_funcions?.trim()) ||
+      projects_organizations_working_on_innovation == null
+    );
   }
 
   onSave(callback?) {
