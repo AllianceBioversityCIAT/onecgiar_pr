@@ -124,14 +124,14 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     return `json_object(
           "toc_result_id", ${outerRelationName}.id,
           "toc_result_uuid", ${outerRelationName}.toc_result_id,
-          "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[\s\n\r]+|[\s\n\r]+$', ''),
-          "toc_result_description", REGEXP_REPLACE(${outerRelationName}.result_description, '^[\s\n\r]+|[\s\n\r]+$', ''),
+          "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[[:space:]]+|[[:space:]]+$', ''),
+          "toc_result_description", REGEXP_REPLACE(${outerRelationName}.result_description, '^[[:space:]]+|[[:space:]]+$', ''),
           "indicators", (
             select json_arrayagg(json_object(
               "indicator_id", oi.id,
               "indicator_uuid", oi.toc_result_indicator_id,
-              "indicator_description", REGEXP_REPLACE(oi.indicator_description, '^[\s\n\r]+|[\s\n\r]+$', ''),
-              "indicator_name", REGEXP_REPLACE(oi.type_name, '^[\s\n\r]+|[\s\n\r]+$', ''),
+              "indicator_description", REGEXP_REPLACE(oi.indicator_description, '^[[:space:]]+|[[:space:]]+$', ''),
+              "indicator_name", REGEXP_REPLACE(oi.type_name, '^[[:space:]]+|[[:space:]]+$', ''),
               "is_indicator_custom", if(trim(oi.type_value) like 'custom', true, false),
               "indicator_baseline", oi.baseline_value,
               "unit_of_measurement", oi.unit_messurament,
