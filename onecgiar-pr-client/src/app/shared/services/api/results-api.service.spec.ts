@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
+import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 
 describe('ResultsApiService', () => {
   let service: ResultsApiService;
@@ -468,10 +469,13 @@ describe('ResultsApiService', () => {
 
   describe('PATCH_partnersSection', () => {
     it('should call PATCH_partnersSection, return expected data and should call isSavingPipe', done => {
-      const mockBody = {
+      const mockBody: PartnersBody = {
         no_applicable_partner: false,
         mqap_institutions: [],
-        institutions: []
+        institutions: [],
+        contributing_center: [],
+        contributing_np_projects: [],
+        is_lead_by_partner: false
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
 
@@ -1043,13 +1047,22 @@ describe('ResultsApiService', () => {
     it('should call GET_toc and map response correctly when initiative.short_name exists', done => {
       mockResponse = {
         response: {
-          contributing_initiatives: [
-            {
-              official_code: 'IC1',
-              short_name: 'Init1',
-              initiative_name: 'Initiative 1'
-            }
-          ]
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [
+              {
+                official_code: 'IC1',
+                short_name: 'Init1',
+                initiative_name: 'Initiative 1'
+              }
+            ],
+            pending_contributing_initiatives: [
+              {
+                official_code: 'IC1',
+                short_name: 'Init1',
+                initiative_name: 'Initiative 1'
+              }
+            ]
+          }
         }
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -1057,14 +1070,23 @@ describe('ResultsApiService', () => {
       service.GET_toc().subscribe(response => {
         expect(response).toEqual({
           response: {
-            contributing_initiatives: [
-              {
-                official_code: 'IC1',
-                short_name: 'Init1',
-                initiative_name: 'Initiative 1',
-                full_name: 'IC1 - <strong>Init1</strong> - Initiative 1'
-              }
-            ]
+            contributing_initiatives: {
+              accepted_contributing_initiatives: [
+                {
+                  official_code: 'IC1',
+                  short_name: 'Init1',
+                  initiative_name: 'Initiative 1',
+                  full_name: 'IC1 - <strong>Init1</strong> - Initiative 1'
+                }
+              ],
+              pending_contributing_initiatives: [
+                {
+                  official_code: 'IC1',
+                  short_name: 'Init1',
+                  initiative_name: 'Initiative 1'
+                }
+              ]
+            }
           }
         });
         done();
@@ -1080,12 +1102,20 @@ describe('ResultsApiService', () => {
     it('should call GET_toc and map response correctly when initiative.short_name does not exist', done => {
       mockResponse = {
         response: {
-          contributing_initiatives: [
-            {
-              official_code: 'IC1',
-              initiative_name: 'Initiative 1'
-            }
-          ]
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [
+              {
+                official_code: 'IC1',
+                initiative_name: 'Initiative 1'
+              }
+            ],
+            pending_contributing_initiatives: [
+              {
+                official_code: 'IC1',
+                initiative_name: 'Initiative 1'
+              }
+            ]
+          }
         }
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
@@ -1093,13 +1123,21 @@ describe('ResultsApiService', () => {
       service.GET_toc().subscribe(response => {
         expect(response).toEqual({
           response: {
-            contributing_initiatives: [
-              {
-                official_code: 'IC1',
-                initiative_name: 'Initiative 1',
-                full_name: 'IC1 - <strong></strong> - Initiative 1'
-              }
-            ]
+            contributing_initiatives: {
+              accepted_contributing_initiatives: [
+                {
+                  official_code: 'IC1',
+                  initiative_name: 'Initiative 1',
+                  full_name: 'IC1 - <strong></strong> - Initiative 1'
+                }
+              ],
+              pending_contributing_initiatives: [
+                {
+                  official_code: 'IC1',
+                  initiative_name: 'Initiative 1'
+                }
+              ]
+            }
           }
         });
         done();
@@ -1748,7 +1786,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/all`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -1799,20 +1837,6 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}request/update`);
       expect(req.request.method).toBe('PATCH');
-
-      req.flush(mockResponse);
-    });
-  });
-
-  describe('GET_requestStatus', () => {
-    it('should call GET_requestStatus and return expected data ', done => {
-      service.GET_requestStatus().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/status`);
-      expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
     });
@@ -2278,13 +2302,22 @@ describe('ResultsApiService', () => {
     it('should call GETContributorsByIpsrResultId and map response correctly when short_name exists', done => {
       mockResponse = {
         response: {
-          contributing_initiatives: [
-            {
-              official_code: '123',
-              short_name: 'SN',
-              initiative_name: 'Initiative Name'
-            }
-          ]
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [
+              {
+                official_code: '123',
+                short_name: 'SN',
+                initiative_name: 'Initiative Name'
+              }
+            ],
+            pending_contributing_initiatives: [
+              {
+                official_code: '123',
+                short_name: 'SN',
+                initiative_name: 'Initiative Name'
+              }
+            ]
+          }
         }
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
@@ -2292,14 +2325,23 @@ describe('ResultsApiService', () => {
       service.GETContributorsByIpsrResultId().subscribe(response => {
         expect(response).toEqual({
           response: {
-            contributing_initiatives: [
-              {
-                official_code: '123',
-                short_name: 'SN',
-                initiative_name: 'Initiative Name',
-                full_name: '123 - <strong>SN</strong> - Initiative Name'
-              }
-            ]
+            contributing_initiatives: {
+              accepted_contributing_initiatives: [
+                {
+                  official_code: '123',
+                  short_name: 'SN',
+                  initiative_name: 'Initiative Name',
+                  full_name: '123 - <strong>SN</strong> - Initiative Name'
+                }
+              ],
+              pending_contributing_initiatives: [
+                {
+                  official_code: '123',
+                  short_name: 'SN',
+                  initiative_name: 'Initiative Name'
+                }
+              ]
+            }
           }
         });
         done();
@@ -2315,12 +2357,20 @@ describe('ResultsApiService', () => {
     it('should call GETContributorsByIpsrResultId and map response correctly when short_name does not exist', done => {
       mockResponse = {
         response: {
-          contributing_initiatives: [
-            {
-              official_code: '123',
-              initiative_name: 'Initiative Name'
-            }
-          ]
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [
+              {
+                official_code: '123',
+                initiative_name: 'Initiative Name'
+              }
+            ],
+            pending_contributing_initiatives: [
+              {
+                official_code: '123',
+                initiative_name: 'Initiative Name'
+              }
+            ]
+          }
         }
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
@@ -2328,13 +2378,21 @@ describe('ResultsApiService', () => {
       service.GETContributorsByIpsrResultId().subscribe(response => {
         expect(response).toEqual({
           response: {
-            contributing_initiatives: [
-              {
-                official_code: '123',
-                initiative_name: 'Initiative Name',
-                full_name: '123 - <strong></strong> - Initiative Name'
-              }
-            ]
+            contributing_initiatives: {
+              accepted_contributing_initiatives: [
+                {
+                  official_code: '123',
+                  initiative_name: 'Initiative Name',
+                  full_name: '123 - <strong></strong> - Initiative Name'
+                }
+              ],
+              pending_contributing_initiatives: [
+                {
+                  official_code: '123',
+                  initiative_name: 'Initiative Name'
+                }
+              ]
+            }
           }
         });
         done();
@@ -3408,6 +3466,96 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/global-parameters/category/${mockCategoryId}`);
       expect(req.request.method).toBe('GET');
+    });
+  });
+
+  describe('GET_contributionsToIndicatorsEOIS', () => {
+    it('should call GET_contributionsToIndicatorsEOIS and return expected data', done => {
+      const initiativeCode = 'INIT_CODE';
+      service.GET_contributionsToIndicatorsEOIS(initiativeCode).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_contributionsToIndicatorsWPS', () => {
+    it('should call GET_contributionsToIndicatorsWPS and return expected data', done => {
+      const initiativeCode = 'INIT_CODE';
+      service.GET_contributionsToIndicatorsWPS(initiativeCode).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/outcomes/${initiativeCode}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_contributionsToIndicators_indicator', () => {
+    it('should call GET_contributionsToIndicators_indicator and return expected data', done => {
+      const tocId = '123';
+      service.GET_contributionsToIndicators_indicator(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/get/indicator/${tocId}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_contributionsToIndicators', () => {
+    it('should call POST_contributionsToIndicators and return expected data', done => {
+      const tocId = '123';
+      service.POST_contributionsToIndicators(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`);
+      expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_contributionsToIndicators', () => {
+    it('should call PATCH_contributionsToIndicators and return expected data', done => {
+      const tocId = '123';
+      service.PATCH_contributionsToIndicators({}, tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators?tocId=${tocId}`);
+      expect(req.request.method).toBe('PATCH');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_contributionsToIndicatorsSubmit', () => {
+    it('should call POST_contributionsToIndicatorsSubmit and return expected data', done => {
+      const tocId = '123';
+      service.POST_contributionsToIndicatorsSubmit(tocId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`);
+      expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
     });
   });
 });

@@ -58,6 +58,10 @@ a {
   margin-top: 0px !important;
 }
 
+.m-0 {
+  margin: 0;
+}
+
 .search_input {
   display: flex;
   align-items: center;
@@ -207,7 +211,6 @@ a {
   cursor: pointer;
   text-decoration: none;
 
-  // width: 200px;
   span {
     white-space: nowrap;
   }
@@ -260,7 +263,6 @@ a {
   width: 100%;
   background-color: #2a2e4556;
   display: flex;
-  // align-items: center;
   justify-content: center;
   z-index: 10000;
 
@@ -317,6 +319,14 @@ a {
   }
 }
 
-.custom-tooltip {
+.tooltip-w-500 {
   min-width: 500px !important;
+}
+
+.tooltip-w-300 {
+  min-width: 300px !important;
+}
+
+.text-underline {
+  text-decoration: underline;
 }

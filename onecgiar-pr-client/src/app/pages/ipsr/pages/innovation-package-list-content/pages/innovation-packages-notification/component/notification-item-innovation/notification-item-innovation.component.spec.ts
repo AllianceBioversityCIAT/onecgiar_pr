@@ -23,6 +23,9 @@ describe('NotificationItemInnovationComponent', () => {
   });
 
   it('should map and accept notification', () => {
+    component.requesting = false;
+    component.api.rolesSE.platformIsClosed = false;
+
     const notification = {
       title: 'Test Title',
       approving_inititiative_id: 1,
@@ -33,17 +36,21 @@ describe('NotificationItemInnovationComponent', () => {
       requester_short_name: 'Test Name',
       result_type_name: 'Test Result Type',
       result_level_id: 1,
-      result_id: 1,
-      requester_initiative_id: 1
+      requester_initiative_id: 1,
+      status_id: 1,
+      request_status_id: 2,
+      version_status: true
     };
+    component.notification = notification;
+
     component.mapAndAccept(notification);
+
     expect(component.api.dataControlSE.currentResult.title).toEqual('Test Title');
-    // Add more assertions for other properties as needed
   });
 
-  it('should check if notification is submitted', () => {
-    component.notification = { status: 1, request_status_id: 1 };
-    expect(component.isSubmitted).toBeTruthy();
+  it('should check if notification is QAed', () => {
+    component.notification = { status_id: 2, request_status_id: 1 };
+    expect(component.isQAed).toBeTruthy();
   });
 
   it('should generate result URL', () => {
@@ -58,6 +65,5 @@ describe('NotificationItemInnovationComponent', () => {
     component.api.resultsSE.PATCH_updateRequest = jest.fn().mockReturnValue(of({}));
     component.acceptOrReject(response);
     expect(component.requesting).toBe(false);
-    // Add more assertions to check if the correct alert was shown and the requestEvent was emitted
   });
 });

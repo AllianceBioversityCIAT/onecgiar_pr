@@ -1,0 +1,108 @@
+<header class="eoio_header">
+  <i
+    class="material-icons-round eoio_header_arrow"
+    routerLink="/outcome-indicator-module/home"
+    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
+    arrow_back
+  </i>
+  <h1 class="eoio_header_title">End of Initiative Outcome Indicators List</h1>
+</header>
+
+<div class="search_input" style="width: 100%; margin-bottom: 2rem">
+  <i class="material-icons-round">search</i>
+  <input type="text" placeholder="Find indicator..." [(ngModel)]="this.outcomeIService.searchText" />
+</div>
+
+<p-table
+  id="resultListTable"
+  #table
+  [value]="this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText()"
+  sortField="toc_result_title"
+  [sortOrder]="1"
+  styleClass="p-datatable-gridlines p-datatable-sm"
+  [rows]="8"
+  responsiveLayout="scroll"
+  [rowsPerPageOptions]="[8, 12, 20]"
+  [loading]="this.outcomeIService.loading()"
+  [showLoader]="false"
+  [first]="this.outcomeIService.searchText() && 0"
+  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 8"
+  [tableStyle]="{ 'min-width': '80rem' }">
+  <ng-template pTemplate="header">
+    <tr>
+      <th pSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">EOI Outcome <p-sortIcon field="toc_result_title" /></th>
+      <th style="width: 25%" id="indicator-header">Indicator</th>
+      <th style="width: 20%" id="indicator-type-header">Indicator Type</th>
+      <th style="width: 8%" id="expected-target-header">Expected Target</th>
+      <th style="width: 8%" id="actual-target-achieved-header">Actual target achieved</th>
+      <th style="width: 8%" id="achieved-status-header">Achieved status</th>
+      <th style="width: 5%" id="reporting-status-header">Reporting status</th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-item>
+    @for (indicator of item.indicators; track $index) {
+      <tr>
+        @if ($index === 0) {
+          <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
+        }
+        @if (!indicator) {
+          <td colspan="6" style="text-align: center">No indicator data found.</td>
+        } @else {
+          <td
+            routerLink="/outcome-indicator-module/indicator-details"
+            [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
+            class="indicator_link">
+            {{ indicator?.indicator_description ?? 'No data found.' }}
+          </td>
+          <td>
+            <span style="font-weight: bold">
+              {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
+            </span>
+            {{ indicator?.indicator_name ?? 'No data found.' }}
+          </td>
+          <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
+          <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
+          <td style="text-align: center">
+            {{
+              this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+                ? 'Achieved'
+                : 'Not achieved'
+            }}
+          </td>
+          <td>
+            <div
+              style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
+              [pTooltip]="indicator?.indicator_submission_status ? 'Submitted' : 'Editing'"
+              tooltipPosition="top"
+              positionTop="-5">
+              <div
+                class="circle"
+                [ngClass]="{
+                  'circle-success': indicator?.indicator_submission_status
+                }"></div>
+            </div>
+          </td>
+        }
+      </tr>
+    }
+  </ng-template>
+
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 200px">
+      <td colspan="7" class="noDataText">There are no results for the selected filters.</td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="loadingbody">
+    <tr
+      [style]="{
+        height: (this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length ? '100%' : '400px'
+      }">
+      <td colspan="7">
+        <app-custom-spinner text="Loading results" [showSpinner]="this.outcomeIService.loading()"></app-custom-spinner>
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

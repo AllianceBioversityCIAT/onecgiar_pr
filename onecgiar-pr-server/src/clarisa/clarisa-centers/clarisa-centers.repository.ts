@@ -1,6 +1,7 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ClarisaCenter } from './entities/clarisa-center.entity';
+import { ClarisaCenterDto } from './dto/clarisa-center.dto';
 
 @Injectable()
 export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
@@ -26,18 +27,18 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
 
   async getAllCenters() {
     const queryData = `
-    select 
-    cc.code ,
-    cc.financial_code ,
-    cc.institutionId,
-    ci.name,
-    ci.acronym 
-    from clarisa_center cc
-   	inner join clarisa_institutions ci on ci.id  = cc.institutionId
-     and ci.is_active > 0;
-`;
+      select 
+      cc.code,
+      cc.financial_code,
+      cc.institutionId,
+      ci.name,
+      ci.acronym 
+      from clarisa_center cc
+      inner join clarisa_institutions ci on ci.id  = cc.institutionId
+        and ci.is_active > 0;
+    `;
     try {
-      const centers: ClarisaCenter[] = await this.query(queryData);
+      const centers: ClarisaCenterDto[] = await this.query(queryData);
       return centers;
     } catch (error) {
       throw {

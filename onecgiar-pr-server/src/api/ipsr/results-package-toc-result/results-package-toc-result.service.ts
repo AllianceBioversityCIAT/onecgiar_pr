@@ -12,7 +12,7 @@ import { IpsrRepository } from '../repository/ipsr.repository';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsTocResultRepository } from '../../results/results-toc-results/results-toc-results.repository';
+import { ResultsTocResultRepository } from '../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
@@ -24,6 +24,8 @@ import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/r
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -44,10 +46,11 @@ export class ResultsPackageTocResultService {
     private readonly _returnResponse: ReturnResponse,
     private readonly _versioningService: VersioningService,
     private readonly _resultTocResultService: ResultsTocResultsService,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
   ) {}
 
   async create(crtr: CreateResultsPackageTocResultDto, user: TokenDto) {
-    //create Contributing initiative
     try {
       const rip = await this._resultRepository.getResultById(crtr.result_id);
       if (!rip) {
@@ -74,7 +77,7 @@ export class ResultsPackageTocResultService {
           response: {
             result_id: rip.id,
           },
-          message: `result_id: ${rip.id} - does not exist`,
+          message: `IPSR: The result id ${rip.id} does not exist`,
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -89,9 +92,11 @@ export class ResultsPackageTocResultService {
         });
       }
 
-      if (crtr?.contributing_initiatives.length) {
-        const { contributing_initiatives: cinit } = crtr;
-        for (const init of cinit) {
+      if (
+        crtr?.contributing_initiatives?.accepted_contributing_initiatives.length
+      ) {
+        const { contributing_initiatives: ci } = crtr;
+        for (const init of ci?.accepted_contributing_initiatives ?? []) {
           if (init?.is_active == false) {
             await this._resultByInitiativesRepository.update(
               { result_id: rip.id, initiative_id: init.id },
@@ -99,24 +104,26 @@ export class ResultsPackageTocResultService {
             );
           }
         }
+      }
 
-        const dataRequst: CreateTocShareResult = {
-          isToc: true,
-          initiativeShareId: cinit.map((el) => el.id),
-          action_area_outcome_id: null,
-          planned_result: null,
-          toc_result_id: null,
+      if (
+        crtr?.contributing_initiatives?.pending_contributing_initiatives.length
+      ) {
+        const { contributing_initiatives: ci } = crtr;
+        const dataRequest: CreateTocShareResult = {
+          isToc: false,
+          initiativeShareId: ci?.pending_contributing_initiatives.map(
+            (el) => el.id,
+          ),
         };
         await this._shareResultRequestService.resultRequest(
-          dataRequst,
+          dataRequest,
           rip.id,
           user,
         );
-      }
-
-      if (crtr?.pending_contributing_initiatives.length) {
-        const { pending_contributing_initiatives: pint } = crtr;
-        const cancelRequest = pint?.filter((e) => e.is_active == false);
+        const cancelRequest = ci?.pending_contributing_initiatives?.filter(
+          (e) => !e.is_active,
+        );
         if (cancelRequest?.length) {
           await this._shareResultRequestRepository.cancelRequest(
             cancelRequest.map((e) => e.share_result_request_id),
@@ -163,7 +170,7 @@ export class ResultsPackageTocResultService {
                 grant_title: cpnp.grant_title,
               });
             } else {
-              this._nonPooledProjectRepository.save({
+              const newNpp = await this._nonPooledProjectRepository.save({
                 results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
                 grant_title: cpnp.grant_title,
@@ -172,6 +179,12 @@ export class ResultsPackageTocResultService {
                 created_by: user.id,
                 last_updated_by: user.id,
                 non_pooled_project_type_id: 1,
+              });
+
+              await this._resultBilateralBudgetRepository.save({
+                non_pooled_projetct_id: newNpp.id,
+                created_by: user.id,
+                last_updated_by: user.id,
               });
             }
           }
@@ -205,7 +218,7 @@ export class ResultsPackageTocResultService {
               last_updated_by: user.id,
             });
           } else {
-            this._resultsCenterRepository.save({
+            await this._resultsCenterRepository.save({
               center_id: cenCC.code,
               result_id: rip.id,
               created_by: user.id,
@@ -228,7 +241,7 @@ export class ResultsPackageTocResultService {
 
       // * Save Contributors ResultTocResult
       await this._resultTocResultService.saveResultTocResultContributor(
-        crtr,
+        crtr.contributors_result_toc_result,
         user,
         rip,
         crtr.result_id,
@@ -270,6 +283,12 @@ export class ResultsPackageTocResultService {
               created_by: user.id,
               last_updated_by: user.id,
             });
+
+            await this._resultInstitutionsBudgetRepository.save({
+              result_institution_id: rbi.id,
+              last_updated_by: user?.id,
+              created_by: user.id,
+            });
           }
 
           if (ins?.deliveries?.length) {
@@ -302,8 +321,6 @@ export class ResultsPackageTocResultService {
         status: HttpStatus.CREATED,
       };
     } catch (error) {
-      console.error(error);
-
       return this._handlersError.returnErrorRes({ error });
     }
   }
@@ -414,12 +431,18 @@ export class ResultsPackageTocResultService {
         await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
           resultId,
         );
-      const conInit =
+      const [conInit, conPending] = await Promise.all([
         await this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
-        );
-      const conPending =
-        await this._resultByInitiativesRepository.getPendingInit(resultId);
+        ),
+        await this._resultByInitiativesRepository.getPendingInit(resultId),
+      ]);
+
+      const contributingInititiatives = {
+        accepted_contributing_initiatives: conInit,
+        pending_contributing_initiatives: conPending,
+      };
+
       const npProject =
         await this._nonPooledProjectRepository.getAllNPProjectByResultId(
           resultId,
@@ -500,19 +523,27 @@ export class ResultsPackageTocResultService {
 
         resTocResConResponse.forEach((response) => {
           individualResponses.push({
-            planned_result: response.planned_result,
-            initiative_id: response.initiative_id,
-            official_code: response.official_code,
-            short_name: response.short_name,
-            result_toc_results: response.result_toc_results,
+            planned_result: response?.planned_result,
+            initiative_id: response?.initiative_id,
+            official_code: response?.official_code,
+            short_name: response?.short_name,
+            result_toc_results: response?.result_toc_results,
           });
         });
       }
+      conPending.forEach((pending) => {
+        individualResponses.push({
+          planned_result: null,
+          initiative_id: pending?.id,
+          official_code: pending?.official_code,
+          short_name: pending?.short_name,
+          result_toc_results: [],
+        });
+      });
 
       return {
         response: {
-          contributing_initiatives: conInit,
-          pending_contributing_initiatives: conPending,
+          contributing_initiatives: contributingInititiatives,
           contributing_np_projects: npProject,
           contributing_center: resCenters,
           result_toc_result: {

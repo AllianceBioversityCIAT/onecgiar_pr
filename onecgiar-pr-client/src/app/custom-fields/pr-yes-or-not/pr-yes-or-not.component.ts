@@ -1,7 +1,6 @@
 import { Component, forwardRef, Input, EventEmitter, Output } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
-import { GreenChecksService } from '../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
@@ -26,9 +25,10 @@ export class PrYesOrNotComponent {
   @Input() editable: boolean = false;
   @Input() hideDescription: boolean = false;
   @Input() showDescriptionLabel: boolean = true;
-  @Input() descInlineStyles: string = 'true';
+  @Input() descInlineStyles: string = '';
+  @Input() labelDescInlineStyles?: string = '';
 
-  @Output() selectOptionEvent = new EventEmitter();
+  @Output() selectOptionEvent = new EventEmitter<boolean>();
   private _value: boolean;
 
   constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
@@ -60,11 +60,11 @@ export class PrYesOrNotComponent {
 
   onclickYes() {
     this.value = true;
-    this.selectOptionEvent.emit();
+    this.selectOptionEvent.emit(true);
   }
 
   onClickNo() {
     this.value = false;
-    this.selectOptionEvent.emit();
+    this.selectOptionEvent.emit(false);
   }
 }

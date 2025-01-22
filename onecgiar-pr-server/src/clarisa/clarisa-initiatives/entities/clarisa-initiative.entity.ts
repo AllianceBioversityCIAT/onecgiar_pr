@@ -1,6 +1,9 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ClarisaActionArea } from '../../clarisa-action-areas/entities/clarisa-action-area.entity';
 import { ClarisaCgiarEntityType } from '../../clarisa-cgiar-entity-types/entities/clarisa-cgiar-entity-type.entity';
+import { UserNotificationSetting } from '../../../api/user-notification-settings/entities/user-notification-settings.entity';
+import { ResultsByInititiative } from '../../../api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
+import { ClarisaInitiativeStage } from '../../clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -64,4 +67,16 @@ export class ClarisaInitiative {
     name: 'cgiar_entity_type_id',
   })
   obj_cgiar_entity_type?: ClarisaCgiarEntityType;
+
+  @OneToMany(
+    () => UserNotificationSetting,
+    (notificationSetting) => notificationSetting.obj_clarisa_initiatives,
+  )
+  obj_user_notification_setting?: UserNotificationSetting[];
+
+  @OneToMany(() => ResultsByInititiative, (rbi) => rbi.obj_initiative)
+  obj_result_by_initiative?: ResultsByInititiative[];
+
+  @OneToMany(() => ClarisaInitiativeStage, (cis) => cis.initiative_object)
+  initiative_stage_array: ClarisaInitiativeStage[];
 }

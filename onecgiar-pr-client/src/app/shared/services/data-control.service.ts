@@ -38,7 +38,10 @@ export class DataControlService {
   IPSRCurrentPhase = { phaseName: null, phaseYear: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
 
-  constructor(private titleService: Title, public resultsSE: ResultsApiService) {}
+  constructor(
+    private titleService: Title,
+    public resultsSE: ResultsApiService
+  ) {}
 
   getCurrentPhases() {
     this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
@@ -101,7 +104,7 @@ export class DataControlService {
     });
   }
 
-  async findClassTenSeconds(className) {
+  findClassTenSeconds(className) {
     let seconds = 0;
     return new Promise((resolve, reject) => {
       const timer = setInterval(() => {
@@ -126,6 +129,14 @@ export class DataControlService {
 
   get isKnowledgeProduct() {
     return this.currentResult?.result_type_id == 6;
+  }
+
+  get isInnoDev() {
+    return this.currentResult?.result_type_id == 7;
+  }
+
+  get isInnoUse() {
+    return this.currentResult?.result_type_id == 2;
   }
 
   someMandatoryFieldIncomplete(container) {

@@ -1,0 +1,38 @@
+.noDataText {
+  text-align: center;
+  padding: 20px 0px;
+  font-size: 1.3em;
+  font-weight: 500;
+  color: var(--pr-color-primary);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.title-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.not-saved {
+  font-weight: 500;
+  color: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  background-color: var(--pr-color-primary);
+  white-space: nowrap;
+}
+
+.total {
+  font-weight: 500;
+  color: #808080;
+  font-size: 12px;
+  margin-top: 1rem;
+}
+
+.removed {
+  text-decoration: line-through;
+}

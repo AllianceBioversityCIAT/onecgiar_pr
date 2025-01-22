@@ -1,41 +1,141 @@
-<app-detail-section-title sectionName="Partners"></app-detail-section-title>
+<app-detail-section-title sectionName="Partners & Contributors"></app-detail-section-title>
 
 <div class="detail_container">
+  <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
+  <!-- Contributing Centers start -->
+  <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
-    <div style="position: relative; z-index: 5;">
-        <app-knowledge-product-selector
-            *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
-        <app-normal-selector></app-normal-selector>
+  <app-pr-multi-select
+    [options]="this.centersSE.centersList"
+    label="Contributing CG Centers"
+    selectedLabel="Center(s) selected"
+    optionLabel="full_name"
+    optionValue="code"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+    placeholder="Select center(s)"
+    [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+    labelDescInlineStyles="font-size: 1.3rem"
+    (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
+  </app-pr-multi-select>
+
+  <div class="medal_selector selected_container">
+    <div class="centers chips_container">
+      <div
+        class="center pr_chip_selected"
+        [pTooltip]="this.disabledText"
+        [tooltipDisabled]="!center.from_cgspace"
+        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+        <div class="name" [innerHtml]="center?.name"></div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+          class="material-icons-round"
+          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+          >cancel</i
+        >
+      </div>
     </div>
+  </div>
+  <!-- Contributing Centers end -->
 
-    <div style="position: relative; z-index: 1;">
-        <div *ngIf="this.api.dataControlSE.isKnowledgeProduct">
-            <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage">
-            </app-alert-status>
-            <div class="column_title">
-                Contributing Center(s)
-            </div>
-            <ng-container [ngSwitch]="(this.rdPartnersSE.centers ?? []).length > 0">
-                <div *ngSwitchCase="true" class="medal_info">
-                    The primary center is marked with a medal icon <i class="material-icons-round">workspace_premium</i>
-                </div>
-                <div *ngSwitchCase="true" class="medal_selector selected_container">
-                    <div class="centers chips_container">
-                        <div class="center pr_chip_selected" [ngClass]="{'medal-gap': center.primary}"
-                            *ngFor="let center of this.rdPartnersSE.centers">
-                            <i class="material-icons-round medal primary" *ngIf="center.primary">workspace_premium</i>
-                            <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
-                        </div>
-                    </div>
-                </div>
-                <div *ngSwitchDefault>
-                    <div>No centers are linked to this result</div>
-                </div>
-            </ng-container>
-        </div>
+  <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
+  <app-normal-selector></app-normal-selector>
+
+  <!-- Lead partner/center start -->
+  <app-pr-yes-or-not
+    label="Is this result being led by an external partner?"
+    [required]="true"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+    labelDescInlineStyles="font-size: 1.3rem"
+    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+    [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
+  </app-pr-yes-or-not>
+  <app-alert-status [description]="getMessageLead()"></app-alert-status>
+  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
+    <app-pr-select
+      label="Lead partner"
+      [options]="this.rdPartnersSE.possibleLeadPartners"
+      optionLabel="full_name"
+      optionValue="institutions_id"
+      placeholder="Select a lead partner..."
+      [required]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      [(ngModel)]="this.rdPartnersSE.leadPartnerId"
+      *ngIf="!this.rdPartnersSE.updatingLeadData">
+    </app-pr-select>
+  </div>
+  <ng-template #selectLeadCenter>
+    <app-pr-select
+      label="Lead center"
+      [options]="this.rdPartnersSE.possibleLeadCenters"
+      optionLabel="full_name"
+      optionValue="code"
+      placeholder="Select a lead center..."
+      [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+      *ngIf="!this.rdPartnersSE.updatingLeadData">
+    </app-pr-select>
+  </ng-template>
+
+  <br />
+  <!-- Lead partner/center end -->
+
+  <!-- Contributing non-pooled start -->
+  <div class="column_title">Contributing non-pooled projects</div>
+  <app-alert-status
+    *ngIf="!this.api.rolesSE.readOnly"
+    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+  </app-alert-status>
+  <div class="donors">
+    <div class="donor" *ngFor="let donor of this.rdPartnersSE.partnersBody.contributing_np_projects; let i = index">
+      <app-pr-field-header [label]="'Non-pooled project No. ' + (i + 1)" [required]="false"></app-pr-field-header>
+      <app-pr-select
+        class="segment_title_margin"
+        [options]="this.institutionsSE?.institutionsList"
+        label="Funder name"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        placeholder="Select funder"
+        [(ngModel)]="donor.funder">
+      </app-pr-select>
+      <div class="auto_fit_container">
+        <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title" placeholder="Grant title goes here..."> </app-pr-input>
+        <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
+        <app-pr-select
+          [options]="this.rdPartnersSE.nppCenters"
+          label="Lead/Contract Center"
+          optionLabel="name"
+          optionValue="lead_center"
+          placeholder="Select donor"
+          [(ngModel)]="donor.lead_center"
+          placeholder="Lead/Contract Center goes here...">
+        </app-pr-select>
+      </div>
+      <app-edit-or-delete-item-button
+        (click)="deleteEvidence(i)"
+        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+      </app-edit-or-delete-item-button>
     </div>
+  </div>
 
+  <app-no-data-text
+    *ngIf="
+      !this.rdPartnersSE.partnersBody?.contributing_np_projects?.length &&
+      !this.api.rolesSE.readOnly &&
+      !this.api.dataControlSE?.currentResult?.status
+    "
+    title="No Non-pooled added">
+  </app-no-data-text>
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
-    <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+  <app-add-button
+    name="Add non-pooled project"
+    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    (clickEvent)="addBilateralContribution()"></app-add-button>
+  <!-- Contributing non-pooled end -->
+
+  <app-alert-status
+    *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+    description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
+  </app-alert-status>
+
+  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+  <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

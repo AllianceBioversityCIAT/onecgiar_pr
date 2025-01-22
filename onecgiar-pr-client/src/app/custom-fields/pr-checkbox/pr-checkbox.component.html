@@ -1,5 +1,10 @@
 <div class="checkbox_container">
-    <p-checkbox name="groupname" [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)" [binary]="true"
-        [value]="true" [(ngModel)]="value" (ngModelChange)="selectOptionEvent.emit()"></p-checkbox>
-    <div class="label" [innerText]="label"></div>
+  <p-checkbox
+    name="groupname"
+    [disabled]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+    [binary]="true"
+    [value]="true"
+    [(ngModel)]="value"
+    (ngModelChange)="selectOptionEvent.emit()"></p-checkbox>
+  <div class="label" [innerHTML]="label"></div>
 </div>

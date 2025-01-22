@@ -1,0 +1,64 @@
+@let notificationsPending =
+  this.resultsNotificationsSE?.updatesData.notificationsPending
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
+
+@let notificationsViewed =
+  this.resultsNotificationsSE?.updatesData?.notificationsViewed
+    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
+    | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
+    | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
+
+<div class="updates_header">
+  <app-pr-button
+    [text]="'Mark all as read'"
+    [verticalMargin]="0.5"
+    icon="drafts"
+    iconsStylesClass="material-icons-outlined"
+    [colorType]="'primary'"
+    [reverse]="true"
+    (click)="this.resultsNotificationsSE.markAllUpdatesNotificationsAsRead()"></app-pr-button>
+</div>
+
+<div class="updates_container">
+  @if (this.resultsNotificationsSE?.updatesData.notificationAnnouncements.length > 0) {
+    <div class="updates_container_content">
+      <h1 class="updates_container_header_title">Announcements</h1>
+
+      <div class="updates_container_content_item">
+        @for (item of this.resultsNotificationsSE?.updatesData.notificationAnnouncements; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
+    </div>
+  }
+
+  <div class="updates_container_content">
+    <h1 class="updates_container_header_title">Unread</h1>
+
+    @if (notificationsPending.length > 0) {
+      <div class="updates_container_content_item">
+        @for (item of notificationsPending; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
+    } @else {
+      <div class="updates_container_content_empty">You have no unread notifications related with the search.</div>
+    }
+  </div>
+
+  <div class="updates_container_content">
+    <h1 class="updates_container_header_title">Latest</h1>
+
+    @if (notificationsViewed.length > 0) {
+      <div class="updates_container_content_item">
+        @for (item of notificationsViewed; track $index) {
+          <app-update-notification [notification]="item" />
+        }
+      </div>
+    } @else {
+      <div class="updates_container_content_empty">You have no read notifications related with the search.</div>
+    }
+  </div>
+</div>

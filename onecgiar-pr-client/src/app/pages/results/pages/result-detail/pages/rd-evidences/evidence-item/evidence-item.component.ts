@@ -38,7 +38,10 @@ export class EvidenceItemComponent {
     { id: 1, name: 'Yes' }
   ];
 
-  constructor(public dataControlSE: DataControlService, public api: ApiService) {}
+  constructor(
+    public dataControlSE: DataControlService,
+    public api: ApiService
+  ) {}
 
   dynamicAlertStatusBasedOnVisibility() {
     if (this.evidence.is_public_file) {
@@ -58,7 +61,19 @@ export class EvidenceItemComponent {
     `;
   }
 
+  getEvidenceRelatedTitle() {
+    if (!this.dataControlSE.isInnoDev && !this.dataControlSE.isInnoUse) {
+      return `Please indicate for which Impact Area tags this evidence is related to`;
+    }
+
+    return `Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation ${this.dataControlSE.isInnoDev ? 'Readiness level' : 'Use'}`;
+  }
+
   validateCloudLink() {
+    if (this.evidence.is_sharepoint) {
+      return false;
+    }
+
     const cloudRegex =
       /^(https?:\/\/)?(www\.)?(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|([\w-]+\.)?sharepoint\.com)(\/.*)?$/i;
     return this.evidence.link && cloudRegex.test(this.evidence.link?.trim());
@@ -78,7 +93,7 @@ export class EvidenceItemComponent {
 
   isInvalidLink(value: string) {
     const regex = new RegExp(
-      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/\S*)?$/i
     );
 
     return regex.test(value.trim());

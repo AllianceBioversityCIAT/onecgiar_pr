@@ -11,12 +11,13 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
-  radioOptions = [
-    { id: true, name: 'Yes' },
-    { id: false, name: 'No, not necessary at this stage' }
-  ];
+  disabledOptionsPartners = [];
 
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
+  constructor(
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
@@ -35,8 +36,13 @@ export class StepN4Component implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
       this.ipsrStep4Body = response;
+
+      this.disabledOptionsPartners = this.ipsrStep4Body.institutions_expected_investment.map(item => ({
+        institutions_id: item?.obj_result_institution?.institutions_id
+      }));
     });
   }
+
   onSaveSection() {
     this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
       this.getSectionInformation();
@@ -57,19 +63,5 @@ export class StepN4Component implements OnInit {
       }, 1000);
     });
     return null;
-  }
-
-  workshopDescription() {
-    return `A template participant list can be downloaded <a href=""  class="open_route" target="_blank">here</a>`;
-  }
-
-  descriptionInnovation() {
-    return `
-    Are there any specific funders – other than the <a href="https://www.cgiar.org/funders/"  class="open_route" target="_blank">CGIAR Fund Donors</a> – who provide core/pooled funding – that you wish to acknowledge for their critical contribution to the continued development, testing, and scaling of this innovation?
-    <ul>
-    <li>Please separate funder names by a semicolon.</li>
-    <li>Acknowledged funders will be included in the acknowledgment section of the Innovation Packages and Scaling Readiness report.</li>
-    </ul>
-    `;
   }
 }

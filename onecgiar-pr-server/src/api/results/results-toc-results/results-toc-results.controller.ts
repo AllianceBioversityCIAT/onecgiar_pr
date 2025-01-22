@@ -11,7 +11,14 @@ import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Results Toc Results')
+@ApiHeader({
+  name: 'auth',
+  description: 'Basic token to access the API, you can get it by logging in',
+  required: true,
+})
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class ResultsTocResultsController {
@@ -19,6 +26,7 @@ export class ResultsTocResultsController {
     private readonly resultsTocResultsService: ResultsTocResultsService,
   ) {}
 
+  @ApiOperation({ summary: 'Create a new result toc' })
   @Post('create/toc/result/:resultId')
   create(
     @Body() createResultsTocResultDto: CreateResultsTocResultDto,
@@ -32,11 +40,15 @@ export class ResultsTocResultsController {
     );
   }
 
+  @ApiOperation({ summary: 'Get all result toc' })
   @Get('get/result/:resultId')
   finTocByResult(@Param('resultId') resultId: number) {
     return this.resultsTocResultsService.getTocByResult(resultId);
   }
 
+  @ApiOperation({
+    summary: 'Get result ToC Indicators and Targets by Result and Initiative',
+  })
   @Get('get/indicator/:id/result/:resultId/initiative/:initiativeId')
   findIndicatorByToc(
     @Param('id') id: number,
@@ -50,6 +62,9 @@ export class ResultsTocResultsController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Get Action Area Outcome By Result and Initiatives',
+  })
   @Get('get/result/:resultId/initiative/:initiativeId')
   findActionResutl(
     @Param('resultId') resultId: number,

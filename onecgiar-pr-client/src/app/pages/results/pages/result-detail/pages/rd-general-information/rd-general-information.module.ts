@@ -12,6 +12,7 @@ import { TableModule } from 'primeng/table';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { MessageModule } from 'primeng/message';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent],
@@ -23,7 +24,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
     FeedbackValidationDirectiveModule,
     DialogModule,
     TableModule,
-    PdfIconModule
+    PdfIconModule,
+    MessageModule
   ]
 })
 export class RdGeneralInformationModule {}

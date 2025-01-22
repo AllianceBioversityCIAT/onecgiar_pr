@@ -16,9 +16,17 @@ export class NotificationItemInnovationComponent {
   requesting = false;
   submitter = true;
 
-  constructor(public api: ApiService, private shareRequestModalSE: ShareRequestModalService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(
+    public api: ApiService,
+    private shareRequestModalSE: ShareRequestModalService,
+    private retrieveModalSE: RetrieveModalService
+  ) {}
 
   mapAndAccept(notification) {
+    if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {
+      return null;
+    }
+
     const {
       title,
       approving_inititiative_id,
@@ -55,9 +63,12 @@ export class NotificationItemInnovationComponent {
 
     this.api.dataControlSE.currentResult.result_type = result_type_name;
     this.api.dataControlSE.currentNotification = notification;
-    this.shareRequestModalSE.shareRequestBody.initiative_id = approving_inititiative_id;
-    this.shareRequestModalSE.shareRequestBody.official_code = approving_official_code;
-    this.shareRequestModalSE.shareRequestBody.short_name = approving_short_name;
+    this.shareRequestModalSE.shareRequestBody.initiative_id =
+      approving_inititiative_id !== owner_initiative_id ? approving_inititiative_id : requester_initiative_id;
+    this.shareRequestModalSE.shareRequestBody.official_code =
+      approving_inititiative_id !== owner_initiative_id ? approving_official_code : requester_official_code;
+    this.shareRequestModalSE.shareRequestBody.short_name =
+      approving_inititiative_id !== owner_initiative_id ? approving_short_name : requester_short_name;
 
     this.shareRequestModalSE.shareRequestBody.result_toc_results.push({
       action_area_outcome_id: null,
@@ -73,8 +84,8 @@ export class NotificationItemInnovationComponent {
     this.api.dataControlSE.showShareRequest = true;
   }
 
-  get isSubmitted() {
-    return this.notification?.status == 1 && this.notification?.request_status_id == 1;
+  get isQAed() {
+    return this.notification?.status_id == 2 && this.notification?.request_status_id == 1;
   }
 
   resultUrl(notification) {
@@ -82,27 +93,21 @@ export class NotificationItemInnovationComponent {
   }
 
   acceptOrReject(response) {
-    if (this.api.rolesSE.platformIsClosed) return;
+    if (this.requesting || this.api.rolesSE.platformIsClosed || this.isQAed || !this.notification?.version_status) {
+      return;
+    }
+
     const body = { result_request: this.notification, request_status_id: response ? 2 : 3 };
     this.requesting = true;
     this.api.resultsSE.PATCH_updateRequest(body).subscribe({
       next: resp => {
         this.requesting = false;
-        this.api.alertsFe.show({
-          id: 'noti',
-          title: response ? 'Request accepted' : 'Request rejected',
-          status: 'success'
-        });
+        this.api.alertsFe.show({ id: 'noti', title: response ? 'Request accepted' : 'Request rejected', status: 'success' });
         this.requestEvent.emit();
       },
       error: err => {
         this.requesting = false;
-        this.api.alertsFe.show({
-          id: 'noti-error',
-          title: 'Error when requesting ',
-          description: '',
-          status: 'error'
-        });
+        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requestEvent.emit();
       }
     });

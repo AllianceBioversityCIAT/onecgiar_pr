@@ -1,0 +1,142 @@
+<header class="wp_header">
+  <i
+    class="material-icons-round wp_header_arrow"
+    routerLink="/outcome-indicator-module/home"
+    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
+    arrow_back
+  </i>
+  <h1 class="wp_header_title">Work Package Outcome Indicators List</h1>
+</header>
+
+<div class="search_input" style="width: 100%; margin-bottom: 2rem">
+  <i class="material-icons-round">search</i>
+  <input
+    type="text"
+    placeholder="Find indicator..."
+    [(ngModel)]="this.outcomeIService.searchText"
+    (keydown.backspace)="this.outcomeIService.searchText.set('')" />
+</div>
+
+<p-table
+  id="resultListTable"
+  [value]="this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true"
+  sortField="workpackage_short_name"
+  [sortOrder]="1"
+  styleClass="p-datatable-gridlines p-datatable-sm"
+  [rows]="8"
+  responsiveLayout="scroll"
+  [rowsPerPageOptions]="[8, 12, 20]"
+  [loading]="this.outcomeIService.loadingWPs()"
+  [showLoader]="false"
+  [first]="this.outcomeIService.searchText() && 0"
+  [paginator]="(this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length > 8"
+  [tableStyle]="{ 'min-width': '80rem' }"
+  dataKey="workpackage_short_name"
+  sortMode="single"
+  rowGroupMode="subheader"
+  groupRowsBy="workpackage_short_name"
+  [expandedRowKeys]="this.outcomeIService.expandedRows">
+  <ng-template pTemplate="header">
+    <tr>
+      <th pSortableColumn="workpackage_short_name" style="width: 26%" id="outcome_header">
+        Work Package Outcome <p-sortIcon field="workpackage_short_name" />
+      </th>
+      <th style="width: 25%" id="indicator_header">Indicator</th>
+      <th style="width: 20%" id="indicator_type_header">Indicator Type</th>
+      <th style="width: 8%" id="expected_target_header">Expected Target</th>
+      <th style="width: 8%" id="actual_target_achieved_header">Actual target achieved</th>
+      <th style="width: 8%" id="achieved_status_header">Achieved status</th>
+      <th style="width: 5%" id="reporting_status_header">Reporting status</th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="groupheader" let-item let-rowIndex="rowIndex" let-expanded="expanded">
+    <tr>
+      <td colspan="7" style="background: #f3f5ff; cursor: pointer; border-bottom: 1px solid #e5e6f0" pRipple [pRowToggler]="item">
+        <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem">
+          <button
+            type="button"
+            pButton
+            class="p-button-text p-button-rounded"
+            style="border: none; box-shadow: none !important"
+            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+
+          <span style="font-weight: bold">{{ item.workpackage_short_name }}: {{ item.workpackage_name }}</span>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="rowexpansion" let-item>
+    @for (result of item.toc_results; track $index) {
+      @if (result.indicators.length === 0 && result.isVisible) {
+        <tr style="height: 50px">
+          <td>{{ result?.toc_result_title }}</td>
+          <td colspan="6" style="text-align: center">No indicator data found</td>
+        </tr>
+      } @else {
+        @for (indicator of result.indicators; track $index) {
+          @if (indicator.isVisible) {
+            <tr>
+              @if ($index === 0) {
+                <td [attr.rowspan]="result.indicators.length">{{ result?.toc_result_title }}</td>
+              }
+              <td
+                class="indicator_link"
+                routerLink="/outcome-indicator-module/indicator-details"
+                [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'wps' }">
+                {{ indicator?.indicator_description }}
+              </td>
+              <td>
+                <span style="font-weight: bold">
+                  {{ !indicator?.indicator_name ? '' : indicator?.is_indicator_custom ? 'Custom - ' : 'Standard - ' }}
+                </span>
+                {{ indicator?.indicator_name }}
+              </td>
+              <td style="text-align: center">{{ indicator?.indicator_target_value ?? 'Not defined' }}</td>
+              <td style="text-align: center">{{ indicator?.indicator_achieved_value ?? 'Not provided' }}</td>
+              <td style="text-align: center">
+                {{
+                  this.outcomeIService.achievedStatus(indicator?.indicator_target_value, indicator?.indicator_achieved_value)
+                    ? 'Achieved'
+                    : 'Not achieved'
+                }}
+              </td>
+              <td>
+                <div
+                  style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%"
+                  [pTooltip]="indicator?.indicator_submission_status ? 'Submitted' : 'Editing'"
+                  tooltipPosition="top"
+                  positionTop="-5">
+                  <div
+                    class="circle"
+                    [ngClass]="{
+                      'circle-success': indicator?.indicator_submission_status
+                    }"></div>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      }
+    }
+  </ng-template>
+
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 200px">
+      <td colspan="7" class="noDataText">There are no results for the selected filters.</td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="loadingbody">
+    <tr
+      [style]="{
+        height: (this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length ? '100%' : '400px'
+      }">
+      <td colspan="7">
+        <app-custom-spinner text="Loading results" [showSpinner]="this.outcomeIService.loadingWPs()"></app-custom-spinner>
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

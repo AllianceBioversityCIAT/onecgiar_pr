@@ -5,6 +5,7 @@ import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
+import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
   selector: 'app-root',
@@ -14,7 +15,15 @@ import { FooterService } from './shared/components/footer/footer.service';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
-  constructor(public AuthService: AuthService, public rolesSE: RolesService, public api: ApiService, public footerSE: FooterService) {}
+
+  constructor(
+    public AuthService: AuthService,
+    public rolesSE: RolesService,
+    public api: ApiService,
+    public footerSE: FooterService,
+    public webSocket: WebsocketService
+  ) {}
+
   ngOnInit(): void {
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();

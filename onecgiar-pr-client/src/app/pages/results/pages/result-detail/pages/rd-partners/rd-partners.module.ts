@@ -10,9 +10,18 @@ import { NormalSelectorComponent } from './components/normal-selector/normal-sel
 import { KnowledgeProductSelectorComponent } from './components/knowledge-product-selector/knowledge-product-selector.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TooltipModule } from 'primeng/tooltip';
+import { FormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [RdPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
-  imports: [CommonModule, RdPartnersRoutingModule, CustomFieldsModule, InstitutionsPipesModule, FeedbackValidationDirectiveModule, TooltipModule]
+  imports: [
+    CommonModule,
+    RdPartnersRoutingModule,
+    CustomFieldsModule,
+    InstitutionsPipesModule,
+    FeedbackValidationDirectiveModule,
+    TooltipModule,
+    FormsModule
+  ]
 })
 export class RdPartnersModule {}

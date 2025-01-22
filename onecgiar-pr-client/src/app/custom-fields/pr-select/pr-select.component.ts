@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, SimpleChanges } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -16,7 +16,6 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ]
 })
 export class PrSelectComponent implements ControlValueAccessor {
-  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -43,11 +42,17 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() labelDescInlineStyles?: string = '';
   @Input() optionsInlineStyles?: string = '';
   @Input() showDescriptionLabel?: boolean = false;
-  @Output() selectOptionEvent = new EventEmitter();
-  private _optionsIntance: any[];
+  @Input() truncateSelectionText?: boolean = false;
+  @Input() inlineStylesContainer?: string = '';
   @Input() _value: string;
+
+  @Output() selectOptionEvent = new EventEmitter();
+
+  private _optionsIntance: any[];
   public fullValue: any = {};
   public searchText: string;
+
+  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
 
   get value(): any {
     return this._value;
@@ -67,16 +72,18 @@ export class PrSelectComponent implements ControlValueAccessor {
   writeValue(value: any): void {
     this._value = value;
   }
+
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
+
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
   }
-  //? Extra
+
   removeFocus(option?) {
     if (option?.disabled) return;
-    const element: any = document.getElementById(this.optionValue + this.indexReference ?? '');
+    const element: any = document.getElementById(this.optionValue + (this.indexReference || ''));
     element.blur();
   }
   get optionsIntance() {
@@ -101,8 +108,6 @@ export class PrSelectComponent implements ControlValueAccessor {
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
 
-    //(itemFinded);
-
     return this._optionsIntance;
   }
   onSelectOption(option) {
@@ -110,18 +115,10 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.fullValue = option;
     this.value = option[this.optionValue];
     option.selected = true;
-    //(option);
-    //(this._optionsIntance);
     this.selectOptionEvent.emit(option);
   }
 
   labelName(value) {
     return '';
   }
-
-  // toggleSelectOption(option) {
-  //   if (option?.disabled === true) return;
-  //   ('toggleSelectOption');
-  //   option.selected = !option.selected;
-  // }
 }

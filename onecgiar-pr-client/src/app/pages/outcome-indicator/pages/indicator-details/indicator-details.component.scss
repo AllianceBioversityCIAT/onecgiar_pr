@@ -1,0 +1,121 @@
+p {
+  margin: 0;
+}
+
+#linkedResultsTableList th {
+  text-align: center;
+}
+
+.indicator_header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 2rem 0;
+  gap: 1rem;
+  width: fit-content;
+  color: var(--pr-color-primary);
+  cursor: pointer;
+
+  &:hover {
+    color: #3a4792;
+  }
+
+  .indicator_header_title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.indicator_title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.indicator_info {
+  display: grid;
+  grid-template-columns: 1fr 1fr 245px 135px 125px;
+  gap: 1.2rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+
+  .indicator_info_item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    background-color: #f3f5ff;
+    border: 1px solid #a4afee;
+    border-radius: 5px;
+
+    .indicator_info_item_header {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 1rem;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .indicator_info_item_value {
+      font-size: 14px;
+      font-weight: 400;
+      color: #808080;
+    }
+  }
+}
+
+.indicator_add_result_container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.indicator_info_container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 8px 1.2rem;
+  color: #fff;
+  background-color: #5569dd;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+::ng-deep .p-button {
+  background-color: var(--pr-color-primary);
+  color: #fff;
+  border: none;
+  box-shadow: none;
+}
+
+.buttons_container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  margin-right: 7.5vw;
+  margin-bottom: 50px;
+  z-index: 100;
+  background-color: #fff;
+  border-radius: 5px;
+  padding: 0.5rem;
+}

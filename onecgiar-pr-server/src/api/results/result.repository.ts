@@ -484,7 +484,11 @@ WHERE
     }
   }*/
 
-  async AllResultsByRoleUsers(userid: number, excludeType = [10, 11]) {
+  async AllResultsByRoleUserAndInitiative(
+    userid: number,
+    excludeType = [10, 11],
+    initiativeCode?: string,
+  ) {
     const queryData = `
     SELECT
     r.id,
@@ -533,11 +537,17 @@ WHERE
     AND rbi.is_active > 0
     AND rbi.initiative_role_id = 1
     AND ci.active > 0
-    AND rt.id not in (${excludeType.toString()});
+    AND rt.id not in (${excludeType.toString()})
+    ${initiativeCode ? 'AND ci.official_code = ?' : ''};
     `;
 
     try {
-      const results = await this.query(queryData, [userid]);
+      const results = await this.query(
+        queryData,
+        ([userid] as (string | number)[]).concat(
+          initiativeCode ? [initiativeCode] : [],
+        ),
+      );
       return results;
     } catch (error) {
       throw {
@@ -551,44 +561,44 @@ WHERE
   async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code as "Result code",
-      version.phase_name as "Reporting phase",
-      r.reported_year_id as "Reporting year",
-      r.title as "Result title",
-      CONCAT(rl.name, ' - ', rt.name) as "Result type",
-      if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "Is Key Result Story",
+      r.result_code,
+      version.phase_name,
+      r.reported_year_id,
+      r.title,
+      CONCAT(rl.name, ' - ', rt.name) as  "result_type",
+      if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "is_key_result",
       (
         Select gtl_gender.description 
         from gender_tag_level gtl_gender 
         where gtl_gender.id = r.gender_tag_level_id
-      ) as "Gender tag", 
+      ) as "gender_tag_level", 
       (
         Select gtl_climate.description 
         from gender_tag_level gtl_climate
         where gtl_climate.id = r.climate_change_tag_level_id
-      ) as "Climate tag",
+      ) as "climate_tag_level",
       (
         Select gtl_nutrition.description 
         from gender_tag_level gtl_nutrition 
         where gtl_nutrition.id = r.nutrition_tag_level_id
-      ) as "Nutrition Tag Level", 
+      ) as "nutrition_tag_level", 
       (
         Select gtl_environment.description 
         from gender_tag_level gtl_environment 
         where gtl_environment.id = r.environmental_biodiversity_tag_level_id
-      ) as "Environment and/or biodiversity Tag Level",
+      ) as "environment_tag_level",
       (
         Select gtl_poverty.description 
         from gender_tag_level gtl_poverty 
         where gtl_poverty.id = r.poverty_tag_level_id
-      ) as "Poverty Tag Level",
-      ci_main.official_code as "Submitter",
-      rs.status_name as "Status",
-      DATE_FORMAT(r.created_date, "%Y-%m-%d") as "Creation date",
-      wp.id as "Work package id",
-      wp.name as "Work package title",
-      rtr.toc_result_id as "Toc result id",
-      tr.result_title as "ToC result",
+      ) as "poverty_tag_level",
+      ci_main.official_code,
+      rs.status_name,
+      DATE_FORMAT(r.created_date, "%Y-%m-%d") as "creation_date",
+      wp.id as "work_package_id",
+      wp.name as "work_package_title",
+      rtr.toc_result_id,
+      tr.result_title as "toc_result_title",
       (
         select group_concat(distinct concat(caa_q1.id, ' - ', caa_q1.name) separator '\n') 
         from ${env.DB_TOC}.toc_results_action_area_results traar_q1
@@ -596,10 +606,10 @@ WHERE
           ON taar_q1.toc_result_id = traar_q1.toc_action_area_results_id_toc and taar_q1.is_active
         right join clarisa_action_area caa_q1 on taar_q1.action_areas_id = caa_q1.id
         where traar_q1.toc_results_id = tr.toc_result_id and traar_q1.is_active
-      ) as "Action Area(s)",
-      GROUP_CONCAT(CONCAT('[', cc.code, ': ', c_inst.acronym, ' - ', c_inst.name, ']') SEPARATOR ', ') as "Center(s)",
-      GROUP_CONCAT(DISTINCT ci_contributor.official_code SEPARATOR ', ') as "Contributing Initiative(s)",
-      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id) as "PDF Link"
+      ) as "action_areas",
+      GROUP_CONCAT(CONCAT('[', cc.code, ': ', c_inst.acronym, ' - ', c_inst.name, ']') SEPARATOR ', ') as "centers",
+      GROUP_CONCAT(DISTINCT ci_contributor.official_code SEPARATOR ', ') as "contributing_initiative",
+      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id) as "pdf_link"
     from result r
     inner join result_type rt on rt.id = r.result_type_id
     inner join result_level rl on rl.id = r.result_level_id
@@ -754,7 +764,7 @@ WHERE
     }
   }
 
-  async getResultById(id: number): Promise<Result> {
+  async getResultById(id: number): Promise<any> {
     const queryData = `
     SELECT
     r.id,
@@ -797,7 +807,8 @@ WHERE
     r.is_replicated,
     r.in_qa as inQA,
     ci.cgiar_entity_type_id,
-    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type
+    JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type,
+    r.is_lead_by_partner
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

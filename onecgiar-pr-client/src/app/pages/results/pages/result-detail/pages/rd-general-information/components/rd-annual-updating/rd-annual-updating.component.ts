@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
@@ -7,7 +7,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
   templateUrl: './rd-annual-updating.component.html',
   styleUrls: ['./rd-annual-updating.component.scss']
 })
-export class RdAnnualUpdatingComponent {
+export class RdAnnualUpdatingComponent implements OnInit {
   @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();
   discontinuedOptions = [];
   options = [
@@ -20,14 +20,22 @@ export class RdAnnualUpdatingComponent {
       value: true
     }
   ];
+
+  alertText: string = '';
+
   constructor(public api: ApiService) {}
 
-  // Create a function that determines if this.generalInfoBody.discontinued_options some value is true if this.generalInfoBody.is_discontinued is true
-  isDiscontinuedOptionsTrue() {
-    if (!this.generalInfoBody.is_discontinued) return true;
+  ngOnInit(): void {
+    this.getAlertNarrative();
+  }
 
-    if (!!this.generalInfoBody.is_discontinued) {
-      return this.generalInfoBody.discontinued_options.some(option => option.value);
-    } else return false;
+  getAlertNarrative(): void {
+    this.api.resultsSE.GET_globalNarratives('updated_innodev_guidance').subscribe(({ response }) => {
+      this.alertText = response.value;
+    });
+  }
+
+  isDiscontinuedOptionsTrue() {
+    return this.generalInfoBody.is_discontinued ? this.generalInfoBody.discontinued_options.some(option => option.value) : true;
   }
 }

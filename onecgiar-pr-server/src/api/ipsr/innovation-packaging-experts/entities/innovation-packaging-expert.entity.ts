@@ -20,6 +20,7 @@ export class InnovationPackagingExpert extends BaseEntity {
   })
   result_ip_expert_id: number;
 
+  // ! This field is deprecated, but still used for data consistency
   @Column({
     name: 'first_name',
     type: 'text',
@@ -27,6 +28,7 @@ export class InnovationPackagingExpert extends BaseEntity {
   })
   first_name: string;
 
+  // ! This field is deprecated, but still used for data consistency
   @Column({
     name: 'last_name',
     type: 'text',
@@ -34,6 +36,7 @@ export class InnovationPackagingExpert extends BaseEntity {
   })
   last_name: string;
 
+  // ! This field is deprecated, but still used for data consistency
   @Column({
     name: 'email',
     type: 'text',

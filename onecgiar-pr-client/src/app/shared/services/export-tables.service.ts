@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
 import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
+import { OutcomeIndicatorService } from '../../pages/outcome-indicator/services/outcome-indicator.service';
 interface Wscols {
   wpx: number;
 }
@@ -9,20 +10,50 @@ interface Wscols {
   providedIn: 'root'
 })
 export class ExportTablesService {
-  constructor(private customAlertService: CustomizedAlertsFeService) {}
-  exportExcel(list, fileName: string, wscols?: Wscols[], callback?, isIPSR = false) {
+  constructor(
+    private readonly customAlertService: CustomizedAlertsFeService,
+    private readonly outcomeIService: OutcomeIndicatorService
+  ) {}
+
+  exportExcel(
+    list: any[],
+    fileName: string,
+    wscols?: any[],
+    cellsToLink?: {
+      cellNumber: number;
+      cellKey: string;
+    }[]
+  ) {
     try {
-      import('xlsx').then(xlsx => {
-        const worksheet = xlsx.utils.json_to_sheet(list, { skipHeader: Boolean(wscols?.length) });
-        if (wscols) worksheet['!cols'] = wscols as any;
-        const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
-        const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-        this.saveAsExcelFile(excelBuffer, fileName, isIPSR);
-        callback?.();
+      import('exceljs').then(async ExcelJS => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('data');
+
+        if (wscols) {
+          worksheet.columns = wscols;
+        }
+
+        list.forEach(data => {
+          const row = worksheet.addRow(data);
+
+          if (cellsToLink) {
+            cellsToLink.forEach(cell => {
+              row.getCell(cell.cellNumber).value = {
+                text: data[cell.cellKey],
+                hyperlink: data[cell.cellKey],
+                tooltip: data[cell.cellKey]
+              };
+            });
+          }
+        });
+
+        this.formatWorksheet(worksheet);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        this.saveAsExcelFile(buffer, fileName);
       });
     } catch (error) {
-      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Erorr generating file', status: 'error' });
-      callback?.();
+      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
     }
   }
 
@@ -169,11 +200,112 @@ export class ExportTablesService {
     }
   }
 
-  private formatWorksheet(worksheet: ExcelJS.Worksheet) {
+  async exportOutcomesIndicatorsToExcel(eoisData: any[], wpsData: any[], fileName: string, wscolsEOIs?: any[], wscolsWPs?: any[], callback?) {
+    try {
+      await import('exceljs').then(async ExcelJS => {
+        const workbook = new ExcelJS.Workbook();
+        const eoisWorksheet = workbook.addWorksheet('EoI outcomes');
+        const wpsWorksheet = workbook.addWorksheet('WP outcomes');
+
+        if (wscolsEOIs) eoisWorksheet.columns = wscolsEOIs;
+        if (wscolsWPs) wpsWorksheet.columns = wscolsWPs;
+
+        eoisData.forEach(data => this.addEOISRow(eoisWorksheet, data));
+        wpsData.forEach(data => this.addWPSRow(wpsWorksheet, data));
+
+        this.formatWorksheet(eoisWorksheet, [4, 5, 6, 7]);
+        this.formatWorksheet(wpsWorksheet, [5, 6, 7, 8]);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        this.saveAsExcelFile(buffer, fileName, false, true, true);
+
+        callback?.();
+      });
+    } catch (error) {
+      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
+      console.error('Error generating file', error);
+      callback?.();
+    }
+  }
+
+  private addEOISRow(worksheet: ExcelJS.Worksheet, data: any) {
+    let indicatorType = 'Not defined';
+    if (data.indicators[0]?.indicator_name) {
+      const prefix = data.indicators[0]?.is_indicator_custom ? 'Custom - ' : 'Standard - ';
+      indicatorType = `${prefix} ${data.indicators[0]?.indicator_name}`;
+    }
+
+    const supportingResults = !data.indicators[0]?.indicator_supporting_results
+      ? 'Not provided'
+      : data.indicators[0]?.indicator_supporting_results
+          .map(item => `• ${item.result_type} ${item.result_code} - ${item.title} (${item.result_submitter} - ${item.phase_name})`)
+          .join('\n');
+
+    worksheet.addRow({
+      toc_result_title: data.toc_result_title ?? 'Not defined',
+      indicator_name: data.indicators[0]?.indicator_description ?? 'Not defined',
+      indicator_type: indicatorType,
+      expected_target: data.indicators[0]?.indicator_target_value ?? 'Not defined',
+      actual_target_achieved: data.indicators[0]?.indicator_achieved_value ?? 'Not provided',
+      achieved_status: this.outcomeIService.achievedStatus(data.indicators[0]?.indicator_target_value, data.indicators[0]?.indicator_achieved_value)
+        ? 'Yes'
+        : 'No',
+      reporting_status: data.indicators[0]?.indicator_submission_status ? 'Submitted' : 'Editing',
+      indicator_achieved_narrative: data.indicators[0]?.indicator_achieved_narrative ?? 'Not provided',
+      indicator_supporting_results: supportingResults
+    });
+  }
+
+  private addWPSRow(worksheet: ExcelJS.Worksheet, data: any) {
+    data.toc_results.forEach(result => {
+      if (result.indicators.length > 0) {
+        result.indicators.forEach(indicator => {
+          let indicatorType = 'Not defined';
+          if (indicator.indicator_name) {
+            const prefix = indicator.is_indicator_custom ? 'Custom - ' : 'Standard - ';
+            indicatorType = `${prefix} ${indicator.indicator_name}`;
+          }
+          const supportingResults = !indicator.indicator_supporting_results
+            ? 'Not provided'
+            : indicator.indicator_supporting_results
+                .map(item => `• ${item.result_type} ${item.result_code} - ${item.title} (${item.result_submitter} - ${item.phase_name})`)
+                .join('\n');
+
+          worksheet.addRow({
+            workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
+            toc_result_title: result.toc_result_title ?? 'Not defined',
+            indicator_name: indicator.indicator_description ?? 'Not defined',
+            indicator_type: indicatorType,
+            expected_target: indicator.indicator_target_value ?? 'Not defined',
+            actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
+            achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
+            reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
+            indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
+            indicator_supporting_results: supportingResults
+          });
+        });
+      } else {
+        worksheet.addRow({
+          workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
+          toc_result_title: result.toc_result_title ?? 'Not defined',
+          indicator_name: 'Not defined',
+          indicator_type: 'Not defined',
+          expected_target: 'Not defined',
+          actual_target_achieved: 'Not provided',
+          achieved_status: 'No',
+          reporting_status: 'Editing',
+          indicator_achieved_narrative: 'Not provided',
+          indicator_supporting_results: 'Not provided'
+        });
+      }
+    });
+  }
+
+  private formatWorksheet(worksheet: ExcelJS.Worksheet, cellsToCenter?: number[]) {
     worksheet.getRow(1).height = 20;
 
     worksheet.getRow(1).eachCell(cell => {
-      cell.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
+      cell.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -192,13 +324,17 @@ export class ExportTablesService {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           cell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
-          cell.font = { size: 14, color: { argb: '000000' } };
+          cell.font = { size: 12, color: { argb: '000000' } };
           cell.border = {
             top: { style: 'thin' },
             left: { style: 'thin' },
             bottom: { style: 'thin' },
             right: { style: 'thin' }
           };
+
+          if (cellsToCenter?.includes(colNumber)) {
+            cell.alignment = { ...cell.alignment, horizontal: 'center' };
+          }
         });
 
         if (rowNumber % 2 === 0) {
@@ -214,68 +350,44 @@ export class ExportTablesService {
     });
   }
 
-  saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false, dateEnd: boolean = false): void {
+  saveAsExcelFile(buffer: any, fileName: string, isIPSR: boolean = false, dateEnd: boolean = false, hourEnd: boolean = false): void {
     const EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
     const EXCEL_EXTENSION = '.xlsx';
-    const data: Blob = new Blob([buffer], {
-      type: EXCEL_TYPE
-    });
+    const data: Blob = new Blob([buffer], { type: EXCEL_TYPE });
+
+    const formatDate = (date: Date, includeTime: boolean = false): string => {
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Europe/Madrid',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        ...(includeTime && { hour: '2-digit', minute: '2-digit' })
+      };
+      const formatted = date.toLocaleString('en-GB', options).replace(/[/,:\s]/g, '');
+      let formattedDate = formatted.slice(4, 8) + formatted.slice(2, 4) + formatted.slice(0, 2);
+      if (includeTime) {
+        formattedDate += '_' + formatted.slice(8, 12) + (isIPSR ? 'cet' : '');
+      }
+      return formattedDate;
+    };
+
+    const saveFile = (suffix: string) => {
+      FileSaver.saveAs(data, `${fileName}_${suffix}${EXCEL_EXTENSION}`);
+    };
 
     if (isIPSR) {
-      const dateCETTime = new Date().toLocaleString('en-US', {
-        timeZone: 'Europe/Madrid',
-        hour12: false
-      });
-
-      const date = dateCETTime.split(',')[0].split('/');
-      let day = date[1];
-      let month = date[0];
-      const year = date[2];
-
-      if (day.length === 1) {
-        day = '0' + day;
-      }
-
-      if (month.length === 1) {
-        month = '0' + month;
-      }
-
-      const dateCET = year + month + day;
-
-      const timeCET = dateCETTime.split(',')[1].trim().replace(':', '').slice(0, 4);
-
-      FileSaver.saveAs(data, fileName + '_' + dateCET + '_' + timeCET + 'cet' + EXCEL_EXTENSION);
+      saveFile(formatDate(new Date(), true));
       return;
     }
 
     if (dateEnd) {
-      const date = new Date()
-        .toLocaleString('en-US', {
-          timeZone: 'Europe/Madrid',
-          hour12: false
-        })
-        .split(',')[0]
-        .split('/');
-
-      let day = date[1];
-      let month = date[0];
-      const year = date[2];
-
-      if (day.length === 1) {
-        day = '0' + day;
-      }
-
-      if (month.length === 1) {
-        month = '0' + month;
-      }
-
-      const dateCET = year + month + day;
-
-      FileSaver.saveAs(data, fileName + '_' + dateCET + EXCEL_EXTENSION);
+      const dateSuffix = formatDate(new Date(), hourEnd);
+      saveFile(dateSuffix);
       return;
     }
 
-    const time = new Date().getTime().toString().slice(0, -1) + '0';
-    FileSaver.saveAs(data, fileName + '_' + time + EXCEL_EXTENSION);
+    const timestamp = Math.floor(new Date().getTime() / 1000) * 10;
+    saveFile(timestamp.toString());
   }
 }

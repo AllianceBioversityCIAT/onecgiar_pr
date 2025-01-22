@@ -88,6 +88,10 @@ export class EvidencesService {
             newEvidence.environmental_biodiversity_related =
               evidence.environmental_biodiversity_related;
             newEvidence.poverty_related = evidence.poverty_related;
+            newEvidence.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            newEvidence.innovation_use_related =
+              evidence.innovation_use_related;
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
@@ -118,6 +122,9 @@ export class EvidencesService {
             eExists.environmental_biodiversity_related =
               evidence.environmental_biodiversity_related;
             eExists.poverty_related = evidence.poverty_related;
+            eExists.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            eExists.innovation_use_related = evidence.innovation_use_related;
             eExists.link = evidence.link;
 
             if (!eExists.knowledge_product_related) {
@@ -368,6 +375,8 @@ export class EvidencesService {
         e.environmental_biodiversity_related =
           !!e.environmental_biodiversity_related;
         e.poverty_related = !!e.poverty_related;
+        e.innovation_readiness_related = !!e.innovation_readiness_related;
+        e.innovation_use_related = !!e.innovation_use_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });

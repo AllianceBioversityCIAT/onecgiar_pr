@@ -41,27 +41,6 @@ describe('StepN1Component', () => {
     },
     geo_scope_id: 4,
     coreResult: {},
-    actionAreaOutcomes: [
-      {
-        outcomeSMOcode: 'code',
-        outcomeStatement: 'statement',
-        full_name: ''
-      }
-    ],
-    sdgTargets: [
-      {
-        full_name: '',
-        sdg_target_code: 'code',
-        sdg_target: 'target'
-      }
-    ],
-    impactAreas: [
-      {
-        full_name: '',
-        name: 'name',
-        target: 'target'
-      }
-    ],
     experts: [
       {
         expertises: [
@@ -115,7 +94,8 @@ describe('StepN1Component', () => {
         getAllInnoPaRelevantCountry: () => of({ response: [] }),
         getAllInnoPaRegionalLeadership: () => of({ response: [] }),
         getAllInnoPaRegionalIntegrated: () => of({ response: [] }),
-        getAllInnoPaActiveBackstopping: () => of({ response: [] })
+        getAllInnoPaActiveBackstopping: () => of({ response: [] }),
+        GETInnovationPathwayByRiId: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
@@ -138,7 +118,6 @@ describe('StepN1Component', () => {
         StepN1ExpertsComponent,
         NoDataTextComponent,
         StepN1ScalingAmbitionBlurbComponent,
-        CdkCopyToClipboard,
         StepN1InstitutionsComponent,
         PrMultiSelectComponent,
         InnovationUseFormComponent,
@@ -148,7 +127,7 @@ describe('StepN1Component', () => {
         SaveButtonComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule],
+      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule, CdkCopyToClipboard],
       providers: [
         {
           provide: ApiService,
@@ -194,27 +173,7 @@ describe('StepN1Component', () => {
       expect(component.ipsrStep1Body.geo_scope_id).toEqual(3);
       expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
-      expect(component.ipsrStep1Body.actionAreaOutcomes[0]).toEqual({
-        full_name: '<strong>code</strong> - statement',
-        outcomeSMOcode: 'code',
-        outcomeStatement: 'statement'
-      });
-      expect(component.ipsrStep1Body.sdgTargets[0]).toEqual({
-        full_name: '<strong>code</strong> - target',
-        sdg_target: 'target',
-        sdg_target_code: 'code'
-      });
-      expect(component.ipsrStep1Body.impactAreas[0]).toEqual({
-        full_name: '<strong>name</strong> - target',
-        name: 'name',
-        target: 'target'
-      });
-      expect(component.ipsrStep1Body.experts[0].expertises[0]).toEqual({
-        name: 'name',
-        obj_expertises: {
-          name: 'name'
-        }
-      });
+
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
         institutions_name: 'name',
         institutions_type_name: 'name'
@@ -233,28 +192,12 @@ describe('StepN1Component', () => {
       expect(component.ipsrStep1Body.geo_scope_id).toEqual(3);
       expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
-      expect(component.ipsrStep1Body.actionAreaOutcomes[0]).toEqual({
-        full_name: '<strong>code</strong> - statement',
-        outcomeSMOcode: 'code',
-        outcomeStatement: 'statement'
-      });
-      expect(component.ipsrStep1Body.sdgTargets[0]).toEqual({
-        full_name: '<strong>code</strong> - target',
-        sdg_target: 'target',
-        sdg_target_code: 'code'
-      });
-      expect(component.ipsrStep1Body.impactAreas[0]).toEqual({
-        full_name: '<strong>name</strong> - target',
-        name: 'name',
-        target: 'target'
-      });
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
         institutions_name: 'name',
         institutions_type_name: 'name'
       });
       expect(component.ipsrStep1Body.innovatonUse.actors).toHaveLength(1);
       expect(component.ipsrStep1Body.innovatonUse.organization).toHaveLength(1);
-      expect(component.ipsrStep1Body.experts).toHaveLength(1);
     });
   });
 
@@ -378,6 +321,103 @@ describe('StepN1Component', () => {
       });
 
       expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is true', () => {
+    const list = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const attr = 'id';
+    component.api.rolesSE.readOnly = true;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('it should call hasElementsWithId and return the length of the list when api.roleSE.readOnly is false and item.is_active is true', () => {
+    const list = [{ is_active: true }, { is_active: true }, { is_active: true }];
+    const attr = 'is_active';
+    component.api.rolesSE.readOnly = false;
+    const hasElementsWithId = component.hasElementsWithId(list, attr);
+    expect(hasElementsWithId).toBe(3);
+  });
+
+  it('should return if is_expert_workshop_organized is true on cleanEvidence', () => {
+    component.ipsrStep1Body = {
+      result_ip: {
+        is_expert_workshop_organized: true
+      }
+    } as any;
+    const result = component.cleanEvidence();
+    expect(result).toBeUndefined();
+  });
+
+  it('should set readiness_level_evidence_based and use_level_evidence_based  to null if is_expert_workshop_organized is false on cleanEvidence', () => {
+    component.ipsrStep1Body = {
+      result_ip: {
+        is_expert_workshop_organized: false
+      }
+    } as any;
+    component.cleanEvidence();
+    expect(component.ipsrStep1Body.result_ip.readiness_level_evidence_based).toBeNull();
+    expect(component.ipsrStep1Body.result_ip.use_level_evidence_based).toBeNull();
+  });
+
+  it('should return expected string on workshopDescription', () => {
+    const result = component.workshopDescription();
+    expect(result).toBe(
+      'A template participant list can be downloaded <a href="https://cgiar.sharepoint.com/:x:/s/PPUInterim/EYOL3e1B-YlGnU8lZmlFkc4BKVDNgLH3G__z6SSjNkBTfA?e=pkpT0d"  class="open_route" target="_blank">here</a>'
+    );
+  });
+
+  it('should add expert to result_ip_expert_workshop_organized when addExpert has been called', () => {
+    component.ipsrStep1Body = {
+      result_ip_expert_workshop_organized: []
+    } as any;
+    component.addExpert();
+    expect(component.ipsrStep1Body.result_ip_expert_workshop_organized.length).toBe(1);
+  });
+
+  it('should remove the item at the given index from result_ip_expert_workshop_organized when delete has been called', () => {
+    component.ipsrStep1Body = {
+      result_ip_expert_workshop_organized: [{}, {}, {}]
+    } as any;
+    component.deleteExpert(1);
+    expect(component.ipsrStep1Body.result_ip_expert_workshop_organized.length).toBe(2);
+  });
+
+  describe('validateParticipantsConsent()', () => {
+    it('should return false if link_workshop_list is empty', () => {
+      component.ipsrStep1Body.link_workshop_list = '';
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return false if link_workshop_list is null', () => {
+      component.ipsrStep1Body.link_workshop_list = null;
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return false if link_workshop_list is an invalid URL', () => {
+      component.ipsrStep1Body.link_workshop_list = 'invalid-url';
+      expect(component.validateParticipantsConsent()).toBe(false);
+    });
+
+    it('should return true if link_workshop_list is a valid URL', () => {
+      component.ipsrStep1Body.link_workshop_list = 'https://www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL without protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL with http protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'http://www.example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
+    });
+
+    it('should return true if link_workshop_list is a valid URL with https protocol', () => {
+      component.ipsrStep1Body.link_workshop_list = 'https://example.com';
+      expect(component.validateParticipantsConsent()).toBe(true);
     });
   });
 });

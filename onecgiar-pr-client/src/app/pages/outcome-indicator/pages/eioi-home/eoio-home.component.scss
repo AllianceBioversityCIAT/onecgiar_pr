@@ -1,0 +1,52 @@
+.circle {
+  background-color: #b9b9b9;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #000;
+}
+
+.circle-success {
+  background-color: #4caf50;
+}
+
+#resultListTable th {
+  text-align: center;
+}
+
+.eoio_header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 0.5rem;
+
+  .eoio_header_arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--pr-color-primary);
+    cursor: pointer;
+    font-size: 22px;
+  }
+
+  .eoio_header_title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.noDataText {
+  text-align: center;
+  padding: 50px 0px;
+  font-size: 1.3em;
+  font-weight: 500;
+  color: var(--pr-color-primary);
+}
+
+.indicator_link {
+  color: var(--pr-color-primary);
+  cursor: pointer;
+  font-weight: 600;
+}

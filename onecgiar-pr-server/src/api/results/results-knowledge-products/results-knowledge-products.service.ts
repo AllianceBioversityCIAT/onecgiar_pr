@@ -123,9 +123,9 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
-      const isAdmin: any = await this._roleByUseRepository.isUserAdmin(user.id);
+      const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
 
-      if (isAdmin?.is_admin == false) {
+      if (!isAdmin) {
         if (
           resultKnowledgeProduct.knowledge_product_type == 'Journal Article'
         ) {
@@ -152,6 +152,7 @@ export class ResultsKnowledgeProductsService {
 
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
+        user,
         resultKnowledgeProduct.result_object?.obj_version?.cgspace_year,
         false,
       );
@@ -522,6 +523,7 @@ export class ResultsKnowledgeProductsService {
 
   async findOnCGSpace(
     handle: string,
+    user: TokenDto,
     versionCgspaceYear: number,
     validateExisting = true,
   ) {
@@ -533,6 +535,8 @@ export class ResultsKnowledgeProductsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
+
+      const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
 
       if (validateExisting) {
         const currentVersion: Version =
@@ -593,32 +597,34 @@ export class ResultsKnowledgeProductsService {
           mqapResponse,
         );
 
-      if ((mqapResponse?.Type ?? '') == 'Journal Article') {
-        if (
-          ['online_publication_date', 'issued_date'].includes(
-            cgYear.field_name,
-          ) &&
-          (cgYear.year ?? 0) != versionCgspaceYear
-        ) {
+      if (!isAdmin) {
+        if ((mqapResponse?.Type ?? '') == 'Journal Article') {
+          if (
+            ['online_publication_date', 'issued_date'].includes(
+              cgYear.field_name,
+            ) &&
+            (cgYear.year ?? 0) != versionCgspaceYear
+          ) {
+            throw {
+              response: { title: mqapResponse?.Title },
+              message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
+                Kindly review the rules provided at the beginning of the submission.<br><br>
+                If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
+                <b>About this error:</b><br>
+                Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+              status: HttpStatus.UNPROCESSABLE_ENTITY,
+            };
+          }
+        } else if ((cgYear.year ?? 0) != versionCgspaceYear) {
           throw {
             response: { title: mqapResponse?.Title },
-            message: `Only journal articles published in ${versionCgspaceYear} are eligible for this reporting cycle.<br>
-              Kindly review the rules provided at the beginning of the submission.<br><br>
-              If you believe this is an error, please contact your Center’s knowledge management team to review this information in CGSpace.<br><br>
-              <b>About this error:</b><br>
-              Please be aware that for journal articles, the reporting system automatically verifies the “Date Issued” field in CGSpace when the "Date Online" is not present. For details on the rules applied with dates, refer to the knowledge product guidance document.`,
+            message:
+              `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
+              'Should you require assistance in modifying the publication year for this knowledge product, ' +
+              'please contact your Center’s knowledge management team to review this information in CGSpace.',
             status: HttpStatus.UNPROCESSABLE_ENTITY,
           };
         }
-      } else if ((cgYear.year ?? 0) != versionCgspaceYear) {
-        throw {
-          response: { title: mqapResponse?.Title },
-          message:
-            `Reporting knowledge products from years outside the current reporting cycle (${versionCgspaceYear}) is not possible. ` +
-            'Should you require assistance in modifying the publication year for this knowledge product, ' +
-            'please contact your Center’s knowledge management team to review this information in CGSpace.',
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-        };
       }
 
       const errors = this._getErrorsFromMqapResponse(mqapResponse);
@@ -810,11 +816,43 @@ export class ResultsKnowledgeProductsService {
       let newResult: Result = null;
 
       if (!resultsKnowledgeProductDto.id) {
+        let versionId: number = null;
+        const is_admin = await this._roleByUseRepository.isUserAdmin(user.id);
+        if (is_admin != undefined && Boolean(is_admin)) {
+          let kpVersion = currentVersion;
+
+          const cgspaceKPYear =
+            resultsKnowledgeProductDto.metadataCG.online_year ??
+            resultsKnowledgeProductDto.metadataCG.issue_year;
+
+          while (
+            kpVersion.previous_phase &&
+            kpVersion.cgspace_year != cgspaceKPYear
+          ) {
+            kpVersion = await this._versioningService.$_findPhase(
+              kpVersion.previous_phase,
+            );
+          }
+
+          if (kpVersion.cgspace_year != cgspaceKPYear) {
+            throw this._handlersError.returnErrorRes({
+              error: {
+                response: {},
+                message: `A phase with a cgspace year of ${cgspaceKPYear} was not found`,
+                status: HttpStatus.UNPROCESSABLE_ENTITY,
+              },
+            });
+          }
+
+          versionId = kpVersion.id;
+        }
+
         const newResultResponse = await this._resultService.createOwnerResult(
           resultsKnowledgeProductDto.result_data,
           user,
+          is_admin,
+          versionId,
         );
-
         if (newResultResponse.status >= 300) {
           throw this._handlersError.returnErrorRes({
             error: newResultResponse,

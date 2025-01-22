@@ -23,7 +23,12 @@
                     [required]="rangeLevel1Required" [(ngModel)]="bodyItem.readinees_evidence_link">
                 </app-pr-input>
 
-                <app-pr-textarea placeholder="Enter text"
+                <p-checkbox name="check" [binary]="true" [(ngModel)]="bodyItem.showDetailsOfReadiness" label="I want to provide evidence details."
+                (ngModelChange)="bodyItem.readiness_details_of_evidence = null"></p-checkbox>
+
+                <app-pr-textarea 
+                    *ngIf="bodyItem.showDetailsOfReadiness"
+                    placeholder="Enter text"
                     label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
                     type="text" [required]="false"
                     [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
@@ -41,7 +46,12 @@
                     [required]="rangeLevel2Required" [(ngModel)]="bodyItem.use_evidence_link">
                 </app-pr-input>
 
-                <app-pr-textarea placeholder="Enter text"
+                <p-checkbox name="check" [binary]="true" [(ngModel)]="bodyItem.showDetailsOfUseLevel" label="I want to provide evidence details."
+                (ngModelChange)="bodyItem.use_details_of_evidence = null"></p-checkbox>
+
+                <app-pr-textarea 
+                    *ngIf="bodyItem.showDetailsOfUseLevel"
+                    placeholder="Enter text"
                     label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
                     type="text" [required]="false" [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
             </div>

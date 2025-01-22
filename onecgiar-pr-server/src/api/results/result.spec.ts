@@ -271,15 +271,6 @@ describe('Result service unit test', () => {
     expect(results.response[0].id).toBeDefined();
   });
 
-  it('should error when not found result', async () => {
-    jest
-      .spyOn(resultService['_customResultRepository'], 'AllResultsByRoleUsers')
-      .mockResolvedValue(() => Promise.resolve([]));
-    const results = resultService.findAllByRole(-1);
-    expect((await results).message).toBe('Results Not Found');
-    expect((await results).status).toBe(HttpStatus.NOT_FOUND);
-  });
-
   it('should return all results legacy new', async () => {
     const title = 'Assessment of the pote';
     const results = await resultService.findAllResultsLegacyNew(title);

@@ -1,44 +1,65 @@
-<app-pr-field-header label="Select or specify complementary innovations/ enablers/ solutions"
-    description="Please first consider the inclusion of other innovations/ enablers/ solutions that CGIAR and partners are already working on. Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header>
-<app-table-innovation (selectInnovationEvent)="selectInnovationEvent($event)"
-    [informationComplementaryInnovations]="informationComplementaryInnovations" [columns]="cols"
-    (saveedit)="saveEdit($event)"
-    (cancelInnovation)="cancelInnovation($event)" 
-    ></app-table-innovation>
+<app-pr-field-header
+  label="Please select PRMS-reported Innovation Development that form a bundle with the core innovation"
+  description="Please consider the inclusion of other innovations that CGIAR and partners are already working on and that have been reported in the PRMS."></app-pr-field-header>
 
+<app-table-innovation
+  (selectEvent)="selectInnovationEvent($event)"
+  [dataTable]="informationInnovationDevelopments"
+  [columns]="cols"
+  (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
 
-<app-new-complementary-innovation [complementaryInnovationFunction]="complemntaryFunction"
-    (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
-<app-pr-field-header [required]="false"
-    [description]="'Complementary innovation(s)/ enabler(s)/ solution(s) selected('+this.innovationPackageCreatorBody?.length+'):'"></app-pr-field-header>
-<div *ngIf="this.innovationPackageCreatorBody.length > 0">
+<!-- This component is reserved for future use. Please do not remove. -->
+<!-- <app-pr-field-header
+  label="Please select or specify other complementary innovations / enablers / solutions that form part of the Innovation Package"
+  description="Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header> -->
+<!-- <app-table-innovation
+  (selectEvent)="selectInnovationEvent($event)"
+  [dataTable]="informationComplementaryInnovations"
+  [columns]="cols"
+  (editEvent)="saveEdit()"
+  (cancelEvent)="cancelInnovation($event)"></app-table-innovation> -->
+<!-- This component is reserved for future use. Please do not remove. -->
 
+<app-new-complementary-innovation
+  [complementaryInnovationFunction]="complementaryFunction"
+  (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
 
-    <div class="core_innovation_selected " *ngFor="let result of this.innovationPackageCreatorBody"
-        style="margin-top: 10px;">
+<app-pr-field-header
+  [required]="false"
+  [description]="
+    'Complementary innovation(s)/ enabler(s)/ solution(s) selected(' + this.innovationPackageCreatorBody?.length + '):'
+  "></app-pr-field-header>
 
-        <div>
-            <strong>{{result.result_code}}</strong> -
-            <span style="text-overflow: ellipsis;">{{ result.title.length > 120? result.title.substr(0,120)+"..." :
-                result.title }}</span>
-            -
-            <strong>{{result.initiative_official_code}}</strong>
-        </div>
-        <i class="material-icons-round" (click)="cancelInnovation(result.result_id)" *ngIf="!this.api.rolesSE.readOnly">
-            cancel
-        </i>
+@if (this.innovationPackageCreatorBody.length > 0) {
+  @for (result of this.innovationPackageCreatorBody; track $index) {
+    <div class="core_innovation_selected" style="margin-top: 10px">
+      <div>
+        <strong>{{ result.result_code }}</strong> -
+        <span style="text-overflow: ellipsis">{{ result.title.length > 120 ? result.title.substr(0, 120) + '...' : result.title }}</span>
+        -
+        <strong>{{ result.initiative_official_code }}</strong>
+      </div>
 
+      @if (!this.api.rolesSE.readOnly) {
+        <i class="material-icons-round" (click)="cancelInnovation(result)"> cancel </i>
+      }
     </div>
-</div>
-
+  }
+}
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
 
-<div class="toggle_change_step" style="margin-top: 50px;">
-    <app-pr-button (click)="onSavePreviuosNext('previous')" padding="big"
-        [text]="this.api.rolesSE.readOnly ? 'Go to previous step':'Save & go to previous step'" icon="arrow_circle_left"
-        [reverse]="true"></app-pr-button>
-    <app-pr-button (click)="onSavePreviuosNext('next')" padding="big"
-        [text]="this.api.rolesSE.readOnly ? 'Go to next step':'Save & go to next step'"
-        icon="arrow_circle_right"></app-pr-button>
+<div class="toggle_change_step" style="margin-top: 50px">
+  <app-pr-button
+    (click)="onSavePreviousNext('previous')"
+    padding="big"
+    [text]="this.api.rolesSE.readOnly ? 'Go to previous step' : 'Save & go to previous step'"
+    icon="arrow_circle_left"
+    [reverse]="true"></app-pr-button>
+
+  <app-pr-button
+    (click)="onSavePreviousNext('next')"
+    padding="big"
+    [text]="this.api.rolesSE.readOnly ? 'Go to next step' : 'Save & go to next step'"
+    icon="arrow_circle_right"></app-pr-button>
 </div>

@@ -1,34 +1,45 @@
 <div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7">
-    <div class="annual_updating">
-        <div class="title"> <strong>Annual updating</strong>
-            <div class="header">
-                <app-pr-field-header
-                    label="Please indicate if the investment for this innovation was continued or discontinued">
-                </app-pr-field-header>
-            </div>
-        </div>
-
-        <app-pr-radio-button [(ngModel)]="this.generalInfoBody.is_discontinued" [verticalAlignment]="true"
-            [options]="this.options" optionLabel="name" optionValue="value"
-            [isStatic]="!this.api.dataControlSE?.currentResult?.status && this.api.rolesSE.access.canDdit">
-        </app-pr-radio-button>
-
-        <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
-            <div class="discontinued_option"
-                *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">
-                <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value"
-                    [isStatic]=" this.api.rolesSE.access.canDdit">
-                </app-pr-checkbox>
-                <app-pr-input *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
-                    placeholder="Enter text" type="text" [required]="false"
-                    [(ngModel)]="!this.api.dataControlSE?.currentResult?.status&&this.discontinuedOption.description">
-                </app-pr-input>
-            </div>
-        </div>
-
-        <div appFeedbackValidation labelText="Reason for inactivity/discontinuation"
-            [isComplete]="isDiscontinuedOptionsTrue()">
-        </div>
-
+  <div class="annual_updating">
+    <div class="title">
+      <strong>Annual updating</strong>
+      <div class="header">
+        <app-pr-field-header label="Please indicate if the investment for this innovation was continued or discontinued"> </app-pr-field-header>
+      </div>
     </div>
+
+    <app-pr-radio-button
+      [(ngModel)]="this.generalInfoBody.is_discontinued"
+      [verticalAlignment]="true"
+      [options]="this.options"
+      optionLabel="name"
+      optionValue="value"
+      [isStatic]="!this.api.dataControlSE?.currentResult?.status && this.api.rolesSE.access.canDdit">
+    </app-pr-radio-button>
+
+    @if (this.generalInfoBody.is_discontinued == false) {
+      <div class="message">
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
+        <div class="message--text" [innerHTML]="alertText"></div>
+      </div>
+    }
+
+    <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
+      <div class="discontinued_option" *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">
+        <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value" [isStatic]="this.api.rolesSE.access.canDdit">
+        </app-pr-checkbox>
+        <app-pr-input
+          *ngIf="discontinuedOption?.investment_discontinued_option_id == 6"
+          placeholder="Enter text"
+          type="text"
+          [required]="false"
+          [ngModel]="!this.api.dataControlSE?.currentResult?.status && this.discontinuedOption.description"
+          (ngModelChange)="!this.api.dataControlSE?.currentResult?.status && (this.discontinuedOption.description = $event)">
+        </app-pr-input>
+      </div>
+    </div>
+
+    <div appFeedbackValidation labelText="Annual Update" [isComplete]="generalInfoBody.is_discontinued !== null"></div>
+
+    <div appFeedbackValidation labelText="Reason for inactivity/discontinuation" [isComplete]="isDiscontinuedOptionsTrue()"></div>
+  </div>
 </div>

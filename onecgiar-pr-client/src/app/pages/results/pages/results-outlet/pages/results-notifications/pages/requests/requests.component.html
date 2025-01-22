@@ -1,0 +1,8 @@
+<div class="requests_header">
+  <a class="requests_header_item" routerLinkActive="active" routerLink="received" (click)="clearFiltersAndUpdateResults()"> Requests received </a>
+  <a class="requests_header_item" routerLinkActive="active" routerLink="sent" (click)="clearFiltersAndUpdateResults()"> Requests sent </a>
+</div>
+
+<div class="requests">
+  <router-outlet></router-outlet>
+</div>

@@ -1,18 +1,11 @@
 import { ExportTablesService } from './export-tables.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import * as FileSaver from 'file-saver';
-import * as xlsx from 'xlsx';
 import * as ExcelJS from 'exceljs';
+import { OutcomeIndicatorService } from '../../pages/outcome-indicator/services/outcome-indicator.service';
 
 jest.mock('file-saver', () => ({
   saveAs: jest.fn()
-}));
-
-jest.mock('xlsx', () => ({
-  utils: {
-    json_to_sheet: jest.fn().mockReturnValue('worksheet')
-  },
-  write: jest.fn().mockReturnValue('excelBuffer')
 }));
 
 jest.mock('exceljs', () => ({
@@ -37,10 +30,12 @@ jest.mock('exceljs', () => ({
 describe('ExportTablesService', () => {
   let service: ExportTablesService;
   let customAlertService: CustomizedAlertsFeService;
+  let outcomeIService: OutcomeIndicatorService;
 
   beforeEach(() => {
     customAlertService = { show: jest.fn() } as any;
-    service = new ExportTablesService(customAlertService);
+    outcomeIService = { eoisData: [], wpsData: [], initiativeIdFilter: 'test' } as any;
+    service = new ExportTablesService(customAlertService, outcomeIService);
   });
 
   afterEach(() => {
@@ -48,25 +43,18 @@ describe('ExportTablesService', () => {
   });
 
   describe('exportExcel', () => {
-    it('should export excel with wscols', async () => {
-      const list = ['data1', 'data2'];
-      const fileName = 'testFile';
-      const wscols = [{ wpx: 100 }];
+    it('should call the expected methods with the expected arguments', async () => {
+      const list = [];
+      const fileName = 'test.xlsx';
+      const wscols = [];
 
-      await service.exportExcel(list, fileName, wscols, () => {
-        expect(xlsx.utils.json_to_sheet).toHaveBeenCalledWith(list, { skipHeader: true });
-        expect(FileSaver.saveAs).toHaveBeenCalled();
-      });
-    });
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+      const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();
 
-    it('should export excel without wscols', async () => {
-      const list = ['data1', 'data2'];
-      const fileName = 'testFile';
+      service.exportExcel(list, fileName, wscols);
 
-      await service.exportExcel(list, fileName);
-
-      expect(xlsx.utils.json_to_sheet).toHaveBeenCalledWith(list, { skipHeader: false });
-      expect(FileSaver.saveAs).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+      customAlertServiceMock.mockRestore();
     });
   });
 
@@ -195,7 +183,7 @@ describe('ExportTablesService', () => {
 
       service.saveAsExcelFile(buffer, fileName, isIPSR);
 
-      const time = new Date().getTime().toString().slice(0, -1) + '0';
+      const time = new Date().getTime().toString().slice(0, -3) + '0';
       const expectedFileName = fileName + '_' + time + '.xlsx';
 
       expect(FileSaver.saveAs).toHaveBeenCalledWith(

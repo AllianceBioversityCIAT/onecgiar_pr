@@ -25,7 +25,7 @@ export class NavigationBarComponent implements OnInit {
 
   ngOnInit(): void {
     window.addEventListener('scroll', e => {
-      const scrollTopValue: any = window.pageYOffset || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
+      const scrollTopValue: number = window.scrollY || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
       if (scrollTopValue > 70) {
         this._navigationBarService.navbar_fixed = true;
       } else {

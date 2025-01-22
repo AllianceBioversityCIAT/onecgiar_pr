@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PlatformReportRepository } from './platform-report.repository';
+import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import {
   HandlersError,
@@ -39,7 +39,7 @@ export class PlatformReportService implements OnModuleInit {
     } catch (error) {
       this._logger.error(
         'Failed to connect to RabbitMQ Reports MicroService',
-        error,
+        error.message,
       );
     }
   }
@@ -51,6 +51,7 @@ export class PlatformReportService implements OnModuleInit {
   ) {
     try {
       const cleanResultCodeInput = Number(result_code);
+      this._logger.log(`Result to be processed: ${cleanResultCodeInput}`);
       if (Number.isNaN(cleanResultCodeInput)) {
         const error: returnErrorDto = {
           status: 404,
@@ -257,7 +258,7 @@ export class PlatformReportService implements OnModuleInit {
 
       const fileName =
         'PRMS-Result-' +
-        data.result_code +
+        cleanResultCodeInput +
         '_' +
         data.generation_date_filename +
         '.pdf';

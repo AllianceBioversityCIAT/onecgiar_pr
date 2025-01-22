@@ -3,7 +3,6 @@ import {
   ReturnResponse,
   ReturnResponseDto,
 } from '../../shared/handlers/error.utils';
-
 import { IpsrRepository } from '../ipsr/ipsr.repository';
 import { InnovationPackagingExpertRepository } from '../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { ResultIpExpertisesRepository } from '../ipsr/innovation-packaging-experts/repositories/result-ip-expertises.repository';
@@ -37,13 +36,13 @@ import { ResultsKnowledgeProductAuthorRepository } from '../results/results-know
 import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/result-toc-action-area.repository';
-import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/result-toc-impact-area-repository';
-import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/result-toc-result-target-indicator.repository';
-import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from '../results/results-toc-results/results-sdg-targets.respository';
-import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/results-toc-results-indicators.repository';
-import { ResultsTocResultRepository } from '../results/results-toc-results/results-toc-results.repository';
+import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/repositories/result-toc-impact-area-repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target-repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { resultValidationRepository } from '../results/results-validation-module/results-validation-module.repository';
 import { ResultByEvidencesRepository } from '../results/results_by_evidences/result_by_evidences.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
@@ -76,6 +75,8 @@ import { ResultCountriesSubNationalRepository } from '../results/result-countrie
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultInstitutionsBudget } from '../results/result_budget/entities/result_institutions_budget.entity';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -417,6 +418,7 @@ export class DeleteRecoverDataService {
         resultAfterbefore,
         new_result_level_id,
         new_result_type_id,
+        user,
       );
 
       //updating elastic search
@@ -478,6 +480,7 @@ export class DeleteRecoverDataService {
     result: Result,
     new_result_level: ResultLevelEnum,
     new_result_type: ResultTypeEnum,
+    user: TokenDto,
   ): Promise<ReturnResponseDto<any>> {
     try {
       const returnDelete = await this.deleteDataByNewResultType(
@@ -502,6 +505,7 @@ export class DeleteRecoverDataService {
         new_result_level,
         result.result_type_id,
         result.result_level_id,
+        user,
       );
 
       if (returnMigration.statusCode >= 300) {
@@ -542,6 +546,7 @@ export class DeleteRecoverDataService {
     _new_result_level: ResultLevelEnum,
     old_result_type: ResultTypeEnum,
     _old_result_level: ResultLevelEnum,
+    user: TokenDto,
   ) {
     try {
       if (ResultTypeEnum.KNOWLEDGE_PRODUCT == old_result_type) {
@@ -561,6 +566,29 @@ export class DeleteRecoverDataService {
         await this._resultRepository.update(result_id, {
           geographic_scope_id: null,
         });
+      }
+
+      if (new_result_type == ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+        const partners: ResultsByInstitution[] =
+          await this._resultByIntitutionsRepository.find({
+            where: {
+              result_id,
+              institution_roles_id: InstitutionRoleEnum.PARTNER,
+              is_active: true,
+            },
+          });
+
+        const partnerBudgets: ResultInstitutionsBudget[] = partners.map((p) => {
+          const partnerBudget = new ResultInstitutionsBudget();
+
+          partnerBudget.result_institution_id = p.id;
+          partnerBudget.created_by = user.id;
+          partnerBudget.is_active = true;
+
+          return partnerBudget;
+        });
+
+        await this._resultInstitutionsBudgetRepository.save(partnerBudgets);
       }
 
       return this._returnResponse.format({

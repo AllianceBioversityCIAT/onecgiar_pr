@@ -1,0 +1,118 @@
+@let isSubmitted = this.indicatorDetailsService.indicatorData()?.submission_status == '1';
+
+<header class="indicator_header" (click)="goBack()">
+  <i class="pi pi-arrow-circle-left" style="font-size: 20px"></i>
+  <h1 class="indicator_header_title">Back to Indicators list</h1>
+</header>
+
+<h1 class="indicator_title">
+  Indicator:
+  <span style="color: var(--pr-color-primary)">
+    {{ this.indicatorDetailsService.indicatorData()?.indicator_name }}
+  </span>
+</h1>
+
+<div class="indicator_info_container">
+  {{ this.indicatorDetailsService.indicatorData().indicator_initiative_short }}
+</div>
+
+<div
+  class="indicator_info"
+  [ngStyle]="{ 'grid-template-columns': this.indicatorDetailsService.platformId() === 'wps' ? '1fr 1fr 245px 135px 125px' : '1fr 1fr 245px 135px' }">
+  @if (this.indicatorDetailsService.platformId() === 'wps') {
+    <div class="indicator_info_item">
+      <div class="indicator_info_item_header">
+        <i class="pi pi-box" style="font-size: 20px"></i>
+
+        <p class="indicator_info_item_label">Work Package</p>
+      </div>
+
+      <p class="indicator_info_item_value">
+        {{
+          this.indicatorDetailsService.indicatorData()?.workpackage_short_name
+            ? this.indicatorDetailsService.indicatorData().workpackage_short_name + ': '
+            : ''
+        }}
+        {{ this.indicatorDetailsService.indicatorData()?.workpackage_name ?? 'Not specified' }}
+      </p>
+    </div>
+  }
+
+  @for (item of indicatorInfoItems; track $index) {
+    <div class="indicator_info_item">
+      <div class="indicator_info_item_header">
+        <i [class]="item?.iconClass" style="font-size: 20px">{{ item?.icon }}</i>
+
+        <p class="indicator_info_item_label">{{ item?.label }}</p>
+      </div>
+
+      <p class="indicator_info_item_value">{{ this.indicatorDetailsService.indicatorData()[item?.value] ?? 'Not specified' }}</p>
+    </div>
+  }
+</div>
+
+<app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
+<p-inputNumber
+  [(ngModel)]="this.indicatorDetailsService.indicatorData().achieved_in_2024"
+  [inputStyle]="{ width: '103px' }"
+  [min]="0"
+  [maxlength]="16"
+  placeholder="100"
+  [readonly]="isSubmitted"></p-inputNumber>
+
+<app-pr-textarea
+  label="Narrative explaining value achievement"
+  [(ngModel)]="this.indicatorDetailsService.indicatorData().narrative_achieved_in_2024"
+  [required]="true"
+  [maxWords]="200"
+  [readOnly]="isSubmitted"
+  [isStatic]="!isSubmitted"
+  placeholder="Enter narrative explaining value achievement"></app-pr-textarea>
+
+<app-pr-field-header label="Which results are evidencing the achieved value for this indicator?" [required]="true"></app-pr-field-header>
+<app-alert-status
+  inlineStyles="margin: 0"
+  description="Please ensure that your result is reported against this outcome. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024. You may also use the 'Add result' button to select a result and incorporate it as evidence."></app-alert-status>
+
+<div class="indicator_add_result_container">
+  <p-button
+    icon="pi pi-file-plus"
+    label="Add result"
+    (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"
+    [ngClass]="{
+      globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
+    }"></p-button>
+</div>
+
+<app-details-table></app-details-table>
+
+<div class="buttons_container">
+  <app-pr-button
+    text="Save"
+    colorType="success"
+    padding="big"
+    [verticalMargin]="0"
+    (click)="handleSaveIndicatorData()"
+    [ngClass]="{ globalDisabled: isSubmitted }"></app-pr-button>
+  <app-pr-button
+    [text]="isSubmitted ? 'Un-submit' : 'Submit'"
+    colorType="primary"
+    padding="big"
+    [verticalMargin]="0"
+    [disabled]="!isSubmitted && isSubmitDisabled()"
+    (click)="isSubmitted ? handleUnsubmitIndicator() : handleSubmitIndicator()"
+    [tooltipText]="!isSubmitted && isSubmitDisabled() && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
+</div>
+
+<p-toast position="bottom-right" key="br" />
+
+@if (this.loading()) {
+  <div class="spinner" style="position: fixed">
+    <div class="info">
+      <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
+      <div class="text">Loading section...</div>
+    </div>
+  </div>
+}
+
+<app-indicator-results-modal></app-indicator-results-modal>

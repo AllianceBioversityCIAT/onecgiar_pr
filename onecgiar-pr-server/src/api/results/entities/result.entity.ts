@@ -26,6 +26,11 @@ import { ResultStatus } from '../result-status/entities/result-status.entity';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { ResultsCenter } from '../results-centers/entities/results-center.entity';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
+import { ShareResultRequest } from '../share-result-request/entities/share-result-request.entity';
+import { ResultsTocResult } from '../results-toc-results/entities/results-toc-result.entity';
+import { Notification } from '../../notification/entities/notification.entity';
+import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
+import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 
 @Entity()
 export class Result {
@@ -342,6 +347,9 @@ export class Result {
   })
   justification_action_type!: string;
 
+  @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
+  is_lead_by_partner: boolean;
+
   // helpers??
   initiative_id!: number;
 
@@ -377,4 +385,19 @@ export class Result {
 
   @OneToMany(() => ResultAnswer, (ra) => ra.obj_result_id)
   obj_result_id: ResultAnswer[];
+
+  @OneToMany(() => ShareResultRequest, (ra) => ra.obj_result)
+  obj_share_result: ShareResultRequest[];
+
+  @OneToMany(() => ResultsTocResult, (ra) => ra.results_id)
+  obj_results_toc_result: ResultsTocResult[];
+
+  @OneToMany(() => Notification, (ra) => ra.obj_result)
+  obj_result_notification: Notification[];
+
+  @OneToMany(() => ContributionToIndicatorResult, (r) => r.result_object)
+  contribution_to_indicator_result_array: ContributionToIndicatorResult[];
+
+  @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
+  obj_result_qaed: ResultQaedLog[];
 }

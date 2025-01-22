@@ -1,6 +1,5 @@
 export class IpsrStep4Body {
   ipsr_pictures: IpsrpictureStep4[] = [];
-  ipsr_materials: IpsrpictureStep4[] = [];
   initiative_expected_investment: Initiativeexpectedinvestment[] = [];
   initiative_unit_time_id: number = null;
   initiative_expected_time: string = null;
@@ -12,11 +11,16 @@ export class IpsrStep4Body {
   partner_expected_time: string = null;
   is_result_ip_published: boolean = null;
   ipsr_pdf_report: string = null;
+  ipsr_materials: IPSRMaterialsStep4[] = [];
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
+  obj_result_institution: any;
   institution: Institution = new Institution();
   budget: Budget = new Budget();
+  is_determined: number;
+  in_kind: string;
+  in_cash: string;
   is_active: boolean;
 }
 
@@ -53,5 +57,9 @@ interface Initiativeexpectedinvestment {
 }
 
 export class IpsrpictureStep4 {
+  link: string;
+}
+
+export class IPSRMaterialsStep4 {
   link: string;
 }

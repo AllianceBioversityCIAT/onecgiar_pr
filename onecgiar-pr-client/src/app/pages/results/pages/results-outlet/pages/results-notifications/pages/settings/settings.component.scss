@@ -1,0 +1,77 @@
+.settings-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+  margin-top: 20px;
+  color: var(--primary-color);
+}
+
+.settings-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1rem;
+
+  .settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    .settings-content-title {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .settings-content-description {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .settings-content-description-title {
+        font-size: 14px;
+        font-weight: 400;
+        margin: 0;
+      }
+
+      .settings-content-description-list {
+        margin: 0;
+      }
+    }
+  }
+}
+
+.settings_filters {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 20px;
+  padding: 0;
+  flex-wrap: wrap;
+
+  .chip_item {
+    background-color: rgb(221, 221, 221);
+    padding: 8px 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+}
+
+.save-button {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.chip_selected {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+.rounded_first {
+  border-top-left-radius: 10px;
+}
+
+.rounded_last {
+  border-top-right-radius: 10px;
+}
