@@ -2206,14 +2206,6 @@ select *
               toc?.actionAreaOutcome,
               toc?.result_toc_result_id,
             );
-
-            // * Save Indicators
-            if (toc?.indicators) {
-              await this.saveInditicatorsContributing(
-                toc?.indicators,
-                rtrExist?.result_toc_result_id,
-              );
-            }
           } else {
             return this._handlersError.returnErrorRepository({
               className: ResultsTocResultRepository.name,
@@ -2306,14 +2298,6 @@ select *
       toc?.actionAreaOutcome,
       toc?.result_toc_result_id,
     );
-
-    // * Save Indicators
-    if (toc?.indicators) {
-      await this.saveInditicatorsContributing(
-        toc?.indicators,
-        rtrExist?.result_toc_result_id,
-      );
-    }
   }
 
   async getSdgTargetsByResultId(resultId) {
