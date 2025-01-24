@@ -63,6 +63,10 @@ ul {
   margin-top: 1rem;
   margin-bottom: 1rem;
   gap: 1rem;
+
+  @media screen and (min-width: 1640px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .progress_right_item_linked_results {
