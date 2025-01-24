@@ -92,7 +92,7 @@ export class IndicatorDetailsComponent implements OnInit {
     this.api.resultsSE.GET_contributionsToIndicators_indicator(this.indicatorDetailsService.indicatorId()).subscribe({
       next: response => {
         this.updateIndicatorData(response);
-        this.handleSaveIndicatorData();
+        this.handleSaveIndicatorData(true);
       },
       error: error => this.handleError(error)
     });
@@ -125,7 +125,7 @@ export class IndicatorDetailsComponent implements OnInit {
     });
   }
 
-  handleSaveIndicatorData() {
+  handleSaveIndicatorData(isFirstTime = false) {
     this.loading.set(true);
 
     this.api.resultsSE
@@ -134,7 +134,10 @@ export class IndicatorDetailsComponent implements OnInit {
         next: () => {
           this.getIndicatorData();
           this.updatePlatformData();
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
+
+          if (!isFirstTime) {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Indicator data saved successfully', key: 'br' });
+          }
         },
         error: error => this.handleError(error)
       });
