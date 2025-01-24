@@ -15,6 +15,7 @@ export const routingApp: PrRoute[] = [
     prHide: false,
     underConstruction: false,
     onlytest: false,
+    canActivate: [CheckLoginGuard],
     path: 'type-one-report',
     loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule)
   },
@@ -39,6 +40,7 @@ export const routingApp: PrRoute[] = [
     prName: 'INIT Admin Module',
     onlytest: false,
     prHide: false,
+    canActivate: [CheckLoginGuard],
     path: 'init-admin-module',
     loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule)
   },
