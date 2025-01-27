@@ -1,151 +1,174 @@
 <app-detail-section-title sectionName="Knowledge product information"></app-detail-section-title>
 <div class="detail_container">
+  <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
+  <app-alert-status
+    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+  </app-alert-status>
+  <app-alert-status
+    description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
+  </app-alert-status>
 
-    <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings">
-    </app-alert-status>
-    <app-alert-status
-        description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
-    </app-alert-status>
-    <app-alert-status
-        description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
-    </app-alert-status>
+  <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null"></div>
 
-    <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null">
-    </div>
+  <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct"> </app-pr-yes-or-not>
 
-    <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct">
+  <div style="padding-left: 50px" *ngIf="this.sectionData.isMeliaProduct === true">
+    <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null"></div>
+
+    <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true" [(ngModel)]="this.sectionData.ostSubmitted">
     </app-pr-yes-or-not>
+    <app-pr-select
+      [options]="this.meliaTypes"
+      label="Select MELIA type"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Select MELIA type"
+      [required]="true"
+      [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
+      *ngIf="this.sectionData.ostSubmitted === false">
+    </app-pr-select>
+    <app-pr-select
+      [options]="this.ostMeliaStudies"
+      label="Select MELIA from those included in OST Section 6.3"
+      optionLabel="melia_study_title"
+      optionValue="melia_id"
+      placeholder="Select MELIA from those included in OST Section 6.3"
+      [required]="true"
+      [(ngModel)]="this.sectionData.ostMeliaId"
+      *ngIf="this.sectionData.ostSubmitted === true">
+    </app-pr-select>
+  </div>
 
-    <div style="padding-left: 50px;" *ngIf="this.sectionData.isMeliaProduct === true">
+  <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true"> </app-pr-input>
+  <div class="auto_fit_container">
+    <app-pr-input [(ngModel)]="knowledgeProductBody.onlineYearCG" label="Date online (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
+    <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
+    <app-pr-input
+      *ngIf="knowledgeProductBody.year_WOS"
+      [(ngModel)]="knowledgeProductBody.year_WOS"
+      label="Issue date (WoS)"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+  </div>
+  <app-pr-field-header label="Authors" [required]="false"></app-pr-field-header>
+  <div class="custom_chips">
+    <div class="author" *ngFor="let item of knowledgeProductBody.authors">
+      {{ item }}
+    </div>
+  </div>
 
-        <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null">
+  <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false" [readOnly]="true"> </app-pr-input>
+  <div class="auto_fit_container">
+    <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" label="Peer reviewed (CGSpace)" [required]="false" [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input
+      *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
+      [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS"
+      label="Peer reviewed (WoS)"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+  </div>
+  <div class="auto_fit_container">
+    <div>
+      <app-pr-input
+        [(ngModel)]="knowledgeProductBody.is_isi_CG"
+        label="Web of Science Core Collection (former ISI) (CGSpace)"
+        [required]="false"
+        [readOnly]="true"></app-pr-input>
+      <p-message
+        *ngIf="knowledgeProductBody.isJournalArticle && (!knowledgeProductBody.is_isi_CG || knowledgeProductBody.is_isi_CG === 'Not provided')"
+        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
+        severity="info"
+        text="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+    </div>
+    <app-pr-input
+      *ngIf="knowledgeProductBody.is_isi_WOS != undefined"
+      [(ngModel)]="knowledgeProductBody.is_isi_WOS"
+      label="Web of Science Core Collection (former ISI) (WoS)"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+  </div>
+
+  <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true"> </app-pr-input>
+  <div class="auto_fit_container">
+    <div>
+      <app-pr-input
+        [(ngModel)]="knowledgeProductBody.accessibility_CG"
+        label="Accessibility (CGSpace)"
+        [required]="false"
+        [readOnly]="true"></app-pr-input>
+      <p-message
+        *ngIf="
+          knowledgeProductBody.isJournalArticle &&
+          (!knowledgeProductBody.accessibility_CG || knowledgeProductBody.accessibility_CG === 'Not provided')
+        "
+        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
+        severity="info"
+        text="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+    </div>
+    <app-pr-input
+      *ngIf="knowledgeProductBody.accessibility_WOS"
+      [(ngModel)]="knowledgeProductBody.accessibility_WOS"
+      label="Accessibility (Unpaywall)"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+  </div>
+
+  <app-pr-input [(ngModel)]="knowledgeProductBody.licence" label="License" [required]="false" [readOnly]="true"> </app-pr-input>
+  <app-pr-input [(ngModel)]="knowledgeProductBody.keywords" label="Keywords" [required]="false" [readOnly]="true"> </app-pr-input>
+  <app-pr-input [(ngModel)]="knowledgeProductBody.agrovoc_keywords" label="AGROVOC Keywords" [required]="false" [readOnly]="true"> </app-pr-input>
+  <app-pr-input [(ngModel)]="knowledgeProductBody.commodity" label="Commodity" [required]="false" [readOnly]="true"> </app-pr-input>
+  <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors/Sponsors" [required]="false" [readOnly]="true"> </app-pr-input>
+  <app-pr-field-header
+    label="Altmetric Attention Score"
+    description="<i>The Altmetric Attention Score might vary over time. Before the end of the reporting period, this information will be automatically refreshed on this page to reflect the latest score.</i>"
+    [required]="false"></app-pr-field-header>
+  <a
+    *ngIf="knowledgeProductBody?.altmetric_details_url; else notAvailable"
+    class="altmetric_details_url"
+    [href]="knowledgeProductBody?.altmetric_details_url"
+    target="_blank">
+    <img class="altmetric_image" [src]="knowledgeProductBody?.altmetric_img_url" alt="" srcset="" />
+  </a>
+  <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other knowledge products" [required]="false" [readOnly]="true">
+  </app-pr-input>
+
+  <app-pr-field-header label="FAIR score for this knowledge product" [description]="this.fairGuideline" [required]="false"></app-pr-field-header>
+
+  <div class="circle-progress-group">
+    <div class="item" *ngFor="let indicator of fair_data">
+      <circle-progress
+        [percent]="indicator.value.score * 100"
+        [subtitle]="indicator.key"
+        subtitleFontSize="30"
+        [radius]="50"
+        [outerStrokeWidth]="7"
+        [innerStrokeWidth]="7"
+        [outerStrokeColor]="calculateBorderColor(indicator.value.score)"
+        innerStrokeColor="#F0F0F0"
+        [space]="$any(-7)"
+        [animation]="true"
+        [animationDuration]="300">
+      </circle-progress>
+      <div class="texts">
+        <div *ngFor="let subIndicator of indicator.value.indicators ?? []" class="indicators">
+          <i class="material-icons-round" ngClass="{{ subIndicator.score ? 'check' : 'incomplete' }}">{{
+            subIndicator.score ? 'check' : 'cancel'
+          }}</i>
+          <span>{{ subIndicator.name }} - {{ subIndicator.description }}</span>
         </div>
-
-        <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true"
-            [(ngModel)]="this.sectionData.ostSubmitted">
-        </app-pr-yes-or-not>
-        <app-pr-select [options]="this.meliaTypes" label="Select MELIA type" optionLabel="name" optionValue="id"
-            placeholder="Select MELIA type" [required]="true" [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
-            *ngIf="this.sectionData.ostSubmitted === false">
-        </app-pr-select>
-        <app-pr-select [options]="this.ostMeliaStudies" label="Select MELIA from those included in OST Section 6.3"
-            optionLabel="melia_study_title" optionValue="melia_id"
-            placeholder="Select MELIA from those included in OST Section 6.3" [required]="true"
-            [(ngModel)]="this.sectionData.ostMeliaId" *ngIf="this.sectionData.ostSubmitted === true">
-        </app-pr-select>
+      </div>
     </div>
+  </div>
 
-    <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true">
-    </app-pr-input>
-    <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.onlineYearCG" label="Date online (CGSpace)" [required]="false"
-            [readOnly]="true">
-        </app-pr-input>
-        <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false"
-            [readOnly]="true">
-        </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.year_WOS" [(ngModel)]="knowledgeProductBody.year_WOS"
-            label="Issue date (WoS)" [required]="false" [readOnly]="true">
-        </app-pr-input>
-    </div>
-    <app-pr-field-header label="Authors" [required]="false"></app-pr-field-header>
-    <div class="custom_chips">
-        <div class="author" *ngFor="let item of knowledgeProductBody.authors">
-            {{item}}
-        </div>
-    </div>
-
-    <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false"
-        [readOnly]="true">
-    </app-pr-input>
-    <div class="auto_fit_container">
-        <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" label="Peer reviewed (CGSpace)"
-            [required]="false" [readOnly]="true">
-        </app-pr-input>
-        <app-pr-input *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
-            [(ngModel)]="knowledgeProductBody.is_peer_reviewed_WOS" label="Peer reviewed (WoS)" [required]="false"
-            [readOnly]="true">
-        </app-pr-input>
-    </div>
-    <div class="auto_fit_container">
-        <div>
-            <app-pr-input [(ngModel)]="knowledgeProductBody.is_isi_CG" label="Web of Science Core Collection (former ISI) (CGSpace)" 
-            [required]="false" [readOnly]="true"></app-pr-input>
-            <p-message *ngIf="!knowledgeProductBody.is_isi_CG || knowledgeProductBody.is_isi_CG === 'Not available'" [style]="{ width : '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }" severity="info" text="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></p-message>
-        </div>
-        <app-pr-input *ngIf="knowledgeProductBody.is_isi_WOS != undefined" [(ngModel)]="knowledgeProductBody.is_isi_WOS"
-            label="Web of Science Core Collection (former ISI) (WoS)" [required]="false" [readOnly]="true">
-        </app-pr-input>
-    </div>
-
-    <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true">
-    </app-pr-input>
-    <div class="auto_fit_container">
-        <div>
-            <app-pr-input [(ngModel)]="knowledgeProductBody.accessibility_CG" label="Accessibility (CGSpace)"
-            [required]="false" [readOnly]="true"></app-pr-input>
-            <p-message *ngIf="!knowledgeProductBody.accessibility_CG || knowledgeProductBody.accessibility_CG === 'Not available'" [style]="{ width : '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }" severity="info" text="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></p-message>
-        </div>
-        <app-pr-input *ngIf="knowledgeProductBody.accessibility_WOS"
-            [(ngModel)]="knowledgeProductBody.accessibility_WOS" label="Accessibility (Unpaywall)" [required]="false"
-            [readOnly]="true">
-        </app-pr-input>
-    </div>
-
-    <app-pr-input [(ngModel)]="knowledgeProductBody.licence" label="License" [required]="false" [readOnly]="true">
-    </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.keywords" label="Keywords" [required]="false" [readOnly]="true">
-    </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.agrovoc_keywords" label="AGROVOC Keywords" [required]="false"
-        [readOnly]="true">
-    </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.commodity" label="Commodity" [required]="false" [readOnly]="true">
-    </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.investors" label="Investors/Sponsors" [required]="false"
-        [readOnly]="true">
-    </app-pr-input>
-    <app-pr-field-header label="Altmetric Attention Score"
-        description="<i>The Altmetric Attention Score might vary over time. Before the end of the reporting period, this information will be automatically refreshed on this page to reflect the latest score.</i>"
-        [required]="false"></app-pr-field-header>
-    <a *ngIf="knowledgeProductBody?.altmetric_details_url;else notAvailable" class="altmetric_details_url"
-        [href]="knowledgeProductBody?.altmetric_details_url" target="_blank">
-        <img class="altmetric_image" [src]="knowledgeProductBody?.altmetric_img_url" alt="" srcset="">
-    </a>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.references" label="Reference to other knowledge products"
-        [required]="false" [readOnly]="true">
-    </app-pr-input>
-
-
-
-    <app-pr-field-header label="FAIR score for this knowledge product" [description]="this.fairGuideline"
-        [required]="false"></app-pr-field-header>
-
-    <div class="circle-progress-group">
-        <div class="item" *ngFor="let indicator of fair_data">
-            <circle-progress [percent]="indicator.value.score * 100" [subtitle]="indicator.key" subtitleFontSize="30"
-                [radius]="50" [outerStrokeWidth]="7" [innerStrokeWidth]="7"
-                [outerStrokeColor]="calculateBorderColor(indicator.value.score)" innerStrokeColor="#F0F0F0"
-                [space]="$any(-7)" [animation]="true" [animationDuration]="300">
-            </circle-progress>
-            <div class="texts">
-                <div *ngFor="let subIndicator of (indicator.value.indicators??[])" class="indicators">
-                    <i class="material-icons-round"
-                        ngClass="{{subIndicator.score ? 'check':'incomplete'}}">{{subIndicator.score ?
-                        'check':'cancel'}}</i>
-                    <span>{{subIndicator.name}} - {{subIndicator.description}}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <ng-template #notAvailable>
-        <div class="read-only">Not Available</div>
-    </ng-template>
-
-
+  <ng-template #notAvailable>
+    <div class="read-only">Not Available</div>
+  </ng-template>
 </div>
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"
-    *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+<app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
-<app-sync-button (clickSave)="onSyncSection()"
-    *ngIf="knowledgeProductBody.type != 'Journal Article' ||this.rolesSE.isAdmin"></app-sync-button>
+<app-sync-button (clickSave)="onSyncSection()" *ngIf="knowledgeProductBody.type != 'Journal Article' || this.rolesSE.isAdmin"></app-sync-button>
