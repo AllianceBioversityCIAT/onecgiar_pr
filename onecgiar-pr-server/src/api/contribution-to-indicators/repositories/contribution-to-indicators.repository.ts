@@ -180,7 +180,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       )) as results
       from (
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, (main_rt.id = 1) as is_ipsr,
+          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, (main_rt.id = 10) as is_ipsr,
           main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, false as is_manually_mapped
         from ${env.DB_TOC}.toc_results_indicators tri
         right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
@@ -197,7 +197,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null and main_ctir.is_active
         union all
         select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, (main_rt.id = 1) as is_ipsr,
+          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, (main_rt.id = 10) as is_ipsr,
           main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, true as is_manually_mapped
         from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
         left join ${env.DB_NAME}.contribution_to_indicators cti on main_ctir.contribution_to_indicator_id = cti.id and cti.is_active
