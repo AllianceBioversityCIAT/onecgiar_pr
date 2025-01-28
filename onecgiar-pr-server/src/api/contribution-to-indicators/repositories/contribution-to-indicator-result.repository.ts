@@ -109,7 +109,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where tri.toc_result_indicator_id = ${tocId ? `'${tocId}'` : '?'} and tri.is_active and main_r.id is not null
     union all
-    select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
+    select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
       main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
       main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date, true as is_manually_mapped, (main_rt.id = 10) as is_ipsr
     from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
