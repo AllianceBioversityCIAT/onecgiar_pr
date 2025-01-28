@@ -1582,12 +1582,20 @@ export class resultValidationRepository
 					),
 					if(rkp.is_melia is not null, true, false)
 				)
+			) and (
+				if(
+					rkp.knowledge_product_type like '%journal%article%', 
+					coalesce(cg_rkm.is_isi, '') <> '' and coalesce(cg_rkm.accesibility) <> '', 
+					true
+				)
 			) then true
 			else false
 		END as validation
 	from
-		\`result\` r
+		result r
 		left join results_knowledge_product rkp on rkp.results_id = r.id
+		left join results_kp_metadata cg_rkm on cg_rkm.result_knowledge_product_id = rkp.result_knowledge_product_id
+			and cg_rkm.is_active and cg_rkm.source like '%cgspace%'
 	WHERE
 		r.id = ?
 		and r.is_active > 0;

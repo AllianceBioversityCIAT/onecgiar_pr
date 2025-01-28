@@ -269,18 +269,36 @@ export class PlatformReportService implements OnModuleInit {
         options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
         fileName,
         bucketName: env.AWS_BUCKET_NAME,
-        credentials: this.authHeaderMs2,
       };
 
-      this.client.emit({ cmd: 'generate' }, info);
-      this._logger.log('PDF generation result on queue:', info.fileName);
+      return await this.generatePdf(info);
+    } catch (error) {
+      return this._handlerError.returnErrorRes({ error, debug: true });
+    }
+  }
 
-      try {
-        return await this.fetchPDF(info.bucketName, info.fileName);
-      } catch (error) {
-        return this._handlerError.returnErrorRes({ error, debug: true });
+  async generatePdf(info: any) {
+    try {
+      const url = env.MS_FM_URL + 'pdf/generate';
+      const response = await axios.post<ValidationResponse>(url, info, {
+        headers: { auth: this.authHeaderMs4 },
+        responseType: 'json',
+      });
+
+      if (response.data.data) {
+        this._logger.log('PDF generated and uploaded successfully');
+        return { pdf: response.data.data, fileName: info.fileName };
+      } else {
+        this._logger.error('No data returned from the validation endpoint');
+        const error: returnErrorDto = {
+          status: 500,
+          message: 'No data returned from the validation endpoint',
+          response: null,
+        };
+        throw error;
       }
     } catch (error) {
+      this._logger.error('Error generating PDF:', error);
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
   }

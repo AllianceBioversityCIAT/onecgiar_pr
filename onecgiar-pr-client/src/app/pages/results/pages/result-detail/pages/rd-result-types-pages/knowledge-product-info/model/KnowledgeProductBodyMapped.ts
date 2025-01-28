@@ -28,4 +28,5 @@ export class KnowledgeProductBodyMapped {
   licence: string;
   warnings?: string[];
   fair_data: FullFairData;
+  isJournalArticle: boolean;
 }

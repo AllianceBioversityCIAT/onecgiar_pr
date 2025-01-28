@@ -37,6 +37,14 @@ describe('OutcomeIndicatorComponent', () => {
     expect(component.loadAllInitiatives).toHaveBeenCalled();
   });
 
+  it('should return if user is not admin', async () => {
+    component.api.rolesSE.isAdmin = false;
+    const getAllInitiativesSpy = jest.spyOn(component.api.resultsSE, 'GET_AllInitiatives');
+    await component.loadAllInitiatives();
+
+    expect(getAllInitiativesSpy).not.toHaveBeenCalled();
+  });
+
   it('should initialize component for non-admin user', async () => {
     component.api.rolesSE.isAdmin = false;
     jest.spyOn(component.api, 'updateUserData');
@@ -112,6 +120,21 @@ describe('OutcomeIndicatorComponent', () => {
     component.handleInitiativeQueryParam();
 
     expect(component.outcomeIService.initiativeIdFilter).toBe('TEST1');
+    expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
+    expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
+  });
+
+  it('should handle initiative query param when param does not exist and initiatives exist', () => {
+    component.allInitiatives = [{ official_code: 'TEST1' }, { official_code: 'TEST2' }];
+    component.activatedRoute.snapshot.queryParams = {};
+    jest.spyOn(component, 'updateQueryParams');
+    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
+
+    component.handleInitiativeQueryParam();
+
+    expect(component.outcomeIService.initiativeIdFilter).toBe('TEST2');
+    expect(component.updateQueryParams).toHaveBeenCalled();
     expect(component.outcomeIService.getEOIsData).toHaveBeenCalled();
     expect(component.outcomeIService.getWorkPackagesData).toHaveBeenCalled();
   });
