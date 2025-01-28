@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ContributionToIndicatorResult } from '../entities/contribution-to-indicator-result.entity';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ContributionToIndicatorResultsDto } from '../dto/contribution-to-indicator-results.dto';
 import { env } from 'process';
 import { ContributionToIndicatorsDto } from '../dto/contribution-to-indicators.dto';
+import { IndicatorSupportingResult } from '../dto/contribution-to-wp-outcome.dto';
 
 @Injectable()
 export class ContributionToIndicatorResultsRepository extends Repository<ContributionToIndicatorResult> {
@@ -72,12 +72,13 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
 
   async findResultContributionsByTocId(
     tocId: string,
-  ): Promise<ContributionToIndicatorResultsDto[]> {
+  ): Promise<IndicatorSupportingResult[]> {
     const dataQuery = this.getContributingResultsQuery();
 
     return this.dataSource
       .query(dataQuery, [tocId, tocId])
       .then((result) => result)
+      .then((result) => this.removeInactives(result))
       .catch((err) => {
         throw this._handlersError.returnErrorRepository({
           error: err,
@@ -85,6 +86,12 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
           debug: true,
         });
       });
+  }
+
+  removeInactives(list: IndicatorSupportingResult[]) {
+    return list.filter((contribution) =>
+      contribution.contribution_id ? !!contribution.is_active : true,
+    );
   }
 
   getContributingResultsQuery(tocId?: string): string {
