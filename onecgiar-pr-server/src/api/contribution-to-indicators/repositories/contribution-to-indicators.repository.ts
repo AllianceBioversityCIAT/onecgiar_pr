@@ -61,6 +61,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           const results = await this.dataSource
             .query(this._flattenedResultsQuery(indicator.indicator_uuid))
             .then((data) => data[0].results)
+            .then((data) =>
+              this._contributionToIndicatorResultsRepository.removeInactives(
+                data ?? [],
+              ),
+            )
             .catch((err) => {
               throw this._handlersError.returnErrorRepository({
                 error: err,
@@ -107,6 +112,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         const results = await this.dataSource
           .query(this._flattenedResultsQuery(indicator.indicator_uuid))
           .then((data) => data[0].results)
+          .then((data) =>
+            this._contributionToIndicatorResultsRepository.removeInactives(
+              data ?? [],
+            ),
+          )
           .catch((err) => {
             throw this._handlersError.returnErrorRepository({
               error: err,
