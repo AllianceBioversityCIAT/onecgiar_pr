@@ -32,6 +32,8 @@ export class OutcomeIndicatorComponent implements OnInit {
     } else {
       this.api.updateUserData(() => this.setDefaultInitiativeForNonAdmin());
     }
+
+    this.outcomeIService.loadAllInitiatives();
   }
 
   handleInitiativeChange() {

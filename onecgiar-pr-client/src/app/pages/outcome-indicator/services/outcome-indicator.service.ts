@@ -11,6 +11,7 @@ export class OutcomeIndicatorService {
   loading = signal(false);
   loadingWPs = signal(false);
   expandedRows = {};
+  allInitiatives = signal<any[]>([]);
 
   searchText = signal<string>('');
 
@@ -85,6 +86,12 @@ export class OutcomeIndicatorService {
         console.error(error);
         this.loadingWPs.set(false);
       }
+    });
+  }
+
+  loadAllInitiatives() {
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      this.allInitiatives.set(response);
     });
   }
 }
