@@ -1,8 +1,9 @@
 <div class="local_container">
-  <div class="tor_sub_title">
-    Partnerships
-  </div>
-  <iframe title="tor-partnerships"  allowfullscreen *ngIf="this.typeOneReportSE.currentBiPage" [src]="this.typeOneReportSE.sanitizedUrl"></iframe>
+  <div class="tor_sub_title">Partnerships</div>
 
+  <app-alert-status description="This section provides cumulative information on partnerships for the period 2022-2024"> </app-alert-status>
+
+  @if (this.typeOneReportSE.currentBiPage) {
+    <iframe title="tor-partnerships" allowfullscreen [src]="this.typeOneReportSE.sanitizedUrl"></iframe>
+  }
 </div>
-

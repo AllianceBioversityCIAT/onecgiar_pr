@@ -32,14 +32,13 @@ export class DataControlService {
   showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
-  showT1RSelectPhase?: boolean;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null };
   previousReportingPhase = { phaseName: null, phaseYear: null, phaseId: null };
   IPSRCurrentPhase = { phaseName: null, phaseYear: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
 
   constructor(
-    private titleService: Title,
+    private readonly titleService: Title,
     public resultsSE: ResultsApiService
   ) {}
 
