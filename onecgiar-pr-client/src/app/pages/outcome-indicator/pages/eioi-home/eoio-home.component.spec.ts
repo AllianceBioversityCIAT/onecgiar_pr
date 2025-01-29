@@ -69,7 +69,7 @@ describe('EoioHomeComponent', () => {
       jest.runAllTimers();
 
       expect(exportSpy).toHaveBeenCalledWith({
-        fileName: `test_EOIO_`,
+        fileName: `test_EOIO`,
         EOIsConfig: {
           data: outcomeIndicatorService.eoisData,
           wscols: wscolsEOIs,

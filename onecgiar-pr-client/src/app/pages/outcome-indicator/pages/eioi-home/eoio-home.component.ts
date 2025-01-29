@@ -64,7 +64,7 @@ export class EoioHomeComponent implements OnDestroy, OnInit {
     ];
 
     this.exportTablesSE.exportOutcomesIndicatorsToExcel({
-      fileName: `${this.outcomeIService.initiativeIdFilter}_EOIO_`,
+      fileName: `${this.outcomeIService.initiativeIdFilter}_EOIO`,
       EOIsConfig: {
         data: this.outcomeIService.eoisData,
         wscols: wscolsEOIs,

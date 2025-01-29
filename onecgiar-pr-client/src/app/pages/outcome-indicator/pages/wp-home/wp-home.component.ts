@@ -65,7 +65,7 @@ export class WpHomeComponent implements OnDestroy, OnInit {
     ];
 
     this.exportTablesSE.exportOutcomesIndicatorsToExcel({
-      fileName: `${this.outcomeIService.initiativeIdFilter}_WP_`,
+      fileName: `${this.outcomeIService.initiativeIdFilter}_WP`,
       WPsConfig: {
         data: this.outcomeIService.wpsData,
         wscols: wscolsWPs,

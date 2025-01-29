@@ -70,7 +70,7 @@ describe('WpHomeComponent', () => {
       jest.runAllTimers();
 
       expect(exportSpy).toHaveBeenCalledWith({
-        fileName: `test_WP_`,
+        fileName: `test_WP`,
         WPsConfig: {
           data: outcomeIndicatorService.wpsData,
           wscols: wscolsWPs,
