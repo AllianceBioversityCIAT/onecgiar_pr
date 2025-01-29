@@ -40,14 +40,14 @@
   <app-pr-input placeholder="Enter text" label="Lead contact person" type="text" [required]="false"
     [(ngModel)]="this.generalInfoBody.lead_contact_person"> </app-pr-input>
 
-  <h1 class="segment_title pr_label">Impact Area Scores</h1>
+  <h1 class="segment_title pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 
   <div class="block_container">
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Gender equality tag" [(ngModel)]="this.generalInfoBody.gender_tag_id"> </app-pr-radio-button>
+        label="Gender equality score" [(ngModel)]="this.generalInfoBody.gender_tag_id"> </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
   </div>
@@ -56,7 +56,7 @@
     <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Climate change tag" [(ngModel)]="this.generalInfoBody.climate_change_tag_id"> </app-pr-radio-button>
+        label="Climate change score" [(ngModel)]="this.generalInfoBody.climate_change_tag_id"> </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
   </div>
@@ -66,7 +66,7 @@
     </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Nutrition, health and food security tag" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
+        label="Nutrition, health and food security score" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
   </div>
@@ -75,7 +75,7 @@
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Environmental health and biodiversity tag" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
+        label="Environmental health and biodiversity score" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3">
       </div>
@@ -86,7 +86,7 @@
     <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Poverty reduction, livelihoods and jobs tag" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
+        label="Poverty reduction, livelihoods and jobs score" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
   </div>
