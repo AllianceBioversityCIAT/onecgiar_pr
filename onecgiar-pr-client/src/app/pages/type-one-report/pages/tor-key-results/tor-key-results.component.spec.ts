@@ -56,7 +56,7 @@ describe('TorKeyResultsComponent', () => {
   it('should return the correct description', () => {
     const initiativeShortName = 'Initiative short name';
     const expectedValue = `This section provides an overview of results reported by the CGIAR Research Initiative on ${initiativeShortName} from 2022 to 2024. These results align with the CGIAR Results Framework and ${initiativeShortName}’s theory of change. <br/><br/>
-    The data used to create the graphics in this section were sourced from the CGIAR Results Dashboard on February 28th, 2025. These results are accurate as of this date and may differ from information in previous Technical Reports. Such differences may be due to data updates throughout the reporting year, revisions to previously reported results, or updates to the theory of change. <br/><br/>
+    The data used to create the graphics in this section were sourced from the CGIAR Results Dashboard on March 3rd, 2025. These results are accurate as of this date and may differ from information in previous Technical Reports. Such differences may be due to data updates throughout the reporting year, revisions to previously reported results, or updates to the theory of change. <br/><br/>
     If you need assistance selecting graphs for inclusion in your annual technical report, and/or if you require support in developing additional graphs beyond those included in this section, please contact us at <a class="open_route" href="mailto:performanceandresults@cgiar.org" target="_blank">performanceandresults@cgiar.org</a>.`;
 
     const result = component.keyResultsDesc(initiativeShortName);
