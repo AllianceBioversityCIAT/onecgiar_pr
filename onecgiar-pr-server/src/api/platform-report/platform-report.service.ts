@@ -269,9 +269,12 @@ export class PlatformReportService implements OnModuleInit {
         options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
         fileName,
         bucketName: env.AWS_BUCKET_NAME,
+        credentials: this.authHeaderMs2,
       };
 
-      return await this.generatePdf(info);
+      this.client.emit('pdf.generate', info);
+      const url = await this.fetchPDF(env.AWS_BUCKET_NAME, fileName);
+      return url;
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
@@ -308,8 +311,9 @@ export class PlatformReportService implements OnModuleInit {
       this._logger.verbose(
         `Fetching PDF from File Management: ${fileName} in ${bucketName} bucket S3`,
       );
+      const url = env.MS_FM_URL + 'file-management/validation';
       const response = await axios.post<ValidationResponse>(
-        env.MS_FM_URL,
+        url,
         { bucketName, key: fileName },
         {
           headers: { auth: this.authHeaderMs4 },
