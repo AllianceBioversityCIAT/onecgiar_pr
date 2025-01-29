@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { OutcomeIndicatorService } from './outcome-indicator.service';
 
 describe('OutcomeIndicatorService', () => {
@@ -9,7 +10,8 @@ describe('OutcomeIndicatorService', () => {
     apiServiceMock = {
       resultsSE: {
         GET_contributionsToIndicatorsEOIS: jest.fn(),
-        GET_contributionsToIndicatorsWPS: jest.fn()
+        GET_contributionsToIndicatorsWPS: jest.fn(),
+        GET_AllInitiatives: jest.fn()
       }
     };
 
@@ -228,5 +230,14 @@ describe('OutcomeIndicatorService', () => {
     service.collapseAll();
 
     expect(service.expandedRows).toEqual({});
+  });
+
+  it('should load all initiatives', () => {
+    const mockResponse = ['initiative1', 'initiative2'];
+    jest.spyOn(apiServiceMock.resultsSE, 'GET_AllInitiatives').mockReturnValue(of({ response: mockResponse }));
+
+    service.loadAllInitiatives();
+
+    expect(service.allInitiatives()).toEqual(mockResponse);
   });
 });

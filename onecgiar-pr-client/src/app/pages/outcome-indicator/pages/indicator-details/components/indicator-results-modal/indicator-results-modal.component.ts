@@ -6,11 +6,13 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 import { RouterModule } from '@angular/router';
 import { FilterIndicatorResultsPipe } from './pipes/filter-indicator-results.pipe';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { OutcomeIndicatorService } from '../../../../services/outcome-indicator.service';
 
 @Component({
   selector: 'app-indicator-results-modal',
   standalone: true,
-  imports: [CommonModule, TableModule, DialogModule, CustomFieldsModule, RouterModule, FilterIndicatorResultsPipe],
+  imports: [CommonModule, TableModule, DialogModule, CustomFieldsModule, RouterModule, FilterIndicatorResultsPipe, MultiSelectModule],
   templateUrl: './indicator-results-modal.component.html',
   styleUrl: './indicator-results-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -27,6 +29,7 @@ export class IndicatorResultsModalComponent {
     { attr: 'create_first_name', title: 'Created by', class: 'create_first_name' }
   ];
 
+  outcomeIndicatorService = inject(OutcomeIndicatorService);
   indicatorDetailsService = inject(IndicatorDetailsService);
 
   openInNewPage(result_code: string, version_id: string) {

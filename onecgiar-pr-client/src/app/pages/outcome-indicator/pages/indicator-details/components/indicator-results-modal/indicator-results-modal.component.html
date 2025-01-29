@@ -28,8 +28,8 @@
     <p-table
       id="resultListTable"
       #table
-      sortField="result_code"
-      [sortOrder]="-1"
+      sortField="submitter"
+      [sortOrder]="1"
       responsiveLayout="scroll"
       [value]="this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value"
       [paginator]="
@@ -37,20 +37,58 @@
       "
       [rows]="10"
       styleClass="p-datatable-gridlines p-datatable-sm"
-      selectionMode="single"
       [rowsPerPageOptions]="[10, 50, 100]"
       [first]="this.indicatorDetailsService.textToSearch().value && 0">
       <ng-template pTemplate="header">
         <tr>
-          @for (column of columnOrder; track column.attr) {
-            <th id="{{ column.attr }}" pSortableColumn="{{ column.attr }}"><p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}</th>
+          @for (column of columnOrder; track column.attr; let i = $index) {
+            @if (i === 4) {
+              <th id="{{ column.attr }}" style="width: 115px">
+                <div class="filter-container">
+                  {{ column.title }}
+
+                  <p-columnFilter
+                    [field]="column.attr"
+                    matchMode="in"
+                    display="menu"
+                    [showMatchModes]="false"
+                    [showOperator]="false"
+                    [showAddButton]="false">
+                    <ng-template pTemplate="header">
+                      <div class="filter-header">
+                        <span style="font-weight: 600"> {{ column.title }} </span>
+                      </div>
+                    </ng-template>
+
+                    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                      <p-multiSelect
+                        [ngModel]="value"
+                        [options]="this.outcomeIndicatorService.allInitiatives()"
+                        placeholder="Any"
+                        (onChange)="filter($event.value)"
+                        optionLabel="official_code"
+                        optionValue="official_code"
+                        [filter]="false">
+                        <ng-template let-option pTemplate="item">
+                          <div style="display: inline-block; vertical-align: middle">
+                            <span style="margin-left: 0.5rem; margin-top: 0.5rem"> {{ option.official_code }} </span>
+                          </div>
+                        </ng-template>
+                      </p-multiSelect>
+                    </ng-template>
+                  </p-columnFilter>
+                </div>
+              </th>
+            } @else {
+              <th id="{{ column.attr }}">{{ column.title }}</th>
+            }
           }
           <th id="actions">Action</th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="body" let-result>
-        <tr>
+        <tr style="height: 62px">
           @for (column of columnOrder; track column.attr) {
             <td [class]="column.attr" style="max-width: 440px">
               <ng-container>
