@@ -18,16 +18,27 @@
       Here you have the ability to select a result from any phase and incorporate it as evidence to substantiate the value achieved.
     </div>
 
-    <app-pr-field-header label="Result"></app-pr-field-header>
+    <div style="display: flex; align-items: flex-end; gap: 1rem">
+      <div style="width: 100%">
+        <app-pr-field-header label="Result"></app-pr-field-header>
 
-    <div class="search_input">
-      <i class="material-icons-round">search</i>
-      <input type="text" placeholder="Find result..." [(ngModel)]="this.indicatorDetailsService.textToSearch().value" />
+        <div class="search_input">
+          <i class="material-icons-round">search</i>
+          <input type="text" placeholder="Find result..." [(ngModel)]="this.indicatorDetailsService.textToSearch().value" />
+        </div>
+      </div>
+
+      <p-button
+        label="Clear all filters"
+        [outlined]="true"
+        icon="pi pi-filter-slash"
+        (onClick)="clear(dt1)"
+        [style]="{ marginBottom: '10px', width: 'max-content' }" />
     </div>
 
     <p-table
       id="resultListTable"
-      #table
+      #dt1
       sortField="submitter"
       [sortOrder]="1"
       responsiveLayout="scroll"
@@ -42,45 +53,48 @@
       <ng-template pTemplate="header">
         <tr>
           @for (column of columnOrder; track column.attr; let i = $index) {
-            @if (i === 4) {
-              <th id="{{ column.attr }}" style="width: 115px">
-                <div class="filter-container">
-                  {{ column.title }}
+            @switch (i) {
+              @case (2) {
+                <th [id]="column.attr" style="width: 135px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
+                    field="version_id"
+                    [options]="this.outcomeIndicatorService.phaseList()"
+                    placeholder="Select phase"
+                    optionLabel="phase_name"
+                    optionValue="id"></app-column-filter>
+                </th>
+              }
 
-                  <p-columnFilter
+              @case (3) {
+                <th [id]="column.attr" style="width: 185px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
+                    field="result_type_id"
+                    [options]="this.resultLevelOptions"
+                    placeholder="Select category"
+                    optionLabel="name"
+                    optionValue="id"></app-column-filter>
+                </th>
+              }
+
+              @case (4) {
+                <th [id]="column.attr" style="width: 115px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
                     [field]="column.attr"
-                    matchMode="in"
-                    display="menu"
-                    [showMatchModes]="false"
-                    [showOperator]="false"
-                    [showAddButton]="false">
-                    <ng-template pTemplate="header">
-                      <div class="filter-header">
-                        <span style="font-weight: 600"> {{ column.title }} </span>
-                      </div>
-                    </ng-template>
-
-                    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-                      <p-multiSelect
-                        [ngModel]="value"
-                        [options]="this.outcomeIndicatorService.allInitiatives()"
-                        placeholder="Any"
-                        (onChange)="filter($event.value)"
-                        optionLabel="official_code"
-                        optionValue="official_code"
-                        [filter]="false">
-                        <ng-template let-option pTemplate="item">
-                          <div style="display: inline-block; vertical-align: middle">
-                            <span style="margin-left: 0.5rem; margin-top: 0.5rem"> {{ option.official_code }} </span>
-                          </div>
-                        </ng-template>
-                      </p-multiSelect>
-                    </ng-template>
-                  </p-columnFilter>
-                </div>
-              </th>
-            } @else {
-              <th id="{{ column.attr }}">{{ column.title }}</th>
+                    [options]="this.outcomeIndicatorService.allInitiatives()"
+                    placeholder="Select initiative"
+                    optionLabel="official_code"
+                    optionValue="official_code"></app-column-filter>
+                </th>
+              }
+              @default {
+                <th [id]="column.attr" [style]="{ width: column.width }">{{ column.title }}</th>
+              }
             }
           }
           <th id="actions">Action</th>
