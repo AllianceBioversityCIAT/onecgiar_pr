@@ -37,7 +37,7 @@ export class EvidencesService {
   ) {}
 
   kpUrlRegex =
-    /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9\-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
+    /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
 
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
@@ -225,7 +225,7 @@ export class EvidencesService {
   }
 
   private async getHandleFromRegularLink(evidence: string): Promise<string> {
-    const isCGLink = evidence?.match(this.kpUrlRegex);
+    const isCGLink = this.kpUrlRegex.exec(evidence ?? '');
 
     if (isCGLink) {
       const mqapParameters: MQAPBodyDto =

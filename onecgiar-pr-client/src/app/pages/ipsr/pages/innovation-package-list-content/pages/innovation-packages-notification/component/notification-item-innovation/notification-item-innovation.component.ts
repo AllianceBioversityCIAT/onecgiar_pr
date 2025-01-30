@@ -11,7 +11,6 @@ import { RetrieveModalService } from '../../../../../../../results/pages/result-
 export class NotificationItemInnovationComponent {
   @Input() notification: any;
   @Input() comes: boolean = true;
-  @Input() readOnly: boolean;
   @Output() requestEvent = new EventEmitter<any>();
   requesting = false;
   submitter = true;

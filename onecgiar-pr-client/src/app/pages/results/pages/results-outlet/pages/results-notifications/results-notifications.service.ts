@@ -32,8 +32,8 @@ export class ResultsNotificationsService {
   hideInitFilter = true;
 
   constructor(
-    private api: ApiService,
-    private router: Router
+    private readonly api: ApiService,
+    private readonly router: Router
   ) {}
 
   get_sent_notifications(callback?) {
@@ -122,34 +122,35 @@ export class ResultsNotificationsService {
 
   get_section_innovation_packages() {
     this.api.resultsSE.GET_requestIPSR().subscribe(({ response }) => {
-      if (!response) {
-        return;
-      }
+      if (!response) return;
 
       const { requestData, requestPendingData } = response;
+      const myInitiativesIds = this.api.dataControlSE.myInitiativesList.map(initiative => initiative.initiative_id);
+      const isNotAdmin = !this.api.rolesSE.isAdmin;
 
-      requestData.filter(word => word.result_type_id === 10);
+      const processRequestData = data => {
+        return data
+          .filter(item => item.result_type_id === 10)
+          .map(item => {
+            const shouldUpdateStatus =
+              isNotAdmin && !myInitiativesIds.includes(item.requester_initiative_id) && myInitiativesIds.includes(item.owner_initiative_id);
 
-      const updateRequestPendingData = requestPendingData
-        .filter(word => word.result_type_id === 10)
-        .map(item => {
-          if (item.request_status_id === 1) {
-            return { ...item, request_status_id: 4, shared_inititiative_id: item.requester_initiative_id, pending: true };
-          }
+            if (shouldUpdateStatus) {
+              return {
+                ...item,
+                request_status_id: 4,
+                shared_inititiative_id: item.requester_initiative_id,
+                pending: true
+              };
+            }
+            return item;
+          });
+      };
 
-          return item;
-        });
+      const updateRequestData = processRequestData(requestData);
+      const updateRequestPendingData = processRequestData(requestPendingData);
 
-      this.api.dataControlSE.myInitiativesList.forEach(myInit => {
-        if (myInit?.role === 'Member') {
-          const notiFinded = requestData.find(noti => noti.approving_inititiative_id === myInit.initiative_id);
-          if (notiFinded) {
-            notiFinded.readOnly = true;
-          }
-        }
-      });
-
-      this.dataIPSR = [...requestData, ...updateRequestPendingData];
+      this.dataIPSR = [...updateRequestData, ...updateRequestPendingData].sort((a, b) => a.request_status_id - b.request_status_id);
     });
   }
 
