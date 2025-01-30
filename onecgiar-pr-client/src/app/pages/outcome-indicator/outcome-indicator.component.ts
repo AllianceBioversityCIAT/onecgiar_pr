@@ -34,6 +34,7 @@ export class OutcomeIndicatorComponent implements OnInit {
     }
 
     this.outcomeIService.loadAllInitiatives();
+    this.outcomeIService.getAllPhases();
   }
 
   handleInitiativeChange() {
