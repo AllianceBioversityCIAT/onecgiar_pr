@@ -35,6 +35,10 @@ export class EvidencesService {
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
     private readonly _mqapService: MQAPService,
   ) {}
+
+  kpUrlRegex =
+    /https:\/\/(cgspace\.cgiar\.org\/(items\/[a-f0-9\-]+|handle(\/\d+){1,2})|hdl\.handle\.net(\/\d+){1,2})/gm;
+
   async create(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
       const result = await this._resultRepository.getResultById(
@@ -221,7 +225,7 @@ export class EvidencesService {
   }
 
   private async getHandleFromRegularLink(evidence: string): Promise<string> {
-    const isCGLink = evidence?.includes('cgspace');
+    const isCGLink = evidence?.match(this.kpUrlRegex);
 
     if (isCGLink) {
       const mqapParameters: MQAPBodyDto =
