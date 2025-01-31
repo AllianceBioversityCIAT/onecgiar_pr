@@ -97,26 +97,20 @@ export class ResultsKnowledgeProductMapper {
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
-        dto?.['Open Access'] == null
-          ? null
-          : StringContentComparator.contentCompare(
-              'Open Access',
-              dto?.['Open Access'],
-            ) == 0;
+        StringContentComparator.contentCompare(
+          'Open Access',
+          dto?.['Open Access'],
+        ) == 0;
     }
 
     metadataCGSpace.doi = dto?.DOI;
     metadataCGSpace.is_isi =
-      dto?.ISI == null
-        ? null
-        : StringContentComparator.contentCompare('ISI Journal', dto?.ISI) == 0;
+      StringContentComparator.contentCompare('ISI Journal', dto?.ISI) == 0;
     metadataCGSpace.is_peer_reviewed =
-      dto?.['Peer-reviewed'] == null
-        ? null
-        : StringContentComparator.contentCompare(
-            'Peer Review',
-            dto?.['Peer-reviewed'],
-          ) == 0;
+      StringContentComparator.contentCompare(
+        'Peer Review',
+        dto?.['Peer-reviewed'],
+      ) == 0;
     metadataCGSpace.issue_year = this.extractOnlyYearFromDateString(
       dto?.['Issued date'],
     );
@@ -135,17 +129,15 @@ export class ResultsKnowledgeProductMapper {
       metadataWoS.source = mqapDOIData.source;
 
       if (mqapDOIData.is_oa) {
-        metadataWoS.accessibility =
-          mqapDOIData.is_oa == null
-            ? null
-            : mqapDOIData.is_oa?.toLocaleLowerCase()?.includes('yes');
+        metadataWoS.accessibility = mqapDOIData.is_oa
+          ?.toLocaleLowerCase()
+          ?.includes('yes');
       }
 
       metadataWoS.doi = mqapDOIData.doi;
-      metadataWoS.is_isi =
-        mqapDOIData.is_isi == null
-          ? null
-          : mqapDOIData.is_isi?.toLocaleLowerCase()?.includes('yes');
+      metadataWoS.is_isi = mqapDOIData.is_isi
+        ?.toLocaleLowerCase()
+        ?.includes('yes');
       metadataWoS.is_peer_reviewed = metadataWoS.is_isi;
       metadataWoS.issue_year = mqapDOIData.publication_year;
 
