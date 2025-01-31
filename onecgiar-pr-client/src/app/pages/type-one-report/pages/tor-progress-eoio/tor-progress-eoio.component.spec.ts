@@ -43,12 +43,16 @@ describe('TorProgressEoioComponent', () => {
       const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
 
       const wscolsEOIs = [
+        { header: '#', key: 'index', width: 25 },
         { header: 'Outcome', key: 'toc_result_title', width: 50 },
         { header: 'Indicator', key: 'indicator_name', width: 50 },
         { header: 'Indicator Type', key: 'indicator_type', width: 50 },
         { header: 'Expected target', key: 'expected_target', width: 22 },
         { header: 'Actual target achieved', key: 'actual_target_achieved', width: 30 },
-        { header: 'Achieved status', key: 'achieved_status', width: 22 }
+        { header: 'Achieved status', key: 'achieved_status', width: 22 },
+        { header: 'Reporting status', key: 'reporting_status', width: 22 },
+        { header: 'Narrative', key: 'indicator_achieved_narrative', width: 50 },
+        { header: 'Supporting results', key: 'indicator_supporting_results', width: 60 }
       ];
 
       outcomeIndicatorService.eoisData = [{ indicators: [{ indicator_name: 'test' }] }];
@@ -64,7 +68,7 @@ describe('TorProgressEoioComponent', () => {
         EOIsConfig: {
           data: outcomeIndicatorService.eoisData,
           wscols: wscolsEOIs,
-          cellToCenter: [4, 5, 6],
+          cellToCenter: [1, 4, 5, 6, 7, 8],
           worksheetName: 'EOIO'
         },
         isT1R: true
