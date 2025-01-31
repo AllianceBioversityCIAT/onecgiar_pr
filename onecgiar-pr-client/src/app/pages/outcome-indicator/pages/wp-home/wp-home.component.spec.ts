@@ -62,8 +62,8 @@ describe('WpHomeComponent', () => {
         { header: 'Supporting results', key: 'indicator_supporting_results', width: 60 }
       ];
 
-      outcomeIndicatorService.eoisData = [{ indicators: [{ indicator_name: 'test' }] }];
-      outcomeIndicatorService.loading.set(false);
+      outcomeIndicatorService.wpsData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.loadingWPs.set(false);
       outcomeIndicatorService.initiativeIdFilter = 'test';
 
       component.exportProgressWpExcel();
@@ -83,7 +83,7 @@ describe('WpHomeComponent', () => {
     it('should not call exportOutcomesIndicatorsToExcel if the conditions are not met', () => {
       const exportSpy = jest.spyOn(exportTablesService, 'exportOutcomesIndicatorsToExcel').mockResolvedValue();
       outcomeIndicatorService.wpsData = [];
-      outcomeIndicatorService.loading.set(true);
+      outcomeIndicatorService.loadingWPs.set(true);
 
       component.exportProgressWpExcel();
 
