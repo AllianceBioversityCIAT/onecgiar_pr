@@ -85,7 +85,7 @@ export class EvidenceItemComponent {
   }
 
   validateFileTypes(file: File) {
-    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.docx', '.pptx', '.jpeg', '.xlsx'];
+    const validFileTypes = ['.jpg', '.png', '.pdf', '.doc', '.docx', '.pptx', '.jpeg', '.xlsx', '.xlsm'];
     const extension = '.' + file.name.split('.').pop();
     const fileSizeInGB = file.size / (1024 * 1024 * 1024);
     return validFileTypes.includes(extension) && fileSizeInGB <= 1;
