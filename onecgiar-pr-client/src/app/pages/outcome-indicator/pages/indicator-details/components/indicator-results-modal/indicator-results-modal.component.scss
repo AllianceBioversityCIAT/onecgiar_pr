@@ -50,3 +50,15 @@
 .created_date {
   white-space: nowrap;
 }
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-header {
+  padding: 1.25rem;
+  padding-bottom: 0;
+  width: 200px;
+}

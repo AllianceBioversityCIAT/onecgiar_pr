@@ -1,12 +1,21 @@
 <header class="wp_header">
-  <i
-    class="material-icons-round wp_header_arrow"
-    routerLink="/outcome-indicator-module/home"
-    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
-    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
-    arrow_back
-  </i>
-  <h1 class="wp_header_title">Work Package Outcome Indicators List</h1>
+  <div class="wp_header_content">
+    <i
+      class="material-icons-round wp_header_arrow"
+      routerLink="/outcome-indicator-module/home"
+      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+      (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
+      arrow_back
+    </i>
+    <h1 class="wp_header_title">Work Package Outcome Indicators List</h1>
+  </div>
+
+  <app-pr-button
+    [text]="this.requesting() ? 'Downloading excel file' : 'Download excel file'"
+    [ngClass]="{ globalDisabled: this.requesting() || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData }"
+    [icon]="this.requesting() ? 'loop' : 'excel_white'"
+    [rotating]="this.requesting()"
+    (click)="exportProgressWpExcel()"></app-pr-button>
 </header>
 
 <div class="search_input" style="width: 100%; margin-bottom: 2rem">
