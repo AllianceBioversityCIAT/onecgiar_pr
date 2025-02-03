@@ -42,13 +42,15 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       	and ctis.is_active
       left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
       left join ${env.DB_TOC}.toc_results_indicators tri on tri.is_active
-        and convert(tri.toc_result_indicator_id using utf8mb4) = convert(cti.toc_result_id using utf8mb4) 
+        and convert(tri.related_node_id using utf8mb4) = convert(cti.toc_result_id using utf8mb4) 
       left join ${env.DB_TOC}.toc_result_indicator_target trit 
         on tri.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
       right join ${env.DB_TOC}.toc_results tr on tr.id = tri.toc_results_id
       left join ${env.DB_NAME}.clarisa_initiatives ci on ci.toc_id = tr.id_toc_initiative
       left join ${env.DB_TOC}.work_packages wp on tr.work_packages_id = wp.id
       where cti.toc_result_id = ? and cti.is_active
+      order by
+        tr.id desc
     `;
 
     return this.dataSource
@@ -74,7 +76,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     tocId: string,
   ): Promise<ContributionToIndicatorResultsDto[]> {
     const dataQuery = `
-      select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
+      select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
       main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
       main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date, false as is_manually_mapped
     from ${env.DB_TOC}.toc_results_indicators tri
@@ -94,7 +96,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where tri.toc_result_indicator_id = ? and tri.is_active and main_r.id is not null
     union all
-    select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
+    select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
       main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
       main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date, true as is_manually_mapped
     from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
