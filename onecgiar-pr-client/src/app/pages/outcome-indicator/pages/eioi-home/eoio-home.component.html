@@ -1,12 +1,21 @@
 <header class="eoio_header">
-  <i
-    class="material-icons-round eoio_header_arrow"
-    routerLink="/outcome-indicator-module/home"
-    [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
-    (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
-    arrow_back
-  </i>
-  <h1 class="eoio_header_title">End of Initiative Outcome Indicators List</h1>
+  <div class="eoio_header_content">
+    <i
+      class="material-icons-round eoio_header_arrow"
+      routerLink="/outcome-indicator-module/home"
+      [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
+      (click)="this.api.dataControlSE.detailSectionTitle('Outcome indicator module')">
+      arrow_back
+    </i>
+    <h1 class="eoio_header_title">End of Initiative Outcome Indicators List</h1>
+  </div>
+
+  <app-pr-button
+    [text]="this.requesting() ? 'Downloading excel file' : 'Download excel file'"
+    [ngClass]="{ globalDisabled: this.requesting() || this.outcomeIService.loading() || !this.outcomeIService.eoisData }"
+    [icon]="this.requesting() ? 'loop' : 'excel_white'"
+    [rotating]="this.requesting()"
+    (click)="exportProgressEoioExcel()"></app-pr-button>
 </header>
 
 <div class="search_input" style="width: 100%; margin-bottom: 2rem">
@@ -42,14 +51,17 @@
   </ng-template>
 
   <ng-template pTemplate="body" let-item>
-    @for (indicator of item.indicators; track $index) {
-      <tr>
-        @if ($index === 0) {
-          <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
-        }
-        @if (!indicator) {
-          <td colspan="6" style="text-align: center">No indicator data found.</td>
-        } @else {
+    @if (!item.indicators.length) {
+      <tr style="height: 50px">
+        <td>{{ item?.toc_result_title }}</td>
+        <td colspan="6" style="text-align: center">No indicator data found</td>
+      </tr>
+    } @else {
+      @for (indicator of item.indicators; track $index) {
+        <tr>
+          @if ($index === 0) {
+            <td [attr.rowspan]="item.indicators.length">{{ item?.toc_result_title ?? 'No data found.' }}</td>
+          }
           <td
             routerLink="/outcome-indicator-module/indicator-details"
             [queryParams]="{ indicatorId: indicator?.indicator_uuid, platform: 'eoi' }"
@@ -84,8 +96,8 @@
                 }"></div>
             </div>
           </td>
-        }
-      </tr>
+        </tr>
+      }
     }
   </ng-template>
 

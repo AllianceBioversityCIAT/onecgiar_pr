@@ -521,6 +521,42 @@ export class ResultsKnowledgeProductsService {
     newKnowledgeProduct.result_object.result_country_array = countries;
   }
 
+  async validateKPExistanceByHandle(handle: string) {
+    const kp: ResultsKnowledgeProduct =
+      await this._resultsKnowledgeProductRepository.findOne({
+        where: {
+          handle: Like(handle),
+          is_active: true,
+          result_object: {
+            is_active: true,
+          },
+        },
+        //relations: this._resultsKnowledgeProductRelations,
+      });
+
+    if (kp) {
+      const infoToMap = await this._resultRepository.getResultInfoToMap(
+        kp.results_id,
+      );
+      return {
+        response: infoToMap,
+        message:
+          'This knowledge product has already been reported in the PRMS Reporting Tool.',
+        status: HttpStatus.CONFLICT,
+      };
+    } else {
+      return null;
+    }
+  }
+
+  extractHandleIdentifier(rawUrl: string): string {
+    const hasQuery = (rawUrl ?? '').indexOf('?');
+    const linkSplit = (rawUrl ?? '')
+      .slice(0, hasQuery != -1 ? hasQuery : rawUrl.length)
+      .split('/');
+    return linkSplit.slice(linkSplit.length - 2).join('/');
+  }
+
   async findOnCGSpace(
     handle: string,
     user: TokenDto,
@@ -546,39 +582,7 @@ export class ResultsKnowledgeProductsService {
         versionCgspaceYear = currentVersion?.phase_year;
       }
 
-      const hasQuery = (handle ?? '').indexOf('?');
-      const linkSplit = (handle ?? '')
-        .slice(0, hasQuery != -1 ? hasQuery : handle.length)
-        .split('/');
-      const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
-
       let response: ResultsKnowledgeProductDto = null;
-      if (validateExisting) {
-        const resultKnowledgeProduct: ResultsKnowledgeProduct =
-          await this._resultsKnowledgeProductRepository.findOne({
-            where: {
-              handle: Like(handleId),
-              is_active: true,
-              result_object: {
-                is_active: true,
-              },
-            },
-            //relations: this._resultsKnowledgeProductRelations,
-          });
-
-        if (resultKnowledgeProduct) {
-          const infoToMap = await this._resultRepository.getResultInfoToMap(
-            resultKnowledgeProduct.results_id,
-          );
-          return {
-            response: infoToMap,
-            message:
-              'This knowledge product has already been reported in the PRMS Reporting Tool.',
-            status: HttpStatus.CONFLICT,
-          };
-        }
-      }
-
       const mqapResponse: MQAPResultDto =
         await this._mqapService.getDataFromCGSpaceHandle(
           MQAPBodyDto.fromHandle(handle),
@@ -590,6 +594,16 @@ export class ResultsKnowledgeProductsService {
           message: `Please add a valid handle (received: ${handle}). Only handles from CGSpace can be reported.`,
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      if (validateExisting) {
+        const handleId = this.extractHandleIdentifier(mqapResponse?.Handle);
+
+        const existingResultKnowledgeProduct =
+          await this.validateKPExistanceByHandle(handleId);
+        if (existingResultKnowledgeProduct) {
+          return existingResultKnowledgeProduct;
+        }
       }
 
       const cgYear =

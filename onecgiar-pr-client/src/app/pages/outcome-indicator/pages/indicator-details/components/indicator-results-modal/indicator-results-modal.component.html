@@ -18,18 +18,29 @@
       Here you have the ability to select a result from any phase and incorporate it as evidence to substantiate the value achieved.
     </div>
 
-    <app-pr-field-header label="Result"></app-pr-field-header>
+    <div style="display: flex; align-items: flex-end; gap: 1rem">
+      <div style="width: 100%">
+        <app-pr-field-header label="Result"></app-pr-field-header>
 
-    <div class="search_input">
-      <i class="material-icons-round">search</i>
-      <input type="text" placeholder="Find result..." [(ngModel)]="this.indicatorDetailsService.textToSearch().value" />
+        <div class="search_input">
+          <i class="material-icons-round">search</i>
+          <input type="text" placeholder="Find result..." [(ngModel)]="this.indicatorDetailsService.textToSearch().value" />
+        </div>
+      </div>
+
+      <p-button
+        label="Clear all filters"
+        [outlined]="true"
+        icon="pi pi-filter-slash"
+        (onClick)="clear(dt1)"
+        [style]="{ marginBottom: '10px', width: 'max-content' }" />
     </div>
 
     <p-table
       id="resultListTable"
-      #table
-      sortField="result_code"
-      [sortOrder]="-1"
+      #dt1
+      sortField="submitter"
+      [sortOrder]="1"
       responsiveLayout="scroll"
       [value]="this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value"
       [paginator]="
@@ -37,20 +48,61 @@
       "
       [rows]="10"
       styleClass="p-datatable-gridlines p-datatable-sm"
-      selectionMode="single"
       [rowsPerPageOptions]="[10, 50, 100]"
       [first]="this.indicatorDetailsService.textToSearch().value && 0">
       <ng-template pTemplate="header">
         <tr>
-          @for (column of columnOrder; track column.attr) {
-            <th id="{{ column.attr }}" pSortableColumn="{{ column.attr }}"><p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}</th>
+          @for (column of columnOrder; track column.attr; let i = $index) {
+            @switch (i) {
+              @case (2) {
+                <th [id]="column.attr" style="width: 135px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
+                    field="version_id"
+                    [options]="this.outcomeIndicatorService.phaseList()"
+                    placeholder="Select phase"
+                    optionLabel="phase_name"
+                    optionValue="id"></app-column-filter>
+                </th>
+              }
+
+              @case (3) {
+                <th [id]="column.attr" style="width: 185px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
+                    field="result_type_id"
+                    [options]="this.resultLevelOptions"
+                    placeholder="Select category"
+                    optionLabel="name"
+                    optionValue="id"></app-column-filter>
+                </th>
+              }
+
+              @case (4) {
+                <th [id]="column.attr" style="width: 115px">
+                  <app-column-filter
+                    [title]="column.title"
+                    [id]="column.attr"
+                    [field]="column.attr"
+                    [options]="this.outcomeIndicatorService.allInitiatives()"
+                    placeholder="Select initiative"
+                    optionLabel="official_code"
+                    optionValue="official_code"></app-column-filter>
+                </th>
+              }
+              @default {
+                <th [id]="column.attr" [style]="{ width: column.width }">{{ column.title }}</th>
+              }
+            }
           }
           <th id="actions">Action</th>
         </tr>
       </ng-template>
 
       <ng-template pTemplate="body" let-result>
-        <tr>
+        <tr style="height: 62px">
           @for (column of columnOrder; track column.attr) {
             <td [class]="column.attr" style="max-width: 440px">
               <ng-container>
