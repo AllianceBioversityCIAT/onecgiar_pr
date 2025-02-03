@@ -141,7 +141,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           "indicators", (
             select json_arrayagg(json_object(
               "indicator_id", oi.id,
-              "indicator_uuid", oi.toc_result_indicator_id,
+              "indicator_uuid", oi.related_node_id,
               "indicator_description", REGEXP_REPLACE(oi.indicator_description, '^[[:space:]]+|[[:space:]]+$', ''),
               "indicator_name", REGEXP_REPLACE(oi.type_name, '^[[:space:]]+|[[:space:]]+$', ''),
               "is_indicator_custom", if(trim(oi.type_value) like 'custom', true, false),
@@ -163,7 +163,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
             left join ${env.DB_TOC}.toc_result_indicator_target trit 
               on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
             left join ${env.DB_NAME}.contribution_to_indicators cti on cti.is_active
-              and convert(cti.toc_result_id using utf8mb4) = convert(oi.toc_result_indicator_id using utf8mb4)
+              and convert(cti.toc_result_id using utf8mb4) = convert(oi.related_node_id using utf8mb4)
             left join ${env.DB_NAME}.contribution_to_indicator_submissions ctis on ctis.contribution_to_indicator_id = cti.id
             	and ctis.is_active
             left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
