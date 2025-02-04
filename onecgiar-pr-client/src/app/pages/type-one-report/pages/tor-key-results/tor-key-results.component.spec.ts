@@ -66,6 +66,7 @@ describe('TorKeyResultsComponent', () => {
 
   it('should call the API service and export tables service with the correct parameters', () => {
     const initiativeSelected = 'mockInitiative';
+    const mockColumns = [{ header: '0', key: '0', width: 24 }];
 
     component.exportExcel(initiativeSelected);
 
@@ -73,7 +74,7 @@ describe('TorKeyResultsComponent', () => {
       component.typeOneReportSE.getInitiativeID(initiativeSelected)?.id,
       component.typeOneReportSE.phaseDefaultId
     );
-    expect(mockExportTablesService.exportExcel).toHaveBeenCalledWith('mockResponse', 'Initiative-progress-and-key-results');
+    expect(mockExportTablesService.exportExcel).toHaveBeenCalledWith('mockResponse', 'Initiative-progress-and-key-results', mockColumns);
   });
 
   it('should set requesting to false after exporting the excel', () => {
@@ -97,6 +98,69 @@ describe('TorKeyResultsComponent', () => {
       title: 'Oops!',
       description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.',
       status: 'error'
+    });
+  });
+
+  describe('generateColumns', () => {
+    it('should return empty array if input data is empty', () => {
+      const result = component['generateColumns']([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should generate columns with correct formatting', () => {
+      const mockData = [
+        {
+          first_name: 'John',
+          last_name: 'Doe',
+          user_id: 123
+        }
+      ];
+
+      const expectedColumns = [
+        {
+          header: 'First Name',
+          key: 'first_name',
+          width: 24
+        },
+        {
+          header: 'Last Name',
+          key: 'last_name',
+          width: 24
+        },
+        {
+          header: 'User Id',
+          key: 'user_id',
+          width: 24
+        }
+      ];
+
+      const result = component['generateColumns'](mockData);
+      expect(result).toEqual(expectedColumns);
+    });
+
+    it('should handle single word keys correctly', () => {
+      const mockData = [
+        {
+          name: 'Test',
+          age: 25
+        }
+      ];
+
+      const expectedColumns = [
+        {
+          header: 'Name',
+          key: 'name',
+          width: 24
+        },
+        {
+          header: 'Age',
+          key: 'age',
+          width: 24
+        }
+      ];
+
+      const result = component['generateColumns'](mockData);
+      expect(result).toEqual(expectedColumns);
     });
   });
 });

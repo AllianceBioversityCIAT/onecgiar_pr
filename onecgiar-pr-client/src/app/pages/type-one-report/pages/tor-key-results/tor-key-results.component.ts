@@ -30,11 +30,13 @@ export class TorKeyResultsComponent implements OnDestroy {
 
   exportExcel(initiativeSelected) {
     this.requesting = true;
+
     this.api.resultsSE
       .GET_excelFullReportByInitiativeId(this.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, this.typeOneReportSE.phaseDefaultId)
       .subscribe({
         next: ({ response }) => {
-          this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results');
+          const wscols = this.generateColumns(response);
+          this.exportTablesSE.exportExcel(response, 'Initiative-progress-and-key-results', wscols);
           this.requesting = false;
         },
         error: err => {
@@ -47,5 +49,18 @@ export class TorKeyResultsComponent implements OnDestroy {
           });
         }
       });
+  }
+
+  private generateColumns(data: any[]): any[] {
+    if (data.length === 0) {
+      return [];
+    }
+
+    const keys = Object.keys(data[0]);
+    return keys.map(key => ({
+      header: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      key: key,
+      width: 24
+    }));
   }
 }
