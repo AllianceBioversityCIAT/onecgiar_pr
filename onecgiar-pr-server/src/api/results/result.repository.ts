@@ -1134,11 +1134,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       whereClause = `${
         whereClause.length ? 'AND' : 'WHERE'
       } rbi3.inititiative_id in (${parameters.initiativeIds.join(',')})
-      ${
-        parameters.phases
-          ? `and r.version_id in (${parameters.phases.join(',')})`
-          : ''
-      }
       AND r.status_id = 2`;
     }
 
