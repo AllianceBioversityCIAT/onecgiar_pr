@@ -485,6 +485,41 @@ export class ResultByInitiativesRepository
 
       if (initsToInactive.length > 0) {
         const placeholders = initsToInactive.map(() => '?').join(',');
+
+        const selectRtrs = `
+          SELECT
+            rtr.result_toc_result_id
+          FROM
+            results_toc_result rtr
+          WHERE
+            rtr.results_id =?
+            AND rtr.is_active > 0
+            AND rtr.initiative_id IN(${placeholders});
+        `;
+
+        const rtrsToInactive = await this.query(selectRtrs, [
+          resultId,
+          ...initsToInactive,
+        ]);
+
+        const rtrIdsToInactive = rtrsToInactive.map(
+          (e) => e.result_toc_result_id,
+        );
+        const updateRtr = `
+          UPDATE
+            results_toc_result
+          SET
+            last_updated_date = NOW(),
+            last_updated_by = ?,
+            is_active = 0,
+            planned_result = NULL
+          WHERE
+            results_id =?
+            AND result_toc_result_id IN(${rtrIdsToInactive.join(',')}); 
+        `;
+
+        await this.query(updateRtr, [userId, resultId]);
+
         const upDateInactive = `
           UPDATE
             results_by_inititiative
