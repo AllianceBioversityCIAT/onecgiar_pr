@@ -41,6 +41,7 @@ export class TorKeyResultsComponent implements OnDestroy {
         },
         error: err => {
           console.error(err);
+          this.requesting = false;
           this.api.alertsFe.show({
             id: 'loginAlert',
             title: 'Oops!',
