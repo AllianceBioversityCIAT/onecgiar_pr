@@ -46,7 +46,7 @@ export class ExportTablesService {
         }
 
         list.forEach(data => {
-          const row = worksheet.addRow(data);
+          const row = worksheet.addRow(Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value ?? 'Not provided'])));
 
           if (cellsToLink) {
             cellsToLink.forEach(cell => {
