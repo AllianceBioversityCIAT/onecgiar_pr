@@ -460,85 +460,77 @@ export class ResultByInitiativesRepository
     isOwner: boolean,
     initiativeArrayPnd: number[],
   ) {
-    const initiative = initiativeArray ?? [];
-    const initiativepnd = initiativeArrayPnd ?? [];
-    const initiativeparameter = initiative.concat(initiativepnd);
+    if (!resultId || !userId) {
+      return [];
+    }
+
+    const initiativeParameter = [
+      ...(initiativeArray ?? []),
+      ...(initiativeArrayPnd ?? []),
+    ];
 
     try {
       const inits = `
-      SELECT
-        *
-      FROM
-        results_by_inititiative rbi
-      WHERE
-        rbi.result_id = ?
-        AND rbi.initiative_role_id = 2
-        AND rbi.is_active > 0
-    `;
+        SELECT inititiative_id 
+        FROM results_by_inititiative 
+        WHERE result_id = ? 
+          AND initiative_role_id = 2 
+          AND is_active > 0
+      `;
 
       const initsResult = await this.query(inits, [resultId]);
       const currentInits = initsResult.map((e) => e.inititiative_id);
-
       const initsToInactive = currentInits.filter(
-        (e: number) => !initiativeparameter.includes(e),
+        (e) => !initiativeParameter.includes(e),
       );
 
-      if (initsToInactive.length > 0) {
-        const placeholders = initsToInactive.map(() => '?').join(',');
-
-        const selectRtrs = `
-          SELECT
-            rtr.result_toc_result_id
-          FROM
-            results_toc_result rtr
-          WHERE
-            rtr.results_id =?
-            AND rtr.is_active > 0
-            AND rtr.initiative_id IN(${placeholders});
-        `;
-
-        const rtrsToInactive = await this.query(selectRtrs, [
-          resultId,
-          ...initsToInactive,
-        ]);
-
-        const rtrIdsToInactive = rtrsToInactive.map(
-          (e) => e.result_toc_result_id,
-        );
-        const updateRtr = `
-          UPDATE
-            results_toc_result
-          SET
-            last_updated_date = NOW(),
-            last_updated_by = ?,
-            is_active = 0,
-            planned_result = NULL
-          WHERE
-            results_id =?
-            AND result_toc_result_id IN(${rtrIdsToInactive.join(',')}); 
-        `;
-
-        await this.query(updateRtr, [userId, resultId]);
-
-        const upDateInactive = `
-          UPDATE
-            results_by_inititiative
-          SET
-            is_active = 0,
-            last_updated_date = NOW(),
-            last_updated_by = ?
-          WHERE
-            is_active > 0
-            AND result_id = ?
-            AND initiative_role_id = ?
-            AND inititiative_id IN(${placeholders});
-        `;
-        const queryParams = [userId, resultId, 2, ...initsToInactive];
-        await this.query(upDateInactive, queryParams);
-        return initsToInactive;
+      if (!initsToInactive.length) {
+        return [];
       }
 
-      return [];
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        if (initsToInactive.length) {
+          await queryRunner.query(
+            `
+            UPDATE results_toc_result
+            SET last_updated_date = NOW(),
+                last_updated_by = ?,
+                is_active = 0,
+                planned_result = NULL
+            WHERE results_id = ?
+              AND initiative_id IN (?)
+              AND is_active > 0
+          `,
+            [userId, resultId, initsToInactive],
+          );
+
+          await queryRunner.query(
+            `
+            UPDATE results_by_inititiative
+            SET is_active = 0,
+                last_updated_date = NOW(),
+                last_updated_by = ?
+            WHERE result_id = ?
+              AND initiative_role_id = 2
+              AND inititiative_id IN (?)
+              AND is_active > 0
+          `,
+            [userId, resultId, initsToInactive],
+          );
+        }
+
+        await queryRunner.commitTransaction();
+        return initsToInactive;
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+      } finally {
+        await queryRunner.release();
+      }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
