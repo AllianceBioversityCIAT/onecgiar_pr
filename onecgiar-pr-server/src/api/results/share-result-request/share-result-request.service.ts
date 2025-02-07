@@ -951,14 +951,6 @@ export class ShareResultRequestService {
       } else {
         await this.activateExistingInitiativeEntry(exists, user);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
-
-        // await this.mapWorkPackagesToInitiative(
-        //   rtr.result_toc_results,
-        //   result_id,
-        //   shared_inititiative_id,
-        //   user,
-        //   rtr?.planned_result,
-        // );
         await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
       }
     } catch (error) {
