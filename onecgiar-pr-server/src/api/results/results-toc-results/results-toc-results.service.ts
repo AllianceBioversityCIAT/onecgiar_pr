@@ -71,7 +71,6 @@ export class ResultsTocResultsService {
 
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
-      let initiativeArrayRtr: number[] = [];
       let initiativeArrayPnd: number[] = [];
 
       if (initSubmitter.initiative_id !== changePrimaryInit) {
