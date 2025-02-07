@@ -416,7 +416,7 @@ export class resultValidationRepository
 					rc.is_active
 					AND rc.result_id = r.id
 					AND rc.is_leading_result = 1
-			) <> 1 AND r.is_lead_by_partner = 0
+			) <= 0 AND r.is_lead_by_partner = 0
 		) THEN FALSE
 		ELSE TRUE
 	END AS validation
