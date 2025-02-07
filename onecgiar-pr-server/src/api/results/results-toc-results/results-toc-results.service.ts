@@ -175,16 +175,6 @@ export class ResultsTocResultsService {
           sdgTargets,
         );
       } else {
-        initiativeArrayRtr =
-          contributing_initiatives?.accepted_contributing_initiatives.map(
-            (initiative) => initiative.id,
-          );
-        initiativeArrayRtr = initiativeArrayRtr.concat(
-          contributing_initiatives?.pending_contributing_initiatives.map(
-            (pending) => pending.id,
-          ),
-        );
-
         // * Save Primary Submitter ResultTocResult
         await this.saveResultTocResultPrimary(
           createResultsTocResultDto,
@@ -729,7 +719,7 @@ export class ResultsTocResultsService {
           is_active: true,
         },
       );
-      
+
       await Promise.all(
         allRtRsContributors.map(async (storedRtR) => {
           if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
@@ -750,7 +740,7 @@ export class ResultsTocResultsService {
               is_active: false,
             },
           );
-          
+
           if (!contributor?.result_toc_results?.length || initInactive.length) {
             contributor.result_toc_results = [];
           }
