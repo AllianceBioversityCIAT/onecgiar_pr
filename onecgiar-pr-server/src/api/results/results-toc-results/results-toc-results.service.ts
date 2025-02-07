@@ -701,8 +701,7 @@ export class ResultsTocResultsService {
     initSubmitter: number,
   ) {
     try {
-      if (!createResultsTocResultDto || !createResultsTocResultDto.length)
-        return;
+      if (!createResultsTocResultDto?.length) return;
 
       const incomingRtRIds = createResultsTocResultDto.flatMap(
         (contributor) =>
