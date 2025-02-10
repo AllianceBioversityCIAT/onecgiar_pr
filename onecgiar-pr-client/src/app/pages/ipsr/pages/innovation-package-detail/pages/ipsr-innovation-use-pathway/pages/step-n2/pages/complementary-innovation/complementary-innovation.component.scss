@@ -1,20 +1,26 @@
 .section_container {
-    margin-top: 30px;
-    min-height: calc(100vh - 200px);
-    padding: 30px 50px 50px 50px;
-    margin-bottom: 50px;
+  margin-top: 30px;
+  min-height: calc(100vh - 200px);
+  padding: 30px 50px 50px 50px;
+  margin-bottom: 50px;
 }
 
 .core_innovation_selected {
-    background-color: var(--pr-color-primary-2);
-    padding: 5px 10px;
-    border-radius: 3px;
-    width: max-content;
-    gap: 30px;
-    display: flex;
-    align-items: center;
+  background-color: var(--pr-color-primary-2);
+  padding: 5px 10px;
+  border-radius: 3px;
+  gap: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 
-    i {
-        cursor: pointer;
-    }
+  i {
+    cursor: pointer;
+  }
+}
+
+.action_buttons {
+  display: flex;
+  gap: 10px;
 }

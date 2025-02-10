@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
+import { ComplementaryInnovationService } from './services/complementary-innovation.service';
 
 export class ComplementaryInnovation {
   climate_change_tag_level_id: string;
@@ -21,6 +22,7 @@ export class ComplementaryInnovation {
   title: string;
   selected: boolean;
   id: string;
+  version_id: number;
 }
 
 @Component({
@@ -33,16 +35,20 @@ export class ComplementaryInnovationComponent implements OnInit {
   innovationPackageCreatorBody: ComplementaryInnovation[] = [];
   complementaryFunction: any;
   status = false;
-  informationComplementaryInnovations: any[] = [];
   informationInnovationDevelopments: any[] = [];
   cols: any[] = [];
   isInitiative = true;
   linksToResultsBody: any;
 
+  idInnovation: number;
+  complementaries = false;
+  informationComplentary: any;
+
   constructor(
     public api: ApiService,
     public ipsrDataControlSE: IpsrDataControlService,
-    public router: Router
+    public router: Router,
+    public complementaryInnovationService: ComplementaryInnovationService
   ) {}
 
   ngOnInit(): void {
@@ -63,6 +69,55 @@ export class ComplementaryInnovationComponent implements OnInit {
     this.api.resultsSE.GETInnovationPathwayStepTwoInnovationSelect().subscribe(resp => {
       this.innovationPackageCreatorBody = resp?.response;
     });
+  }
+
+  getComplementaryInnovation(id, result) {
+    this.isInitiative = this.api.rolesSE.validateInitiative(this.ipsrDataControlSE.initiative_id);
+
+    if (result.result_type_id == 11) {
+      this.complementaryInnovationService.isEdit = true;
+
+      this.complementaryInnovationService.idInnovation = id;
+
+      this.api.resultsSE.GETComplementaryById(id).subscribe(({ response }) => {
+        this.complementaryInnovationService.dialogStatus = true;
+
+        this.complementaryInnovationService.complementaries = false;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation =
+          response?.findResultComplementaryInnovation?.projects_organizations_working_on_innovation;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.specify_projects_organizations =
+          response?.findResultComplementaryInnovation?.specify_projects_organizations;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.title = response?.findResult?.title;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.description = response?.findResult?.description;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.short_title = response?.findResultComplementaryInnovation?.short_title;
+
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions =
+          response?.findResultComplementaryInnovation?.other_funcions;
+
+        response?.findComplementaryInnovationFuctions.forEach(element => {
+          const name = this.complementaryFunction.find(
+            item => item.complementary_innovation_functions_id === element.complementary_innovation_function_id
+          )?.name;
+
+          this.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions.push({
+            complementary_innovation_functions_id: element.complementary_innovation_function_id,
+            name: name
+          });
+        });
+
+        setTimeout(() => {
+          this.complementaryInnovationService.complementaries = true;
+        }, 100);
+      });
+    } else {
+      const url = `/result/result-detail/${result.result_code}/general-information?phase=${result.version_id}`;
+      window.open(url, '_blank');
+    }
   }
 
   createInnovationEvent(event: ComplementaryInnovation): void {
@@ -94,8 +149,8 @@ export class ComplementaryInnovationComponent implements OnInit {
     const index = this.innovationPackageCreatorBody.findIndex(item => item.result_id === result.result_id);
     if (index !== -1) {
       const innovation = this.innovationPackageCreatorBody[index];
-      const innovationList = innovation.result_type_id === 7 ? this.informationInnovationDevelopments : this.informationComplementaryInnovations;
-      const innovationFind = innovationList.find(item => item.result_code === innovation.result_code);
+      const innovationList = this.informationInnovationDevelopments;
+      const innovationFind = innovationList.find(item => item.result_id === innovation.result_id);
       if (innovationFind) {
         innovationFind.selected = false;
       }
@@ -185,16 +240,11 @@ export class ComplementaryInnovationComponent implements OnInit {
       });
 
       this.informationInnovationDevelopments = resp.response.filter((element: any) => element.result_type_id === 7);
-      this.informationComplementaryInnovations = resp.response.filter((element: any) => element.result_type_id === 11);
 
       this.innovationPackageCreatorBody.forEach(selected => {
-        const foundDevelopment = this.informationInnovationDevelopments.find(item => item.result_code === selected.result_code);
+        const foundDevelopment = this.informationInnovationDevelopments.find(item => item.result_id === selected.result_id);
         if (foundDevelopment) {
           foundDevelopment.selected = true;
-        }
-        const foundComplementary = this.informationComplementaryInnovations.find(item => item.result_code === selected.result_code);
-        if (foundComplementary) {
-          foundComplementary.selected = true;
         }
       });
     });

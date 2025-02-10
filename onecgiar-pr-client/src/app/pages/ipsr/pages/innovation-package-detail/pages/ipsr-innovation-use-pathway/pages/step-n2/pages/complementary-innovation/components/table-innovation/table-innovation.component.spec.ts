@@ -12,7 +12,6 @@ import { PrFieldValidationsComponent } from '../../../../../../../../../../../..
 import { TooltipModule } from 'primeng/tooltip';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { of } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../../../../../../../../../../../shared/services/customized-alerts-fe.service';
 
 describe('TableInnovationComponent', () => {
@@ -42,7 +41,6 @@ describe('TableInnovationComponent', () => {
 
     fixture = TestBed.createComponent(TableInnovationComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -57,72 +55,50 @@ describe('TableInnovationComponent', () => {
     expect(result.selected).toBe(true);
   });
 
-  it('should set status to true and isReadonly to true when getComplementaryInnovation is called with result_type_id 11 and isRead 0', () => {
-    const id = 1;
-    const isRead = 0;
-    const result = { result_type_id: 11 };
-    const mockResponse = {
-      response: {
-        findResultComplementaryInnovation: {
-          projects_organizations_working_on_innovation: [],
-          specify_projects_organizations: []
-        },
-        findResult: {
-          title: '',
-          description: ''
-        },
-        findComplementaryInnovationFuctions: []
-      }
+  it('should emit cancelEvent when cancelInnovationEvent is called', () => {
+    const result = { id: 1 };
+    const cancelEventSpy = jest.spyOn(component.cancelEvent, 'emit');
+    component.cancelInnovationEvent(result);
+    expect(cancelEventSpy).toHaveBeenCalledWith(result);
+  });
+
+  it('should open new window with correct URL when openNewWindow is called', () => {
+    const result = {
+      result_code: 'TEST123',
+      version_id: 1
     };
-
-    jest.spyOn(component.api.resultsSE, 'GETComplementaryById').mockReturnValue(of(mockResponse));
-    component.getComplementaryInnovation(id, isRead, result);
-    expect(component.status).toBe(true);
-    expect(component.isReadonly).toBe(true);
-    expect(component.idInnovation).toBe(id);
+    const windowSpy = jest.spyOn(window, 'open').mockImplementation();
+    component.openNewWindow(result);
+    expect(windowSpy).toHaveBeenCalledWith(`/result/result-detail/${result.result_code}/general-information?phase=${result.version_id}`, '_blank');
   });
 
-  it('should open a new page when getComplementaryInnovation is called with result_type_id not equal to 11', () => {
-    const result = { result_type_id: 10, result_code: '123', version_id: 1 };
-    const windowOpenSpy = jest.spyOn(window, 'open');
-    component.getComplementaryInnovation(1, 0, result);
-    expect(windowOpenSpy).toHaveBeenCalledWith('/result/result-detail/123/general-information?phase=1', '_blank');
-  });
-
-  it('should add a new input to referenceMaterials when addNewInput is called and referenceMaterials length is less than 3', () => {
-    component.informationComplentary.referenceMaterials = [];
-    component.addNewInput();
-    expect(component.informationComplentary.referenceMaterials.length).toBe(1);
-  });
-
-  it('should set statusAdd to true when addNewInput is called and referenceMaterials length is equal to 3', () => {
-    component.informationComplentary.referenceMaterials = [{ link: 'link1' }, { link: 'link2' }, { link: 'link3' }];
-    component.addNewInput();
-    expect(component.statusAdd).toBe(true);
-  });
-
-  it('should call PATCHcomplementaryinnovation and emit editEvent when onSave is called', () => {
-    component.selectComplementary = [1, 2, 3];
-    component.idInnovation = 1;
-
-    const PatchSpy = jest.spyOn(component.api.resultsSE, 'PATCHcomplementaryinnovation').mockReturnValue(of({}));
-    const emitSpy = jest.spyOn(component.editEvent, 'emit');
-    component.onSave();
-    expect(PatchSpy).toHaveBeenCalledWith(component.informationComplentary, component.idInnovation);
-    expect(component.status).toBe(false);
-    expect(emitSpy).toHaveBeenCalledWith(true);
-  });
-
-  it('should call DELETEcomplementaryinnovation and emit editEvent when onDelete is called', () => {
+  it('should show confirmation dialog and delete innovation when onDelete is called', () => {
     const id = 1;
-    const alertFeSpy = jest.spyOn(mockCustomizedAlertsFeService, 'show');
-    const deleteComplementary = jest.spyOn(component.api.resultsSE, 'DELETEcomplementaryinnovation').mockReturnValue(of({}));
-    const emitSpy = jest.spyOn(component.editEvent, 'emit');
-    component.onDelete(id, () => {
-      expect(alertFeSpy).toHaveBeenCalled();
-      expect(deleteComplementary).toHaveBeenCalledWith(id);
-      expect(component.status).toBe(false);
-      expect(emitSpy).toHaveBeenCalledWith(true);
-    });
+    const callback = jest.fn();
+
+    component.onDelete(id, callback);
+
+    expect(mockCustomizedAlertsFeService.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'confirm-delete-result',
+        title: 'Are you sure you want to remove this complementary innovation?',
+        status: 'success',
+        confirmText: 'Yes, delete'
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it('should open new window with correct URL when openNewWindow is called', () => {
+    const result = {
+      result_code: 'TEST123',
+      version_id: 1
+    };
+    const windowSpy = jest.spyOn(window, 'open').mockImplementation();
+
+    component.openNewWindow(result);
+
+    const expectedUrl = `/result/result-detail/${result.result_code}/general-information?phase=${result.version_id}`;
+    expect(windowSpy).toHaveBeenCalledWith(expectedUrl, '_blank');
   });
 });
