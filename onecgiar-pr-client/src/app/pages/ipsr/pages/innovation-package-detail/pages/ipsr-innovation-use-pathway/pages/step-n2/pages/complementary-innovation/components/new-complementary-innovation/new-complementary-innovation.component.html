@@ -1,90 +1,148 @@
-<app-pr-button text="Add new complementary innovation/ enabler/ solution" icon="add_box"
-    *ngIf="!this.api.rolesSE.readOnly" [reverse]="true" [verticalMargin]="20" (click)="status = true"></app-pr-button>
+@if (!this.api.rolesSE.readOnly) {
+  <app-pr-button
+    text="Add new complementary innovation/ enabler/ solution"
+    icon="add_box"
+    [reverse]="true"
+    [verticalMargin]="20"
+    (click)="complementaryInnovationService.dialogStatus = true"></app-pr-button>
+}
 
-<p-dialog class="support_information" [(visible)]="status" [draggable]="false" [modal]="true" [closeOnEscape]="true"
-    [showHeader]="true" [dismissableMask]="true" [style]="{padding: '0px', margin:'0px', width:'70vw'}"
-    [blockScroll]="true" appendTo="body">
+<p-dialog
+  class="support_information"
+  [(visible)]="complementaryInnovationService.dialogStatus"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="true"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
+  [blockScroll]="true"
+  appendTo="body"
+  (onHide)="complementaryInnovationService.resetAll()">
+  <div style="display: flex; justify-content: center; flex-direction: column">
+    <div class="modal_title">
+      {{ this.api.rolesSE.readOnly ? 'View' : this.complementaryInnovationService.isEdit ? 'Edit' : 'New' }} complementary innovation/ enabler/
+      solution
+    </div>
 
-    <div style="display: flex; justify-content: center; flex-direction: column;">
-        <div class="modal_title">New complementary innovation/ enabler/ solution</div>
-        <div class="modal_container">
-
-            <app-pr-field-header label="Short title" [required]="true"
-                description="
+    <div class="modal_container">
+      <app-pr-field-header
+        label="Short title"
+        [required]="true"
+        description="
             <li> Short title that facilitates clear communication about the innovation/ enabler/ solution </li> 
             <li>Avoid abbreviations or (technical) jargon.</li> 
             <li>Varieties or breeds should be described by their generic traits or characteristics</li> 
             <li>If not essential, avoid making reference to specific countries or regions</li> 
             <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>"></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation short title" [maxWords]="10" [required]="true"
-                [(ngModel)]="bodyNewComplementaryInnovation.short_title"></app-pr-input>
+      <app-pr-input
+        placeholder="Complementary innovation short title"
+        [maxWords]="10"
+        [required]="true"
+        [readOnly]="this.api.rolesSE.readOnly"
+        [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.short_title"></app-pr-input>
 
-            <app-pr-field-header label="Long title" [required]="true" description='
+      <app-pr-field-header
+        label="Long title"
+        [required]="true"
+        [readOnly]="this.api.rolesSE.readOnly"
+        description='
             <li>More elaborate explanation of "what it is", "what it does" and "for whom"</li>
             <li>Avoid abbreviations or (technical) jargon.</li>'></app-pr-field-header>
 
-            <app-pr-input placeholder="Complementary innovation long title" [maxWords]="30 " [required]="true"
-                [(ngModel)]="bodyNewComplementaryInnovation.title"> </app-pr-input>
+      <app-pr-input
+        placeholder="Complementary innovation long title"
+        [maxWords]="30"
+        [required]="true"
+        [readOnly]="this.api.rolesSE.readOnly"
+        [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.title">
+      </app-pr-input>
 
-            <app-pr-field-header label="Description / other information" [required]="false"
-                description='
-           <li> Ensure the description is understandable for a non-specialist reader.</li>
-           <li> Avoid acronyms and technical jargon</li>
-           <li> Avoid repetition of the title</li>
-           <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>'></app-pr-field-header>
-            <app-pr-textarea placeholder="Description" [maxWords]="150" [required]="false" [rows]="3"
-                [(ngModel)]="bodyNewComplementaryInnovation.description"></app-pr-textarea>
+      <app-pr-field-header
+        label="Description / other information"
+        [required]="false"
+        description="
+          <li> Ensure the description is understandable for a non-specialist reader.</li>
+          <li> Avoid acronyms and technical jargon</li>
+          <li> Avoid repetition of the title</li>
+          <li> Try to explain in clear language what kind of challenge this innovation/ enabler/ solution addresses, and what kind of solution it offers</li>"></app-pr-field-header>
 
-            <app-pr-field-header label="Function" [required]="true"
-                description='
-            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):'></app-pr-field-header>
-            <div class="selectedInnovation">
-                <span style="display: flex;flex-direction: column; width: 50%;">
-                    <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
-                        <div *ngIf="i < 5" style="margin-top: 10px;">
-                            <p-checkbox name="group" [value]="innovation"
-                                [inputId]="innovation.complementary_innovation_functions_id"
-                                [(ngModel)]="selectedValues"></p-checkbox>
-                            <label> {{ innovation.name }}</label>
+      <app-pr-textarea
+        placeholder="Description"
+        [maxWords]="150"
+        [required]="false"
+        [rows]="3"
+        [readOnly]="this.api.rolesSE.readOnly"
+        [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.description"></app-pr-textarea>
 
-                        </div>
-                    </div>
+      <app-pr-field-header
+        label="Function"
+        [required]="true"
+        description="
+            What the complementary innovation/ enabler/ solution tries to achieve (select multiple):"></app-pr-field-header>
 
-
-                </span>
-                <span style="display: flex;flex-direction: column; width: 50%; margin-left: '10px';">
-                    <div *ngFor="let innovation of complementaryInnovationFunction; let i = index">
-                        <div *ngIf="i >= 5" style="margin-top: 10px;">
-                            <p-checkbox name="group" [value]="innovation"
-                                [inputId]="innovation.complementary_innovation_functions_id"
-                                [(ngModel)]="selectedValues"></p-checkbox>
-                            <label> {{ innovation.name }}</label>
-                        </div>
-
-                    </div>
-                    <app-pr-input label="Other enabler functions" placeholder="" [required]="false"
-                        [(ngModel)]="bodyNewComplementaryInnovation.other_funcions"></app-pr-input>
-                </span>
+      @if (complementaryInnovationService.complementaries) {
+        <div class="container">
+          <div class="col{{ i }}" *ngFor="let item of columns; let i = index">
+            <div *ngFor="let subItem of item" style="margin-bottom: 10px">
+              <p-checkbox
+                name="name"
+                [value]="subItem"
+                id="checkbox{{ subItem.complementary_innovation_functions_id }}"
+                [inputId]="subItem.complementary_innovation_functions_id"
+                [readonly]="this.api.rolesSE.readOnly"
+                [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions"></p-checkbox>
+              <label for="checkbox{{ subItem.complementary_innovation_functions_id }}"> {{ subItem.name }}</label>
             </div>
-
-            <app-pr-radio-button
-                label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
-                [options]="this.awareOptions" optionLabel="name" optionValue="value" [required]="true"
-                [(ngModel)]="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
-                (ngModelChange)="this.bodyNewComplementaryInnovation.specify_projects_organizations = null">
-            </app-pr-radio-button>
-            <div style="margin-top: 10px;"></div>
-            <app-pr-textarea *ngIf="this.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
-                placeholder="Please specify..." description="Please specify those projects or organizations."
-                [(ngModel)]="this.bodyNewComplementaryInnovation.specify_projects_organizations"></app-pr-textarea>
-
+          </div>
         </div>
-    </div>
-    <div class="buttons">
+      }
 
-        <app-pr-button text="Save and continue" padding="medium" colorType="success" (click)="disableSaveButton() ? null : onSave()" [disabled]="disableSaveButton()"
+      @if (complementaryInnovationService.complementaries) {
+        <div style="display: flex; align-content: flex-end; width: 100%; justify-content: flex-end">
+          <app-pr-input
+            style="width: 50%; margin-top: -30px; margin-left: 20px"
+            label="Other enabler functions"
+            [required]="false"
+            [readOnly]="this.api.rolesSE.readOnly"
+            [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions"
+            placeholder=""></app-pr-input>
+        </div>
+      }
+
+      <app-pr-radio-button
+        label="Are you aware of any projects or organizations already working on this complementary innovation/ enabler/ solution?"
+        [options]="this.awareOptions"
+        optionLabel="name"
+        optionValue="value"
+        [required]="true"
+        [readOnly]="this.api.rolesSE.readOnly"
+        [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation"
+        (ngModelChange)="complementaryInnovationService.bodyNewComplementaryInnovation.specify_projects_organizations = null">
+      </app-pr-radio-button>
+
+      <div style="margin-top: 10px"></div>
+
+      @if (complementaryInnovationService.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation) {
+        <app-pr-textarea
+          placeholder="Please specify..."
+          description="Please specify those projects or organizations."
+          [readOnly]="this.api.rolesSE.readOnly"
+          [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.specify_projects_organizations"></app-pr-textarea>
+      }
+    </div>
+  </div>
+
+  @if (!this.api.rolesSE.readOnly) {
+    <div class="buttons">
+      <app-pr-button
+        text="Save and continue"
+        padding="medium"
+        colorType="success"
+        (click)="disableSaveButton() ? null : onSave()"
+        [disabled]="disableSaveButton()"
         [tooltipText]="disableSaveButton() ? 'Please complete the mandatory fields.' : ''"></app-pr-button>
     </div>
-
+  }
 </p-dialog>
