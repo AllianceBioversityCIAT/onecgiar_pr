@@ -22,7 +22,7 @@
             <cdk-virtual-scroll-viewport itemSize="190" class="custom_scroll virtual_scroll all_notifications">
                 <div style="display: flex; flex-direction: column; gap: 10px;"
                     *cdkVirtualFor="let notification of this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter; let i =index">
-                    <app-notification-item-innovation [comes]="notification.pending" [readOnly]="notification.readOnly"
+                    <app-notification-item-innovation [comes]="notification.pending"
                         (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()"
                         [notification]="notification" style="margin-bottom: 10px;">
                     </app-notification-item-innovation>

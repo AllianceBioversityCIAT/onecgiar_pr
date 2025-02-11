@@ -42,13 +42,15 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       	and ctis.is_active
       left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
       left join ${env.DB_TOC}.toc_results_indicators tri on tri.is_active
-        and convert(tri.toc_result_indicator_id using utf8mb4) = convert(cti.toc_result_id using utf8mb4) 
+        and convert(tri.related_node_id using utf8mb4) = convert(cti.toc_result_id using utf8mb4) 
       left join ${env.DB_TOC}.toc_result_indicator_target trit 
         on tri.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
       right join ${env.DB_TOC}.toc_results tr on tr.id = tri.toc_results_id
       left join ${env.DB_NAME}.clarisa_initiatives ci on ci.toc_id = tr.id_toc_initiative
       left join ${env.DB_TOC}.work_packages wp on tr.work_packages_id = wp.id
       where cti.toc_result_id = ? and cti.is_active
+      order by
+        tr.id desc
     `;
 
     return this.dataSource

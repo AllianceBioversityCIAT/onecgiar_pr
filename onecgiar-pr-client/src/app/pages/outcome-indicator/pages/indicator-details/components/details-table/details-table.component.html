@@ -21,7 +21,7 @@
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="body" let-item let-expanded="expanded">
+  <ng-template pTemplate="body" let-item>
     <tr>
       <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.result_code }}</td>
       <td [ngClass]="{ removed: item?.is_active === false }">

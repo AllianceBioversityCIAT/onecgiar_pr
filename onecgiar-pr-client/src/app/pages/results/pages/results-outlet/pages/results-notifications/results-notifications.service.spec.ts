@@ -43,6 +43,9 @@ describe('ResultsNotificationsService', () => {
             initiative_id: 1
           }
         ]
+      },
+      rolesSE: {
+        isAdmin: false
       }
     };
 
@@ -114,52 +117,99 @@ describe('ResultsNotificationsService', () => {
   });
 
   describe('get_section_innovation_packages()', () => {
-    it('should update dataIPSR for get_section_innovation_packages', () => {
-      mockGET_allRequestResponse.requestPendingData[0].request_status_id = 1;
+    it('should process and sort data when response exists', () => {
+      const mockResponse = {
+        requestData: [
+          { result_type_id: 10, requester_initiative_id: 1, owner_initiative_id: 2, request_status_id: 1 },
+          { result_type_id: 8, requester_initiative_id: 2, owner_initiative_id: 1 }
+        ],
+        requestPendingData: [{ result_type_id: 10, requester_initiative_id: 3, owner_initiative_id: 1, request_status_id: 2 }]
+      };
+
+      mockApiService.dataControlSE.myInitiativesList = [{ initiative_id: 1 }, { initiative_id: 2 }];
+      mockApiService.rolesSE = { isAdmin: false };
+
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR').mockReturnValue(of({ response: mockResponse }));
+
+      service.get_section_innovation_packages();
+
+      expect(spy).toHaveBeenCalled();
+      expect(service.dataIPSR).toEqual([
+        {
+          result_type_id: 10,
+          requester_initiative_id: 1,
+          owner_initiative_id: 2,
+          request_status_id: 1
+        },
+        {
+          result_type_id: 10,
+          requester_initiative_id: 3,
+          owner_initiative_id: 1,
+          request_status_id: 4,
+          pending: true,
+          shared_inititiative_id: 3
+        }
+      ]);
+    });
+
+    it('should update status when user is not admin and has correct initiative permissions', () => {
+      const mockResponse = {
+        requestData: [
+          {
+            result_type_id: 10,
+            requester_initiative_id: 2, // Not in myInitiativesList
+            owner_initiative_id: 1 // In myInitiativesList
+          }
+        ],
+        requestPendingData: []
+      };
+
+      mockApiService.dataControlSE.myInitiativesList = [{ initiative_id: 1 }];
+      mockApiService.rolesSE = { isAdmin: false };
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR').mockReturnValue(of({ response: mockResponse }));
 
       service.get_section_innovation_packages();
 
       expect(service.dataIPSR).toEqual([
         {
-          approving_inititiative_id: 1,
           result_type_id: 10,
-          readOnly: true
-        },
-        {
-          requester_initiative_id: 1,
+          requester_initiative_id: 2,
+          owner_initiative_id: 1,
           request_status_id: 4,
-          shared_inititiative_id: 1,
-          result_type_id: 10,
+          shared_inititiative_id: 2,
           pending: true
         }
       ]);
     });
-    it('should update dataIPSR for get_section_innovation_packages when request_status_id is not 1', () => {
-      mockGET_allRequestResponse.requestPendingData[0].request_status_id = 2;
 
-      service.get_section_innovation_packages();
-
-      expect(service.dataIPSR).toEqual([
-        {
-          approving_inititiative_id: 1,
-          result_type_id: 10,
-          readOnly: true
-        },
-        {
-          requester_initiative_id: 1,
-          request_status_id: 2,
-          result_type_id: 10
-        }
-      ]);
-    });
-    it('should not update dataIPSR for get_section_innovation_packages', () => {
-      mockApiService.resultsSE.GET_requestIPSR = () => of({});
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR');
+    it('should not process data when response is empty', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR').mockReturnValue(of({ response: null }));
 
       service.get_section_innovation_packages();
 
       expect(spy).toHaveBeenCalled();
       expect(service.dataIPSR).toEqual([]);
+    });
+
+    it('should filter out non-type-10 results', () => {
+      const mockResponse = {
+        requestData: [
+          { result_type_id: 8, requester_initiative_id: 1 },
+          { result_type_id: 10, requester_initiative_id: 2 }
+        ],
+        requestPendingData: []
+      };
+
+      mockApiService.dataControlSE.myInitiativesList = [];
+      mockApiService.rolesSE = { isAdmin: true };
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_requestIPSR').mockReturnValue(of({ response: mockResponse }));
+
+      service.get_section_innovation_packages();
+
+      expect(service.dataIPSR.length).toBe(1);
+      expect(service.dataIPSR[0].result_type_id).toBe(10);
     });
   });
 

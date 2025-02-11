@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report/type-one-report.service';
+import { ModuleTypeEnum, StatusPhaseEnum } from '../../../shared/enum/api.enum';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,8 @@ export class OutcomeIndicatorService {
   loading = signal(false);
   loadingWPs = signal(false);
   expandedRows = {};
+  allInitiatives = signal([]);
+  phaseList = signal([]);
 
   searchText = signal<string>('');
 
@@ -97,6 +100,18 @@ export class OutcomeIndicatorService {
         console.error(error);
         this.loadingWPs.set(false);
       }
+    });
+  }
+
+  loadAllInitiatives() {
+    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+      this.allInitiatives.set(response);
+    });
+  }
+
+  getAllPhases() {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+      this.phaseList.set(response);
     });
   }
 }
