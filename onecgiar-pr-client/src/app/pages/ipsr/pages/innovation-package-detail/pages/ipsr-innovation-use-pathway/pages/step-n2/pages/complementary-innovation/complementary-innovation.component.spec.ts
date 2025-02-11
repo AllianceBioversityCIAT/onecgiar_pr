@@ -20,6 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
+jest.useFakeTimers();
 
 describe('ComplementaryInnovationComponent', () => {
   let component: ComplementaryInnovationComponent;
@@ -124,21 +125,9 @@ describe('ComplementaryInnovationComponent', () => {
 
   it('should cancel innovation correctly', () => {
     const result = { result_id: '1', result_code: 'code', result_type_id: 7 } as ComplementaryInnovation;
-    const innovationFind = { result_code: 'code', selected: true };
+    const innovationFind = { result_id: '1', selected: true };
     component.innovationPackageCreatorBody = [result];
     component.informationInnovationDevelopments = [innovationFind];
-
-    component.cancelInnovation(result);
-
-    expect(component.innovationPackageCreatorBody.length).toBe(0);
-    expect(innovationFind.selected).toBe(false);
-  });
-
-  it('should cancel complementary innovation correctly', () => {
-    const result = { result_id: '1', result_code: 'code', result_type_id: 11 } as ComplementaryInnovation;
-    const innovationFind = { result_code: 'code', selected: true };
-    component.innovationPackageCreatorBody = [result];
-    component.informationComplementaryInnovations = [innovationFind];
 
     component.cancelInnovation(result);
 
@@ -262,14 +251,35 @@ describe('ComplementaryInnovationComponent', () => {
   it('should load information complementary innovations correctly', () => {
     const mockResponse = {
       response: [
-        { result_code: 'code1', title: 'Title 1', initiative_official_code: 'Initiative 1', lead_contact_person: 'Person 1', result_type_id: 7 },
-        { result_code: 'code2', title: 'Title 2', initiative_official_code: 'Initiative 2', lead_contact_person: 'Person 2', result_type_id: 7 },
-        { result_code: 'code3', title: 'Title 3', initiative_official_code: 'Initiative 3', lead_contact_person: 'Person 3', result_type_id: 7 }
+        {
+          result_id: '1',
+          result_code: 'code1',
+          title: 'Title 1',
+          initiative_official_code: 'Initiative 1',
+          lead_contact_person: 'Person 1',
+          result_type_id: 7
+        },
+        {
+          result_id: '2',
+          result_code: 'code2',
+          title: 'Title 2',
+          initiative_official_code: 'Initiative 2',
+          lead_contact_person: 'Person 2',
+          result_type_id: 7
+        },
+        {
+          result_id: '3',
+          result_code: 'code3',
+          title: 'Title 3',
+          initiative_official_code: 'Initiative 3',
+          lead_contact_person: 'Person 3',
+          result_type_id: 7
+        }
       ]
     };
     jest.spyOn(component.api.resultsSE, 'GETinnovationpathwayStepTwo').mockReturnValue(of(mockResponse));
 
-    component.innovationPackageCreatorBody = [{ result_code: 'code1' }, { result_code: 'code2' }] as any;
+    component.innovationPackageCreatorBody = [{ result_id: '1' }, { result_id: '2' }] as any;
 
     component.loadInformationComplementaryInnovations();
 
@@ -416,5 +426,52 @@ describe('ComplementaryInnovationComponent', () => {
     component.onSavePreviousNext('next');
 
     expect(component.api.resultsSE.POST_resultsLinked).not.toHaveBeenCalled();
+  });
+
+  describe('getComplementaryInnovation', () => {
+    it('should open result in new tab when result_type_id is not 11', () => {
+      const id = 1;
+      const result = { result_type_id: 7, result_code: 'code123', version_id: 1 };
+      const windowSpy = jest.spyOn(window, 'open').mockImplementation();
+
+      component.getComplementaryInnovation(id, result);
+
+      expect(windowSpy).toHaveBeenCalledWith('/result/result-detail/code123/general-information?phase=1', '_blank');
+    });
+
+    it('should set complementary innovation data when result_type_id is 11', () => {
+      const id = 1;
+      const result = { result_type_id: 11 };
+      const mockResponse = {
+        response: {
+          findResultComplementaryInnovation: {
+            projects_organizations_working_on_innovation: true,
+            specify_projects_organizations: 'test org',
+            short_title: 'short title',
+            other_funcions: 'other functions'
+          },
+          findResult: {
+            title: 'test title',
+            description: 'test description'
+          },
+          findComplementaryInnovationFuctions: [{ complementary_innovation_function_id: 1 }]
+        }
+      };
+      component.complementaryFunction = [{ complementary_innovation_functions_id: 1, name: 'function 1' }];
+      jest.spyOn(component.api.resultsSE, 'GETComplementaryById').mockReturnValue(of(mockResponse));
+
+      component.getComplementaryInnovation(id, result);
+
+      jest.runAllTimers();
+      expect(component.complementaryInnovationService.isEdit).toBe(true);
+      expect(component.complementaryInnovationService.idInnovation).toBe(id);
+      expect(component.complementaryInnovationService.dialogStatus).toBe(true);
+      expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.title).toBe('test title');
+      expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.description).toBe('test description');
+      expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.short_title).toBe('short title');
+      expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
+        { complementary_innovation_functions_id: 1, name: 'function 1' }
+      ]);
+    });
   });
 });

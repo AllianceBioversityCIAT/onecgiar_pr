@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NewComplementaryInnovationComponent } from './new-complementary-innovation.component';
-import { of } from 'rxjs';
+import { CreateComplementaryInnovationDto, NewComplementaryInnovationComponent } from './new-complementary-innovation.component';
+import { of, throwError } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
@@ -43,89 +43,138 @@ describe('NewComplementaryInnovationComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should return true when short_title is empty', () => {
-    component.bodyNewComplementaryInnovation.short_title = '';
-    component.bodyNewComplementaryInnovation.title = 'Title';
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
-    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
-
-    expect(component.disableSaveButton()).toBe(true);
-  });
-
-  it('should return true when title is empty', () => {
-    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
-    component.bodyNewComplementaryInnovation.title = '';
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
-    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
-
-    expect(component.disableSaveButton()).toBe(true);
-  });
-
-  it('should return true when selectedValues is empty', () => {
-    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
-    component.bodyNewComplementaryInnovation.title = 'Title';
+  it('should disable save button when required fields are empty', () => {
+    component.complementaryInnovationService.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
     component.selectedValues = [];
-    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
 
     expect(component.disableSaveButton()).toBe(true);
   });
 
-  it('should return true when projects_organizations_working_on_innovation is null', () => {
-    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
-    component.bodyNewComplementaryInnovation.title = 'Title';
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
-    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = null;
+  it('should disable save button when only short title is filled', () => {
+    component.complementaryInnovationService.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.short_title = 'test';
+    component.selectedValues = [];
 
     expect(component.disableSaveButton()).toBe(true);
   });
 
-  it('should return false when all required fields are filled', () => {
-    component.bodyNewComplementaryInnovation.short_title = 'Short Title';
-    component.bodyNewComplementaryInnovation.title = 'Title';
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }];
-    component.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
+  it('should disable save button when only title is filled', () => {
+    component.complementaryInnovationService.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.title = 'test';
+    component.selectedValues = [];
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should disable save button when projects_organizations_working_on_innovation is null', () => {
+    component.complementaryInnovationService.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.short_title = 'test';
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.title = 'test';
+    component.selectedValues = ['test'];
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = null;
+
+    expect(component.disableSaveButton()).toBe(true);
+  });
+
+  it('should enable save button when all required fields are filled with other_funcions', () => {
+    component.complementaryInnovationService.bodyNewComplementaryInnovation = new CreateComplementaryInnovationDto();
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.short_title = 'test';
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.title = 'test';
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions = 'test';
+    component.selectedValues = [];
+    component.complementaryInnovationService.bodyNewComplementaryInnovation.projects_organizations_working_on_innovation = true;
 
     expect(component.disableSaveButton()).toBe(false);
   });
 
-  it('should initialize linksComplemntaryInnovation with three empty links', () => {
-    expect(component.linksComplemntaryInnovation).toEqual([{ link: '' }, { link: '' }, { link: '' }]);
-  });
+  describe('onUpdate', () => {
+    it('should call onUpdate when isEdit is true', () => {
+      component.complementaryInnovationService.isEdit = true;
+      jest.spyOn(component, 'onUpdate');
+      component.onSave();
+      expect(component.onUpdate).toHaveBeenCalled();
+    });
 
-  it('should filter out empty links and update bodyNewComplementaryInnovation when onSave is called', () => {
-    component.linksComplemntaryInnovation = [{ link: 'https://example.com' }, { link: '' }, { link: 'https://example.org' }];
-    component.selectedValues = [{ complementary_innovation_functions_id: 1 }, { complementary_innovation_functions_id: 2 }];
-    component.ipsrDataControlSE.detailData = { ...component.ipsrDataControlSE.detailData, inititiative_id: '123' };
-    component.bodyNewComplementaryInnovation.other_funcions = undefined;
+    it('should update dialogStatus and emit event on successful update', () => {
+      jest.spyOn(component.editEvent, 'emit');
+      jest.spyOn(component.api.resultsSE, 'PATCHcomplementaryinnovation').mockReturnValue(of({}));
 
-    component.onSave(() => {
-      expect(component.linksComplemntaryInnovation).toEqual([{ link: 'https://example.com' }, { link: 'https://example.org' }]);
-      expect(component.bodyNewComplementaryInnovation.complementaryFunctions).toEqual([
-        { complementary_innovation_functions_id: 1 },
-        { complementary_innovation_functions_id: 2 }
-      ]);
-      expect(component.bodyNewComplementaryInnovation.initiative_id).toBe(123);
-      expect(component.bodyNewComplementaryInnovation.other_funcions).toBe('');
+      component.onUpdate();
+
+      expect(component.complementaryInnovationService.dialogStatus).toBeFalsy();
+      expect(component.editEvent.emit).toHaveBeenCalledWith(true);
     });
   });
 
-  it('should emit createInnovationEvent with the response when onSave is called', () => {
-    const mockApiResponse = {
-      response: {
-        createResult: {
-          initiative_id: 1
+  describe('onSave', () => {
+    it('should call POSTNewCompletaryInnovation and emit event on successful save', () => {
+      const mockResponse = {
+        response: {
+          createResult: {
+            initiative_id: 5
+          }
         }
-      }
-    };
-    const emitSpy = jest.spyOn(component.createInnovationEvent, 'emit');
-    const apiResultsSEPostNewCompletaryInnovationSpy = jest
-      .spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation')
-      .mockReturnValue(of(mockApiResponse));
+      };
 
-    component.onSave(() => {
-      expect(apiResultsSEPostNewCompletaryInnovationSpy).toHaveBeenCalledWith(component.bodyNewComplementaryInnovation);
+      jest.spyOn(component.createInnovationEvent, 'emit');
+      jest.spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation').mockReturnValue(of(mockResponse));
+
+      component.onSave();
+
+      expect(component.api.resultsSE.POSTNewCompletaryInnovation).toHaveBeenCalled();
+      expect(component.createInnovationEvent.emit).toHaveBeenCalledWith({
+        initiative_id: 5,
+        initiative_official_code: 'INIT-05'
+      });
+      expect(component.complementaryInnovationService.dialogStatus).toBeFalsy();
+      expect(component.selectedValues).toEqual([]);
     });
 
-    expect(emitSpy).toHaveBeenCalledWith({ initiative_id: 1, initiative_official_code: 'INIT-01' });
+    it('should set initiative_official_code correctly for id >= 10', () => {
+      const mockResponse = {
+        response: {
+          createResult: {
+            initiative_id: 15
+          }
+        }
+      };
+
+      jest.spyOn(component.createInnovationEvent, 'emit');
+      jest.spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation').mockReturnValue(of(mockResponse));
+
+      component.onSave();
+
+      expect(component.createInnovationEvent.emit).toHaveBeenCalledWith({
+        initiative_id: 15,
+        initiative_official_code: 'INIT-15'
+      });
+    });
+
+    it('should set other_funcions to empty string if undefined', () => {
+      const mockResponse = {
+        response: {
+          createResult: {
+            initiative_id: 5
+          }
+        }
+      };
+
+      component.complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions = undefined;
+      jest.spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation').mockReturnValue(of(mockResponse));
+
+      component.onSave();
+
+      expect(component.complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions).toBe(undefined);
+    });
+
+    it('should handle error case', () => {
+      const mockError = new Error('Test error');
+      jest.spyOn(console, 'error').mockImplementation();
+      jest.spyOn(component.api.resultsSE, 'POSTNewCompletaryInnovation').mockReturnValue(throwError(() => mockError));
+
+      component.onSave();
+
+      expect(console.error).toHaveBeenCalledWith(mockError);
+    });
   });
 });

@@ -8,21 +8,11 @@
   [columns]="cols"
   (cancelEvent)="cancelInnovation($event)"></app-table-innovation>
 
-<!-- This component is reserved for future use. Please do not remove. -->
-<!-- <app-pr-field-header
-  label="Please select or specify other complementary innovations / enablers / solutions that form part of the Innovation Package"
-  description="Additional complementary innovations/ enablers/ solutions can be added below."></app-pr-field-header> -->
-<!-- <app-table-innovation
-  (selectEvent)="selectInnovationEvent($event)"
-  [dataTable]="informationComplementaryInnovations"
-  [columns]="cols"
-  (editEvent)="saveEdit()"
-  (cancelEvent)="cancelInnovation($event)"></app-table-innovation> -->
-<!-- This component is reserved for future use. Please do not remove. -->
-
 <app-new-complementary-innovation
   [complementaryInnovationFunction]="complementaryFunction"
-  (createInnovationEvent)="createInnovationEvent($event)"></app-new-complementary-innovation>
+  (createInnovationEvent)="createInnovationEvent($event)"
+  [columns]="cols"
+  (editEvent)="saveEdit()"></app-new-complementary-innovation>
 
 <app-pr-field-header
   [required]="false"
@@ -35,14 +25,20 @@
     <div class="core_innovation_selected" style="margin-top: 10px">
       <div>
         <strong>{{ result.result_code }}</strong> -
-        <span style="text-overflow: ellipsis">{{ result.title.length > 120 ? result.title.substr(0, 120) + '...' : result.title }}</span>
+        <span style="text-overflow: ellipsis">{{ result.title }}</span>
         -
         <strong>{{ result.initiative_official_code }}</strong>
       </div>
 
-      @if (!this.api.rolesSE.readOnly) {
-        <i class="material-icons-round" (click)="cancelInnovation(result)"> cancel </i>
-      }
+      <div class="action_buttons">
+        <i class="material-icons-round" (click)="getComplementaryInnovation(result.result_id, result)">
+          {{ this.api.rolesSE.readOnly ? 'visibility' : result.result_type_id === 7 ? 'visibility' : 'edit' }}
+        </i>
+
+        @if (!this.api.rolesSE.readOnly) {
+          <i class="material-icons-round" (click)="cancelInnovation(result)"> cancel </i>
+        }
+      </div>
     </div>
   }
 }
