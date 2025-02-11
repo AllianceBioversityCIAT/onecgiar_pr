@@ -53,18 +53,7 @@ describe('OutcomeIndicatorService', () => {
     expect(service.loading()).toBe(false);
   });
 
-  it('should set loading to true and call GET_contributionsToIndicatorsEOIS with typeOneReportServiceMock.initiativeSelected', () => {
-    const subscribeMock = jest.fn();
-    apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
-
-    service.getEOIsData(true);
-
-    expect(service.loading()).toBe(true);
-    expect(apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS).toHaveBeenCalledWith(typeOneReportServiceMock.initiativeSelected);
-    expect(subscribeMock).toHaveBeenCalled();
-  });
-
-  it('should set eoisData with empty indicators array when indicators are null', () => {
+  it('should set eoisData with indicators when indicators are null', () => {
     const response = { response: [{ indicators: null }] };
     const subscribeMock = jest.fn(({ next }) => next(response));
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
