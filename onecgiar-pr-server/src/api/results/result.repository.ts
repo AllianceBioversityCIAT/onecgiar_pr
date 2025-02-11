@@ -561,10 +561,11 @@ WHERE
   async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code,
+      DISTINCT r.result_code,
       version.phase_name,
       r.reported_year_id,
       r.title,
+      r.description,
       CONCAT(rl.name, ' - ', rt.name) as  "result_type",
       if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "is_key_result",
       (
@@ -632,8 +633,8 @@ WHERE
       and r.is_active > 0 and r.result_type_id not in (10,11)
     GROUP by r.id, r.reported_year_id, r.title, rl.name, rt.name, ci_main.official_code, rs.status_name, r.created_date,
       wp.id, wp.name, rtr.toc_result_id, tr.result_title, rtr.action_area_outcome_id, caao.outcomeStatement
-    order by r.created_date DESC;
-    `;
+    ORDER BY creation_date DESC;
+      `;
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
       return results;
@@ -1133,245 +1134,528 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     if (parameters.initiativeIds) {
       whereClause = `${
         whereClause.length ? 'AND' : 'WHERE'
-      } rbi3.inititiative_id in (${parameters.initiativeIds.join(',')})
-      ${
-        parameters.phases
-          ? `and r.version_id in (${parameters.phases.join(',')})`
-          : ''
-      }
+      } rbi.inititiative_id in (${parameters.initiativeIds.join(',')})
       AND r.status_id = 2`;
     }
 
     const query = `
-    select 
-    DISTINCT r.result_code as "Result Code",
-    (SELECT v.phase_name FROM version v WHERE r.version_id = v.id) AS "Reporting phase",
-    CONCAT('${
-      env.FRONT_END_PDF_ENDPOINT
-    }', r.result_code, "?phase=", r.version_id) AS "PDF Link",
-    rl.name as "Result Level",
-    rt.name as "Result Type",
-    (
-      SELECT
+    SELECT
+        -- GENERAL INFORMATION
+        DISTINCT r.result_code AS "Result Code",
+        (
+            SELECT
+                v.phase_name
+            FROM
+                version v
+            WHERE
+                r.version_id = v.id
+        ) AS "Reporting phase",
         CONCAT(
-          u.last_name,
-          ', ',
-          u.first_name
-        )
-      FROM 
-        users u
-      WHERE
-        u.id = r.created_by
-    ) AS "Created by",
-    rs.status_name as "Status",
-    r.title as "Result Title",
-    r.description as "Result Description",
-    r.lead_contact_person as "Lead Contact Person",
-    gtl.title as "Gender Tag Level",
-    gtl2.title as "Climate Tag Level",
-    gtl3.title as "Nutrition Tag Level",
-    gtl4.title as "Environment and/or biodiversity Tag Level",
-    gtl5.title as "Poverty Tag Level",
-    if(r.is_krs is null,'Not provided',if(r.is_krs,'Yes','No')) as "Is Key Result Story",
-    -- section 2
-    concat(ci.official_code, ' - ', ci.name) as "Primary Submitter",
-    GROUP_CONCAT(distinct concat(ci2.official_code, ' - ', ci2.name) SEPARATOR '; ') as "Contributing Initiative(s)",
-    GROUP_CONCAT(distinct CONCAT('(Funder name: ',ci4.acronym,' - ',ci4.name ,', Grant title: ',npp.grant_title,', Center Grant ID: ',IFNULL(npp.center_grant_id, 'Not applicable'),', Lead/Contract Center: ',ci3.name,')') SEPARATOR ', ') as "Non-pooled Project(s)",
-    GROUP_CONCAT(distinct CONCAT(if(rc.is_primary,'(Primary: ','('),ci5.acronym,' - ',ci5.name,')') SEPARATOR ', ') as "Contributing Center(s)",
-    IF (r.result_level_id = 1 OR r.result_level_id = 2, '<Not applicable>', (
-		SELECT GROUP_CONCAT('(', ci9.official_code, ' - ', ci9.name, ') ', 
-			IFNULL(
-	        	(
-	        		SELECT CONCAT(wp.acronym, ' - ', wp.name)
-	                FROM Integration_information.work_packages wp
-	                WHERE wp.id = tr.work_packages_id
-	            ), 
-	            ''
-			), '  Title: ', tr.result_title, ' - ', IF(tr.result_description IS NULL OR tr.result_description = '', '', CONCAT(' Description: ', tr.result_description) ) SEPARATOR '\n')
-		FROM Integration_information.toc_results tr
-		LEFT JOIN prdb.results_toc_result rtr ON rtr.results_id = r.id AND rtr.is_active = 1
-		LEFT JOIN prdb.clarisa_initiatives ci9 ON ci9.id = rtr.initiative_id
-		WHERE tr.id = rtr.toc_result_id
-	)) AS "ToC Mapping (Primary submitter)",
-    GROUP_CONCAT(distinct CONCAT('(',ci6.official_code,' - ',ci6.short_name,'): ', 'Toc Level: ' ,IFNULL(tl2.name , 'Not provider'), ', ToC result title:' ,IFNULL(tr2.title, 'Not provider')) SEPARATOR ', ') as "ToC Mapping (Contributting initiatives)",
-    -- section 3
-    if(rt.id <> 6, if(r.no_applicable_partner=1, "No", "Yes"), "Yes") as "Are partners applicable?",
-    if(rt.id <> 6,(
-    	select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
-    	from (
-    		select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
-		    FROM results_by_institution rbi
-		    left join result_by_institutions_by_deliveries_type rbibdt 
-		          on rbibdt.result_by_institution_id = rbi.id 
-		        and rbibdt.is_active > 0
-		    left join clarisa_institutions ci7 
-		          on ci7.id = rbi.institutions_id
-		    left JOIN partner_delivery_type pdt 
-		          on pdt.id = rbibdt.partner_delivery_type_id
-		      WHERE rbi.result_id = r.id
-		        and rbi.institution_roles_id = 2
-		        and rbi.is_active > 0
-	    GROUP by rbi.result_id, ci7.id
-	    ) as q1
-	), 'Not Applicable') as "Partners (with delivery type) for non-KP results",
-	if(rt.id = 6, (
-		SELECT group_concat(distinct concat('• ', q1.partner) separator '\n')
-	    from ( select concat('CGSpace Institution: ', rkmi.intitution_name, '; Mapped institution: ', if(rbi.id is null, 'None', concat(concat(if(coalesce(ci8.acronym, '') = '', '', concat(ci8.acronym, ' - ')), ci8.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')))) as partner
-	    FROM results_kp_mqap_institutions rkmi
-	    left join results_knowledge_product rkp on rkmi.result_knowledge_product_id = rkp.result_knowledge_product_id and rkp.is_active > 0
-	    left join results_by_institution rbi on	rkmi.results_by_institutions_id = rbi.id and rbi.is_active > 0 and rbi.institution_roles_id = 2
-	    left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi.id and rbibdt.is_active > 0
-	    left join clarisa_institutions ci8 on ci8.id = rbi.institutions_id
-	    left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
-	    WHERE rkmi.is_active > 0 and rkp.results_id = r.id
-	    GROUP by rkp.results_id, rbi.institutions_id, rkmi.intitution_name, rkmi.results_by_institutions_id) as q1), 'Not Applicable') as "Partners (with delivery type) for KP results",
-    if(rt.id = 6, if(r.no_applicable_partner=1, "No", "Yes"), 'Not Applicable') as "Are additional partners for KP results applicable?",
-    if(rt.id = 6,(
-    	select GROUP_CONCAT(DISTINCT concat('• ', q1.partner) SEPARATOR '\n')
-	    from (select concat(concat(if(coalesce(ci7.acronym, '') = '', '', concat(ci7.acronym, ' - ')), ci7.name), '; Delivery type(s): ', group_concat(distinct pdt.name separator ', ')) as partner
-	    FROM results_by_institution rbi
-	    left join result_by_institutions_by_deliveries_type rbibdt on rbibdt.result_by_institution_id = rbi.id and rbibdt.is_active > 0
-	    left join clarisa_institutions ci7 on ci7.id = rbi.institutions_id
-	    left JOIN partner_delivery_type pdt on pdt.id = rbibdt.partner_delivery_type_id
-	    WHERE rbi.result_id = r.id and rbi.institution_roles_id = 8 and rbi.is_active > 0
-	    GROUP by rbi.result_id, ci7.id) as q1), 'Not Applicable'
-	) as "Additional partners (with delivery type) for KP results",
-    -- section 4
-    (SELECT if(cgs.name is null, 'Not Provided', (if(cgs.id = 3, 'National', cgs.name))) 
-  FROM clarisa_geographic_scope cgs
- WHERE cgs.id = r.geographic_scope_id
- GROUP BY cgs.id,cgs.name) as "Geographic Focus",
-    ( SELECT GROUP_CONCAT(DISTINCT cr.name separator ', ')
-     FROM result_region rr
-left join clarisa_regions cr 
-       on cr.um49Code = rr.region_id 
-    WHERE rr.result_id  =  r.id
-      and rr.is_active = 1) as "Regions",
-     (select if(rt.id<>6, if(r.geographic_scope_id = 5, GROUP_CONCAT(csn.res separator '\n'), GROUP_CONCAT(csn.countries separator ', ')), rkp.cgspace_countries) 
-     from (select CONCAT_WS('',cc3.name,': ', IFNULL(GROUP_CONCAT(css.name separator ', '), IF((select count(css2.id) 
-     from clarisa_subnational_scopes css2
-     where css2.country_iso_alpha_2 = cc3.iso_alpha_2) > 0, 'Not provided', 'No sub-national levels available'))) as res, 
-     cc3.name  as countries
-         FROM
-           result_country rc2
-         left join clarisa_countries cc3 
-            on
-           cc3.id = rc2.country_id
-         left join result_country_subnational rcs 
-         on 
-             rcs.result_country_id = rc2.result_country_id 
-           and 
-             rcs.is_active > 0
-           left join clarisa_subnational_scopes css on css.code = rcs.clarisa_subnational_scope_code
-         WHERE
-           rc2.result_id = r.id
-           and rc2.is_active = 1
-     GROUP BY cc3.name, prdb.cc3.iso_alpha_2) csn) as "Countries",
-    -- section 5
-    GROUP_CONCAT(DISTINCT CONCAT('(',res2.result_code,': ',res2.result_type,' - ', res2.title,')')) as "Linked Results",
-    (SELECT GROUP_CONCAT(DISTINCT lr2.legacy_link separator '\n')
-      FROM linked_result lr2
-      WHERE lr2.origin_result_id = r.id
-      and lr2.linked_results_id is NULL 
-      and lr2.is_active > 0
-      and lr2.legacy_link is not NULL
-    ) as "Results from previous portfolio",
-    -- section 6
-   (SELECT GROUP_CONCAT(DISTINCT CONCAT(
-        '• Link: ', 
-        COALESCE(e.link, 'Not Provided'), 
-        '; Gender related? ', 
-        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'), 
-        '; Youth related? ', 
-        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'), 
-        '; Nutrition related? ', 
-        IF(COALESCE(e.nutrition_related, 0) = 1, 'Yes', 'No'), 
-        '; Environment and/or biodiversity related? ', 
-        IF(COALESCE(e.environmental_biodiversity_related, 0) = 1, 'Yes', 'No'), 
-        '; Poverty related? ', 
-        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'), 
-        '; Details: ', 
-        COALESCE(e.description, 'Not Provided')
-    ) SEPARATOR '\n')
-    FROM evidence e
-    WHERE e.result_id = r.id
-      AND e.is_active > 0) AS "Evidences"
-    FROM 
-    result r
-    left join gender_tag_level gtl on gtl.id = r.gender_tag_level_id 
-    left join gender_tag_level gtl2 on gtl2.id = r.climate_change_tag_level_id 
-    left join gender_tag_level gtl3 on gtl3.id = r.nutrition_tag_level_id 
-    left join gender_tag_level gtl4 on gtl4.id = r.environmental_biodiversity_tag_level_id
-    left join gender_tag_level gtl5 on gtl5.id = r.poverty_tag_level_id
-    left join results_by_inititiative rbi on rbi.result_id = r.id 
-    and rbi.initiative_role_id = 1
-    and rbi.is_active > 0
-    left join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-    left join results_by_inititiative rbi2 on rbi2.result_id = r.id 
-    and rbi2.initiative_role_id = 2
-    and rbi2.is_active > 0
-    left join clarisa_initiatives ci2 on ci2.id = rbi2.inititiative_id 
-    left join result_level rl ON rl.id = r.result_level_id 
-    left join result_type rt on rt.id = r.result_type_id 
-    left join non_pooled_project npp on npp.results_id = r.id 
-    and npp.is_active > 0
-    left JOIN clarisa_center cc on cc.code = npp.lead_center_id 
-    left join clarisa_institutions ci3 on ci3.id = cc.institutionId 
-    left join clarisa_institutions ci4 on ci4.id = npp.funder_institution_id 
-    left join results_center rc on rc.result_id = r.id 
-    and rc.is_active > 0
-    left join clarisa_center cc2 on cc2.code = rc.center_id 
-    left join clarisa_institutions ci5 on ci5.id = cc2.institutionId 
-    left join results_toc_result rtr on rtr.results_id = r.id 
-    and rtr.initiative_id = ci.id 
-    and rtr.is_active > 0
-    left join toc_result tr on tr.toc_result_id = rtr.toc_result_id
-    left join toc_level tl on tl.toc_level_id = tr.toc_level_id 
-    left join results_toc_result rtr2 on rtr2.results_id = r.id 
-    and rtr2.initiative_id <> ci.id 
-    and rtr2.is_active > 0
-    left join clarisa_initiatives ci6 on ci6.id = rtr2.initiative_id 
-    left join toc_result tr2 on tr2.toc_result_id = rtr2.toc_result_id
-    left join toc_level tl2 on tl2.toc_level_id = tr2.toc_level_id
-    left join linked_result lr on lr.origin_result_id = r.id
-    and lr.linked_results_id is not NULL 
-    and lr.is_active > 0
-    and lr.legacy_link is NULL 
-    left join (select r2.id, r2.result_code, r2.title, rt2.name as result_type 
-    from result r2 
-    left join result_type rt2 on rt2.id = r2.result_type_id
-    where r2.is_active > 0) res2 on res2.id = lr.linked_results_id
-    left join results_knowledge_product rkp on rkp.results_id = r.id and rkp.is_active > 0
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id
-    ${
-      parameters.initiativeIds
-        ? 'left join results_by_inititiative rbi3 on rbi3.result_id = r.id and rbi3.is_active > 0'
-        : ''
-    }
+            '${env.FRONT_END_PDF_ENDPOINT}',
+            r.result_code,
+            "?phase=",
+            r.version_id
+        ) AS "PDF Link",
+        (
+            SELECT
+                rl.name
+            FROM
+                result_level rl
+            WHERE
+                r.result_level_id = rl.id
+        ) AS "Result Level",
+        (
+            SELECT
+                rt.name
+            FROM
+                result_type rt
+            WHERE
+                r.result_type_id = rt.id
+        ) AS "Result Type",
+        (
+            SELECT
+                CONCAT(
+                    u.last_name,
+                    ', ',
+                    u.first_name
+                )
+            FROM
+                users u
+            WHERE
+                u.id = r.created_by
+        ) AS "Created by",
+        (
+            SELECT
+                rs.status_name
+            FROM
+                result_status rs
+            WHERE
+                r.status_id = rs.result_status_id
+        ) AS "Status",
+        r.title AS "Result Title",
+        r.description AS "Result Description",
+        r.lead_contact_person AS "Lead Contact Person",
+        IFNULL(gtl.description, 'Not provided') AS "Gender Tag Level",
+        IFNULL(gtl2.description, 'Not provided') AS "Climate Tag Level",
+        IFNULL(gtl3.description, 'Not provided') AS "Nutrition Tag Level",
+        IFNULL(gtl4.description, 'Not provided') AS "Environment AND/or biodiversity Tag Level",
+        IFNULL(gtl5.description, 'Not provided') AS "Poverty Tag Level",
+        IF(
+            r.is_krs IS NULL,
+            'Not provided',
+            IF(r.is_krs, 'Yes', 'No')
+        ) AS "Is Key Result Story",
+        -- THEORY OF CHANGE
+        (
+            SELECT
+                CONCAT(
+                    ci.official_code,
+                    ' - ',
+                    ci.name
+                )
+            FROM
+                clarisa_initiatives ci
+            WHERE
+                rbi.inititiative_id = ci.id
+        ) AS "Primary Submitter",
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        ci2.official_code,
+                        ' - ',
+                        ci2.name SEPARATOR '; '
+                    )
+                FROM
+                    clarisa_initiatives ci2
+                    LEFT JOIN results_by_inititiative rbi2 ON rbi2.inititiative_id = ci2.id
+                WHERE
+                    r.id = rbi2.result_id
+                    AND rbi2.initiative_role_id = 2
+                    AND rbi2.is_active > 0
+            ),
+            'Not provided'
+        ) AS "Contributing Initiative(s)",
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        DISTINCT CONCAT(
+                            '(Funder name: ',
+                            ci4.acronym,
+                            ' - ',
+                            ci4.name,
+                            ', Grant title: ',
+                            npp.grant_title,
+                            ', Center Grant ID: ',
+                            IFNULL(npp.center_grant_id, 'Not applicable'),
+                            ', Lead/Contract Center: ',
+                            ci3.name,
+                            ')'
+                        ) SEPARATOR ', '
+                    )
+                FROM
+                    non_pooled_project npp
+                    LEFT JOIN clarisa_center cc ON cc.code = npp.lead_center_id
+                    LEFT JOIN clarisa_institutions ci3 ON ci3.id = cc.institutionId
+                    LEFT JOIN clarisa_institutions ci4 ON ci4.id = npp.funder_institution_id
+                WHERE
+                    npp.results_id = r.id
+                    AND npp.is_active > 0
+            ),
+            'Not provided'
+        ) AS "Non-pooled Project(s)",
+        (
+            SELECT
+                GROUP_CONCAT(
+                    DISTINCT CONCAT(
+                        IF(rc.is_primary, '(Primary: ', '('),
+                        ci5.acronym,
+                        ' - ',
+                        ci5.name,
+                        ')'
+                    ) SEPARATOR ', '
+                )
+            FROM
+                results_center rc
+                LEFT JOIN clarisa_center cc2 ON cc2.code = rc.center_id
+                LEFT JOIN clarisa_institutions ci5 ON ci5.id = cc2.institutionId
+            WHERE
+                rc.result_id = r.id
+                AND rc.is_active > 0
+        ) AS "Contributing Center(s)",
+        IF (
+            r.result_level_id = 1
+            OR r.result_level_id = 2,
+            '<Not applicable>',
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        '(',
+                        ci9.official_code,
+                        ' - ',
+                        ci9.name,
+                        ') ',
+                        IFNULL(
+                            (
+                                SELECT
+                                    CONCAT(wp.acronym, ' - ', wp.name)
+                                FROM
+                                    Integration_information.work_packages wp
+                                WHERE
+                                    wp.id = tr.work_packages_id
+                            ),
+                            ''
+                        ),
+                        '  Title: ',
+                        tr.result_title,
+                        ' - ',
+                        IF(
+                            tr.result_description IS NULL
+                            OR tr.result_description = '',
+                            '',
+                            CONCAT(' Description: ', tr.result_description)
+                        ) SEPARATOR ''
+                    )
+                FROM
+                    Integration_information.toc_results tr
+                    LEFT JOIN prdb.results_toc_result rtr ON rtr.results_id = r.id
+                    AND rtr.is_active = 1
+                    LEFT JOIN prdb.clarisa_initiatives ci9 ON ci9.id = rtr.initiative_id
+                WHERE
+                    tr.id = rtr.toc_result_id
+            )
+        ) AS "ToC Mapping (Primary submitter)",
+        IFNULL (
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        DISTINCT CONCAT(
+                            '(',
+                            ci6.official_code,
+                            ' - ',
+                            ci6.short_name,
+                            '): ',
+                            'Toc Level: ',
+                            IFNULL(tl2.name, 'Not provider'),
+                            ', ToC result title:',
+                            IFNULL(tr2.title, 'Not provider')
+                        ) SEPARATOR ', '
+                    )
+                FROM
+                    results_toc_result rtr2
+                    LEFT JOIN clarisa_initiatives ci6 ON ci6.id = rtr2.initiative_id
+                    LEFT JOIN toc_result tr2 ON tr2.toc_result_id = rtr2.toc_result_id
+                    LEFT JOIN toc_level tl2 ON tl2.toc_level_id = tr2.toc_level_id
+                WHERE
+                    rtr2.results_id = r.id
+                    AND rtr2.initiative_id <> rbi.inititiative_id
+                    AND rtr2.is_active > 0
+            ),
+            'Not provided'
+        ) AS "ToC Mapping (Contributting initiatives)",
+        -- PARTNERS & CONTRIBUTION
+        IF(
+            r.result_type_id <> 6,
+            IF(r.no_applicable_partner = 1, "No", "Yes"),
+            "Yes"
+        ) AS "Are partners applicable?",
+        IF(
+            r.result_type_id <> 6,
+            (
+                SELECT
+                    GROUP_CONCAT(DISTINCT CONCAT('• ', q1.partner) SEPARATOR ' ')
+                FROM
+                    (
+                        SELECT
+                            CONCAT(
+                                CONCAT(
+                                    IF(
+                                        COALESCE(ci7.acronym, '') = '',
+                                        '',
+                                        CONCAT(ci7.acronym, ' - ')
+                                    ),
+                                    ci7.name
+                                ),
+                                '; Delivery type(s): ',
+                                GROUP_CONCAT(DISTINCT pdt.name separator ', ')
+                            ) AS partner
+                        FROM
+                            results_by_institution rbi
+                            LEFT JOIN result_by_institutions_by_deliveries_type rbibdt ON rbibdt.result_by_institution_id = rbi.id
+                            AND rbibdt.is_active > 0
+                            LEFT JOIN clarisa_institutions ci7 ON ci7.id = rbi.institutions_id
+                            LEFT JOIN partner_delivery_type pdt ON pdt.id = rbibdt.partner_delivery_type_id
+                        WHERE
+                            rbi.result_id = r.id
+                            AND rbi.institution_roles_id = 2
+                            AND rbi.is_active > 0
+                        GROUP by
+                            rbi.result_id,
+                            ci7.id
+                    ) AS q1
+            ),
+            'Not Applicable'
+        ) AS "Partners (with delivery type) for non-KP results",
+        IF(
+            r.result_type_id = 6,
+            (
+                SELECT
+                    group_concat(DISTINCT CONCAT('• ', q1.partner) separator ' ')
+                FROM
+                    (
+                        SELECT
+                            CONCAT(
+                                'CGSpace Institution: ',
+                                rkmi.intitution_name,
+                                '; Mapped institution: ',
+                                IF(
+                                    rbi.id IS NULL,
+                                    'None',
+                                    CONCAT(
+                                        CONCAT(
+                                            IF(
+                                                COALESCE(ci8.acronym, '') = '',
+                                                '',
+                                                CONCAT(ci8.acronym, ' - ')
+                                            ),
+                                            ci8.name
+                                        ),
+                                        '; Delivery type(s): ',
+                                        GROUP_CONCAT(DISTINCT pdt.name separator ', ')
+                                    )
+                                )
+                            ) AS partner
+                        FROM
+                            results_kp_mqap_institutions rkmi
+                            LEFT JOIN results_knowledge_product rkp ON rkmi.result_knowledge_product_id = rkp.result_knowledge_product_id
+                            AND rkp.is_active > 0
+                            LEFT JOIN results_by_institution rbi ON rkmi.results_by_institutions_id = rbi.id
+                            AND rbi.is_active > 0
+                            AND rbi.institution_roles_id = 2
+                            LEFT JOIN result_by_institutions_by_deliveries_type rbibdt ON rbibdt.result_by_institution_id = rbi.id
+                            AND rbibdt.is_active > 0
+                            LEFT JOIN clarisa_institutions ci8 ON ci8.id = rbi.institutions_id
+                            LEFT JOIN partner_delivery_type pdt ON pdt.id = rbibdt.partner_delivery_type_id
+                        WHERE
+                            rkmi.is_active > 0
+                            AND rkp.results_id = r.id
+                        GROUP by
+                            rkp.results_id,
+                            rbi.institutions_id,
+                            rkmi.intitution_name,
+                            rkmi.results_by_institutions_id
+                    ) AS q1
+            ),
+            'Not Applicable'
+        ) AS "Partners (with delivery type) for KP results",
+        IF(
+            r.result_type_id = 6,
+            IF(r.no_applicable_partner = 1, "No", "Yes"),
+            'Not Applicable'
+        ) AS "Are additional partners for KP results applicable?",
+        IF(
+            r.result_type_id = 6,
+            (
+                SELECT
+                    GROUP_CONCAT(DISTINCT CONCAT('• ', q1.partner) SEPARATOR ' ')
+                FROM
+                    (
+                        SELECT
+                            CONCAT(
+                                CONCAT(
+                                    IF(
+                                        COALESCE(ci7.acronym, '') = '',
+                                        '',
+                                        CONCAT(ci7.acronym, ' - ')
+                                    ),
+                                    ci7.name
+                                ),
+                                '; Delivery type(s): ',
+                                group_concat(DISTINCT pdt.name separator ', ')
+                            ) AS partner
+                        FROM
+                            results_by_institution rbi
+                            LEFT JOIN result_by_institutions_by_deliveries_type rbibdt ON rbibdt.result_by_institution_id = rbi.id
+                            AND rbibdt.is_active > 0
+                            LEFT JOIN clarisa_institutions ci7 ON ci7.id = rbi.institutions_id
+                            LEFT JOIN partner_delivery_type pdt ON pdt.id = rbibdt.partner_delivery_type_id
+                        WHERE
+                            rbi.result_id = r.id
+                            AND rbi.institution_roles_id = 8
+                            AND rbi.is_active > 0
+                        GROUP by
+                            rbi.result_id,
+                            ci7.id
+                    ) AS q1
+            ),
+            'Not Applicable'
+        ) AS "Additional partners (with delivery type) for KP results",
+        -- GEOGRAPHIC LOCATION
+        (
+            SELECT
+                IF(
+                    cgs.name is null,
+                    'Not Provided',
+                    (IF(cgs.id = 3, 'National', cgs.name))
+                )
+            FROM
+                clarisa_geographic_scope cgs
+            WHERE
+                cgs.id = r.geographic_scope_id
+            GROUP BY
+                cgs.id,
+                cgs.name
+        ) AS "Geographic Focus",
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(DISTINCT cr.name separator ', ')
+                FROM
+                    result_region rr
+                    LEFT JOIN clarisa_regions cr ON cr.um49Code = rr.region_id
+                WHERE
+                    rr.result_id = r.id
+                    AND rr.is_active = 1
+            ),
+            'Not applicable / Not provided'
+        ) AS "Regions",
+        IFNULL(
+            (
+                SELECT
+                    CASE
+                        WHEN r.result_type_id <> 6 THEN 
+                            CASE
+                                WHEN r.geographic_scope_id = 5 THEN GROUP_CONCAT(csn.res SEPARATOR ' ')
+                                ELSE GROUP_CONCAT(csn.countries SEPARATOR ', ')
+                            END
+                        ELSE MAX(rkp_inner.cgspace_countries)
+                    END AS countries_val
+                FROM
+                    (
+                        SELECT
+                            cc3.name AS countries,
+                            CONCAT_WS(
+                                '',
+                                cc3.name,
+                                ': ',
+                                IFNULL(
+                                    GROUP_CONCAT(css.name SEPARATOR ', '),
+                                    IF(
+                                        (
+                                            SELECT COUNT(css2.id)
+                                            FROM clarisa_subnational_scopes css2
+                                            WHERE css2.country_iso_alpha_2 = cc3.iso_alpha_2
+                                        ) > 0,
+                                        'Not provided',
+                                        'No sub-national levels available'
+                                    )
+                                )
+                            ) AS res
+                        FROM result_country rc2
+                        LEFT JOIN clarisa_countries cc3 ON cc3.id = rc2.country_id
+                        LEFT JOIN result_country_subnational rcs ON rcs.result_country_id = rc2.result_country_id
+                            AND rcs.is_active = 1
+                        LEFT JOIN clarisa_subnational_scopes css ON css.code = rcs.clarisa_subnational_scope_code
+                        WHERE rc2.result_id = r.id
+                          AND rc2.is_active = 1
+                        GROUP BY cc3.name, cc3.iso_alpha_2
+                    ) csn
+                LEFT JOIN results_knowledge_product rkp_inner ON rkp_inner.results_id = r.id
+                    AND rkp_inner.is_active > 0
+                GROUP BY r.id
+            ),
+            'Not applicable'
+        ) AS "Countries",
+        -- LINKS TO RESULTS
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        DISTINCT CONCAT(
+                            '(',
+                            r2.result_code,
+                            ': ',
+                            rt2.name,
+                            ' - ',
+                            r2.title,
+                            ')'
+                        ) SEPARATOR ', '
+                    )
+                FROM
+                    linked_result lr
+                    JOIN result r2 ON r2.id = lr.linked_results_id
+                    AND r2.is_active > 0
+                    LEFT JOIN result_type rt2 ON rt2.id = r2.result_type_id
+                WHERE
+                    lr.origin_result_id = r.id
+                    AND lr.linked_results_id IS NOT NULL
+                    AND lr.is_active > 0
+            ),
+            'Not provided'
+        ) AS "Linked Results",
+        IFNULL(
+            (
+                SELECT
+                    GROUP_CONCAT(
+                        DISTINCT lr2.legacy_link SEPARATOR ' '
+                    )
+                FROM
+                    linked_result lr2
+                WHERE
+                    lr2.origin_result_id = r.id
+                    AND lr2.linked_results_id IS NULL
+                    AND lr2.is_active > 0
+                    AND lr2.legacy_link IS NOT NULL
+            ),
+            'Not provided'
+        ) AS "Results from previous portfolio",
+        -- EVIDENCE
+        (
+            SELECT
+                GROUP_CONCAT(
+                    DISTINCT CONCAT(
+                        '• Link: ',
+                        COALESCE(e.link, 'Not Provided'),
+                        '; Gender related? ',
+                        IF(COALESCE(e.gender_related, 0) = 1, 'Yes', 'No'),
+                        '; Youth related? ',
+                        IF(COALESCE(e.youth_related, 0) = 1, 'Yes', 'No'),
+                        '; Nutrition related? ',
+                        IF(
+                            COALESCE(e.nutrition_related, 0) = 1,
+                            'Yes',
+                            'No'
+                        ),
+                        '; Environment and/or biodiversity related? ',
+                        IF(
+                            COALESCE(e.environmental_biodiversity_related, 0) = 1,
+                            'Yes',
+                            'No'
+                        ),
+                        '; Poverty related? ',
+                        IF(COALESCE(e.poverty_related, 0) = 1, 'Yes', 'No'),
+                        '; Details: ',
+                        COALESCE(e.description, 'Not Provided')
+                    ) SEPARATOR ''
+                )
+            FROM
+                evidence e
+            WHERE
+                e.result_id = r.id
+                AND e.is_active > 0
+        ) AS "Evidences"
+    FROM
+        result r
+        LEFT JOIN results_by_inititiative rbi ON r.id = rbi.result_id
+        AND rbi.initiative_role_id = 1
+        AND rbi.is_active > 0
+        LEFT JOIN gender_tag_level gtl ON gtl.id = r.gender_tag_level_id
+        LEFT JOIN gender_tag_level gtl2 ON gtl2.id = r.climate_change_tag_level_id
+        LEFT JOIN gender_tag_level gtl3 ON gtl3.id = r.nutrition_tag_level_id
+        LEFT JOIN gender_tag_level gtl4 ON gtl4.id = r.environmental_biodiversity_tag_level_id
+        LEFT JOIN gender_tag_level gtl5 ON gtl5.id = r.poverty_tag_level_id
     ${whereClause}
-    GROUP by 
-    r.result_code,
-    r.id,
-    r.title,
-    r.description,
-    gtl.title,
-    gtl2.title,
-    gtl3.title,
-    gtl4.title,
-    gtl5.title,
-    rl.name,
-    rt.name,
-    r.is_krs,
-    r.lead_contact_person,
-    ci.official_code,
-    rtr.result_toc_result_id,
-    ci.official_code,
-    ci.short_name,
-    r.no_applicable_partner,
-    rkp.cgspace_countries,
-    rt.id,
-    ci.name
-    ;
     `;
 
     try {
