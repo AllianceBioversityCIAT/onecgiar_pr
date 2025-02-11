@@ -561,10 +561,11 @@ WHERE
   async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      r.result_code,
+      DISTINCT r.result_code,
       version.phase_name,
       r.reported_year_id,
       r.title,
+      r.description,
       CONCAT(rl.name, ' - ', rt.name) as  "result_type",
       if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "is_key_result",
       (
@@ -632,8 +633,8 @@ WHERE
       and r.is_active > 0 and r.result_type_id not in (10,11)
     GROUP by r.id, r.reported_year_id, r.title, rl.name, rt.name, ci_main.official_code, rs.status_name, r.created_date,
       wp.id, wp.name, rtr.toc_result_id, tr.result_title, rtr.action_area_outcome_id, caao.outcomeStatement
-    order by r.created_date DESC;
-    `;
+    ORDER BY creation_date DESC;
+      `;
     try {
       const results = await this.query(queryData, ['?', initDate, endDate]);
       return results;
