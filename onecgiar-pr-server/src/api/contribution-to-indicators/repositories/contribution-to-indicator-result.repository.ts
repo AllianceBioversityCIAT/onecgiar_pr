@@ -106,7 +106,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
       right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
       left join ${env.DB_NAME}.contribution_to_indicators cti on 
-        convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and cti.is_active
+        convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4) and cti.is_active
       left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
       left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
         and main_ctir.contribution_to_indicator_id = cti.id
@@ -116,7 +116,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
         and main_rbi.initiative_role_id = 1
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-      where tri.toc_result_indicator_id = ${tocId ? `'${tocId}'` : '?'} and tri.is_active and main_r.id is not null
+      where tri.related_node_id = ${tocId ? `'${tocId}'` : '?'} and tri.is_active and main_r.id is not null
       union all
       select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
         main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
@@ -138,7 +138,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
           from ${env.DB_TOC}.toc_results_indicators tri
           right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
           right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-          where convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and tri.is_active
+          where convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4) and tri.is_active
         )
       )
     `;
