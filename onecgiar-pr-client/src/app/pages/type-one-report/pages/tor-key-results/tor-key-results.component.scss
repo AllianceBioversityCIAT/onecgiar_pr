@@ -2,9 +2,11 @@
   overflow-y: hidden;
   height: auto !important;
   padding: 20px;
-  iframe{
+
+  iframe {
     width: 100%;
     height: 1000px;
+    border: none;
+    margin-top: 20px;
   }
-
 }

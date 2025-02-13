@@ -1,4 +1,3 @@
-/* eslint-disable arrow-parens */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
@@ -15,12 +14,11 @@ export class TorFactSheetComponent implements OnInit {
     { category: 'Initiative name', value: '' },
     { category: 'Initiative short name', value: '' },
     { category: 'Initiative lead', value: '' },
-    { category: 'Initiative deputy', value: '' },
+    { category: 'Initiative Co-lead', value: '' },
     { category: 'Science Group', value: '' },
     { category: 'Start date', value: '' },
     { category: 'End date', value: '' },
     { category: 'Geographic scope', value: '' },
-    // { category: 'Measurable three-year (End of Initiative) outcomes', value: '' },
     { category: 'OECD DAC Climate marker Adaptation score*', value: '' },
     { category: 'OECD DAC Climate marker Mitigation score*', value: '' },
     { category: 'OECD DAC Gender equity marker score*', value: '' },
@@ -53,27 +51,40 @@ export class TorFactSheetComponent implements OnInit {
     <a class="open_route" href="https://www.cgiar.org/how-we-work/governance/system-council/initial-set-of-submissions-for-the-cgiar-2022-2024-investment-prospectus/" target="_blank">https://www.cgiar.org/how-we-work/governance/system-council/initial-set-of-submissions-for-the-cgiar-2022-2024-investment-prospectus/</a>
     `;
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService) {}
+  constructor(
+    public api: ApiService,
+    public typeOneReportSE: TypeOneReportService
+  ) {}
 
   ngOnInit(): void {
     this.loadingData = true;
-    this.api.resultsSE.GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id).subscribe(({ response }) => {
-      const data = response;
-      this.convertBudgetData(data);
-      this.data[0].value = data.initiative_name;
-      this.data[1].value = data.short_name;
-      this.data[2].value = data.iniative_lead;
-      this.data[3].value = data.initiative_deputy;
-      this.data[4].value = data.action_area;
-      this.data[5].value = data.start_date;
-      this.data[6].value = data.end_date;
-      this.concatGeo(data);
-      this.data[8].value = data?.climateGenderScore[0]?.adaptation_score ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
-      this.data[9].value = data.climateGenderScore[0]?.mitigation_score ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
-      this.data[10].value = data.climateGenderScore[0]?.gender_score ? `<strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}` : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
-      this.data[11].value = data?.web_page ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>` : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
-      this.loadingData = false;
-    });
+    this.api.resultsSE
+      .GET_factSheetByInitiativeId(this.typeOneReportSE.getInitiativeID(this.typeOneReportSE.initiativeSelected)?.id)
+      .subscribe(({ response }) => {
+        const data = response;
+        this.convertBudgetData(data);
+        this.data[0].value = data.initiative_name;
+        this.data[1].value = data.short_name;
+        this.data[2].value = data.iniative_lead;
+        this.data[3].value = data.initiative_deputy;
+        this.data[4].value = data.action_area;
+        this.data[5].value = data.start_date;
+        this.data[6].value = data.end_date;
+        this.concatGeo(data);
+        this.data[8].value = data?.climateGenderScore[0]?.adaptation_score
+          ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
+        this.data[9].value = data.climateGenderScore[0]?.mitigation_score
+          ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
+        this.data[10].value = data.climateGenderScore[0]?.gender_score
+          ? `<strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`
+          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
+        this.data[11].value = data?.web_page
+          ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`
+          : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
+        this.loadingData = false;
+      });
   }
 
   convertBudgetData(data) {
@@ -98,11 +109,15 @@ export class TorFactSheetComponent implements OnInit {
     const regions = data.regionsProposal?.map(element => element.name).join('; ');
     const countries = data.countriesProposal?.map(element => element.name).join('; ');
 
-    this.data[7].value += '<strong>Regions targeted in the proposal:</strong><br>';
-    this.data[7].value += regions ? `${regions}<br>` : '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
+    this.data[7].value += '<strong>Regions:</strong><br>';
+    this.data[7].value += regions
+      ? `${regions}<br>`
+      : '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
 
-    this.data[7].value += '<br><strong>Countries targeted in the proposal:</strong><br>';
-    this.data[7].value += countries ? `${countries}<br>` : '<div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
+    this.data[7].value += '<br><strong>Countries:</strong><br>';
+    this.data[7].value += countries
+      ? `${countries}<br>`
+      : '<div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
   }
 
   concatEoiOutcome(data) {

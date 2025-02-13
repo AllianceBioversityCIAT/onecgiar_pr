@@ -1,6 +1,6 @@
 .local_container {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 300px 1fr;
 
   .phaseLoaded {
     display: flex;
@@ -25,7 +25,7 @@
   }
 
   .router {
-    padding: 20px 45px;
+    padding: 20px 35px;
 
     .tor_section_container {
       .initiative {

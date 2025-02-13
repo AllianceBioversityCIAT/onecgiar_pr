@@ -4,6 +4,7 @@ import { OutcomeIndicatorService } from './outcome-indicator.service';
 describe('OutcomeIndicatorService', () => {
   let service: OutcomeIndicatorService;
   let apiServiceMock: any;
+  let typeOneReportServiceMock: any;
 
   beforeEach(() => {
     apiServiceMock = {
@@ -14,7 +15,11 @@ describe('OutcomeIndicatorService', () => {
       }
     };
 
-    service = new OutcomeIndicatorService(apiServiceMock);
+    typeOneReportServiceMock = {
+      initiativeSelected: '123'
+    };
+
+    service = new OutcomeIndicatorService(apiServiceMock, typeOneReportServiceMock);
   });
 
   it('should set loading to true and call GET_contributionsToIndicatorsEOIS', () => {
@@ -54,6 +59,8 @@ describe('OutcomeIndicatorService', () => {
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsEOIS.mockReturnValue({ subscribe: subscribeMock });
 
     service.getEOIsData();
+
+    expect(service.eoisData[0].indicators).toEqual([]);
   });
 
   it('should set loadingWPs to true and call GET_contributionsToIndicatorsWPS', () => {
@@ -93,6 +100,35 @@ describe('OutcomeIndicatorService', () => {
     apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
 
     service.getWorkPackagesData();
+  });
+
+  it('should set loadingWPs to true and call GET_contributionsToIndicatorsWPS with typeOneReportServiceMock.initiativeSelected', () => {
+    const subscribeMock = jest.fn();
+    apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
+
+    service.getWorkPackagesData(true);
+
+    expect(service.loadingWPs()).toBe(true);
+    expect(apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS).toHaveBeenCalledWith(typeOneReportServiceMock.initiativeSelected);
+    expect(subscribeMock).toHaveBeenCalled();
+  });
+
+  it('should sort workpackages by short name', () => {
+    const response = {
+      response: [
+        { workpackage_short_name: 'WP2', toc_results: [] },
+        { workpackage_short_name: 'WP1', toc_results: [] },
+        { workpackage_short_name: 'WP3', toc_results: [] }
+      ]
+    };
+    const subscribeMock = jest.fn(({ next }) => next(response));
+    apiServiceMock.resultsSE.GET_contributionsToIndicatorsWPS.mockReturnValue({ subscribe: subscribeMock });
+
+    service.getWorkPackagesData();
+
+    expect(service.wpsData[0].workpackage_short_name).toBe('WP1');
+    expect(service.wpsData[1].workpackage_short_name).toBe('WP2');
+    expect(service.wpsData[2].workpackage_short_name).toBe('WP3');
   });
 
   it('should return true when achievedTarget is greater than or equal to expectedTarget', () => {

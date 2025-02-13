@@ -46,7 +46,7 @@ export class ExportTablesService {
         }
 
         list.forEach(data => {
-          const row = worksheet.addRow(data);
+          const row = worksheet.addRow(Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value ?? 'Not provided'])));
 
           if (cellsToLink) {
             cellsToLink.forEach(cell => {
@@ -233,11 +233,12 @@ export class ExportTablesService {
           const eoisWorksheet = workbook.addWorksheet(EOIsConfig.worksheetName);
           if (EOIsConfig.wscols) eoisWorksheet.columns = EOIsConfig.wscols;
 
-          EOIsConfig?.data?.forEach(data =>
+          EOIsConfig?.data?.forEach((data, index) =>
             this.addEOISRow({
               worksheet: eoisWorksheet,
               data,
-              isT1R
+              isT1R,
+              index
             })
           );
           this.formatWorksheet(eoisWorksheet, EOIsConfig.cellToCenter);
@@ -269,7 +270,7 @@ export class ExportTablesService {
     }
   }
 
-  private addEOISRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
+  private addEOISRow({ worksheet, data, isT1R, index }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean; index: number }) {
     if (data.indicators.length > 0) {
       data.indicators.forEach(indicator => {
         let indicatorType = 'Not defined';
@@ -285,44 +286,38 @@ export class ExportTablesService {
               .join('\n');
 
         const rowData = {
+          ...(isT1R ? { index: `EOIO ${index + 1}` } : {}),
           toc_result_title: data.toc_result_title ?? 'Not defined',
           indicator_name: indicator.indicator_description ?? 'Not defined',
           indicator_type: indicatorType,
           expected_target: indicator.indicator_target_value ?? 'Not defined',
           actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
           achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
-          ...(isT1R
-            ? {}
-            : {
-                reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
-                indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
-                indicator_supporting_results: supportingResults
-              })
+          reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
+          indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
+          indicator_supporting_results: supportingResults
         };
 
         worksheet.addRow(rowData);
       });
     } else {
       worksheet.addRow({
+        ...(isT1R ? { index: `EOIO 1` } : {}),
         toc_result_title: data.toc_result_title ?? 'Not defined',
         indicator_name: 'Not defined',
         indicator_type: 'Not defined',
         expected_target: 'Not defined',
         actual_target_achieved: 'Not provided',
         achieved_status: 'No',
-        ...(isT1R
-          ? {}
-          : {
-              reporting_status: 'Editing',
-              indicator_achieved_narrative: 'Not provided',
-              indicator_supporting_results: 'Not provided'
-            })
+        reporting_status: 'Editing',
+        indicator_achieved_narrative: 'Not provided',
+        indicator_supporting_results: 'Not provided'
       });
     }
   }
 
   private addWPSRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
-    data.toc_results.forEach(result => {
+    data.toc_results.forEach((result, index) => {
       if (result.indicators.length > 0) {
         result.indicators.forEach(indicator => {
           let indicatorType = 'Not defined';
@@ -338,6 +333,7 @@ export class ExportTablesService {
 
           const rowData = {
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
+            ...(isT1R ? { index: `OUTCOME ${index + 1}` } : {}),
             toc_result_title: result.toc_result_title ?? 'Not defined',
             indicator_name: indicator.indicator_description ?? 'Not defined',
             indicator_type: indicatorType,
@@ -345,18 +341,15 @@ export class ExportTablesService {
             actual_target_achieved: indicator.indicator_achieved_value ?? 'Not provided',
             achieved_status: this.outcomeIService.achievedStatus(indicator.indicator_target_value, indicator.indicator_achieved_value) ? 'Yes' : 'No',
             reporting_status: indicator.indicator_submission_status ? 'Submitted' : 'Editing',
-            ...(isT1R
-              ? {}
-              : {
-                  indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
-                  indicator_supporting_results: supportingResults
-                })
+            indicator_achieved_narrative: indicator.indicator_achieved_narrative ?? 'Not provided',
+            indicator_supporting_results: supportingResults
           };
 
           worksheet.addRow(rowData);
         });
       } else {
         worksheet.addRow({
+          ...(isT1R ? { index: `OUTCOME 1` } : {}),
           workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
           toc_result_title: result.toc_result_title ?? 'Not defined',
           indicator_name: 'Not defined',

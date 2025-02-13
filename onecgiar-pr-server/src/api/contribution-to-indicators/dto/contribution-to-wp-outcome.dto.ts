@@ -43,5 +43,6 @@ export class IndicatorSupportingResult {
   created_date: string;
   contribution_id: number;
   result_submitter: string;
+  is_ipsr: boolean;
   is_manually_mapped: number;
 }

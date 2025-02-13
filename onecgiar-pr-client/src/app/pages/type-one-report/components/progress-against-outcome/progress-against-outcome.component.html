@@ -1,0 +1,118 @@
+@if (this.loadingStatus) {
+  @for (item of [1, 2]; track $index) {
+    <div class="progress_container">
+      <div class="progress_left">
+        <p-skeleton width="50px" />
+
+        <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px">
+          <p-skeleton />
+          <p-skeleton />
+          <p-skeleton />
+          <p-skeleton />
+        </div>
+      </div>
+
+      <div class="progress_right">
+        <div class="progress_right_item">
+          <div style="display: flex; align-items: center; gap: 5px">
+            <span class="progress_right_item_title_span">Indicator:</span>
+            <p-skeleton width="200px" />
+          </div>
+
+          <div class="progress_right_item_progress">
+            @for (item of indicatorInfoItems; track $index) {
+              <div class="indicator_info_item">
+                <div class="indicator_info_item_header">
+                  <i [class]="item?.iconClass" style="font-size: 20px">{{ item?.icon }}</i>
+
+                  <p class="indicator_info_item_label">{{ item?.label }}</p>
+                </div>
+
+                <p-skeleton width="100px" [style]="{ 'margin-top': '5px' }" />
+              </div>
+            }
+          </div>
+
+          <p class="progress_right_item_title_span">Target value achieved explanation:</p>
+          <p-skeleton [style]="{ 'margin-top': '5px' }" />
+          <p-skeleton [style]="{ 'margin-top': '5px' }" />
+
+          <p class="progress_right_item_title_span" style="margin-top: 1rem">Linked results:</p>
+
+          <div class="progress_right_item_linked_results">
+            @for (result of [1, 2]; track $index) {
+              <p-skeleton />
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+} @else {
+  @for (item of this.progressData; track $index; let idx = $index) {
+    @if (this.isWPS && item.workpackage_short_name) {
+      <div class="work_package_container">
+        <h1 class="work_package_title">{{ item.workpackage_short_name }} - {{ item.workpackage_name }}</h1>
+        <div class="line"></div>
+      </div>
+    }
+
+    @for (result of this.isWPS ? item.toc_results : [item]; track $index) {
+      <div class="progress_container">
+        <div class="progress_left">
+          <div [style]="{ position: 'sticky', top: '71px' }">
+            <h1 class="progress_left_title">{{ this.isWPS ? 'OUTCOME' : 'EOIO' }} {{ this.isWPS ? $index + 1 : idx + 1 }}</h1>
+            <p class="progress_left_desc">
+              {{ result.toc_result_description }}
+            </p>
+          </div>
+        </div>
+
+        <div class="progress_right">
+          @if (!result.indicators?.length) {
+            <div class="progress_right_empty_item">
+              <p class="progress_right_empty_item_title">No indicator data found</p>
+            </div>
+          } @else {
+            @for (indicator of result.indicators; track $index) {
+              <div class="progress_right_item">
+                <p class="progress_right_item_title">
+                  <span class="progress_right_item_title_span">Indicator:</span> {{ indicator.indicator_description }}
+                </p>
+
+                <div class="progress_right_item_progress">
+                  @for (item of indicatorInfoItems; track $index) {
+                    <div class="indicator_info_item">
+                      <div class="indicator_info_item_header">
+                        <i [class]="item?.iconClass" style="font-size: 20px">{{ item?.icon }}</i>
+                        <p class="indicator_info_item_label">{{ item?.label }}</p>
+                      </div>
+                      <p class="indicator_info_item_value">{{ indicator[item?.value] ?? 'Not provided' }}</p>
+                    </div>
+                  }
+                </div>
+
+                <p class="progress_right_item_title_span">Target value achieved explanation:</p>
+                <p style="margin-top: 5px">{{ indicator.indicator_achieved_narrative ?? 'Not provided' }}</p>
+
+                @if (indicator.indicator_supporting_results?.length) {
+                  <p class="progress_right_item_title_span" style="margin-top: 1rem">Linked results:</p>
+                  <div class="progress_right_item_linked_results">
+                    @for (result of indicator.indicator_supporting_results; track $index) {
+                      <div style="display: flex; align-items: center; gap: 5px; color: #1a91ff">
+                        &#8226;
+                        <a class="progress_right_item_linked_results_item" [href]="generatePDFLink(result)" target="_blank" rel="noopener noreferrer">
+                          {{ result.result_code }} - {{ result.title }}
+                        </a>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+}

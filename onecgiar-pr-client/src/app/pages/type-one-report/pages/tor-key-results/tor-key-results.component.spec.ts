@@ -54,23 +54,27 @@ describe('TorKeyResultsComponent', () => {
   });
 
   it('should return the correct description', () => {
-    const name = 'Initiative short name';
-    const expectedValue = `This section provides an overview of results reported by the CGIAR Initiative on <strong>${name}</strong> These results align with the CGIAR Results Framework and <strong>${name}</strong> theory of change.
-  The following diagrams have been produced using quality assessed reported results in 2023 and, for certain indicator categories a trend overview of quality assessed results from 2022 and 2023 is presented.<br>
-  Further information on these results is available through the <a class="open_route" href="https://www.cgiar.org/food-security-impact/new-results-dashboard/" target="_blank">CGIAR Results Dashboard</a>.`;
+    const initiativeShortName = 'Initiative short name';
+    const expectedValue = `This section provides an overview of results reported and contributed to, by the CGIAR Research Initiative on ${initiativeShortName} from 2022 to 2024. These results align with the CGIAR Results Framework and ${initiativeShortName}’s theory of change. <br/><br/>
+    The data used to create the graphics in this section were sourced from the CGIAR Results Dashboard on March 3rd, 2025. These results are accurate as of this date and may differ from information in previous Technical Reports. Such differences may be due to data updates throughout the reporting year, revisions to previously reported results, or updates to the theory of change. <br/><br/>
+    If you need assistance selecting graphs for inclusion in your annual technical report, and/or if you require support in developing additional graphs beyond those included in this section, please contact us at <a class="open_route" href="mailto:performanceandresults@cgiar.org" target="_blank">performanceandresults@cgiar.org</a>.`;
 
-    const result = component.keyResultsDesc(name);
+    const result = component.keyResultsDesc(initiativeShortName);
 
     expect(result).toEqual(expectedValue);
   });
 
   it('should call the API service and export tables service with the correct parameters', () => {
     const initiativeSelected = 'mockInitiative';
+    const mockColumns = [{ header: '0', key: '0', width: 24 }];
 
     component.exportExcel(initiativeSelected);
 
-    expect(mockApiService.resultsSE.GET_excelFullReportByInitiativeId).toHaveBeenCalledWith(component.typeOneReportSE.getInitiativeID(initiativeSelected)?.id, component.typeOneReportSE.phaseDefaultId);
-    expect(mockExportTablesService.exportExcel).toHaveBeenCalledWith('mockResponse', 'Initiative-progress-and-key-results');
+    expect(mockApiService.resultsSE.GET_excelFullReportByInitiativeId).toHaveBeenCalledWith(
+      component.typeOneReportSE.getInitiativeID(initiativeSelected)?.id,
+      component.typeOneReportSE.phaseDefaultId
+    );
+    expect(mockExportTablesService.exportExcel).toHaveBeenCalledWith('mockResponse', 'Initiative-progress-and-key-results', mockColumns);
   });
 
   it('should set requesting to false after exporting the excel', () => {
@@ -94,6 +98,69 @@ describe('TorKeyResultsComponent', () => {
       title: 'Oops!',
       description: 'There was an error in the system while generating the report. If the issue persists, please contact the technical team.',
       status: 'error'
+    });
+  });
+
+  describe('generateColumns', () => {
+    it('should return empty array if input data is empty', () => {
+      const result = component['generateColumns']([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should generate columns with correct formatting', () => {
+      const mockData = [
+        {
+          first_name: 'John',
+          last_name: 'Doe',
+          user_id: 123
+        }
+      ];
+
+      const expectedColumns = [
+        {
+          header: 'First Name',
+          key: 'first_name',
+          width: 24
+        },
+        {
+          header: 'Last Name',
+          key: 'last_name',
+          width: 24
+        },
+        {
+          header: 'User Id',
+          key: 'user_id',
+          width: 24
+        }
+      ];
+
+      const result = component['generateColumns'](mockData);
+      expect(result).toEqual(expectedColumns);
+    });
+
+    it('should handle single word keys correctly', () => {
+      const mockData = [
+        {
+          name: 'Test',
+          age: 25
+        }
+      ];
+
+      const expectedColumns = [
+        {
+          header: 'Name',
+          key: 'name',
+          width: 24
+        },
+        {
+          header: 'Age',
+          key: 'age',
+          width: 24
+        }
+      ];
+
+      const result = component['generateColumns'](mockData);
+      expect(result).toEqual(expectedColumns);
     });
   });
 });
