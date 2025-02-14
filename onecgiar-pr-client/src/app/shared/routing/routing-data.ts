@@ -12,7 +12,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'Type 1 report elements',
-    prHide: false,
+    prHide: true,
     underConstruction: false,
     onlytest: false,
     canActivate: [CheckLoginGuard],
