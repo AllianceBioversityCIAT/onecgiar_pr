@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -27,6 +27,11 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { WebsocketService } from './sockets/websocket.service';
 import { environment } from '../environments/environment';
+import { ClarityService } from './shared/services/clarity.service';
+
+function initializeClarityService(clarityService: ClarityService) {
+  return () => clarityService.init();
+}
 
 @NgModule({
   declarations: [
@@ -60,6 +65,13 @@ import { environment } from '../environments/environment';
     { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
     provideHttpClient(withInterceptorsFromDi()),
     MessageService,
+    ClarityService,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeClarityService,
+      deps: [ClarityService],
+      multi: true
+    },
     WebsocketService
   ]
 })
