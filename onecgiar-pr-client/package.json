@@ -26,6 +26,7 @@
     "@angular/platform-browser-dynamic": "^18.2.6",
     "@angular/router": "^18.2.6",
     "@hotjar/browser": "^1.0.9",
+    "@microsoft/clarity": "^1.0.0",
     "@ncstate/sat-popover": "^13.1.0",
     "chroma-js": "^3.1.1",
     "date-fns": "^4.1.0",
@@ -89,6 +90,9 @@
       "<rootDir>/node_modules/",
       "<rootDir>/dist/"
     ],
+    "moduleNameMapper": {
+      "@microsoft/clarity": "<rootDir>/tests/mocks/clarityMock.ts"
+    },
     "coverageThreshold": {
       "global": {
         "branches": 80,
