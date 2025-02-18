@@ -120,9 +120,12 @@ export class ResultInitiativeBudgetRepository
   }
   fisicalDelete(resultId: number): Promise<any> {
     const queryData = `
-    delete rib from result_initiative_budget rib 
-    inner join results_by_inititiative rbi on rbi.id = result_initiative_budget_id 
-    where rbi.result_id = ?;`;
+    delete rib
+    from
+        result_initiative_budget rib
+        inner join results_by_inititiative rbi on rbi.id = rib.result_initiative_id
+    where
+        rbi.result_id = ?;`;
     return this.query(queryData, [resultId])
       .then((res) => res)
       .catch((err) =>
