@@ -140,6 +140,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
         right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
         where convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4) and tri.is_active
       )
+    )
     `;
   }
 }
