@@ -79,7 +79,7 @@ export class ClarityService {
       Clarity.event(name);
       if (data) {
         Object.entries(data).forEach(([key, value]) => {
-          Clarity.setTag(key, String(value));
+          Clarity.setTag(key, JSON.stringify(value));
         });
       }
     } catch (error) {
