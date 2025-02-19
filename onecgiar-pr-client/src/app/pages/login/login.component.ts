@@ -7,7 +7,7 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 import { RolesService } from '../../shared/services/global/roles.service';
 import { FooterService } from '../../shared/components/footer/footer.service';
 import { WebsocketService } from '../../sockets/websocket.service';
-
+import { ClarityService } from '../../shared/services/clarity.service';
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
@@ -19,18 +19,21 @@ export class LoginComponent implements OnDestroy, OnInit {
   successLogin = false;
 
   constructor(
-    private authService: AuthService,
-    private customAlertService: CustomizedAlertsFeService,
-    private router: Router,
-    private rolesSE: RolesService,
+    private readonly authService: AuthService,
+    private readonly clarityService: ClarityService,
+    private readonly customAlertService: CustomizedAlertsFeService,
+    private readonly router: Router,
+    private readonly rolesSE: RolesService,
     public footerSE: FooterService,
     public webSocket: WebsocketService
   ) {
     this.authService.inLogin = true;
-    if (this.authService.localStorageUser) this.router.navigate(['/']);
   }
 
   ngOnInit(): void {
+    if (this.authService.localStorageUser) {
+      this.router.navigate(['/']);
+    }
     document.getElementById('password').addEventListener('keyup', function (event) {
       if (event.key === 'Enter') {
         document.getElementById('login').click();
@@ -47,7 +50,7 @@ export class LoginComponent implements OnDestroy, OnInit {
         this.authService.localStorageUser = resp?.response?.user;
         this.successLogin = true;
         this.webSocket.configUser(this.authService.localStorageUser?.user_name, this.authService.localStorageUser?.id);
-
+        this.clarityService.updateUserInfo();
         setTimeout(() => {
           this.router.navigate(['/']);
           this.rolesSE.validateReadOnly();
