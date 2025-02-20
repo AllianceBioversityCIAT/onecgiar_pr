@@ -561,82 +561,111 @@ WHERE
   async getResultDataForBasicReport(initDate: Date, endDate: Date) {
     const queryData = `
     SELECT
-      DISTINCT r.result_code,
+      r.result_code,
       version.phase_name,
       r.reported_year_id,
       r.title,
-      r.description,
-      CONCAT(rl.name, ' - ', rt.name) as  "result_type",
-      if(r.is_krs is null, 'Not provided', if(r.is_krs, 'Yes', 'No')) as "is_key_result",
-      (
-        Select gtl_gender.description 
-        from gender_tag_level gtl_gender 
-        where gtl_gender.id = r.gender_tag_level_id
-      ) as "gender_tag_level", 
-      (
-        Select gtl_climate.description 
-        from gender_tag_level gtl_climate
-        where gtl_climate.id = r.climate_change_tag_level_id
-      ) as "climate_tag_level",
-      (
-        Select gtl_nutrition.description 
-        from gender_tag_level gtl_nutrition 
-        where gtl_nutrition.id = r.nutrition_tag_level_id
-      ) as "nutrition_tag_level", 
-      (
-        Select gtl_environment.description 
-        from gender_tag_level gtl_environment 
-        where gtl_environment.id = r.environmental_biodiversity_tag_level_id
-      ) as "environment_tag_level",
-      (
-        Select gtl_poverty.description 
-        from gender_tag_level gtl_poverty 
-        where gtl_poverty.id = r.poverty_tag_level_id
-      ) as "poverty_tag_level",
+      REGEXP_REPLACE(REPLACE(REPLACE(r.description, '<', '&lt;'), '>', '&gt;'), '[^[:print:]]', '') as description,
+      CONCAT(rl.name, ' - ', rt.name) AS "result_type",
+      IF(
+        r.is_krs IS NULL,
+        'Not provided',
+        IF(r.is_krs, 'Yes', 'No')
+      ) AS "is_key_result",
+      gtl_gender.description AS "gender_tag_level",
+      gtl_climate.description AS "climate_tag_level",
+      gtl_nutrition.description AS "nutrition_tag_level",
+      gtl_environment.description AS "environment_tag_level",
+      gtl_poverty.description AS "poverty_tag_level",
       ci_main.official_code,
       rs.status_name,
-      DATE_FORMAT(r.created_date, "%Y-%m-%d") as "creation_date",
-      wp.id as "work_package_id",
-      wp.name as "work_package_title",
+      DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
+      wp.id AS "work_package_id",
+      wp.name AS "work_package_title",
       rtr.toc_result_id,
-      tr.result_title as "toc_result_title",
-      (
-        select group_concat(distinct concat(caa_q1.id, ' - ', caa_q1.name) separator '\n') 
-        from ${env.DB_TOC}.toc_results_action_area_results traar_q1
-        left JOIN ${env.DB_TOC}.toc_action_area_results taar_q1 
-          ON taar_q1.toc_result_id = traar_q1.toc_action_area_results_id_toc and taar_q1.is_active
-        right join clarisa_action_area caa_q1 on taar_q1.action_areas_id = caa_q1.id
-        where traar_q1.toc_results_id = tr.toc_result_id and traar_q1.is_active
-      ) as "action_areas",
-      GROUP_CONCAT(CONCAT('[', cc.code, ': ', c_inst.acronym, ' - ', c_inst.name, ']') SEPARATOR ', ') as "centers",
-      GROUP_CONCAT(DISTINCT ci_contributor.official_code SEPARATOR ', ') as "contributing_initiative",
-      concat('${env.FRONT_END_PDF_ENDPOINT}', r.result_code, ?, 'phase=', r.version_id) as "pdf_link"
-    from result r
-    inner join result_type rt on rt.id = r.result_type_id
-    inner join result_level rl on rl.id = r.result_level_id
-    inner join results_by_inititiative rbi_main on rbi_main.result_id = r.id 
-      and rbi_main.initiative_role_id = 1 and rbi_main.is_active > 0
-    left join results_by_inititiative rbi_contributor on rbi_contributor.result_id = r.id 
-      and rbi_contributor.initiative_role_id = 2 and rbi_contributor.is_active > 0
-    inner join clarisa_initiatives ci_main on ci_main.id = rbi_main.inititiative_id
-    left join clarisa_initiatives ci_contributor on ci_contributor.id = rbi_contributor.inititiative_id
-    left join results_toc_result rtr on rtr.results_id = r.id 
-      and rtr.initiative_id = rbi_main.inititiative_id and rtr.is_active > 0
-    left join ${env.DB_TOC}.toc_results tr on rtr.toc_result_id = tr.id and tr.is_active
-    left join clarisa_action_area_outcome caao ON caao.id = rtr.action_area_outcome_id
-    left join ${env.DB_TOC}.work_packages wp on wp.id = tr.work_packages_id and wp.active > 0
-    left join results_center rc on rc.result_id = r.id and rc.is_active > 0
-    left join clarisa_center cc on cc.code = rc.center_id
-    left join clarisa_institutions c_inst on c_inst.id = cc.institutionId and c_inst.is_active > 0
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id
-    inner join version on version.id = r.version_id WHERE r.created_date >= ? and r.created_date <= ? 
-      and r.is_active > 0 and r.result_type_id not in (10,11)
-    GROUP by r.id, r.reported_year_id, r.title, rl.name, rt.name, ci_main.official_code, rs.status_name, r.created_date,
-      wp.id, wp.name, rtr.toc_result_id, tr.result_title, rtr.action_area_outcome_id, caao.outcomeStatement
-    ORDER BY creation_date DESC;
+      tr.result_title AS "toc_result_title",
+      action_areas_sub.action_areas,
+      GROUP_CONCAT(
+        DISTINCT CONCAT(
+          '[',
+          cc.code,
+          ': ',
+          c_inst.acronym,
+          ' - ',
+          c_inst.name,
+          ']'
+        ) SEPARATOR ', '
+      ) AS "centers",
+      GROUP_CONCAT(
+        DISTINCT ci_contributor.official_code SEPARATOR ', '
+      ) AS "contributing_initiative",
+      CONCAT(
+        '${env.FRONT_END_PDF_ENDPOINT}',
+        r.result_code,
+        '%3F',
+        'phase=',
+        r.version_id
+      ) AS "pdf_link"
+    FROM
+      result r
+      INNER JOIN result_type rt ON rt.id = r.result_type_id
+      INNER JOIN result_level rl ON rl.id = r.result_level_id
+      INNER JOIN results_by_inititiative rbi_main ON rbi_main.result_id = r.id
+      AND rbi_main.initiative_role_id = 1
+      AND rbi_main.is_active
+      INNER JOIN clarisa_initiatives ci_main ON ci_main.id = rbi_main.inititiative_id
+      INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+      INNER JOIN version ON version.id = r.version_id
+      LEFT JOIN results_by_inititiative rbi_contributor ON rbi_contributor.result_id = r.id
+      AND rbi_contributor.initiative_role_id = 2
+      AND rbi_contributor.is_active
+      LEFT JOIN clarisa_initiatives ci_contributor ON ci_contributor.id = rbi_contributor.inititiative_id
+      LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
+      AND rtr.initiative_id = rbi_main.inititiative_id
+      AND rtr.is_active
+      LEFT JOIN ${env.DB_TOC}.toc_results tr ON rtr.toc_result_id = tr.id
+      AND tr.is_active
+      LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.id = tr.work_packages_id
+      AND wp.active
+      LEFT JOIN results_center rc ON rc.result_id = r.id
+      AND rc.is_active
+      LEFT JOIN clarisa_center cc ON cc.code = rc.center_id
+      LEFT JOIN clarisa_institutions c_inst ON c_inst.id = cc.institutionId
+      AND c_inst.is_active
+      LEFT JOIN gender_tag_level AS gtl_gender ON gtl_gender.id = r.gender_tag_level_id
+      LEFT JOIN gender_tag_level AS gtl_climate ON gtl_climate.id = r.climate_change_tag_level_id
+      LEFT JOIN gender_tag_level AS gtl_nutrition ON gtl_nutrition.id = r.nutrition_tag_level_id
+      LEFT JOIN gender_tag_level AS gtl_environment ON gtl_environment.id = r.environmental_biodiversity_tag_level_id
+      LEFT JOIN gender_tag_level AS gtl_poverty ON gtl_poverty.id = r.poverty_tag_level_id
+      LEFT JOIN (
+        SELECT
+          traar.toc_results_id,
+          GROUP_CONCAT(
+            DISTINCT CONCAT(caa.id, ' - ', caa.name) SEPARATOR '\n'
+          ) AS action_areas
+        FROM
+          ${env.DB_TOC}.toc_results_action_area_results traar
+          INNER JOIN ${env.DB_TOC}.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
+          AND taar.is_active
+          RIGHT JOIN clarisa_action_area caa ON taar.action_areas_id = caa.id
+        WHERE
+          traar.is_active
+        GROUP BY
+          traar.toc_results_id
+      ) AS action_areas_sub ON action_areas_sub.toc_results_id = tr.toc_result_id
+    WHERE
+      r.created_date BETWEEN ?
+      AND ?
+      AND r.is_active
+      AND r.result_type_id NOT IN (10, 11)
+    GROUP BY
+      r.id
+    ORDER BY
+      creation_date DESC;
       `;
     try {
-      const results = await this.query(queryData, ['?', initDate, endDate]);
+      const results = await this.query(queryData, [initDate, endDate]);
+
       return results;
     } catch (error) {
       throw {
