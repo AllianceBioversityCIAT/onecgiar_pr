@@ -562,29 +562,31 @@ WHERE
     const queryData = `
     SELECT
       r.result_code,
-      version.phase_name,
-      r.reported_year_id,
-      r.title,
-      REGEXP_REPLACE(REPLACE(REPLACE(r.description, '<', '&lt;'), '>', '&gt;'), '[^[:print:]]', '') as description,
-      CONCAT(rl.name, ' - ', rt.name) AS "result_type",
-      IF(
-        r.is_krs IS NULL,
-        'Not provided',
-        IF(r.is_krs, 'Yes', 'No')
+      ANY_VALUE(version.phase_name) AS phase_name,
+      ANY_VALUE(r.reported_year_id) AS reported_year_id,
+      ANY_VALUE(r.title) AS title,
+      REGEXP_REPLACE(REPLACE(REPLACE(r.description, '<', '&lt;'), '>', '&gt;'), '[^[:print:]]', '') AS description,
+      ANY_VALUE(CONCAT(rl.name, ' - ', rt.name)) AS "result_type",
+      ANY_VALUE(
+        IF(
+          r.is_krs IS NULL,
+          'Not provided',
+          IF(r.is_krs, 'Yes', 'No')
+        )
       ) AS "is_key_result",
-      gtl_gender.description AS "gender_tag_level",
-      gtl_climate.description AS "climate_tag_level",
-      gtl_nutrition.description AS "nutrition_tag_level",
-      gtl_environment.description AS "environment_tag_level",
-      gtl_poverty.description AS "poverty_tag_level",
-      ci_main.official_code,
-      rs.status_name,
+      IFNULL(ANY_VALUE(gtl_gender.description), '') AS "gender_tag_level",
+      IFNULL(ANY_VALUE(gtl_climate.description), '') AS "climate_tag_level",
+      IFNULL(ANY_VALUE(gtl_nutrition.description), '') AS "nutrition_tag_level",
+      IFNULL(ANY_VALUE(gtl_environment.description), '') AS "environment_tag_level",
+      IFNULL(ANY_VALUE(gtl_poverty.description), '') AS "poverty_tag_level",
+      ANY_VALUE(ci_main.official_code) AS official_code,
+      ANY_VALUE(rs.status_name) AS status_name,
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
-      wp.id AS "work_package_id",
-      wp.name AS "work_package_title",
-      rtr.toc_result_id,
-      tr.result_title AS "toc_result_title",
-      action_areas_sub.action_areas,
+      ANY_VALUE(wp.id) AS "work_package_id",
+      REPLACE(REPLACE(IFNULL(ANY_VALUE(wp.name), ''), '<', '&lt;'), '>', '&gt;') AS "work_package_title",
+      ANY_VALUE(rtr.toc_result_id) AS toc_result_id,
+      REPLACE(REPLACE(IFNULL(ANY_VALUE(tr.result_title), ''), '<', '&lt;'), '>', '&gt;') AS "toc_result_title",
+      REPLACE(REPLACE(IFNULL(ANY_VALUE(action_areas_sub.action_areas), ''), '<', '&lt;'), '>', '&gt;') AS action_areas,
       GROUP_CONCAT(
         DISTINCT CONCAT(
           '[',
@@ -602,7 +604,7 @@ WHERE
       CONCAT(
         '${env.FRONT_END_PDF_ENDPOINT}',
         r.result_code,
-        '%3F',
+        ?,
         'phase=',
         r.version_id
       ) AS "pdf_link"
@@ -664,7 +666,7 @@ WHERE
       creation_date DESC;
       `;
     try {
-      const results = await this.query(queryData, [initDate, endDate]);
+      const results = await this.query(queryData, ['?', initDate, endDate]);
 
       return results;
     } catch (error) {
