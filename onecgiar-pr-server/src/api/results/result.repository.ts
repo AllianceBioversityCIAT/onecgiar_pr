@@ -665,8 +665,7 @@ WHERE
       `;
     try {
       const results = await this.query(queryData, [initDate, endDate]);
-      console.log("🚀 ~ getResultDataForBasicReport ~ queryData:", queryData)
-      
+
       return results;
     } catch (error) {
       throw {
