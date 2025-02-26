@@ -291,7 +291,7 @@ describe('ResultsListComponent', () => {
 
       expect(spyExportExcel).toHaveBeenCalledWith([], 'results_list', wscols, [
         {
-          cellNumber: 22,
+          cellNumber: 23,
           cellKey: 'pdf_link'
         }
       ]);
