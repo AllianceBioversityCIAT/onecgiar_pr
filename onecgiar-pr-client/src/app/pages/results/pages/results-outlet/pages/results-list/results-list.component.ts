@@ -142,7 +142,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
         this.exportTablesSE.exportExcel(response, 'results_list', wscols, [
           {
-            cellNumber: 22,
+            cellNumber: 23,
             cellKey: 'pdf_link'
           }
         ]);
