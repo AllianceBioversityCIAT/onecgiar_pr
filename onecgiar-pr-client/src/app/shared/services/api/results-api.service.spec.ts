@@ -586,7 +586,8 @@ describe('ResultsApiService', () => {
         websiteLink: 'link',
         externalUserMail: 'mail@mail.com',
         externalUserName: 'name',
-        externalUserComments: 'comments'
+        externalUserComments: 'comments',
+        platformUrl: 'url'
       };
       service.POST_partnerRequest(mockBody).subscribe(response => {
         expect(response).toEqual(mockResponse);
@@ -611,7 +612,8 @@ describe('ResultsApiService', () => {
         websiteLink: 'link',
         externalUserMail: 'mail@mail.com',
         externalUserName: 'name',
-        externalUserComments: 'comments'
+        externalUserComments: 'comments',
+        platformUrl: 'url'
       };
       service.ipsrDataControlSE.inIpsr = {};
       service.POST_partnerRequest(mockBody).subscribe(response => {
