@@ -25,7 +25,7 @@ export class ClarisaConnectionsService {
   ) {
     createClarisaConnectionDto.externalUserName = `${user.first_name} ${user.last_name}`;
     createClarisaConnectionDto.externalUserMail = user.email;
-    createClarisaConnectionDto.misAcronym = 'PRMS';
+    createClarisaConnectionDto.misAcronym = 'PRMS Reporting tool';
 
     try {
       const result =
