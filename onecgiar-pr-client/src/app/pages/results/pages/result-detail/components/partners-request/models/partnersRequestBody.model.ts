@@ -7,4 +7,5 @@ export class PartnersRequestBody {
   public externalUserMail: string = null;
   public externalUserName: string = null;
   public externalUserComments: string = null;
+  public platformUrl: string = null;
 }

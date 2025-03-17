@@ -50,7 +50,7 @@ export class ClarisaConnectionsService {
           )
           .pipe(map((resp) => resp.data)),
       ).catch((res) => {
-        console.log(res.data);
+        console.log(res);
       });
 
       return {
