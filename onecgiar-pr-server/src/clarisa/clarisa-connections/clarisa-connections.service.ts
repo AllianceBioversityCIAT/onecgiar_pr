@@ -25,7 +25,7 @@ export class ClarisaConnectionsService {
   ) {
     createClarisaConnectionDto.externalUserName = `${user.first_name} ${user.last_name}`;
     createClarisaConnectionDto.externalUserMail = user.email;
-    createClarisaConnectionDto.misAcronym = 'PRMS Reporting tool';
+    createClarisaConnectionDto.misAcronym = 'PRMS';
 
     try {
       const result =
@@ -50,7 +50,7 @@ export class ClarisaConnectionsService {
           )
           .pipe(map((resp) => resp.data)),
       ).catch((res) => {
-        console.log(res.data);
+        console.log(res);
       });
 
       return {
