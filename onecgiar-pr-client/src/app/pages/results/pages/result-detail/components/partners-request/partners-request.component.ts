@@ -55,7 +55,7 @@ export class PartnersRequestComponent implements OnInit, DoCheck {
     const { initiative_official_code, initiative_short_name, initiative_name, initiative_id }: any = this.ipsrDataControlSE.inIpsr
       ? this.ipsrDataControlSE.detailData
       : this.api?.dataControlSE?.currentResult || {};
-    const initiativeFinded = this.api.rolesSE.roles.initiative.find(initiative => (initiative.initiative_id = initiative_id));
+    const initiativeFinded = this.api.rolesSE.roles.initiative.find(initiative => (initiative.initiative_id === initiative_id));
     this.partnersRequestBody.externalUserName = user_name;
     this.partnersRequestBody.externalUserMail = email;
     this.partnersRequestBody.externalUserComments = `
