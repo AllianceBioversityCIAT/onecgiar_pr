@@ -9,4 +9,5 @@ export class CreateClarisaConnectionDto {
   public externalUserMail?: string;
   public externalUserName?: string;
   public externalUserComments: string;
+  public platformUrl: string;
 }
