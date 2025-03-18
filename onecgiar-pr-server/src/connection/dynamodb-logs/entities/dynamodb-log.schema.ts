@@ -4,7 +4,7 @@ import { Actions } from '../dto/enumAction.const';
 import { Result } from '../../../api/results/entities/result.entity';
 
 export class LogsModel {
-  public id: number;
+  public id: string;
   public action: Actions;
   public userId: number;
   public userFirstName?: string;

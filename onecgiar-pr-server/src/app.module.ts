@@ -65,7 +65,6 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     TypeOneReportModule,
     TypeOrmModule.forRoot({
       ...dataSource.options,
-      keepConnectionAlive: true,
       autoLoadEntities: true,
     }),
     ClarisaModule,
