@@ -1,9 +1,7 @@
-/* eslint-disable camelcase */
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { TypeOneReportService } from './type-one-report.service';
 import { Router } from '@angular/router';
-import { RolesService } from '../../shared/services/global/roles.service';
 import { PhasesService } from '../../shared/services/global/phases.service';
 import { TypePneReportRouting } from '../../shared/routing/routing-data';
 import { GlobalVariablesService } from '../../shared/services/global-variables.service';
@@ -17,10 +15,18 @@ export class TypeOneReportComponent implements OnInit {
   sections: any = [];
   phaseNameLoaded = '';
 
-  constructor(public api: ApiService, public typeOneReportSE: TypeOneReportService, private rolesSE: RolesService, public router: Router, public phasesSE: PhasesService, public globalVariablesSE: GlobalVariablesService) {}
+  constructor(
+    public api: ApiService,
+    public typeOneReportSE: TypeOneReportService,
+    public router: Router,
+    public phasesSE: PhasesService,
+    public globalVariablesSE: GlobalVariablesService
+  ) {}
 
   ngOnInit(): void {
-    TypePneReportRouting.forEach((section: any, index) => (section.prName ? this.sections.push({ ...section, name: `Section ${index + 1}: ${section.prName}` }) : null));
+    TypePneReportRouting.forEach((section: any, index) =>
+      section.prName ? this.sections.push({ ...section, name: `Section ${index + 1}: ${section.prName}` }) : null
+    );
 
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Type one report');
@@ -30,7 +36,8 @@ export class TypeOneReportComponent implements OnInit {
 
   getThePhases() {
     const autoSelectOpenPhases = (phases: any[]) => {
-      const openPhase = phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
+      const openPhase =
+        phases.find((phase: any) => phase.status) || phases.find((phase: any) => phase.id == this.globalVariablesSE.get.t1r_default_phase);
       this.typeOneReportSE.phaseSelected = openPhase?.id;
       this.typeOneReportSE.phaseDefaultId = openPhase?.id;
       this.phaseNameLoaded = openPhase?.phase_name_status;

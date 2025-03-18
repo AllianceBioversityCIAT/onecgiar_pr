@@ -5,6 +5,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { env } from 'process';
 import { ContributionToWpOutcomeDto } from '../dto/contribution-to-wp-outcome.dto';
 import { ContributionToEoiOutcomeDto } from '../dto/contribution-to-eoi-outcome.dto';
+import { ContributionToIndicatorResultsRepository } from './contribution-to-indicator-result.repository';
 
 @Injectable()
 export class ContributionToIndicatorsRepository extends Repository<ContributionToIndicator> {
@@ -15,6 +16,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
+    private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
   ) {
     super(ContributionToIndicator, dataSource.createEntityManager());
   }
@@ -59,6 +61,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           const results = await this.dataSource
             .query(this._flattenedResultsQuery(indicator.indicator_uuid))
             .then((data) => data[0].results)
+            .then((data) =>
+              this._contributionToIndicatorResultsRepository.removeInactives(
+                data ?? [],
+              ),
+            )
             .catch((err) => {
               throw this._handlersError.returnErrorRepository({
                 error: err,
@@ -105,6 +112,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         const results = await this.dataSource
           .query(this._flattenedResultsQuery(indicator.indicator_uuid))
           .then((data) => data[0].results)
+          .then((data) =>
+            this._contributionToIndicatorResultsRepository.removeInactives(
+              data ?? [],
+            ),
+          )
           .catch((err) => {
             throw this._handlersError.returnErrorRepository({
               error: err,
@@ -129,11 +141,12 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
           "indicators", (
             select json_arrayagg(json_object(
               "indicator_id", oi.id,
-              "indicator_uuid", oi.toc_result_indicator_id,
+              "indicator_uuid", oi.related_node_id,
               "indicator_description", REGEXP_REPLACE(oi.indicator_description, '^[[:space:]]+|[[:space:]]+$', ''),
               "indicator_name", REGEXP_REPLACE(oi.type_name, '^[[:space:]]+|[[:space:]]+$', ''),
               "is_indicator_custom", if(trim(oi.type_value) like 'custom', true, false),
               "indicator_baseline", oi.baseline_value,
+              "unit_of_measurement", oi.unit_messurament,
               "indicator_target_value", trit.target_value,
               "indicator_target_date", trit.target_date,
               "indicator_achieved_value", cti.achieved_in_2024,
@@ -150,7 +163,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
             left join ${env.DB_TOC}.toc_result_indicator_target trit 
               on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
             left join ${env.DB_NAME}.contribution_to_indicators cti on cti.is_active
-              and convert(cti.toc_result_id using utf8mb4) = convert(oi.toc_result_indicator_id using utf8mb4)
+              and convert(cti.toc_result_id using utf8mb4) = convert(oi.related_node_id using utf8mb4)
             left join ${env.DB_NAME}.contribution_to_indicator_submissions ctis on ctis.contribution_to_indicator_id = cti.id
             	and ctis.is_active
             left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
@@ -167,56 +180,18 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         "is_active", is_active,
         "result_id", result_id,
         "result_code", result_code,
-        "title", result_title,
+        "title", title,
         "phase_name", phase_name,
-        "version_id", phase_id,
+        "version_id", version_id,
+        "is_ipsr", is_ipsr,
         "result_type", result_type,
         "result_submitter", result_submitter,
-        "status_name", result_status,
-        "created_date", result_creation_date,
+        "status_name", status_name,
+        "created_date", created_date,
         "is_manually_mapped", is_manually_mapped
       )) as results
       from (
-        select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, false as is_manually_mapped
-        from ${env.DB_TOC}.toc_results_indicators tri
-        right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
-        right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-        right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
-        left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
-        left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
-        left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
-        left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
-        left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
-          and rtr.initiative_id = main_rbi.inititiative_id
-        left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
-        left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where tri.toc_result_indicator_id = '${tocId}' and tri.is_active and main_r.id is not null and main_ctir.is_active
-        union all
-        select main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title as result_title,
-          main_v.phase_name, main_v.id as phase_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-          main_rs.status_name as result_status, date_format(main_r.created_date, '%Y-%m-%d') as result_creation_date, true as is_manually_mapped
-        from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
-        left join ${env.DB_NAME}.contribution_to_indicators cti on main_ctir.contribution_to_indicator_id = cti.id and cti.is_active
-        left join ${env.DB_NAME}.result main_r on main_r.id = main_ctir.result_id and main_r.is_active
-        left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
-        left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
-        left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id
-        left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
-        left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-        where convert(cti.toc_result_id using utf8mb4) = convert('${tocId}' using utf8mb4) and main_ctir.is_active
-          and main_ctir.result_id not in (
-            select rtr.results_id
-            from ${env.DB_NAME}.results_toc_result rtr
-            where rtr.is_active and rtr.toc_result_id in (
-              select outcomes.id
-              from ${env.DB_TOC}.toc_results_indicators tri
-              right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
-              right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-              where convert(cti.toc_result_id using utf8mb4) = convert(tri.toc_result_indicator_id using utf8mb4) and tri.is_active
-            )
-          )
+        ${this._contributionToIndicatorResultsRepository.getContributingResultsQuery(tocId)}
       ) inner_q
     `;
   }

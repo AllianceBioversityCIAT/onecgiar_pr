@@ -1,0 +1,40 @@
+<div class="local_container">
+  <div class="tor_sub_title">Progress towards Work Packages</div>
+
+  <div class="box_container">
+    <div class="desc">
+      <p>
+        You can access the Work Packages ToC diagrams for Section #3 of the Type 1 report using the <b>Go to</b> folder button below. This version of
+        the TOC will be included in the final version of your 2024 Type 1 report. <br /><br />
+        We recommend using the data and information from the Outcome Indicator Module (available below) to inform the narrative on progress for each
+        Work Package over the three-year period (2022–2024). This information is particularly useful when drafting content for the Work Package
+        progress rating summary table. Please note that the traffic light color is not automatically assigned in this module; it is the
+        initiative&apos;s responsibility to determine a color based on targets achieved and overall progress at the Work Package level after three
+        years of operations. In the Type 1 report, be sure to provide a rationale for the progress rating assigned to each Work Package.
+      </p>
+
+      <a
+        href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/EulWCZAB9NpJih0pHKcrC_UB3DrKckmL51fSw57rbJPE1w?e=Mw8aMs"
+        target="_blank"
+        rel="noopener noreferrer">
+        <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
+      </a>
+    </div>
+  </div>
+
+  <div class="tor_sub_title_container">
+    <div class="tor_sub_title">Work Package progress rating</div>
+
+    <app-pr-button
+      [text]="this.requesting ? 'Downloading excel file' : 'Download excel file'"
+      [ngClass]="{ globalDisabled: this.requesting || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData }"
+      [icon]="this.requesting ? 'loop' : 'excel_white'"
+      [rotating]="this.requesting"
+      (click)="exportProgressWpsExcel()"></app-pr-button>
+  </div>
+
+  <app-progress-against-outcome
+    [loadingStatus]="this.outcomeIService.loadingWPs()"
+    [progressData]="this.outcomeIService.wpsData"
+    [isWPS]="true"></app-progress-against-outcome>
+</div>

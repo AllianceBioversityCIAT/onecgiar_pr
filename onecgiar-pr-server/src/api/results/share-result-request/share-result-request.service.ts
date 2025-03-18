@@ -922,43 +922,49 @@ export class ShareResultRequestService {
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
   ) {
-    const exists =
-      await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(
-        result_id,
-        shared_inititiative_id,
-        false,
-      );
-
-    if (!exists) {
-      const newReIni = await this.createNewInitiativeEntry(
-        shared_inititiative_id,
-        result_id,
-        user,
-      );
-      await this.createBudgetForInitiative(newReIni.id, user);
-
-      if (!is_map_to_toc) {
-        await this.mapWorkPackagesToInitiative(
-          rtr.result_toc_results,
+    try {
+      const exists =
+        await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(
           result_id,
           shared_inititiative_id,
-          user,
-          rtr?.planned_result,
+          false,
         );
+
+      if (!exists) {
+        const newReIni = await this.createNewInitiativeEntry(
+          shared_inititiative_id,
+          result_id,
+          user,
+        );
+        await this.createBudgetForInitiative(newReIni.id, user);
+
+        if (!is_map_to_toc) {
+          await this.mapWorkPackagesToInitiative(
+            rtr.result_toc_results,
+            result_id,
+            shared_inititiative_id,
+            user,
+            rtr?.planned_result,
+          );
+          await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
+        }
+      } else {
+        await this.activateExistingInitiativeEntry(exists, user);
+        await this.createOrUpdateBudgetForInitiative(exists.id, user);
+        if (!is_map_to_toc) {
+          await this.mapWorkPackagesToInitiative(
+            rtr.result_toc_results,
+            result_id,
+            shared_inititiative_id,
+            user,
+            rtr?.planned_result,
+          );
+        }
         await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
       }
-    } else {
-      await this.activateExistingInitiativeEntry(exists, user);
-      await this.createOrUpdateBudgetForInitiative(exists.id, user);
-
-      await this.mapWorkPackagesToInitiative(
-        rtr.result_toc_results,
-        result_id,
-        shared_inititiative_id,
-        user,
-        rtr?.planned_result,
-      );
-      await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
+    } catch (error) {
+      this._logger.error('Error approving share result request', error);
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
@@ -1025,20 +1031,26 @@ export class ShareResultRequestService {
     user: TokenDto,
     planned_result: any,
   ) {
-    for (const toc of tocResults) {
-      if (toc) {
-        await this._resultsTocResultRepository.save({
-          initiative_ids: initiative_id,
-          toc_result_id: toc?.toc_result_id,
-          created_by: user.id,
-          last_updated_by: user.id,
-          result_id,
-          planned_result,
-          action_area_outcome_id: toc?.action_area_outcome_id,
-          is_active: true,
-          toc_progressive_narrative: toc?.toc_progressive_narrative,
-        });
+    try {
+      for (const toc of tocResults) {
+        if (toc) {
+          await this._resultsTocResultRepository.save({
+            initiative_ids: initiative_id,
+            toc_result_id: toc?.toc_result_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id,
+            planned_result,
+            action_area_outcome_id: toc?.action_area_outcome_id,
+            is_active: true,
+            toc_progressive_narrative: toc?.toc_progressive_narrative,
+          });
+        }
       }
+      this._logger.log('Work packages mapped successfully');
+    } catch (error) {
+      this._logger.error('Error mapping work packages', error);
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 

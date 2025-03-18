@@ -1,0 +1,35 @@
+<div class="filter-container">
+  {{ title }}
+
+  <p-columnFilter
+    [field]="field"
+    matchMode="in"
+    display="menu"
+    [showMatchModes]="false"
+    [showOperator]="false"
+    [showAddButton]="false"
+    [showApplyButton]="false">
+    <ng-template pTemplate="header">
+      <div class="filter-header">
+        <span style="font-weight: 600"> {{ title }} </span>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+      <p-multiSelect
+        [ngModel]="value"
+        [options]="options"
+        [placeholder]="placeholder"
+        (onChange)="filter($event.value)"
+        [optionLabel]="optionLabel"
+        [optionValue]="optionValue"
+        [filter]="true">
+        <ng-template let-option pTemplate="item">
+          <div style="display: inline-block; vertical-align: middle">
+            <span style="margin-left: 0.5rem; margin-top: 0.5rem"> {{ option[optionLabel] }} </span>
+          </div>
+        </ng-template>
+      </p-multiSelect>
+    </ng-template>
+  </p-columnFilter>
+</div>

@@ -119,6 +119,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
           { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
           { header: 'Reporting year', key: 'reported_year_id', width: 13 },
           { header: 'Result title', key: 'title', width: 125 },
+          { header: 'Description', key: 'description', width: 125 },
           { header: 'Result type', key: 'result_type', width: 45 },
           { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
           { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
@@ -141,7 +142,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
         this.exportTablesSE.exportExcel(response, 'results_list', wscols, [
           {
-            cellNumber: 22,
+            cellNumber: 23,
             cellKey: 'pdf_link'
           }
         ]);

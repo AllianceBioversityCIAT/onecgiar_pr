@@ -139,9 +139,15 @@ describe('TorFactSheetComponent', () => {
       expect(component.data[4].value).toBe('action area');
       expect(component.data[5].value).toBe('01-01-2022');
       expect(component.data[6].value).toBe('01-01-2023');
-      expect(component.data[8].value).toContain('<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>');
-      expect(component.data[9].value).toContain('<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>');
-      expect(component.data[10].value).toContain('<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong');
+      expect(component.data[8].value).toContain(
+        '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>'
+      );
+      expect(component.data[9].value).toContain(
+        '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>'
+      );
+      expect(component.data[10].value).toContain(
+        '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong'
+      );
       expect(component.data[11].value).toContain('<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>');
       expect(component.loadingData).toBeFalsy();
     });
@@ -187,7 +193,7 @@ describe('TorFactSheetComponent', () => {
 
       component.concatGeo(data);
 
-      const expectedResult = '<strong>Regions targeted in the proposal:</strong><br>Region1; Region2<br><br><strong>Countries targeted in the proposal:</strong><br>Country1; Country2<br>';
+      const expectedResult = '<strong>Regions:</strong><br>Region1; Region2<br><br><strong>Countries:</strong><br>Country1; Country2<br>';
 
       expect(component.data[7].value).toEqual(expectedResult);
     });
@@ -200,7 +206,8 @@ describe('TorFactSheetComponent', () => {
 
       component.concatGeo(data);
 
-      const expectedResult = '<strong>Regions targeted in the proposal:</strong><br><div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div><br><strong>Countries targeted in the proposal:</strong><br><div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
+      const expectedResult =
+        '<strong>Regions:</strong><br><div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div><br><strong>Countries:</strong><br><div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
 
       expect(component.data[7].value).toEqual(expectedResult);
     });
@@ -226,7 +233,8 @@ describe('TorFactSheetComponent', () => {
 
       component.concatEoiOutcome(data);
 
-      const expectedResult = '<strong>Type1 - Result1</strong><br><strong>Description:</strong> Description1<br><br><strong>Type2 - Result2</strong><br><strong>Description:</strong> Description2<br><br>';
+      const expectedResult =
+        '<strong>Type1 - Result1</strong><br><strong>Description:</strong> Description1<br><br><strong>Type2 - Result2</strong><br><strong>Description:</strong> Description2<br><br>';
 
       expect(component.data[8].value).toEqual(expectedResult);
     });

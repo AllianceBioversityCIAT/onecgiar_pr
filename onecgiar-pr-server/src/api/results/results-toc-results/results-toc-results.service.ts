@@ -71,7 +71,6 @@ export class ResultsTocResultsService {
 
       const result = await this._resultRepository.getResultById(result_id);
       let initiativeArray: number[] = [];
-      let initiativeArrayRtr: number[] = [];
       let initiativeArrayPnd: number[] = [];
 
       if (initSubmitter.initiative_id !== changePrimaryInit) {
@@ -175,21 +174,6 @@ export class ResultsTocResultsService {
           sdgTargets,
         );
       } else {
-        initiativeArrayRtr =
-          contributing_initiatives?.accepted_contributing_initiatives.map(
-            (initiative) => initiative.id,
-          );
-        initiativeArrayRtr = initiativeArrayRtr.concat(
-          contributing_initiatives?.pending_contributing_initiatives.map(
-            (pending) => pending.id,
-          ),
-        );
-        await this._resultsTocResultRepository.updateResultByInitiative(
-          result_id,
-          [...initiativeArrayRtr, initSubmitter.initiative_id],
-          user.id,
-        );
-
         // * Save Primary Submitter ResultTocResult
         await this.saveResultTocResultPrimary(
           createResultsTocResultDto,
@@ -717,76 +701,89 @@ export class ResultsTocResultsService {
     initSubmitter: number,
   ) {
     try {
-      // * Logic to map multiple WPs to multiple Initiatives Contributors
-      if (createResultsTocResultDto) {
-        // * Logic to delete a WP from Contributors
-        const incomingRtRIds = [];
-        createResultsTocResultDto.forEach((contributor) => {
-          contributor?.result_toc_results?.forEach((rtrc) => {
-            incomingRtRIds.push(rtrc?.result_toc_result_id);
-          });
-        });
+      if (!createResultsTocResultDto?.length) return;
 
-        const allRtRsContributors =
-          await this._resultsTocResultRepository.findBy({
-            result_id,
-            initiative_id: Not(initSubmitter),
-            is_active: true,
-          });
+      const incomingRtRIds = createResultsTocResultDto.flatMap(
+        (contributor) =>
+          contributor?.result_toc_results?.map(
+            (rtrc) => rtrc?.result_toc_result_id,
+          ) || [],
+      );
 
-        allRtRsContributors.forEach(async (storedRtR) => {
+      const allRtRsContributors = await this._resultsTocResultRepository.findBy(
+        {
+          result_id,
+          initiative_id: Not(initSubmitter),
+          is_active: true,
+        },
+      );
+
+      await Promise.all(
+        allRtRsContributors.map(async (storedRtR) => {
           if (!incomingRtRIds.includes(storedRtR.result_toc_result_id)) {
-            await this._resultsTocResultRepository.update(
+            return this._resultsTocResultRepository.update(
               storedRtR.result_toc_result_id,
               { is_active: false },
             );
           }
-        });
+        }),
+      );
 
-        // * Map multiple WPs to the same initiative
-        // Remove the declaration of RtRArray variable
-        for (const contributor of createResultsTocResultDto) {
-          if (!contributor.result_toc_results?.length) {
+      await Promise.all(
+        createResultsTocResultDto.map(async (contributor) => {
+          const initInactive = await this._resultByInitiativesRepository.findBy(
+            {
+              initiative_id: contributor.initiative_id,
+              result_id,
+              is_active: false,
+            },
+          );
+
+          if (!contributor?.result_toc_results?.length || initInactive.length) {
             contributor.result_toc_results = [];
           }
-          for (const rtrc of contributor.result_toc_results) {
-            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
-              continue;
-            }
-            const RtR = await this._resultsTocResultRepository.getRTRById(
-              rtrc?.result_toc_result_id,
-            );
 
-            if (RtR) {
-              await this._resultsTocResultRepository.update(
-                RtR.result_toc_result_id,
-                {
+          await Promise.all(
+            contributor.result_toc_results.map(async (rtrc) => {
+              if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) return;
+
+              const existingRtR =
+                await this._resultsTocResultRepository.getRTRById(
+                  rtrc?.result_toc_result_id,
+                );
+
+              if (existingRtR) {
+                return this._resultsTocResultRepository.update(
+                  existingRtR.result_toc_result_id,
+                  {
+                    toc_result_id: rtrc?.toc_result_id,
+                    action_area_outcome_id:
+                      rtrc?.action_area_outcome_id || null,
+                    toc_progressive_narrative:
+                      rtrc?.toc_progressive_narrative || null,
+                    planned_result: contributor?.planned_result,
+                    last_updated_by: user.id,
+                    is_active: true,
+                  },
+                );
+              } else {
+                return this._resultsTocResultRepository.insert({
+                  initiative_ids: contributor?.initiative_id,
                   toc_result_id: rtrc?.toc_result_id,
+                  created_by: user.id,
+                  last_updated_by: user.id,
+                  result_id: result_id,
+                  planned_result: contributor?.planned_result,
                   action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+                  is_active: true,
                   toc_progressive_narrative:
                     rtrc?.toc_progressive_narrative || null,
-                  planned_result: contributor?.planned_result,
-                  last_updated_by: user.id,
-                  is_active: true,
-                },
-              );
-            } else {
-              await this._resultsTocResultRepository.insert({
-                initiative_ids: contributor?.initiative_id,
-                toc_result_id: rtrc?.toc_result_id,
-                created_by: user.id,
-                last_updated_by: user.id,
-                result_id: result_id,
-                planned_result: contributor?.planned_result,
-                action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-                is_active: true,
-                toc_progressive_narrative:
-                  rtrc?.toc_progressive_narrative || null,
-              });
-            }
-          }
-        }
-      }
+                });
+              }
+            }),
+          );
+        }),
+      );
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }

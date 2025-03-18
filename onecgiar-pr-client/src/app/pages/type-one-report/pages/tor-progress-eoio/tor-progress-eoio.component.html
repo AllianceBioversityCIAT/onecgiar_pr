@@ -1,0 +1,34 @@
+<div class="local_container">
+  <div class="tor_sub_title">Progress towards EOI-O</div>
+
+  <div class="box_container">
+    <div class="desc">
+      <p>
+        You can access the Theory of Change (ToC) diagram for Section #2 of the Type 1 report using the <b>Go to</b> Folder link below. This version
+        will be included in the final version of your 2024 Type 1 report.
+      </p>
+
+      <a
+        href="https://cgiar.sharepoint.com/:f:/s/PRMSProject/EulWCZAB9NpJih0pHKcrC_UB3DrKckmL51fSw57rbJPE1w?e=Mw8aMs"
+        target="_blank"
+        rel="noopener noreferrer">
+        <app-pr-button text="Go to folder" icon="folder"></app-pr-button>
+      </a>
+    </div>
+  </div>
+
+  <div class="tor_sub_title_container">
+    <div class="tor_sub_title">Progress against EOI Outcomes</div>
+
+    <app-pr-button
+      [text]="this.requesting ? 'Downloading excel file' : 'Download excel file'"
+      [ngClass]="{ globalDisabled: this.requesting || this.outcomeIService.loading() || !this.outcomeIService.eoisData }"
+      [icon]="this.requesting ? 'loop' : 'excel_white'"
+      [rotating]="this.requesting"
+      (click)="exportProgressEoioExcel()"></app-pr-button>
+  </div>
+
+  <app-progress-against-outcome
+    [loadingStatus]="this.outcomeIService.loading()"
+    [progressData]="this.outcomeIService.eoisData"></app-progress-against-outcome>
+</div>

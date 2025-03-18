@@ -6,10 +6,10 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ContributionToIndicatorsDto } from './dto/contribution-to-indicators.dto';
 import { ContributionToIndicatorResult } from './entities/contribution-to-indicator-result.entity';
 import { ContributionToIndicator } from './entities/contribution-to-indicator.entity';
-import { ContributionToIndicatorResultsDto } from './dto/contribution-to-indicator-results.dto';
 import { ContributionToIndicatorSubmissionRepository } from './repositories/contribution-to-indicator-result-submission.repository';
 import { ContributionToIndicatorSubmission } from './entities/contribution-to-indicator-submission.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { IndicatorSupportingResult } from './dto/contribution-to-wp-outcome.dto';
 
 @Injectable()
 export class ContributionToIndicatorsService {
@@ -119,22 +119,6 @@ export class ContributionToIndicatorsService {
 
   async findOneCoIResultByTocId(tocId: string) {
     try {
-      function removeInactives(list: ContributionToIndicatorResultsDto[]) {
-        return list
-          .filter((contribution) =>
-            contribution.contribution_id ? !!contribution.is_active : true,
-          )
-          .map((contribution) => {
-            if (contribution.linked_results?.length) {
-              contribution.linked_results = removeInactives(
-                contribution.linked_results,
-              );
-            }
-
-            return contribution;
-          });
-      }
-
       if (!tocId?.length) {
         throw {
           response: {},
@@ -165,8 +149,7 @@ export class ContributionToIndicatorsService {
         await this._contributionToIndicatorResultsRepository.findResultContributionsByTocId(
           tocId,
         );
-      contributionToIndicator.contributing_results =
-        removeInactives(contributingResults);
+      contributionToIndicator.contributing_results = contributingResults;
 
       return {
         response: contributionToIndicator,
@@ -240,7 +223,7 @@ export class ContributionToIndicatorsService {
     contributionToIndicator: ContributionToIndicator,
   ) {
     function recursive(
-      contributingResults: ContributionToIndicatorResultsDto[],
+      contributingResults: IndicatorSupportingResult[],
       contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
       processedContributingResults: ContributionToIndicatorResult[] = [],
     ): ContributionToIndicatorResult[] {
@@ -276,14 +259,6 @@ export class ContributionToIndicatorsService {
         contributingResult.last_updated_by = userDto.id;
 
         processedContributingResults.push(contributingResult);
-
-        if (result.linked_results) {
-          processedContributingResults = recursive(
-            result.linked_results ?? [],
-            contributionToIndicatorResultsRepository,
-            processedContributingResults,
-          );
-        }
       }
 
       return processedContributingResults;

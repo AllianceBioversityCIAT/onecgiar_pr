@@ -85,22 +85,24 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
     mapped.onlineYearCG = response.metadataCG?.online_year;
+
     this.fair_data = this.filterOutObject(response.fair_data);
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
+    mapped.isJournalArticle = journalArticle;
     if (journalArticle) {
       if (response.metadataCG?.doi) {
         if (response.metadataWOS) {
           this.getMetadataFromWoS(mapped, response);
-          this.getMetadataFromCGSpace(mapped, response);
+          this.getMetadataFromCGSpace(mapped, response, journalArticle);
         } else {
-          this.getMetadataFromCGSpace(mapped, response);
+          this.getMetadataFromCGSpace(mapped, response, journalArticle);
         }
       } else {
-        this.getMetadataFromCGSpace(mapped, response);
+        this.getMetadataFromCGSpace(mapped, response, journalArticle);
       }
     } else if (response.metadataCG?.issue_year == response.cgspace_phase_year) {
-      this.getMetadataFromCGSpace(mapped, response);
+      this.getMetadataFromCGSpace(mapped, response, journalArticle);
     }
 
     return mapped;
@@ -114,12 +116,12 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return this.kpGradientScale(value).hex();
   }
 
-  private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
+  private getMetadataFromCGSpace(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody, isJA: boolean) {
     mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
-    mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi);
+    mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi, isJA);
     let accessibilityCG: string;
     if (response.metadataCG?.accessibility == null) {
-      accessibilityCG = 'Not available';
+      accessibilityCG = !isJA ? 'Not available' : 'Not provided';
     } else {
       accessibilityCG = response.metadataCG.accessibility ? 'Open Access' : 'Limited Access';
     }
@@ -127,19 +129,19 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.yearCG = response.metadataCG?.issue_year;
   }
 
-  private transformBoolean(value: boolean): string {
-    if (value == null) {
-      return 'Not available';
-    }
-
-    return value ? 'Yes' : 'No';
-  }
-
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
     mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
     mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
+  }
+
+  private transformBoolean(value: boolean, isJA?: boolean): string {
+    if (value == null) {
+      return !isJA ? 'Not available' : 'Not provided';
+    }
+
+    return value ? 'Yes' : 'No';
   }
 
   filterOutObject(fairObject: FullFairData): Array<{ key: string; value: FairSpecificData }> {

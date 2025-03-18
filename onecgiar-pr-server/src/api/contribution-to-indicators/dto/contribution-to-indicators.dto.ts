@@ -1,4 +1,4 @@
-import { ContributionToIndicatorResultsDto } from './contribution-to-indicator-results.dto';
+import { IndicatorSupportingResult } from './contribution-to-wp-outcome.dto';
 
 export class ContributionToIndicatorsDto {
   contribution_id: number;
@@ -12,5 +12,5 @@ export class ContributionToIndicatorsDto {
   outcome_name: string;
   outcome_description: string;
   workpackage_name: string;
-  contributing_results?: ContributionToIndicatorResultsDto[];
+  contributing_results?: IndicatorSupportingResult[];
 }

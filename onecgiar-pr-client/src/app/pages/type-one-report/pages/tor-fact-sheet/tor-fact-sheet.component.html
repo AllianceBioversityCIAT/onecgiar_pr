@@ -1,23 +1,21 @@
 <div class="local_container">
+  <div class="tor_sub_title">Fact sheet</div>
 
-  <div class="tor_sub_title">
-    Fact sheet
-  </div>
-
-  This information is sourced from the PRMS
-  <app-simple-table-with-clipboard [loadingData]="loadingData" distribution="left" [data]="data" [header]="header"
+  <app-simple-table-with-clipboard
+    [loadingData]="loadingData"
+    distribution="left"
+    [data]="data"
+    [header]="header"
     tableTitle="Fact sheet"></app-simple-table-with-clipboard>
 
-    <app-alert-status [description]="torFactSheetAlertDescription" inlineStyles="margin: 16px 0 0 0;"></app-alert-status>
-
   <div class="budget_sub_section">
-    <div class="tor_sub_title">
-      Budget
-    </div>
+    <div class="tor_sub_title">Budget</div>
     <div>
-      This information is displayed in the <a class="open_route" rel="noopener"
-        href="https://cgiar.sharepoint.com/sites/cgiar_infopoint/SitePages/Financial%20Planning%20and%20Analysis%20Dashboard.aspx?OR=Teams-HL&CT=1682696052809"
-        target="_blank">Anaplan dashboard</a>
+      Use the
+      <a class="open_route" href="https://www.cgiar.org/funders/trust-fund/financing-plan/" target="_blank" rel="noopener noreferrer">
+        Financing Plan <i class="pi pi-external-link"></i>
+      </a>
+      dashboard for 2022, 2023 and 2024 budget information
     </div>
   </div>
 </div>
