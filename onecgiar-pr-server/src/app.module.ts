@@ -50,7 +50,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     ThrottlerModule.forRoot({
       throttlers: [
         {
-          ttl: 60000,
+          ttl: 60,
           limit: 100,
         },
       ],
