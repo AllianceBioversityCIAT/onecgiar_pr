@@ -4,8 +4,7 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TocModule } from './toc/toc.module';
 import { ClarisaModule } from './clarisa/clarisa.module';
 import { APP_FILTER, APP_GUARD, RouterModule } from '@nestjs/core';
@@ -51,7 +50,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     ThrottlerModule.forRoot({
       throttlers: [
         {
-          ttl: 60000,
+          ttl: 60,
           limit: 100,
         },
       ],
