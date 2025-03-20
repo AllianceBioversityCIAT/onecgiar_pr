@@ -357,10 +357,11 @@ export const TypePneReportRouting: PrRoute[] = [
       import('../../pages/type-one-report/pages/tor-portfolio-linkages/tor-portfolio-linkages.module').then(m => m.TorPortfolioLinkagesModule)
   },
   {
-    prName: '',
+    prName: 'Key result story',
     underConstruction: false,
-    path: 'white',
-    loadChildren: () => import('../../pages/type-one-report/pages/white-page/white-page.module').then(m => m.WhitePageModule)
+    path: 'key-result-story',
+    loadChildren: () =>
+      import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule)
   },
   { prName: '', path: '**', underConstruction: false, pathMatch: 'full', redirectTo: 'fact-sheet' }
 ];
