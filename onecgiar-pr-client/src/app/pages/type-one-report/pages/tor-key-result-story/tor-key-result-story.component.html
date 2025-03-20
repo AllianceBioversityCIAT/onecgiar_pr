@@ -1,0 +1,23 @@
+<div class="local_container">
+
+    <div class="tor_sub_title">
+        Key result story
+    </div>
+
+    <app-alert-status [description]="alertInformation()"> </app-alert-status>
+
+    <app-no-data-text title="There is no information for this Initiative."
+        *ngIf="!this.tablesList.length"></app-no-data-text>
+
+    <div *ngFor="let table of this.tablesList">
+        <app-simple-table-with-clipboard *ngIf="this.table.data" distribution="left" [data]="table.data"
+            [header]="table.header" tableTitle="Key Result Story info"></app-simple-table-with-clipboard>
+        <app-no-data-text title="There is no information for this Initiative."
+            *ngIf="!this.table.data"></app-no-data-text>
+        <br><br><br>
+    </div>
+
+    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" [editable]="true"
+        *ngIf="validateOneDropDown()"></app-save-button>
+
+</div>
