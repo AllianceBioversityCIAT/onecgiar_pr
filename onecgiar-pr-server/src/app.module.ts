@@ -1,12 +1,13 @@
-import { TocModule } from './toc/toc.module';
-import { ClarisaModule } from './clarisa/clarisa.module';
 import {
   MiddlewareConsumer,
   Module,
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { APP_FILTER, RouterModule } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { TocModule } from './toc/toc.module';
+import { ClarisaModule } from './clarisa/clarisa.module';
+import { APP_FILTER, APP_GUARD, RouterModule } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -46,6 +47,12 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     TocModule,
     ClarisaModule,
     AuthModule,
@@ -88,6 +95,10 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     JwtService,
     JwtMiddleware,
     Repository,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
