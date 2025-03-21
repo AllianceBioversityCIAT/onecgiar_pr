@@ -47,14 +47,12 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60,
-          limit: 100,
-        },
-      ],
-    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     TocModule,
     ClarisaModule,
     AuthModule,
@@ -98,12 +96,12 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     JwtMiddleware,
     Repository,
     {
-      provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
-    },
-    {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })
