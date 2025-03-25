@@ -49,7 +49,8 @@ export class IndicatorResultsModalComponent {
     { id: 6, name: 'Knowledge product' },
     { id: 7, name: 'Innovation development' },
     { id: 8, name: 'Other output' },
-    { id: 9, name: 'Impact contribution' }
+    { id: 9, name: 'Impact contribution' },
+    { id: 10, name: 'Innovation package' }
   ];
 
   outcomeIndicatorService = inject(OutcomeIndicatorService);
