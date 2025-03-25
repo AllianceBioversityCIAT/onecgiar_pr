@@ -538,6 +538,10 @@ export class IpsrRepository
                 WHERE
                     u.id = r.created_by
             ) AS created_by,
+            u.first_name as create_first_name,
+            u.last_name as create_last_name,
+            r.created_date,
+            rt.id as result_type_id,
             v.phase_name,
             v.phase_year,
             v.status as phase_status,
@@ -548,6 +552,7 @@ export class IpsrRepository
             LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
             LEFT JOIN result_type rt ON rt.id = r.result_type_id
             INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+            LEFT JOIN users u on u.id = r.created_by
             INNER JOIN version v ON v.id = r.version_id
         WHERE
             r.is_active = 1
