@@ -163,7 +163,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where
-      cti.toc_result_id = ${tocId ? `'$tocId}'` : '?'}
+      cti.toc_result_id = ${tocId ? `'${tocId}'` : '?'}
       AND NOT EXISTS (
         SELECT
           1
