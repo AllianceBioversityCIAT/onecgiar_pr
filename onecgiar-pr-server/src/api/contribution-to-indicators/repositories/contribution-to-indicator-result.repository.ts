@@ -176,9 +176,9 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
             SELECT
               outcomes.id
             FROM
-              Integration_information.toc_results_indicators tri
-              RIGHT JOIN Integration_information.toc_results indicator_outcome ON tri.toc_results_id = indicator_outcome.id
-              RIGHT JOIN Integration_information.toc_results outcomes ON outcomes.toc_result_id = indicator_outcome.toc_result_id
+              ${env.DB_TOC}.toc_results_indicators tri
+              RIGHT JOIN ${env.DB_TOC}.toc_results indicator_outcome ON tri.toc_results_id = indicator_outcome.id
+              RIGHT JOIN ${env.DB_TOC}.toc_results outcomes ON outcomes.toc_result_id = indicator_outcome.toc_result_id
             WHERE
               convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4)
               AND tri.is_active
