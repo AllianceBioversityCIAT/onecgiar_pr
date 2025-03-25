@@ -98,49 +98,92 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
 
   getContributingResultsQuery(tocId?: string): string {
     return `
-      select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
-      main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-      main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date, false as is_manually_mapped, (main_rt.id = 10) as is_ipsr
-    from ${env.DB_TOC}.toc_results_indicators tri
-    right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
-    right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-    right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id and rtr.is_active
-    left join ${env.DB_NAME}.contribution_to_indicators cti on 
-      convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4) and cti.is_active
-    left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id and main_r.is_active
-    left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id 
+    select
+      distinct main_ctir.id as contribution_id,
+      main_ctir.is_active,
+      main_r.id as result_id,
+      main_r.result_code,
+      main_r.title,
+      main_v.phase_name,
+      main_v.id as version_id,
+      main_rt.name as result_type,
+      main_ci.official_code as result_submitter,
+      main_rs.status_name,
+      date_format(main_r.created_date, '%Y-%m-%d') as created_date,
+      false as is_manually_mapped,
+      (main_rt.id = 10) as is_ipsr
+    from
+      ${env.DB_TOC}.toc_results_indicators tri
+      right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
+      right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
+      right join ${env.DB_NAME}.results_toc_result rtr on rtr.toc_result_id = outcomes.id
+      and rtr.is_active
+      left join ${env.DB_NAME}.contribution_to_indicators cti on convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4)
+      and cti.is_active
+      left join ${env.DB_NAME}.result main_r on main_r.id = rtr.results_id
+      and main_r.is_active
+      left join ${env.DB_NAME}.contribution_to_indicator_results main_ctir on main_ctir.result_id = main_r.id
       and main_ctir.contribution_to_indicator_id = cti.id
-    left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
-    left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
-    left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
+      left join ${env.DB_NAME}.version main_v on main_r.version_id = main_v.id
+      left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
+      left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id
       and main_rbi.initiative_role_id = 1
-    left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
-    left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-    where tri.related_node_id = ${tocId ? `'${tocId}'` : '?'} and tri.is_active and main_r.id is not null
-    union all
-    select distinct main_ctir.id as contribution_id, main_ctir.is_active, main_r.id as result_id, main_r.result_code, main_r.title,
-      main_v.phase_name, main_v.id as version_id, main_rt.name as result_type, main_ci.official_code as result_submitter, 
-      main_rs.status_name, date_format(main_r.created_date, '%Y-%m-%d') as created_date, true as is_manually_mapped, (main_rt.id = 10) as is_ipsr
-    from ${env.DB_NAME}.contribution_to_indicator_results main_ctir
-    left join ${env.DB_NAME}.contribution_to_indicators cti on main_ctir.contribution_to_indicator_id = cti.id and cti.is_active
-    left join ${env.DB_NAME}.result main_r on main_r.id = main_ctir.result_id and main_r.is_active
-    left join ${env.DB_NAME}.\`version\` main_v on main_r.version_id = main_v.id
-    left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
-    left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id 
+      left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
+      left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
+    where
+      tri.related_node_id = ${tocId ? `'$tocId}'` : '?'}
+      and tri.is_active
+      and main_r.id is not null
+    union
+    all
+    select
+      distinct main_ctir.id as contribution_id,
+      main_ctir.is_active,
+      main_r.id as result_id,
+      main_r.result_code,
+      main_r.title,
+      main_v.phase_name,
+      main_v.id as version_id,
+      main_rt.name as result_type,
+      main_ci.official_code as result_submitter,
+      main_rs.status_name,
+      date_format(main_r.created_date, '%Y-%m-%d') as created_date,
+      true as is_manually_mapped,
+      (main_rt.id = 10) as is_ipsr
+    from
+      ${env.DB_NAME}.contribution_to_indicator_results main_ctir
+      left join ${env.DB_NAME}.contribution_to_indicators cti on main_ctir.contribution_to_indicator_id = cti.id
+      and cti.is_active
+      left join ${env.DB_NAME}.result main_r on main_r.id = main_ctir.result_id
+      and main_r.is_active
+      left join ${env.DB_NAME}.version main_v on main_r.version_id = main_v.id
+      left join ${env.DB_NAME}.result_type main_rt on main_r.result_type_id = main_rt.id
+      left join ${env.DB_NAME}.results_by_inititiative main_rbi on main_rbi.result_id = main_r.id
       and main_rbi.initiative_role_id = 1
-    left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
-    left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
-    where cti.toc_result_id = ${tocId ? `'${tocId}'` : '?'} and main_ctir.result_id not in (
-      select rtr.results_id
-      from ${env.DB_NAME}.results_toc_result rtr
-      where rtr.is_active and rtr.toc_result_id in (
-        select outcomes.id
-        from ${env.DB_TOC}.toc_results_indicators tri
-        right join ${env.DB_TOC}.toc_results indicator_outcome on tri.toc_results_id = indicator_outcome.id
-        right join ${env.DB_TOC}.toc_results outcomes on outcomes.toc_result_id = indicator_outcome.toc_result_id
-        where convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4) and tri.is_active
+      left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
+      left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
+    where
+      cti.toc_result_id = ${tocId ? `'$tocId}'` : '?'}
+      AND NOT EXISTS (
+        SELECT
+          1
+        FROM
+          prdb.results_toc_result rtr
+        WHERE
+          rtr.is_active
+          AND rtr.results_id = main_ctir.result_id
+          AND rtr.toc_result_id IN (
+            SELECT
+              outcomes.id
+            FROM
+              Integration_information.toc_results_indicators tri
+              RIGHT JOIN Integration_information.toc_results indicator_outcome ON tri.toc_results_id = indicator_outcome.id
+              RIGHT JOIN Integration_information.toc_results outcomes ON outcomes.toc_result_id = indicator_outcome.toc_result_id
+            WHERE
+              convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4)
+              AND tri.is_active
+          )
       )
-    )
     `;
   }
 }
