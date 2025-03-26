@@ -110,7 +110,7 @@ export class OutcomeIndicatorService {
   }
 
   getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList.set(response);
     });
   }

@@ -22,15 +22,27 @@ export class IndicatorDetailsService {
   ) {}
 
   getIndicatorDetailsResults() {
-    this.resultsApiService.GET_contributionsDetailsResults(this.authSE.localStorageUser.id).subscribe(res => {
-      res.response.forEach(result => {
+    this.resultsApiService.GET_contributionsDetailsResults(this.authSE.localStorageUser.id).subscribe(contributionsRes => {
+      contributionsRes.response.forEach(result => {
         if (this.indicatorData().contributing_results.some(r => r.result_id === result.id)) {
           result.is_added = true;
           result.is_saved = true;
         }
       });
 
-      this.indicatorResults.set(res.response);
+      this.resultsApiService.GETAllInnovationPackages().subscribe(innovationRes => {
+        innovationRes.response.forEach(result => {
+          if (this.indicatorData().contributing_results.some(r => r.result_id === result.id)) {
+            result.is_added = true;
+            result.is_saved = true;
+          }
+          result.status_name = result.status;
+          result.submitter = result.official_code;
+        });
+
+        const mergedResults = [...contributionsRes.response, ...innovationRes.response];
+        this.indicatorResults.set(mergedResults);
+      });
     });
   }
 }
