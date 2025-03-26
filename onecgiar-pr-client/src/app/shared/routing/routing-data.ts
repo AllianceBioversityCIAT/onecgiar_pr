@@ -119,6 +119,12 @@ export const adminModuleRouting: PrRoute[] = [
     path: 'knowledge-products',
     loadChildren: () => import('../../pages/admin-section/pages/knowledge-products/knowledge-products.module').then(m => m.KnowledgeProductsModule)
   },
+  {
+    prName: 'Tickets Dashboard',
+    path: 'tickets-dashboard',
+    loadComponent: () =>
+      import('../../pages/admin-section/pages/tickets-dashboard/tickets-dashboard.component').then(m => m.TicketsDashboardComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 

@@ -1,0 +1,16 @@
+<header class="tickets_header">
+  <i class="material-icons-round" style="font-size: 30px">query_stats</i>
+  <h1 class="tickets_header--title">Tickets Dashboard</h1>
+</header>
+
+<p class="tickets_container--description">
+  Welcome to the PRMS Tickets dashboard, here you can see the actual support cases that we are currently receiving of the platform. Information
+  regarding each case, its current status, and how it is being handled by the technical team is also available here. This information comes from our
+  ticketing system (PRMSTechSupport&#64;cgiar.org) in real time.
+</p>
+
+<div class="tickets_container">
+  @if (ticketsDashboardUrl) {
+    <iframe title="tickets-dashboard" allowfullscreen [src]="ticketsDashboardUrl"></iframe>
+  }
+</div>
