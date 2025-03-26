@@ -131,7 +131,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where
-      tri.related_node_id = ${tocId ? `'$tocId}'` : '?'}
+      tri.related_node_id = ${tocId ? `'${tocId}'` : '?'}
       and tri.is_active
       and main_r.id is not null
     union
@@ -163,7 +163,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where
-      cti.toc_result_id = ${tocId ? `'$tocId}'` : '?'}
+      cti.toc_result_id = ${tocId ? `'${tocId}'` : '?'}
       AND NOT EXISTS (
         SELECT
           1
@@ -176,9 +176,9 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
             SELECT
               outcomes.id
             FROM
-              Integration_information.toc_results_indicators tri
-              RIGHT JOIN Integration_information.toc_results indicator_outcome ON tri.toc_results_id = indicator_outcome.id
-              RIGHT JOIN Integration_information.toc_results outcomes ON outcomes.toc_result_id = indicator_outcome.toc_result_id
+              ${env.DB_TOC}.toc_results_indicators tri
+              RIGHT JOIN ${env.DB_TOC}.toc_results indicator_outcome ON tri.toc_results_id = indicator_outcome.id
+              RIGHT JOIN ${env.DB_TOC}.toc_results outcomes ON outcomes.toc_result_id = indicator_outcome.toc_result_id
             WHERE
               convert(cti.toc_result_id using utf8mb4) = convert(tri.related_node_id using utf8mb4)
               AND tri.is_active
