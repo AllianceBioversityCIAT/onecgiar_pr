@@ -42,26 +42,42 @@ describe('IndicatorDetailsService', () => {
   });
 
   it('should fetch indicator details results and update indicatorResults', () => {
-    const mockResponse = {
+    const contributionsMockResponse = {
       response: [
         { id: 'result1', is_added: false, is_saved: false },
         { id: 'result2', is_added: false, is_saved: false }
       ]
     };
 
-    resultsApiServiceMock.GET_contributionsDetailsResults.mockReturnValue(of(mockResponse));
+    const innovationMockResponse = {
+      response: [
+        { id: 'innovation1', status: 'Approved', official_code: 'IP-001' },
+        { id: 'innovation2', status: 'Pending', official_code: 'IP-002' }
+      ]
+    };
+
+    resultsApiServiceMock.GET_contributionsDetailsResults = jest.fn().mockReturnValue(of(contributionsMockResponse));
+    resultsApiServiceMock.GETAllInnovationPackages = jest.fn().mockReturnValue(of(innovationMockResponse));
 
     service.indicatorData.set({
-      contributing_results: [{ result_id: 'result1' }]
+      contributing_results: [{ result_id: 'result1' }, { result_id: 'innovation2' }]
     } as IndicatorData);
 
     service.getIndicatorDetailsResults();
 
     expect(resultsApiServiceMock.GET_contributionsDetailsResults).toHaveBeenCalledWith(123);
-    expect(service.indicatorResults().length).toBe(2);
+    expect(resultsApiServiceMock.GETAllInnovationPackages).toHaveBeenCalled();
+
+    expect(service.indicatorResults().length).toBe(4);
+
     expect(service.indicatorResults()[0].is_added).toBe(true);
     expect(service.indicatorResults()[0].is_saved).toBe(true);
     expect(service.indicatorResults()[1].is_added).toBe(false);
     expect(service.indicatorResults()[1].is_saved).toBe(false);
+
+    expect(service.indicatorResults()[3].is_added).toBe(true);
+    expect(service.indicatorResults()[3].is_saved).toBe(true);
+    expect(service.indicatorResults()[3].status_name).toBe('Pending');
+    expect(service.indicatorResults()[3].submitter).toBe('IP-002');
   });
 });
