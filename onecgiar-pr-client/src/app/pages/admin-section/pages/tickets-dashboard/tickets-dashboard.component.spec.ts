@@ -1,8 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TicketsDashboardComponent } from './tickets-dashboard.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { DomSanitizer } from '@angular/platform-browser';
 import { GlobalLinksService } from '../../../../shared/services/variables/global-links.service';
+import { DomSanitizer } from '@angular/platform-browser';
 
 describe('TicketsDashboardComponent', () => {
   let component: TicketsDashboardComponent;
@@ -13,25 +12,20 @@ describe('TicketsDashboardComponent', () => {
   beforeEach(async () => {
     mockGlobalLinksService = {
       links: {
-        url_t1r_bi_report: 'https://example.com/bi/dashboard'
+        url_t1r_bi_report: 'http://example.com/report',
+        url_prms_tickets_dashboards: 'http://example.com/dashboard'
       }
     };
 
     mockDomSanitizer = {
-      bypassSecurityTrustResourceUrl: jest.fn().mockImplementation(url => url)
+      bypassSecurityTrustResourceUrl: jest.fn().mockReturnValue('sanitized-url')
     };
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, TicketsDashboardComponent],
+      declarations: [],
       providers: [
-        {
-          provide: GlobalLinksService,
-          useValue: mockGlobalLinksService
-        },
-        {
-          provide: DomSanitizer,
-          useValue: mockDomSanitizer
-        }
+        { provide: GlobalLinksService, useValue: mockGlobalLinksService },
+        { provide: DomSanitizer, useValue: mockDomSanitizer }
       ]
     }).compileComponents();
 
@@ -45,26 +39,24 @@ describe('TicketsDashboardComponent', () => {
 
   describe('ngOnInit', () => {
     it('should call sanitizeUrl on initialization', () => {
-      const spy = jest.spyOn(component, 'sanitizeUrl');
+      const sanitizeUrlSpy = jest.spyOn(component, 'sanitizeUrl');
       component.ngOnInit();
-      expect(spy).toHaveBeenCalled();
+      expect(sanitizeUrlSpy).toHaveBeenCalled();
     });
   });
 
   describe('sanitizeUrl', () => {
-    it('should set ticketsDashboardUrl with sanitized URL', () => {
+    it('should set ticketsDashboardUrl when url_t1r_bi_report exists', () => {
       component.sanitizeUrl();
-      expect(component.ticketsDashboardUrl).toBeTruthy();
-      expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).toHaveBeenCalledWith('https://example.com/bi/IBD-ticket-tracking');
-      expect(component.ticketsDashboardUrl).toBe('https://example.com/bi/IBD-ticket-tracking');
+      expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).toHaveBeenCalledWith('http://example.com/dashboard');
+      expect(component.ticketsDashboardUrl).toBe('sanitized-url');
     });
 
-    it('should handle case when url_t1r_bi_report is undefined', () => {
-      mockGlobalLinksService.links.url_t1r_bi_report = undefined;
+    it('should not set ticketsDashboardUrl when url_t1r_bi_report does not exist', () => {
+      mockGlobalLinksService.links.url_t1r_bi_report = null;
       component.sanitizeUrl();
-      expect(component.ticketsDashboardUrl).toBeFalsy();
       expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).not.toHaveBeenCalled();
-      expect(component.ticketsDashboardUrl).toBeFalsy();
+      expect(component.ticketsDashboardUrl).toBeNull();
     });
   });
 });
