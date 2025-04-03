@@ -25,7 +25,7 @@ export class TicketsDashboardComponent implements OnInit {
       return;
     }
 
-    const url = `${this.globalLinksSE?.links?.url_t1r_bi_report?.split('bi/')[0]}bi/IBD-ticket-tracking`;
+    const url = `${this.globalLinksSE?.links?.url_prms_tickets_dashboards}`;
 
     this.ticketsDashboardUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
