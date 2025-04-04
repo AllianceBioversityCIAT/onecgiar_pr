@@ -1,0 +1,52 @@
+<div class="whats-new-home_card">
+  <div class="whats-new-home_card_header">
+    @if (item.cover?.external?.url) {
+      <img [src]="item.cover?.external?.url" alt="cover" />
+    } @else {
+      <div class="whats-new-home_card_header_placeholder">No image</div>
+    }
+  </div>
+
+  <div class="whats-new-home_card_content">
+    <div class="whats-new-home_card_content_header">
+      <div class="whats-new-home_card_content_author">
+        @if (item.properties['Developers:']?.people.length > 0) {
+          @for (person of item.properties['Developers:']?.people; track $index) {
+            <div class="whats-new-home_card_content_author_avatar scale" [pTooltip]="person.name" tooltipPosition="top" style="cursor: help">
+              <img [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/{{id}}'" alt="author {{ item.name }}" />
+            </div>
+          }
+        } @else {
+          @let authorItem = item.properties['Added by']?.created_by;
+          @let defaultAvatar = 'https://avatar.vercel.sh/' + authorItem?.id;
+
+          <div class="whats-new-home_card_content_author_avatar scale" [pTooltip]="authorItem?.name" tooltipPosition="top" style="cursor: help">
+            <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" />
+          </div>
+        }
+      </div>
+
+      <p class="whats-new-home_card_content_date">
+        {{ item.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+      </p>
+    </div>
+
+    <div class="whats-new-home_card_content_text">
+      <div class="whats-new-home_card_content_text_tags">
+        <p
+          class="whats-new-home_card_content_text_tags_item"
+          [style]="{ backgroundColor: whatsNewService.getColor(item.properties?.Tags?.select?.color) }">
+          {{ item.properties?.Tags?.select?.name }}
+        </p>
+
+        @for (item of item.properties?.Projects?.multi_select; track $index) {
+          <p class="whats-new-home_card_content_text_tags_item" [style]="{ backgroundColor: whatsNewService.getColor(item.color) }">
+            {{ item.name }}
+          </p>
+        }
+      </div>
+
+      <h3 class="whats-new-home_card_content_text_title">{{ item.properties.Name.title[0].plain_text }}</h3>
+    </div>
+  </div>
+</div>

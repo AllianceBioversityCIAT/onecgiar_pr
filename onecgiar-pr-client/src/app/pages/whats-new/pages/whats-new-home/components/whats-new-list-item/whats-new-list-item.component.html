@@ -1,0 +1,52 @@
+<div class="whats-new-home_list_item row">
+  <div class="" style="grid-area: a">
+    <h1 class="whats-new-home_list_item_title">
+      {{ item.properties.Name.title[0].plain_text }}
+    </h1>
+  </div>
+
+  <div class="" style="grid-area: b">
+    <div class="whats-new-home_text_tags">
+      @if (item.properties?.Tags?.select) {
+        <p class="whats-new-home_text_tags_item" [style]="{ backgroundColor: whatsNewService.getColor(item.properties?.Tags?.select?.color) }">
+          {{ item.properties?.Tags?.select?.name }}
+        </p>
+      }
+
+      @if (item.properties?.Projects?.multi_select.length > 0) {
+        @for (item of item.properties?.Projects?.multi_select; track $index) {
+          <p class="whats-new-home_text_tags_item" [style]="{ backgroundColor: whatsNewService.getColor(item.color) }">
+            {{ item.name }}
+          </p>
+        }
+      }
+
+      @if (item.properties?.Projects?.multi_select.length === 0 && !item.properties?.Tags?.select) {
+        No tags or projects
+      }
+    </div>
+  </div>
+
+  <div class="" style="grid-area: c; justify-self: end">
+    <p class="whats-new-home_date">
+      {{ item.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+    </p>
+  </div>
+
+  <div class="whats-new-home_list_item_author" style="grid-area: d; justify-self: end">
+    @if (item.properties['Developers:']?.people.length > 0) {
+      @for (person of item.properties['Developers:']?.people; track $index) {
+        <div class="whats-new-home_author_avatar scale" [pTooltip]="person.name" tooltipPosition="top" style="cursor: help">
+          <img [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id" alt="author {{ item.name }}" />
+        </div>
+      }
+    } @else {
+      @let authorItem = item.properties['Added by']?.created_by;
+      @let defaultAvatar = 'https://avatar.vercel.sh/' + authorItem?.id;
+
+      <div class="whats-new-home_author_avatar scale" [pTooltip]="authorItem?.name" tooltipPosition="top" style="cursor: help">
+        <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" />
+      </div>
+    }
+  </div>
+</div>
