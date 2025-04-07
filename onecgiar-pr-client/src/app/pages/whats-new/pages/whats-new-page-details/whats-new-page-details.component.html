@@ -1,10 +1,10 @@
 @if (whatsNewService.notionDataLoading()) {
-  <p>Loading...</p>
-} @else if (whatsNewService.notionDataError()) {
-  <p>Error: {{ whatsNewService.notionDataError()?.message }} {{ whatsNewService.notionDataError()?.status }}</p>
+  <app-whats-new-page-details-loading />
+} @else if (whatsNewService.notionDataError()?.error) {
+  <h1>Error: {{ whatsNewService.notionDataError()?.message }} {{ whatsNewService.notionDataError()?.status }}</h1>
 } @else {
   @let headerInfo = whatsNewService.activeNotionPageData()?.headerInfo;
-  @let developers = headerInfo?.properties['Developers:']?.people;
+  @let developers = headerInfo?.properties['Developers']?.people;
 
   <div class="whats-new-page-details_header">
     <div class="whats-new-page-details_header_cover">

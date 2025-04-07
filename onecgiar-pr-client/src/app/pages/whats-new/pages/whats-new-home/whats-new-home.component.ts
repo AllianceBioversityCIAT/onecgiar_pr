@@ -5,10 +5,11 @@ import { WhatsNewCardComponent } from './components/whats-new-card/whats-new-car
 import { RouterModule } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { WhatsNewListItemComponent } from './components/whats-new-list-item/whats-new-list-item.component';
+import { SkeletonModule } from 'primeng/skeleton';
 @Component({
   selector: 'app-whats-new-home',
   standalone: true,
-  imports: [CommonModule, TooltipModule, WhatsNewCardComponent, RouterModule, WhatsNewListItemComponent],
+  imports: [CommonModule, TooltipModule, SkeletonModule, WhatsNewCardComponent, RouterModule, WhatsNewListItemComponent],
   templateUrl: './whats-new-home.component.html',
   styleUrl: './whats-new-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

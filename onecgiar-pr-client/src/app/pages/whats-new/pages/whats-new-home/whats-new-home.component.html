@@ -2,7 +2,24 @@
   <h1 class="whats-new-home_title">Release Notes</h1>
 
   @if (whatsNewService.notionDataLoading()) {
-    <p>Loading...</p>
+    <div class="whats-new-home_first">
+      <p-skeleton width="100%" height="374.5px" [style]="{ backgroundColor: '#DDD' }" />
+      <p-skeleton width="100%" height="374.5px" [style]="{ backgroundColor: '#DDD' }" />
+    </div>
+
+    <div class="whats-new-home_second">
+      <p-skeleton width="100%" height="400px" [style]="{ backgroundColor: '#DDD' }" />
+      <p-skeleton width="100%" height="400px" [style]="{ backgroundColor: '#DDD' }" />
+      <p-skeleton width="100%" height="400px" [style]="{ backgroundColor: '#DDD' }" />
+    </div>
+
+    <h2 class="whats-new-home_subtitle">More from the team</h2>
+
+    <div class="whats-new-home_third">
+      @for (item of [0, 1, 2]; track $index) {
+        <p-skeleton width="100%" height="95px" [style]="{ backgroundColor: '#DDD', marginBottom: '10px' }" />
+      }
+    </div>
   } @else {
     @if (!whatsNewService.notionData()?.results?.length) {
       <p>No data</p>

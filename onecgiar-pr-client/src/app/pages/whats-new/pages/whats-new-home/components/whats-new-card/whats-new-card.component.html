@@ -18,8 +18,8 @@
   <div class="whats-new-home_card_content">
     <div class="whats-new-home_card_content_header">
       <div class="whats-new-home_card_content_author">
-        @if (item?.properties['Developers:']?.people?.length > 0) {
-          @for (person of item?.properties['Developers:']?.people; track $index) {
+        @if (item?.properties['Developers']?.people?.length > 0) {
+          @for (person of item?.properties['Developers']?.people; track $index) {
             <div class="whats-new-home_card_content_author_avatar scale" [pTooltip]="person.name" tooltipPosition="top" style="cursor: help">
               <img [src]="person?.avatar_url ? person?.avatar_url : 'https://avatar.vercel.sh/' + person?.id" alt="author {{ item.name }}" />
             </div>
