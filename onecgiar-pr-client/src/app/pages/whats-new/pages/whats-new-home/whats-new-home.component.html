@@ -4,11 +4,11 @@
   @if (whatsNewService.notionDataLoading()) {
     <p>Loading...</p>
   } @else {
-    @if (!whatsNewService.notionData().results.length) {
+    @if (!whatsNewService.notionData()?.results?.length) {
       <p>No data</p>
     } @else {
       <div class="whats-new-home_first">
-        @for (item of whatsNewService.notionData().results.slice(0, 2); track item.id) {
+        @for (item of whatsNewService.notionData()?.results?.slice(0, 2); track item.id) {
           <app-whats-new-card
             [item]="item"
             [routerLink]="['/whats-new/details', item.id]"
@@ -16,9 +16,9 @@
         }
       </div>
 
-      @if (whatsNewService.notionData().results.length > 2) {
+      @if (whatsNewService.notionData()?.results?.length > 2) {
         <div class="whats-new-home_second">
-          @for (item of whatsNewService.notionData().results.slice(2, 5); track item.id) {
+          @for (item of whatsNewService.notionData()?.results?.slice(2, 5); track item.id) {
             <app-whats-new-card
               [item]="item"
               [routerLink]="['/whats-new/details', item.id]"
@@ -27,11 +27,11 @@
         </div>
       }
 
-      @if (whatsNewService.notionData().results.length > 5) {
+      @if (whatsNewService.notionData()?.results?.length > 5) {
         <h2 class="whats-new-home_subtitle">More from the team</h2>
 
         <div class="whats-new-home_third">
-          @for (item of whatsNewService.notionData().results.slice(5, whatsNewService.notionData().results.length); track item.id) {
+          @for (item of whatsNewService.notionData()?.results?.slice(5, whatsNewService.notionData()?.results?.length); track item.id) {
             <app-whats-new-list-item
               [item]="item"
               [routerLink]="['/whats-new/details', item.id]"

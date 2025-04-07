@@ -334,3 +334,16 @@ a {
 .text-semibold {
   font-weight: 600;
 }
+
+.notion-code {
+  color: #eb5757;
+  padding: 2px;
+  background-color: #ededeb;
+}
+
+.notion-link {
+  color: #666;
+  text-decoration: underline;
+  word-break: break-all;
+  word-break: break-word;
+}

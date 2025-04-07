@@ -1,63 +1,83 @@
-<p>whats-new-page-details works!</p>
-<p>{{ notionPageId() }}</p>
-
 @if (whatsNewService.notionDataLoading()) {
   <p>Loading...</p>
+} @else if (whatsNewService.notionDataError()) {
+  <p>Error: {{ whatsNewService.notionDataError()?.message }} {{ whatsNewService.notionDataError()?.status }}</p>
 } @else {
-  <div class="whats-new-page-details_container">
-    @for (item of whatsNewService.activeNotionPageData().blocks; track item.id) {
-      @switch (item.type) {
-        @case ('callout') {
-          @let text = joinText(item?.callout?.rich_text);
-          @let icon = item?.callout?.icon?.emoji;
+  @let headerInfo = whatsNewService.activeNotionPageData()?.headerInfo;
+  @let developers = headerInfo?.properties['Developers:']?.people;
 
-          <div class="whats-new-page-details_callout">
-            @if (icon) {
-              <p class="whats-new-page-details_callout_icon">{{ icon }}</p>
-            }
-            @if (text) {
-              <p class="whats-new-page-details_callout_text" [innerHTML]="text"></p>
-            }
+  <div class="whats-new-page-details_header">
+    <div class="whats-new-page-details_header_cover">
+      @let cover = whatsNewService.activeNotionPageData()?.headerInfo?.cover;
+
+      @switch (cover?.type) {
+        @case ('external') {
+          <img [src]="cover?.external?.url" alt="cover" />
+        }
+        @case ('file') {
+          <img [src]="cover?.file?.url" alt="cover" />
+        }
+        @default {
+          <div class="whats-new-home_card_header_placeholder">No image</div>
+        }
+      }
+    </div>
+
+    <h1 class="whats-new-page-details_header_title">
+      {{ headerInfo?.properties?.Name?.title[0]?.plain_text }}
+    </h1>
+
+    <!-- additional info -->
+    <div class="whats-new-page-details_header_additional-info">
+      <div class="whats-new-page-details_header_additional-author">
+        @if (developers?.length > 0) {
+          @for (person of developers; track $index) {
+            <div
+              class="whats-new-page-details_header_additional-info_item_avatar"
+              [pTooltip]="person.name"
+              tooltipPosition="top"
+              style="cursor: help">
+              <img
+                [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id"
+                alt="author {{ person.name }}"
+                width="24"
+                height="24" />
+            </div>
+          }
+        } @else {
+          @let authorItem = headerInfo?.properties['Added by']?.created_by;
+          @let defaultAvatar = 'https://avatar.vercel.sh/' + authorItem?.id;
+
+          <div
+            class="whats-new-page-details_header_additional-info_item_avatar"
+            [pTooltip]="authorItem?.name"
+            tooltipPosition="top"
+            style="cursor: help">
+            <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" width="24" height="24" />
           </div>
         }
+      </div>
 
-        @case ('heading_1') {
-          @let text = joinText(item?.heading_1?.rich_text);
-          @if (text) {
-            <h1 class="whats-new-page-details_heading_1" [innerHTML]="text"></h1>
-          }
+      <p class="whats-new-page-details_header_additional-info_item_last-updated">
+        Created date: {{ headerInfo?.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+      </p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="whats-new-page-details_container">
+    @for (item of whatsNewService.activeNotionPageData()?.blocks; track item.id) {
+      @if (item.type === 'numbered_list_item') {
+        @if ($first || whatsNewService.activeNotionPageData()?.blocks[$index - 1]?.type !== 'numbered_list_item') {
+          <ol>
+            @for (numberedItem of getConsecutiveNumberedItems($index); track numberedItem.id) {
+              <app-dynamic-notion-block [block]="numberedItem"></app-dynamic-notion-block>
+            }
+          </ol>
         }
-
-        @case ('heading_2') {
-          @let text = joinText(item?.heading_2?.rich_text);
-          @if (text) {
-            <h2 class="whats-new-page-details_heading_2" [innerHTML]="text"></h2>
-          }
-        }
-
-        @case ('heading_3') {
-          @let text = joinText(item?.heading_3?.rich_text);
-          @if (text) {
-            <h3 class="whats-new-page-details_heading_3" [innerHTML]="text"></h3>
-          }
-        }
-
-        @case ('paragraph') {
-          @let text = joinText(item?.paragraph?.rich_text);
-
-          @if (text) {
-            <p class="whats-new-page-details_paragraph" [innerHTML]="text"></p>
-          }
-        }
-
-        @case ('bulleted_list_item') {
-          @let text = joinText(item?.bulleted_list_item?.rich_text);
-          @if (text) {
-            <ul>
-              <li class="whats-new-page-details_bulleted_list_item" [innerHTML]="text"></li>
-            </ul>
-          }
-        }
+      } @else {
+        <app-dynamic-notion-block [block]="item"></app-dynamic-notion-block>
       }
     }
   </div>

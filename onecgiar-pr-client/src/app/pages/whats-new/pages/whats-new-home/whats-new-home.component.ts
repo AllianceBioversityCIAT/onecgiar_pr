@@ -18,7 +18,6 @@ export class WhatsNewHomeComponent {
   whatsNewService = inject(WhatsNewService);
 
   setActiveNotionPageData(item: any) {
-    console.log(item);
     this.whatsNewService.activeNotionPageData.set({
       headerInfo: {
         cover: item.cover,

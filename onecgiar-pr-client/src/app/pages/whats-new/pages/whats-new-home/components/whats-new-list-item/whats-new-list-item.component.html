@@ -1,7 +1,7 @@
 <div class="whats-new-home_list_item row">
   <div class="" style="grid-area: a">
     <h1 class="whats-new-home_list_item_title">
-      {{ item.properties.Name.title[0].plain_text }}
+      {{ item.properties?.Name?.title[0]?.plain_text }}
     </h1>
   </div>
 
@@ -13,7 +13,7 @@
         </p>
       }
 
-      @if (item.properties?.Projects?.multi_select.length > 0) {
+      @if (item.properties?.Projects?.multi_select?.length > 0) {
         @for (item of item.properties?.Projects?.multi_select; track $index) {
           <p class="whats-new-home_text_tags_item" [style]="{ backgroundColor: whatsNewService.getColor(item.color) }">
             {{ item.name }}
@@ -21,7 +21,7 @@
         }
       }
 
-      @if (item.properties?.Projects?.multi_select.length === 0 && !item.properties?.Tags?.select) {
+      @if (item.properties?.Projects?.multi_select?.length === 0 && !item.properties?.Tags?.select) {
         No tags or projects
       }
     </div>
@@ -34,7 +34,7 @@
   </div>
 
   <div class="whats-new-home_list_item_author" style="grid-area: d; justify-self: end">
-    @if (item.properties['Developers:']?.people.length > 0) {
+    @if (item.properties['Developers:']?.people?.length > 0) {
       @for (person of item.properties['Developers:']?.people; track $index) {
         <div class="whats-new-home_author_avatar scale" [pTooltip]="person.name" tooltipPosition="top" style="cursor: help">
           <img [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id" alt="author {{ item.name }}" />

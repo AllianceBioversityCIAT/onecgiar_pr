@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { WhatsNewService } from './services/whats-new.service';
 
 @Component({
@@ -6,10 +6,10 @@ import { WhatsNewService } from './services/whats-new.service';
   templateUrl: './whats-new.component.html',
   styleUrl: './whats-new.component.scss'
 })
-export class WhatsNewComponent {
+export class WhatsNewComponent implements OnInit {
   whatsNewService = inject(WhatsNewService);
 
   ngOnInit() {
-    this.whatsNewService.getWhatsNew();
+    this.whatsNewService.getWhatsNewPages();
   }
 }

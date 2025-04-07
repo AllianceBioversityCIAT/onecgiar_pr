@@ -11,49 +11,87 @@ p {
 .whats-new-page-details_container {
   display: flex;
   flex-direction: column;
+}
+
+.whats-new-page-details_header {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.whats-new-page-details_callout {
+.whats-new-page-details_header_cover {
+  width: 100%;
+  height: 200px;
+  background-color: #f0f0f0;
+  overflow: hidden;
+  border-radius: 10px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.whats-new-home_card_header_placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: #f0f0f0;
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  border-radius: 10px;
-  background-color: #e4e4e4;
-  width: fit-content;
-  gap: 10px;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #777;
+  height: 200px;
 }
 
-.whats-new-page-details_callout_icon {
-  font-size: 20px;
+.whats-new-page-details_header_title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 10px;
 }
 
-.whats-new-page-details_callout_text {
-  font-size: 16px;
+.whats-new-page-details_header_additional-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.whats-new-page-details_header_additional-author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.whats-new-page-details_header_additional-info_item_avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.whats-new-page-details_header_additional-info_item_last-updated {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
   font-weight: 500;
 }
 
-.whats-new-page-details_heading_1 {
-  font-size: 28px;
-  font-weight: 600;
-}
-
-.whats-new-page-details_heading_2 {
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.whats-new-page-details_heading_3 {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.whats-new-page-details_paragraph {
-  font-size: 15px;
-  font-weight: 400;
-}
-
-.whats-new-page-details_bulleted_list_item {
-  font-size: 15px;
-  font-weight: 400;
+.divider {
+  width: 100%;
+  height: 2px;
+  background-color: #e0e0e0;
+  margin: 20px 0;
+  margin-bottom: 30px;
 }

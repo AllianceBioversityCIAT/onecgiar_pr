@@ -1,61 +1,55 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { CommonModule } from '@angular/common';
+import { DynamicNotionBlockComponent } from '../../../../shared/components/dynamic-notion-block/dynamic-notion-block.component';
+import { Subscription } from 'rxjs';
+import { TooltipModule } from 'primeng/tooltip';
+
 @Component({
   selector: 'app-whats-new-page-details',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule],
   templateUrl: './whats-new-page-details.component.html',
   styleUrls: ['./whats-new-page-details.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WhatsNewPageDetailsComponent implements OnInit {
+export class WhatsNewPageDetailsComponent implements OnInit, OnDestroy {
   notionPageId = signal<string>('');
   whatsNewService = inject(WhatsNewService);
+  private paramsSubscription: Subscription;
 
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit() {
-    this.route.params.subscribe(params => {
-      this.notionPageId.set(params['id']);
-    });
+    this.paramsSubscription = this.route.params.subscribe(params => {
+      const newId = params['id'];
+      this.notionPageId.set(newId);
 
-    this.whatsNewService.getNotionBlockChildren(this.notionPageId());
+      // Fetch new data when the ID changes
+      if (newId) {
+        this.whatsNewService.getNotionBlockChildren(newId);
+      }
+    });
   }
 
-  joinText(text: any[]) {
-    if (!text || !text.length) return '';
+  ngOnDestroy() {
+    // Clean up subscription to prevent memory leaks
+    if (this.paramsSubscription) {
+      this.paramsSubscription.unsubscribe();
+    }
+  }
 
-    // Process text items
-    const processedText = text.map(item => {
-      // Handle links
-      if (item.href) {
-        return `<a href="${item.href}">${item.plain_text}</a>`;
-      }
+  getConsecutiveNumberedItems(startIndex: number): any[] {
+    const blocks = this.whatsNewService.activeNotionPageData()?.blocks || [];
+    const consecutiveItems = [];
+    let currentIndex = startIndex;
 
-      // Handle text with different formatting
-      let formattedText = item.plain_text;
+    while (currentIndex < blocks.length && blocks[currentIndex].type === 'numbered_list_item') {
+      consecutiveItems.push(blocks[currentIndex]);
+      currentIndex++;
+    }
 
-      // Apply bold formatting if needed
-      if (item.annotations?.bold) {
-        formattedText = `<span class="text-semibold">${formattedText}</span>`;
-      }
-
-      // Apply italic formatting if needed
-      if (item.annotations?.italic) {
-        formattedText = `<em>${formattedText}</em>`;
-      }
-
-      // Apply underline formatting if needed
-      if (item.annotations?.underline) {
-        formattedText = `<u>${formattedText}</u>`;
-      }
-
-      return formattedText;
-    });
-
-    // Join the processed text items
-    return processedText.join('');
+    return consecutiveItems;
   }
 }

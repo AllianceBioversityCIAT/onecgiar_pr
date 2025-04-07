@@ -1,0 +1,161 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+ul,
+ol,
+p {
+  margin: 0;
+}
+
+.whats-new-page-details_default_text {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+// Callout
+
+.whats-new-page-details_callout_container {
+  display: flex;
+  // flex-direction: column;
+  background-color: #f1f0ed;
+  padding: 10px 20px;
+  border-radius: 5px;
+}
+
+.whats-new-page-details_callout {
+  display: flex;
+  gap: 10px;
+}
+
+.whats-new-page-details_callout_icon {
+  font-size: 20px;
+}
+
+.whats-new-page-details_callout_text {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+// Heading 1
+
+.whats-new-page-details_heading_1 {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+// Heading 2
+
+.whats-new-page-details_heading_2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+// Heading 3
+
+.whats-new-page-details_heading_3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+// Paragraph
+
+.whats-new-page-details_paragraph {
+  font-size: 15px;
+  font-weight: 400;
+}
+
+// List
+
+// Table
+
+.whats-new-page-details_table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+}
+
+.whats-new-page-details_table th,
+.whats-new-page-details_table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.whats-new-page-details_table td {
+  font-size: 16px;
+}
+
+// To do
+
+.whats-new-page-details_to_do_container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.whats-new-page-details_to_do {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+// Quote
+
+.whats-new-page-details_quote {
+  font-size: 16px;
+  font-weight: 400;
+  padding-left: 15px;
+  border-left: 3px solid #000;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+// Divider
+
+.whats-new-page-details_divider {
+  border: 1px solid #dfdfde;
+  margin: 10px 0;
+}
+
+// Code
+
+.whats-new-page-details_code {
+  background: #f1f0ed;
+  padding: 30px 20px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+// Caption
+
+.whats-new-page-details_image_caption {
+  font-size: 12px;
+  font-weight: 400;
+  color: #7d7c78;
+}
+
+// Children container
+
+.whats-new-page-details_children_container {
+  margin-left: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+// Toggle
+
+.whats-new-page-details_toggle_text {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+// spacing margin bottom 10px
+
+.mb-10 {
+  margin-bottom: 10px;
+}
