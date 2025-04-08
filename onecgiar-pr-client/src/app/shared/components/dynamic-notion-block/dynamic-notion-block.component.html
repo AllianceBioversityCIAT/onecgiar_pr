@@ -92,7 +92,9 @@
     }
 
     @if (video?.external?.url) {
-      <video [src]="video.external.url" width="100%" class="mb-10" controls autoplay [muted]="'muted'" loop></video>
+      <a [href]="video.external.url" target="_blank" rel="noopener noreferrer" class="mb-10">
+        <video width="100%" controls autoplay [muted]="'muted'" loop></video>
+      </a>
     }
   }
 
@@ -217,7 +219,7 @@
     @let text = block?.child_page?.title;
 
     @if (text) {
-      <p class="whats-new-page-details_default_text mb-10" (click)="navigateToChildPage(block.id)">
+      <p class="whats-new-page-details_default_text whats-new-page-details_child-page mb-10" (click)="navigateToChildPage(block.id)">
         {{ text }}
       </p>
     }

@@ -159,3 +159,17 @@ p {
 .mb-10 {
   margin-bottom: 10px;
 }
+
+// child page
+
+.whats-new-page-details_child-page {
+  cursor: pointer;
+  background-color: #f1f0ed;
+  padding: 5px 15px;
+  width: fit-content;
+  border-radius: 5px;
+
+  &:hover {
+    background-color: #e0dfdc;
+  }
+}

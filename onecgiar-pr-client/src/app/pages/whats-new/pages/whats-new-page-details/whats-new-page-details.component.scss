@@ -88,6 +88,21 @@ p {
   font-weight: 500;
 }
 
+.go-back-button {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+  width: fit-content;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: #333;
+  }
+}
+
 .divider {
   width: 100%;
   height: 2px;

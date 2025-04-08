@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { CommonModule } from '@angular/common';
 import { DynamicNotionBlockComponent } from '../../../../shared/components/dynamic-notion-block/dynamic-notion-block.component';
@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { TooltipModule } from 'primeng/tooltip';
 import { SkeletonModule } from 'primeng/skeleton';
 import { WhatsNewPageDetailsLoadingComponent } from './components/whats-new-page-details-loading/whats-new-page-details-loading.component';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-whats-new-page-details',
@@ -20,6 +21,8 @@ export class WhatsNewPageDetailsComponent implements OnInit, OnDestroy {
   notionPageId = signal<string>('');
   whatsNewService = inject(WhatsNewService);
   private paramsSubscription: Subscription;
+  private router = inject(Router);
+  private location = inject(Location);
 
   constructor(private route: ActivatedRoute) {}
 
@@ -53,5 +56,13 @@ export class WhatsNewPageDetailsComponent implements OnInit, OnDestroy {
     }
 
     return consecutiveItems;
+  }
+
+  goBack() {
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/whats-new']);
+    }
   }
 }

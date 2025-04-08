@@ -6,6 +6,11 @@
   @let headerInfo = whatsNewService.activeNotionPageData()?.headerInfo;
   @let developers = headerInfo?.properties['Developers']?.people;
 
+  <p class="go-back-button" (click)="goBack()">
+    <i class="pi pi-arrow-left" style="margin-right: 5px"></i>
+    Go back
+  </p>
+
   <div class="whats-new-page-details_header">
     <div class="whats-new-page-details_header_cover">
       @let cover = whatsNewService.activeNotionPageData()?.headerInfo?.cover;
@@ -24,44 +29,46 @@
     </div>
 
     <h1 class="whats-new-page-details_header_title">
-      {{ headerInfo?.properties?.Name?.title[0]?.plain_text }}
+      {{ headerInfo?.properties?.Name?.title[0]?.plain_text ?? headerInfo?.properties?.title?.title[0]?.plain_text }}
     </h1>
 
     <!-- additional info -->
-    <div class="whats-new-page-details_header_additional-info">
-      <div class="whats-new-page-details_header_additional-author">
-        @if (developers?.length > 0) {
-          @for (person of developers; track $index) {
+    @if (developers?.length > 0 || headerInfo?.properties['Added by']?.created_by) {
+      <div class="whats-new-page-details_header_additional-info">
+        <div class="whats-new-page-details_header_additional-author">
+          @if (developers?.length > 0) {
+            @for (person of developers; track $index) {
+              <div
+                class="whats-new-page-details_header_additional-info_item_avatar"
+                [pTooltip]="person.name"
+                tooltipPosition="top"
+                style="cursor: help">
+                <img
+                  [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id"
+                  alt="author {{ person.name }}"
+                  width="24"
+                  height="24" />
+              </div>
+            }
+          } @else {
+            @let authorItem = headerInfo?.properties['Added by']?.created_by;
+            @let defaultAvatar = 'https://avatar.vercel.sh/' + authorItem?.id;
+
             <div
               class="whats-new-page-details_header_additional-info_item_avatar"
-              [pTooltip]="person.name"
+              [pTooltip]="authorItem?.name"
               tooltipPosition="top"
               style="cursor: help">
-              <img
-                [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id"
-                alt="author {{ person.name }}"
-                width="24"
-                height="24" />
+              <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" width="24" height="24" />
             </div>
           }
-        } @else {
-          @let authorItem = headerInfo?.properties['Added by']?.created_by;
-          @let defaultAvatar = 'https://avatar.vercel.sh/' + authorItem?.id;
+        </div>
 
-          <div
-            class="whats-new-page-details_header_additional-info_item_avatar"
-            [pTooltip]="authorItem?.name"
-            tooltipPosition="top"
-            style="cursor: help">
-            <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" width="24" height="24" />
-          </div>
-        }
+        <p class="whats-new-page-details_header_additional-info_item_last-updated">
+          Created date: {{ headerInfo?.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+        </p>
       </div>
-
-      <p class="whats-new-page-details_header_additional-info_item_last-updated">
-        Created date: {{ headerInfo?.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
-      </p>
-    </div>
+    }
   </div>
 
   <div class="divider"></div>

@@ -8,6 +8,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { of, Subject } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 jest.useFakeTimers();
 
@@ -17,6 +19,8 @@ describe('WhatsNewPageDetailsComponent', () => {
   let whatsNewService: WhatsNewService;
   let mockWhatsNewService: jest.Mocked<WhatsNewService>;
   let mockActivatedRoute: Partial<ActivatedRoute>;
+  let mockRouter: jest.Mocked<Router>;
+  let mockLocation: jest.Mocked<Location>;
   let paramsSubject: Subject<any>;
 
   beforeEach(async () => {
@@ -33,11 +37,21 @@ describe('WhatsNewPageDetailsComponent', () => {
       params: paramsSubject.asObservable()
     };
 
+    mockRouter = {
+      navigate: jest.fn()
+    } as any;
+
+    mockLocation = {
+      back: jest.fn()
+    } as any;
+
     await TestBed.configureTestingModule({
       imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule, HttpClientTestingModule],
       providers: [
         { provide: WhatsNewService, useValue: mockWhatsNewService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
+        { provide: Router, useValue: mockRouter },
+        { provide: Location, useValue: mockLocation },
         ResultsApiService
       ]
     }).compileComponents();
@@ -148,6 +162,34 @@ describe('WhatsNewPageDetailsComponent', () => {
       const result = component.getConsecutiveNumberedItems(0);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('goBack', () => {
+    it('should call location.back() when there is a previous page in history', () => {
+      // Mock window.history.length
+      Object.defineProperty(window, 'history', {
+        value: { length: 2 },
+        writable: true
+      });
+
+      component.goBack();
+
+      expect(mockLocation.back).toHaveBeenCalled();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should navigate to /whats-new when there is no previous page in history', () => {
+      // Mock window.history.length
+      Object.defineProperty(window, 'history', {
+        value: { length: 1 },
+        writable: true
+      });
+
+      component.goBack();
+
+      expect(mockLocation.back).not.toHaveBeenCalled();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/whats-new']);
     });
   });
 });

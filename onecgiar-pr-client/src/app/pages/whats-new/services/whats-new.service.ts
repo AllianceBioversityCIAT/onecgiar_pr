@@ -40,36 +40,29 @@ export class WhatsNewService {
   getNotionBlockChildren(notionBlockId: string) {
     this.notionDataLoading.set(true);
 
-    // First get the page data if needed
-    if (!this.activeNotionPageData()) {
-      this.resultsApiService.getNotionPage(notionBlockId).subscribe({
-        next: pageRes => {
-          if (pageRes.error) {
-            this.notionDataError.set({
-              error: true,
-              status: pageRes.status,
-              message: pageRes.message
-            });
-            this.notionDataLoading.set(false);
-            return;
-          }
-
-          this.activeNotionPageData.set({
-            headerInfo: {
-              id: pageRes.id,
-              cover: pageRes.cover,
-              properties: pageRes.properties
-            }
+    this.resultsApiService?.getNotionPage(notionBlockId)?.subscribe({
+      next: pageRes => {
+        if (pageRes.error) {
+          this.notionDataError.set({
+            error: true,
+            status: pageRes.status,
+            message: pageRes.message
           });
-
-          // Now get the block children after page data is loaded
-          this.getBlockChildren(notionBlockId);
+          this.notionDataLoading.set(false);
+          return;
         }
-      });
-    } else {
-      // If we already have page data, just get the block children
-      this.getBlockChildren(notionBlockId);
-    }
+
+        this.activeNotionPageData.set({
+          headerInfo: {
+            id: pageRes.id,
+            cover: pageRes.cover,
+            properties: pageRes.properties
+          }
+        });
+
+        this.getBlockChildren(notionBlockId);
+      }
+    });
   }
 
   private getBlockChildren(notionBlockId: string) {
@@ -114,7 +107,7 @@ export class WhatsNewService {
       // Verificar si el bloque tiene hijos
       if (block.has_children) {
         // Obtener los bloques hijos recursivamente
-        return this.resultsApiService.getNotionBlockChildren(block.id).pipe(
+        return this.resultsApiService?.getNotionBlockChildren(block.id)?.pipe(
           switchMap(childrenRes => {
             // Procesar los bloques hijos recursivamente
             return this.processBlocksRecursively(childrenRes.results, depth + 1).pipe(
