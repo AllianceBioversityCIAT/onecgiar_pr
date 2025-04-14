@@ -1091,4 +1091,19 @@ export class ResultsApiService {
   GET_contributionsDetailsResults(userId: number) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/get/all/roles/${userId}`);
   }
+
+  // NOTION API
+  getNotionData() {
+    return this.http.get<any>(
+      `${environment.releasesNotesApiUrl}/databases/035e13d090ff4251acb12f8e5e2171f4/query?projects=PRMS%20Reporting%20tool,QA%20Platform,CGIAR%20Results%20Dashboard,CLARISA`
+    );
+  }
+
+  getNotionPage(pageId: string) {
+    return this.http.get<any>(`${environment.releasesNotesApiUrl}/pages/${pageId}`);
+  }
+
+  getNotionBlockChildren(blockId: string) {
+    return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
+  }
 }
