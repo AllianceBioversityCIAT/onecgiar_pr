@@ -59,7 +59,10 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
       for (const tocResult of wp.toc_results ?? []) {
         for (const indicator of tocResult.indicators ?? []) {
           const results = await this.dataSource
-            .query(this._flattenedResultsQuery(indicator.indicator_uuid))
+            .query(this._flattenedResultsQuery(), [
+              indicator.indicator_uuid,
+              indicator.indicator_uuid,
+            ])
             .then((data) => data[0].results)
             .then((data) =>
               this._contributionToIndicatorResultsRepository.removeInactives(
@@ -110,7 +113,10 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     for (const eoi of result) {
       for (const indicator of eoi.indicators ?? []) {
         const results = await this.dataSource
-          .query(this._flattenedResultsQuery(indicator.indicator_uuid))
+          .query(this._flattenedResultsQuery(), [
+            indicator.indicator_uuid,
+            indicator.indicator_uuid,
+          ])
           .then((data) => data[0].results)
           .then((data) =>
             this._contributionToIndicatorResultsRepository.removeInactives(
@@ -173,8 +179,10 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         )`;
   }
 
-  private _flattenedResultsQuery(tocId: string) {
-    return `
+  private _flattenedResultsQuery() {
+    const query =
+      this._contributionToIndicatorResultsRepository.getContributingResultsQuery();
+    const sql = `
       select json_arrayagg(json_object(
         "contribution_id", contribution_id,
         "is_active", is_active,
@@ -190,9 +198,9 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         "created_date", created_date,
         "is_manually_mapped", is_manually_mapped
       )) as results
-      from (
-        ${this._contributionToIndicatorResultsRepository.getContributingResultsQuery(tocId)}
-      ) inner_q
+      from (${query}) inner_q
     `;
+
+    return sql;
   }
 }

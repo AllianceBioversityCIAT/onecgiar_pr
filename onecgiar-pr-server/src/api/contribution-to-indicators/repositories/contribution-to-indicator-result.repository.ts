@@ -76,7 +76,6 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     tocId: string,
   ): Promise<IndicatorSupportingResult[]> {
     const dataQuery = this.getContributingResultsQuery();
-
     return this.dataSource
       .query(dataQuery, [tocId, tocId])
       .then((result) => result)
@@ -96,7 +95,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
     );
   }
 
-  getContributingResultsQuery(tocId?: string): string {
+  getContributingResultsQuery(): string {
     return `
     select
       distinct main_ctir.id as contribution_id,
@@ -131,7 +130,7 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where
-      tri.related_node_id = ${tocId ? `'${tocId}'` : '?'}
+      tri.related_node_id = ?
       and tri.is_active
       and main_r.id is not null
     union
@@ -163,12 +162,12 @@ export class ContributionToIndicatorResultsRepository extends Repository<Contrib
       left join ${env.DB_NAME}.clarisa_initiatives main_ci on main_ci.id = main_rbi.inititiative_id
       left join ${env.DB_NAME}.result_status main_rs on main_rs.result_status_id = main_r.status_id
     where
-      cti.toc_result_id = ${tocId ? `'${tocId}'` : '?'}
+      cti.toc_result_id = ?
       AND NOT EXISTS (
         SELECT
           1
         FROM
-          prdb.results_toc_result rtr
+          ${env.DB_NAME}.results_toc_result rtr
         WHERE
           rtr.is_active
           AND rtr.results_id = main_ctir.result_id
