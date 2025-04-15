@@ -11,6 +11,14 @@
 
 <div class="tickets_container">
   @if (ticketsDashboardUrl) {
-    <iframe title="tickets-dashboard" allowfullscreen [src]="ticketsDashboardUrl"></iframe>
+    <iframe
+      #dashboardIframe
+      title="tickets-dashboard"
+      allowfullscreen
+      [src]="ticketsDashboardUrl"
+      scrolling="no"
+      frameborder="0"
+      style="width: 100%; overflow: hidden"
+      [style.height]="iframeHeight"></iframe>
   }
 </div>

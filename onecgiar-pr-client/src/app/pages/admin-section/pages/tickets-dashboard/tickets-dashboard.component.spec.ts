@@ -2,12 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TicketsDashboardComponent } from './tickets-dashboard.component';
 import { GlobalLinksService } from '../../../../shared/services/variables/global-links.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { ChangeDetectorRef } from '@angular/core';
 
 describe('TicketsDashboardComponent', () => {
   let component: TicketsDashboardComponent;
   let fixture: ComponentFixture<TicketsDashboardComponent>;
   let mockGlobalLinksService: any;
   let mockDomSanitizer: any;
+  let mockChangeDetectorRef: any;
 
   beforeEach(async () => {
     mockGlobalLinksService = {
@@ -21,16 +23,23 @@ describe('TicketsDashboardComponent', () => {
       bypassSecurityTrustResourceUrl: jest.fn().mockReturnValue('sanitized-url')
     };
 
+    mockChangeDetectorRef = {
+      detectChanges: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
-      declarations: [],
+      imports: [TicketsDashboardComponent],
       providers: [
         { provide: GlobalLinksService, useValue: mockGlobalLinksService },
-        { provide: DomSanitizer, useValue: mockDomSanitizer }
+        { provide: DomSanitizer, useValue: mockDomSanitizer },
+        { provide: ChangeDetectorRef, useValue: mockChangeDetectorRef }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(TicketsDashboardComponent);
     component = fixture.componentInstance;
+
+    jest.spyOn(component, 'setAdaptiveHeight').mockImplementation(() => {});
   });
 
   it('should create', () => {
@@ -40,8 +49,11 @@ describe('TicketsDashboardComponent', () => {
   describe('ngOnInit', () => {
     it('should call sanitizeUrl on initialization', () => {
       const sanitizeUrlSpy = jest.spyOn(component, 'sanitizeUrl');
+
       component.ngOnInit();
+
       expect(sanitizeUrlSpy).toHaveBeenCalled();
+      expect(component.setAdaptiveHeight).toHaveBeenCalled();
     });
   });
 
@@ -57,6 +69,33 @@ describe('TicketsDashboardComponent', () => {
       component.sanitizeUrl();
       expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).not.toHaveBeenCalled();
       expect(component.ticketsDashboardUrl).toBeNull();
+    });
+  });
+
+  describe('setAdaptiveHeight', () => {
+    it('should set iframe height based on viewport dimensions', () => {
+      jest.spyOn(component, 'setAdaptiveHeight').mockImplementation(() => {
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+
+        if (viewportWidth < 768) {
+          component.iframeHeight = `${viewportHeight * 2}px`;
+        } else if (viewportWidth < 1700) {
+          component.iframeHeight = `${viewportHeight * 1.8}px`;
+        } else {
+          component.iframeHeight = '2200px';
+        }
+
+        mockChangeDetectorRef.detectChanges();
+      });
+
+      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+
+      component.setAdaptiveHeight();
+
+      expect(component.iframeHeight).toBe('1382.4px');
+      expect(mockChangeDetectorRef.detectChanges).toHaveBeenCalled();
     });
   });
 });

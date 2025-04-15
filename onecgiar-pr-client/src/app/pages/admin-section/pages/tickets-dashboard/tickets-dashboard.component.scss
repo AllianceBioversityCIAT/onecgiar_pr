@@ -7,10 +7,10 @@ p {
 
 .tickets_container {
   padding: 0 30px;
-  height: calc(100vh - 140px);
+  height: auto;
 
   iframe {
-    height: calc(100% - 20px);
+    min-height: 700px;
     width: 100%;
     border: none;
   }
