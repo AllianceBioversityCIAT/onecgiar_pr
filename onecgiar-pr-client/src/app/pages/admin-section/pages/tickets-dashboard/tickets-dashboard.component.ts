@@ -85,7 +85,6 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
     try {
       this.adjustIframeHeight();
     } catch (e) {
-      console.log('Error adjusting iframe height:', e);
       throw e;
     }
   }
@@ -103,7 +102,6 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
         }
       }
     } catch (e) {
-      console.error('Error adjusting iframe height:', e);
       throw e;
     }
   }
