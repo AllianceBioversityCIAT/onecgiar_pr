@@ -1,0 +1,32 @@
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.tickets_container {
+  padding: 0 30px;
+  height: calc(100vh - 140px);
+
+  iframe {
+    height: calc(100% - 20px);
+    width: 100%;
+    border: none;
+  }
+}
+
+.tickets_header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 0 30px;
+  padding-top: 30px;
+}
+
+.tickets_container--description {
+  padding: 0 30px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
