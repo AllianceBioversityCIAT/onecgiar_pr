@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { GlobalLinksService } from '../../../../shared/services/variables/global-links.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { LoggerService } from '../../../../shared/services/logger.service';
 
 @Component({
   selector: 'app-tickets-dashboard',
@@ -28,6 +29,7 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
   globalLinksSE = inject(GlobalLinksService);
   sanitizer = inject(DomSanitizer);
   cdr = inject(ChangeDetectorRef);
+  private readonly logger = inject(LoggerService);
 
   private resizeListener: () => void;
 
@@ -85,16 +87,16 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
     try {
       this.adjustIframeHeight();
     } catch (e) {
-      throw e;
+      this.logger.error('Error ajustando altura del iframe', e);
     }
   }
 
   adjustIframeHeight() {
     try {
       const iframe = this.iframeElement.nativeElement;
-      const iframeWin = iframe.contentWindow || iframe.contentDocument.parentWindow;
+      const iframeWin = iframe.contentWindow ?? iframe.contentDocument.parentWindow;
       if (iframeWin.document.body) {
-        const height = iframeWin.document.documentElement.scrollHeight || iframeWin.document.body.scrollHeight;
+        const height = iframeWin.document.documentElement.scrollHeight ?? iframeWin.document.body.scrollHeight;
 
         if (height > 300) {
           this.iframeHeight = `${height}px`;
@@ -102,7 +104,7 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
         }
       }
     } catch (e) {
-      throw e;
+      this.logger.error('Error accediendo al contenido del iframe', e);
     }
   }
 
