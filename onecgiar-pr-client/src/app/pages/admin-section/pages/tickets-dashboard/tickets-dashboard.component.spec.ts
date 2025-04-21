@@ -14,7 +14,6 @@ describe('TicketsDashboardComponent', () => {
   beforeEach(async () => {
     mockGlobalLinksService = {
       links: {
-        url_t1r_bi_report: 'http://example.com/report',
         url_prms_tickets_dashboards: 'http://example.com/dashboard'
       }
     };
@@ -58,14 +57,14 @@ describe('TicketsDashboardComponent', () => {
   });
 
   describe('sanitizeUrl', () => {
-    it('should set ticketsDashboardUrl when url_t1r_bi_report exists', () => {
+    it('should set ticketsDashboardUrl when url_prms_tickets_dashboards exists', () => {
       component.sanitizeUrl();
       expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).toHaveBeenCalledWith('http://example.com/dashboard');
       expect(component.ticketsDashboardUrl).toBe('sanitized-url');
     });
 
-    it('should not set ticketsDashboardUrl when url_t1r_bi_report does not exist', () => {
-      mockGlobalLinksService.links.url_t1r_bi_report = null;
+    it('should not set ticketsDashboardUrl when url_prms_tickets_dashboards does not exist', () => {
+      mockGlobalLinksService.links.url_prms_tickets_dashboards = null;
       component.sanitizeUrl();
       expect(mockDomSanitizer.bypassSecurityTrustResourceUrl).not.toHaveBeenCalled();
       expect(component.ticketsDashboardUrl).toBeNull();
