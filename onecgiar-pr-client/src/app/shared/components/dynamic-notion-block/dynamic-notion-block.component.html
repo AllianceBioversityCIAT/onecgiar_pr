@@ -92,9 +92,14 @@
     }
 
     @if (video?.external?.url) {
-      <a [href]="video.external.url" target="_blank" rel="noopener noreferrer" class="mb-10">
-        <video width="100%" controls autoplay [muted]="'muted'" loop></video>
-      </a>
+      <div class="video-player-container mb-10">
+        <div class="video-player-placeholder">
+          <div class="play-button">
+            <i class="pi pi-play"></i>
+          </div>
+        </div>
+        <a [href]="video.external.url" target="_blank" rel="noopener noreferrer" class="video-link"> Watch Video </a>
+      </div>
     }
   }
 
@@ -194,9 +199,12 @@
 
     @if (text) {
       <div class="whats-new-page-details_toggle">
-        <p class="whats-new-page-details_default_text mb-10" [innerHTML]="text"></p>
+        <div class="whats-new-page-details_toggle_header mb-10" (click)="toggleExpand()">
+          <i class="pi" [ngClass]="{ 'pi-caret-right': !isExpanded(), 'pi-caret-down': isExpanded() }"></i>
+          <p class="whats-new-page-details_default_text" [innerHTML]="text"></p>
+        </div>
 
-        @if (children) {
+        @if (children && isExpanded()) {
           <div class="whats-new-page-details_children_container">
             @for (child of children; track child.id; let i = $index) {
               <app-dynamic-notion-block [block]="child"></app-dynamic-notion-block>
