@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
 import { RouterModule } from '@angular/router';
@@ -17,11 +17,16 @@ import { CommonModule } from '@angular/common';
 export class DynamicNotionBlockComponent {
   @Input() block: any;
   whatsNewService = inject(WhatsNewService);
+  isExpanded = signal<boolean>(false);
 
   constructor(private router: Router) {}
 
   navigateToChildPage(id: string) {
     this.router.navigate(['/whats-new/details', id]);
+  }
+
+  toggleExpand() {
+    this.isExpanded.update(current => !current);
   }
 
   joinText(text: any[]) {
