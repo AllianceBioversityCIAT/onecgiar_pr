@@ -18,7 +18,7 @@ import { LoggerService } from '../../../../shared/services/logger.service';
   standalone: true,
   imports: [],
   templateUrl: './tickets-dashboard.component.html',
-  styleUrl: './tickets-dashboard.component.scss',
+  styleUrls: ['./tickets-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -109,7 +109,7 @@ export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   sanitizeUrl() {
-    if (!this.globalLinksSE?.links?.url_t1r_bi_report) {
+    if (!this.globalLinksSE?.links?.url_prms_tickets_dashboards) {
       return;
     }
 
