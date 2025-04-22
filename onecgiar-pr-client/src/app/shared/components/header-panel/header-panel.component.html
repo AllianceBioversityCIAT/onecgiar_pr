@@ -48,8 +48,8 @@
       <i class="material-icons-round info_icon">info</i>
     </div>
 
-    <div routerLink="/whats-new">
-      <i class="material-icons-round info_icon">fiber_new</i>
+    <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
+      <i class="material-icons-round info_icon">rocket_launch</i>
     </div>
 
     <div (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
