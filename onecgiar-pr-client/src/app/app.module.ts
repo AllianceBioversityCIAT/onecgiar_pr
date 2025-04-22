@@ -28,6 +28,7 @@ import { MessageService } from 'primeng/api';
 import { WebsocketService } from './sockets/websocket.service';
 import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
+import { TooltipModule } from 'primeng/tooltip';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -58,6 +59,7 @@ function initializeClarityService(clarityService: ClarityService) {
     SatPopoverModule,
     FormatTimeAgoModule,
     ToastModule,
+    TooltipModule,
     PopUpNotificationItemComponent,
     SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],

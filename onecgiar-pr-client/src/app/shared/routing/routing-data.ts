@@ -54,6 +54,15 @@ export const routingApp: PrRoute[] = [
     loadChildren: () => import('../../pages/outcome-indicator/outcome-indicator.module').then(m => m.OutcomeIndicatorModule)
   },
   {
+    prName: 'Whats new',
+    onlytest: false,
+    prHide: true,
+    underConstruction: false,
+    canActivate: [CheckLoginGuard],
+    path: 'whats-new',
+    loadChildren: () => import('../../pages/whats-new/whats-new.module').then(m => m.WhatsNewModule)
+  },
+  {
     prName: 'reports',
     prHide: true,
     path: 'reports/result-details/:id',
@@ -399,6 +408,22 @@ export const OutcomeIndicatorRouting: PrRoute[] = [
     path: 'indicator-details',
     loadComponent: () =>
       import('../../pages/outcome-indicator/pages/indicator-details/indicator-details.component').then(m => m.IndicatorDetailsComponent)
+  },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
+];
+
+export const WhatsNewRouting: PrRoute[] = [
+  { prName: 'Whats new', path: 'whats-new', redirectTo: 'whats-new/home', pathMatch: 'full' },
+  {
+    prName: 'Whats new',
+    path: 'home',
+    loadComponent: () => import('../../pages/whats-new/pages/whats-new-home/whats-new-home.component').then(m => m.WhatsNewHomeComponent)
+  },
+  {
+    prName: 'Whats new - Page details',
+    path: 'details/:id',
+    loadComponent: () =>
+      import('../../pages/whats-new/pages/whats-new-page-details/whats-new-page-details.component').then(m => m.WhatsNewPageDetailsComponent)
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
