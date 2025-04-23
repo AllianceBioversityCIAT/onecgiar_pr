@@ -48,6 +48,10 @@
       <i class="material-icons-round info_icon">info</i>
     </div>
 
+    <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
+      <i class="material-icons-round info_icon">rocket_launch</i>
+    </div>
+
     <div (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
       <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
     </div>

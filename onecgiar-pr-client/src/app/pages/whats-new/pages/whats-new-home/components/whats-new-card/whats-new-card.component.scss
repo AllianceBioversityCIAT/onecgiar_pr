@@ -1,0 +1,123 @@
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.whats-new-home_card {
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  overflow: hidden;
+  height: 100%;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.01);
+    border: 1px solid #d8d8d8;
+  }
+}
+
+.whats-new-home_card_header {
+  width: 100%;
+  height: 200px;
+  background-color: #f0f0f0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.whats-new-home_card_content_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  // flex-wrap: wrap;
+}
+
+.whats-new-home_card_content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.whats-new-home_card_content_author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.whats-new-home_card_content_author_avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.whats-new-home_card_content_date {
+  font-size: 14px;
+  color: #777;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.whats-new-home_card_header_placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #777;
+}
+
+.whats-new-home_card_content_text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.whats-new-home_card_content_text_title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.whats-new-home_card_content_text_tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.whats-new-home_card_content_text_tags_item {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  color: white;
+}
+
+.scale {
+  &:hover {
+    cursor: help;
+    transform: scale(1.1);
+    transition: transform 0.2s ease-in-out;
+  }
+}
