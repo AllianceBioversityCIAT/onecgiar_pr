@@ -4,7 +4,10 @@ import {
   GreenchecksResponse,
 } from './dto/get-validation-section-inno-pckg.dto';
 import { IpsrRepository } from '../ipsr.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsInnovationPackagesValidationModuleRepository } from './results-innovation-packages-validation-module.repository';
 
@@ -15,11 +18,12 @@ export class ResultsInnovationPackagesValidationModuleService {
     private readonly _resultRepository: ResultRepository,
     private readonly _ipsrReposotory: IpsrRepository,
     private readonly _resultInnovationPackageValidationModuleRepository: ResultsInnovationPackagesValidationModuleRepository,
+    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   async getGreenchecksByinnovationPackage(
     resultId: number,
-  ): Promise<GreenchecksResponse> {
+  ): Promise<GreenchecksResponse | ReturnResponse> {
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
@@ -30,17 +34,15 @@ export class ResultsInnovationPackagesValidationModuleService {
         ipsr_role_id: 1,
         is_active: true,
       });
-      if (!resultExist) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-      if (!ipExist) {
-        throw {
-          response: {},
-          message: 'Innovation package Not Found',
+
+      if (!ipExist || !resultExist) {
+        return {
+          response: {
+            mainSection: [],
+            stepSections: [],
+            validResult: 0,
+          },
+          message: 'Innovation package not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -107,17 +109,4 @@ export class ResultsInnovationPackagesValidationModuleService {
       };
     }
   }
-
-  // async innovationPackageValidation(resultId: number) {
-  //   try {
-  //     const validation: GreenchecksResponse = await this.getGreenchecksByinnovationPackage(resultId);
-
-  //     return {
-  //       message: 'Sections have been successfully validated',
-  //       status: HttpStatus.OK,
-  //     };
-  //   } catch (error) {
-  //     return this._handlersError.returnErrorRes(error);
-  //   }
-  // }
 }
