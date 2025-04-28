@@ -17,10 +17,11 @@
             </div>
             <div class="submit_button"
             *ngIf="(this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id))&&!this.api.rolesSE.platformIsClosed">
-            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
+            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status_id == 1 ? 'Submit' : 'Un-submission'"
             [verticalMargin]="0"
             [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
+            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"
+            (keyup)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
         </app-pr-button>
     </div>
 

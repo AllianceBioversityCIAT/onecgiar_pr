@@ -16,14 +16,14 @@ import { MessageService } from 'primeng/api';
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   constructor(
-    private activatedRoute: ActivatedRoute,
-    private messageSE: MessageService,
+    private readonly activatedRoute: ActivatedRoute,
+    private readonly messageSE: MessageService,
     public ipsrDataControlSE: IpsrDataControlService,
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
-    private ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
-    private dataControlSE: DataControlService,
-    private router: Router
+    private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
+    private readonly dataControlSE: DataControlService,
+    private readonly router: Router
   ) {}
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
@@ -31,6 +31,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     this.ipsrDataControlSE.resultInnovationPhase = this.activatedRoute.snapshot.queryParams['phase'];
     this.GET_resultIdToCode(() => {
       this.api.GETInnovationPackageDetail();
+      setTimeout(() => {}, 1000);
       this.ipsrCompletenessStatusSE.updateGreenChecks();
       this.getIPSRPhases();
     });
