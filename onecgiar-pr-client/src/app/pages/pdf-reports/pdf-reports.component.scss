@@ -1,16 +1,34 @@
 iframe {
-    width: 100%;
-    height: 100vh;
-    // width: 500px;
-    // height: 500px;
+  width: 100%;
+  height: 100vh;
 }
 
 .iframe_spinner {
-    background-color: rgb(51, 51, 51);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
+  background-color: rgb(51, 51, 51);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+.pdf-iframe {
+  display: none;
+}
+
+.pdf-iframe-mobile {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .pdf-iframe {
+    display: block;
+  }
+}
+
+@media (max-width: 1025px) {
+  .pdf-iframe-mobile {
+    display: block;
+  }
 }
