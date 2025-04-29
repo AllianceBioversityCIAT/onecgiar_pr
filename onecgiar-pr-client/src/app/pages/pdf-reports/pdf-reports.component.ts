@@ -50,7 +50,7 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
           return;
         }
         this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${resp.pdf}`);
-        this.mobilePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`http://docs.google.com/gview?url=${resp.pdf}&embedded=true`);
+        this.mobilePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://docs.google.com/gview?url=${resp.pdf}&embedded=true`);
         this.iframeLoaded = false;
       },
       error: err => {
