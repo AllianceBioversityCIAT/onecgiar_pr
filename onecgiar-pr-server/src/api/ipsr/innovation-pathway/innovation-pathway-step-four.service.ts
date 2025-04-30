@@ -641,7 +641,7 @@ export class InnovationPathwayStepFourService {
             });
         }
         const delData = crtr?.deliveries?.length ? crtr?.deliveries : [];
-        await this.saveDeliveries(instExist || rbi, delData, user.id, version);
+        await this.saveDeliveries(instExist ?? rbi, delData, user.id, version);
       }
 
       return {
