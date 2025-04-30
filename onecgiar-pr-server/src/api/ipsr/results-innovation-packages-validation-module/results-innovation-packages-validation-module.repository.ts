@@ -7,7 +7,7 @@ import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-in
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleRepository extends Repository<ResultsInnovationPackagesValidationModule> {
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(
@@ -922,6 +922,7 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
                             WHERE
                                 npp.is_active = 1
                                 AND npp.results_id = r.id
+                                AND npp.non_pooled_project_type_id = 2
                         )
                         AND nppb.is_active = 1
                         AND (
