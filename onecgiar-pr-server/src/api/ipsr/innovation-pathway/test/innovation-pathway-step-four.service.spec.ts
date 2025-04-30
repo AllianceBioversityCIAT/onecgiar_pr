@@ -137,6 +137,32 @@ describe('InnovationPathwayStepFourService', () => {
     returnErrorRes: jest.fn(),
   };
 
+  const mockEvidenceSaveResponse = {
+    id: 1,
+    link: 'http://example.com',
+    description: 'Test material',
+    gender_related: false,
+    youth_related: false,
+    nutrition_related: false,
+    environmental_biodiversity_related: false,
+    poverty_related: false,
+    is_supplementary: false,
+    knowledge_product_related: 0,
+    is_sharepoint: 0,
+    innovation_readiness_related: false,
+    innovation_use_related: false,
+    result_id: null,
+    evidence_type_id: 2,
+    is_active: 1,
+    created_by: null,
+    creation_date: new Date(),
+    last_updated_by: null,
+    last_updated_date: null,
+    obj_result: null,
+    evidence_type: null,
+    evidenceSharepointArray: [],
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -406,29 +432,9 @@ describe('InnovationPathwayStepFourService', () => {
         .mockResolvedValue(mockVersion);
       jest.spyOn(evidenceRepository, 'getMaterials').mockResolvedValue([]);
       jest.spyOn(evidenceRepository, 'save').mockResolvedValue({
-        id: 1,
-        link: 'http://example.com',
-        description: 'Test material',
-        gender_related: false,
-        youth_related: false,
-        nutrition_related: false,
-        environmental_biodiversity_related: false,
-        poverty_related: false,
-        is_supplementary: false,
-        knowledge_product_related: 0,
-        is_sharepoint: 0,
-        innovation_readiness_related: false,
-        innovation_use_related: false,
+        ...mockEvidenceSaveResponse,
         result_id: resultId,
-        evidence_type_id: 2,
-        is_active: 1,
         created_by: user.id,
-        creation_date: new Date(),
-        last_updated_by: null,
-        last_updated_date: null,
-        obj_result: null,
-        evidence_type: null,
-        evidenceSharepointArray: [],
       });
       jest
         .spyOn(resultInnovationPackageRepository, 'update')
@@ -532,29 +538,9 @@ describe('InnovationPathwayStepFourService', () => {
 
       jest.spyOn(evidenceRepository, 'getMaterials').mockResolvedValue([]);
       jest.spyOn(evidenceRepository, 'save').mockResolvedValue({
-        id: 1,
-        link: 'http://example.com',
-        description: 'Test material',
-        gender_related: false,
-        youth_related: false,
-        nutrition_related: false,
-        environmental_biodiversity_related: false,
-        poverty_related: false,
-        is_supplementary: false,
-        knowledge_product_related: 0,
-        is_sharepoint: 0,
-        innovation_readiness_related: false,
-        innovation_use_related: false,
+        ...mockEvidenceSaveResponse,
         result_id: resultId,
-        evidence_type_id: 2,
-        is_active: 1,
         created_by: user.id,
-        creation_date: new Date(),
-        last_updated_by: null,
-        last_updated_date: null,
-        obj_result: null,
-        evidence_type: null,
-        evidenceSharepointArray: [],
       });
 
       const result = await service.saveMaterials(
