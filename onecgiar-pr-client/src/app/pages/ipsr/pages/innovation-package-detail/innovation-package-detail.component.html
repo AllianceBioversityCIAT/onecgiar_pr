@@ -20,7 +20,8 @@
             <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
             [verticalMargin]="0"
             [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
+            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"
+            (keyup)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
         </app-pr-button>
     </div>
 

@@ -29,5 +29,6 @@ interface DetailData {
   result_type: string;
   inititiative_id: string;
   status: string;
+  status_id: number;
   validResult: string | number;
 }
