@@ -14,9 +14,15 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
   iframeLoaded = null;
   error = null;
   pdfUrl = null;
+  mobilePdfUrl = null;
   report = new Report(this.activatedRoute, this.sanitizer);
 
-  constructor(private authService: AuthService, private activatedRoute: ActivatedRoute, public sanitizer: DomSanitizer, public http: HttpClient) {}
+  constructor(
+    private authService: AuthService,
+    private activatedRoute: ActivatedRoute,
+    public sanitizer: DomSanitizer,
+    public http: HttpClient
+  ) {}
 
   ngOnInit(): void {
     this.authService.inLogin = true;
@@ -43,8 +49,8 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
           this.error = 'warning';
           return;
         }
-
-        this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(resp.pdf);
+        this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${resp.pdf}`);
+        this.mobilePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://docs.google.com/gview?url=${resp.pdf}&embedded=true`);
         this.iframeLoaded = false;
       },
       error: err => {
@@ -65,7 +71,10 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
 class Report {
   id = null;
   sanitizedUrl = null;
-  constructor(public activatedRoute, public sanitizer) {
+  constructor(
+    public activatedRoute,
+    public sanitizer
+  ) {
     this.sanitizer = sanitizer;
     this.sanitizeUrl();
   }
