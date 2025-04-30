@@ -1,45 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
-import { ResultRepository } from '../../results/result.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
-import { ResultInnovationPackageRepository } from '../result-innovation-package/repositories/result-innovation-package.repository';
-import { VersionsService } from '../../results/versions/versions.service';
-import { EvidencesRepository } from '../../results/evidences/evidences.repository';
-import { IpsrRepository } from '../ipsr.repository';
-import { ResultByInitiativesRepository } from '../../../api/results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultInitiativeBudgetRepository } from '../../../api/results/result_budget/repositories/result_initiative_budget.repository';
-import { NonPooledProjectRepository } from '../../../api/results/non-pooled-projects/non-pooled-projects.repository';
-import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
-import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
-import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
-import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
-import { VersioningService } from '../../versioning/versioning.service';
+import { InnovationPathwayStepFourService } from '../innovation-pathway-step-four.service';
+import { ResultRepository } from '../../../results/result.repository';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
+import { ResultInnovationPackageRepository } from '../../result-innovation-package/repositories/result-innovation-package.repository';
+import { VersionsService } from '../../../results/versions/versions.service';
+import { EvidencesRepository } from '../../../results/evidences/evidences.repository';
+import { IpsrRepository } from '../../ipsr.repository';
+import { ResultByInitiativesRepository } from '../../../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ResultInitiativeBudgetRepository } from '../../../results/result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectRepository } from '../../../results/non-pooled-projects/non-pooled-projects.repository';
+import { NonPooledProjectBudgetRepository } from '../../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultByIntitutionsRepository } from '../../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultInstitutionsBudgetRepository } from '../../../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { VersioningService } from '../../../versioning/versioning.service';
 import { HttpStatus } from '@nestjs/common';
-import { SaveStepFour } from './dto/save-step-four.dto';
-import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { Version } from '../../versioning/entities/version.entity';
+import { SaveStepFour } from '../dto/save-step-four.dto';
+import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
+import { Version } from '../../../versioning/entities/version.entity';
 
 import { UpdateResult } from 'typeorm';
 
 interface InstitutionsInterface {
   institutions_id: number;
   deliveries: number[];
-}
-
-interface InitiativeExpectedInvestment {
-  result_initiative_id: number;
-  current_year: number;
-  initiative_id?: number;
-  next_year?: number;
-  is_determined?: boolean;
-}
-
-interface BilateralExpectedInvestment {
-  non_pooled_projetct_id: number;
-  in_cash: number;
-  in_kind?: number;
-  is_determined?: boolean;
-  is_active?: boolean;
 }
 
 describe('InnovationPathwayStepFourService', () => {
@@ -519,8 +503,6 @@ describe('InnovationPathwayStepFourService', () => {
       };
 
       const result = await service.saveMain(1, mockUser, emptyDto);
-      console.log('🚀 ~ it ~ result:', result);
-
       expect(result).toBe(undefined);
     });
   });

@@ -4,26 +4,20 @@ import {
   GreenchecksResponse,
 } from './dto/get-validation-section-inno-pckg.dto';
 import { IpsrRepository } from '../ipsr.repository';
-import {
-  HandlersError,
-  ReturnResponse,
-} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsInnovationPackagesValidationModuleRepository } from './results-innovation-packages-validation-module.repository';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleService {
   constructor(
-    private readonly _handlersError: HandlersError,
     private readonly _resultRepository: ResultRepository,
     private readonly _ipsrReposotory: IpsrRepository,
     private readonly _resultInnovationPackageValidationModuleRepository: ResultsInnovationPackagesValidationModuleRepository,
-    private readonly _returnResponse: ReturnResponse,
   ) {}
 
   async getGreenchecksByinnovationPackage(
     resultId: number,
-  ): Promise<GreenchecksResponse | ReturnResponse> {
+  ): Promise<GreenchecksResponse> {
     try {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
