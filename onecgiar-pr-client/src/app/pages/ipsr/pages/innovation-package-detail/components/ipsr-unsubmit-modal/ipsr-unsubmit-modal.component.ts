@@ -21,7 +21,7 @@ export class IpsrUnsubmitModalComponent {
     this.requesting = true;
     this.api.resultsSE.PATCHSubmissionsUnsubmitIpsr(this.comment).subscribe({
       next: resp => {
-        this.ipsrDataControlSE.detailData.status = resp.response?.innoPckg?.status;
+        this.ipsrDataControlSE.detailData.status_id = resp.response?.innoPckg?.status_id;
         this.api.alertsFe.show({ id: 'unsubmodal', title: `Success`, description: `The result has been unsubmitted.`, status: 'success' });
         this.ipsrDataControlSE.modals.unsubmit = false;
         this.requesting = false;
