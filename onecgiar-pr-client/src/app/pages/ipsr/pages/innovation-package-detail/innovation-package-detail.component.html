@@ -1,68 +1,74 @@
 <div class="innovation_packages_title">
-    <div class="back_button" style="margin-left: -25px; max-width: 250px;">
-        <a routerLink="/ipsr/list/innovation-list" class="open_link_in_new_page">
-            <app-pr-button text="Back to Innovation Packages list" icon="arrow_back" [reverse]="true" [showBackground]="false">
-            </app-pr-button>
-        </a>
-    </div>
+  <div class="back_button" style="margin-left: -25px; max-width: 250px">
+    <a routerLink="/ipsr/list/innovation-list" class="open_link_in_new_page">
+      <app-pr-button text="Back to Innovation Packages list" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
+    </a>
+  </div>
 
-    <div style="margin-bottom: 0.5rem;">
-        <app-phase-switcher></app-phase-switcher>
-    </div>
+  <div style="margin-bottom: 0.5rem">
+    <app-phase-switcher></app-phase-switcher>
+  </div>
 
-    <div class="title_container">
-        <div class="title">
-            <div>
-                {{this.ipsrDataControlSE.detailData?.title}}
-            </div>
-            <div class="submit_button"
-            *ngIf="(this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id))&&!this.api.rolesSE.platformIsClosed">
-            <app-pr-button [text]="this.ipsrDataControlSE?.detailData?.status ?'Un-submission' :'Submit'"
+  <div class="title_container">
+    @let statusId = this.ipsrDataControlSE?.detailData?.status_id;
+
+    <div class="title">
+      <div>
+        {{ this.ipsrDataControlSE.detailData?.title }}
+      </div>
+
+      @if (
+        (this.api.rolesSE.isAdmin || this.api.rolesSE.accessToIPSRSubmit(this.ipsrDataControlSE.initiative_id)) &&
+        !this.api.rolesSE.platformIsClosed &&
+        (statusId == 1 || statusId == 3)
+      ) {
+        <div class="submit_button">
+          <app-pr-button
+            [text]="statusId == 1 ? 'Submit' : 'Un-submission'"
             [verticalMargin]="0"
-            [ngClass]="{'globalDisabled': this.ipsrDataControlSE?.detailData?.status ? false : !this.ipsrDataControlSE?.detailData?.validResult}"
-            (click)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true"
-            (keyup)="this.ipsrDataControlSE?.detailData?.status?this.ipsrDataControlSE.modals.unsubmit = true : this.ipsrDataControlSE.modals.submission = true">
-        </app-pr-button>
+            [ngClass]="{ globalDisabled: statusId == 3 ? false : !this.ipsrDataControlSE?.detailData?.validResult }"
+            (click)="statusId == 1 ? (this.ipsrDataControlSE.modals.submission = true) : (this.ipsrDataControlSE.modals.unsubmit = true)">
+          </app-pr-button>
+        </div>
+      }
     </div>
-
-    </div>
-        <app-pdf-actions (copyEvent)="onCopy()" [horizontal]="true"></app-pdf-actions>
-    </div>
+    <app-pdf-actions (copyEvent)="onCopy()" [horizontal]="true"></app-pdf-actions>
+  </div>
 </div>
 
 <div class="section_container">
-    <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
-    <div class="ipsr-detail-line"></div>
-    <div class="section_container_chips">
-        <div class="metadata">
-            <div class="item">
-                Status: <strong>{{this.api.dataControlSE?.currentResult?.status ?'Submitted' :'Editing'}}</strong>
-            </div>
-            <div class="item">
-                Result level: <strong>{{this.ipsrDataControlSE.detailData?.result_level}}</strong>
-            </div>
-            <div class="item">
-                Indicator category: <strong>{{this.ipsrDataControlSE.detailData?.result_type}}</strong>
-            </div>
-            <div class="item">
-                Result code: <strong>{{this.ipsrDataControlSE.detailData?.result_code}}</strong>
-            </div>
-            <div class="item">
-                {{this.ipsrDataControlSE.detailData?.official_code}}
-            </div>
-        </div>
+  <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
+  <div class="ipsr-detail-line"></div>
+  <div class="section_container_chips">
+    <div class="metadata">
+      <div class="item">
+        Status: <strong>{{ this.api.dataControlSE?.currentResult?.status ? 'Submitted' : 'Editing' }}</strong>
+      </div>
+      <div class="item">
+        Result level: <strong>{{ this.ipsrDataControlSE.detailData?.result_level }}</strong>
+      </div>
+      <div class="item">
+        Indicator category: <strong>{{ this.ipsrDataControlSE.detailData?.result_type }}</strong>
+      </div>
+      <div class="item">
+        Result code: <strong>{{ this.ipsrDataControlSE.detailData?.result_code }}</strong>
+      </div>
+      <div class="item">
+        {{ this.ipsrDataControlSE.detailData?.official_code }}
+      </div>
     </div>
+  </div>
 
-    <div class="content">
-        <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
-        <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
-            <div class="info">
-                <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="">
-                <div class="text">Loading section...</div>
-            </div>
-        </div>
-        <div class="section_final_space"></div>
+  <div class="content">
+    <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
+    <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
+      <div class="info">
+        <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
+        <div class="text">Loading section...</div>
+      </div>
     </div>
+    <div class="section_final_space"></div>
+  </div>
 </div>
 
 <app-partners-request></app-partners-request>

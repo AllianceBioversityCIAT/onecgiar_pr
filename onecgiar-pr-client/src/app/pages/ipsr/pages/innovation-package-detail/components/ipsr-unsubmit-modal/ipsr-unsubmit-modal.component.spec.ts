@@ -26,7 +26,7 @@ describe('IpsrUnsubmitModalComponent', () => {
       resultsSE: {
         PATCHSubmissionsUnsubmitIpsr:() => of({ response: {
           innoPckg: {
-            status: 'status'
+            status_id: 'status_id'
           }
         }}),
       },
@@ -37,7 +37,7 @@ describe('IpsrUnsubmitModalComponent', () => {
 
     mockIpsrDataControlService = {
       detailData: {
-        status: ''
+        status_id: 'status_id'
       },
       modals: {
         unsubmit: true
@@ -96,7 +96,7 @@ describe('IpsrUnsubmitModalComponent', () => {
       component.onSubmit();
 
       expect(spy).toHaveBeenCalledWith(comment);
-      expect(mockIpsrDataControlService.detailData.status).toBe('status');
+      expect(mockIpsrDataControlService.detailData.status_id).toBe('status_id');
       expect(spyShow).toHaveBeenCalledWith({
         id: 'unsubmodal',
         title: 'Success',
