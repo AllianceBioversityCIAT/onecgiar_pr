@@ -29,6 +29,11 @@ export const routingApp: PrRoute[] = [
   },
   { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
   {
+    prName: 'Auth',
+    path: 'auth',
+    loadComponent: () => import('../../pages/auth-cognito/auth-cognito.component').then(m => m.AuthCognitoComponent)
+  },
+  {
     prName: 'Quality Assurance',
     onlytest: false,
     underConstruction: false,

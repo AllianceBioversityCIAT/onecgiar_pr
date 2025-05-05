@@ -1,8 +1,4 @@
-<!--Hey! This is the original version
-of Simple CSS Waves-->
-
-<div class="header fadeIn">
-  <!--Content before waves-->
+<!-- <div class="header fadeIn">
   <input type="text" id="fake" style="opacity: 0;position: absolute;">
   <div class="inner-header flex">
     <div class="login_card" [ngClass]="{'success_padding': successLogin}">
@@ -11,7 +7,6 @@ of Simple CSS Waves-->
       </lord-icon>
       <div *ngIf="successLogin" class="successText">Successful login</div>
       <div class="form" [ngClass]="{'successLogin': successLogin}">
-        <!-- <div class="title">Login</div> -->
         <div class="welcome">{{internationalizationData.global.platformName}} Tool</div>
         <app-pr-input [required]="false" placeholder="e.g. Example@cgiar.org" label="Email" type="email"
           [isStatic]="true" [(ngModel)]="userLoginData.email">
@@ -30,7 +25,6 @@ of Simple CSS Waves-->
     </div>
   </div>
 
-  <!--Waves Container-->
   <div>
     <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
       viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
@@ -45,6 +39,4 @@ of Simple CSS Waves-->
       </g>
     </svg>
   </div>
-  <!--Waves end-->
-</div>
-<!--Header ends-->
+</div> -->
