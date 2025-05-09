@@ -5,13 +5,16 @@ import {
   Param,
   HttpCode,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
-import { ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { CognitoProfileDto } from '../shared/AWS/cognito/dto/cognito-profile.dto';
 
 @Controller()
 @ApiTags('auth')
@@ -24,7 +27,7 @@ export class AuthController {
     return this.authService.create(createAuthDto);
   }
 
-  @Post('/singin')
+  @Post('/cognito')
   @ApiSecurity('')
   singIn(@Body() userLogin: UserLoginDto) {
     return this.authService.singIn(userLogin);
@@ -45,13 +48,10 @@ export class AuthController {
     );
     return response.auth;
   }
-}
 
-//TODO check if this code is planned to do something in the future
-/*function PusherSocketId(arg0: string) {
-  throw new Error('Function not implemented.');
+  @UseGuards(AuthGuard('cognito'))
+  @Post('/singin')
+  cognito(@Body() userLogin: CognitoProfileDto) {
+    return this.authService.cognito(userLogin);
+  }
 }
-
-function PusherChannel(arg0: string) {
-  throw new Error('Function not implemented.');
-}*/

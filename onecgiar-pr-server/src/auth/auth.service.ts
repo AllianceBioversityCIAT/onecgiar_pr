@@ -1,4 +1,9 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +18,12 @@ import { HandlersError } from '../shared/handlers/error.utils';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
 import ActiveDirectory from 'activedirectory';
+import { CognitoProfileDto } from '../shared/AWS/cognito/dto/cognito-profile.dto';
+import {
+  AccessTokenDto,
+  PayloadDto,
+  ResponseAccessTokenDto,
+} from '../shared/globalInterfaces/payload.dto';
 
 @Injectable()
 export class AuthService {
@@ -241,5 +252,69 @@ export class AuthService {
         }
       });
     });
+  }
+
+  async cognito(profileData: CognitoProfileDto): Promise<any> {
+    try {
+      const email: string = profileData.email?.trim().toLocaleLowerCase();
+      
+      // Validate email verification status
+      if (profileData.email_verified !== 'true') {
+        throw new UnauthorizedException(
+          `The email ${email} has not been verified in Cognito.`,
+        );
+      }
+
+      // Validate Cognito sub (unique identifier)
+      if (!profileData.sub) {
+        throw new UnauthorizedException('Invalid Cognito token: missing sub claim');
+      }
+
+      const tempUser = await this._userRepository.findOne({
+        where: { email: email },
+        relations: ['obj_role_by_user'],
+      });
+
+      if (!tempUser) {
+        throw new UnauthorizedException(
+          `The user ${email} is not registered in the system.`,
+        );
+      }
+
+      const hasRol = tempUser.obj_role_by_user;
+
+      if (!hasRol || hasRol.length === 0) {
+        throw new UnauthorizedException(
+          `The user ${email} does not have a role assigned in the system.`,
+        );
+      }
+
+      // Store Cognito sub in user metadata if needed
+      // await this._userRepository.update(tempUser.id, { cognitoSub: profileData.sub });
+
+      const accessToken: string = this.generateToken(tempUser);
+      const tokenObj: AccessTokenDto = new AccessTokenDto(
+        accessToken,
+        tempUser,
+      );
+
+      return {
+        ...tokenObj,
+        user: tempUser,
+        cognitoSub: profileData.sub, // Include Cognito sub in response
+      };
+    } catch (error) {
+      this._logger.error('Error in cognito authentication', error);
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private generateToken(user: User): string {
+    const payload: PayloadDto = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    };
+    return this._jwtService.sign(payload);
   }
 }

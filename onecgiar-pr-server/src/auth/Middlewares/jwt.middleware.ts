@@ -1,77 +1,60 @@
+import { Request, Response, NextFunction } from 'express';
 import {
   Injectable,
   NestMiddleware,
   Next,
   Req,
   Res,
-  HttpException,
-  HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { NextFunction, Request, Response } from 'express';
+import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
 import { env } from 'process';
-import { AuthService } from '../auth.service';
-import { UserLoginDto } from 'src/auth/dto/login-user.dto';
-import { JwtService } from '@nestjs/jwt';
-import { returnFormatSingin } from '../dto/return-fromat-singin.dto';
+import { DataSource } from 'typeorm';
+import { ExceptionMessage } from '../../shared/AWS/enum/exception-message.enum';
+import { PayloadDto } from '../../shared/globalInterfaces/payload.dto';
 
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
   constructor(
-    private readonly _authService: AuthService,
-    private readonly _jwtService: JwtService,
+    private readonly jwtService: JwtService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async use(
-    @Req() req: Request,
-    @Res() res: Response,
+    @Req() req: RequestWithCustomAttrs,
+    @Res() _res: Response,
     @Next() next: NextFunction,
-  ): Promise<void> {
-    const authBasic: string = req.headers.authorization;
-    const credentials: string | null = authBasic
-      ? authBasic.split('Basic ')[1]
-      : null;
+  ) {
+    const { authorization } = req.headers;
+    if (typeof authorization !== 'string') {
+      throw new UnauthorizedException(ExceptionMessage.JWT_NOT_FOUND);
+    }
 
-    let jwtPayload: any, token_: string;
+    const parts = authorization.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      throw new UnauthorizedException(ExceptionMessage.JWT_NOT_FOUND);
+    }
+
+    const token = parts[1];
+
     try {
-      if (credentials) {
-        // decode nase 64 string
-        const cre: string = Buffer.from(credentials, 'base64').toString(
-          'utf-8',
-        );
-        // basic auth token creation
-        const userLogin: UserLoginDto = {
-          email: cre.split(':')[0],
-          password: cre.split(':')[1],
-        };
-
-        const dataAuth: returnFormatSingin =
-          await this._authService.singIn(userLogin);
-        // get token
-        token_ = dataAuth.response.token;
-      } else {
-        // get SBT authorization token
-        token_ = <string>req.headers['auth'];
-      }
-      jwtPayload = await this._jwtService.verifyAsync(token_, {
-        secret: env.JWT_SKEY,
-        ignoreExpiration: true,
+      const decoded: PayloadDto = this.jwtService.verify(token, {
+        secret: env.ARIM_JWT_SECRET,
       });
-      res.locals.jwtPayload = jwtPayload;
-
-      const newToken: string = await this._jwtService.signAsync(
-        { jwtPayload },
-        { secret: env.JWT_SKEY, expiresIn: '7h' },
-      );
-      res.setHeader('auth', newToken);
+      req.user = decoded;
       next();
-    } catch (_error) {
-      throw new HttpException(
-        {
-          message: 'Invalid token',
-          response: {},
-        },
-        HttpStatus.UNAUTHORIZED,
-      );
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        throw new UnauthorizedException(ExceptionMessage.JWT_EXPIRED);
+      } else if (error instanceof JsonWebTokenError) {
+        throw new UnauthorizedException(ExceptionMessage.JWT_INVALID);
+      } else {
+        throw new UnauthorizedException(ExceptionMessage.JWT_ERROR);
+      }
     }
   }
+}
+
+interface RequestWithCustomAttrs extends Request {
+  [key: string]: any;
 }

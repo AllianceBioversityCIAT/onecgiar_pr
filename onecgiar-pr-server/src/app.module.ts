@@ -20,7 +20,7 @@ import { dataSource } from './config/orm.config';
 import { JwtMiddleware } from './auth/Middlewares/jwt.middleware';
 import { UserModule } from './auth/modules/user/user.module';
 import { RoleModule } from './auth/modules/role/role.module';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { User } from './auth/modules/user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { HttpExceptionFilter } from './shared/handlers/error.exception';
@@ -47,6 +47,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 
 @Module({
   imports: [
+    JwtModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -92,8 +93,8 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
   controllers: [AppController],
   providers: [
     AppService,
-    JwtService,
-    JwtMiddleware,
+    // JwtService,
+    // JwtMiddleware,
     Repository,
     {
       provide: APP_GUARD,
