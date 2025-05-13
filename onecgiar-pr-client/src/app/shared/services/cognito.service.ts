@@ -28,7 +28,7 @@ export class CognitoService {
 
     this.isLoadingAzureAd.set(true);
 
-    const res = await this.api.resultsSE.loginWithAzureAd(23, 'CGIAR-AzureAD').then(res => res.json());
+    const res = await this.api.resultsSE.loginWithAzureAd(15, 'CGIAR-AzureAD').then(res => res.json());
 
     if (!res.authUrl) {
       this.customAlertService.show({
