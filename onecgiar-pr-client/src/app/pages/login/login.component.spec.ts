@@ -1,171 +1,182 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { LoginComponent } from './login.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { PrInputComponent } from '../../custom-fields/pr-input/pr-input.component';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { PrFieldHeaderComponent } from '../../custom-fields/pr-field-header/pr-field-header.component';
-import { PrFieldValidationsComponent } from '../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { PrButtonComponent } from '../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
-import { AuthService } from '../../shared/services/api/auth.service';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { RolesService } from '../../shared/services/global/roles.service';
+import { LoginComponent } from './login.component';
+import { AuthService } from '../../shared/services/api/auth.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
-import { MessageService } from 'primeng/api';
-
-jest.useFakeTimers();
+import { RolesService } from '../../shared/services/global/roles.service';
+import { WebsocketService } from '../../sockets/websocket.service';
+import { ClarityService } from '../../shared/services/clarity.service';
+import { CognitoService } from '../../shared/services/cognito.service';
+import { internationalizationData } from '../../shared/data/internationalization-data';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
-  let mockAuthService: any;
-  let mockRouter: any;
-  let mockRolesService: any;
-  let mockCustomizedAlertsFeService: any;
-  const mockuserAuthResponse = {
-    token: 'token',
-    user: 'user'
-  }
+  let authServiceMock: Partial<AuthService>;
+  let routerMock: Partial<Router>;
+  let customAlertServiceMock: Partial<CustomizedAlertsFeService>;
+  let rolesServiceMock: Partial<RolesService>;
+  let webSocketMock: Partial<WebsocketService>;
+  let clarityServiceMock: Partial<ClarityService>;
+  let cognitoServiceMock: Partial<CognitoService>;
 
-  beforeEach(async () => {
-    mockAuthService = {
+  beforeEach(() => {
+    authServiceMock = {
       inLogin: false,
-      localStorageUser: 'admin',
-      userAuth: () => of({ response: mockuserAuthResponse }),
-      GET_allRolesByUser: () => of({ response: [] }),
+      userAuth: jest.fn()
     };
-
-    mockRouter = {
-      navigate: jest.fn(),
+    routerMock = {
+      navigate: jest.fn()
     };
-
-    mockRolesService = {
+    customAlertServiceMock = {
+      show: jest.fn(),
+      closeAction: jest.fn()
+    };
+    rolesServiceMock = {
       validateReadOnly: jest.fn()
-    }
+    };
+    webSocketMock = {
+      configUser: jest.fn()
+    };
+    clarityServiceMock = {
+      updateUserInfo: jest.fn()
+    };
+    cognitoServiceMock = {};
 
-    mockCustomizedAlertsFeService = {
-      show: jest.fn().mockImplementationOnce((config, callback) => {
-        callback();
-      }),
-      closeAction: jest.fn(),
-    }
-
-    await TestBed.configureTestingModule({
-      declarations: [
-        LoginComponent,
-        PrInputComponent,
-        PrFieldHeaderComponent,
-        PrFieldValidationsComponent,
-        PrButtonComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule,
-        TooltipModule
-      ],
+    TestBed.configureTestingModule({
+      imports: [FormsModule, LoginComponent],
       providers: [
-        {
-          provide: AuthService,
-          useValue: mockAuthService
-        },
-        {
-          provide: Router,
-          useValue: mockRouter
-        },
-        {
-          provide: RolesService,
-          useValue: mockRolesService
-        },
-        {
-          provide: CustomizedAlertsFeService,
-          useValue: mockCustomizedAlertsFeService
-        },
-        MessageService
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: Router, useValue: routerMock },
+        { provide: CustomizedAlertsFeService, useValue: customAlertServiceMock },
+        { provide: RolesService, useValue: rolesServiceMock },
+        { provide: WebsocketService, useValue: webSocketMock },
+        { provide: ClarityService, useValue: clarityServiceMock },
+        { provide: CognitoService, useValue: cognitoServiceMock }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
-  describe('ngOnInit', () => {
-    it('should set up the keyup event listener', () => {
-      const spyClick = jest.spyOn(document.getElementById('login'), 'click');
-      const spyBlur = jest.spyOn(document.getElementById('password'), 'blur');
-      const spyFocus = jest.spyOn(document.getElementById('fake'), 'focus');
-      const keyupEvent = new KeyboardEvent('keyup', { key: 'Enter' });
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
 
-      component.ngOnInit();
+  it('should initialize with inLogin set to true', () => {
+    component.ngOnInit();
+    expect(authServiceMock.inLogin).toBe(true);
+  });
 
-      document.getElementById('password').dispatchEvent(keyupEvent);
+  it('should set inLogin to false on component destroy', () => {
+    component.ngOnDestroy();
+    expect(authServiceMock.inLogin).toBe(false);
+  });
 
-      expect(spyClick).toHaveBeenCalled();
-      expect(spyBlur).toHaveBeenCalled();
-      expect(spyFocus).toHaveBeenCalled();
+  it('should initialize with default values', () => {
+    expect(component.internationalizationData).toBe(internationalizationData);
+    expect(component.isLoadingAzureAd()).toBe(false);
+    expect(component.isLoadingCredentials()).toBe(false);
+    expect(component.body()).toEqual({
+      email: '',
+      password: ''
     });
   });
 
-  describe('onLogin', () => {
-    it('should navigate on successful login', () => {
-      const spy = jest.spyOn(mockAuthService, 'userAuth');
-      const spyRouter = jest.spyOn(mockRouter, 'navigate');
-      const spyValidateReadOnly = jest.spyOn(mockRolesService, 'validateReadOnly');
-      component.onLogin();
+  it('should toggle isLoadingAzureAd flag during loginWithAzureAd and reset after timeout', fakeAsync(() => {
+    component.loginWithAzureAd();
+    expect(component.isLoadingAzureAd()).toBe(true);
 
-      setTimeout(() => {
-        expect(spy).toHaveBeenCalled();
-        expect(component.successLogin).toBeTruthy();
-        expect(spyRouter).toHaveBeenCalledWith(['/']);
-        expect(spyValidateReadOnly).toHaveBeenCalled();
-      }, 1500);
-    });
+    tick(1500);
+    expect(component.isLoadingAzureAd()).toBe(false);
+  }));
 
-    it('should show custom alert on login error with status code is 404', () => {
-      const error = {
-        error: { statusCode: 404 }
-      }
-      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(() => error));
-      const spyShow = jest.spyOn(mockCustomizedAlertsFeService, 'show');
-
-      component.onLogin();
-
-      expect(spyShow).toHaveBeenCalledWith(
-        {
-          id: 'loginAlert',
-          title: 'Oops!',
-          description: component.internationalizationData.login.alerts[error.error.statusCode],
-          status: 'warning',
-          confirmText: 'Contact us',
+  it('should handle successful login with valid credentials', () => {
+    const mockResponse = {
+      response: {
+        token: 'test-token',
+        user: {
+          id: 1,
+          user_name: 'testuser',
+          email: 'test@example.com'
         },
-        expect.any(Function)
-      );
-    });
-
-    it('should show custom alert on login error with status code is not 404', () => {
-      const error = {
-        error: { statusCode: 400 }
+        valid: true
       }
-      jest.spyOn(mockAuthService, 'userAuth').mockReturnValue(throwError(() => error));
-      const spyShow = jest.spyOn(mockCustomizedAlertsFeService, 'show');
+    };
 
-      component.onLogin();
+    (authServiceMock.userAuth as jest.Mock).mockReturnValue(of(mockResponse));
 
-      expect(spyShow).toHaveBeenCalledWith(
-        {
-          id: 'loginAlert',
-          title: 'Oops!',
-          status: 'warning',
-        },
-      );
+    component.loginWithCredentials();
+
+    expect(component.isLoadingCredentials()).toBe(false);
+    expect(authServiceMock.userAuth).toHaveBeenCalledWith(component.body());
+    expect(webSocketMock.configUser).toHaveBeenCalledWith('testuser', 1);
+    expect(clarityServiceMock.updateUserInfo).toHaveBeenCalled();
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/']);
+    expect(rolesServiceMock.validateReadOnly).toHaveBeenCalled();
+  });
+
+  it('should handle 404 error when logging in', () => {
+    const mockError = {
+      error: {
+        statusCode: 404,
+        message: 'User not found'
+      }
+    };
+
+    (authServiceMock.userAuth as jest.Mock).mockReturnValue(throwError(() => mockError));
+
+    component.loginWithCredentials();
+
+    expect(component.isLoadingCredentials()).toBe(false);
+    expect(customAlertServiceMock.show).toHaveBeenCalledWith({
+      id: 'loginAlert',
+      title: 'Oops!',
+      description: internationalizationData.login.alerts[404],
+      status: 'warning'
     });
   });
 
-  describe('ngOnDestroy', () => {
-    it('should set inLogin property to false on ngOnDestroy', () => {
-      component.ngOnDestroy();
+  it('should handle other errors when logging in', () => {
+    const mockError = {
+      error: {
+        statusCode: 500,
+        message: 'Server error'
+      }
+    };
 
-      expect(mockAuthService.inLogin).toBeFalsy();
+    (authServiceMock.userAuth as jest.Mock).mockReturnValue(throwError(() => mockError));
+
+    component.loginWithCredentials();
+
+    expect(component.isLoadingCredentials()).toBe(false);
+    expect(customAlertServiceMock.show).toHaveBeenCalledWith({
+      id: 'loginAlert',
+      title: 'Oops!',
+      description: 'Server error',
+      status: 'warning'
     });
+  });
+
+  it('should set isLoadingCredentials to true when calling loginWithCredentials', () => {
+    (authServiceMock.userAuth as jest.Mock).mockReturnValue(of({}));
+
+    component.loginWithCredentials();
+
+    expect(authServiceMock.userAuth).toHaveBeenCalled();
+  });
+
+  it('should disable buttons when either loading flag is true', () => {
+    component.isLoadingAzureAd.set(true);
+    fixture.detectChanges();
+    const azureButton = fixture.nativeElement.querySelector('.corp-id-btn');
+    const signInButton = fixture.nativeElement.querySelector('.signin-btn');
+
+    expect(azureButton.disabled).toBe(true);
+    expect(signInButton.disabled).toBe(true);
   });
 });

@@ -27,7 +27,7 @@ export const routingApp: PrRoute[] = [
     path: 'ipsr',
     loadChildren: () => import('../../pages/ipsr/ipsr.module').then(m => m.IpsrModule)
   },
-  { prName: 'login', prHide: true, path: 'login', loadChildren: () => import('../../pages/login/login.module').then(m => m.LoginModule) },
+  { prName: 'login', prHide: true, path: 'login', loadComponent: () => import('../../pages/login/login.component').then(m => m.LoginComponent) },
   {
     prName: 'Auth',
     path: 'auth',
