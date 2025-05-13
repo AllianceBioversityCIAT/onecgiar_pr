@@ -6,10 +6,10 @@
 
     <div class="login-form">
       <h2>Sign in with your CGIAR credentials</h2>
-      <button class="corp-id-btn" (click)="loginWithAzureAd()" [disabled]="isLoadingAzureAd() || isLoadingCredentials()">
+      <button class="corp-id-btn" (click)="this.cognito.loginWithAzureAd()" [disabled]="cognito.isLoadingAzureAd() || isLoadingCredentials()">
         Continue with your CGIAR account
 
-        @if (isLoadingAzureAd()) {
+        @if (cognito.isLoadingAzureAd()) {
           <i class="pi pi-spin pi-spinner" style="font-size: 1rem; margin-left: 10px"></i>
         }
       </button>
@@ -27,7 +27,7 @@
           id="email"
           placeholder="name@host.com"
           [(ngModel)]="body().email"
-          [disabled]="isLoadingCredentials() || isLoadingAzureAd()" />
+          [disabled]="isLoadingCredentials() || cognito.isLoadingAzureAd()" />
       </div>
 
       <div class="form-group" style="margin-bottom: 30px !important">
@@ -37,10 +37,10 @@
           id="password"
           placeholder="Password"
           [(ngModel)]="body().password"
-          [disabled]="isLoadingCredentials() || isLoadingAzureAd()" />
+          [disabled]="isLoadingCredentials() || cognito.isLoadingAzureAd()" />
       </div>
 
-      <button class="signin-btn" [disabled]="isLoadingCredentials() || isLoadingAzureAd()" (click)="loginWithCredentials()">
+      <button class="signin-btn" [disabled]="isLoadingCredentials() || cognito.isLoadingAzureAd()" (click)="loginWithCredentials()">
         <span>
           @if (isLoadingCredentials()) {
             Signing in

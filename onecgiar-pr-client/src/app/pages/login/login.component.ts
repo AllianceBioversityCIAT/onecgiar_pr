@@ -37,15 +37,7 @@ export class LoginComponent implements OnInit {
   webSocket = inject(WebsocketService);
 
   ngOnInit(): void {
-    this.authService.inLogin = true;
-  }
-
-  loginWithAzureAd() {
-    this.isLoadingAzureAd.set(true);
-
-    setTimeout(() => {
-      this.isLoadingAzureAd.set(false);
-    }, 1500);
+    this.authService.inLogin.set(true);
   }
 
   loginWithCredentials() {
@@ -81,6 +73,6 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
-    this.authService.inLogin = false;
+    this.authService.inLogin.set(false);
   }
 }

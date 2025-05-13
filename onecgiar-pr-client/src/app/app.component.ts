@@ -28,7 +28,7 @@ export class AppComponent implements OnInit {
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
     setTimeout(() => {
-      if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
+      if (!this.AuthService.inLogin()) this.rolesSE.validateReadOnly();
     }, 500);
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {

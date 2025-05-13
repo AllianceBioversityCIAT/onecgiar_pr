@@ -73,7 +73,10 @@ export class RolesService {
       return null;
     };
     updateMyRoles(this.updateRolesListFromLocalStorage());
-    updateMyRoles(this.updateRolesList());
+
+    if (this.authSE.localStorageUser) {
+      updateMyRoles(this.updateRolesList());
+    }
   }
 
   getIsAdminValue() {

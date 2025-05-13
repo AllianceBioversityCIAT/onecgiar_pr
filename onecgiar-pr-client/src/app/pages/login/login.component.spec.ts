@@ -10,6 +10,7 @@ import { WebsocketService } from '../../sockets/websocket.service';
 import { ClarityService } from '../../shared/services/clarity.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { internationalizationData } from '../../shared/data/internationalization-data';
+import { signal } from '@angular/core';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
@@ -24,7 +25,7 @@ describe('LoginComponent', () => {
 
   beforeEach(() => {
     authServiceMock = {
-      inLogin: false,
+      inLogin: signal(false),
       userAuth: jest.fn()
     };
     routerMock = {
@@ -69,12 +70,12 @@ describe('LoginComponent', () => {
 
   it('should initialize with inLogin set to true', () => {
     component.ngOnInit();
-    expect(authServiceMock.inLogin).toBe(true);
+    expect(authServiceMock.inLogin()).toBe(true);
   });
 
   it('should set inLogin to false on component destroy', () => {
     component.ngOnDestroy();
-    expect(authServiceMock.inLogin).toBe(false);
+    expect(authServiceMock.inLogin()).toBe(false);
   });
 
   it('should initialize with default values', () => {
@@ -86,14 +87,6 @@ describe('LoginComponent', () => {
       password: ''
     });
   });
-
-  it('should toggle isLoadingAzureAd flag during loginWithAzureAd and reset after timeout', fakeAsync(() => {
-    component.loginWithAzureAd();
-    expect(component.isLoadingAzureAd()).toBe(true);
-
-    tick(1500);
-    expect(component.isLoadingAzureAd()).toBe(false);
-  }));
 
   it('should handle successful login with valid credentials', () => {
     const mockResponse = {

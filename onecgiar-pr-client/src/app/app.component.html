@@ -1,8 +1,8 @@
 <div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
   {{ this.api.globalVariablesSE.get?.global_info_message }}
 </div>
-<app-header-panel *ngIf="!this.AuthService.inLogin"></app-header-panel>
-<app-navigation-bar *ngIf="!this.AuthService.inLogin"></app-navigation-bar>
+<app-header-panel *ngIf="!this.AuthService.inLogin()"></app-header-panel>
+<app-navigation-bar *ngIf="!this.AuthService.inLogin()"></app-navigation-bar>
 <router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
 <app-external-tools></app-external-tools>
 <app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>

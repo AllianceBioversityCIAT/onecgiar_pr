@@ -15,11 +15,11 @@ export class AuthCognitoComponent {
   authService = inject(AuthService);
 
   ngOnInit(): void {
-    this.authService.inLogin = true;
+    this.authService.inLogin.set(true);
     this.cognito.validateCognitoCode();
   }
 
   ngOnDestroy(): void {
-    this.authService.inLogin = false;
+    this.authService.inLogin.set(false);
   }
 }

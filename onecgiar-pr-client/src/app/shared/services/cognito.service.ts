@@ -1,37 +1,50 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-// import { CacheService } from './cache.service';
-// import { ApiService } from './api.service';
-// import { ActionsService } from './actions.service';
 import { ClarityService } from './clarity.service';
 import { environment } from '../../../environments/environment';
 import { ApiService } from './api/api.service';
 import { AuthService } from './api/auth.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
-import { RolesService } from './global/roles.service';
 import { WebsocketService } from '../../sockets/websocket.service';
-import { internationalizationData } from '../data/internationalization-data';
-import { UserAuth } from '../interfaces/user.interface';
-
 @Injectable({
   providedIn: 'root'
 })
 export class CognitoService {
   activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
-  // cache = inject(CacheService);
   api = inject(ApiService);
-  // actions = inject(ActionsService);
   clarity = inject(ClarityService);
   authService = inject(AuthService);
   customAlertService = inject(CustomizedAlertsFeService);
   webSocket = inject(WebsocketService);
-  rolesSE = inject(RolesService);
-  internationalizationData = internationalizationData;
-  userLoginData = new UserAuth();
+  isLoadingAzureAd = signal(false);
 
   redirectToCognito() {
     window.location.href = environment.cognitoUrl;
+  }
+
+  async loginWithAzureAd() {
+    if (this.isLoadingAzureAd()) return;
+
+    this.isLoadingAzureAd.set(true);
+
+    const res = await this.api.resultsSE.loginWithAzureAd(23, 'CGIAR-AzureAD').then(res => res.json());
+
+    if (!res.authUrl) {
+      this.customAlertService.show({
+        id: 'loginAlert',
+        title: 'Oops!',
+        description: 'Error while trying to login with Azure AD',
+        status: 'warning'
+      });
+      this.isLoadingAzureAd.set(false);
+
+      return;
+    }
+
+    window.location.href = res.authUrl;
+
+    this.isLoadingAzureAd.set(false);
   }
 
   async validateCognitoCode() {
@@ -52,50 +65,6 @@ export class CognitoService {
     //   // });
     //   return;
     // }
-
-    this.authService.userAuth(this.userLoginData).subscribe({
-      next: resp => {
-        // this.successLogin = true;
-        this.updateCacheService(resp);
-        setTimeout(() => {
-          this.router.navigate(['/']);
-          this.rolesSE.validateReadOnly();
-        }, 2000);
-      },
-      error: err => {
-        const statusCode = err?.error?.statusCode;
-        if (statusCode == 404)
-          return this.customAlertService.show(
-            {
-              id: 'loginAlert',
-              title: 'Oops!',
-              description: this.internationalizationData.login.alerts[statusCode],
-              status: 'warning',
-              confirmText: 'Contact us'
-            },
-            () => {
-              document.getElementById('question').click();
-              this.customAlertService.closeAction('loginAlert');
-            }
-          );
-        console.error(err);
-        this.customAlertService.show(
-          {
-            id: 'loginAlert',
-            title: 'Oops!',
-            description: err?.error?.message,
-            status: 'warning',
-            confirmText: 'Retry Log in',
-            hideCancelButton: true
-          },
-          () => {
-            this.redirectToCognito();
-          }
-        );
-      }
-    });
-
-    // this.actions.updateLocalStorage(loginResponse);
   }
 
   updateCacheService(resp: any) {

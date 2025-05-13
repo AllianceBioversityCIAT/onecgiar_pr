@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
@@ -8,7 +8,7 @@ import { map } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  inLogin = false;
+  inLogin = signal(false);
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
 
   constructor(public http: HttpClient, private router: Router) {}

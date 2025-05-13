@@ -1107,4 +1107,19 @@ export class ResultsApiService {
   getNotionBlockChildren(blockId: string) {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
+
+  loginWithAzureAd(misId: number, provider: string) {
+    const url = `${environment.cognitoMicroserviceUrl}auth/login/provider`;
+
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        misId,
+        provider
+      })
+    });
+  }
 }
