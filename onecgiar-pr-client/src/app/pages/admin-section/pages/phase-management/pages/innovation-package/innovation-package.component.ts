@@ -44,7 +44,7 @@ export class InnovationPackageComponent implements OnInit {
     }
   ];
 
-  constructor(public api: ApiService, public resultsSE: ResultsApiService, private customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
+  constructor(public api: ApiService, public resultsSE: ResultsApiService, private readonly customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
 
   ngOnInit(): void {
     this.getAllPhases();
@@ -123,7 +123,7 @@ export class InnovationPackageComponent implements OnInit {
         phase_name: 'N/A',
         id: null
       });
-      this.phaseList.map((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
+      this.phaseList.forEach((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
     });
   }
 

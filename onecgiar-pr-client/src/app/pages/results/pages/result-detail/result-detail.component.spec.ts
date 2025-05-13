@@ -142,7 +142,6 @@ describe('ResultDetailComponent', () => {
 
     fixture = TestBed.createComponent(ResultDetailComponent);
     component = fixture.componentInstance;
-    // fixture.detectChanges();
   });
 
   describe('ngOnInit()', () => {

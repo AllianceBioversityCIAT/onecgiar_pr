@@ -7,22 +7,19 @@ import { ResultsListFilterService } from '../services/results-list-filter.servic
 export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
-  constructor(private resultsListFilterSE: ResultsListFilterService) {}
+  constructor(private readonly resultsListFilterSE: ResultsListFilterService) {}
   transform(resultList: any[], word: string, combine: boolean, filterJoin: number): any {
     return this.convertList(this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))), combine);
   }
 
   filterByText(resultList: any[], word: string) {
     if (!resultList?.length) return [];
-    resultList.map(item => {
+    resultList.forEach(item => {
       item.joinAll = '';
-      Object.keys(item).map(attr => {
-        //(attr);
+      Object.keys(item).forEach(attr => {
         if (attr != 'created_date' && attr != 'id') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
       });
     });
-    // //(resultList);
-    // //(resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1));
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
@@ -48,7 +45,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     for (const option of phase?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
     if (!resultsFilters.length) return resultList;
     resultList = resultList.filter(result => {
-      //(result);
       for (const filter of resultsFilters) if (filter?.attr == result?.phase_name) return true;
       return false;
     });

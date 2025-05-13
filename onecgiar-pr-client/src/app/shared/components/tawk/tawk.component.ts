@@ -16,17 +16,15 @@ export class TawkComponent implements OnInit {
 
   script = this._renderer.createElement('script');
 
-  constructor(private _renderer: Renderer2, @Inject(DOCUMENT) private _document, public api: ApiService) {}
+  constructor(private readonly _renderer: Renderer2, @Inject(DOCUMENT) private _document, public api: ApiService) {}
 
   ngOnInit(): void {
     this.initializeTawkIo();
   }
 
   initializeTawkIo() {
-    //(this.user);
 
     if (this.user != undefined) {
-      //('Initializing tawkto');
 
       this.script.text = `
 

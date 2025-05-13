@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { IpsrStep1Body, CoreResult, Measure, Actor, Organization, Expert } from './model/Ipsr-step-1-body.model';
+import { IpsrStep1Body, CoreResult, Measure, Actor, Organization } from './model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { Router } from '@angular/router';
 import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum';
@@ -29,7 +29,7 @@ export class StepN1Component implements OnInit {
   constructor(
     public api: ApiService,
     public ipsrDataControlSE: IpsrDataControlService,
-    private router: Router
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {

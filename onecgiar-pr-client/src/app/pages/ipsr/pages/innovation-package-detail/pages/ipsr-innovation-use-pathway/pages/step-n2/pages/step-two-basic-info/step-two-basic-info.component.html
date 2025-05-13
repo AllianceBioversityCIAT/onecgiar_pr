@@ -24,7 +24,7 @@
                                             [inputId]="category.complementary_innovation_enabler_types_id"
                                             [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_one"
                                             (ngModelChange)="selectedOneLevel(category, i,1)"></p-checkbox>
-                                        <label> {{ category.group }}</label>
+                                        <label [for]="category.complementary_innovation_enabler_types_id"> {{ category.group }}</label>
                                     </li>
                                     <ul>
                                         <li>
@@ -36,7 +36,7 @@
                                                     [inputId]="categories.complementary_innovation_enabler_types_id"
                                                     [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_two"
                                                     (ngModelChange)=" selectedTwo(category, i)"></p-checkbox>
-                                                <label>{{ categories.group }}</label>
+                                                <label [for]="categories.complementary_innovation_enabler_types_id">{{ categories.group }}</label>
 
                                             </div>
                                         </li>

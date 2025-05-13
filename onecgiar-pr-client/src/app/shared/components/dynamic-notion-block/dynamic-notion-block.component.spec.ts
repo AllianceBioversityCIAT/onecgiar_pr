@@ -9,7 +9,6 @@ describe('DynamicNotionBlockComponent', () => {
   let component: DynamicNotionBlockComponent;
   let fixture: ComponentFixture<DynamicNotionBlockComponent>;
   let router: Router;
-  let whatsNewService: WhatsNewService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -21,7 +20,6 @@ describe('DynamicNotionBlockComponent', () => {
     fixture = TestBed.createComponent(DynamicNotionBlockComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
-    whatsNewService = TestBed.inject(WhatsNewService);
   });
 
   it('should create', () => {

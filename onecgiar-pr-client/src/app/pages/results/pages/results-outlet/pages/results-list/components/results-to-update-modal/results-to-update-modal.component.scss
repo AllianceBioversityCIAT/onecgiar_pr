@@ -15,14 +15,12 @@
   border-bottom-right-radius: 10px;
 }
 
-.modal_container {
-  .description {
-    font-weight: 700;
-    text-align: center;
-    color: var(--pr-color-secondary);
-    padding: 20px 20vw;
-    font-size: 1.2rem;
-  }
+.description {
+  font-weight: 700;
+  text-align: center;
+  color: var(--pr-color-secondary);
+  padding: 20px 20vw;
+  font-size: 1.2rem;
 }
 
 .buttons {
@@ -42,9 +40,6 @@
 
   strong {
     color: var(--pr-color-primary);
-  }
-
-  .email {
   }
 }
 
@@ -194,7 +189,6 @@ td {
 .link_button {
   color: white;
   padding: 3px 10px;
-  width: 100px;
   border-radius: 3px;
   cursor: pointer;
   text-align: center;

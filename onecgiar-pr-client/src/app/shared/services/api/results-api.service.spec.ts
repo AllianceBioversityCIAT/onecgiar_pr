@@ -3,7 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { ResultsApiService } from './results-api.service';
 import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
-import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 
@@ -934,7 +934,7 @@ describe('ResultsApiService', () => {
         contributing_initiatives: [],
         contributing_np_projects: [],
         contributing_center: [],
-        result_toc_result: new resultToResultInterfaceToc(),
+        result_toc_result: new ResultToResultInterfaceToc(),
         contributors_result_toc_result: [],
         impacts: [],
         pending_contributing_initiatives: 'pending',

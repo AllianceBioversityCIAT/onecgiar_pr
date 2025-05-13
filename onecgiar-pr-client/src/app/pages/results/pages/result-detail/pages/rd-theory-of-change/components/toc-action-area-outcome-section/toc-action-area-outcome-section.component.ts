@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
@@ -10,7 +10,7 @@ import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-ser
   styleUrls: ['./toc-action-area-outcome-section.component.scss']
 })
 export class TocActionAreaOutcomeSectionComponent {
-  @Input() result_toc_result = new resultToResultInterfaceToc();
+  @Input() result_toc_result = new ResultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
 
   constructor(public api: ApiService, public dataControlSE: DataControlService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {

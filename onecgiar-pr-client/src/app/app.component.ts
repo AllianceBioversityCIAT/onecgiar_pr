@@ -45,14 +45,14 @@ export class AppComponent implements OnInit {
 
   copyTokenToClipboard() {
     if (environment.production) return;
-    document.onkeyup = function () {
-      var e = e || window.event;
+    document.onkeyup = function (e: KeyboardEvent) {
+      e = e || (window.event as KeyboardEvent);
       if (e.altKey && e.which == 84) {
         navigator.clipboard.writeText(localStorage.getItem('token'));
         alert('Token copied to clipboard');
         return false;
       }
-      return false;
+      return true;
     };
   }
 
