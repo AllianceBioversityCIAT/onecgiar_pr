@@ -11,7 +11,7 @@ import { IpsrCompletenessStatusService } from '../../pages/ipsr/services/ipsr-co
   providedIn: 'root'
 })
 export class GeneralInterceptorService implements HttpInterceptor {
-  constructor(private authService: AuthService, private greenChecksSE: GreenChecksService, private apiService: ApiService, private ipsrCompletenessStatusSE: IpsrCompletenessStatusService) {}
+  constructor(private readonly authService: AuthService, private readonly greenChecksSE: GreenChecksService, private apiService: ApiService, private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.authService?.localStorageToken && !req.url.indexOf(environment.apiBaseUrl)) return next.handle(req.clone());
@@ -34,7 +34,6 @@ export class GeneralInterceptorService implements HttpInterceptor {
             const inResultsModule = req.url.includes('/api/results/');
             const inIPSRModule = req.url.includes('/api/ipsr/');
             const notValidateList = ['/api/ipsr/all-innovations'];
-            // if the req.url has some text from the blackList, then don't update the green checks
             if (!notValidateList.some(url => req.url.includes(url))) {
               if (!validateGreenCheckRoute && inResultsModule) {
                 this.greenChecksSE.updateGreenChecks();
@@ -60,9 +59,6 @@ export class GeneralInterceptorService implements HttpInterceptor {
   }
 
   manageError(error: HttpErrorResponse) {
-    //(error);
-    //(error?.error?.message);
-    // return throwError('Error intercepted');
     return throwError(error);
   }
 }

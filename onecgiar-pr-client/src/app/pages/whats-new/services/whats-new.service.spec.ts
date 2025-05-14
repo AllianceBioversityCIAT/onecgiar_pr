@@ -8,7 +8,6 @@ describe('WhatsNewService', () => {
   let resultsApiServiceMock: jest.Mocked<ResultsApiService>;
 
   beforeEach(() => {
-    // Create mock for ResultsApiService
     resultsApiServiceMock = {
       getNotionData: jest.fn(),
       getNotionPage: jest.fn(),
@@ -68,7 +67,6 @@ describe('WhatsNewService', () => {
 
       expect(resultsApiServiceMock.getNotionPage).toHaveBeenCalledWith(mockBlockId);
 
-      // Wait for the observables to complete
       setTimeout(() => {
         expect(service.activeNotionPageData()).toEqual({
           headerInfo: {
@@ -95,7 +93,6 @@ describe('WhatsNewService', () => {
     });
 
     it('should directly fetch block children if activeNotionPageData already exists', () => {
-      // Set up initial page data
       service.activeNotionPageData.set({
         headerInfo: {
           id: 'existing-page-id',
@@ -111,7 +108,6 @@ describe('WhatsNewService', () => {
       expect(resultsApiServiceMock.getNotionPage).toHaveBeenCalled();
       expect(resultsApiServiceMock.getNotionBlockChildren).not.toHaveBeenCalledWith(mockBlockId);
 
-      // Wait for the observable to complete
       setTimeout(() => {
         expect(service.notionDataLoading()).toBe(false);
       }, 0);
@@ -141,7 +137,6 @@ describe('WhatsNewService', () => {
         { id: 'block2', type: 'heading_1', has_children: false }
       ];
 
-      // This is a private method, so we need to access it through any
       const result = (service as any).processBlocksRecursively(mockBlocks, 0);
 
       result.subscribe(processedBlocks => {
@@ -163,7 +158,6 @@ describe('WhatsNewService', () => {
 
       resultsApiServiceMock.getNotionBlockChildren.mockReturnValue(of({ results: mockChildBlocks }));
 
-      // This is a private method, so we need to access it through any
       const result = (service as any).processBlocksRecursively([mockParentBlock], 0);
 
       result.subscribe(processedBlocks => {
@@ -179,7 +173,6 @@ describe('WhatsNewService', () => {
         has_children: true
       };
 
-      // This is a private method, so we need to access it through any
       const result = (service as any).processBlocksRecursively([mockBlock], 3);
 
       result.subscribe(processedBlocks => {
@@ -188,30 +181,11 @@ describe('WhatsNewService', () => {
     });
 
     it('should handle empty blocks array', () => {
-      // This is a private method, so we need to access it through any
       const result = (service as any).processBlocksRecursively([], 0);
 
       result.subscribe(processedBlocks => {
         expect(processedBlocks).toEqual([]);
       });
     });
-
-    // it('should not process children for child_page blocks', () => {
-    //   const mockBlocks = [
-    //     {
-    //       id: 'child-page',
-    //       type: 'child_page',
-    //       has_children: true
-    //     }
-    //   ];
-
-    //   // This is a private method, so we need to access it through any
-    //   const result = (service as any).processBlocksRecursively(mockBlocks, 0);
-
-    //   result.subscribe(processedBlocks => {
-    //     expect(processedBlocks).toEqual(mockBlocks);
-    //     expect(resultsApiServiceMock.getNotionBlockChildren).not.toHaveBeenCalled();
-    //   });
-    // });
   });
 });

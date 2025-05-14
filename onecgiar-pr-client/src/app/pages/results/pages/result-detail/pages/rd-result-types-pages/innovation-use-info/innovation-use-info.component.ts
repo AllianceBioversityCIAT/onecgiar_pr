@@ -10,7 +10,7 @@ import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-d
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new IpsrStep1Body();
   savingSection = false;
-  constructor(private api: ApiService) {}
+  constructor(private readonly api: ApiService) {}
 
   ngOnInit(): void {
     this.getSectionInformation();

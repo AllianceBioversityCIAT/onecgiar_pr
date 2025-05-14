@@ -2,14 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN3Component } from './step-n3.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { PrRadioButtonComponent } from '../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
-import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { PrRangeLevelComponent } from '../../../../../../../../custom-fields/pr-range-level/pr-range-level.component';
-import { PrInputComponent } from '../../../../../../../../custom-fields/pr-input/pr-input.component';
-import { PrTextareaComponent } from '../../../../../../../../custom-fields/pr-textarea/pr-textarea.component';
-import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
-import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
-import { PrFieldValidationsComponent } from '../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
 import { CheckboxModule } from 'primeng/checkbox';

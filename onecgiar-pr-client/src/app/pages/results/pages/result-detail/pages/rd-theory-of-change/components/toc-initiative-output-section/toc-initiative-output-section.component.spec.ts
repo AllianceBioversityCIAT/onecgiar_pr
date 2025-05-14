@@ -5,7 +5,7 @@ import { TocInitiativeOutComponent } from '../shared/toc-initiative-out/toc-init
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrYesOrNotComponent } from '../../../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
 import { FormsModule } from '@angular/forms';
-import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 
 
 describe('TocInitiativeOutputSectionComponent', () => {
@@ -33,7 +33,7 @@ describe('TocInitiativeOutputSectionComponent', () => {
   });
 
   it('should have the correct inputs', () => {
-    const resultTocResult = new resultToResultInterfaceToc();
+    const resultTocResult = new ResultToResultInterfaceToc();
     const contributorsResultTocResult = {};
 
     component.result_toc_result = resultTocResult;

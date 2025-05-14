@@ -7,7 +7,7 @@ export class TheoryOfChangeBody {
     accepted_contributing_initiatives: [],
     pending_contributing_initiatives: []
   };
-  result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
+  result_toc_result: ResultToResultInterfaceToc = new ResultToResultInterfaceToc();
   contributors_result_toc_result: any = [];
   impacts: ResultTocImpactsInterface[];
   pending_contributing_initiatives: any;
@@ -23,38 +23,36 @@ interface ResultTocImpactsInterface {
   id: number;
   name: string;
   description: string;
-  target: targetTocInterface[];
-  indicators: indicatorsTocInterface[];
+  target: TargetTocInterface[];
+  indicators: IndicatorsTocInterface[];
 }
-interface initiativeInterfaces {
-  id: number;
-}
-interface targetTocInterface {
+
+interface TargetTocInterface {
   targetId: number;
   target?: string;
 }
 
-interface indicatorsTocInterface {
+interface IndicatorsTocInterface {
   id: number;
   indicator_statement?: string;
 }
 
-export interface centerInterfacesToc {
+export interface CenterInterfacesToc {
   code: string;
   primary?: boolean;
   name: string;
   from_cgspace: boolean;
 }
 
-export class resultToResultInterfaceToc {
+export class ResultToResultInterfaceToc {
   planned_result: boolean = null;
   initiative_id: number = null;
   official_code: string = null;
   short_name: string = null;
-  result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
+  result_toc_results: ResultTocResultsInterface[] = new Array<ResultTocResultsInterface>();
 }
 
-export class resultTocResultsInterface {
+export class ResultTocResultsInterface {
   result_toc_result_id?: number = null;
   toc_result_id?: number = null;
   action_area_outcome_id?: number = null;

@@ -1,13 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { HttpClient, HTTP_INTERCEPTORS, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { GeneralInterceptorService } from './general-interceptor.service';
 import { AuthService } from '../services/api/auth.service';
 import { GreenChecksService } from '../services/global/green-checks.service';
 import { ApiService } from '../services/api/api.service';
 import { IpsrCompletenessStatusService } from '../../pages/ipsr/services/ipsr-completeness-status.service';
 import { environment } from '../../../environments/environment';
-import { of, throwError } from 'rxjs';
 
 describe('GeneralInterceptorService', () => {
   let service: GeneralInterceptorService;

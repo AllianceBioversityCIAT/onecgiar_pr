@@ -72,8 +72,24 @@
         color: #7b7a7a;
 
         .tag {
-          background-color: gray;
-          color: white;
+            display: flex;
+            font-size: .9rem;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 3px;
+            gap: 4px;
+            background-color: white;
+            color: var(--pr-color-primary);
+
+            .text {
+                font-size: .8rem;
+                font-weight: 500;
+            }
+
+            i {
+                font-size: 1.1rem;
+
+            }
         }
       }
 

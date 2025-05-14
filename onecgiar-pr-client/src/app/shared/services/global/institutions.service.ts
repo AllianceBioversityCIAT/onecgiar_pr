@@ -14,7 +14,7 @@ export class InstitutionsService {
 
   loadedInstitutions: EventEmitter<boolean> = new EventEmitter();
 
-  constructor(private api: ApiService) {
+  constructor(private readonly api: ApiService) {
     this.api.resultsSE.GET_allInstitutions().subscribe(({ response }) => {
       this.institutionsList = response;
       this.institutionsWithoutCentersList = response.filter(it => it.is_center != '1');
@@ -32,12 +32,10 @@ export class InstitutionsService {
         };
       });
       this.loadedInstitutions.emit(true);
-      //(this.institutionsList);
     });
     this.api.resultsSE.GET_allInstitutionTypes().subscribe(({ response }) => {
       this.institutionsTypesList = response;
       this.institutionsTypesPartnerRequestList = this.institutionsTypesList.filter(it => !it.is_legacy);
-      //(this.institutionsTypesList);
     });
 
     this.api.resultsSE.GET_allChildlessInstitutionTypes().subscribe(({ response }) => {

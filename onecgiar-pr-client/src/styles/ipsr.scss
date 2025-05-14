@@ -14,12 +14,12 @@
   align-items: center;
   gap: 20px;
 
-  i,
-  a {
-    color: var(--pr-color-primary);
-    font-size: 1.2em;
-    cursor: pointer;
-  }
+    i,
+    a {
+        color: var(--pr-color-primary);
+        font-size: 1.2em;
+        cursor: pointer;
+    }
 }
 
 .steps_status {
@@ -43,15 +43,15 @@
 }
 
 .ipsr-sub-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 1.2em;
-  font-weight: 500;
-  background: rgb(85, 105, 221);
-  background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
-  width: 50vw;
-  color: var(--pr-color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 1.2em;
+    font-weight: 500;
+    background: rgb(85, 105, 221);
+    background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
+    width: 50vw;
+    color: var(--pr-color-secondary);
 
   &::before {
     content: '';
@@ -62,11 +62,11 @@
 }
 
 .step_sub_section {
-  border-left: 4px dashed #556add11;
-  border-bottom: 4px dashed #556add11;
-  padding-left: 15px;
-  margin-bottom: 70px;
-  padding-bottom: 70px;
+    border-left: 4px dashed #556add11;
+    border-bottom: 4px dashed #556add11;
+    padding-left: 15px;
+    margin-bottom: 70px;
+    padding-bottom: 70px;
 }
 
 .ipsr-sub-title-2 {
@@ -96,34 +96,34 @@
 }
 
 .toggle_change_step {
-  display: flex;
-  gap: 10px;
+    display: flex;
+    gap: 10px;
 }
 
 .unit_of_time_container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
 
   .unitW {
     width: 150px !important;
   }
 
-  & > div:first-child {
-    width: max-content;
-    margin-top: -20px;
-    margin-bottom: -7px;
-  }
+    &>div:first-child {
+        width: max-content;
+        margin-top: -20px;
+        margin-bottom: -7px;
+    }
 
-  & > div:nth-child(2) {
-    width: 100px;
-    margin-top: 5px;
-  }
+    &>div:nth-child(2) {
+        width: 100px;
+        margin-top: 5px;
+    }
 
-  & > div:nth-child(3) {
-    width: 300px;
-  }
+    &>div:nth-child(3) {
+        width: 300px;
+    }
 }
 
 .gray_card {

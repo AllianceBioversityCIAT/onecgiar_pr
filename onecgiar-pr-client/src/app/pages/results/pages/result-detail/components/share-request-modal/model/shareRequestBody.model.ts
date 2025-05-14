@@ -3,11 +3,11 @@ export class ShareRequestBody {
   initiative_id: number = null;
   official_code: string = null;
   short_name: string = null;
-  result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
+  result_toc_results: ResultTocResultsInterface[] = new Array<ResultTocResultsInterface>();
   showMultipleWPsContent = true;
 }
 
-export class resultTocResultsInterface {
+export class ResultTocResultsInterface {
   result_toc_result_id?: number = null;
   toc_result_id?: number = null;
   action_area_outcome_id?: number = null;

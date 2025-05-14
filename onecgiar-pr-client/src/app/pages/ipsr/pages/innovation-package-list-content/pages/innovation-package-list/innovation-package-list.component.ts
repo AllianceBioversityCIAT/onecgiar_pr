@@ -38,7 +38,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
       this.ipsrDataControlSE.ipsrResultList = response;
       this.totalResults = response.filter((thing, index, self) => self.findIndex(t => t.result_code === thing.result_code) === index).length;
 
-      this.ipsrDataControlSE.ipsrResultList.map((inno: any) => {
+      this.ipsrDataControlSE.ipsrResultList.forEach((inno: any) => {
         inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;
         inno.result_code = Number(inno.result_code);
       });

@@ -5,17 +5,14 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
   name: 'filterResultNotLinked'
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
-  constructor(private api: ApiService) {}
-
+  constructor(private readonly api: ApiService) {}
   transform(list: any[], linkedList: any[], combine: boolean, counter: number, text_to_search: string): any {
     if (!list?.length) return [];
 
     list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
-
     list.forEach(result => {
       result.selected = false;
     });
-
     linkedList.forEach(result => {
       const resultFinded = list.find(linked => linked.id == result.id);
       if (resultFinded) resultFinded.selected = true;
@@ -26,11 +23,10 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
 
   filterByText(resultList: any[], word: string) {
     if (!resultList?.length) return [];
-
     resultList.forEach(item => {
       item.joinAll = '';
       Object.keys(item).forEach(attr => {
-        item.joinAll += (item[attr] ? item[attr] : '') + ' ';
+        item.joinAll += (item[attr] ?? '') + ' ';
       });
     });
 
@@ -53,15 +49,14 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
-      if (!resultMap[result.result_code]) {
-        resultMap[result.result_code] = {
-          selected: result.selected,
-          result_code: result.result_code,
-          submitter: result.submitter,
-          version_id: result.version_id,
-          results: []
-        };
-      }
+      resultMap[result.result_code] ??= {
+        selected: result.selected,
+        result_code: result.result_code,
+        submitter: result.submitter,
+        version_id: result.version_id,
+        results: []
+      };
+
       resultMap[result.result_code].results.push({
         ...result
       });

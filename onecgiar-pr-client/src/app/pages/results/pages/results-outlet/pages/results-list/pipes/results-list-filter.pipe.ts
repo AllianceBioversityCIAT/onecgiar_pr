@@ -7,9 +7,7 @@ import { ResultsListFilterService } from '../services/results-list-filter.servic
 export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
-
-  constructor(private resultsListFilterSE: ResultsListFilterService) {}
-
+  constructor(private readonly resultsListFilterSE: ResultsListFilterService) {}
   transform(resultList: any[], word: string, combine: boolean, filterJoin: number): any {
     return this.convertList(this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))), combine);
   }

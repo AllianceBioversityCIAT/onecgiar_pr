@@ -3,7 +3,6 @@ import { RouterModule } from '@angular/router';
 import { ResultsComponent } from './results.component';
 import { HttpClientModule } from '@angular/common/http';
 import { ApiService } from '../../../app/shared/services/api/api.service';
-import { environment } from '../../../environments/environment';
 import { IpsrDataControlService } from '../ipsr/services/ipsr-data-control.service';
 
 describe('ResultsComponent', () => {
