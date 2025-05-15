@@ -17,6 +17,7 @@ import { AuthService } from '../../auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleByUserModule } from '../role-by-user/role-by-user.module';
 import { HandlersError } from '../../../shared/handlers/error.utils';
+import { AuthMicroserviceModule } from '../../../shared/microservices/auth-microservice/auth-microservice.module';
 
 @Module({
   controllers: [UserController],
@@ -34,6 +35,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
     TypeOrmModule.forFeature([User]),
     JwtModule,
     RoleByUserModule,
+    AuthMicroserviceModule
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })

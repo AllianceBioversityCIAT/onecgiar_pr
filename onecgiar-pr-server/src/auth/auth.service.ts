@@ -18,12 +18,8 @@ import { HandlersError } from '../shared/handlers/error.utils';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
 import ActiveDirectory from 'activedirectory';
-import { CognitoProfileDto } from '../shared/AWS/cognito/dto/cognito-profile.dto';
-import {
-  AccessTokenDto,
-  PayloadDto,
-  ResponseAccessTokenDto,
-} from '../shared/globalInterfaces/payload.dto';
+import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
+import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 
 @Injectable()
 export class AuthService {
@@ -37,6 +33,7 @@ export class AuthService {
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _authMicroservice: AuthMicroserviceService,
   ) {
     this.pusher = new Pusher({
       appId: `${env.PUSHER_APP_ID}`,
@@ -45,9 +42,6 @@ export class AuthService {
       cluster: `${env.PUSHER_APP_CLUSTER}`,
       useTLS: true,
     });
-  }
-  create(createAuthDto: CreateAuthDto) {
-    return createAuthDto;
   }
 
   async pusherAuth(
@@ -83,6 +77,12 @@ export class AuthService {
     }
   }
 
+  /**
+   * Sign In
+   * @param userLogin
+   * @returns JWT token and user information
+   * @description This method handles the sign-in process for users.
+   */
   async singIn(userLogin: UserLoginDto): Promise<any> {
     try {
       if (!(userLogin.email && userLogin.password)) {
@@ -94,74 +94,71 @@ export class AuthService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      userLogin.email = userLogin.email.trim().toLowerCase();
-      const user: User = await this._customUserRepository.findOne({
-        where: {
-          email: userLogin.email,
-          active: true,
-        },
-      });
-      let valid: any;
-      if (user) {
-        const { email, first_name, last_name, is_cgiar, id } = <
-          FullUserRequestDto
-        >user;
-        if (is_cgiar) {
-          const { response, message, status }: any = await this.validateAD(
-            email,
-            userLogin.password,
-          );
-          if (!response.valid) {
-            throw {
-              response,
-              message,
-              status,
-            };
-          }
-          valid = response.valid;
-        } else {
-          valid = this._bcryptPasswordEncoder.matches(
-            user.password,
-            userLogin.password,
-          );
-        }
 
-        if (valid) {
-          await this._userRepository.updateLastLoginUserByEmail(
+      userLogin.email = userLogin.email.trim().toLowerCase();
+
+      try {
+        const authResponse =
+          await this._authMicroservice.authenticateWithCustomCredentials(
             userLogin.email,
+            userLogin.password,
           );
-          return {
-            message: 'Successful login',
-            response: {
-              valid: true,
-              token: this._jwtService.sign(
-                { id, email, first_name, last_name },
-                { secret: env.JWT_SKEY },
-              ),
-              user: {
-                id: user.id,
-                user_name: `${user.first_name} ${user.last_name}`,
-                email: user.email,
-              },
+
+        const userInfo = authResponse.userInfo;
+
+        const user =
+          await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
+
+        await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
+
+        const jwtToken = this._jwtService.sign(
+          {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+          },
+          { secret: env.JWT_SKEY },
+        );
+
+        return {
+          message: 'Successful login',
+          response: {
+            valid: true,
+            token: jwtToken,
+            user: {
+              id: user.id,
+              user_name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
             },
-            status: HttpStatus.ACCEPTED,
-          };
-        } else {
+            auth_tokens: authResponse.tokens,
+          },
+          status: HttpStatus.ACCEPTED,
+        };
+      } catch (error) {
+        const user = await this._userRepository.findOne({
+          where: {
+            email: userLogin.email,
+            active: true,
+          },
+        });
+
+        if (!user) {
           throw {
+            message: `The user ${userLogin.email} is not registered in the system.`,
             response: {
               valid: false,
             },
-            message: 'Password does not match',
-            status: HttpStatus.UNAUTHORIZED,
+            status: HttpStatus.NOT_FOUND,
           };
         }
-      } else {
+
         throw {
-          message: `The user ${userLogin.email} is not registered in the PRMS Reporting database.`,
           response: {
             valid: false,
           },
-          status: HttpStatus.NOT_FOUND,
+          message: error.message || 'Authentication failed',
+          status: error.status || HttpStatus.UNAUTHORIZED,
         };
       }
     } catch (error) {
@@ -169,152 +166,101 @@ export class AuthService {
     }
   }
 
-  validateAD(email, password) {
-    //!INFO: this is the original code. remove the import above and uncomment this one to revert to the original code
-    //const ActiveDirectory = require('activedirectory');
-    const ad = new ActiveDirectory(config.active_directory);
-
-    return new Promise((resolve, reject) => {
-      this._logger.log(`Validation with the active directory`);
-      ad.authenticate(email, password, (err, auth) => {
-        try {
-          if (auth) {
-            this._logger.verbose(`Successful validation`);
-            return resolve({
-              response: {
-                valid: !!auth,
-              },
-              message: 'Successful validation',
-              status: HttpStatus.ACCEPTED,
-            });
-          }
-          if (err) {
-            if (err?.errno) {
-              throw {
-                response: {
-                  valid: false,
-                  error: err.errno,
-                  code: err.code,
-                },
-                message: 'Error with communication with third party servers',
-                status: HttpStatus.UNAUTHORIZED,
-              };
-            } else {
-              const errorParts = err.lde_message?.split(/:|,/);
-              if (errorParts && errorParts[2]) {
-                const error = errorParts[2].trim();
-                switch (error) {
-                  case 'DSID-0C090447':
-                    throw {
-                      response: {
-                        valid: false,
-                        error: err.errno,
-                        code: err.code,
-                      },
-                      message:
-                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                      status: HttpStatus.UNAUTHORIZED,
-                    };
-                    break;
-                  default:
-                    throw {
-                      response: {
-                        valid: false,
-                      },
-                      message:
-                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                      status: HttpStatus.UNAUTHORIZED,
-                    };
-                    break;
-                }
-              } else {
-                throw {
-                  response: {
-                    valid: false,
-                  },
-                  message: 'Invalid error format',
-                  status: HttpStatus.UNAUTHORIZED,
-                };
-              }
-            }
-          } else {
-            throw {
-              response: {
-                valid: false,
-                error: err,
-              },
-              message: 'Unknown error',
-              status: HttpStatus.UNAUTHORIZED,
-            };
-          }
-        } catch (error) {
-          return reject(this._handlersError.returnErrorRes({ error }));
-        }
-      });
-    });
-  }
-
-  async cognito(profileData: CognitoProfileDto): Promise<any> {
+  /**
+   * Get Auth URL
+   * @param provider
+   * @returns Authentication URL for the specified provider
+   * @description This method generates an authentication URL for the specified OAuth provider.
+   */
+  async getAuthURL(provider: string): Promise<any> {
     try {
-      const email: string = profileData.email?.trim().toLocaleLowerCase();
-      
-      // Validate email verification status
-      if (profileData.email_verified !== 'true') {
-        throw new UnauthorizedException(
-          `The email ${email} has not been verified in Cognito.`,
-        );
-      }
+      this._logger.log(`Getting authentication URL for provider: ${provider}`);
 
-      // Validate Cognito sub (unique identifier)
-      if (!profileData.sub) {
-        throw new UnauthorizedException('Invalid Cognito token: missing sub claim');
-      }
-
-      const tempUser = await this._userRepository.findOne({
-        where: { email: email },
-        relations: ['obj_role_by_user'],
-      });
-
-      if (!tempUser) {
-        throw new UnauthorizedException(
-          `The user ${email} is not registered in the system.`,
-        );
-      }
-
-      const hasRol = tempUser.obj_role_by_user;
-
-      if (!hasRol || hasRol.length === 0) {
-        throw new UnauthorizedException(
-          `The user ${email} does not have a role assigned in the system.`,
-        );
-      }
-
-      // Store Cognito sub in user metadata if needed
-      // await this._userRepository.update(tempUser.id, { cognitoSub: profileData.sub });
-
-      const accessToken: string = this.generateToken(tempUser);
-      const tokenObj: AccessTokenDto = new AccessTokenDto(
-        accessToken,
-        tempUser,
-      );
+      const response =
+        await this._authMicroservice.getAuthenticationUrl(provider);
 
       return {
-        ...tokenObj,
-        user: tempUser,
-        cognitoSub: profileData.sub, // Include Cognito sub in response
+        message: 'Authentication URL generated successfully',
+        response: response,
+        status: HttpStatus.OK,
       };
     } catch (error) {
-      this._logger.error('Error in cognito authentication', error);
+      this._logger.error(
+        `Error getting authentication URL: ${error.message}`,
+        error.stack,
+      );
       return this._handlersError.returnErrorRes({ error });
     }
   }
 
-  private generateToken(user: User): string {
-    const payload: PayloadDto = {
-      id: user.id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-    };
-    return this._jwtService.sign(payload);
+  /**
+   * Validate Code Auth
+   * @param authCodeDto
+   * @returns User information and JWT token
+   * @description Validates the authorization code received from the OAuth provider and retrieves user information.
+   */
+  async validateAuthCode(authCodeDto: AuthCodeValidationDto): Promise<any> {
+    try {
+      this._logger.log('Validando código de autorización');
+
+      const authResponse =
+        await this._authMicroservice.validateAuthorizationCode(
+          authCodeDto.code,
+        );
+
+      const userInfo = authResponse.userInfo;
+
+      if (!userInfo || !userInfo.email) {
+        throw {
+          message: 'The user does not have an email address.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const user =
+        await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
+
+      if (!user.obj_role_by_user || user.obj_role_by_user.length === 0) {
+        throw {
+          message: `The user ${user.email} does not have rol associate.`,
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
+
+      const jwtToken = this._jwtService.sign(
+        {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+        },
+        { secret: env.JWT_SKEY },
+      );
+
+      await this._userRepository.updateLastLoginUserByEmail(user.email);
+
+      return {
+        message: 'Successful login',
+        response: {
+          valid: true,
+          token: jwtToken,
+          auth_tokens: {
+            accessToken: authResponse.accessToken,
+            idToken: authResponse.idToken,
+            refreshToken: authResponse.refreshToken,
+            expiresIn: authResponse.expiresIn,
+          },
+          user: {
+            id: user.id,
+            user_name: `${user.first_name} ${user.last_name}`,
+            email: user.email,
+          },
+        },
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(`An error ocurred: ${error.message}`, error.stack);
+      return this._handlersError.returnErrorRes({ error });
+    }
   }
 }

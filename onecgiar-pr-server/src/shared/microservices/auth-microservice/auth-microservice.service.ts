@@ -1,6 +1,5 @@
 import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
@@ -12,7 +11,6 @@ export class AuthMicroserviceService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
   ) {
     this.authMicroserviceUrl = process.env.AUTH_MICROSERVICE_URL;
 

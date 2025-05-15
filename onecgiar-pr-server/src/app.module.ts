@@ -44,6 +44,8 @@ import { UserNotificationSettingsModule } from './api/user-notification-settings
 import { EmailNotificationManagementModule } from './shared/microservices/email-notification-management/email-notification-management.module';
 import { ContributionToIndicatorsModule } from './api/contribution-to-indicators/contribution-to-indicators.module';
 import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
+import { AuthMicroserviceService } from './shared/microservices/auth-microservice/auth-microservice.service';
+import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
 
 @Module({
   imports: [
@@ -89,6 +91,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     NotificationModule,
     ContributionToIndicatorsModule,
     ResultQaedModule,
+    AuthMicroserviceModule
   ],
   controllers: [AppController],
   providers: [
@@ -104,6 +107,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    AuthMicroserviceService,
   ],
 })
 export class AppModule implements NestModule {

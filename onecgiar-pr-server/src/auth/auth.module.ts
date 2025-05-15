@@ -22,8 +22,7 @@ import { RoleLevelsModule } from './modules/role-levels/role-levels.module';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { RestrictionsByRoleModule } from './modules/restrictions-by-role/restrictions-by-role.module';
 import { RestrictionsModule } from './modules/restrictions/restrictions.module';
-import { CognitoStrategy } from '../shared/AWS/cognito/cognito.strategy';
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { AuthMicroserviceModule } from '../shared/microservices/auth-microservice/auth-microservice.module';
 
 @Module({
   controllers: [AuthController],
@@ -31,7 +30,6 @@ import { HttpModule, HttpService } from '@nestjs/axios';
     PassportModule,
     RoleModule,
     UserModule,
-    HttpModule,
     JwtModule.register({
       secret: env.JWT_SKEY,
       signOptions: { expiresIn: env.JWT_EXPIRES },
@@ -41,11 +39,11 @@ import { HttpModule, HttpService } from '@nestjs/axios';
     RoleLevelsModule,
     RestrictionsByRoleModule,
     RestrictionsModule,
+    AuthMicroserviceModule,
   ],
   providers: [
-    CognitoStrategy,
     AuthService,
-    // JwtStrategy,
+    JwtStrategy,
     JwtService,
     BcryptPasswordEncoder,
     JwtMiddleware,

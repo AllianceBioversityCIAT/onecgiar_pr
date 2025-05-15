@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus, HttpException } from '@nestjs/common';
+import { Injectable, HttpStatus, HttpException, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -19,7 +19,7 @@ export class UserService {
 
   constructor(
     @InjectRepository(User)
-    private readonly _userRepository: Repository<User>,
+    private readonly _userRepository: UserRepository,
     private readonly _customUserRespository: UserRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
@@ -205,6 +205,64 @@ export class UserService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * Create or update user based on information from the authentication microservice
+   * @param userInfo User information from the microservice
+   * @returns Created or updated user
+   */
+  async createOrUpdateUserFromAuthProvider(userInfo: any): Promise<User> {
+    const logger = new Logger('createOrUpdateUserFromAuthProvider');
+
+    try {
+      if (!userInfo || !userInfo.email) {
+        throw new Error('Invalid user information in auth response');
+      }
+
+      const email = userInfo.email.toLowerCase().trim();
+
+      logger.log(`Checking if user exists: ${email}`);
+      let user = await this._userRepository.findOne({
+        where: { email, active: true },
+        relations: ['obj_role_by_user'],
+      });
+
+      if (user) {
+        logger.log(`User found in database: ${email}`);
+        await this._userRepository.updateLastLoginUserByEmail(email);
+        return user;
+      }
+
+      logger.log(`Creating new user from authentication provider: ${email}`);
+      const newUser = new User();
+      newUser.email = email;
+      newUser.first_name =
+        userInfo.given_name || userInfo.name?.split(' ')[0] || 'User';
+      newUser.last_name =
+        userInfo.family_name ||
+        userInfo.name?.split(' ').slice(1).join(' ') ||
+        '';
+      newUser.is_cgiar = email.endsWith('@cgiar.org');
+      newUser.active = true;
+
+      const savedUser = await this._userRepository.save(newUser);
+      logger.log(`User created: ${email} (ID: ${savedUser.id})`);
+
+      await this._roleByUserRepository.createGuestRoleForUser(savedUser.id);
+      logger.log(`GUEST role assigned to user: ${email}`);
+
+      return this._userRepository.findOne({
+        where: { id: savedUser.id },
+        relations: ['obj_role_by_user'],
+      });
+    } catch (error) {
+      logger.error(
+        `Error creating/updating user: ${error.message}`,
+        error.stack,
+      );
+      throw new Error(`Failed to create or update user: ${error.message}`);
     }
   }
 }
