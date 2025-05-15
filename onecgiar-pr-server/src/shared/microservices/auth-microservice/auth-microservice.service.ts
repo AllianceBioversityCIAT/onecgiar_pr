@@ -10,10 +10,10 @@ export class AuthMicroserviceService {
   private readonly misSecret: string;
 
   constructor(private readonly httpService: HttpService) {
-    this.authMicroserviceUrl = process.env.AUTH_MICROSERVICE_URL;
+    this.authMicroserviceUrl = process.env.MS_AUTH_URL;
 
-    this.misId = process.env.MIS_CLIENT_ID;
-    this.misSecret = process.env.MIS_CLIENT_SECRET;
+    this.misId = process.env.MS_AUTH_USER;
+    this.misSecret = process.env.MS_AUTH_PASSWORD;
 
     this.logger.log('Auth Microservice initialized');
     this.logger.log(`Auth Microservice URL: ${this.authMicroserviceUrl}`);
