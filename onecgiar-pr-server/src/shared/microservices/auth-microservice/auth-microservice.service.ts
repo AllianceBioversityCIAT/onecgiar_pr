@@ -9,9 +9,7 @@ export class AuthMicroserviceService {
   private readonly misId: string;
   private readonly misSecret: string;
 
-  constructor(
-    private readonly httpService: HttpService,
-  ) {
+  constructor(private readonly httpService: HttpService) {
     this.authMicroserviceUrl = process.env.AUTH_MICROSERVICE_URL;
 
     this.misId = process.env.MIS_CLIENT_ID;

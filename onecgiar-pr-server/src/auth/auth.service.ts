@@ -1,23 +1,12 @@
-import {
-  Injectable,
-  HttpStatus,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
-import { BcryptPasswordEncoder } from './utils/bcrypt.util';
 import { env } from 'process';
-import config from '../config/const.config';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
-import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
-import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
-import ActiveDirectory from 'activedirectory';
 import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 
@@ -30,8 +19,6 @@ export class AuthService {
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
     private readonly _userRepository: UserRepository,
-    private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
-    private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
     private readonly _authMicroservice: AuthMicroserviceService,
   ) {

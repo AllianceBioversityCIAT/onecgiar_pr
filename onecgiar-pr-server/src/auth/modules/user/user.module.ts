@@ -35,7 +35,7 @@ import { AuthMicroserviceModule } from '../../../shared/microservices/auth-micro
     TypeOrmModule.forFeature([User]),
     JwtModule,
     RoleByUserModule,
-    AuthMicroserviceModule
+    AuthMicroserviceModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })

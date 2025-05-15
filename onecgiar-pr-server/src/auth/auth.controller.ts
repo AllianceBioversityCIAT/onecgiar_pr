@@ -5,23 +5,13 @@ import {
   Param,
   HttpCode,
   UseInterceptors,
-  UseGuards,
   Get,
   Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UserLoginDto } from './dto/login-user.dto';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 
 @Controller()

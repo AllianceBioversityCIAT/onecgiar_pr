@@ -91,7 +91,7 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
     NotificationModule,
     ContributionToIndicatorsModule,
     ResultQaedModule,
-    AuthMicroserviceModule
+    AuthMicroserviceModule,
   ],
   controllers: [AppController],
   providers: [

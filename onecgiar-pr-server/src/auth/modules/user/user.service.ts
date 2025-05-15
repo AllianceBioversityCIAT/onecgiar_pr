@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus, HttpException, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { returnFormatUser } from './dto/return-create-user.dto';
@@ -224,7 +223,7 @@ export class UserService {
       const email = userInfo.email.toLowerCase().trim();
 
       logger.log(`Checking if user exists: ${email}`);
-      let user = await this._userRepository.findOne({
+      const user = await this._userRepository.findOne({
         where: { email, active: true },
         relations: ['obj_role_by_user'],
       });
