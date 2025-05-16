@@ -1108,18 +1108,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
 
-  loginWithAzureAd(misId: number, provider: string) {
-    const url = `${environment.cognitoMicroserviceUrl}auth/login/provider`;
+  GET_loginWithAzureAd(provider: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+  }
 
-    return fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        misId,
-        provider
-      })
-    });
+  POST_validateCognitoCode(code: string) {
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 }

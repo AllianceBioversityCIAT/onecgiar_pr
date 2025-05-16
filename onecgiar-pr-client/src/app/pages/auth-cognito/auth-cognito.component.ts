@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { AuthService } from '../../shared/services/api/auth.service';
 
@@ -10,7 +10,7 @@ import { AuthService } from '../../shared/services/api/auth.service';
   styleUrl: './auth-cognito.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AuthCognitoComponent {
+export class AuthCognitoComponent implements OnInit, OnDestroy {
   cognito = inject(CognitoService);
   authService = inject(AuthService);
 

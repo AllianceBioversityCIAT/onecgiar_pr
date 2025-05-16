@@ -1,15 +1,21 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClarityService } from './clarity.service';
-import { environment } from '../../../environments/environment';
 import { ApiService } from './api/api.service';
 import { AuthService } from './api/auth.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import { WebsocketService } from '../../sockets/websocket.service';
+import { RolesService } from './global/roles.service';
+import { UserAuth } from '../interfaces/user.interface';
+import { internationalizationData } from '../data/internationalization-data';
 @Injectable({
   providedIn: 'root'
 })
 export class CognitoService {
+  internationalizationData = internationalizationData;
+  isLoadingAzureAd = signal(false);
+  isLoadingCredentials = signal(false);
+
   activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
   api = inject(ApiService);
@@ -17,66 +23,97 @@ export class CognitoService {
   authService = inject(AuthService);
   customAlertService = inject(CustomizedAlertsFeService);
   webSocket = inject(WebsocketService);
-  isLoadingAzureAd = signal(false);
+  rolesSE = inject(RolesService);
 
-  redirectToCognito() {
-    window.location.href = environment.cognitoUrl;
-  }
-
-  async loginWithAzureAd() {
+  loginWithAzureAd() {
     if (this.isLoadingAzureAd()) return;
 
     this.isLoadingAzureAd.set(true);
 
-    const res = await this.api.resultsSE.loginWithAzureAd(15, 'CGIAR-AzureAD').then(res => res.json());
+    this.api.resultsSE.GET_loginWithAzureAd('CGIAR-AzureAD').subscribe({
+      next: res => {
+        window.location.href = res?.response?.authUrl;
 
-    if (!res.authUrl) {
-      this.customAlertService.show({
-        id: 'loginAlert',
-        title: 'Oops!',
-        description: 'Error while trying to login with Azure AD',
-        status: 'warning'
-      });
-      this.isLoadingAzureAd.set(false);
-
-      return;
-    }
-
-    window.location.href = res.authUrl;
-
-    this.isLoadingAzureAd.set(false);
+        this.isLoadingAzureAd.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.customAlertService.show({
+          id: 'loginAlert',
+          title: 'Oops!',
+          description: 'Error while trying to login with Azure AD',
+          status: 'warning'
+        });
+        this.isLoadingAzureAd.set(false);
+      }
+    });
   }
 
   async validateCognitoCode() {
     const { code } = this.activatedRoute.snapshot.queryParams ?? {};
 
-    if (!code) return;
-    // this.cache.isValidatingToken.set(true);
-    // const loginResponse = await this.api.login(code);
-    // if (!loginResponse.successfulRequest) {
-    //   // this.actions.showGlobalAlert({
-    //   //   severity: 'error',
-    //   //   summary: 'Error authenticating',
-    //   //   detail: loginResponse.errorDetail.errors,
-    //   //   confirmCallback: {
-    //   //     label: 'Retry Log in',
-    //   //     event: () => this.redirectToCognito()
-    //   //   }
-    //   // });
-    //   return;
-    // }
+    if (!code) {
+      return;
+    }
+
+    this.api.resultsSE.POST_validateCognitoCode(code).subscribe({
+      next: res => {
+        this.updateCacheService(res);
+        this.redirectToHome();
+        this.isLoadingAzureAd.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.customAlertService.show({
+          id: 'loginAlert',
+          title: 'Oops!',
+          description: 'Error while trying to login with Azure AD',
+          status: 'warning'
+        });
+        this.isLoadingAzureAd.set(false);
+      }
+    });
+  }
+
+  loginWithCredentials(body: UserAuth) {
+    if (this.isLoadingCredentials() || body.email == '' || body.password == '') return;
+
+    this.isLoadingCredentials.set(true);
+
+    this.authService.POST_cognitoAuth(body).subscribe({
+      next: resp => {
+        this.updateCacheService(resp);
+        this.redirectToHome();
+        this.isLoadingCredentials.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.isLoadingCredentials.set(false);
+        const statusCode = err?.error?.statusCode;
+        if (statusCode == 404)
+          return this.customAlertService.show({
+            id: 'loginAlert',
+            title: 'Oops!',
+            description: 'This user is not registered. <br> Please contact the support team.',
+            status: 'warning'
+          });
+        console.error(err);
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
+      }
+    });
   }
 
   updateCacheService(resp: any) {
-    // this.cache.dataCache.set(localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data') ?? '') : {});
-    // this.cache.isLoggedIn.set(true);
-    // this.cache.isValidatingToken.set(false);
-
-    this.clarity.updateUserInfo();
-
     this.authService.localStorageToken = resp?.response?.token;
     this.authService.localStorageUser = resp?.response?.user;
     this.webSocket.configUser(this.authService.localStorageUser?.user_name, this.authService.localStorageUser?.id);
     this.clarity.updateUserInfo();
+    this.rolesSE.validateReadOnly();
+  }
+
+  redirectToHome() {
+    setTimeout(() => {
+      this.router.navigate(['/']);
+    }, 1000);
   }
 }

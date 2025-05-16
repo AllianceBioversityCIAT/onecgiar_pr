@@ -31,6 +31,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Auth',
     path: 'auth',
+    prHide: true,
     loadComponent: () => import('../../pages/auth-cognito/auth-cognito.component').then(m => m.AuthCognitoComponent)
   },
   {

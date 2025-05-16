@@ -11,7 +11,10 @@ export class AuthService {
   inLogin = signal(false);
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
 
-  constructor(public http: HttpClient, private router: Router) {}
+  constructor(
+    public http: HttpClient,
+    private router: Router
+  ) {}
 
   set localStorageToken(token: string) {
     localStorage.setItem('token', token);
@@ -69,6 +72,10 @@ export class AuthService {
 
   userAuth(body: UserAuth) {
     return this.http.post<any>(`${this.apiBaseUrl}singin`, body);
+  }
+
+  POST_cognitoAuth(body: UserAuth) {
+    return this.http.post<any>(`${this.apiBaseUrl}login/custom`, body);
   }
 
   GET_allRolesByUser() {
