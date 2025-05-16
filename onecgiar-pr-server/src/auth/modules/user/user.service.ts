@@ -230,7 +230,15 @@ export class UserService {
 
       if (user) {
         logger.log(`User found in database: ${email}`);
-        await this._userRepository.updateLastLoginUserByEmail(email);
+        await this._userRepository.update(
+          {
+            id: user.id,
+            email: user.email,
+          },
+          {
+            last_login: new Date(),
+          },
+        );
         return user;
       }
 

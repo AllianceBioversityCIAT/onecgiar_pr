@@ -91,10 +91,8 @@ export class AuthService {
             userLogin.password,
           );
 
-        const userInfo = authResponse.userInfo;
-
         const user =
-          await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
+          await this._userService.createOrUpdateUserFromAuthProvider(userLogin);
 
         await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
 
@@ -224,7 +222,15 @@ export class AuthService {
         { secret: env.JWT_SKEY },
       );
 
-      await this._userRepository.updateLastLoginUserByEmail(user.email);
+      await this._userRepository.update(
+        {
+          id: user.id,
+          email: user.email,
+        },
+        {
+          last_login: new Date(),
+        },
+      );
 
       return {
         message: 'Successful login',
