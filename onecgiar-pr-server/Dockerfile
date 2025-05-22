@@ -20,6 +20,7 @@ RUN npm install  --ignore-scripts
 COPY src ./src
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
+COPY eslint.config.mjs ./
 
 # Creates a "dist" folder with the production build
 RUN npm run build
@@ -40,6 +41,7 @@ COPY src ./src
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 COPY package*.json ./
+COPY eslint.config.mjs ./
 
 RUN npm run build
 
