@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TypeOneReportService } from './type-one-report.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { environment } from '../../../environments/environment';
 import { ApiService } from '../../shared/services/api/api.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { of } from 'rxjs';

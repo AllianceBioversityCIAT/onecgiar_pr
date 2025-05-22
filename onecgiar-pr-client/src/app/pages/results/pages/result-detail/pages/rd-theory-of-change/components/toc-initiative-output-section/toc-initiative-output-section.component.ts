@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { TocInitiativeOutcomeListsService } from '../toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
@@ -11,7 +11,7 @@ import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-ser
   styleUrls: ['./toc-initiative-output-section.component.scss']
 })
 export class TocInitiativeOutputSectionComponent {
-  @Input() result_toc_result = new resultToResultInterfaceToc();
+  @Input() result_toc_result = new ResultToResultInterfaceToc();
 
   @Input() contributors_result_toc_result: any;
 

@@ -5,9 +5,7 @@ export class PusherBlocked {
     this.currentRoute = currentRoute;
   }
   blockedRoute() {
-    //(this.currentRoute);
     const sdsd = this.pusherBlockedRoutes.some(route => this.currentRoute.indexOf(route) >= 0);
-    //(sdsd);
     return sdsd;
   }
 }

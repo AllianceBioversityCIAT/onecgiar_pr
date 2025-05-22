@@ -11,27 +11,21 @@ import { Router } from '@angular/router';
 export class CurrentResultService {
   resultIdIsconverted = false;
   constructor(
-    private resultLevelSE: ResultLevelService,
-    private api: ApiService,
-    private rolesSE: RolesService,
-    private dataControlSE: DataControlService,
-    private router: Router
+    private readonly resultLevelSE: ResultLevelService,
+    private readonly api: ApiService,
+    private readonly rolesSE: RolesService,
+    private readonly dataControlSE: DataControlService,
+    private readonly router: Router
   ) {}
 
-  async GET_resultById() {
-    await this.api.resultsSE.GET_resultById().subscribe(
-      ({ response }) => {
-        //('GET_resultById');
-        //(response);
+  GET_resultById() {
+    this.api.resultsSE.GET_resultById().subscribe({
+      next: ({ response }) => {
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
-        //(response);
         this.dataControlSE.currentResult = response;
-        // (this.dataControlSE.currentResult);
-
-        // ({ is_discontinued: response.is_discontinued });
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:
@@ -44,11 +38,10 @@ export class CurrentResultService {
             break;
         }
       },
-      err => {
-        //(err.error);
+      error: err => {
         if (err.error.statusCode == 404) this.router.navigate([`/`]);
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: 'Result not found.', status: 'error' });
       }
-    );
+    });
   }
 }

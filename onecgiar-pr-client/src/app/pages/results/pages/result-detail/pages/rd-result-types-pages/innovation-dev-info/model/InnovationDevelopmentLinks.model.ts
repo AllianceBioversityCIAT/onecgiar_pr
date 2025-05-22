@@ -1,9 +1,9 @@
 export class InnovationDevelopmentLinks {
-  pictures: linkType[] = [{ link: '' }];
-  reference_materials: linkType[] = [{ link: '' }];
+  pictures: LinkType[] = [{ link: '' }];
+  reference_materials: LinkType[] = [{ link: '' }];
 }
 
-export class linkType {
+export class LinkType {
   id?: string = '';
   link: string = '';
   description?: string | null = null;

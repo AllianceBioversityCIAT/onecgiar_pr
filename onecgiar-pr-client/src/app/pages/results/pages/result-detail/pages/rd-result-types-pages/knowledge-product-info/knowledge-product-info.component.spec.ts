@@ -259,7 +259,7 @@ describe('KnowledgeProductInfoComponent', () => {
         doi: true,
         accessibility: false,
         is_peer_reviewed: false
-      },
+      };
         mockGET_resultknowledgeProductsResponse.metadataWOS = {
           is_peer_reviewed: true,
           is_isi: true,

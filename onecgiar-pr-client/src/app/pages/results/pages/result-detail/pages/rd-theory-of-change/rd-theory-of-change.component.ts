@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { resultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
+import { ResultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -161,7 +161,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
   onSelectContributingInitiative() {
     this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.forEach((resp: any) => {
       const contributorFinded = this.theoryOfChangeBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
-      const contributorToPush = new resultTocResultsInterface();
+      const contributorToPush = new ResultTocResultsInterface();
       contributorToPush.initiative_id = resp.id;
       contributorToPush.short_name = resp.short_name;
       contributorToPush.official_code = resp.official_code;

@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { resultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../model/theoryOfChangeBody';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
@@ -9,7 +9,7 @@ import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-ser
   styleUrls: ['./toc-initiative-outcome-section.component.scss']
 })
 export class TocInitiativeOutcomeSectionComponent {
-  @Input() result_toc_result = new resultToResultInterfaceToc();
+  @Input() result_toc_result = new ResultToResultInterfaceToc();
   @Input() contributors_result_toc_result: any;
 
   constructor(public rolesSE: RolesService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}

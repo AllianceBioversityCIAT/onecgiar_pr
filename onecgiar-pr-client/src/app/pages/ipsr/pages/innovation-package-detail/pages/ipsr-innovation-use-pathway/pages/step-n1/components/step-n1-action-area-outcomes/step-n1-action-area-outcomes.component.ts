@@ -11,22 +11,16 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 export class StepN1ActionAreaOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   actionAreasOutcomesList: any = null;
-  constructor(private ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}
+  constructor(private readonly ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}
   ngOnInit(): void {
-    //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
-    //Add 'implements OnInit' to the class.
     this.GET_tocLevelsByresultId();
 
     this.api.resultsSE.GETAllClarisaActionAreasOutcomes().subscribe(
       ({ response }) => {
-        //(response);
         this.actionAreasOutcomesList = response;
         this.actionAreasOutcomesList.geneticInnovation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.resilientAgrifoodSystems.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
         this.actionAreasOutcomesList.systemTrasnformation.map(item => (item.full_name = `<strong>${item.outcomeSMOcode}</strong> - ${item.outcomeStatement}`));
-
-        //(this.actionAreasOutcomesList);
-        //(this.actionAreasOutcomesList);
       },
       err => {
         console.error(err);
@@ -42,22 +36,12 @@ export class StepN1ActionAreaOutcomesComponent implements OnInit {
         console.error(err);
       }
     });
-    /*this.api.tocApiSE.GET_tocLevelsByresultId(this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe(
-      ({ response }) => {
-        this.actionAreasOutcomesList = response;
-        //(response);
-      },
-      err => {
-        console.error(err);
-      }
-    );*/
   }
   removeOption(option) {
     const index = this.body.actionAreaOutcomes.findIndex(valueItem => valueItem.action_area_outcome_id == option.action_area_outcome_id);
     this.body.actionAreaOutcomes.splice(index, 1);
   }
   filterByAAOId(id) {
-    //(this.body.actionAreaOutcomes);
     return this.body.actionAreaOutcomes.filter((item: any) => item?.actionAreaId == id);
   }
 }

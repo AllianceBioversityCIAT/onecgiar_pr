@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
-import { InnovationUseInfoBody, policyChangeQuestions } from './model/innovationUseInfoBody';
+import { InnovationUseInfoBody, PolicyChangeQuestions } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
 
@@ -11,7 +11,7 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();
-  policyChangeQuestions = new policyChangeQuestions();
+  policyChangeQuestions = new PolicyChangeQuestions();
   cantidad: string = '';
   relatedTo: string = '';
   relatedToOptions = [
@@ -19,15 +19,9 @@ export class PolicyChangeInfoComponent implements OnInit {
     { value: 'capacity-development', label: 'The capacity development of key actors in a policy process' }
   ];
 
-  // relatedToEngagementOptions = [
-  //   { value: true, label: 'Yes' },
-  //   { value: false, label: 'No' }
-  // ];
-
   constructor(public api: ApiService, public policyControlListSE: PolicyControlListService, public institutionsService: InstitutionsService) {}
 
   ngOnInit(): void {
-    this.showAlerts();
     this.getSectionInformation();
     this.getPolicyChangesQuestions();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
@@ -78,6 +72,4 @@ export class PolicyChangeInfoComponent implements OnInit {
       this.getSectionInformation();
     });
   }
-
-  showAlerts() {}
 }

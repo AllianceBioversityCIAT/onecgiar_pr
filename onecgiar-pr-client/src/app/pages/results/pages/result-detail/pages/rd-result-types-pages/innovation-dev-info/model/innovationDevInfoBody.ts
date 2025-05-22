@@ -1,25 +1,24 @@
 export class InnovationDevInfoBody {
   public result_innovation_dev_id: number;
-  public short_title: string; //todo
-  public innovation_characterization_id: number; //todo
-  public innovation_nature_id: number; //todo
-  public innovation_readiness_level_id: number; //todo
-  public is_new_variety: boolean; //todo
-  public number_of_varieties: number; //todo
-  public innovation_developers: string; //todo
-  public innovation_collaborators: string; //todo
-  // public readiness_level: string; //todo
-  public evidences_justification: string; //todo
+  public short_title: string;
+  public innovation_characterization_id: number;
+  public innovation_nature_id: number;
+  public innovation_readiness_level_id: number;
+  public is_new_variety: boolean;
+  public number_of_varieties: number;
+  public innovation_developers: string;
+  public innovation_collaborators: string;
+  public evidences_justification: string;
   public innovation_acknowledgement: string;
   public result = { title: '' };
-  public pictures: linkType[] = [{ link: '' }];
-  public reference_materials: linkType[] = [{ link: '' }];
+  public pictures: LinkType[] = [{ link: '' }];
+  public reference_materials: LinkType[] = [{ link: '' }];
   public innovatonUse: InnovatonUse = new InnovatonUse();
   public innovation_pdf: boolean;
   public innovation_user_to_be_determined: boolean;
-  public initiative_expected_investment: Initiative_expected_investment[] = [];
-  public bilateral_expected_investment: Bilateral_expected_investment[] = [];
-  public institutions_expected_investment: Institutions_expected_investment[] = [];
+  public initiative_expected_investment: InitiativeExpectedInvestment[] = [];
+  public bilateral_expected_investment: BilateralExpectedInvestment[] = [];
+  public institutions_expected_investment: InstitutionsExpectedInvestment[] = [];
   public previous_irl: number;
 }
 
@@ -72,7 +71,7 @@ export class Actor {
   addressing_demands: string;
 }
 
-export class linkType {
+export class LinkType {
   id?: string = '';
   link?: string = '';
   description?: string | null = null;
@@ -89,7 +88,7 @@ export class linkType {
   evidence_type_id?: string = '';
 }
 
-class Bilateral_expected_investment {
+class BilateralExpectedInvestment {
   public is_active: boolean = false;
   public created_date: string = '';
   public last_updated_date: string = '';
@@ -119,7 +118,7 @@ class ObjNonPooledProjetct {
   public non_pooled_project_type_id: string = '';
 }
 
-class Initiative_expected_investment {
+class InitiativeExpectedInvestment {
   public is_active: boolean = false;
   public created_date: string = '';
   public last_updated_date: string = '';
@@ -156,7 +155,7 @@ class ObjInitiative {
   public toc_id: string = '';
 }
 
-class Institutions_expected_investment {
+class InstitutionsExpectedInvestment {
   public institution: Institution = new Institution();
   public budget: any[] = [];
   public kind_cash?: any;
