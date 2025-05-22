@@ -65,7 +65,7 @@
         </div>
 
         <p class="whats-new-page-details_header_additional-info_item_last-updated">
-          Created date: {{ headerInfo?.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+          Created date: {{ headerInfo?.properties['Released date']?.date?.start | date: 'MMM d, yyyy' }}
         </p>
       </div>
     }
