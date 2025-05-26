@@ -1,7 +1,16 @@
 <div class="outcomes">
-  <div class="outcomes_title">
-    <i class="material-icons-outlined" style="font-size: 30px">assessment</i>
-    <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
+  <div class="outcomes_header">
+    <div class="outcomes_title">
+      <i class="material-icons-outlined" style="font-size: 30px">assessment</i>
+      <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
+    </div>
+
+    <app-pr-button
+      [text]="this.requestingFullReport() ? 'Downloading full report' : 'Download full report'"
+      [ngClass]="{ globalDisabled: this.requestingFullReport() }"
+      [icon]="this.requestingFullReport() ? 'loop' : 'excel_white'"
+      [rotating]="this.requestingFullReport()"
+      (click)="exportFullReport()"></app-pr-button>
   </div>
 
   <p class="outcomes_desc">Welcome to the Outcome indicators reporting module.</p>
@@ -52,7 +61,7 @@
           this.outcomeIService.loading() ||
           this.outcomeIService.loadingWPs()
       }"
-      (click)="exportIndicatorsToExcel()">
+      (click)="exportIndicatorsToExcel(this.outcomeIService.eoisData, this.outcomeIService.wpsData)">
       <i class="pi pi-file-export" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Export progress reported by indicator </p>
     </div>

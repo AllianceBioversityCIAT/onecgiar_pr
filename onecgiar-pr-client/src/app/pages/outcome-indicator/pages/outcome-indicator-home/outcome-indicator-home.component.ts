@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -6,14 +6,17 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 @Component({
   selector: 'app-outcome-indicator-home',
   templateUrl: './outcome-indicator-home.component.html',
   styleUrl: './outcome-indicator-home.component.scss',
   standalone: true,
-  imports: [NgClass, RouterLink, ToastModule]
+  imports: [NgClass, RouterLink, ToastModule, CustomFieldsModule]
 })
 export class OutcomeIndicatorHomeComponent {
+  requestingFullReport = signal(false);
+
   constructor(
     public api: ApiService,
     public outcomeIService: OutcomeIndicatorService,
@@ -21,7 +24,30 @@ export class OutcomeIndicatorHomeComponent {
     public messageService: MessageService
   ) {}
 
-  exportIndicatorsToExcel() {
+  exportFullReport() {
+    this.requestingFullReport.set(true);
+
+    this.api.resultsSE.GET_fullReport().subscribe({
+      next: ({ response }) => {
+        console.log(response);
+        // this.exportIndicatorsToExcel(response.eoisData, response.wpsData, `Full_report_OIM_`);
+        this.requestingFullReport.set(false);
+      },
+      error: () => {
+        this.requestingFullReport.set(false);
+      }
+    });
+
+    // setTimeout(() => {
+    // this.requestingFullReport.set(false);
+    // }, 1000);
+  }
+
+  exportIndicatorsToExcel(
+    eoisData: any,
+    wpsData: any,
+    fileName: string = `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`
+  ) {
     if (
       !this.outcomeIService.initiativeIdFilter ||
       !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
@@ -57,15 +83,15 @@ export class OutcomeIndicatorHomeComponent {
     ];
 
     this.exportTablesSE.exportOutcomesIndicatorsToExcel({
-      fileName: `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
+      fileName: fileName,
       EOIsConfig: {
-        data: this.outcomeIService.eoisData,
+        data: eoisData,
         wscols: wscolsEOIs,
         cellToCenter: [4, 5, 6, 7],
         worksheetName: 'EoI outcomes'
       },
       WPsConfig: {
-        data: this.outcomeIService.wpsData,
+        data: wpsData,
         wscols: wscolsWPs,
         cellToCenter: [5, 6, 7, 8],
         worksheetName: 'WP outcomes'

@@ -1065,6 +1065,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
   }
 
+  GET_fullReport() {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/get/full-report`);
+  }
+
   GET_contributionsToIndicatorsEOIS(initiativeCode: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
   }
