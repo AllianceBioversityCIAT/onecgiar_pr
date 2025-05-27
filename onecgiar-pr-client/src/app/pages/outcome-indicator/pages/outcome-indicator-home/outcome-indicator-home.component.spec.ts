@@ -65,7 +65,7 @@ describe('OutcomeIndicatorHomeComponent', () => {
       outcomeIndicatorService.initiativeIdFilter = 'test';
       component.api.dataControlSE.reportingCurrentPhase.phaseName = 'test';
 
-      component.exportIndicatorsToExcel();
+      component.exportIndicatorsToExcel(outcomeIndicatorService.eoisData, outcomeIndicatorService.wpsData);
 
       expect(exportSpy).toHaveBeenCalledWith({
         fileName: `test_Contribution_Outcome_Indicators_`,
@@ -92,7 +92,7 @@ describe('OutcomeIndicatorHomeComponent', () => {
       outcomeIndicatorService.loading.set(true);
       outcomeIndicatorService.loadingWPs.set(true);
 
-      component.exportIndicatorsToExcel();
+      component.exportIndicatorsToExcel(outcomeIndicatorService.eoisData, outcomeIndicatorService.wpsData);
 
       expect(exportSpy).not.toHaveBeenCalled();
     });
