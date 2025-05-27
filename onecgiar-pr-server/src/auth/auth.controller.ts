@@ -14,6 +14,7 @@ import { ResponseInterceptor } from '../shared/Interceptors/Return-data.intercep
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
+import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 
 @Controller()
 @ApiTags('Authentication')
@@ -47,6 +48,21 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   validateAuthCode(@Body() authCodeDto: AuthCodeValidationDto) {
     return this.authService.validateAuthCode(authCodeDto);
+  }
+
+  @Post('/complete-password-challenge')
+  @ApiOperation({
+    summary: 'Complete new password challenge for first-time login',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password set successfully, user authenticated',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid challenge data' })
+  async completePasswordChallenge(
+    @Body() challengeDto: CompletePasswordChallengeDto,
+  ) {
+    return this.authService.completePasswordChallenge(challengeDto);
   }
 
   @Post('/signin/pusher/result/:resultId/:userId')

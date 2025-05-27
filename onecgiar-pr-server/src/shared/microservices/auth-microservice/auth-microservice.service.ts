@@ -143,14 +143,25 @@ export class AuthMicroserviceService {
   async authenticateWithCustomCredentials(
     username: string,
     password: string,
+    userMetadata?: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    },
   ): Promise<any> {
     try {
       this.logger.log(`Authenticating user: ${username}`);
 
+      const requestBody: any = { username, password };
+
+      if (userMetadata) {
+        requestBody.userMetadata = userMetadata;
+      }
+
       const response = await firstValueFrom(
         this.httpService.post(
           `${this.authMicroserviceUrl}/auth/login/custom`,
-          { username, password },
+          requestBody,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -171,6 +182,51 @@ export class AuthMicroserviceService {
       );
       throw new HttpException(
         error.response?.data?.message || 'Authentication failed',
+        error.response?.status || 500,
+      );
+    }
+  }
+
+  /**
+   * Complete new password challenge
+   * @param challengeData Challenge completion data
+   * @returns Authentication result with tokens
+   */
+  async completeNewPasswordChallenge(challengeData: {
+    username: string;
+    newPassword: string;
+    session: string;
+  }): Promise<any> {
+    try {
+      this.logger.log(
+        `Completing new password challenge for user: ${challengeData.username}`,
+      );
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/complete-new-password-challenge`,
+          challengeData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error(
+        `Error completing new password challenge: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        error.response?.data?.message ||
+          'Failed to complete password challenge',
         error.response?.status || 500,
       );
     }
