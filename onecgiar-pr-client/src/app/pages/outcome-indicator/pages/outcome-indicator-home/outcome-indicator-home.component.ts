@@ -29,12 +29,12 @@ export class OutcomeIndicatorHomeComponent {
 
     this.api.resultsSE.GET_fullReport().subscribe({
       next: ({ response }) => {
-        console.log(response);
-        // this.exportIndicatorsToExcel(response.eoisData, response.wpsData, `Full_report_OIM_`);
+        this.exportIndicatorsToExcel(response.eoisData, response.wpsData, `Full_report_OIM_`);
         this.requestingFullReport.set(false);
       },
-      error: () => {
+      error: error => {
         this.requestingFullReport.set(false);
+        console.error(error);
       }
     });
 
