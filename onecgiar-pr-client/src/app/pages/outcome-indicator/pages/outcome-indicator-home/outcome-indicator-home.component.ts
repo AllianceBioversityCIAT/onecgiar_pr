@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -15,8 +15,6 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
   imports: [NgClass, RouterLink, ToastModule, CustomFieldsModule]
 })
 export class OutcomeIndicatorHomeComponent {
-  requestingFullReport = signal(false);
-
   constructor(
     public api: ApiService,
     public outcomeIService: OutcomeIndicatorService,
@@ -25,22 +23,18 @@ export class OutcomeIndicatorHomeComponent {
   ) {}
 
   exportFullReport() {
-    this.requestingFullReport.set(true);
+    this.outcomeIService.requestingFullReport.set(true);
 
     this.api.resultsSE.GET_fullReport().subscribe({
       next: ({ response }) => {
-        this.exportIndicatorsToExcel(response.eoisData, response.wpsData, `Full_report_OIM_`);
-        this.requestingFullReport.set(false);
+        this.exportIndicatorsToExcel(response.eois, response.wps, `Full_report_OIM_`);
+        this.outcomeIService.requestingFullReport.set(false);
       },
       error: error => {
-        this.requestingFullReport.set(false);
+        this.outcomeIService.requestingFullReport.set(false);
         console.error(error);
       }
     });
-
-    // setTimeout(() => {
-    // this.requestingFullReport.set(false);
-    // }, 1000);
   }
 
   exportIndicatorsToExcel(

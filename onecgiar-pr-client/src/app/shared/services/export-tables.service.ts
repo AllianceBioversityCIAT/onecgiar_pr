@@ -271,7 +271,11 @@ export class ExportTablesService {
   }
 
   private addEOISRow({ worksheet, data, isT1R, index }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean; index: number }) {
-    if (data.indicators.length > 0) {
+    if (!data?.toc_result_id) {
+      return;
+    }
+
+    if (data?.indicators?.length > 0) {
       data.indicators.forEach(indicator => {
         let indicatorType = 'Not defined';
         if (indicator.indicator_name) {
@@ -317,8 +321,12 @@ export class ExportTablesService {
   }
 
   private addWPSRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
+    if (!data.workpackage_name) {
+      return;
+    }
+
     data.toc_results.forEach((result, index) => {
-      if (result.indicators.length > 0) {
+      if (result?.indicators?.length > 0) {
         result.indicators.forEach(indicator => {
           let indicatorType = 'Not defined';
           if (indicator.indicator_name) {
