@@ -39,4 +39,22 @@ describe('AuthService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('POST_cognitoChangePassword', () => {
+    it('should call POST_cognitoChangePassword and return expected data', done => {
+      const mockBody = { session: 'test-session', newPassword: 'password123', username: 'test@example.com' };
+      const mockResponse = { response: { token: 'test-token', user: {} } };
+
+      service.POST_cognitoChangePassword(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}complete-password-challenge`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(mockBody);
+
+      req.flush(mockResponse);
+    });
+  });
 });

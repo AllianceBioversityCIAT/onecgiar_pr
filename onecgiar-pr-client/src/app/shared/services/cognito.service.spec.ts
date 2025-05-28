@@ -20,6 +20,24 @@ describe('CognitoService', () => {
     expect(service).toBeTruthy();
   });
 
+  describe('Service Initialization', () => {
+    it('should initialize with correct default values', () => {
+      expect(service.isLoadingAzureAd()).toBe(false);
+      expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
+      expect(service.chagePasswordSession()).toBe(null);
+      expect(service.body()).toEqual({
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+    });
+
+    it('should have internationalizationData available', () => {
+      expect(service.internationalizationData).toBeDefined();
+    });
+  });
+
   describe('loginWithAzureAd', () => {
     it('should not call API if already loading', () => {
       service.isLoadingAzureAd.set(true);
@@ -109,6 +127,22 @@ describe('CognitoService', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
+    it('should not proceed if email is empty', () => {
+      const spy = jest.spyOn(service.authService, 'POST_cognitoAuth');
+
+      service.loginWithCredentials({ email: '', password: 'password123' });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should not proceed if password is empty', () => {
+      const spy = jest.spyOn(service.authService, 'POST_cognitoAuth');
+
+      service.loginWithCredentials({ email: 'test@test.com', password: '' });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
     it('should handle successful login with credentials', () => {
       const mockCredentials = { email: 'test@test.com', password: 'password123' };
       const mockResponse = { response: { token: 'test-token', user: {} } };
@@ -121,6 +155,29 @@ describe('CognitoService', () => {
       expect(updateCacheSpy).toHaveBeenCalledWith(mockResponse);
       expect(redirectSpy).toHaveBeenCalled();
       expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
+    });
+
+    it('should handle NEW_PASSWORD_REQUIRED challenge', () => {
+      const mockCredentials = { email: 'test@test.com', password: 'password123' };
+      const mockResponse = {
+        response: {
+          challengeName: 'NEW_PASSWORD_REQUIRED',
+          session: 'test-session-token'
+        }
+      };
+      jest.spyOn(service.authService, 'POST_cognitoAuth').mockReturnValue(of(mockResponse));
+
+      service.loginWithCredentials(mockCredentials);
+
+      expect(service.requiredChangePassword()).toBe(true);
+      expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.chagePasswordSession()).toBe('test-session-token');
+      expect(service.body()).toEqual({
+        email: 'test@test.com',
+        password: '',
+        confirmPassword: ''
+      });
     });
 
     it('should handle 404 error during login', () => {
@@ -138,6 +195,7 @@ describe('CognitoService', () => {
         status: 'warning'
       });
       expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
     });
 
     it('should handle other errors during login', () => {
@@ -154,6 +212,71 @@ describe('CognitoService', () => {
         description: 'Invalid credentials',
         status: 'warning'
       });
+      expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
+    });
+  });
+
+  describe('changePassword', () => {
+    beforeEach(() => {
+      service.chagePasswordSession.set('test-session');
+      service.body.set({
+        email: 'test@example.com',
+        password: 'NewPassword123!',
+        confirmPassword: 'NewPassword123!'
+      });
+    });
+
+    it('should successfully change password', () => {
+      const mockResponse = { response: { token: 'new-token', user: {} } };
+      jest.spyOn(service.authService, 'POST_cognitoChangePassword').mockReturnValue(of(mockResponse));
+      const updateCacheSpy = jest.spyOn(service as any, 'updateCacheService');
+      const redirectSpy = jest.spyOn(service as any, 'redirectToHome');
+
+      service.changePassword();
+
+      expect(service.authService.POST_cognitoChangePassword).toHaveBeenCalledWith({
+        session: 'test-session',
+        newPassword: 'NewPassword123!',
+        username: 'test@example.com'
+      });
+      expect(updateCacheSpy).toHaveBeenCalledWith(mockResponse);
+      expect(redirectSpy).toHaveBeenCalled();
+      expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
+      expect(service.body()).toEqual({
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+    });
+
+    it('should handle error during password change', () => {
+      const mockError = { error: { message: 'Password change failed' } };
+      jest.spyOn(service.authService, 'POST_cognitoChangePassword').mockReturnValue(throwError(() => mockError));
+      const alertSpy = jest.spyOn(service.customAlertService, 'show');
+
+      service.changePassword();
+
+      expect(alertSpy).toHaveBeenCalledWith({
+        id: 'loginAlert',
+        title: 'Oops!',
+        description: 'Password change failed',
+        status: 'warning'
+      });
+      expect(service.isLoadingCredentials()).toBe(false);
+      expect(service.requiredChangePassword()).toBe(false);
+    });
+
+    it('should set loading state during password change', () => {
+      const mockResponse = { response: { token: 'new-token', user: {} } };
+      jest.spyOn(service.authService, 'POST_cognitoChangePassword').mockReturnValue(of(mockResponse));
+
+      expect(service.isLoadingCredentials()).toBe(false);
+
+      service.changePassword();
+
+      // The loading state should have been set to true initially and then back to false
       expect(service.isLoadingCredentials()).toBe(false);
     });
   });

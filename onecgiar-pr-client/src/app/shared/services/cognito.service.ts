@@ -15,6 +15,13 @@ export class CognitoService {
   internationalizationData = internationalizationData;
   isLoadingAzureAd = signal(false);
   isLoadingCredentials = signal(false);
+  requiredChangePassword = signal(false);
+  body = signal<UserAuth>({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  chagePasswordSession = signal<string | null>(null);
 
   activatedRoute = inject(ActivatedRoute);
   router = inject(Router);
@@ -82,13 +89,32 @@ export class CognitoService {
 
     this.authService.POST_cognitoAuth(body).subscribe({
       next: resp => {
+        if (resp?.response?.challengeName && resp?.response?.challengeName == 'NEW_PASSWORD_REQUIRED') {
+          this.requiredChangePassword.set(true);
+          this.isLoadingCredentials.set(false);
+          this.body.set({
+            email: body.email,
+            password: '',
+            confirmPassword: ''
+          });
+          this.chagePasswordSession.set(resp?.response?.session);
+          return;
+        }
+
         this.updateCacheService(resp);
-        this.redirectToHome();
         this.isLoadingCredentials.set(false);
+        this.requiredChangePassword.set(false);
+        this.body.set({
+          email: '',
+          password: '',
+          confirmPassword: ''
+        });
+        this.redirectToHome();
       },
       error: err => {
         console.error(err);
         this.isLoadingCredentials.set(false);
+        this.requiredChangePassword.set(false);
         const statusCode = err?.error?.statusCode;
         if (statusCode == 404)
           return this.customAlertService.show({
@@ -103,6 +129,36 @@ export class CognitoService {
     });
   }
 
+  changePassword() {
+    const body = {
+      session: this.chagePasswordSession(),
+      newPassword: this.body().password,
+      username: this.body().email
+    };
+
+    this.isLoadingCredentials.set(true);
+
+    this.authService.POST_cognitoChangePassword(body).subscribe({
+      next: resp => {
+        this.updateCacheService(resp);
+        this.isLoadingCredentials.set(false);
+        this.requiredChangePassword.set(false);
+        this.body.set({
+          email: '',
+          password: '',
+          confirmPassword: ''
+        });
+        this.redirectToHome();
+      },
+      error: err => {
+        console.error(err);
+        this.isLoadingCredentials.set(false);
+        this.requiredChangePassword.set(false);
+        this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: err?.error?.message, status: 'warning' });
+      }
+    });
+  }
+
   updateCacheService(resp: any) {
     this.authService.localStorageToken = resp?.response?.token;
     this.authService.localStorageUser = resp?.response?.user;
@@ -112,8 +168,8 @@ export class CognitoService {
   }
 
   redirectToHome() {
-    setTimeout(() => {
-      this.router.navigate(['/']);
-    }, 1000);
+    // setTimeout(() => {
+    this.router.navigate(['/']);
+    // }, 1000);
   }
 }

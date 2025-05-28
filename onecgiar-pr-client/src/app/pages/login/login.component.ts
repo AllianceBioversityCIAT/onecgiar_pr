@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
@@ -13,11 +13,6 @@ import { FormsModule } from '@angular/forms';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent implements OnInit, OnDestroy {
-  body = signal({
-    email: '',
-    password: ''
-  });
-
   cognito = inject(CognitoService);
   authService = inject(AuthService);
 
@@ -26,7 +21,54 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   validateBody(): boolean {
-    return !this.body().email || !this.body().password;
+    if (this.cognito.requiredChangePassword()) {
+      return (
+        !this.cognito.body().email ||
+        !this.cognito.body().password ||
+        !this.cognito.body().confirmPassword ||
+        !this.isPasswordValid() ||
+        !this.doPasswordsMatch()
+      );
+    }
+    return !this.cognito.body().email || !this.cognito.body().password;
+  }
+
+  // Password validation based on requirements
+  isPasswordValid(): boolean {
+    const password = this.cognito.body().password;
+    return (
+      this.hasLowerCase(password) &&
+      this.hasUpperCase(password) &&
+      this.hasMinLength(password) &&
+      this.hasSpecialCharacter(password) &&
+      this.hasNoLeadingTrailingSpaces(password)
+    );
+  }
+
+  // Check if passwords match
+  doPasswordsMatch(): boolean {
+    return this.cognito.body().password === this.cognito.body().confirmPassword;
+  }
+
+  // Individual validation methods
+  hasLowerCase(password: string): boolean {
+    return /[a-z]/.test(password);
+  }
+
+  hasUpperCase(password: string): boolean {
+    return /[A-Z]/.test(password);
+  }
+
+  hasMinLength(password: string): boolean {
+    return password.length >= 8;
+  }
+
+  hasSpecialCharacter(password: string): boolean {
+    return /[^a-zA-Z0-9]/.test(password);
+  }
+
+  hasNoLeadingTrailingSpaces(password: string): boolean {
+    return password === password.trim();
   }
 
   ngOnDestroy(): void {
