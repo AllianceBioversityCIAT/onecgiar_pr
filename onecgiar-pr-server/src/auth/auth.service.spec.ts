@@ -19,7 +19,6 @@ jest.mock('pusher', () => {
 
 describe('AuthService', () => {
   let service: AuthService;
-  let jwtService: JwtService;
   let userService: UserService;
   let userRepository: UserRepository;
   let handlersError: HandlersError;
@@ -98,7 +97,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    jwtService = module.get<JwtService>(JwtService);
     userService = module.get<UserService>(UserService);
     userRepository = module.get<UserRepository>(UserRepository);
     handlersError = module.get<HandlersError>(HandlersError);
@@ -292,8 +290,6 @@ describe('AuthService', () => {
         .spyOn(authMicroservice, 'getAuthenticationUrl')
         .mockRejectedValue(error);
 
-      const result = await service.getAuthURL('invalid-provider');
-
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });
   });
@@ -436,8 +432,6 @@ describe('AuthService', () => {
       jest
         .spyOn(authMicroservice, 'completeNewPasswordChallenge')
         .mockRejectedValue(error);
-
-      const result = await service.completePasswordChallenge(mockChallengeDto);
 
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });
