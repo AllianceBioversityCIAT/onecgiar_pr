@@ -1,55 +1,52 @@
 #################### BASE STAGE ####################
-# Base image
 FROM node:20.13.1-alpine AS base
 
-# Create app directory
+# Set working directory
 WORKDIR /app
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied.
+# Copy only package manifests
 COPY package*.json ./
 
 #################### DEVELOPMENT STAGE ####################
-
-# Development stage
 FROM base AS development
 
-# Install app dependencies
-RUN npm install
+# Install all dependencies including devDependencies
+RUN npm install && npm install --save-dev @types/node
 
-# Bundle app source
+# Copy full source including config and tsconfig
 COPY . .
 
-# Creates a "dist" folder with the production build
-RUN npm run build
-
-# Expose the port on which the app will run
+# Expose port for dev
 EXPOSE 3000
 
-# Start the server using the production build
+# Build the application
+RUN npm run build
+
+# Default command for dev
 CMD ["npm", "run", "start"]
 
 #################### BUILD STAGE ####################
-
 FROM base AS build
 
+# Install only production dependencies
 RUN npm ci --only=production
 
+# Copy application code
 COPY . .
 
+# Build application
 RUN npm run build
 
 #################### PRODUCTION STAGE ####################
-
-# Base image
 FROM --platform=linux/amd64 node:20.13.1-alpine AS production
 
 # Set working directory
 WORKDIR /app
 
-# Create non-root user for better security
+# Create non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy the "dist" folder from the build stage
+# Copy build artifacts and runtime files
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
@@ -57,8 +54,8 @@ COPY --from=build /app/package*.json ./
 # Switch to non-root user
 USER appuser
 
-# Expose the port on which the app will run
+# Expose runtime port
 EXPOSE 3000
 
-# Start the server using the production build
+# Start the app
 CMD ["node", "dist/main.js"]
