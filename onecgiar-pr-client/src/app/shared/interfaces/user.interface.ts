@@ -1,6 +1,7 @@
 export class UserAuth {
   public email: string = '';
   public password: string = '';
+  public confirmPassword?: string = '';
 }
 
 export interface UserCreate {
@@ -23,4 +24,10 @@ export interface LocalStorageUser {
   id: number;
   user_name: string;
   email: string;
+}
+
+export interface UserChangePassword {
+  session: string;
+  newPassword: string;
+  username: string;
 }

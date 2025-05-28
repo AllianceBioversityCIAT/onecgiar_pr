@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
-import { LocalStorageUser, UserAuth } from '../../interfaces/user.interface';
+import { LocalStorageUser, UserAuth, UserChangePassword } from '../../interfaces/user.interface';
 import { map } from 'rxjs';
 @Injectable({
   providedIn: 'root'
@@ -13,7 +13,7 @@ export class AuthService {
 
   constructor(
     public http: HttpClient,
-    private router: Router
+    private readonly router: Router
   ) {}
 
   set localStorageToken(token: string) {
@@ -76,6 +76,10 @@ export class AuthService {
 
   POST_cognitoAuth(body: UserAuth) {
     return this.http.post<any>(`${this.apiBaseUrl}login/custom`, body);
+  }
+
+  POST_cognitoChangePassword(body: UserChangePassword) {
+    return this.http.post<any>(`${this.apiBaseUrl}complete-password-challenge`, body);
   }
 
   GET_allRolesByUser() {
