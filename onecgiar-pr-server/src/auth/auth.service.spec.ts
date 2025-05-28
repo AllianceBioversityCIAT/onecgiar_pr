@@ -290,6 +290,8 @@ describe('AuthService', () => {
         .spyOn(authMicroservice, 'getAuthenticationUrl')
         .mockRejectedValue(error);
 
+      await service.getAuthURL('invalid-provider');
+
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });
   });
@@ -432,6 +434,8 @@ describe('AuthService', () => {
       jest
         .spyOn(authMicroservice, 'completeNewPasswordChallenge')
         .mockRejectedValue(error);
+
+      await service.completePasswordChallenge(mockChallengeDto);
 
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });
