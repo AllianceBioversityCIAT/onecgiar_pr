@@ -3,11 +3,13 @@ import { AuthService } from '../../shared/services/api/auth.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PasswordModule } from 'primeng/password';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PasswordModule, InputTextModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -36,6 +38,11 @@ export class LoginComponent implements OnInit, OnDestroy {
   // Password validation based on requirements
   isPasswordValid(): boolean {
     const password = this.cognito.body().password;
+
+    if (this.cognito.requiredChangePassword() && !password) {
+      return true;
+    }
+
     return (
       this.hasLowerCase(password) &&
       this.hasUpperCase(password) &&

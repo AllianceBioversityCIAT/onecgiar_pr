@@ -1,16 +1,19 @@
 <div class="login-container">
   <div class="login-card">
-    <div class="logo-section">
-      <img src="../../../assets/cgiar-logo-white.png" alt="CGIAR logo" width="100px" />
-    </div>
-
     <div class="login-form">
+      <div class="logo-section">
+        <img src="../../../assets/logos-login.png" alt="CGIAR and PRMS logo" width="100%" />
+      </div>
+
       @if (!cognito.requiredChangePassword()) {
-        <h2>Sign in with your CGIAR credentials</h2>
+        <h2 class="login-title">Log in to your PRMS Reporting Tool</h2>
+        <p class="login-description">Use your organization email to easily connect</p>
         <button
           class="corp-id-btn"
           (click)="this.cognito.loginWithAzureAd()"
           [disabled]="cognito.isLoadingAzureAd() || cognito.isLoadingCredentials()">
+          <img src="../../../assets/cgiar-logo.png" alt="CGIAR" class="cgiar-icon" />
+
           Continue with your CGIAR account
 
           @if (cognito.isLoadingAzureAd()) {
@@ -26,88 +29,95 @@
       @if (cognito.requiredChangePassword()) {
         <h2>Please change your password</h2>
       } @else {
-        <h2>Sign in with your email and password</h2>
+        <p class="external-users-text">For external users</p>
       }
 
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="email">Email:</label>
         <input
+          pInputText
           type="email"
           id="email"
-          autocomplete="off"
           placeholder="name@host.com"
           [(ngModel)]="cognito.body().email"
           (keydown)="handleKeyDown($event)"
           [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd() || cognito.requiredChangePassword()" />
       </div>
 
-      <div class="form-group" [ngStyle]="{ 'margin-bottom': !cognito.requiredChangePassword() ? '30px' : '15px' }">
+      <div class="form-group" [ngStyle]="{ 'margin-bottom': !cognito.requiredChangePassword() ? '20px' : '6px' }">
         <label for="password">
-          {{ cognito.requiredChangePassword() ? 'New Password' : 'Password' }}
+          {{ cognito.requiredChangePassword() ? 'New Password:' : 'Password:' }}
         </label>
-        <input
-          type="password"
-          id="password"
-          autocomplete="off"
+        <p-password
+          [ngClass]="{ 'ng-invalid ng-dirty': cognito.requiredChangePassword() && !isPasswordValid() }"
+          [toggleMask]="true"
+          [style]="{ width: '100%', fontSize: '12px' }"
+          [inputStyle]="{ width: '100%', borderRadius: '10px', fontSize: '12px' }"
+          [feedback]="cognito.requiredChangePassword()"
           [placeholder]="cognito.requiredChangePassword() ? 'New Password' : 'Password'"
           [(ngModel)]="cognito.body().password"
           (keydown)="handleKeyDown($event)"
-          [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()" />
+          [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()">
+          <ng-template pTemplate="footer">
+            <ul class="requirements-list">
+              <li [class.valid]="hasLowerCase(cognito.body().password)" [class.invalid]="!hasLowerCase(cognito.body().password)">
+                <i [class]="hasLowerCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain a lower case letter
+              </li>
+              <li [class.valid]="hasUpperCase(cognito.body().password)" [class.invalid]="!hasUpperCase(cognito.body().password)">
+                <i [class]="hasUpperCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain an upper case letter
+              </li>
+              <li [class.valid]="hasMinLength(cognito.body().password)" [class.invalid]="!hasMinLength(cognito.body().password)">
+                <i [class]="hasMinLength(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain at least 8 characters
+              </li>
+              <li [class.valid]="hasSpecialCharacter(cognito.body().password)" [class.invalid]="!hasSpecialCharacter(cognito.body().password)">
+                <i [class]="hasSpecialCharacter(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain a special character or a space
+              </li>
+              <li
+                [class.valid]="hasNoLeadingTrailingSpaces(cognito.body().password)"
+                [class.invalid]="!hasNoLeadingTrailingSpaces(cognito.body().password)">
+                <i [class]="hasNoLeadingTrailingSpaces(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must not contain a leading or trailing space
+              </li>
+            </ul>
+          </ng-template>
+        </p-password>
       </div>
 
       @if (cognito.requiredChangePassword()) {
-        <div class="password-requirements" *ngIf="cognito.body().password">
-          <ul class="requirements-list">
-            <li [class.valid]="hasLowerCase(cognito.body().password)" [class.invalid]="!hasLowerCase(cognito.body().password)">
-              <i [class]="hasLowerCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
-              Password must contain a lower case letter
-            </li>
-            <li [class.valid]="hasUpperCase(cognito.body().password)" [class.invalid]="!hasUpperCase(cognito.body().password)">
-              <i [class]="hasUpperCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
-              Password must contain an upper case letter
-            </li>
-            <li [class.valid]="hasMinLength(cognito.body().password)" [class.invalid]="!hasMinLength(cognito.body().password)">
-              <i [class]="hasMinLength(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
-              Password must contain at least 8 characters
-            </li>
-            <li [class.valid]="hasSpecialCharacter(cognito.body().password)" [class.invalid]="!hasSpecialCharacter(cognito.body().password)">
-              <i [class]="hasSpecialCharacter(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
-              Password must contain a special character or a space
-            </li>
-            <li
-              [class.valid]="hasNoLeadingTrailingSpaces(cognito.body().password)"
-              [class.invalid]="!hasNoLeadingTrailingSpaces(cognito.body().password)">
-              <i [class]="hasNoLeadingTrailingSpaces(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
-              Password must not contain a leading or trailing space
-            </li>
-          </ul>
-        </div>
-
         <div class="form-group" [ngStyle]="{ 'margin-bottom': '15px' }">
           <label for="confirmPassword">Confirm Password</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            autocomplete="new-password"
-            placeholder="Confirm Password"
+
+          <p-password
+            [toggleMask]="true"
+            [style]="{ width: '100%', fontSize: '12px' }"
+            [inputStyle]="{ width: '100%', borderRadius: '10px', fontSize: '12px' }"
+            [feedback]="cognito.requiredChangePassword()"
+            [ngClass]="{ 'ng-invalid ng-dirty': !doPasswordsMatch() }"
+            [placeholder]="'Confirm Password'"
             [(ngModel)]="cognito.body().confirmPassword"
             (keydown)="handleKeyDown($event)"
-            [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()" />
+            [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()">
+            <ng-template pTemplate="footer">
+              @if (cognito.body().confirmPassword && !doPasswordsMatch()) {
+                <div class="password-match password-match-error" style="margin-top: 10px">
+                  <i class="pi pi-times"></i>
+                  Passwords do not match
+                </div>
+              }
+
+              @if (cognito.body().confirmPassword && doPasswordsMatch() && cognito.body().password) {
+                <div class="password-match password-match-success" style="margin-top: 10px">
+                  <i class="pi pi-check"></i>
+                  Passwords match
+                </div>
+              }
+            </ng-template>
+          </p-password>
         </div>
-
-        @if (cognito.body().confirmPassword && !doPasswordsMatch()) {
-          <div class="password-match-error">
-            <i class="pi pi-times"></i>
-            Passwords do not match
-          </div>
-        }
-
-        @if (cognito.body().confirmPassword && doPasswordsMatch() && cognito.body().password) {
-          <div class="password-match-success">
-            <i class="pi pi-check"></i>
-            Passwords match
-          </div>
-        }
       }
 
       <button
@@ -119,9 +129,9 @@
             Change Password
           } @else {
             @if (cognito.isLoadingCredentials()) {
-              Signing in
+              Logging in
             } @else {
-              Sign in
+              Log in
             }
           }
         </span>
@@ -130,6 +140,26 @@
           <i class="pi pi-spin pi-spinner" style="font-size: 1rem; margin-left: 10px"></i>
         }
       </button>
+
+      <div class="divider"></div>
+
+      <div class="need-help-container">
+        <p class="need-help-text">Need help? Contact PRMS technical support at</p>
+        <a class="global-link" href="mailto:PRMSTechSupport&#64;cgiar.org">PRMSTechSupport&#64;cgiar.org</a>
+      </div>
+
+      <p class="terms-and-conditions-text">
+        By continuing, you acknowledge that you understand and agree to the
+        <a
+          class="global-link"
+          href="https://cgiar-prms.notion.site/Legal-Terms-eb2f3e436f3e46bd9057b1cb1e3391b8"
+          target="_blank"
+          rel="noopener noreferrer">
+          Terms & Conditions
+        </a>
+      </p>
     </div>
   </div>
+
+  <div class="bg-image-section"></div>
 </div>
