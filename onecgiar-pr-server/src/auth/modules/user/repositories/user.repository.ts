@@ -75,10 +75,6 @@ export class UserRepository extends Repository<User> {
   }
 
   async updateLastLoginUserByEmail(email: string) {
-    console.log(
-      '🚀 ~ UserRepository ~ updateLastLoginUserByEmail ~ email:',
-      email,
-    );
     const queryData = `
     UPDATE users 
     	set last_login = NOW()
