@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PasswordModule } from 'primeng/password';
 import { InputTextModule } from 'primeng/inputtext';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -17,8 +18,13 @@ import { InputTextModule } from 'primeng/inputtext';
 export class LoginComponent implements OnInit, OnDestroy {
   cognito = inject(CognitoService);
   authService = inject(AuthService);
+  router = inject(Router);
 
   ngOnInit(): void {
+    if (this.authService.localStorageUser) {
+      this.router.navigate(['/']);
+    }
+
     this.authService.inLogin.set(true);
   }
 
