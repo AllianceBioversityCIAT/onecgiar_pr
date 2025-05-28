@@ -14,7 +14,7 @@ COPY package*.json ./
 FROM base AS development
 
 # Install app dependencies
-RUN npm install  --ignore-scripts
+RUN npm install
 
 # Bundle app source
 COPY . .
@@ -32,7 +32,7 @@ CMD ["npm", "run", "start"]
 
 FROM base AS build
 
-RUN npm ci --only=production --ignore-scripts
+RUN npm ci --only=production
 
 COPY . .
 
