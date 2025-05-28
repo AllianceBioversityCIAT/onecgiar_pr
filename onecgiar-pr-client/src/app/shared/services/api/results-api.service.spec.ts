@@ -3559,4 +3559,35 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_loginWithAzureAd', () => {
+    it('should call GET_loginWithAzureAd and return expected data', done => {
+      const provider = 'CGIAR-AzureAD';
+      service.GET_loginWithAzureAd(provider).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_validateCognitoCode', () => {
+    it('should call POST_validateCognitoCode and return expected data', done => {
+      const code = 'test-code';
+      service.POST_validateCognitoCode(code).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/validate/code`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ code });
+
+      req.flush(mockResponse);
+    });
+  });
 });

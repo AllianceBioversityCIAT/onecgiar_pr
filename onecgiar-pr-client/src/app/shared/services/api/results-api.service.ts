@@ -1110,4 +1110,12 @@ export class ResultsApiService {
   getNotionBlockChildren(blockId: string) {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
+
+  GET_loginWithAzureAd(provider: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+  }
+
+  POST_validateCognitoCode(code: string) {
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
+  }
 }
