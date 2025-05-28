@@ -24,6 +24,12 @@ FROM node:20-alpine AS test
 # Set the working directory
 WORKDIR /usr/src/app
 
+# Set timezone to America/Bogota
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/America/Bogota /etc/localtime && \
+    echo "America/Bogota" > /etc/timezone && \
+    apk del tzdata
+
 # Copy the built Angular application from the build stage
 COPY --from=build /usr/src/app /usr/src/app
 
