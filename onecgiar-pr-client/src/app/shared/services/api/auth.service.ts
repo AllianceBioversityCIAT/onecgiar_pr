@@ -34,8 +34,8 @@ export class AuthService {
 
   logout() {
     this.logOutTawtkTo();
-    this.router.navigate(['/login']);
     localStorage.clear();
+    window.location.replace('/login');
   }
 
   private logOutTawtkTo() {
@@ -64,10 +64,6 @@ export class AuthService {
         document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     }
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
   }
 
   userAuth(body: UserAuth) {
