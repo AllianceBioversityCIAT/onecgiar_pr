@@ -327,4 +327,77 @@ describe('LoginComponent', () => {
       expect(inLoginSpy).toHaveBeenCalledWith(false);
     });
   });
+
+  describe('handleKeyDown', () => {
+    beforeEach(() => {
+      // Add the missing methods to the mock
+      cognitoServiceMock.changePassword = jest.fn();
+      cognitoServiceMock.loginWithCredentials = jest.fn();
+    });
+
+    it('should not call any login methods when key is not Enter', () => {
+      const event = new KeyboardEvent('keydown', { key: 'Tab' });
+
+      component.handleKeyDown(event);
+
+      expect(cognitoServiceMock.changePassword).not.toHaveBeenCalled();
+      expect(cognitoServiceMock.loginWithCredentials).not.toHaveBeenCalled();
+    });
+
+    it('should not call any login methods when validation fails', () => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+      // Mock validateBody to return true (invalid form)
+      jest.spyOn(component, 'validateBody').mockReturnValue(true);
+
+      component.handleKeyDown(event);
+
+      expect(cognitoServiceMock.changePassword).not.toHaveBeenCalled();
+      expect(cognitoServiceMock.loginWithCredentials).not.toHaveBeenCalled();
+    });
+
+    describe('when not required to change password', () => {
+      beforeEach(() => {
+        component.cognito.requiredChangePassword = signal(false);
+      });
+
+      it('should call loginWithCredentials when Enter is pressed and form is valid', () => {
+        const event = new KeyboardEvent('keydown', { key: 'Enter' });
+        const body = { email: 'test@example.com', password: 'ValidPass1!' };
+
+        // Mock validateBody to return false (valid form)
+        jest.spyOn(component, 'validateBody').mockReturnValue(false);
+        component.cognito.body.set(body);
+
+        component.handleKeyDown(event);
+
+        expect(cognitoServiceMock.loginWithCredentials).toHaveBeenCalledWith(body);
+        expect(cognitoServiceMock.changePassword).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('when required to change password', () => {
+      beforeEach(() => {
+        component.cognito.requiredChangePassword = signal(true);
+      });
+
+      it('should call changePassword when Enter is pressed and form is valid', () => {
+        const event = new KeyboardEvent('keydown', { key: 'Enter' });
+        const body = {
+          email: 'test@example.com',
+          password: 'ValidPass1!',
+          confirmPassword: 'ValidPass1!'
+        };
+
+        // Mock validateBody to return false (valid form)
+        jest.spyOn(component, 'validateBody').mockReturnValue(false);
+        component.cognito.body.set(body);
+
+        component.handleKeyDown(event);
+
+        expect(cognitoServiceMock.changePassword).toHaveBeenCalled();
+        expect(cognitoServiceMock.loginWithCredentials).not.toHaveBeenCalled();
+      });
+    });
+  });
 });

@@ -71,6 +71,17 @@ export class LoginComponent implements OnInit, OnDestroy {
     return password === password.trim();
   }
 
+  // Handle keydown events to support Enter key submissions
+  handleKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !this.validateBody()) {
+      if (this.cognito.requiredChangePassword()) {
+        this.cognito.changePassword();
+      } else {
+        this.cognito.loginWithCredentials(this.cognito.body());
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.authService.inLogin.set(false);
   }

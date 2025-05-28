@@ -37,6 +37,7 @@
           autocomplete="off"
           placeholder="name@host.com"
           [(ngModel)]="cognito.body().email"
+          (keydown)="handleKeyDown($event)"
           [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd() || cognito.requiredChangePassword()" />
       </div>
 
@@ -50,6 +51,7 @@
           autocomplete="off"
           [placeholder]="cognito.requiredChangePassword() ? 'New Password' : 'Password'"
           [(ngModel)]="cognito.body().password"
+          (keydown)="handleKeyDown($event)"
           [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()" />
       </div>
 
@@ -89,6 +91,7 @@
             autocomplete="new-password"
             placeholder="Confirm Password"
             [(ngModel)]="cognito.body().confirmPassword"
+            (keydown)="handleKeyDown($event)"
             [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()" />
         </div>
 
