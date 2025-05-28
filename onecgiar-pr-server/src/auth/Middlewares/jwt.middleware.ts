@@ -42,7 +42,6 @@ export class JwtMiddleware implements NestMiddleware {
       const authBasic: string = req.headers.authorization;
       const authToken: string = req.headers['auth'] as string;
 
-      let token: string;
       let jwtPayload: any;
 
       if (authBasic?.startsWith('Basic ')) {
@@ -74,7 +73,7 @@ export class JwtMiddleware implements NestMiddleware {
         );
       }
 
-      token = authToken;
+      const token: string = authToken;
 
       try {
         jwtPayload = await this._jwtService.verifyAsync(token, {

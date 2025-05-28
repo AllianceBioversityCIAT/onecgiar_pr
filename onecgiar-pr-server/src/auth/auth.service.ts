@@ -9,7 +9,6 @@ import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
 import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
-import { User } from './modules/user/entities/user.entity';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 
 @Injectable()
@@ -127,8 +126,6 @@ export class AuthService {
             userMetadata,
           );
 
-        this._logger.debug(`Auth MS response: ${JSON.stringify(authResponse)}`);
-
         if (authResponse?.challengeName === 'NEW_PASSWORD_REQUIRED') {
           this._logger.log(
             `User ${userLogin.email} needs to set a new password (first login)`,
@@ -160,8 +157,6 @@ export class AuthService {
             'Invalid authentication response from Auth Microservice',
           );
         }
-
-        const userInfo = authResponse.userInfo;
 
         await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
         this._logger.log(`Updated last login for user: ${userLogin.email}`);
