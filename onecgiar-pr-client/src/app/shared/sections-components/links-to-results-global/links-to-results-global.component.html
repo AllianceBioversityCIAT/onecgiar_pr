@@ -17,13 +17,13 @@
         [rowsPerPageOptions]="[5,50,100]">
         <ng-template pTemplate="header">
             <tr>
-                <th (click)="validateOrder('result_code')" pSortableColumn="result_code"> <p-sortIcon
+                <th id="result_code" (click)="validateOrder('result_code')" pSortableColumn="result_code"> <p-sortIcon
                         field="result_code"></p-sortIcon>Result code</th>
-                <th (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
+                <th [id]="column.attr" (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
                     *ngFor="let column of columnOrder">
                     <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
                 </th>
-                <th>Action</th>
+                <th id="action">Action</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-result>

@@ -12,8 +12,6 @@ export interface AlertOptions {
   providedIn: 'root'
 })
 export class CustomizedAlertsFeService {
-  //TODO customized alerts for events
-  // showed = false;
   statusIcons = [];
   constructor() {
     this.statusIcons['error'] = 'priority_high';
@@ -78,9 +76,7 @@ export class CustomizedAlertsFeService {
       }, 3000);
 
     alert.addEventListener('animationend', () => {
-      //('animationend');
       if (alert.classList.contains('delete')) {
-        //('remove');
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);

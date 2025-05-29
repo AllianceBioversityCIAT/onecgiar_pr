@@ -12,10 +12,6 @@ export class KnowledgeProductBodyMapped {
   altmetric_img_url: string;
   altmetric_details_url: string;
   references: string;
-  //findable: number;
-  //accessible: number;
-  //interoperable: number;
-  //reusable: number;
   onlineYearCG: number;
   yearCG: number;
   is_peer_reviewed_CG: string;

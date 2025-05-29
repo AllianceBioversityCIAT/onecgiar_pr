@@ -28,7 +28,6 @@ export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.cleanSelected();
     this.manageInnovationsListSE.GETallInnovations(this.body.initiative_id);
-    //(this.api.rolesSE.readOnly);
   }
 
   ngOnDestroy(): void {
@@ -51,6 +50,6 @@ export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
   }
 
   cleanSelected() {
-    this.manageInnovationsListSE.allInnovationsList.map((inno: CoreInnovationSelected) => (inno.selected = false));
+    this.manageInnovationsListSE.allInnovationsList.forEach((inno: CoreInnovationSelected) => (inno.selected = false));
   }
 }

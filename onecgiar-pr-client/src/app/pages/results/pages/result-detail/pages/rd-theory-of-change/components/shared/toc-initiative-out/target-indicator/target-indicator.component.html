@@ -54,8 +54,6 @@
 
     <div class="targets_container" *ngIf="initiative?.targets?.length">
         <div *ngFor="let item of initiative?.targets; let i = index;">
-            <!-- <div appFeedbackValidation labelText="Contribution to an indicator's target" [isComplete]="!checkAlert()">
-            </div> -->
 
             <div class="target_id">
                 <div class="square"></div>
@@ -78,11 +76,6 @@
                 </header>
 
                 <div class="indicator_content_information">
-                    <!-- <div
-                        *ngIf="initiative.type_value !== 'custom' && initiative.number_result_type !== initiative?.result.result_type_id && (initiative?.result.result_type_id !== 4 && initiative?.result.result_type_id !== 8)">
-                        <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
-                            [description]="descriptionWarning(initiative?.result.name, initiative?.type)"></app-alert-status>
-                    </div> -->
 
                     <div *ngIf="!initiative?.is_calculable">
                         <app-alert-status inlineStyles="margin: 10px 0px;" status="warning"
@@ -96,8 +89,6 @@
                             [description]="descriptionWarningYear(item?.target_date, initiative?.result?.phase_year).description"></app-alert-status>
                     </div>
 
-                    <!-- <div
-                        *ngIf="initiative.type_value === 'custom' || initiative.number_result_type ===  initiative?.result.result_type_id || (initiative?.result.result_type_id === 4 || initiative?.result.result_type_id === 8)"> -->
                         <div class="indicator_content_information_item">
                             <app-pr-yes-or-not id="table-desc"
                                 label="Does your result directly contribute to this indicator?" [required]="true"
@@ -124,7 +115,6 @@
                                 [disabled]="!item.target_progress_narrative" placeholder="Enter text" [rows]="2">
                             </app-pr-textarea>
                         </div>
-                    <!-- </div> -->
                 </div>
             </div>
         </div>

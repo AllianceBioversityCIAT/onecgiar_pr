@@ -7,18 +7,13 @@ import { ResultsApiService } from '../api/results-api.service';
 })
 export class GreenChecksService {
   submit = null;
-  constructor(private api: ApiService, private resultsApiSE: ResultsApiService) {}
+  constructor(private readonly api: ApiService, private readonly resultsApiSE: ResultsApiService) {}
 
   updateGreenChecks() {
     setTimeout(() => {
       if (this.resultsApiSE.currentResultId) {
-        // this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
-        //   //('🚀 ~ file: green-checks.service.ts:16 ~ GreenChecksService ~ this.api.resultsSE.GET_greenChecksByResultId ~ response:', response);
-        //   this.api.dataControlSE.green_checks = response?.green_checDks;
-        // });
         this.api.resultsSE.PATCH_greenChecksByResultId().subscribe(resp => {
           this.api.dataControlSE.green_checks = resp.response.green_checks;
-          //(resp.response);
           this.submit = Boolean(resp.response?.submit);
         });
       }
@@ -30,7 +25,6 @@ export class GreenChecksService {
       if (this.resultsApiSE.currentResultId) {
         this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
           this.api.dataControlSE.green_checks = response.green_checks;
-          //(this.api.dataControlSE.green_checks);
         });
       }
     }, 10);

@@ -76,7 +76,7 @@
     @let caption = joinText(block?.image?.caption);
 
     @if (image) {
-      <img [src]="image" alt="Image" width="100%" class="mb-10" />
+      <img [src]="image" alt="Notion Img" width="100%" class="mb-10" />
     }
 
     @if (caption) {
@@ -113,11 +113,9 @@
           <p class="whats-new-page-details_default_text mb-10" [innerHTML]="text"></p>
 
           @if (children) {
-            <!-- <div class="whats-new-page-details_children_container"> -->
             @for (child of children; track child.id; let i = $index) {
               <app-dynamic-notion-block [block]="child"></app-dynamic-notion-block>
             }
-            <!-- </div> -->
           }
         </li>
       </ul>

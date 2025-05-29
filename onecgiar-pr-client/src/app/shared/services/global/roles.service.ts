@@ -37,7 +37,6 @@ export class RolesService {
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
-    //(restrictionFinded);
     return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
   }
   validateApplication(application) {
@@ -46,8 +45,6 @@ export class RolesService {
   }
 
   async validateReadOnly(result?) {
-    //('%cvalidateReadOnly', 'background: #222; color: #52cd47');
-    //(result);
     if (this.platformIsClosed) {
       this.readOnly = true;
       this.updateRolesListFromLocalStorage();
@@ -62,14 +59,10 @@ export class RolesService {
       if (isAdmin) return (this.access.canDdit = true);
       if (!result) return null;
       const { initiative_id } = result;
-      //(initiative_id);
-      //(initiative);
 
       const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
       this.access.canDdit = Boolean(initiativeFinded);
       this.readOnly = Boolean(!initiativeFinded);
-      // this.readOnly ? //('%cIs ReadOnly => ' + this.readOnly, 'background: #222; color: #d84242') : //('%cNot ReadOnly => ' + this.readOnly, 'background: #222; color: #aaeaf5');
-      //('%c******END OF validateReadOnly*******', 'background: #222; color: #52cd47');
       return null;
     };
     updateMyRoles(this.updateRolesListFromLocalStorage());
@@ -93,12 +86,10 @@ export class RolesService {
     return new Promise((resolve, reject) => {
       this.authSE.GET_allRolesByUser().subscribe(
         ({ response }) => {
-          //? Update role list
           this.roles = response;
           localStorage.setItem('roles', JSON.stringify(response));
           this.getIsAdminValue();
 
-          //?
           this.firstValidationOfReadOnly = true;
           resolve(response);
         },
@@ -119,18 +110,4 @@ export class RolesService {
     if (initiativeFind?.role_id == 6 || this.dataControlSE?.currentResult?.status_id == 2) return false;
     return !!initiativeFind;
   }
-
-  //TODO App roles
-  /*
-  Admin
-  Guest
-  */
-
-  //TODO Roles by initiative
-  /*
-  Lead
-  Co-Lead
-  Coordinator
-  Member
-  */
 }

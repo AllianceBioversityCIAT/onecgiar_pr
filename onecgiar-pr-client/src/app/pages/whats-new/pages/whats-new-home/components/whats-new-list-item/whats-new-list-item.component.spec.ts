@@ -38,6 +38,11 @@ describe('WhatsNewListItemComponent', () => {
           }
         ]
       },
+      'Released date': {
+        date: {
+          start: '2023-01-15'
+        }
+      },
       Created: {
         created_time: '2023-01-15T12:00:00Z'
       }

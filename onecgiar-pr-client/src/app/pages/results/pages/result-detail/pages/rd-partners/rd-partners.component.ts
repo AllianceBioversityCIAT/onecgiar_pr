@@ -26,11 +26,11 @@ export class RdPartnersComponent implements OnInit {
     public institutionsSE: InstitutionsService,
     public rolesSE: RolesService,
     public rdPartnersSE: RdPartnersService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
@@ -108,15 +108,11 @@ export class RdPartnersComponent implements OnInit {
       this.rdPartnersSE.partnersBody.institutions = [];
     }
 
-    //('leadPartner', this.rdPartnersSE.leadPartnerId);
-    //('leadCenter', this.rdPartnersSE.leadCenterCode);
     if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
       this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
         mqap.is_leading_result = this.rdPartnersSE.leadPartnerId === mqap.institutions_id;
       });
       this.rdPartnersSE.partnersBody.institutions?.forEach(i => {
-        //('institution', i);
-        //('is leading result');
         i.is_leading_result = this.rdPartnersSE.leadPartnerId === i.institutions_id;
       });
       this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => (center.is_leading_result = false));
