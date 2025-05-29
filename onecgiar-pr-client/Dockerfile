@@ -1,56 +1,36 @@
-#################### DEVELOPMENT STAGE ####################
-# Use an official Node.js runtime AS a parent image
+#################### BUILD STAGE ####################
 FROM node:20-alpine AS build
 
-# Set the working directory
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy dependencies
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy the rest of the application code
+# Copy the application code
 COPY . .
 
-# Build the Angular application
+# Build Angular app in dev mode (as solicitado)
 RUN npm run build:dev
 
-#################### TESTING STAGE ####################
-# Use the same Node.js runtime AS a parent image
-FROM node:20-alpine AS test
-
-# Set the working directory
-WORKDIR /usr/src/app
-
-# Set timezone to America/Bogota
-RUN apk add --no-cache tzdata && \
-    cp /usr/share/zoneinfo/America/Bogota /etc/localtime && \
-    echo "America/Bogota" > /etc/timezone && \
-    apk del tzdata
-
-# Copy the built Angular application from the build stage
-COPY --from=build /usr/src/app /usr/src/app
-
 #################### PRODUCTION STAGE ####################
-# Use an official Nginx runtime AS a parent image
 FROM nginx:alpine
 
-# Remove the default Nginx website
+# Remove default Nginx website
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the built Angular application from the build stage
-COPY --from=build /usr/src/app/dist/research-indicators/browser /usr/share/nginx/html
-
-# Copy the custom Nginx configuration file
+# Copy custom Nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Ensure the correct permissions
+# Copy built Angular files
+COPY --from=build /usr/src/app/dist/onecgiar-pr-client /usr/share/nginx/html
+
+# Set permissions
 RUN chmod -R 755 /usr/share/nginx/html
 
-# Expose port 80
+# Expose HTTP port
 EXPOSE 80
 
-# Start Nginx server
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
