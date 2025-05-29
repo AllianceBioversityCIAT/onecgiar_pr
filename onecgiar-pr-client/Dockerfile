@@ -15,7 +15,7 @@ RUN npm ci
 COPY . .
 
 # Build the Angular application
-RUN npm run build --prod
+RUN npm run build:dev
 
 #################### TESTING STAGE ####################
 # Use the same Node.js runtime AS a parent image
