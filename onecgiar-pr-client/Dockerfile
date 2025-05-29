@@ -1,36 +1,44 @@
 #################### BUILD STAGE ####################
 FROM node:20-alpine AS build
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Copy dependencies
 COPY package*.json ./
 RUN npm ci
 
-# Copy the application code
 COPY . .
 
-# Build Angular app in dev mode (as solicitado)
+# Build in dev mode as per team requirement
 RUN npm run build:dev
+
+#################### TESTING STAGE ####################
+FROM node:20-alpine AS test
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# Run tests (adjust the script if needed)
+CMD ["npm", "run", "test:coverage"]
 
 #################### PRODUCTION STAGE ####################
 FROM nginx:alpine
 
-# Remove default Nginx website
+# Clean default Nginx html
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy custom Nginx config
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Copy built Angular files
+# Copy built Angular app from build stage
 COPY --from=build /usr/src/app/dist/onecgiar-pr-client /usr/share/nginx/html
 
-# Set permissions
+# Permissions
 RUN chmod -R 755 /usr/share/nginx/html
 
-# Expose HTTP port
 EXPOSE 80
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
