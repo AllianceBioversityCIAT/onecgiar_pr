@@ -20,7 +20,7 @@ import { dataSource } from './config/orm.config';
 import { JwtMiddleware } from './auth/Middlewares/jwt.middleware';
 import { UserModule } from './auth/modules/user/user.module';
 import { RoleModule } from './auth/modules/role/role.module';
-import { JwtService } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { User } from './auth/modules/user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { HttpExceptionFilter } from './shared/handlers/error.exception';
@@ -44,9 +44,12 @@ import { UserNotificationSettingsModule } from './api/user-notification-settings
 import { EmailNotificationManagementModule } from './shared/microservices/email-notification-management/email-notification-management.module';
 import { ContributionToIndicatorsModule } from './api/contribution-to-indicators/contribution-to-indicators.module';
 import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
+import { AuthMicroserviceService } from './shared/microservices/auth-microservice/auth-microservice.service';
+import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
 
 @Module({
   imports: [
+    JwtModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -88,6 +91,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
     NotificationModule,
     ContributionToIndicatorsModule,
     ResultQaedModule,
+    AuthMicroserviceModule,
   ],
   controllers: [AppController],
   providers: [
@@ -103,6 +107,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
+    AuthMicroserviceService,
   ],
 })
 export class AppModule implements NestModule {

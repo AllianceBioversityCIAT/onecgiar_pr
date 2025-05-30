@@ -1,50 +1,165 @@
-<!--Hey! This is the original version
-of Simple CSS Waves-->
-
-<div class="header fadeIn">
-  <!--Content before waves-->
-  <input type="text" id="fake" style="opacity: 0;position: absolute;">
-  <div class="inner-header flex">
-    <div class="login_card" [ngClass]="{'success_padding': successLogin}">
-      <lord-icon *ngIf="successLogin" src="https://cdn.lordicon.com/vnioezyi.json" trigger="loop"
-        style="width:100px;height:100px">
-      </lord-icon>
-      <div *ngIf="successLogin" class="successText">Successful login</div>
-      <div class="form" [ngClass]="{'successLogin': successLogin}">
-        <!-- <div class="title">Login</div> -->
-        <div class="welcome">{{internationalizationData.global.platformName}} Tool</div>
-        <app-pr-input [required]="false" placeholder="e.g. Example@cgiar.org" label="Email" type="email"
-          [isStatic]="true" [(ngModel)]="userLoginData.email">
-        </app-pr-input>
-        <app-pr-input [required]="false" id="password" placeholder="Enter your password" label="Password"
-          type="password" [isStatic]="true" [(ngModel)]="userLoginData.password">
-        </app-pr-input>
-        <div class="center_flex_100" id="login" style="margin-top: 20px;" (click)="onLogin()">
-          <app-pr-button padding="medium" text="Login" icon="arrow_forward_ios"></app-pr-button>
-        </div>
-        <div class="question_container" (click)="this.footerSE.displayContactUs = true" id="question">
-          <a class="question">Have a question?</a>
-        </div>
-
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-form">
+      <div class="logo-section">
+        <img src="../../../assets/logos-login.png" alt="CGIAR and PRMS logo" width="100%" />
       </div>
+
+      @if (!cognito.requiredChangePassword()) {
+        <h2 class="login-title">Log in to your PRMS Reporting Tool</h2>
+        <p class="login-description">Use your organization email to easily connect</p>
+        <button
+          class="corp-id-btn"
+          (click)="this.cognito.loginWithAzureAd()"
+          [disabled]="cognito.isLoadingAzureAd() || cognito.isLoadingCredentials()">
+          <img src="../../../assets/cgiar-logo.png" alt="CGIAR" class="cgiar-icon" />
+
+          Continue with your CGIAR account
+
+          @if (cognito.isLoadingAzureAd()) {
+            <i class="pi pi-spin pi-spinner" style="font-size: 1rem; margin-left: 10px"></i>
+          }
+        </button>
+
+        <div class="divider">
+          <span>or</span>
+        </div>
+      }
+
+      @if (cognito.requiredChangePassword()) {
+        <h2 class="login-title">Please change your password</h2>
+      } @else {
+        <p class="external-users-text">For external users</p>
+      }
+
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input
+          pInputText
+          type="email"
+          id="email"
+          placeholder="name@host.com"
+          [(ngModel)]="cognito.body().email"
+          (keydown)="handleKeyDown($event)"
+          [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd() || cognito.requiredChangePassword()" />
+      </div>
+
+      <div class="form-group" [ngStyle]="{ 'margin-bottom': !cognito.requiredChangePassword() ? '20px' : '6px' }">
+        <label for="password">
+          {{ cognito.requiredChangePassword() ? 'New Password:' : 'Password:' }}
+        </label>
+        <p-password
+          [ngClass]="{ 'ng-invalid ng-dirty': cognito.requiredChangePassword() && !isPasswordValid() }"
+          [toggleMask]="true"
+          [style]="{ width: '100%', fontSize: '12px' }"
+          [inputStyle]="{ width: '100%', borderRadius: '10px', fontSize: '12px' }"
+          [feedback]="cognito.requiredChangePassword()"
+          [placeholder]="cognito.requiredChangePassword() ? 'New Password' : 'Password'"
+          [(ngModel)]="cognito.body().password"
+          (keydown)="handleKeyDown($event)"
+          [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()">
+          <ng-template pTemplate="footer">
+            <ul class="requirements-list">
+              <li [class.valid]="hasLowerCase(cognito.body().password)" [class.invalid]="!hasLowerCase(cognito.body().password)">
+                <i [class]="hasLowerCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain a lower case letter
+              </li>
+              <li [class.valid]="hasUpperCase(cognito.body().password)" [class.invalid]="!hasUpperCase(cognito.body().password)">
+                <i [class]="hasUpperCase(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain an upper case letter
+              </li>
+              <li [class.valid]="hasMinLength(cognito.body().password)" [class.invalid]="!hasMinLength(cognito.body().password)">
+                <i [class]="hasMinLength(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain at least 8 characters
+              </li>
+              <li [class.valid]="hasSpecialCharacter(cognito.body().password)" [class.invalid]="!hasSpecialCharacter(cognito.body().password)">
+                <i [class]="hasSpecialCharacter(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must contain a special character or a space
+              </li>
+              <li
+                [class.valid]="hasNoLeadingTrailingSpaces(cognito.body().password)"
+                [class.invalid]="!hasNoLeadingTrailingSpaces(cognito.body().password)">
+                <i [class]="hasNoLeadingTrailingSpaces(cognito.body().password) ? 'pi pi-check' : 'pi pi-times'"></i>
+                Password must not contain a leading or trailing space
+              </li>
+            </ul>
+          </ng-template>
+        </p-password>
+      </div>
+
+      @if (cognito.requiredChangePassword()) {
+        <div class="form-group" [ngStyle]="{ 'margin-bottom': '15px' }">
+          <label for="confirmPassword">Confirm Password</label>
+
+          <p-password
+            [toggleMask]="true"
+            [style]="{ width: '100%', fontSize: '12px' }"
+            [inputStyle]="{ width: '100%', borderRadius: '10px', fontSize: '12px' }"
+            [feedback]="cognito.requiredChangePassword()"
+            [ngClass]="{ 'ng-invalid ng-dirty': !doPasswordsMatch() }"
+            [placeholder]="'Confirm Password'"
+            [(ngModel)]="cognito.body().confirmPassword"
+            (keydown)="handleKeyDown($event)"
+            [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd()">
+            <ng-template pTemplate="footer">
+              @if (cognito.body().confirmPassword && !doPasswordsMatch()) {
+                <div class="password-match password-match-error" style="margin-top: 10px">
+                  <i class="pi pi-times"></i>
+                  Passwords do not match
+                </div>
+              }
+
+              @if (cognito.body().confirmPassword && doPasswordsMatch() && cognito.body().password) {
+                <div class="password-match password-match-success" style="margin-top: 10px">
+                  <i class="pi pi-check"></i>
+                  Passwords match
+                </div>
+              }
+            </ng-template>
+          </p-password>
+        </div>
+      }
+
+      <button
+        class="signin-btn"
+        [disabled]="cognito.isLoadingCredentials() || cognito.isLoadingAzureAd() || validateBody()"
+        (click)="cognito.requiredChangePassword() ? cognito.changePassword() : cognito.loginWithCredentials(cognito.body())">
+        <span>
+          @if (cognito.requiredChangePassword()) {
+            Change Password
+          } @else {
+            @if (cognito.isLoadingCredentials()) {
+              Logging in
+            } @else {
+              Log in
+            }
+          }
+        </span>
+
+        @if (cognito.isLoadingCredentials()) {
+          <i class="pi pi-spin pi-spinner" style="font-size: 1rem; margin-left: 10px"></i>
+        }
+      </button>
+
+      <div class="divider"></div>
+
+      <div class="need-help-container">
+        <p class="need-help-text">Need help? Contact PRMS technical support at</p>
+        <a class="global-link" href="mailto:PRMSTechSupport&#64;cgiar.org">PRMSTechSupport&#64;cgiar.org</a>
+      </div>
+
+      <p class="terms-and-conditions-text">
+        By continuing, you acknowledge that you understand and agree to the
+        <a
+          class="global-link"
+          href="https://cgiar-prms.notion.site/Legal-Terms-eb2f3e436f3e46bd9057b1cb1e3391b8"
+          target="_blank"
+          rel="noopener noreferrer">
+          Terms & Conditions
+        </a>
+      </p>
     </div>
   </div>
 
-  <!--Waves Container-->
-  <div>
-    <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-      viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
-      <defs>
-        <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
-      </defs>
-      <g class="parallax">
-        <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7" />
-        <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
-        <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
-        <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff" />
-      </g>
-    </svg>
-  </div>
-  <!--Waves end-->
+  <div class="bg-image-section"></div>
 </div>
-<!--Header ends-->
