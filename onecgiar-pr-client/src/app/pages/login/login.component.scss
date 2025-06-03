@@ -9,6 +9,10 @@
   background-image: url('../../../assets/login-cover.png');
   background-size: cover;
   background-position: right;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
 }
 
 .login-card {
@@ -17,6 +21,10 @@
   flex-direction: column;
   padding: 40px;
   background: url('../../../assets/texture-bg.png');
+
+  @media (max-width: 767px) {
+    width: 100%;
+  }
 }
 
 .logo-section {
@@ -24,6 +32,10 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 60px;
+
+  @media (max-height: 780px) {
+    margin-bottom: 0px;
+  }
 }
 
 .login-title {
@@ -101,6 +113,10 @@ h2 {
   margin: 20px 0;
   width: 100%;
   color: #9ca2c3 !important;
+
+  @media (max-height: 780px) {
+    margin: 10px 0;
+  }
 }
 
 .divider::before,
@@ -186,6 +202,10 @@ input {
   width: 100%;
   gap: 5px;
   margin-bottom: 20px;
+
+  @media (max-height: 780px) {
+    margin-bottom: 10px;
+  }
 }
 
 .need-help-text {
