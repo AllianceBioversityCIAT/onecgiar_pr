@@ -72,16 +72,17 @@ describe('OutcomeIndicatorHomeComponent', () => {
         EOIsConfig: {
           data: outcomeIndicatorService.eoisData,
           wscols: wscolsEOIs,
-          cellToCenter: [4, 5, 6, 7],
+          cellToCenter: [1, 4, 5, 6, 7],
           worksheetName: 'EoI outcomes'
         },
         WPsConfig: {
           data: outcomeIndicatorService.wpsData,
           wscols: wscolsWPs,
-          cellToCenter: [5, 6, 7, 8],
+          cellToCenter: [1, 5, 6, 7, 8],
           worksheetName: 'WP outcomes'
         },
-        isT1R: false
+        isT1R: false,
+        showInitiativeCode: false
       });
     });
 

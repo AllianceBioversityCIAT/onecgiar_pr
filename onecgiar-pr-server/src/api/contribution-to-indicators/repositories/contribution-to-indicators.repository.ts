@@ -25,6 +25,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     const relationName = 'outcome';
     const dataQuery = `
       select json_object(
+        "initiative_official_code", ci.official_code,
         "workpackage_code", wp.wp_official_code,
         "workpackage_name", wp.name,
         "workpackage_short_name", wp.acronym,
@@ -37,8 +38,8 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
 	      and ${relationName}.id_toc_initiative = ci.toc_id and ${relationName}.work_packages_id = wp.id
       right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
-      group by wp.id
-      order by wp.id
+      group by ci.official_code, wp.id
+      order by ci.official_code, wp.id
     `;
 
     const result = await this.dataSource
@@ -93,6 +94,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         and ${relationName}.id_toc_initiative = ci.toc_id
       right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
+      order by ci.official_code
     `;
 
     const result = await this.dataSource
@@ -255,6 +257,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
 
   private _getTocResultSubquery(outerRelationName: string): string {
     return `json_object(
+          "initiative_official_code", ci.official_code,
           "toc_result_id", ${outerRelationName}.id,
           "toc_result_uuid", ${outerRelationName}.toc_result_id,
           "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[[:space:]]+|[[:space:]]+$', ''),

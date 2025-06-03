@@ -27,7 +27,7 @@ export class OutcomeIndicatorHomeComponent {
 
     this.api.resultsSE.GET_fullReport().subscribe({
       next: ({ response }) => {
-        this.exportIndicatorsToExcel(response.eois, response.wps, `Full_report_OIM_`);
+        this.exportIndicatorsToExcel(response.eois, response.wps, `Full_report_OIM_`, true);
         this.outcomeIService.requestingFullReport.set(false);
       },
       error: error => {
@@ -40,7 +40,8 @@ export class OutcomeIndicatorHomeComponent {
   exportIndicatorsToExcel(
     eoisData: any,
     wpsData: any,
-    fileName: string = `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`
+    fileName: string = `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
+    showInitiativeCode: boolean = false
   ) {
     if (
       !this.outcomeIService.initiativeIdFilter ||
@@ -52,6 +53,7 @@ export class OutcomeIndicatorHomeComponent {
     }
 
     const wscolsEOIs = [
+      ...(showInitiativeCode ? [{ header: 'Initiative', key: 'initiative_official_code', width: 22 }] : []),
       { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },
       { header: 'Indicator Type', key: 'indicator_type', width: 50 },
@@ -64,6 +66,7 @@ export class OutcomeIndicatorHomeComponent {
     ];
 
     const wscolsWPs = [
+      ...(showInitiativeCode ? [{ header: 'Initiative', key: 'initiative_official_code', width: 22 }] : []),
       { header: 'Workpackage name', key: 'workpackage_name', width: 50 },
       { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },
@@ -81,16 +84,17 @@ export class OutcomeIndicatorHomeComponent {
       EOIsConfig: {
         data: eoisData,
         wscols: wscolsEOIs,
-        cellToCenter: [4, 5, 6, 7],
+        cellToCenter: [1, 4, 5, 6, 7],
         worksheetName: 'EoI outcomes'
       },
       WPsConfig: {
         data: wpsData,
         wscols: wscolsWPs,
-        cellToCenter: [5, 6, 7, 8],
+        cellToCenter: [1, 5, 6, 7, 8],
         worksheetName: 'WP outcomes'
       },
-      isT1R: false
+      isT1R: false,
+      showInitiativeCode
     });
 
     this.messageService.add({
