@@ -25,13 +25,13 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (!this.AuthService.localStorageUser) {
+      this.AuthService.inLogin.set(true);
+    }
+
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
-    setTimeout(() => {
-      if (!this.AuthService.inLogin()) {
-        this.rolesSE.validateReadOnly();
-      }
-    }, 150);
+    this.rolesSE.validateReadOnly();
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {
       try {
