@@ -26,7 +26,7 @@ import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
-import { In, Not } from 'typeorm';
+import { In } from 'typeorm';
 
 @Injectable()
 export class ResultsPackageTocResultService {
