@@ -676,6 +676,7 @@ export class InnovationPathwayStepFourService {
             grant_title: bltl.grant_title,
             non_pooled_project_type_id: 2,
             results_id: resultId,
+            is_active: true,
           },
         });
 
@@ -693,11 +694,22 @@ export class InnovationPathwayStepFourService {
             await this._resultBilateralBudgetRepository.find({
               where: {
                 non_pooled_projetct_id: nppExRole2.id,
+                is_active: true,
               },
               relations: {
                 obj_non_pooled_projetct: true,
               },
             });
+
+          if (!bilateral_expected_investment?.length) {
+            bilateral_expected_investment =
+              await this._resultBilateralBudgetRepository.save({
+                non_pooled_projetct_id: nppExRole2.id,
+                created_by: user.id,
+                last_updated_by: user.id,
+                is_active: true,
+              });
+          }
         } else {
           newNpp = await this._nonPooledProjectRepository.save({
             results_id: resultId,
@@ -708,12 +720,14 @@ export class InnovationPathwayStepFourService {
             created_by: user.id,
             last_updated_by: user.id,
             non_pooled_project_type_id: 2,
+            is_active: true,
           });
 
           await this._resultBilateralBudgetRepository.save({
             non_pooled_projetct_id: newNpp?.id,
             created_by: user.id,
             last_updated_by: user.id,
+            is_active: true,
           });
 
           bilateral_expected_investment =
