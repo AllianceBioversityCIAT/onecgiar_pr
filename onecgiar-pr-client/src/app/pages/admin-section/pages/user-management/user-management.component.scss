@@ -130,19 +130,20 @@
     font-size: 14px;
     padding: 8px 16px;
     border: none;
-    
+
     .header-content {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    
+
     .p-sortable-column-icon {
       color: white !important;
     }
-    
+
     &:nth-child(3), // Is CGIAR header
-    &:nth-child(5) { // Status header
+    &:nth-child(5) {
+      // Status header
       .header-content {
         justify-content: center;
       }
@@ -162,9 +163,10 @@
       font-size: 14px;
       color: #374151;
       vertical-align: middle;
-      
+
       &:nth-child(3), // Is CGIAR column
-      &:nth-child(5) { // Status column
+      &:nth-child(5) {
+        // Status column
         text-align: center;
       }
     }
@@ -243,6 +245,261 @@
         margin-left: 0;
         margin-top: 16px;
       }
+    }
+  }
+}
+
+// Empty state message
+.empty-message {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  padding: 24px;
+}
+
+/* Add User Modal Styles */
+::ng-deep .add-user-modal {
+  .p-dialog-header {
+    background-color: #1f2937;
+    color: white;
+    padding: 20px 24px;
+    border-radius: 8px 8px 0 0;
+
+    .p-dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .p-dialog-header-icon {
+      color: white;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  .p-dialog-content {
+    padding: 0;
+  }
+
+  .p-dialog-footer {
+    padding: 0;
+    border-top: none;
+  }
+}
+
+.modal-content {
+  padding: 24px;
+
+  .form-field {
+    margin-bottom: 20px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: block;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 14px;
+
+      .required {
+        color: #ef4444;
+        margin-left: 2px;
+      }
+    }
+
+    &.half-width {
+      flex: 1;
+      margin-right: 16px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+  }
+
+  .cgiar-buttons {
+    display: flex;
+    gap: 12px;
+
+    .cgiar-btn {
+      padding: 8px 20px;
+      border: 2px solid #d1d5db;
+      background-color: white;
+      color: #374151;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #6366f1;
+        background-color: #f8fafc;
+      }
+
+      &.active {
+        border-color: #6366f1;
+        background-color: #6366f1;
+        color: white;
+      }
+    }
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  .selected-user {
+    padding: 10px 12px;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .created-by {
+    padding: 10px 12px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 14px;
+  }
+}
+
+::ng-deep .user-autocomplete {
+  width: 100%;
+
+  .p-autocomplete-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+
+    &:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+  }
+
+  .p-autocomplete-panel {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+    .p-autocomplete-items {
+      .p-autocomplete-item {
+        padding: 12px;
+        border-bottom: 1px solid #f3f4f6;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #f8fafc;
+        }
+
+        &.p-highlight {
+          background-color: #6366f1;
+          color: white;
+        }
+
+        .user-item {
+          .user-name {
+            font-weight: 500;
+            color: inherit;
+            margin-bottom: 2px;
+          }
+
+          .user-email {
+            font-size: 12px;
+            color: #6b7280;
+          }
+        }
+
+        &.p-highlight .user-item .user-email {
+          color: rgba(255, 255, 255, 0.8);
+        }
+      }
+    }
+  }
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  .cancel-btn {
+    padding: 10px 20px;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #f3f4f6;
+      border-color: #9ca3af;
+    }
+  }
+
+  .save-btn {
+    padding: 10px 20px;
+    border: 1px solid #6366f1;
+    background-color: #6366f1;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background-color: #5856eb;
+      border-color: #5856eb;
+    }
+
+    &:disabled {
+      background-color: #9ca3af;
+      border-color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
   }
 }

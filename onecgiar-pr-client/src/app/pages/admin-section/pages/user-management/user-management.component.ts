@@ -5,8 +5,10 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
-import { CreateUserModalComponent } from '../../../../shared/modals/create-user-modal/create-user-modal.component';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 interface UserColumn {
   label: string;
@@ -27,18 +29,44 @@ interface StatusOption {
   value: string;
 }
 
+interface CgiarUser {
+  name: string;
+  email: string;
+}
+
+interface AddUserForm {
+  isCGIAR: boolean;
+  selectedUser?: CgiarUser;
+  name?: string;
+  lastName?: string;
+  email?: string;
+  hasAdminPermissions: boolean;
+}
+
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, CustomFieldsModule, CreateUserModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    ButtonModule,
+    TooltipModule,
+    InputTextModule,
+    DialogModule,
+    AutoCompleteModule,
+    CustomFieldsModule
+  ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
 export default class UserManagementComponent {
+  constructor(public api: ApiService) {}
+
   // Column configuration
   columns: UserColumn[] = [
     { label: 'User name', key: 'username', width: '200px' },
-    { label: 'Email', key: 'email', width: '100px' },
+    { label: 'Email', key: 'email', width: '300px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' }
@@ -101,6 +129,26 @@ export default class UserManagementComponent {
   searchText: string = '';
   selectedStatus: string = 'all';
 
+  // Modal variables
+  showAddUserModal: boolean = false;
+  addUserForm: AddUserForm = {
+    isCGIAR: true,
+    hasAdminPermissions: false
+  };
+
+  // CGIAR users for autocomplete
+  cgiarUsers: CgiarUser[] = [
+    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org' },
+    { name: 'Sara Lawson', email: 's.lawson@cgiar.org' },
+    { name: 'John Smith', email: 'j.smith@cgiar.org' },
+    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org' },
+    { name: 'David Johnson', email: 'd.johnson@cgiar.org' },
+    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org' },
+    { name: 'Michael Brown', email: 'm.brown@cgiar.org' },
+    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org' }
+  ];
+  filteredCgiarUsers: CgiarUser[] = [];
+
   // Filtered data
   get filteredUsers(): User[] {
     let filtered = this.users;
@@ -121,7 +169,8 @@ export default class UserManagementComponent {
 
   // Action methods
   onAddUser(): void {
-    console.log('Add user clicked');
+    this.resetAddUserForm();
+    this.showAddUserModal = true;
   }
 
   onExportData(): void {
@@ -135,5 +184,72 @@ export default class UserManagementComponent {
   // Method to get status CSS class
   getStatusClass(status: string): string {
     return status === 'Active' ? 'status-active' : 'status-inactive';
+  }
+
+  // Modal methods
+  resetAddUserForm(): void {
+    this.addUserForm = {
+      isCGIAR: true,
+      hasAdminPermissions: false
+    };
+    this.filteredCgiarUsers = [];
+  }
+
+  onCgiarChange(isCgiar: boolean): void {
+    this.addUserForm.isCGIAR = isCgiar;
+    // Reset form fields when changing CGIAR status
+    this.addUserForm.selectedUser = undefined;
+    this.addUserForm.name = '';
+    this.addUserForm.lastName = '';
+    this.addUserForm.email = '';
+    this.filteredCgiarUsers = [];
+  }
+
+  searchCgiarUsers(event: any): void {
+    const query = event.query.toLowerCase();
+    this.filteredCgiarUsers = this.cgiarUsers.filter(user => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query));
+  }
+
+  onUserSelect(event: any): void {
+    this.addUserForm.selectedUser = event;
+  }
+
+  onSaveUser(): void {
+    if (this.addUserForm.isCGIAR) {
+      console.log('Saving CGIAR user:', {
+        user: this.addUserForm.selectedUser,
+        hasAdminPermissions: this.addUserForm.hasAdminPermissions,
+        createdBy: this.api.authSE?.localStorageUser?.user_name
+      });
+    } else {
+      console.log('Saving non-CGIAR user:', {
+        name: this.addUserForm.name,
+        lastName: this.addUserForm.lastName,
+        email: this.addUserForm.email,
+        hasAdminPermissions: this.addUserForm.hasAdminPermissions,
+        createdBy: this.api.authSE?.localStorageUser?.user_name
+      });
+    }
+    this.showAddUserModal = false;
+  }
+
+  onCancelAddUser(): void {
+    this.showAddUserModal = false;
+  }
+
+  get currentUserName(): string {
+    return this.api.authSE?.localStorageUser?.user_name || 'Unknown User';
+  }
+
+  get currentUserEmail(): string {
+    return this.api.authSE?.localStorageUser?.email || '';
+  }
+
+  get isFormValid(): boolean {
+    if (this.addUserForm.isCGIAR) {
+      return !!this.addUserForm.selectedUser;
+    } else {
+      return !!(this.addUserForm.name && this.addUserForm.lastName && this.addUserForm.email);
+    }
   }
 }

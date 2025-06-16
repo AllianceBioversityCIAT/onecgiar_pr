@@ -92,6 +92,94 @@
       </ng-template>
     </p-table>
   </div>
-</div>
 
-<app-create-user-modal></app-create-user-modal>
+  <!-- Add User Modal -->
+  <p-dialog
+    header="Add user"
+    [(visible)]="showAddUserModal"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="add-user-modal"
+    [style]="{ width: '600px' }">
+    <div class="modal-content">
+      <!-- Is CGIAR Question -->
+      <div class="form-field">
+        <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
+        <div class="cgiar-buttons">
+          <button type="button" class="cgiar-btn" [class.active]="addUserForm.isCGIAR" (click)="onCgiarChange(true)">Yes</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm.isCGIAR" (click)="onCgiarChange(false)">No</button>
+        </div>
+      </div>
+
+      <!-- CGIAR User Search -->
+      <div class="form-field" *ngIf="addUserForm.isCGIAR">
+        <label class="field-label"> Select a user:<span class="required">*</span> </label>
+        <p-autoComplete
+          [(ngModel)]="addUserForm.selectedUser"
+          [suggestions]="filteredCgiarUsers"
+          (completeMethod)="searchCgiarUsers($event)"
+          (onSelect)="onUserSelect($event)"
+          field="name"
+          placeholder="Search user..."
+          [dropdown]="false"
+          styleClass="user-autocomplete">
+          <ng-template let-user pTemplate="item">
+            <div class="user-item">
+              <div class="user-name">{{ user.name }}</div>
+              <div class="user-email">({{ user.email }})</div>
+            </div>
+          </ng-template>
+        </p-autoComplete>
+      </div>
+
+      <!-- Selected User Display (Read-only) -->
+      <div class="form-field" *ngIf="addUserForm.isCGIAR && addUserForm.selectedUser">
+        <label class="field-label">User:</label>
+        <div class="selected-user">{{ addUserForm.selectedUser.name }} ({{ addUserForm.selectedUser.email }})</div>
+      </div>
+
+      <!-- Non-CGIAR User Form -->
+      <div *ngIf="!addUserForm.isCGIAR">
+        <div class="form-row">
+          <div class="form-field half-width">
+            <label class="field-label"> Name:<span class="required">*</span> </label>
+            <input type="text" pInputText placeholder="Enter name" [(ngModel)]="addUserForm.name" class="form-input" />
+          </div>
+          <div class="form-field half-width">
+            <label class="field-label"> Last name:<span class="required">*</span> </label>
+            <input type="text" pInputText placeholder="Enter last name" [(ngModel)]="addUserForm.lastName" class="form-input" />
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label"> Email:<span class="required">*</span> </label>
+          <input type="email" pInputText placeholder="Enter Email" [(ngModel)]="addUserForm.email" class="form-input" />
+        </div>
+      </div>
+
+      <!-- Admin Permissions -->
+      <div class="form-field">
+        <label class="field-label">Admin permissions</label>
+        <app-pr-checkbox
+          [(ngModel)]="addUserForm.hasAdminPermissions"
+          label="This user has admin permissions in the system."
+          [required]="false"></app-pr-checkbox>
+      </div>
+
+      <!-- Created By -->
+      <div class="form-field">
+        <label class="field-label">Created by</label>
+        <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <div class="modal-footer">
+        <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
+        <button type="button" class="save-btn" [disabled]="!isFormValid" (click)="onSaveUser()">Save</button>
+      </div>
+    </ng-template>
+  </p-dialog>
+</div>
