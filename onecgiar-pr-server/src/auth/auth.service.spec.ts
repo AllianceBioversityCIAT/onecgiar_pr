@@ -79,8 +79,8 @@ describe('AuthService', () => {
           provide: HandlersError,
           useValue: {
             returnErrorRes: jest.fn().mockImplementation(({ error }) => ({
-              message: error.message || 'Internal server error',
-              status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+              message: error.message ?? 'Internal server error',
+              status: error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
             })),
           },
         },

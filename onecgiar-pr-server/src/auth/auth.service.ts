@@ -190,7 +190,7 @@ export class AuthService {
             response: {
               valid: false,
             },
-            message: error.message || 'Invalid credentials',
+            message: error.message ?? 'Invalid credentials',
             status: HttpStatus.UNAUTHORIZED,
           };
         }
@@ -199,8 +199,8 @@ export class AuthService {
           response: {
             valid: false,
           },
-          message: error.message || 'Authentication failed',
-          status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message ?? 'Authentication failed',
+          status: error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
     } catch (error) {

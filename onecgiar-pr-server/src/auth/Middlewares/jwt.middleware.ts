@@ -107,7 +107,7 @@ export class JwtMiddleware implements NestMiddleware {
         );
       }
 
-      if (!jwtPayload || !jwtPayload.id || !jwtPayload.email) {
+      if (!jwtPayload?.id || !jwtPayload?.email) {
         throw new HttpException(
           {
             message: 'Invalid token payload',
