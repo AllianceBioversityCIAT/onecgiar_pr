@@ -11,9 +11,15 @@
       <!-- User search -->
       <div class="search-container">
         <label class="search-label">Search by user:</label>
-        <div class="search-input">
-          <i class="material-icons-round search-icon">search</i>
-          <input type="text" placeholder="Search" [(ngModel)]="searchText" class="search-field" />
+        <div class="p-input-icon-left">
+          <i class="pi pi-search"></i>
+          <input 
+            type="text" 
+            pInputText 
+            placeholder="Search" 
+            [(ngModel)]="searchText" 
+            class="search-field" 
+          />
         </div>
       </div>
 

@@ -52,43 +52,18 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-
+      
       .search-label {
         font-size: 14px;
         font-weight: 500;
         color: #374151;
       }
-
-      .search-input {
-        position: relative;
-        display: flex;
-        align-items: center;
-
-        .search-icon {
-          position: absolute;
-          left: 12px;
-          color: #9ca3af;
-          font-size: 20px;
-          z-index: 1;
-        }
-
+      
+      .p-input-icon-left {
+        width: 280px;
+        
         .search-field {
-          padding: 12px 16px 12px 44px;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 14px;
-          width: 280px;
-          transition: all 0.2s ease;
-
-          &:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-          }
-
-          &::placeholder {
-            color: #9ca3af;
-          }
+          width: 100%;
         }
       }
     }
@@ -154,7 +129,7 @@
     color: white !important;
     font-weight: 600;
     font-size: 14px;
-    padding: 16px 20px;
+    padding: 8px 16px;
     border: none;
 
     .header-content {
@@ -176,7 +151,7 @@
     }
 
     > td {
-      padding: 16px 20px;
+      padding: 8px 16px;
       border-bottom: 1px solid #f3f4f6;
       font-size: 14px;
       color: #374151;
@@ -186,7 +161,7 @@
 
   .p-datatable-emptymessage > td {
     text-align: center;
-    padding: 40px 20px;
+    padding: 24px 16px;
     color: #6b7280;
     font-style: italic;
   }
@@ -234,7 +209,7 @@
       flex-direction: column;
       align-items: stretch;
 
-      .search-container .search-input .search-field {
+      .search-container .p-input-icon-left {
         width: 100%;
       }
 

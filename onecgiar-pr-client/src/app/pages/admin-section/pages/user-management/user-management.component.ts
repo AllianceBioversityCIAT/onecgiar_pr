@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { InputTextModule } from 'primeng/inputtext';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 interface UserColumn {
@@ -28,7 +29,7 @@ interface StatusOption {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, CustomFieldsModule],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, CustomFieldsModule],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
