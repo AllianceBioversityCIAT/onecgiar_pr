@@ -4,4 +4,92 @@
     <h1>User Management</h1>
   </header>
   <div class="description">Welcome to the user management panel, here you can manage the users and their roles within the platform.</div>
+
+  <!-- Filter and action controls -->
+  <div class="controls-section">
+    <div class="controls-row">
+      <!-- User search -->
+      <div class="search-container">
+        <label class="search-label">Search by user:</label>
+        <div class="search-input">
+          <i class="material-icons-round search-icon">search</i>
+          <input type="text" placeholder="Search" [(ngModel)]="searchText" class="search-field" />
+        </div>
+      </div>
+
+      <!-- Status filter -->
+      <div class="status-filter">
+        <label class="status-label">Status:</label>
+        <app-pr-select
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All"
+          [(ngModel)]="selectedStatus"
+          [required]="false"></app-pr-select>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-buttons">
+        <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
+
+        <button
+          class="info-button p-button p-button-secondary p-button-icon-only"
+          (click)="onShowInfo()"
+          [style]="{ backgroundColor: '#6366f1', color: '#fff' }"
+          pTooltip="Information"
+          tooltipPosition="top">
+          <i class="pi pi-info-circle"></i>
+        </button>
+
+        <app-pr-button text="Export data" icon="file_download" colorType="primary" (clickEvent)="onExportData()"></app-pr-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="table-container">
+    <p-table
+      [value]="filteredUsers"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      styleClass="p-datatable-gridlines p-datatable-sm user-table"
+      responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          <th *ngFor="let column of columns" [style.width]="column.width" [pSortableColumn]="column.key">
+            <div class="header-content">
+              {{ column.label }}
+              <p-sortIcon [field]="column.key"></p-sortIcon>
+            </div>
+          </th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <td>{{ user.username }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.isCGIAR }}</td>
+          <td>{{ user.userCreationDate }}</td>
+          <td>
+            <span [class]="getStatusClass(user.status)">
+              {{ user.status }}
+            </span>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="columns.length" class="no-data">No users found matching your criteria.</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="paginatorleft">
+        <div class="pagination-info">Users | {{ filteredUsers.length }} total</div>
+      </ng-template>
+    </p-table>
+  </div>
 </div>
