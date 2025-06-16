@@ -99,7 +99,7 @@ jobs:
             -Dsonar.sources=onecgiar-pr-server,onecgiar-pr-client \
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/migrations/**,**/*spec.ts \
             -Dsonar.coverage.exclusions=** \
-            -Dsonar.typescript.lcov.reportPaths=onecgiar-pr-server/coverage/lcov.info,onecgiar-pr-client/coverage/lcov.info
+            -Dsonar.typescript.lcov.reportPaths=onecgiar-pr-server/coverage/lcov.info,onecgiar-pr-client/coverage/lcov.info \
             -Dsonar.newCode.referenceBranch=master
         working-directory: .
         env:
