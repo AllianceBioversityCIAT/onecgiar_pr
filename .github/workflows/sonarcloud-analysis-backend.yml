@@ -50,7 +50,7 @@ jobs:
       - name: Load .env from AWS Secrets Manager
         run: |
           aws secretsmanager get-secret-value \
-            --secret-id dev/app/backend/roar/main \
+            --secret-id dev/app/backend/prms/reportingtool \
             --query SecretString \
             --output text > .env
         working-directory: ./onecgiar-pr-server
