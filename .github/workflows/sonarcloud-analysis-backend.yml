@@ -1,4 +1,4 @@
-name: SonarCloud Analysis - NestJS Backend
+name: SonarCloud Analysis - Full Stack (Backend + Frontend)
 
 on:
   push:
@@ -46,8 +46,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Step 7: Load environment variables from AWS Secrets Manager
-      - name: Load .env from AWS Secrets Manager
+      # Step 7: Load .env for backend
+      - name: Load backend .env from AWS Secrets Manager
         run: |
           aws secretsmanager get-secret-value \
             --secret-id dev/app/backend/prms/reportingtool \
@@ -55,21 +55,51 @@ jobs:
             --output text > .env
         working-directory: ./onecgiar-pr-server
 
-      # Step 8: Install dependencies
-      - name: Install NestJS dependencies
-        run: npm install
+      # Step 8: Load environment.ts for frontend from AWS Secrets Manager
+      - name: Load frontend environment.ts from AWS Secrets Manager
+        run: |
+          mkdir -p src/environments
+          aws secretsmanager get-secret-value \
+            --secret-id dev/app/frontend/prms/reportingtool \
+            --query SecretString \
+            --output text > src/environments/environment.ts
+        working-directory: ./onecgiar-pr-client
+
+      # Step 9: Install backend dependencies
+      - name: Install backend dependencies
+        run: npm ci
         working-directory: ./onecgiar-pr-server
 
-      # Step 9: Build the NestJS project
-      - name: Build the NestJS project
+      # Step 10: Build backend
+      - name: Build backend
         run: npm run build
         working-directory: ./onecgiar-pr-server
 
-      # Step 10: Install SonarScanner globally
+      # Step 11: Run backend tests with coverage
+      - name: Run backend tests with coverage
+        run: npm run test -- --coverage
+        working-directory: ./onecgiar-pr-server
+
+      # Step 12: Install frontend dependencies
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./onecgiar-pr-client
+
+      # Step 13: Build frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./onecgiar-pr-client
+
+      # Step 14: Run frontend tests with coverage
+      - name: Run frontend tests with coverage
+        run: npm run test -- --coverage
+        working-directory: ./onecgiar-pr-client
+
+      # Step 15: Install SonarScanner globally
       - name: Install SonarScanner
         run: npm install -g sonar-scanner
 
-      # Step 11: Run SonarCloud analysis
+      # Step 16: Run SonarCloud analysis (backend + frontend)
       - name: Run SonarCloud analysis
         run: |
           sonar-scanner \
@@ -77,9 +107,10 @@ jobs:
             -Dsonar.organization=alliancebioversityciat \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.sources=onecgiar-pr-server,onecgiar-pr-client \
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/migrations/**,**/*spec.ts \
             -Dsonar.coverage.exclusions=** \
-            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
-        working-directory: ./onecgiar-pr-server
+            -Dsonar.typescript.lcov.reportPaths=onecgiar-pr-server/coverage/lcov.info,onecgiar-pr-client/coverage/lcov.info
+        working-directory: .
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
