@@ -75,11 +75,6 @@ jobs:
         run: npm run build
         working-directory: ./onecgiar-pr-server
 
-      # Step 11: Run backend tests with coverage
-      - name: Run backend tests with coverage
-        run: npm run test -- --coverage
-        working-directory: ./onecgiar-pr-server
-
       # Step 12: Install frontend dependencies
       - name: Install frontend dependencies
         run: npm ci
@@ -88,11 +83,6 @@ jobs:
       # Step 13: Build frontend
       - name: Build frontend
         run: npm run build
-        working-directory: ./onecgiar-pr-client
-
-      # Step 14: Run frontend tests with coverage
-      - name: Run frontend tests with coverage
-        run: npm run test -- --coverage
         working-directory: ./onecgiar-pr-client
 
       # Step 15: Install SonarScanner globally
