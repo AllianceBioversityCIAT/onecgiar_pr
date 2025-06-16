@@ -6,6 +6,7 @@ import {
   Param,
   UseInterceptors,
   Patch,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -21,6 +22,7 @@ import {
   ApiParam,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -133,6 +135,75 @@ export class UserController {
   })
   async findAll() {
     return this.userService.findAll();
+  }
+
+  @Get('get/users_list')
+  @ApiOperation({ 
+    summary: 'Get list users',
+    description: 'Get list of all users with their details' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users retrieved successfully',
+    schema: {
+      example: {
+        data: [
+          {
+            firstName: 'John',
+            lastName: 'Doe',
+            emailAddress: 'john.doe@example.com',
+            cgIAR: 'Yes',
+            userStatus: 'Active',
+            userCreationDate: '2024-03-10T12:00:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  async getAllUsers() {
+    return this.userService.getAllUsers();
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search users by name, email, CGIAR, or status (partial match)' })
+  @ApiQuery({ name: 'name', required: false, type: String })
+  @ApiQuery({ name: 'email', required: false, type: String })
+  @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
+  @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of users matching the search criteria or a message if none match',
+    schema: {
+      example: {
+        data: [
+          {
+            firstName: 'Jane',
+            lastName: 'Doe',
+            emailAddress: 'jane.doe@cgiar.org',
+            cgIAR: 'Yes',
+            userStatus: 'Active',
+            userCreationDate: '2024-05-10T14:33:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  async searchUsers(
+    @Query('name') name?: string,
+    @Query('email') email?: string,
+    @Query('cgIAR') cgIAR?: 'Yes' | 'No',
+    @Query('status') status?: 'Active' | 'Inactive',
+  ) {
+    const result = await this.userService.searchUsers({ name, email, cgIAR, status });
+
+    if (result.response.length === 0) {
+      return {
+        status: result.status,
+        message: 'No users match the entered criteria',
+        response: [],
+      };
+    }
+
+    return result;
   }
 
   @Get('get/all/:email')
