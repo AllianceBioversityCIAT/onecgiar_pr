@@ -246,10 +246,10 @@ export class UserService {
       const newUser = new User();
       newUser.email = email;
       newUser.first_name =
-        userInfo.given_name || userInfo.name?.split(' ')[0] || 'User';
+        userInfo.given_name ?? userInfo.name?.split(' ')[0] ?? 'User';
       newUser.last_name =
-        userInfo.family_name ||
-        userInfo.name?.split(' ').slice(1).join(' ') ||
+        userInfo.family_name ??
+        userInfo.name?.split(' ').slice(1).join(' ') ??
         '';
       newUser.is_cgiar = email.endsWith('@cgiar.org');
       newUser.active = true;
