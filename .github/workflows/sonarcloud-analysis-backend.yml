@@ -73,7 +73,7 @@ jobs:
       - name: Run SonarCloud analysis
         run: |
           sonar-scanner \
-            -Dsonar.projectKey=AllianceBioversityCIAT_alliance-research-indicators-main \
+            -Dsonar.projectKey=AllianceBioversityCIAT_onecgiar_pr \
             -Dsonar.organization=alliancebioversityciat \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
