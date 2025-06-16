@@ -55,14 +55,13 @@ jobs:
             --output text > .env
         working-directory: ./onecgiar-pr-server
 
-      # Step 8: Load environment.ts for frontend from AWS Secrets Manager
-      - name: Load frontend environment.ts from AWS Secrets Manager
+      - name: Load frontend environments from AWS Secrets Manager
         run: |
           mkdir -p src/environments
           aws secretsmanager get-secret-value \
             --secret-id dev/app/frontend/prms/reportingtool \
             --query SecretString \
-            --output text > src/environments/environment.ts
+            --output text | tee src/environments/environment.ts > src/environments/environment.prod.ts
         working-directory: ./onecgiar-pr-client
 
       # Step 9: Install backend dependencies
