@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { CreateUserModalComponent } from '../../../../shared/modals/create-user-modal/create-user-modal.component';
 
 interface UserColumn {
   label: string;
@@ -29,7 +30,7 @@ interface StatusOption {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, CustomFieldsModule],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, CustomFieldsModule, CreateUserModalComponent],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
@@ -37,7 +38,7 @@ export default class UserManagementComponent {
   // Column configuration
   columns: UserColumn[] = [
     { label: 'User name', key: 'username', width: '200px' },
-    { label: 'Email', key: 'email', width: '300px' },
+    { label: 'Email', key: 'email', width: '100px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' }
@@ -107,10 +108,7 @@ export default class UserManagementComponent {
     // Filter by search text
     if (this.searchText) {
       const searchLower = this.searchText.toLowerCase();
-      filtered = filtered.filter(user => 
-        user.username.toLowerCase().includes(searchLower) ||
-        user.email.toLowerCase().includes(searchLower)
-      );
+      filtered = filtered.filter(user => user.username.toLowerCase().includes(searchLower) || user.email.toLowerCase().includes(searchLower));
     }
 
     // Filter by status

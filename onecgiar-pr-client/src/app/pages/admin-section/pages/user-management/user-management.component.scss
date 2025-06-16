@@ -19,7 +19,6 @@
 
     i {
       font-size: 24px;
-      color: #6366f1;
     }
 
     h1 {
@@ -52,16 +51,16 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      
+
       .search-label {
         font-size: 14px;
         font-weight: 500;
         color: #374151;
       }
-      
+
       .p-input-icon-left {
         width: 280px;
-        
+
         .search-field {
           width: 100%;
         }
@@ -131,15 +130,22 @@
     font-size: 14px;
     padding: 8px 16px;
     border: none;
-
+    
     .header-content {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-
+    
     .p-sortable-column-icon {
       color: white !important;
+    }
+    
+    &:nth-child(3), // Is CGIAR header
+    &:nth-child(5) { // Status header
+      .header-content {
+        justify-content: center;
+      }
     }
   }
 
@@ -156,6 +162,11 @@
       font-size: 14px;
       color: #374151;
       vertical-align: middle;
+      
+      &:nth-child(3), // Is CGIAR column
+      &:nth-child(5) { // Status column
+        text-align: center;
+      }
     }
   }
 

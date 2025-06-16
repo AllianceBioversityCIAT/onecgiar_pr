@@ -1,5 +1,5 @@
 <div class="local_container section_container">
-  <header class="kp_header">
+  <header>
     <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
     <h1>User Management</h1>
   </header>
@@ -13,13 +13,7 @@
         <label class="search-label">Search by user:</label>
         <div class="p-input-icon-left">
           <i class="pi pi-search"></i>
-          <input 
-            type="text" 
-            pInputText 
-            placeholder="Search" 
-            [(ngModel)]="searchText" 
-            class="search-field" 
-          />
+          <input type="text" pInputText placeholder="Search" [(ngModel)]="searchText" class="search-field" />
         </div>
       </div>
 
@@ -99,3 +93,5 @@
     </p-table>
   </div>
 </div>
+
+<app-create-user-modal></app-create-user-modal>
