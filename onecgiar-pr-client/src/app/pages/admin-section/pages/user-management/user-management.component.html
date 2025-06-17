@@ -3,7 +3,12 @@
     <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
     <h1>User Management</h1>
   </header>
-  <div class="description">Welcome to the user management panel, here you can manage the users and their roles within the platform.</div>
+  <div
+    class="description"
+    pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
+    tooltipPosition="bottom">
+    Welcome to the user management panel, here you can manage the users and their roles within the platform.
+  </div>
 
   <!-- Filter and action controls -->
   <div class="controls-section">
@@ -54,6 +59,8 @@
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
+      [scrollable]="true"
+      scrollHeight="calc(100vh - 520px)"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
       responsiveLayout="scroll">
       <ng-template pTemplate="header">

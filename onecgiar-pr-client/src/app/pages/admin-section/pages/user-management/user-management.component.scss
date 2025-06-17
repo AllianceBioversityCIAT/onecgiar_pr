@@ -34,6 +34,10 @@
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
   }
 }
 
@@ -225,6 +229,13 @@
 }
 
 // Responsive styles
+// Medium screens - description definitely wraps
+@media (max-width: 1000px) {
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 560px) !important; // Extra 40px for definite description wrap
+  }
+}
+
 @media (max-width: 768px) {
   .local_container {
     padding: 20px 24px;
@@ -250,6 +261,11 @@
       }
     }
   }
+
+  // Mobile: stacked controls
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 620px) !important; // Extra 100px for stacked controls
+  }
 }
 
 @media (max-width: 1200px) {
@@ -265,6 +281,11 @@
         justify-content: flex-start;
       }
     }
+  }
+
+  // Adjust table scroll height when controls wrap to two lines
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 590px) !important; // Extra 70px when filters go below
   }
 }
 
