@@ -70,8 +70,8 @@ export default class UserManagementComponent {
 
   // Column configuration
   columns: UserColumn[] = [
-    { label: 'User name', key: 'username', width: '200px' },
-    { label: 'Email', key: 'email', width: '300px' },
+    { label: 'User name', key: 'firstName', width: '200px' },
+    { label: 'Email', key: 'emailAddress', width: '300px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' }

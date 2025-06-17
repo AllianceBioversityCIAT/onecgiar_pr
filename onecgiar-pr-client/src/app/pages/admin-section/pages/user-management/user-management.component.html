@@ -69,13 +69,13 @@
 
       <ng-template pTemplate="body" let-user>
         <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.isCGIAR }}</td>
-          <td>{{ user.userCreationDate }}</td>
+          <td>{{ user.firstName }} {{ user.lastName }}</td>
+          <td>{{ user.emailAddress }}</td>
+          <td>{{ user.cgIAR }}</td>
+          <td>{{ user.userCreationDate | date: 'MM-dd-yyyy' }}</td>
           <td>
-            <span [class]="getStatusClass(user.status)">
-              {{ user.status }}
+            <span [class]="getStatusClass(user.userStatus)">
+              {{ user.userStatus }}
             </span>
           </td>
         </tr>
