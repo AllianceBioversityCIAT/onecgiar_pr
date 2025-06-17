@@ -162,13 +162,9 @@ export default class UserManagementComponent {
     this.showAddUserModal = true;
   }
 
-  onExportData(): void {
-    console.log('Export data clicked');
-  }
+  onExportData(): void {}
 
-  onShowInfo(): void {
-    console.log('Show info clicked');
-  }
+  onShowInfo(): void {}
 
   // Method to get status CSS class
   getStatusClass(status: string): string {
@@ -200,21 +196,6 @@ export default class UserManagementComponent {
   }
 
   onSaveUser(): void {
-    if (this.addUserForm.isCGIAR) {
-      console.log('Saving CGIAR user:', {
-        user: this.addUserForm.selectedUser,
-        hasAdminPermissions: this.addUserForm.hasAdminPermissions,
-        createdBy: this.api.authSE?.localStorageUser?.user_name
-      });
-    } else {
-      console.log('Saving non-CGIAR user:', {
-        name: this.addUserForm.name,
-        lastName: this.addUserForm.lastName,
-        email: this.addUserForm.email,
-        hasAdminPermissions: this.addUserForm.hasAdminPermissions,
-        createdBy: this.api.authSE?.localStorageUser?.user_name
-      });
-    }
     this.showAddUserModal = false;
   }
 
