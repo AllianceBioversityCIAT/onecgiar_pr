@@ -6,7 +6,6 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
-import { AutoCompleteModule } from 'primeng/autocomplete';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../shared/services/api/api.service';
 
@@ -37,6 +36,7 @@ interface CgiarUser {
 interface AddUserForm {
   isCGIAR: boolean;
   selectedUser?: CgiarUser;
+  selectedUserEmail?: string;
   name?: string;
   lastName?: string;
   email?: string;
@@ -46,17 +46,7 @@ interface AddUserForm {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    TableModule,
-    ButtonModule,
-    TooltipModule,
-    InputTextModule,
-    DialogModule,
-    AutoCompleteModule,
-    CustomFieldsModule
-  ],
+  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, DialogModule, CustomFieldsModule],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
@@ -137,17 +127,16 @@ export default class UserManagementComponent {
   };
 
   // CGIAR users for autocomplete
-  cgiarUsers: CgiarUser[] = [
-    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org' },
-    { name: 'Sara Lawson', email: 's.lawson@cgiar.org' },
-    { name: 'John Smith', email: 'j.smith@cgiar.org' },
-    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org' },
-    { name: 'David Johnson', email: 'd.johnson@cgiar.org' },
-    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org' },
-    { name: 'Michael Brown', email: 'm.brown@cgiar.org' },
-    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org' }
+  cgiarUsers: any[] = [
+    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org', displayName: 'Svetlana Saakova (s.saakove@cgiar.org)' },
+    { name: 'Sara Lawson', email: 's.lawson@cgiar.org', displayName: 'Sara Lawson (s.lawson@cgiar.org)' },
+    { name: 'John Smith', email: 'j.smith@cgiar.org', displayName: 'John Smith (j.smith@cgiar.org)' },
+    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org', displayName: 'Maria Garcia (m.garcia@cgiar.org)' },
+    { name: 'David Johnson', email: 'd.johnson@cgiar.org', displayName: 'David Johnson (d.johnson@cgiar.org)' },
+    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org', displayName: 'Ana Rodriguez (a.rodriguez@cgiar.org)' },
+    { name: 'Michael Brown', email: 'm.brown@cgiar.org', displayName: 'Michael Brown (m.brown@cgiar.org)' },
+    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org', displayName: 'Elena Petrov (e.petrov@cgiar.org)' }
   ];
-  filteredCgiarUsers: CgiarUser[] = [];
 
   // Filtered data
   get filteredUsers(): User[] {
@@ -192,26 +181,22 @@ export default class UserManagementComponent {
       isCGIAR: true,
       hasAdminPermissions: false
     };
-    this.filteredCgiarUsers = [];
   }
 
   onCgiarChange(isCgiar: boolean): void {
     this.addUserForm.isCGIAR = isCgiar;
     // Reset form fields when changing CGIAR status
     this.addUserForm.selectedUser = undefined;
+    this.addUserForm.selectedUserEmail = '';
     this.addUserForm.name = '';
     this.addUserForm.lastName = '';
     this.addUserForm.email = '';
-    this.filteredCgiarUsers = [];
-  }
-
-  searchCgiarUsers(event: any): void {
-    const query = event.query.toLowerCase();
-    this.filteredCgiarUsers = this.cgiarUsers.filter(user => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query));
   }
 
   onUserSelect(event: any): void {
-    this.addUserForm.selectedUser = event;
+    // Find the selected user by email from the event
+    this.addUserForm.selectedUser = this.cgiarUsers.find(user => user.email === event.email);
+    this.addUserForm.selectedUserEmail = event.email;
   }
 
   onSaveUser(): void {

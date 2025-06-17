@@ -114,24 +114,17 @@
       </div>
 
       <!-- CGIAR User Search -->
-      <div class="form-field" *ngIf="addUserForm.isCGIAR">
-        <label class="field-label"> Select a user:<span class="required">*</span> </label>
-        <p-autoComplete
-          [(ngModel)]="addUserForm.selectedUser"
-          [suggestions]="filteredCgiarUsers"
-          (completeMethod)="searchCgiarUsers($event)"
-          (onSelect)="onUserSelect($event)"
-          field="name"
-          placeholder="Search user..."
-          [dropdown]="false"
-          styleClass="user-autocomplete">
-          <ng-template let-user pTemplate="item">
-            <div class="user-item">
-              <div class="user-name">{{ user.name }}</div>
-              <div class="user-email">({{ user.email }})</div>
-            </div>
-          </ng-template>
-        </p-autoComplete>
+      <div class="form-field" *ngIf="addUserForm.isCGIAR && !addUserForm.selectedUser">
+        <app-pr-select
+          [options]="cgiarUsers"
+          optionLabel="displayName"
+          optionValue="email"
+          placeholder="Select a user"
+          label="Select a user"
+          [(ngModel)]="addUserForm.selectedUserEmail"
+          (selectOptionEvent)="onUserSelect($event)"
+          [required]="true">
+        </app-pr-select>
       </div>
 
       <!-- Selected User Display (Read-only) -->
@@ -159,19 +152,22 @@
         </div>
       </div>
 
-      <!-- Admin Permissions -->
-      <div class="form-field">
-        <label class="field-label">Admin permissions</label>
-        <app-pr-checkbox
-          [(ngModel)]="addUserForm.hasAdminPermissions"
-          label="This user has admin permissions in the system."
-          [required]="false"></app-pr-checkbox>
-      </div>
+      <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
+      <div *ngIf="(addUserForm.isCGIAR && addUserForm.selectedUser) || !addUserForm.isCGIAR">
+        <!-- Admin Permissions -->
+        <div class="form-field" [class.extra-margin-top]="!addUserForm.isCGIAR">
+          <label class="field-label">Admin permissions</label>
+          <app-pr-checkbox
+            [(ngModel)]="addUserForm.hasAdminPermissions"
+            label="This user has admin permissions in the system."
+            [required]="false"></app-pr-checkbox>
+        </div>
 
-      <!-- Created By -->
-      <div class="form-field">
-        <label class="field-label">Created by</label>
-        <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+        <!-- Created By -->
+        <div class="form-field">
+          <label class="field-label">Created by</label>
+          <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+        </div>
       </div>
     </div>
 

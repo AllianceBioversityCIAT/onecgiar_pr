@@ -300,6 +300,10 @@
       margin-bottom: 0;
     }
 
+    &.extra-margin-top {
+      margin-top: 32px;
+    }
+
     .field-label {
       display: block;
       font-weight: 500;
@@ -391,66 +395,6 @@
     border-radius: 6px;
     color: #6b7280;
     font-size: 14px;
-  }
-}
-
-::ng-deep .user-autocomplete {
-  width: 100%;
-
-  .p-autocomplete-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-
-    &:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-  }
-
-  .p-autocomplete-panel {
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-
-    .p-autocomplete-items {
-      .p-autocomplete-item {
-        padding: 12px;
-        border-bottom: 1px solid #f3f4f6;
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        &:hover {
-          background-color: #f8fafc;
-        }
-
-        &.p-highlight {
-          background-color: #6366f1;
-          color: white;
-        }
-
-        .user-item {
-          .user-name {
-            font-weight: 500;
-            color: inherit;
-            margin-bottom: 2px;
-          }
-
-          .user-email {
-            font-size: 12px;
-            color: #6b7280;
-          }
-        }
-
-        &.p-highlight .user-item .user-email {
-          color: rgba(255, 255, 255, 0.8);
-        }
-      }
-    }
   }
 }
 
