@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -8,6 +8,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 
 interface UserColumn {
   label: string;
@@ -51,7 +53,18 @@ interface AddUserForm {
   styleUrl: './user-management.component.scss'
 })
 export default class UserManagementComponent {
-  constructor(public api: ApiService) {}
+  resultsApiService = inject(ResultsApiService);
+  api = inject(ApiService);
+
+  ngOnInit() {
+    this.getUsers();
+  }
+
+  getUsers() {
+    this.resultsApiService.GET_usersList().subscribe((res: AddUser) => {
+      console.log(res);
+    });
+  }
 
   // Column configuration
   columns: UserColumn[] = [
