@@ -85,6 +85,7 @@
       gap: 12px;
       align-items: center;
       margin-left: auto;
+      // margin-top: 100px; // Align with form fields
 
       .info-button {
         height: 32px;
@@ -142,6 +143,7 @@
     }
 
     &:nth-child(3), // Is CGIAR header
+    &:nth-child(4), // Date header
     &:nth-child(5) {
       // Status header
       .header-content {
@@ -165,6 +167,7 @@
       vertical-align: middle;
 
       &:nth-child(3), // Is CGIAR column
+      &:nth-child(4), // Date column
       &:nth-child(5) {
         // Status column
         text-align: center;
@@ -238,12 +241,16 @@
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .controls-section {
     .controls-row {
+      flex-wrap: wrap;
+
       .action-buttons {
         margin-left: 0;
         margin-top: 16px;
+        width: 100%;
+        justify-content: flex-start;
       }
     }
   }
