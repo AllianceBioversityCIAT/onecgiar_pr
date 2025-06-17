@@ -161,48 +161,10 @@ export class AuthService {
         await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
         this._logger.log(`Updated last login for user: ${userLogin.email}`);
 
-        if (
-          !existingUser.obj_role_by_user ||
-          existingUser.obj_role_by_user.length === 0
-        ) {
-          this._logger.warn(`User ${userLogin.email} has no roles assigned`);
-          return {
-            message: `The user ${userLogin.email} does not have any roles assigned. Please contact the administrator.`,
-            response: {
-              valid: false,
-              needsRoles: true,
-            },
-            status: HttpStatus.FORBIDDEN,
-          };
-        }
-
-        const jwtToken = this._jwtService.sign(
-          {
-            id: existingUser.id,
-            email: existingUser.email,
-            first_name: existingUser.first_name,
-            last_name: existingUser.last_name,
-          },
-          {
-            secret: env.JWT_SKEY,
-            expiresIn: '7h',
-          },
+        return this.createSuccessfulLoginResponse(
+          existingUser,
+          authResponse.tokens,
         );
-
-        return {
-          message: 'Successful login',
-          response: {
-            valid: true,
-            token: jwtToken,
-            user: {
-              id: existingUser.id,
-              user_name: `${existingUser.first_name} ${existingUser.last_name}`,
-              email: existingUser.email,
-            },
-            auth_tokens: authResponse.tokens,
-          },
-          status: HttpStatus.OK,
-        };
       } catch (error) {
         this._logger.error(
           `Authentication error for ${userLogin.email}: ${error.message}`,
@@ -228,7 +190,7 @@ export class AuthService {
             response: {
               valid: false,
             },
-            message: error.message || 'Invalid credentials',
+            message: error.message ?? 'Invalid credentials',
             status: HttpStatus.UNAUTHORIZED,
           };
         }
@@ -237,8 +199,8 @@ export class AuthService {
           response: {
             valid: false,
           },
-          message: error.message || 'Authentication failed',
-          status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message ?? 'Authentication failed',
+          status: error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
     } catch (error) {
@@ -294,7 +256,7 @@ export class AuthService {
 
       const userInfo = authResponse.userInfo;
 
-      if (!userInfo || !userInfo.email) {
+      if (!userInfo?.email) {
         throw {
           message: 'The user does not have an email address.',
           status: HttpStatus.BAD_REQUEST,
@@ -303,23 +265,6 @@ export class AuthService {
 
       const user =
         await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
-
-      if (!user.obj_role_by_user || user.obj_role_by_user.length === 0) {
-        throw {
-          message: `The user ${user.email} does not have rol associate.`,
-          status: HttpStatus.UNAUTHORIZED,
-        };
-      }
-
-      const jwtToken = this._jwtService.sign(
-        {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-        },
-        { secret: env.JWT_SKEY },
-      );
 
       await this._userRepository.update(
         {
@@ -331,25 +276,14 @@ export class AuthService {
         },
       );
 
-      return {
-        message: 'Successful login',
-        response: {
-          valid: true,
-          token: jwtToken,
-          auth_tokens: {
-            accessToken: authResponse.accessToken,
-            idToken: authResponse.idToken,
-            refreshToken: authResponse.refreshToken,
-            expiresIn: authResponse.expiresIn,
-          },
-          user: {
-            id: user.id,
-            user_name: `${user.first_name} ${user.last_name}`,
-            email: user.email,
-          },
-        },
-        status: HttpStatus.OK,
+      const authTokens = {
+        accessToken: authResponse.accessToken,
+        idToken: authResponse.idToken,
+        refreshToken: authResponse.refreshToken,
+        expiresIn: authResponse.expiresIn,
       };
+
+      return this.createSuccessfulLoginResponse(user, authTokens);
     } catch (error) {
       this._logger.error(`An error ocurred: ${error.message}`, error.stack);
       return this._handlersError.returnErrorRes({ error });
@@ -369,7 +303,6 @@ export class AuthService {
         `Completing password challenge for user: ${challengeDto.username}`,
       );
 
-      // Buscar usuario local
       const existingUser = await this._userRepository.findOne({
         where: {
           email: challengeDto.username.trim().toLowerCase(),
@@ -385,7 +318,6 @@ export class AuthService {
         };
       }
 
-      // Completar challenge en Auth Microservice
       const authResponse =
         await this._authMicroservice.completeNewPasswordChallenge({
           username: challengeDto.username,
@@ -399,57 +331,15 @@ export class AuthService {
         );
       }
 
-      // Actualizar último login
       await this._userRepository.updateLastLoginUserByEmail(
         challengeDto.username,
       );
 
-      // Verificar roles
-      if (
-        !existingUser.obj_role_by_user ||
-        existingUser.obj_role_by_user.length === 0
-      ) {
-        this._logger.warn(
-          `User ${challengeDto.username} has no roles assigned`,
-        );
-        return {
-          message: `The user ${challengeDto.username} does not have any roles assigned. Please contact the administrator.`,
-          response: {
-            valid: false,
-            needsRoles: true,
-          },
-          status: HttpStatus.FORBIDDEN,
-        };
-      }
-
-      // Generar JWT local
-      const jwtToken = this._jwtService.sign(
-        {
-          id: existingUser.id,
-          email: existingUser.email,
-          first_name: existingUser.first_name,
-          last_name: existingUser.last_name,
-        },
-        {
-          secret: env.JWT_SKEY,
-          expiresIn: '7h',
-        },
+      return this.createSuccessfulLoginResponse(
+        existingUser,
+        authResponse.tokens,
+        'Password set successfully. Login completed.',
       );
-
-      return {
-        message: 'Password set successfully. Login completed.',
-        response: {
-          valid: true,
-          token: jwtToken,
-          user: {
-            id: existingUser.id,
-            user_name: `${existingUser.first_name} ${existingUser.last_name}`,
-            email: existingUser.email,
-          },
-          auth_tokens: authResponse.tokens,
-        },
-        status: HttpStatus.OK,
-      };
     } catch (error) {
       this._logger.error(
         `Error completing password challenge: ${error.message}`,
@@ -457,5 +347,58 @@ export class AuthService {
       );
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * Creates JWT token and success response for authenticated user
+   * @param user User entity
+   * @param authTokens Authentication tokens from auth microservice
+   * @param successMessage Custom success message
+   * @returns Successful login response object
+   */
+  private createSuccessfulLoginResponse(
+    user: any,
+    authTokens: any,
+    successMessage: string = 'Successful login',
+  ) {
+    if (!user.obj_role_by_user || user.obj_role_by_user.length === 0) {
+      this._logger.warn(`User ${user.email} has no roles assigned`);
+      return {
+        message: `The user ${user.email} does not have any roles assigned. Please contact the administrator.`,
+        response: {
+          valid: false,
+          needsRoles: true,
+        },
+        status: HttpStatus.FORBIDDEN,
+      };
+    }
+
+    const jwtToken = this._jwtService.sign(
+      {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      },
+      {
+        secret: env.JWT_SKEY,
+        expiresIn: '7h',
+      },
+    );
+
+    return {
+      message: successMessage,
+      response: {
+        valid: true,
+        token: jwtToken,
+        user: {
+          id: user.id,
+          user_name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+        },
+        auth_tokens: authTokens,
+      },
+      status: HttpStatus.OK,
+    };
   }
 }

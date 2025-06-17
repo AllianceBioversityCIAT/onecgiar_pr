@@ -79,8 +79,8 @@ describe('AuthService', () => {
           provide: HandlersError,
           useValue: {
             returnErrorRes: jest.fn().mockImplementation(({ error }) => ({
-              message: error.message || 'Internal server error',
-              status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+              message: error.message ?? 'Internal server error',
+              status: error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
             })),
           },
         },
@@ -368,8 +368,8 @@ describe('AuthService', () => {
 
       const result = await service.validateAuthCode(mockAuthCodeDto);
 
-      expect(result.status).toBe(HttpStatus.UNAUTHORIZED);
-      expect(result.message).toContain('does not have rol associate');
+      expect(result.status).toBe(HttpStatus.FORBIDDEN);
+      expect(result.message).toContain('The user test@example.com does not have any roles assigned. Please contact the administrator.');
     });
   });
 
