@@ -165,8 +165,7 @@ export class UserController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search users by name, email, CGIAR, or status (partial match)' })
-  @ApiQuery({ name: 'name', required: false, type: String })
-  @ApiQuery({ name: 'email', required: false, type: String })
+  @ApiQuery({ name: 'user', required: false, type: String })
   @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
   @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
   @ApiResponse({
@@ -188,12 +187,11 @@ export class UserController {
     },
   })
   async searchUsers(
-    @Query('name') name?: string,
-    @Query('email') email?: string,
+    @Query('user') user?: string,
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
     @Query('status') status?: 'Active' | 'Inactive',
   ) {
-    const result = await this.userService.searchUsers({ name, email, cgIAR, status });
+    const result = await this.userService.searchUsers({user, cgIAR, status });
 
     if (result.response.length === 0) {
       return {
