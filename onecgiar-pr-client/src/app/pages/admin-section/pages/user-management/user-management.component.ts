@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -55,14 +55,16 @@ interface AddUserForm {
 export default class UserManagementComponent {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+  users = signal<AddUser[]>([]);
 
   ngOnInit() {
     this.getUsers();
   }
 
   getUsers() {
-    this.resultsApiService.GET_usersList().subscribe((res: AddUser) => {
-      console.log(res);
+    this.resultsApiService.GET_usersList().subscribe(res => {
+      this.users.set(res.response);
+      console.log(this.users());
     });
   }
 
@@ -73,52 +75,6 @@ export default class UserManagementComponent {
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' }
-  ];
-
-  // User data
-  users: User[] = [
-    {
-      username: 'Jhon Doe',
-      email: 'j.doe@cgiar.org',
-      isCGIAR: 'Yes',
-      userCreationDate: '05-09-2022',
-      status: 'Active'
-    },
-    {
-      username: 'Alice Font',
-      email: 'a.font@cgiar.org',
-      isCGIAR: 'Yes',
-      userCreationDate: '05-09-2022',
-      status: 'Inactive'
-    },
-    {
-      username: 'Christopher Bang',
-      email: 'c.bang@cgiar.org',
-      isCGIAR: 'Yes',
-      userCreationDate: '05-09-2022',
-      status: 'Active'
-    },
-    {
-      username: 'Hector Tobon',
-      email: 'h.f.tobon@cgiar.org',
-      isCGIAR: 'Yes',
-      userCreationDate: '05-09-2022',
-      status: 'Active'
-    },
-    {
-      username: 'Steven Lee',
-      email: 'stevenlee@gmail.com',
-      isCGIAR: 'No',
-      userCreationDate: '20-04-2024',
-      status: 'Active'
-    },
-    {
-      username: 'Andrew Luce',
-      email: 'a.luce@cgiar.org',
-      isCGIAR: 'Yes',
-      userCreationDate: '17-03-2023',
-      status: 'Inactive'
-    }
   ];
 
   // Status filter options
@@ -150,24 +106,6 @@ export default class UserManagementComponent {
     { name: 'Michael Brown', email: 'm.brown@cgiar.org', displayName: 'Michael Brown (m.brown@cgiar.org)' },
     { name: 'Elena Petrov', email: 'e.petrov@cgiar.org', displayName: 'Elena Petrov (e.petrov@cgiar.org)' }
   ];
-
-  // Filtered data
-  get filteredUsers(): User[] {
-    let filtered = this.users;
-
-    // Filter by search text
-    if (this.searchText) {
-      const searchLower = this.searchText.toLowerCase();
-      filtered = filtered.filter(user => user.username.toLowerCase().includes(searchLower) || user.email.toLowerCase().includes(searchLower));
-    }
-
-    // Filter by status
-    if (this.selectedStatus !== 'all') {
-      filtered = filtered.filter(user => user.status === this.selectedStatus);
-    }
-
-    return filtered;
-  }
 
   // Action methods
   onAddUser(): void {
