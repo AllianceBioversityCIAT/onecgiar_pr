@@ -124,6 +124,96 @@ export class UserService {
     }
   }
 
+  async getAllUsers() {
+    try {
+      const query =
+      ` SELECT  
+        first_name AS "firstName",
+        last_name AS "lastName",
+        email AS "emailAddress",
+        CASE 
+            WHEN is_cgiar = 1 THEN 'Yes'
+            ELSE 'No'
+        END AS "cgIAR",
+        CASE 
+            WHEN active = 1 THEN 'Active'
+            ELSE 'Inactive'
+        END AS "userStatus",
+        created_date AS "userCreationDate"
+      FROM 
+        users`
+    ;
+    const user: User[] = await this._userRepository.query(query);
+    return {
+      response: user,
+      message: 'Successful response',
+      status: HttpStatus.OK,
+    };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async searchUsers(filters: {
+    name?: string;
+    email?: string;
+    cgIAR?: 'Yes' | 'No';
+    status?: 'Active' | 'Inactive';
+  }) {
+    const { name, email, cgIAR, status } = filters;
+    try{
+      let baseQuery = `
+      SELECT  
+        first_name AS "firstName",
+        last_name AS "lastName",
+        email AS "emailAddress",
+        CASE 
+            WHEN is_cgiar = 1 THEN 'Yes'
+            ELSE 'No'
+        END AS "cgIAR",
+        CASE 
+            WHEN active = 1 THEN 'Active'
+            ELSE 'Inactive'
+        END AS "userStatus",
+        created_date AS "userCreationDate"
+      FROM users
+      WHERE 1 = 1
+    `;
+
+    const params = [];
+
+    if (name) {
+      baseQuery += ` AND (first_name LIKE ? OR last_name LIKE ?)`;
+      params.push(`%${name}%`, `%${name}%`);
+    }
+
+    if (email) {
+      baseQuery += ` AND email LIKE ?`;
+      params.push(`%${email}%`);
+    }
+
+    if (cgIAR) {
+      baseQuery += ` AND is_cgiar = ?`;
+      params.push(cgIAR === 'Yes' ? 1 : 0);
+    }
+
+    if (status) {
+      baseQuery += ` AND active = ?`;
+      params.push(status === 'Active' ? 1 : 0);
+    }
+
+    const user: User[] = await this._userRepository.query(baseQuery, params);
+    return {
+      response: user,
+      message: 'Successful response',
+      status: HttpStatus.OK,
+    };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+    
+  }
+
   async findOne(id: number): Promise<returnFormatUser | returnErrorDto> {
     try {
       const user: User = await this._userRepository.findOne({

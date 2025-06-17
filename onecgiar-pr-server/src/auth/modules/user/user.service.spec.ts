@@ -578,4 +578,94 @@ describe('UserService', () => {
       );
     });
   });
+
+  describe('getAllUsers', () => {
+    it('should return formatted users from raw SQL query', async () => {
+      const mockQueryResult = [
+        {
+          firstName: 'Test',
+          lastName: 'User',
+          emailAddress: 'test@example.com',
+          cgIAR: 'Yes',
+          userStatus: 'Active',
+          userCreationDate: new Date(),
+        },
+      ];
+      userRepository.query = jest.fn().mockResolvedValue(mockQueryResult);
+
+      const result = await service.getAllUsers();
+
+      expect(result).toEqual({
+        response: mockQueryResult,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      });
+      expect(userRepository.query).toHaveBeenCalled();
+    });
+
+    it('should handle errors in getAllUsers', async () => {
+      const error = new Error('Query failed');
+      userRepository.query = jest.fn().mockRejectedValue(error);
+      handlersError.returnErrorRes = jest
+        .fn()
+        .mockReturnValue(mockErrorResponse);
+
+      const result = await service.getAllUsers();
+
+      expect(result).toEqual(mockErrorResponse);
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('searchUsers', () => {
+    it('should return users based on filters', async () => {
+      const filters: {
+        name?: string;
+        email?: string;
+        cgIAR?: 'Yes' | 'No';
+        status?: 'Active' | 'Inactive';
+      } = {
+        name: 'Test',
+        email: 'test@example.com',
+        cgIAR: 'Yes',
+        status: 'Active',
+      };
+
+      const mockQueryResult = [
+        {
+          firstName: 'Test',
+          lastName: 'User',
+          emailAddress: 'test@example.com',
+          cgIAR: 'Yes',
+          userStatus: 'Active',
+          userCreationDate: new Date(),
+        },
+      ];
+
+      userRepository.query = jest.fn().mockResolvedValue(mockQueryResult);
+
+      const result = await service.searchUsers(filters);
+
+      expect(result).toEqual({
+        response: mockQueryResult,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      });
+      expect(userRepository.query).toHaveBeenCalled();
+    });
+
+    it('should handle errors in searchUsers', async () => {
+      const filters = { name: 'Fail' };
+      const error = new Error('Search failed');
+      userRepository.query = jest.fn().mockRejectedValue(error);
+      handlersError.returnErrorRes = jest
+        .fn()
+        .mockReturnValue(mockErrorResponse);
+
+      const result = await service.searchUsers(filters);
+
+      expect(result).toEqual(mockErrorResponse);
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
 });
