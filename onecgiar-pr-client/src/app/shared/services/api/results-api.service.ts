@@ -1119,11 +1119,14 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 
-  GET_searchUser(search: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search?search=${search}`);
-  }
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {
+    const queryParams: string[] = [];
 
-  GET_usersList() {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/get/users_list`);
+    if (search) queryParams.push(`user=${search}`);
+    if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
+    if (status) queryParams.push(`status=${status}`);
+
+    const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
   }
 }

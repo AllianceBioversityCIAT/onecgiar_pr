@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -7,6 +7,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
@@ -26,6 +27,11 @@ interface User {
 }
 
 interface StatusOption {
+  label: string;
+  value: string;
+}
+
+interface CgiarOption {
   label: string;
   value: string;
 }
@@ -52,19 +58,144 @@ interface AddUserForm {
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
-export default class UserManagementComponent implements OnInit {
+export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+
+  // ViewChild references for clearing selects
+  @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
+  @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
+
+  // Signals for data and filters
   users = signal<AddUser[]>([]);
+  searchText = signal<string>(''); // For input display only
+  searchQuery = signal<string>(''); // For API calls and filtering
+  selectedStatus = signal<string>('');
+  selectedCgiar = signal<string>('');
+  loading = signal<boolean>(false);
+
+  // Timeout for search debounce
+  private searchTimeout: any;
+
+  // Computed signal for filtered users (reactive filtering)
+  filteredUsers = computed(() => {
+    const users = this.users();
+    const search = this.searchQuery(); // Use searchQuery instead of searchText
+    const status = this.selectedStatus();
+    const cgiar = this.selectedCgiar();
+
+    return users.filter(user => {
+      const matchesSearch =
+        !search ||
+        user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+        user.emailAddress?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus = !status || user.userStatus === status;
+      const matchesCgiar = !cgiar || user.cgIAR === cgiar;
+
+      return matchesSearch && matchesStatus && matchesCgiar;
+    });
+  });
+
+  constructor() {
+    // Effect to trigger API calls when filters change (except search)
+    effect(() => {
+      const status = this.selectedStatus();
+      const cgiar = this.selectedCgiar();
+
+      // Skip if it's initial values
+      if (status !== '' || cgiar !== '') {
+        this.getUsers();
+      }
+    });
+  }
 
   ngOnInit() {
     this.getUsers();
   }
 
+  ngOnDestroy() {
+    // Clean up timeout when component is destroyed
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+  }
+
   getUsers() {
-    this.resultsApiService.GET_usersList().subscribe(res => {
-      this.users.set(res.response);
+    this.loading.set(true);
+    this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
+      next: res => {
+        this.users.set(res.response);
+        this.loading.set(false);
+      },
+      error: error => {
+        console.error('Error fetching users:', error);
+        this.loading.set(false);
+      }
     });
+  }
+
+  // Method to handle search input changes with timeout
+  onSearchChange(value: string) {
+    this.searchText.set(value); // Update input display immediately
+
+    // Clear existing timeout
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Set new timeout for 2 seconds
+    this.searchTimeout = setTimeout(() => {
+      this.searchQuery.set(value); // Update search query after timeout
+      this.getUsers(); // Execute API call
+    }, 1000);
+  }
+
+  // Method to handle input events
+  onSearchInputChange(event: Event) {
+    const value = (event.target as HTMLInputElement)?.value || '';
+    this.onSearchChange(value);
+  }
+
+  // Method to handle status filter changes
+  onStatusChange(value: string) {
+    this.selectedStatus.set(value);
+  }
+
+  // Method to handle CGIAR filter changes
+  onCgiarChange(value: string) {
+    this.selectedCgiar.set(value);
+  }
+
+  // Method to clear all filters
+  onClearFilters() {
+    // Clear search timeout if exists
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Reset all filter signals
+    this.searchText.set('');
+    this.searchQuery.set('');
+    this.selectedStatus.set('');
+    this.selectedCgiar.set('');
+
+    // Clear the visual state of select components using writeValue
+    if (this.statusSelect) {
+      this.statusSelect.writeValue('');
+      this.statusSelect._value = '';
+      this.statusSelect.fullValue = {};
+    }
+
+    if (this.cgiarSelect) {
+      this.cgiarSelect.writeValue('');
+      this.cgiarSelect._value = '';
+      this.cgiarSelect.fullValue = {};
+    }
+
+    // Reload data without filters
+    this.getUsers();
   }
 
   // Column configuration
@@ -78,14 +209,14 @@ export default class UserManagementComponent implements OnInit {
 
   // Status filter options
   statusOptions: StatusOption[] = [
-    { label: 'All', value: 'all' },
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' }
   ];
 
-  // Filter variables
-  searchText: string = '';
-  selectedStatus: string = 'all';
+  isCGIAROptions: CgiarOption[] = [
+    { label: 'Yes', value: 'Yes' },
+    { label: 'No', value: 'No' }
+  ];
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -129,7 +260,7 @@ export default class UserManagementComponent implements OnInit {
     };
   }
 
-  onCgiarChange(isCgiar: boolean): void {
+  onModalCgiarChange(isCgiar: boolean): void {
     this.addUserForm.isCGIAR = isCgiar;
     // Reset form fields when changing CGIAR status
     this.addUserForm.selectedUser = undefined;
