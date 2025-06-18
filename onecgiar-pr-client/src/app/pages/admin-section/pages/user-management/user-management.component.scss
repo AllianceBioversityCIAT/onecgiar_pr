@@ -217,9 +217,11 @@
   font-weight: 500;
 }
 
-// Fix pagination dropdown overflow
+// Fix pagination dropdown overflow and center pagination
 ::ng-deep .user-table {
   .p-paginator {
+    text-align: center !important;
+
     .p-dropdown {
       .p-dropdown-panel {
         z-index: 1000 !important;
