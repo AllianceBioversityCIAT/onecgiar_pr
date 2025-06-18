@@ -91,7 +91,7 @@
 
     .clear-filter {
       min-width: 150px; // Smaller width for the clear button
-      margin-top: -8px; // Move button up to align with action buttons
+      margin-top: -6px; // Move button up to align with action buttons
     }
 
     .action-buttons {
@@ -99,7 +99,7 @@
       gap: 12px;
       align-items: center;
       margin-left: auto;
-      margin-top: 20px; // Align with input fields
+      margin-top: 22px; // Align with input fields
 
       .info-button {
         height: 32px;
