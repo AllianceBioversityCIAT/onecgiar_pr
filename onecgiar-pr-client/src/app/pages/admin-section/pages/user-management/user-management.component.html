@@ -26,6 +26,7 @@
       <div class="status-filter">
         <label class="status-label">Status:</label>
         <app-pr-select
+          #statusSelect
           [options]="statusOptions"
           optionLabel="label"
           optionValue="value"
@@ -39,6 +40,7 @@
       <div class="cgiar-filter">
         <label class="cgiar-label">Is CGIAR:</label>
         <app-pr-select
+          #cgiarSelect
           [options]="isCGIAROptions"
           optionLabel="label"
           optionValue="value"
@@ -46,6 +48,12 @@
           [ngModel]="selectedCgiar()"
           (ngModelChange)="onCgiarChange($event)"
           [required]="false"></app-pr-select>
+      </div>
+
+      <!-- Clear filters button -->
+      <div class="clear-filter">
+        <label class="clear-label">&nbsp;</label>
+        <app-pr-button text="Clear filters" icon="clear" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
       </div>
 
       <!-- Action buttons -->

@@ -131,10 +131,50 @@ describe('UserManagementComponent', () => {
     // Should not call getUsers immediately
     expect(component.getUsers).not.toHaveBeenCalled();
 
-    // Should call getUsers after 2 seconds
+    // Should call getUsers after 1 second (updated timeout)
     setTimeout(() => {
       expect(component.getUsers).toHaveBeenCalled();
       done();
-    }, 2100);
+    }, 1100);
+  });
+
+  it('should clear all filters', () => {
+    // Set some filter values
+    component.searchText.set('test');
+    component.searchQuery.set('test');
+    component.selectedStatus.set('Active');
+    component.selectedCgiar.set('Yes');
+
+    // Mock select components
+    component.statusSelect = {
+      writeValue: jasmine.createSpy(),
+      _value: 'Active',
+      fullValue: { label: 'Active', value: 'Active' }
+    } as any;
+    component.cgiarSelect = {
+      writeValue: jasmine.createSpy(),
+      _value: 'Yes',
+      fullValue: { label: 'Yes', value: 'Yes' }
+    } as any;
+
+    spyOn(component, 'getUsers');
+
+    // Clear filters
+    component.onClearFilters();
+
+    // Verify all filters are cleared
+    expect(component.searchText()).toBe('');
+    expect(component.searchQuery()).toBe('');
+    expect(component.selectedStatus()).toBe('');
+    expect(component.selectedCgiar()).toBe('');
+
+    // Verify select components were reset
+    expect(component.statusSelect.writeValue).toHaveBeenCalledWith('');
+    expect(component.cgiarSelect.writeValue).toHaveBeenCalledWith('');
+    expect(component.statusSelect._value).toBe('');
+    expect(component.cgiarSelect._value).toBe('');
+
+    // Verify getUsers was called
+    expect(component.getUsers).toHaveBeenCalled();
   });
 });

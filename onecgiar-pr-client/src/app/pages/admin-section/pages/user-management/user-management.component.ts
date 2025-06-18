@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -7,6 +7,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
@@ -60,6 +61,10 @@ interface AddUserForm {
 export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+
+  // ViewChild references for clearing selects
+  @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
+  @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -161,6 +166,36 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
+  }
+
+  // Method to clear all filters
+  onClearFilters() {
+    // Clear search timeout if exists
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Reset all filter signals
+    this.searchText.set('');
+    this.searchQuery.set('');
+    this.selectedStatus.set('');
+    this.selectedCgiar.set('');
+
+    // Clear the visual state of select components using writeValue
+    if (this.statusSelect) {
+      this.statusSelect.writeValue('');
+      this.statusSelect._value = '';
+      this.statusSelect.fullValue = {};
+    }
+
+    if (this.cgiarSelect) {
+      this.cgiarSelect.writeValue('');
+      this.cgiarSelect._value = '';
+      this.cgiarSelect.fullValue = {};
+    }
+
+    // Reload data without filters
+    this.getUsers();
   }
 
   // Column configuration
