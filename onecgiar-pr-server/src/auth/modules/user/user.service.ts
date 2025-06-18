@@ -155,12 +155,11 @@ export class UserService {
   }
 
   async searchUsers(filters: {
-    name?: string;
-    email?: string;
+    user?: string;
     cgIAR?: 'Yes' | 'No';
     status?: 'Active' | 'Inactive';
   }) {
-    const { name, email, cgIAR, status } = filters;
+    const { user, cgIAR, status } = filters;
     try{
       let baseQuery = `
       SELECT  
@@ -182,14 +181,11 @@ export class UserService {
 
     const params = [];
 
-    if (name) {
+    if (user) {
       baseQuery += ` AND (first_name LIKE ? OR last_name LIKE ?)`;
-      params.push(`%${name}%`, `%${name}%`);
-    }
-
-    if (email) {
-      baseQuery += ` AND email LIKE ?`;
-      params.push(`%${email}%`);
+      params.push(`%${user}%`, `%${user}%`);
+      baseQuery += ` OR email LIKE ?`;
+      params.push(`%${user}%`);
     }
 
     if (cgIAR) {
@@ -202,9 +198,9 @@ export class UserService {
       params.push(status === 'Active' ? 1 : 0);
     }
 
-    const user: User[] = await this._userRepository.query(baseQuery, params);
+    const users: User[] = await this._userRepository.query(baseQuery, params);
     return {
-      response: user,
+      response: users,
       message: 'Successful response',
       status: HttpStatus.OK,
     };
@@ -336,10 +332,10 @@ export class UserService {
       const newUser = new User();
       newUser.email = email;
       newUser.first_name =
-        userInfo.given_name || userInfo.name?.split(' ')[0] || 'User';
+        userInfo.given_name ?? userInfo.name?.split(' ')[0] ?? 'User';
       newUser.last_name =
-        userInfo.family_name ||
-        userInfo.name?.split(' ').slice(1).join(' ') ||
+        userInfo.family_name ??
+        userInfo.name?.split(' ').slice(1).join(' ') ??
         '';
       newUser.is_cgiar = email.endsWith('@cgiar.org');
       newUser.active = true;

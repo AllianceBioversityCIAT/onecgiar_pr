@@ -51,8 +51,8 @@ export class AuthMicroserviceService {
         error.stack,
       );
       throw new HttpException(
-        error.response?.data?.message || 'Failed to get authentication URL',
-        error.response?.status || 500,
+        error.response?.data?.message ?? 'Failed to get authentication URL',
+        error.response?.status ?? 500,
       );
     }
   }
@@ -89,9 +89,9 @@ export class AuthMicroserviceService {
         error.stack,
       );
       throw new HttpException(
-        error.response?.data?.message ||
+        error.response?.data?.message ??
           'Failed to validate authorization code',
-        error.response?.status || 500,
+        error.response?.status ?? 500,
       );
     }
   }
@@ -128,8 +128,8 @@ export class AuthMicroserviceService {
         error.stack,
       );
       throw new HttpException(
-        error.response?.data?.message || 'Failed to get user information',
-        error.response?.status || 500,
+        error.response?.data?.message ?? 'Failed to get user information',
+        error.response?.status ?? 500,
       );
     }
   }
@@ -181,8 +181,8 @@ export class AuthMicroserviceService {
         error.stack,
       );
       throw new HttpException(
-        error.response?.data?.message || 'Authentication failed',
-        error.response?.status || 500,
+        error.response?.data?.message ?? 'Authentication failed',
+        error.response?.status ?? 500,
       );
     }
   }
@@ -225,9 +225,9 @@ export class AuthMicroserviceService {
         error.stack,
       );
       throw new HttpException(
-        error.response?.data?.message ||
+        error.response?.data?.message ??
           'Failed to complete password challenge',
-        error.response?.status || 500,
+        error.response?.status ?? 500,
       );
     }
   }
