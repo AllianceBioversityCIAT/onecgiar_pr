@@ -36,7 +36,7 @@ export class UserService {
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       createUserDto.is_cgiar =
-        createUserDto.email.search(this.cgiarRegex) > -1 ? true : false;
+        createUserDto.email.search(this.cgiarRegex) > -1;
       const user = await this.findOneByEmail(createUserDto.email);
       if (user.response) {
         throw {
@@ -182,23 +182,29 @@ export class UserService {
     const params = [];
 
     if (user) {
-      baseQuery += ` AND (first_name LIKE ? OR last_name LIKE ?)`;
-      params.push(`%${user}%`, `%${user}%`);
-      baseQuery += ` OR email LIKE ?`;
-      params.push(`%${user}%`);
+      baseQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+      params.push(`%${user}%`, `%${user}%`, `%${user}%`);
     }
 
     if (cgIAR) {
       baseQuery += ` AND is_cgiar = ?`;
-      params.push(cgIAR === 'Yes' ? 1 : 0);
+      params.push(cgIAR.toLowerCase() === 'yes' ? 1 : 0);
     }
 
     if (status) {
       baseQuery += ` AND active = ?`;
-      params.push(status === 'Active' ? 1 : 0);
+      params.push(status.toLocaleLowerCase() === 'active' ? 1 : 0);
     }
 
     const users: User[] = await this._userRepository.query(baseQuery, params);
+
+    if (users.length === 0) {
+      return {
+        response: [],
+        message: 'No users match the entered criteria',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
     return {
       response: users,
       message: 'Successful response',
