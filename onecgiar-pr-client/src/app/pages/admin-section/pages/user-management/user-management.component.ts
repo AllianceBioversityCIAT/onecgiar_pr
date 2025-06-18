@@ -62,7 +62,7 @@ export default class UserManagementComponent implements OnInit {
   }
 
   getUsers() {
-    this.resultsApiService.GET_usersList().subscribe(res => {
+    this.resultsApiService.GET_searchUser('', '', '').subscribe(res => {
       this.users.set(res.response);
     });
   }
