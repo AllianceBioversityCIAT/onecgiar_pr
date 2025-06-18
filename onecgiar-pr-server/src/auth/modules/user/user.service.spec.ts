@@ -620,13 +620,11 @@ describe('UserService', () => {
   describe('searchUsers', () => {
     it('should return users based on filters', async () => {
       const filters: {
-        name?: string;
-        email?: string;
+        user?: string;
         cgIAR?: 'Yes' | 'No';
         status?: 'Active' | 'Inactive';
       } = {
-        name: 'Test',
-        email: 'test@example.com',
+        user: 'Test',
         cgIAR: 'Yes',
         status: 'Active',
       };
@@ -655,7 +653,7 @@ describe('UserService', () => {
     });
 
     it('should handle errors in searchUsers', async () => {
-      const filters = { name: 'Fail' };
+      const filters = { user: 'Fail' };
       const error = new Error('Search failed');
       userRepository.query = jest.fn().mockRejectedValue(error);
       handlersError.returnErrorRes = jest

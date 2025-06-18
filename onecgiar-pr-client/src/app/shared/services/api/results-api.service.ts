@@ -1118,4 +1118,12 @@ export class ResultsApiService {
   POST_validateCognitoCode(code: string) {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
+
+  GET_searchUser(search: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search?search=${search}`);
+  }
+
+  GET_usersList() {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/get/users_list`);
+  }
 }

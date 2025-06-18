@@ -34,6 +34,10 @@
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
   }
 }
 
@@ -43,7 +47,7 @@
 
   .controls-row {
     display: flex;
-    align-items: end;
+    align-items: flex-start;
     gap: 24px;
     flex-wrap: wrap;
 
@@ -85,6 +89,7 @@
       gap: 12px;
       align-items: center;
       margin-left: auto;
+      margin-top: 20px; // Align with input fields
 
       .info-button {
         height: 32px;
@@ -113,7 +118,31 @@
   box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  overflow: hidden;
+  overflow: visible; // Allow pagination dropdown to show
+  position: relative; // For absolute positioning of counter
+
+  // Floating counter
+  .counter {
+    font-size: 14px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #6b7280;
+
+    .name {
+      font-weight: 600;
+    }
+
+    .total {
+      font-weight: 500;
+    }
+  }
 }
 
 // Custom table styles
@@ -142,6 +171,7 @@
     }
 
     &:nth-child(3), // Is CGIAR header
+    &:nth-child(4), // Date header
     &:nth-child(5) {
       // Status header
       .header-content {
@@ -165,6 +195,7 @@
       vertical-align: middle;
 
       &:nth-child(3), // Is CGIAR column
+      &:nth-child(4), // Date column
       &:nth-child(5) {
         // Status column
         text-align: center;
@@ -203,14 +234,31 @@
   letter-spacing: 0.05em;
 }
 
-// Pagination information
-::ng-deep .pagination-info {
-  font-size: 14px;
-  color: #6b7280;
-  font-weight: 500;
+// Center pagination globally for this component
+::ng-deep {
+  .user-table .p-paginator {
+    display: flex !important;
+    justify-content: center !important;
+
+    .p-dropdown .p-dropdown-panel {
+      z-index: 1000 !important;
+    }
+  }
+
+  // Alternative approach - center the entire table footer
+  .user-table .p-datatable-footer {
+    text-align: center;
+  }
 }
 
 // Responsive styles
+// Medium screens - description definitely wraps
+@media (max-width: 1000px) {
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 560px) !important; // Extra 40px for definite description wrap
+  }
+}
+
 @media (max-width: 768px) {
   .local_container {
     padding: 20px 24px;
@@ -236,16 +284,31 @@
       }
     }
   }
+
+  // Mobile: stacked controls
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 620px) !important; // Extra 100px for stacked controls
+  }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .controls-section {
     .controls-row {
+      flex-wrap: wrap;
+      gap: 12px; // Reduce gap in responsive
+
       .action-buttons {
         margin-left: 0;
-        margin-top: 16px;
+        margin-top: 0 !important; // No margin when buttons are below
+        width: 100%;
+        justify-content: flex-start;
       }
     }
+  }
+
+  // Adjust table scroll height when controls wrap to two lines
+  ::ng-deep .user-table .p-datatable-scrollable-body {
+    height: calc(100vh - 590px) !important; // Extra 70px when filters go below
   }
 }
 

@@ -3,7 +3,12 @@
     <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
     <h1>User Management</h1>
   </header>
-  <div class="description">Welcome to the user management panel, here you can manage the users and their roles within the platform.</div>
+  <div
+    class="description"
+    pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
+    tooltipPosition="bottom">
+    Welcome to the user management panel, here you can manage the users and their roles within the platform.
+  </div>
 
   <!-- Filter and action controls -->
   <div class="controls-section">
@@ -33,7 +38,7 @@
       <div class="action-buttons">
         <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
 
-        <button
+        <!-- <button
           class="info-button p-button p-button-secondary p-button-icon-only"
           (click)="onShowInfo()"
           [style]="{ backgroundColor: '#6366f1', color: '#fff' }"
@@ -42,7 +47,7 @@
           <i class="pi pi-info-circle"></i>
         </button>
 
-        <app-pr-button text="Export data" icon="file_download" colorType="primary" (clickEvent)="onExportData()"></app-pr-button>
+        <app-pr-button text="Export data" icon="file_download" colorType="primary" (clickEvent)="onExportData()"></app-pr-button> -->
       </div>
     </div>
   </div>
@@ -50,10 +55,12 @@
   <!-- Users table -->
   <div class="table-container">
     <p-table
-      [value]="filteredUsers"
+      [value]="this.users()"
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
+      [scrollable]="true"
+      scrollHeight="calc(100vh - 520px)"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
       responsiveLayout="scroll">
       <ng-template pTemplate="header">
@@ -69,13 +76,13 @@
 
       <ng-template pTemplate="body" let-user>
         <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.isCGIAR }}</td>
-          <td>{{ user.userCreationDate }}</td>
+          <td>{{ user.firstName }} {{ user.lastName }}</td>
+          <td>{{ user.emailAddress }}</td>
+          <td>{{ user.cgIAR }}</td>
+          <td>{{ user.userCreationDate | date: 'MM-dd-yyyy' }}</td>
           <td>
-            <span [class]="getStatusClass(user.status)">
-              {{ user.status }}
+            <span [class]="getStatusClass(user.userStatus)">
+              {{ user.userStatus }}
             </span>
           </td>
         </tr>
@@ -86,11 +93,13 @@
           <td [attr.colspan]="columns.length" class="no-data">No users found matching your criteria.</td>
         </tr>
       </ng-template>
-
-      <ng-template pTemplate="paginatorleft">
-        <div class="pagination-info">Users | {{ filteredUsers.length }} total</div>
-      </ng-template>
     </p-table>
+
+    <!-- Floating counter like in global-completeness-status -->
+    <div class="counter">
+      <span class="name">Users |</span>
+      <span class="total">{{ this.users().length }} total</span>
+    </div>
   </div>
 
   <!-- Add User Modal -->
