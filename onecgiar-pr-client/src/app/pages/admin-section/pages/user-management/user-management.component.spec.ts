@@ -50,6 +50,7 @@ describe('UserManagementComponent', () => {
   it('should initialize with default values', () => {
     expect(component.searchText()).toBe('');
     expect(component.selectedStatus()).toBe('');
+    expect(component.loading()).toBe(false);
     expect(component.showAddUserModal).toBe(false);
     expect(component.addUserForm.isCGIAR).toBe(true);
     expect(component.addUserForm.hasAdminPermissions).toBe(false);
@@ -121,5 +122,19 @@ describe('UserManagementComponent', () => {
   it('should return current user information', () => {
     expect(component.currentUserName).toBe('Test User');
     expect(component.currentUserEmail).toBe('test@example.com');
+  });
+
+  it('should handle search with timeout', done => {
+    spyOn(component, 'getUsers');
+    component.onSearchChange('test search');
+
+    // Should not call getUsers immediately
+    expect(component.getUsers).not.toHaveBeenCalled();
+
+    // Should call getUsers after 2 seconds
+    setTimeout(() => {
+      expect(component.getUsers).toHaveBeenCalled();
+      done();
+    }, 2100);
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -10,8 +10,6 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface UserColumn {
   label: string;
@@ -59,23 +57,25 @@ interface AddUserForm {
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
-export default class UserManagementComponent implements OnInit {
+export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
-  searchText = signal<string>('');
+  searchText = signal<string>(''); // For input display only
+  searchQuery = signal<string>(''); // For API calls and filtering
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
+  loading = signal<boolean>(false);
 
-  // Subject for debounced search
-  private searchSubject = new Subject<string>();
+  // Timeout for search debounce
+  private searchTimeout: any;
 
   // Computed signal for filtered users (reactive filtering)
   filteredUsers = computed(() => {
     const users = this.users();
-    const search = this.searchText();
+    const search = this.searchQuery(); // Use searchQuery instead of searchText
     const status = this.selectedStatus();
     const cgiar = this.selectedCgiar();
 
@@ -94,18 +94,6 @@ export default class UserManagementComponent implements OnInit {
   });
 
   constructor() {
-    // Set up debounced search
-    this.searchSubject
-      .pipe(
-        debounceTime(2000),
-        distinctUntilChanged(),
-        switchMap(searchTerm => this.resultsApiService.GET_searchUser(searchTerm, this.selectedCgiar() as any, this.selectedStatus() as any)),
-        takeUntilDestroyed()
-      )
-      .subscribe(res => {
-        this.users.set(res.response);
-      });
-
     // Effect to trigger API calls when filters change (except search)
     effect(() => {
       const status = this.selectedStatus();
@@ -122,16 +110,41 @@ export default class UserManagementComponent implements OnInit {
     this.getUsers();
   }
 
+  ngOnDestroy() {
+    // Clean up timeout when component is destroyed
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+  }
+
   getUsers() {
-    this.resultsApiService.GET_searchUser(this.searchText(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe(res => {
-      this.users.set(res.response);
+    this.loading.set(true);
+    this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
+      next: res => {
+        this.users.set(res.response);
+        this.loading.set(false);
+      },
+      error: error => {
+        console.error('Error fetching users:', error);
+        this.loading.set(false);
+      }
     });
   }
 
-  // Method to handle search input changes
+  // Method to handle search input changes with timeout
   onSearchChange(value: string) {
-    this.searchText.set(value);
-    this.searchSubject.next(value);
+    this.searchText.set(value); // Update input display immediately
+
+    // Clear existing timeout
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Set new timeout for 2 seconds
+    this.searchTimeout = setTimeout(() => {
+      this.searchQuery.set(value); // Update search query after timeout
+      this.getUsers(); // Execute API call
+    }, 1000);
   }
 
   // Method to handle input events

@@ -70,6 +70,7 @@
   <div class="table-container">
     <p-table
       [value]="this.filteredUsers()"
+      [loading]="this.loading()"
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
