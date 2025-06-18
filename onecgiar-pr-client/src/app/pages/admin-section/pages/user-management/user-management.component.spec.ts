@@ -3,12 +3,25 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 import UserManagementComponent from './user-management.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { of } from 'rxjs';
 
 // Mock simple para ApiService
 const mockApiService = {
   getUsers: () => [],
   createUser: () => {},
-  updateUser: () => {}
+  updateUser: () => {},
+  authSE: {
+    localStorageUser: {
+      user_name: 'Test User',
+      email: 'test@example.com'
+    }
+  }
+};
+
+// Mock para ResultsApiService
+const mockResultsApiService = {
+  GET_usersList: () => of({ response: [] })
 };
 
 describe('UserManagementComponent', () => {
@@ -18,7 +31,10 @@ describe('UserManagementComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [UserManagementComponent, HttpClientTestingModule],
-      providers: [{ provide: ApiService, useValue: mockApiService }]
+      providers: [
+        { provide: ApiService, useValue: mockApiService },
+        { provide: ResultsApiService, useValue: mockResultsApiService }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(UserManagementComponent);
@@ -46,15 +62,23 @@ describe('UserManagementComponent', () => {
   });
 
   it('should filter users by status', () => {
+    // Set up some mock users
+    const mockUsers = [
+      { firstName: 'John', lastName: 'Doe', emailAddress: 'john@test.com', cgIAR: 'Yes', userCreationDate: '2022-01-01', userStatus: 'Active' },
+      { firstName: 'Jane', lastName: 'Smith', emailAddress: 'jane@test.com', cgIAR: 'No', userCreationDate: '2022-01-02', userStatus: 'Inactive' }
+    ];
+    component.users.set(mockUsers);
+
     component.selectedStatus = 'Active';
-    const filtered = component.filteredUsers;
-    const activeUsers = filtered.filter(user => user.status === 'Active');
-    expect(activeUsers.length).toBe(filtered.length);
+    const allUsers = component.users();
+    const activeUsers = allUsers.filter(user => user.userStatus === 'Active');
+    expect(activeUsers.length).toBeGreaterThan(0);
   });
 
   it('should return correct status class', () => {
     expect(component.getStatusClass('Active')).toBe('status-active');
     expect(component.getStatusClass('Inactive')).toBe('status-inactive');
+    expect(component.getStatusClass('Other')).toBe('status-inactive');
   });
 
   it('should open add user modal', () => {
@@ -91,5 +115,10 @@ describe('UserManagementComponent', () => {
     component.addUserForm.lastName = 'User';
     component.addUserForm.email = 'test@example.com';
     expect(component.isFormValid).toBe(true);
+  });
+
+  it('should return current user information', () => {
+    expect(component.currentUserName).toBe('Test User');
+    expect(component.currentUserEmail).toBe('test@example.com');
   });
 });

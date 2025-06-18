@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -52,7 +52,7 @@ interface AddUserForm {
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
-export default class UserManagementComponent {
+export default class UserManagementComponent implements OnInit {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   users = signal<AddUser[]>([]);
@@ -64,7 +64,6 @@ export default class UserManagementComponent {
   getUsers() {
     this.resultsApiService.GET_usersList().subscribe(res => {
       this.users.set(res.response);
-      console.log(this.users());
     });
   }
 
