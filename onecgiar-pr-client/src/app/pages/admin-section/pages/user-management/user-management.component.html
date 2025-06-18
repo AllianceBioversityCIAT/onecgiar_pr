@@ -93,11 +93,13 @@
           <td [attr.colspan]="columns.length" class="no-data">No users found matching your criteria.</td>
         </tr>
       </ng-template>
-
-      <ng-template pTemplate="paginatorleft">
-        <div class="pagination-info">Users | {{ this.users().length }} total</div>
-      </ng-template>
     </p-table>
+
+    <!-- Floating counter like in global-completeness-status -->
+    <div class="counter">
+      <span class="name">Users |</span>
+      <span class="total">{{ this.users().length }} total</span>
+    </div>
   </div>
 
   <!-- Add User Modal -->

@@ -119,6 +119,30 @@
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
   overflow: visible; // Allow pagination dropdown to show
+  position: relative; // For absolute positioning of counter
+
+  // Floating counter
+  .counter {
+    font-size: 14px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #6b7280;
+
+    .name {
+      font-weight: 600;
+    }
+
+    .total {
+      font-weight: 500;
+    }
+  }
 }
 
 // Custom table styles
@@ -210,23 +234,20 @@
   letter-spacing: 0.05em;
 }
 
-// Pagination information
-::ng-deep .pagination-info {
-  font-size: 14px;
-  color: #6b7280;
-  font-weight: 500;
-}
+// Center pagination globally for this component
+::ng-deep {
+  .user-table .p-paginator {
+    display: flex !important;
+    justify-content: center !important;
 
-// Fix pagination dropdown overflow and center pagination
-::ng-deep .user-table {
-  .p-paginator {
-    text-align: center !important;
-
-    .p-dropdown {
-      .p-dropdown-panel {
-        z-index: 1000 !important;
-      }
+    .p-dropdown .p-dropdown-panel {
+      z-index: 1000 !important;
     }
+  }
+
+  // Alternative approach - center the entire table footer
+  .user-table .p-datatable-footer {
+    text-align: center;
   }
 }
 
