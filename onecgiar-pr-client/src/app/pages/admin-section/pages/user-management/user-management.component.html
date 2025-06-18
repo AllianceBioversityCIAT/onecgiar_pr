@@ -18,7 +18,7 @@
         <label class="search-label">Search by user:</label>
         <div class="p-input-icon-left">
           <i class="pi pi-search"></i>
-          <input type="text" pInputText placeholder="Search" [(ngModel)]="searchText" class="search-field" />
+          <input type="text" pInputText placeholder="Search" [value]="searchText()" (input)="onSearchInputChange($event)" class="search-field" />
         </div>
       </div>
 
@@ -26,12 +26,34 @@
       <div class="status-filter">
         <label class="status-label">Status:</label>
         <app-pr-select
+          #statusSelect
           [options]="statusOptions"
           optionLabel="label"
           optionValue="value"
           placeholder="All"
-          [(ngModel)]="selectedStatus"
+          [ngModel]="selectedStatus()"
+          (ngModelChange)="onStatusChange($event)"
           [required]="false"></app-pr-select>
+      </div>
+
+      <!-- CGIAR filter -->
+      <div class="cgiar-filter">
+        <label class="cgiar-label">Is CGIAR:</label>
+        <app-pr-select
+          #cgiarSelect
+          [options]="isCGIAROptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="All"
+          [ngModel]="selectedCgiar()"
+          (ngModelChange)="onCgiarChange($event)"
+          [required]="false"></app-pr-select>
+      </div>
+
+      <!-- Clear filters button -->
+      <div class="clear-filter">
+        <label class="clear-label">&nbsp;</label>
+        <app-pr-button text="Clear filters" icon="clear" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
       </div>
 
       <!-- Action buttons -->
@@ -55,7 +77,8 @@
   <!-- Users table -->
   <div class="table-container">
     <p-table
-      [value]="this.users()"
+      [value]="this.filteredUsers()"
+      [loading]="this.loading()"
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
@@ -98,7 +121,7 @@
     <!-- Floating counter like in global-completeness-status -->
     <div class="counter">
       <span class="name">Users |</span>
-      <span class="total">{{ this.users().length }} total</span>
+      <span class="total">{{ this.filteredUsers().length }} total</span>
     </div>
   </div>
 
@@ -117,8 +140,8 @@
       <div class="form-field">
         <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
         <div class="cgiar-buttons">
-          <button type="button" class="cgiar-btn" [class.active]="addUserForm.isCGIAR" (click)="onCgiarChange(true)">Yes</button>
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm.isCGIAR" (click)="onCgiarChange(false)">No</button>
+          <button type="button" class="cgiar-btn" [class.active]="addUserForm.isCGIAR" (click)="onModalCgiarChange(true)">Yes</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm.isCGIAR" (click)="onModalCgiarChange(false)">No</button>
         </div>
       </div>
 
