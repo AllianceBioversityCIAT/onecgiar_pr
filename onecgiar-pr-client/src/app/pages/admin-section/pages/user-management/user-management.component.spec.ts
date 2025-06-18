@@ -125,15 +125,15 @@ describe('UserManagementComponent', () => {
   });
 
   it('should handle search with timeout', done => {
-    spyOn(component, 'getUsers');
+    const spy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
     component.onSearchChange('test search');
 
     // Should not call getUsers immediately
-    expect(component.getUsers).not.toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
 
     // Should call getUsers after 1 second (updated timeout)
     setTimeout(() => {
-      expect(component.getUsers).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
       done();
     }, 1100);
   });
@@ -146,18 +146,22 @@ describe('UserManagementComponent', () => {
     component.selectedCgiar.set('Yes');
 
     // Mock select components
+    const statusWriteValueSpy = jest.fn();
+    const cgiarWriteValueSpy = jest.fn();
+
     component.statusSelect = {
-      writeValue: jasmine.createSpy(),
+      writeValue: statusWriteValueSpy,
       _value: 'Active',
       fullValue: { label: 'Active', value: 'Active' }
     } as any;
+
     component.cgiarSelect = {
-      writeValue: jasmine.createSpy(),
+      writeValue: cgiarWriteValueSpy,
       _value: 'Yes',
       fullValue: { label: 'Yes', value: 'Yes' }
     } as any;
 
-    spyOn(component, 'getUsers');
+    const getUsersSpy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
 
     // Clear filters
     component.onClearFilters();
@@ -169,12 +173,12 @@ describe('UserManagementComponent', () => {
     expect(component.selectedCgiar()).toBe('');
 
     // Verify select components were reset
-    expect(component.statusSelect.writeValue).toHaveBeenCalledWith('');
-    expect(component.cgiarSelect.writeValue).toHaveBeenCalledWith('');
+    expect(statusWriteValueSpy).toHaveBeenCalledWith('');
+    expect(cgiarWriteValueSpy).toHaveBeenCalledWith('');
     expect(component.statusSelect._value).toBe('');
     expect(component.cgiarSelect._value).toBe('');
 
     // Verify getUsers was called
-    expect(component.getUsers).toHaveBeenCalled();
+    expect(getUsersSpy).toHaveBeenCalled();
   });
 });

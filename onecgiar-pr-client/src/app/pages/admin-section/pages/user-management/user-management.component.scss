@@ -91,6 +91,7 @@
 
     .clear-filter {
       min-width: 150px; // Smaller width for the clear button
+      margin-top: -8px; // Move button up to align with action buttons
     }
 
     .action-buttons {
