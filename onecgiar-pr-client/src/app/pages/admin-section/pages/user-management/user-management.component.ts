@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -10,6 +10,8 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface UserColumn {
   label: string;
@@ -26,6 +28,11 @@ interface User {
 }
 
 interface StatusOption {
+  label: string;
+  value: string;
+}
+
+interface CgiarOption {
   label: string;
   value: string;
 }
@@ -55,16 +62,92 @@ interface AddUserForm {
 export default class UserManagementComponent implements OnInit {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+
+  // Signals for data and filters
   users = signal<AddUser[]>([]);
+  searchText = signal<string>('');
+  selectedStatus = signal<string>('');
+  selectedCgiar = signal<string>('');
+
+  // Subject for debounced search
+  private searchSubject = new Subject<string>();
+
+  // Computed signal for filtered users (reactive filtering)
+  filteredUsers = computed(() => {
+    const users = this.users();
+    const search = this.searchText();
+    const status = this.selectedStatus();
+    const cgiar = this.selectedCgiar();
+
+    return users.filter(user => {
+      const matchesSearch =
+        !search ||
+        user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+        user.emailAddress?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus = !status || user.userStatus === status;
+      const matchesCgiar = !cgiar || user.cgIAR === cgiar;
+
+      return matchesSearch && matchesStatus && matchesCgiar;
+    });
+  });
+
+  constructor() {
+    // Set up debounced search
+    this.searchSubject
+      .pipe(
+        debounceTime(2000),
+        distinctUntilChanged(),
+        switchMap(searchTerm => this.resultsApiService.GET_searchUser(searchTerm, this.selectedCgiar() as any, this.selectedStatus() as any)),
+        takeUntilDestroyed()
+      )
+      .subscribe(res => {
+        this.users.set(res.response);
+      });
+
+    // Effect to trigger API calls when filters change (except search)
+    effect(() => {
+      const status = this.selectedStatus();
+      const cgiar = this.selectedCgiar();
+
+      // Skip if it's initial values
+      if (status !== '' || cgiar !== '') {
+        this.getUsers();
+      }
+    });
+  }
 
   ngOnInit() {
     this.getUsers();
   }
 
   getUsers() {
-    this.resultsApiService.GET_searchUser('', '', '').subscribe(res => {
+    this.resultsApiService.GET_searchUser(this.searchText(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe(res => {
       this.users.set(res.response);
     });
+  }
+
+  // Method to handle search input changes
+  onSearchChange(value: string) {
+    this.searchText.set(value);
+    this.searchSubject.next(value);
+  }
+
+  // Method to handle input events
+  onSearchInputChange(event: Event) {
+    const value = (event.target as HTMLInputElement)?.value || '';
+    this.onSearchChange(value);
+  }
+
+  // Method to handle status filter changes
+  onStatusChange(value: string) {
+    this.selectedStatus.set(value);
+  }
+
+  // Method to handle CGIAR filter changes
+  onCgiarChange(value: string) {
+    this.selectedCgiar.set(value);
   }
 
   // Column configuration
@@ -78,14 +161,14 @@ export default class UserManagementComponent implements OnInit {
 
   // Status filter options
   statusOptions: StatusOption[] = [
-    { label: 'All', value: 'all' },
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' }
   ];
 
-  // Filter variables
-  searchText: string = '';
-  selectedStatus: string = 'all';
+  isCGIAROptions: CgiarOption[] = [
+    { label: 'Yes', value: 'Yes' },
+    { label: 'No', value: 'No' }
+  ];
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -129,7 +212,7 @@ export default class UserManagementComponent implements OnInit {
     };
   }
 
-  onCgiarChange(isCgiar: boolean): void {
+  onModalCgiarChange(isCgiar: boolean): void {
     this.addUserForm.isCGIAR = isCgiar;
     // Reset form fields when changing CGIAR status
     this.addUserForm.selectedUser = undefined;

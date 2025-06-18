@@ -1,0 +1,51 @@
+# Angular 18+ Development Rules
+
+## Core Principles
+
+- Always use Angular 18+ features and syntax
+- Prefer signals over traditional reactive patterns
+- Use computed signals instead of getter methods
+- Implement proper TypeScript typing
+- Follow Angular's reactive patterns
+
+## Signals Usage
+
+- Use `signal()` for state management
+- Use `computed()` for derived state instead of getter methods
+- Use `effect()` for side effects
+- Prefer signals over BehaviorSubject when possible
+
+## Component Architecture
+
+- Use standalone components by default
+- Implement OnInit interface when using lifecycle hooks
+- Use `inject()` function for dependency injection
+- Use proper typing for all interfaces and signals
+
+## Reactive Patterns
+
+- Implement debounce for search inputs (2+ seconds)
+- Use computed signals for filtering and data transformation
+- Avoid manual subscriptions when signals can handle reactivity
+- Use proper cleanup for subscriptions when necessary
+
+## Performance
+
+- Use `OnPush` change detection strategy when appropriate
+- Implement proper signal-based reactivity
+- Avoid unnecessary re-computations
+- Use trackBy functions for \*ngFor loops
+
+## Code Quality
+
+- Remove console.log statements in production code
+- Implement proper error handling
+- Use meaningful variable and method names
+- Follow Angular style guide conventions
+
+## Modern Angular Features (v18+)
+
+- Use zoneless change detection when possible
+- Leverage new control flow syntax (@if, @for, @defer)
+- Use Material 3 components when available
+- Implement proper SSR and hydration support

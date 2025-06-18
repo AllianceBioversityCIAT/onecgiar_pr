@@ -21,7 +21,8 @@ const mockApiService = {
 
 // Mock para ResultsApiService
 const mockResultsApiService = {
-  GET_usersList: () => of({ response: [] })
+  GET_usersList: () => of({ response: [] }),
+  GET_searchUser: () => of({ response: [] })
 };
 
 describe('UserManagementComponent', () => {
@@ -47,8 +48,8 @@ describe('UserManagementComponent', () => {
   });
 
   it('should initialize with default values', () => {
-    expect(component.searchText).toBe('');
-    expect(component.selectedStatus).toBe('all');
+    expect(component.searchText()).toBe('');
+    expect(component.selectedStatus()).toBe('');
     expect(component.showAddUserModal).toBe(false);
     expect(component.addUserForm.isCGIAR).toBe(true);
     expect(component.addUserForm.hasAdminPermissions).toBe(false);
@@ -69,7 +70,7 @@ describe('UserManagementComponent', () => {
     ];
     component.users.set(mockUsers);
 
-    component.selectedStatus = 'Active';
+    component.selectedStatus.set('Active');
     const allUsers = component.users();
     const activeUsers = allUsers.filter(user => user.userStatus === 'Active');
     expect(activeUsers.length).toBeGreaterThan(0);
@@ -97,7 +98,7 @@ describe('UserManagementComponent', () => {
   it('should handle CGIAR status change', () => {
     component.addUserForm.selectedUser = { name: 'Test', email: 'test@test.com' };
     component.addUserForm.name = 'Test Name';
-    component.onCgiarChange(false);
+    component.onModalCgiarChange(false);
     expect(component.addUserForm.isCGIAR).toBe(false);
     expect(component.addUserForm.selectedUser).toBeUndefined();
     expect(component.addUserForm.name).toBe('');

@@ -71,13 +71,15 @@
       }
     }
 
-    .status-filter {
+    .status-filter,
+    .cgiar-filter {
       display: flex;
       flex-direction: column;
       gap: 8px;
       min-width: 200px;
 
-      .status-label {
+      .status-label,
+      .cgiar-label {
         font-size: 14px;
         font-weight: 500;
         color: #374151;
