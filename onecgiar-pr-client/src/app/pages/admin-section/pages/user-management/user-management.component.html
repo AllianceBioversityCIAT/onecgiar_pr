@@ -102,7 +102,7 @@
           <td>{{ user.firstName }} {{ user.lastName }}</td>
           <td>{{ user.emailAddress }}</td>
           <td>{{ user.cgIAR }}</td>
-          <td>{{ user.userCreationDate | date: 'MM-dd-yyyy' }}</td>
+          <td>{{ user.userCreationDate | date: 'dd-MM-yyyy' }}</td>
           <td>
             <span [class]="getStatusClass(user.userStatus)">
               {{ user.userStatus }}
