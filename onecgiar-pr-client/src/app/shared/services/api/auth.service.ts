@@ -1,17 +1,20 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
-import { LocalStorageUser, UserAuth } from '../../interfaces/user.interface';
+import { LocalStorageUser, UserAuth, UserChangePassword } from '../../interfaces/user.interface';
 import { map } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  inLogin = false;
+  inLogin = signal(false);
   apiBaseUrl = environment.apiBaseUrl + 'auth/';
 
-  constructor(public http: HttpClient, private router: Router) {}
+  constructor(
+    public http: HttpClient,
+    private readonly router: Router
+  ) {}
 
   set localStorageToken(token: string) {
     localStorage.setItem('token', token);
@@ -31,8 +34,8 @@ export class AuthService {
 
   logout() {
     this.logOutTawtkTo();
-    this.router.navigate(['/login']);
     localStorage.clear();
+    window.location.replace('/login');
   }
 
   private logOutTawtkTo() {
@@ -61,14 +64,18 @@ export class AuthService {
         document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     }
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
   }
 
   userAuth(body: UserAuth) {
     return this.http.post<any>(`${this.apiBaseUrl}singin`, body);
+  }
+
+  POST_cognitoAuth(body: UserAuth) {
+    return this.http.post<any>(`${this.apiBaseUrl}login/custom`, body);
+  }
+
+  POST_cognitoChangePassword(body: UserChangePassword) {
+    return this.http.post<any>(`${this.apiBaseUrl}complete-password-challenge`, body);
   }
 
   GET_allRolesByUser() {

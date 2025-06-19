@@ -13,6 +13,7 @@ import { Notification } from '../../../../api/notification/entities/notification
 import { UserNotificationSetting } from '../../../../api/user-notification-settings/entities/user-notification-settings.entity';
 import { ResultQaedLog } from '../../../../api/result-qaed/entities/result-qaed-log.entity';
 import { ContributionToIndicatorSubmission } from '../../../../api/contribution-to-indicators/entities/contribution-to-indicator-submission.entity';
+import { RoleByUser } from '../../role-by-user/entities/role-by-user.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -85,6 +86,9 @@ export class User {
     nullable: true,
   })
   last_pop_up_viewed!: Date;
+
+  @OneToMany(() => RoleByUser, (roleByUser) => roleByUser.obj_user)
+  obj_role_by_user: RoleByUser[];
 
   @OneToMany(
     () => UserNotificationSetting,
