@@ -11,8 +11,6 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import moment from 'moment';
-import { parse } from 'path';
 import { Brackets } from 'typeorm';
 
 @Injectable()
@@ -175,10 +173,6 @@ export class UserService {
       'users.created_date AS "userCreationDate"',
     ]);
 
-    const yearRegex = /^\d{4}$/;
-    const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
-    const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
-
     query.where('1 = 1');
 
     if (user && user.trim() !== '') {
@@ -188,7 +182,6 @@ export class UserService {
             .orWhere('users.last_name LIKE :searchTerm', { searchTerm: `%${user}%` })
             .orWhere('users.email LIKE :searchTerm', { searchTerm: `%${user}%` });
 
-          // Validaciones de fecha como ya tienes:
           const yearRegex = /^\d{4}$/;
           const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
           const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
