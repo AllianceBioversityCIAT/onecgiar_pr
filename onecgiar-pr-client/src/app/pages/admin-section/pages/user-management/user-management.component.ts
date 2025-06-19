@@ -98,11 +98,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       next: res => {
         this.users.set(res.response);
         this.loading.set(false);
-        console.log(res.response);
       },
       error: error => {
         console.error('Error fetching users:', error);
         this.loading.set(false);
+        this.users.set([]);
       }
     });
   }
