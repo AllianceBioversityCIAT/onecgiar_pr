@@ -97,6 +97,7 @@ describe('UserService', () => {
     save: jest.fn(),
     update: jest.fn(),
     InitiativeByUser: jest.fn(),
+    createQueryBuilder: jest.fn(),
   }));
 
   const mockRoleByUserRepositoryFactory = jest.fn(() => ({
@@ -617,6 +618,17 @@ describe('UserService', () => {
     });
   });
 
+  const createQueryBuilderMock = () => {
+    const mock = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orWhere: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn(),
+    };
+    return mock;
+  };
+
   describe('searchUsers', () => {
     it('should return users based on filters', async () => {
       const filters: {
@@ -640,25 +652,26 @@ describe('UserService', () => {
         },
       ];
 
-      userRepository.query = jest.fn().mockResolvedValue(mockQueryResult);
+    const queryBuilderMock = createQueryBuilderMock();
+    queryBuilderMock.getRawMany.mockResolvedValue(mockQueryResult);
+    (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(queryBuilderMock);
 
-      const result = await service.searchUsers(filters);
+    const result = await service.searchUsers(filters);
 
       expect(result).toEqual({
         response: mockQueryResult,
         message: 'Successful response',
         status: HttpStatus.OK,
       });
-      expect(userRepository.query).toHaveBeenCalled();
+      expect(queryBuilderMock.getRawMany).toHaveBeenCalled();
     });
 
     it('should handle errors in searchUsers', async () => {
       const filters = { user: 'Fail' };
-      const error = new Error('Search failed');
-      userRepository.query = jest.fn().mockRejectedValue(error);
-      handlersError.returnErrorRes = jest
-        .fn()
-        .mockReturnValue(mockErrorResponse);
+      const error = new Error('Error message');
+      const queryBuilderMock = createQueryBuilderMock();
+      queryBuilderMock.getRawMany.mockRejectedValue(error);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(queryBuilderMock);
 
       const result = await service.searchUsers(filters);
 
