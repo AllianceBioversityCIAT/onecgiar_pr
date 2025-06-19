@@ -4,6 +4,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { CognitoService } from './cognito.service';
 import { MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 describe('CognitoService', () => {
   let service: CognitoService;
@@ -54,7 +55,7 @@ describe('CognitoService', () => {
 
       service.loginWithAzureAd();
 
-      expect(spy).toHaveBeenCalledWith('CGIAR-AzureAD');
+      expect(spy).toHaveBeenCalledWith(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD');
       expect(service.isLoadingAzureAd()).toBe(false);
     });
 
