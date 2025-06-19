@@ -1,72 +1,52 @@
 export class ContributorsBody {
-  // result_id: number = null;
   contributing_initiatives: {
     accepted_contributing_initiatives: any;
     pending_contributing_initiatives: any;
   } = { accepted_contributing_initiatives: [], pending_contributing_initiatives: [] };
-  contributing_np_projects: donorInterfaceToc[] = [];
-  contributing_center: centerInterfacesToc[] = [];
-  result_toc_result: resultToResultInterfaceToc = new resultToResultInterfaceToc();
+  contributing_np_projects: DonorInterfaceToc[] = [];
+  contributing_center: CenterInterfacesToc[] = [];
+  result_toc_result: ResultToResultInterfaceToc = new ResultToResultInterfaceToc();
   contributors_result_toc_result: any = [];
-  pending_contributing_initiatives: shareResultRequestInterface[] = [];
-  institutions: institutionsInterface[] = [];
+  pending_contributing_initiatives: ShareResultRequestInterface[] = [];
+  institutions: InstitutionsInterface[] = [];
   contributingInitiativeNew: any = [];
 }
 
-interface institutionsInterface {
+interface InstitutionsInterface {
   institutions_id: number;
   institutions_type_name: string;
   institutions_name: string;
   deliveries?: number[];
 }
 
-interface targetTocInterface {
-  targetId: number;
-  target?: string;
-}
-
-interface indicatorsTocInterface {
-  id: number;
-  indicator_statement?: string;
-}
-
-interface initiativeInterfaces {
-  id: number;
-  is_active: boolean;
-}
-
-interface institutionsInterfaceToc {
-  institutions_id: number;
-}
-
-export class donorInterfaceToc {
+export class DonorInterfaceToc {
   funder: number = null;
   grant_title: string = null;
   center_grant_id: string = null;
   lead_center: string = null;
 }
-interface centerInterfacesToc {
+interface CenterInterfacesToc {
   code: string;
   name: string;
   primary?: boolean;
 }
 
-export class resultToResultInterfaceToc {
+export class ResultToResultInterfaceToc {
   planned_result: boolean = null;
   initiative_id: number = null;
   official_code: string = null;
   short_name: string = null;
-  result_toc_results: resultTocResultsInterface[] = new Array<resultTocResultsInterface>();
+  result_toc_results: ResultTocResultsInterface[] = new Array<ResultTocResultsInterface>();
 }
 
-interface shareResultRequestInterface {
+interface ShareResultRequestInterface {
   id: number;
   share_result_request_id: number;
   is_active: boolean;
   initiative_name: string;
   official_code: string;
 }
-export class resultTocResultsInterface {
+export class ResultTocResultsInterface {
   result_toc_result_id?: number = null;
   toc_result_id?: number = null;
   action_area_outcome_id?: number = null;

@@ -25,11 +25,13 @@ export class AppComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (!this.AuthService.localStorageUser) {
+      this.AuthService.inLogin.set(true);
+    }
+
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
-    setTimeout(() => {
-      if (!this.AuthService.inLogin) this.rolesSE.validateReadOnly();
-    }, 500);
+    this.rolesSE.validateReadOnly();
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {
       try {
@@ -45,14 +47,14 @@ export class AppComponent implements OnInit {
 
   copyTokenToClipboard() {
     if (environment.production) return;
-    document.onkeyup = function () {
-      var e = e || window.event;
+    document.onkeyup = function (e: KeyboardEvent) {
+      e = e || (window.event as KeyboardEvent);
       if (e.altKey && e.which == 84) {
         navigator.clipboard.writeText(localStorage.getItem('token'));
         alert('Token copied to clipboard');
         return false;
       }
-      return false;
+      return true;
     };
   }
 

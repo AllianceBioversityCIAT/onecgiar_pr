@@ -415,7 +415,7 @@ describe('ChangeResultTypeModalComponent', () => {
         .mockReturnValue(throwError({ error: { message: 'Some error' } }));
       const showErrorAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
-      await component.changeResultTypeKP();
+      component.changeResultTypeKP();
 
       expect(component.isChagingType).toBeFalsy();
       expect(postCreateWithHandleSpy).toHaveBeenCalled();
@@ -436,7 +436,7 @@ describe('ChangeResultTypeModalComponent', () => {
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
       const navigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
 
-      await component.changeResultTypeOther();
+      component.changeResultTypeOther();
 
       expect(component.isChagingType).toBeFalsy();
       expect(spy).toHaveBeenCalled();
@@ -456,7 +456,7 @@ describe('ChangeResultTypeModalComponent', () => {
       const showSuccessAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
       const navigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
 
-      await component.changeResultTypeOther();
+      component.changeResultTypeOther();
 
       expect(component.isChagingType).toBeFalsy();
       expect(spy).toHaveBeenCalled();
@@ -475,7 +475,7 @@ describe('ChangeResultTypeModalComponent', () => {
       .mockReturnValue(throwError({ error: { message: 'Some error' } }));
       const showErrorAlertSpy = jest.spyOn(mockApiService.alertsFe, 'show');
 
-      await component.changeResultTypeOther();
+      component.changeResultTypeOther();
 
       expect(spy).toHaveBeenCalled();
       expect(component.isChagingType).toBeFalsy();

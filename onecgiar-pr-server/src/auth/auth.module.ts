@@ -22,6 +22,7 @@ import { RoleLevelsModule } from './modules/role-levels/role-levels.module';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { RestrictionsByRoleModule } from './modules/restrictions-by-role/restrictions-by-role.module';
 import { RestrictionsModule } from './modules/restrictions/restrictions.module';
+import { AuthMicroserviceModule } from '../shared/microservices/auth-microservice/auth-microservice.module';
 
 @Module({
   controllers: [AuthController],
@@ -38,6 +39,7 @@ import { RestrictionsModule } from './modules/restrictions/restrictions.module';
     RoleLevelsModule,
     RestrictionsByRoleModule,
     RestrictionsModule,
+    AuthMicroserviceModule,
   ],
   providers: [
     AuthService,

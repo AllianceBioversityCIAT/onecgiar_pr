@@ -6,7 +6,7 @@ import { PdfIconComponent } from '../../../../../../../../shared/icon-components
 import { LabelNamePipe } from '../../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { of, throwError, throwIfEmpty } from 'rxjs';
+import { of, throwError} from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { HttpHeaders } from '@angular/common/http';
 

@@ -1,22 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WhatsNewPageDetailsComponent } from './whats-new-page-details.component';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { DynamicNotionBlockComponent } from '../../../../shared/components/dynamic-notion-block/dynamic-notion-block.component';
 import { TooltipModule } from 'primeng/tooltip';
-import { of, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
-import { Router } from '@angular/router';
-import { Location } from '@angular/common';
 
 jest.useFakeTimers();
 
 describe('WhatsNewPageDetailsComponent', () => {
   let component: WhatsNewPageDetailsComponent;
   let fixture: ComponentFixture<WhatsNewPageDetailsComponent>;
-  let whatsNewService: WhatsNewService;
   let mockWhatsNewService: jest.Mocked<WhatsNewService>;
   let mockActivatedRoute: Partial<ActivatedRoute>;
   let mockRouter: jest.Mocked<Router>;
@@ -58,7 +55,6 @@ describe('WhatsNewPageDetailsComponent', () => {
 
     fixture = TestBed.createComponent(WhatsNewPageDetailsComponent);
     component = fixture.componentInstance;
-    whatsNewService = TestBed.inject(WhatsNewService);
     fixture.detectChanges();
   });
 

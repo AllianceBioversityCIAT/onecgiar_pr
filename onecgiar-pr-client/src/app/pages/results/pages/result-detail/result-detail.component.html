@@ -1,11 +1,10 @@
 <div class="local_grid">
   <div>
-    <div class="panel_menu" [ngClass]="{'expand_menu': this.navigationBarSE.navbar_fixed }">
+    <div class="panel_menu" [ngClass]="{ expand_menu: this.navigationBarSE.navbar_fixed }">
       <app-panel-menu (copyEvent)="onCopy()"></app-panel-menu>
     </div>
   </div>
   <div>
-    <!-- <app-breadcrumb></app-breadcrumb> -->
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
     </div>
@@ -13,27 +12,26 @@
     <div class="section_container">
       <div class="metadata">
         <div class="item">
-          Status: <strong>{{this.dataControlSE?.currentResult?.status_name}}</strong>
+          Status: <strong>{{ this.dataControlSE?.currentResult?.status_name }}</strong>
         </div>
         <div class="item">
-          Result level: <strong>{{this.dataControlSE.currentResult?.result_level_name}}</strong>
+          Result level: <strong>{{ this.dataControlSE.currentResult?.result_level_name }}</strong>
         </div>
         <div class="item">
-          Indicator category: <strong>{{this.dataControlSE.currentResult?.result_type_name}}</strong>
+          Indicator category: <strong>{{ this.dataControlSE.currentResult?.result_type_name }}</strong>
         </div>
         <div class="item">
-          Result code: <strong>{{this.api.resultsSE.currentResultCode}}</strong>
+          Result code: <strong>{{ this.api.resultsSE.currentResultCode }}</strong>
         </div>
         <div class="item">
-          {{this.dataControlSE.currentResult?.initiative_official_code}} -
-          {{this.dataControlSE.currentResult?.initiative_name}}
+          {{ this.dataControlSE.currentResult?.initiative_official_code }} -
+          {{ this.dataControlSE.currentResult?.initiative_name }}
         </div>
-
       </div>
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
       <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
         <div class="info">
-          <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="">
+          <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
           <div class="text">Loading section...</div>
         </div>
       </div>

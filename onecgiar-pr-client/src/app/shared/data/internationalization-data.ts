@@ -15,7 +15,14 @@ export const internationalizationData = {
     }
   },
   reportNewResult: {
-    greeting: (name: string, initiatives: string, isAdmin: boolean) => `Hello <strong>${name}</strong>, ${isAdmin ? 'as an admin user, you can report results for <strong>any Initiative, Platform or SGP</strong> in the PRMS Reporting Tool.' : `you can report for <strong>${initiatives}</strong>. If you would like to report for another Initiative, please contact <a class="open_route" href="mailto: projectcoordinationunit@cgiar.org">Project Coordination Unit.</a>`}`,
+    greeting: (name: string, initiatives: string, isAdmin: boolean) => {
+      const nameSection = `Hello <strong>${name}</strong>, `;
+      const adminSection =
+        'as an admin user, you can report results for <strong>any Initiative, Platform or SGP</strong> in the PRMS Reporting Tool.';
+      const nonAdminSection = `you can report for <strong>${initiatives}</strong>. If you would like to report for another Initiative, please contact <a class="open_route" href="mailto: projectcoordinationunit@cgiar.org">Project Coordination Unit.</a>`;
+
+      return nameSection + (isAdmin ? adminSection : nonAdminSection);
+    },
     alerts: {
       info: 'Remember that there is a possibility that the result you want to report has already been entered into the PRMS Reporting Tool. If this is the case, it is only necessary to map the result to your Initiative. There is no need to enter it as a new result. Please check the results section to see if your result has been previously entered.'
     }
@@ -28,5 +35,3 @@ export const internationalizationData = {
     }
   }
 };
-
-// platformName: string;

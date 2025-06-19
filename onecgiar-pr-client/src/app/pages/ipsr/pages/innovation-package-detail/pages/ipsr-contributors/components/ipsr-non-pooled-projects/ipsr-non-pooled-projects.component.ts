@@ -1,5 +1,5 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { ContributorsBody, donorInterfaceToc } from '../../model/contributorsBody';
+import { Component, Input } from '@angular/core';
+import { ContributorsBody, DonorInterfaceToc } from '../../model/contributorsBody';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
@@ -17,6 +17,6 @@ export class IpsrNonPooledProjectsComponent {
     this.contributorsBody.contributing_np_projects.splice(index, 1);
   }
   addBilateralContribution() {
-    this.contributorsBody.contributing_np_projects.push(new donorInterfaceToc());
+    this.contributorsBody.contributing_np_projects.push(new DonorInterfaceToc());
   }
 }

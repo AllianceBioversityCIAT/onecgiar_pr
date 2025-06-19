@@ -1,18 +1,15 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
-import { BcryptPasswordEncoder } from './utils/bcrypt.util';
 import { env } from 'process';
-import config from '../config/const.config';
 import { UserService } from './modules/user/user.service';
 import { UserRepository } from './modules/user/repositories/user.repository';
-import { FullUserRequestDto } from './modules/user/dto/full-user-request.dto';
-import { User } from './modules/user/entities/user.entity';
 import { HandlersError } from '../shared/handlers/error.utils';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import Pusher from 'pusher';
-import ActiveDirectory from 'activedirectory';
+import { AuthMicroserviceService } from '../shared/microservices/auth-microservice/auth-microservice.service';
+import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
+import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
 
 @Injectable()
 export class AuthService {
@@ -23,9 +20,8 @@ export class AuthService {
     private readonly _jwtService: JwtService,
     private readonly _userService: UserService,
     private readonly _userRepository: UserRepository,
-    private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
-    private readonly _customUserRepository: UserRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _authMicroservice: AuthMicroserviceService,
   ) {
     this.pusher = new Pusher({
       appId: `${env.PUSHER_APP_ID}`,
@@ -34,9 +30,6 @@ export class AuthService {
       cluster: `${env.PUSHER_APP_CLUSTER}`,
       useTLS: true,
     });
-  }
-  create(createAuthDto: CreateAuthDto) {
-    return createAuthDto;
   }
 
   async pusherAuth(
@@ -72,6 +65,13 @@ export class AuthService {
     }
   }
 
+  /**
+   * Sign In
+   * @param userLogin
+   * @returns JWT token and user information OR password challenge
+   * @description This method handles the sign-in process for users with automatic user creation if needed.
+   * Also handles NEW_PASSWORD_REQUIRED challenge for first-time logins.
+   */
   async singIn(userLogin: UserLoginDto): Promise<any> {
     try {
       if (!(userLogin.email && userLogin.password)) {
@@ -83,163 +83,322 @@ export class AuthService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      userLogin.email = userLogin.email.trim().toLowerCase();
-      const user: User = await this._customUserRepository.findOne({
-        where: {
-          email: userLogin.email,
-          active: true,
-        },
-      });
-      let valid: any;
-      if (user) {
-        const { email, first_name, last_name, is_cgiar, id } = <
-          FullUserRequestDto
-        >user;
-        if (is_cgiar) {
-          const { response, message, status }: any = await this.validateAD(
-            email,
-            userLogin.password,
-          );
-          if (!response.valid) {
-            throw {
-              response,
-              message,
-              status,
-            };
-          }
-          valid = response.valid;
-        } else {
-          valid = this._bcryptPasswordEncoder.matches(
-            user.password,
-            userLogin.password,
-          );
-        }
 
-        if (valid) {
-          await this._userRepository.updateLastLoginUserByEmail(
-            userLogin.email,
+      userLogin.email = userLogin.email.trim().toLowerCase();
+
+      try {
+        const existingUser = await this._userRepository.findOne({
+          where: {
+            email: userLogin.email,
+            active: true,
+          },
+          relations: ['obj_role_by_user'],
+        });
+
+        let userMetadata = null;
+        if (existingUser) {
+          userMetadata = {
+            firstName: existingUser.first_name,
+            lastName: existingUser.last_name,
+            email: existingUser.email,
+          };
+          this._logger.log(
+            `User found locally: ${userLogin.email}. Sending metadata to auth microservice.`,
+          );
+        } else {
+          this._logger.log(
+            `User not found locally: ${userLogin.email}. Cannot proceed without local user record.`,
           );
           return {
-            message: 'Successful login',
+            message:
+              'User not found in local database. Please contact the support team.',
+            status: HttpStatus.NOT_FOUND,
             response: {
-              valid: true,
-              token: this._jwtService.sign(
-                { id, email, first_name, last_name },
-                { secret: env.JWT_SKEY },
-              ),
-              user: {
-                id: user.id,
-                user_name: `${user.first_name} ${user.last_name}`,
-                email: user.email,
+              valid: false,
+            },
+          };
+        }
+
+        const authResponse =
+          await this._authMicroservice.authenticateWithCustomCredentials(
+            userLogin.email,
+            userLogin.password,
+            userMetadata,
+          );
+
+        if (authResponse?.challengeName === 'NEW_PASSWORD_REQUIRED') {
+          this._logger.log(
+            `User ${userLogin.email} needs to set a new password (first login)`,
+          );
+
+          return {
+            message: 'Password change required. Please set a new password.',
+            response: {
+              valid: false,
+              challengeRequired: true,
+              challengeName: 'NEW_PASSWORD_REQUIRED',
+              session: authResponse.session,
+              userAttributes: authResponse.userAttributes,
+              userId: authResponse.userId,
+
+              localUser: {
+                id: existingUser.id,
+                email: existingUser.email,
+                firstName: existingUser.first_name,
+                lastName: existingUser.last_name,
               },
             },
             status: HttpStatus.ACCEPTED,
           };
-        } else {
-          throw {
+        }
+
+        if (!authResponse.tokens) {
+          throw new Error(
+            'Invalid authentication response from Auth Microservice',
+          );
+        }
+
+        await this._userRepository.updateLastLoginUserByEmail(userLogin.email);
+        this._logger.log(`Updated last login for user: ${userLogin.email}`);
+
+        return this.createSuccessfulLoginResponse(
+          existingUser,
+          authResponse.tokens,
+        );
+      } catch (error) {
+        this._logger.error(
+          `Authentication error for ${userLogin.email}: ${error.message}`,
+          error.stack,
+        );
+
+        if (error.response?.data?.challengeName === 'NEW_PASSWORD_REQUIRED') {
+          return {
+            message: 'Password change required',
+            response: {
+              valid: false,
+              challengeRequired: true,
+              challengeName: 'NEW_PASSWORD_REQUIRED',
+              session: error.response.data.session,
+              userAttributes: error.response.data.userAttributes,
+            },
+            status: HttpStatus.ACCEPTED,
+          };
+        }
+
+        if (error.status === HttpStatus.UNAUTHORIZED) {
+          return {
             response: {
               valid: false,
             },
-            message: 'Password does not match',
+            message: error.message ?? 'Invalid credentials',
             status: HttpStatus.UNAUTHORIZED,
           };
         }
-      } else {
-        throw {
-          message: `The user ${userLogin.email} is not registered in the PRMS Reporting database.`,
+
+        return {
           response: {
             valid: false,
           },
-          status: HttpStatus.NOT_FOUND,
+          message: error.message ?? 'Authentication failed',
+          status: error.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
     } catch (error) {
+      this._logger.error(
+        `Unexpected error in singIn: ${error.message}`,
+        error.stack,
+      );
       return this._handlersError.returnErrorRes({ error });
     }
   }
 
-  validateAD(email, password) {
-    //!INFO: this is the original code. remove the import above and uncomment this one to revert to the original code
-    //const ActiveDirectory = require('activedirectory');
-    const ad = new ActiveDirectory(config.active_directory);
+  /**
+   * Get Auth URL
+   * @param provider
+   * @returns Authentication URL for the specified provider
+   * @description This method generates an authentication URL for the specified OAuth provider.
+   */
+  async getAuthURL(provider: string): Promise<any> {
+    try {
+      this._logger.log(`Getting authentication URL for provider: ${provider}`);
 
-    return new Promise((resolve, reject) => {
-      this._logger.log(`Validation with the active directory`);
-      ad.authenticate(email, password, (err, auth) => {
-        try {
-          if (auth) {
-            this._logger.verbose(`Successful validation`);
-            return resolve({
-              response: {
-                valid: !!auth,
-              },
-              message: 'Successful validation',
-              status: HttpStatus.ACCEPTED,
-            });
-          }
-          if (err) {
-            if (err?.errno) {
-              throw {
-                response: {
-                  valid: false,
-                  error: err.errno,
-                  code: err.code,
-                },
-                message: 'Error with communication with third party servers',
-                status: HttpStatus.UNAUTHORIZED,
-              };
-            } else {
-              const errorParts = err.lde_message?.split(/:|,/);
-              if (errorParts && errorParts[2]) {
-                const error = errorParts[2].trim();
-                switch (error) {
-                  case 'DSID-0C090447':
-                    throw {
-                      response: {
-                        valid: false,
-                        error: err.errno,
-                        code: err.code,
-                      },
-                      message:
-                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                      status: HttpStatus.UNAUTHORIZED,
-                    };
-                    break;
-                  default:
-                    throw {
-                      response: {
-                        valid: false,
-                      },
-                      message:
-                        'Invalid credentials. If you are a CGIAR user, remember to use the password you use for accessing the CGIAR organizational account.',
-                      status: HttpStatus.UNAUTHORIZED,
-                    };
-                    break;
-                }
-              } else {
-                throw {
-                  response: {
-                    valid: false,
-                  },
-                  message: 'Invalid error format',
-                  status: HttpStatus.UNAUTHORIZED,
-                };
-              }
-            }
-          } else {
-            throw {
-              response: {
-                valid: false,
-                error: err,
-              },
-              message: 'Unknown error',
-              status: HttpStatus.UNAUTHORIZED,
-            };
-          }
-        } catch (error) {
-          return reject(this._handlersError.returnErrorRes({ error }));
-        }
+      const response =
+        await this._authMicroservice.getAuthenticationUrl(provider);
+
+      return {
+        message: 'Authentication URL generated successfully',
+        response: response,
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(
+        `Error getting authentication URL: ${error.message}`,
+        error.stack,
+      );
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * Validate Code Auth
+   * @param authCodeDto
+   * @returns User information and JWT token
+   * @description Validates the authorization code received from the OAuth provider and retrieves user information.
+   */
+  async validateAuthCode(authCodeDto: AuthCodeValidationDto): Promise<any> {
+    try {
+      this._logger.log('Validando código de autorización');
+
+      const authResponse =
+        await this._authMicroservice.validateAuthorizationCode(
+          authCodeDto.code,
+        );
+
+      const userInfo = authResponse.userInfo;
+
+      if (!userInfo?.email) {
+        throw {
+          message: 'The user does not have an email address.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const user =
+        await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
+
+      await this._userRepository.update(
+        {
+          id: user.id,
+          email: user.email,
+        },
+        {
+          last_login: new Date(),
+        },
+      );
+
+      const authTokens = {
+        accessToken: authResponse.accessToken,
+        idToken: authResponse.idToken,
+        refreshToken: authResponse.refreshToken,
+        expiresIn: authResponse.expiresIn,
+      };
+
+      return this.createSuccessfulLoginResponse(user, authTokens);
+    } catch (error) {
+      this._logger.error(`An error ocurred: ${error.message}`, error.stack);
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * Complete Password Challenge
+   * @param challengeDto Challenge completion data
+   * @returns JWT token and user information after successful password set
+   */
+  async completePasswordChallenge(
+    challengeDto: CompletePasswordChallengeDto,
+  ): Promise<any> {
+    try {
+      this._logger.log(
+        `Completing password challenge for user: ${challengeDto.username}`,
+      );
+
+      const existingUser = await this._userRepository.findOne({
+        where: {
+          email: challengeDto.username.trim().toLowerCase(),
+          active: true,
+        },
+        relations: ['obj_role_by_user'],
       });
-    });
+
+      if (!existingUser) {
+        throw {
+          message: 'User not found in local database',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const authResponse =
+        await this._authMicroservice.completeNewPasswordChallenge({
+          username: challengeDto.username,
+          newPassword: challengeDto.newPassword,
+          session: challengeDto.session,
+        });
+
+      if (!authResponse.tokens) {
+        throw new Error(
+          'Invalid response from Auth Microservice - no tokens received',
+        );
+      }
+
+      await this._userRepository.updateLastLoginUserByEmail(
+        challengeDto.username,
+      );
+
+      return this.createSuccessfulLoginResponse(
+        existingUser,
+        authResponse.tokens,
+        'Password set successfully. Login completed.',
+      );
+    } catch (error) {
+      this._logger.error(
+        `Error completing password challenge: ${error.message}`,
+        error.stack,
+      );
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * Creates JWT token and success response for authenticated user
+   * @param user User entity
+   * @param authTokens Authentication tokens from auth microservice
+   * @param successMessage Custom success message
+   * @returns Successful login response object
+   */
+  private createSuccessfulLoginResponse(
+    user: any,
+    authTokens: any,
+    successMessage: string = 'Successful login',
+  ) {
+    if (!user.obj_role_by_user || user.obj_role_by_user.length === 0) {
+      this._logger.warn(`User ${user.email} has no roles assigned`);
+      return {
+        message: `The user ${user.email} does not have any roles assigned. Please contact the administrator.`,
+        response: {
+          valid: false,
+          needsRoles: true,
+        },
+        status: HttpStatus.FORBIDDEN,
+      };
+    }
+
+    const jwtToken = this._jwtService.sign(
+      {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      },
+      {
+        secret: env.JWT_SKEY,
+        expiresIn: '7h',
+      },
+    );
+
+    return {
+      message: successMessage,
+      response: {
+        valid: true,
+        token: jwtToken,
+        user: {
+          id: user.id,
+          user_name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+        },
+        auth_tokens: authTokens,
+      },
+      status: HttpStatus.OK,
+    };
   }
 }

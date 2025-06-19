@@ -6,13 +6,12 @@ export interface AlertOptions {
   closeIn?: number;
   status: 'error' | 'success' | 'warning' | 'information';
   confirmText?: string;
+  hideCancelButton?: boolean;
 }
 @Injectable({
   providedIn: 'root'
 })
 export class CustomizedAlertsFeService {
-  //TODO customized alerts for events
-  // showed = false;
   statusIcons = [];
   constructor() {
     this.statusIcons['error'] = 'priority_high';
@@ -22,7 +21,7 @@ export class CustomizedAlertsFeService {
   }
 
   show(alertOptions: AlertOptions, callback?) {
-    const { id, title, description = '', closeIn, status, confirmText } = alertOptions;
+    const { id, title, description = '', closeIn, status, confirmText, hideCancelButton = false } = alertOptions;
     // this.showed = true;
     let alert = document.getElementById(id);
 
@@ -51,8 +50,12 @@ export class CustomizedAlertsFeService {
     alert = document.getElementById(id);
     if (confirmText) {
       document.getElementById(`close-${id}`).style.display = 'none';
+
       document.getElementById(`cancel-${id}`).style.display = 'block';
       document.getElementById(`confirm-${id}`).style.display = 'block';
+    }
+    if (hideCancelButton) {
+      document.getElementById(`cancel-${id}`).style.display = 'none';
     }
     document.getElementById(`bg-${id}`).addEventListener('click', () => {
       this.closeAction(id);
@@ -73,9 +76,7 @@ export class CustomizedAlertsFeService {
       }, 3000);
 
     alert.addEventListener('animationend', () => {
-      //('animationend');
       if (alert.classList.contains('delete')) {
-        //('remove');
         alert.classList.remove('animate__animated', 'animate__bounceIn', 'animate__bounceOut');
         alert.style.display = 'none';
         alert.parentNode.removeChild(alert);

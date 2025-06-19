@@ -1,10 +1,10 @@
 export class TheoryOfChangeBody {
   result_id: number;
-  contributing_initiatives: initiativeInterfaces[];
-  contributing_np_projects: donorInterfaceToc[];
-  contributing_center: centerInterfacesToc[];
-  result_toc_result: resultToResultInterfaceToc;
-  contributors_result_toc_result: resultToResultInterfaceToc[];
+  contributing_initiatives: InitiativeInterfaces[];
+  contributing_np_projects: DonorInterfaceToc[];
+  contributing_center: CenterInterfacesToc[];
+  result_toc_result: ResultToResultInterfaceToc;
+  contributors_result_toc_result: ResultToResultInterfaceToc[];
   impacts: ResultTocImpactsInterface[];
 }
 
@@ -12,40 +12,36 @@ interface ResultTocImpactsInterface {
   id: number;
   name: string;
   description: string;
-  target: targetTocInterface[];
-  indicators: indicatorsTocInterface[];
+  target: TargetTocInterface[];
+  indicators: IndicatorsTocInterface[];
 }
 
-interface targetTocInterface {
+interface TargetTocInterface {
   targetId: number;
   target?: string;
 }
 
-interface indicatorsTocInterface {
+interface IndicatorsTocInterface {
   id: number;
   indicator_statement?: string;
 }
 
-interface initiativeInterfaces {
+interface InitiativeInterfaces {
   id: number;
 }
 
-interface institutionsInterfaceToc {
-  institutions_id: number;
-}
-
-interface donorInterfaceToc {
+interface DonorInterfaceToc {
   funder: number;
   grant_title: string;
   center_grant_id: string;
   lead_center: string;
 }
-interface centerInterfacesToc {
+interface CenterInterfacesToc {
   code: string;
   primary?: boolean;
 }
 
-interface resultToResultInterfaceToc {
+interface ResultToResultInterfaceToc {
   result_toc_result_id?: number;
   toc_result_id?: number;
   action_area_outcome_id?: number;
