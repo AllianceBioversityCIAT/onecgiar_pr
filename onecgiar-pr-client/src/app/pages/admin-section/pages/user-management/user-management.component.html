@@ -77,7 +77,7 @@
   <!-- Users table -->
   <div class="table-container">
     <p-table
-      [value]="this.filteredUsers()"
+      [value]="this.users()"
       [loading]="this.loading()"
       [paginator]="true"
       [rows]="10"
@@ -102,7 +102,7 @@
           <td>{{ user.firstName }} {{ user.lastName }}</td>
           <td>{{ user.emailAddress }}</td>
           <td>{{ user.cgIAR }}</td>
-          <td>{{ user.userCreationDate | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ user.userCreationDate | date: 'yyyy-MM-dd' }}</td>
           <td>
             <span [class]="getStatusClass(user.userStatus)">
               {{ user.userStatus }}
@@ -121,7 +121,7 @@
     <!-- Floating counter like in global-completeness-status -->
     <div class="counter">
       <span class="name">Users |</span>
-      <span class="total">{{ this.filteredUsers().length }} total</span>
+      <span class="total">{{ this.users().length }} total</span>
     </div>
   </div>
 

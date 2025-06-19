@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -77,38 +77,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Timeout for search debounce
   private searchTimeout: any;
 
-  // Computed signal for filtered users (reactive filtering)
-  filteredUsers = computed(() => {
-    const users = this.users();
-    const search = this.searchQuery(); // Use searchQuery instead of searchText
-    const status = this.selectedStatus();
-    const cgiar = this.selectedCgiar();
-
-    return users.filter(user => {
-      const matchesSearch =
-        !search ||
-        user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-        user.emailAddress?.toLowerCase().includes(search.toLowerCase());
-
-      const matchesStatus = !status || user.userStatus === status;
-      const matchesCgiar = !cgiar || user.cgIAR === cgiar;
-
-      return matchesSearch && matchesStatus && matchesCgiar;
-    });
-  });
-
   constructor() {
-    // Effect to trigger API calls when filters change (except search)
-    effect(() => {
-      const status = this.selectedStatus();
-      const cgiar = this.selectedCgiar();
-
-      // Skip if it's initial values
-      if (status !== '' || cgiar !== '') {
-        this.getUsers();
-      }
-    });
+    // No effect needed - we'll handle API calls explicitly
   }
 
   ngOnInit() {
@@ -128,6 +98,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       next: res => {
         this.users.set(res.response);
         this.loading.set(false);
+        console.log(res.response);
       },
       error: error => {
         console.error('Error fetching users:', error);
@@ -161,11 +132,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Method to handle status filter changes
   onStatusChange(value: string) {
     this.selectedStatus.set(value);
+    this.getUsers();
   }
 
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
+    this.getUsers();
   }
 
   // Method to clear all filters
