@@ -409,6 +409,7 @@ describe('UserNotificationSettingsService', () => {
             obj_emitter_user_notification: [],
             obj_qaed_user: [],
             contribution_to_indicator_submission_array: [],
+            obj_role_by_user: [],
           },
           obj_initiative: {} as any,
           action_area_id: 1,
