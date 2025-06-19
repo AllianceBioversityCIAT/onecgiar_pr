@@ -11,6 +11,9 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
+import moment from 'moment';
+import { parse } from 'path';
+import { Brackets } from 'typeorm';
 
 @Injectable()
 export class UserService {
@@ -159,44 +162,75 @@ export class UserService {
     cgIAR?: 'Yes' | 'No';
     status?: 'Active' | 'Inactive';
   }) {
+
+  try{
     const { user, cgIAR, status } = filters;
-    try{
-      let baseQuery = `
-      SELECT  
-        first_name AS "firstName",
-        last_name AS "lastName",
-        email AS "emailAddress",
-        CASE 
-            WHEN is_cgiar = 1 THEN 'Yes'
-            ELSE 'No'
-        END AS "cgIAR",
-        CASE 
-            WHEN active = 1 THEN 'Active'
-            ELSE 'Inactive'
-        END AS "userStatus",
-        created_date AS "userCreationDate"
-      FROM users
-      WHERE 1 = 1
-    `;
+    const query = this._userRepository.createQueryBuilder('users');
+    query.select([
+      'users.first_name AS "firstName"',
+      'users.last_name AS "lastName"',
+      'users.email AS "emailAddress"',
+      `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+      `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
+      'users.created_date AS "userCreationDate"',
+    ]);
 
-    const params = [];
+    const yearRegex = /^\d{4}$/;
+    const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+    const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
 
-    if (user) {
-      baseQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
-      params.push(`%${user}%`, `%${user}%`, `%${user}%`);
+    query.where('1 = 1');
+
+    if (user && user.trim() !== '') {
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('users.first_name LIKE :searchTerm', { searchTerm: `%${user}%` })
+            .orWhere('users.last_name LIKE :searchTerm', { searchTerm: `%${user}%` })
+            .orWhere('users.email LIKE :searchTerm', { searchTerm: `%${user}%` });
+
+          // Validaciones de fecha como ya tienes:
+          const yearRegex = /^\d{4}$/;
+          const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+          const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
+
+          if (fullDateRegex.test(user)) {
+            qb.orWhere('DATE(users.created_date) = :dateCondition', { dateCondition: user });
+          } else if (yearMonthRegex.test(user)) {
+            const [year, month] = user.split('-').map(Number);
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+            qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+              startDate: startDate + ' 00:00:00',
+              endDate: endDate + ' 23:59:59',
+            });
+          } else if (yearRegex.test(user)) {
+            const startDate = `${user}-01-01`;
+            const endDate = `${user}-12-31`;
+
+            qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+              startDate: startDate + ' 00:00:00',
+              endDate: endDate + ' 23:59:59',
+            });
+          }
+        })
+      );
     }
 
     if (cgIAR) {
-      baseQuery += ` AND is_cgiar = ?`;
-      params.push(cgIAR.toLowerCase() === 'yes' ? 1 : 0);
+      query.andWhere('users.is_cgiar = :isCgiar', {
+        isCgiar: cgIAR.toLowerCase() === 'yes' ? 1 : 0,
+      });
     }
 
     if (status) {
-      baseQuery += ` AND active = ?`;
-      params.push(status.toLocaleLowerCase() === 'active' ? 1 : 0);
+      query.andWhere('users.active = :activeStatus', {
+        activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
+      });
     }
 
-    const users: User[] = await this._userRepository.query(baseQuery, params);
+    const users: User[] = await query.getRawMany();
+    console.log('Query result:', users);
 
     if (users.length === 0) {
       return {
