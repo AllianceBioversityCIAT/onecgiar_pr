@@ -174,17 +174,26 @@ export class UserService {
       query.where('1 = 1');
 
       if (user && user.trim() !== '') {
+        const keywords = user.trim().split(/\s+/);
+
         query.andWhere(
           new Brackets((qb) => {
-            qb.where('users.first_name LIKE :searchTerm', {
-              searchTerm: `%${user}%`,
-            })
-              .orWhere('users.last_name LIKE :searchTerm', {
-                searchTerm: `%${user}%`,
-              })
-              .orWhere('users.email LIKE :searchTerm', {
-                searchTerm: `%${user}%`,
+            if (keywords.length === 1) {
+              const word = `%${keywords[0]}%`;
+
+              qb.where('users.first_name LIKE :word', { word })
+                .orWhere('users.last_name LIKE :word', { word })
+                .orWhere('users.email LIKE :word', { word });
+
+            } else if (keywords.length >= 2) {
+              const first = `%${keywords[0]}%`;
+              const last = `%${keywords[1]}%`;
+
+              qb.where('users.first_name LIKE :firstName AND users.last_name LIKE :lastName', {
+                firstName: first,
+                lastName: last,
               });
+            }
 
             const yearRegex = /^\d{4}$/;
             const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
