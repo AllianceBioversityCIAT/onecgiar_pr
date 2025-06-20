@@ -745,7 +745,7 @@ export class InnovationPathwayStepFourService {
 
       return {
         response:
-          bilateral_expected_investment?.[0] || bilateral_expected_investment,
+          bilateral_expected_investment?.[0] ?? bilateral_expected_investment,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
