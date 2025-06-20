@@ -138,9 +138,10 @@ export class UserController {
   }
 
   @Get('get/users_list')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get list users',
-    description: 'Get list of all users with their details' })
+    description: 'Get list of all users with their details',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of users retrieved successfully',
@@ -164,13 +165,16 @@ export class UserController {
   }
 
   @Get('search')
-  @ApiOperation({ summary: 'Search users by name, email, CGIAR, or status (partial match)' })
+  @ApiOperation({
+    summary: 'Search users by name, email, CGIAR, or status (partial match)',
+  })
   @ApiQuery({ name: 'user', required: false, type: String })
   @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
   @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
   @ApiResponse({
     status: 200,
-    description: 'Returns list of users matching the search criteria or a message if none match',
+    description:
+      'Returns list of users matching the search criteria or a message if none match',
     schema: {
       example: {
         data: [
@@ -191,7 +195,7 @@ export class UserController {
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
     @Query('status') status?: 'Active' | 'Inactive',
   ) {
-    const result = await this.userService.searchUsers({user, cgIAR, status });
+    const result = await this.userService.searchUsers({ user, cgIAR, status });
 
     if (result.response.length === 0) {
       return {
