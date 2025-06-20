@@ -131,12 +131,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Method to handle status filter changes
   onStatusChange(value: string) {
+    console.log('Status changed to:', value);
     this.selectedStatus.set(value);
     this.getUsers();
   }
 
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
+    console.log('CGIAR changed to:', value);
     this.selectedCgiar.set(value);
     this.getUsers();
   }

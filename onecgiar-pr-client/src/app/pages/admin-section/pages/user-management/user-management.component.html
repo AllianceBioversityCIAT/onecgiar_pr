@@ -35,7 +35,8 @@
             placeholder="All"
             [ngModel]="selectedStatus()"
             (ngModelChange)="onStatusChange($event)"
-            [required]="false"></app-pr-select>
+            [required]="false"
+            [indexReference]="1"></app-pr-select>
         </div>
 
         <!-- CGIAR filter -->
@@ -49,7 +50,8 @@
             placeholder="All"
             [ngModel]="selectedCgiar()"
             (ngModelChange)="onCgiarChange($event)"
-            [required]="false"></app-pr-select>
+            [required]="false"
+            [indexReference]="2"></app-pr-select>
         </div>
 
         <!-- Clear filters button -->
