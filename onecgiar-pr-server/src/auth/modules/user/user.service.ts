@@ -142,7 +142,9 @@ export class UserService {
         END AS "userStatus",
         created_date AS "userCreationDate"
       FROM 
-        users`
+        users
+      ORDER BY 
+        created_date DESC;`
     ;
     const user: User[] = await this._userRepository.query(query);
     return {
@@ -221,6 +223,8 @@ export class UserService {
         activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
       });
     }
+
+    query.orderBy('users.created_date', 'DESC');
 
     const users: User[] = await query.getRawMany();
     console.log('Query result:', users);
