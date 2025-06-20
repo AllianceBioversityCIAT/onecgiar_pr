@@ -623,6 +623,7 @@ describe('UserService', () => {
       select: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       orWhere: jest.fn().mockReturnThis(),
       getRawMany: jest.fn(),
     };
@@ -652,11 +653,13 @@ describe('UserService', () => {
         },
       ];
 
-    const queryBuilderMock = createQueryBuilderMock();
-    queryBuilderMock.getRawMany.mockResolvedValue(mockQueryResult);
-    (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(queryBuilderMock);
+      const queryBuilderMock = createQueryBuilderMock();
+      queryBuilderMock.getRawMany.mockResolvedValue(mockQueryResult);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
 
-    const result = await service.searchUsers(filters);
+      const result = await service.searchUsers(filters);
 
       expect(result).toEqual({
         response: mockQueryResult,
@@ -671,7 +674,9 @@ describe('UserService', () => {
       const error = new Error('Error message');
       const queryBuilderMock = createQueryBuilderMock();
       queryBuilderMock.getRawMany.mockRejectedValue(error);
-      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(queryBuilderMock);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
 
       const result = await service.searchUsers(filters);
 

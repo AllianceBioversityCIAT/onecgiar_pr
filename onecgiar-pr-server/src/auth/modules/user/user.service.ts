@@ -36,8 +36,7 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
-      createUserDto.is_cgiar =
-        createUserDto.email.search(this.cgiarRegex) > -1;
+      createUserDto.is_cgiar = createUserDto.email.search(this.cgiarRegex) > -1;
       const user = await this.findOneByEmail(createUserDto.email);
       if (user.response) {
         throw {
@@ -127,8 +126,7 @@ export class UserService {
 
   async getAllUsers() {
     try {
-      const query =
-      ` SELECT  
+      const query = ` SELECT  
         first_name AS "firstName",
         last_name AS "lastName",
         email AS "emailAddress",
@@ -144,14 +142,13 @@ export class UserService {
       FROM 
         users
       ORDER BY 
-        created_date DESC;`
-    ;
-    const user: User[] = await this._userRepository.query(query);
-    return {
-      response: user,
-      message: 'Successful response',
-      status: HttpStatus.OK,
-    };
+        created_date DESC;`;
+      const user: User[] = await this._userRepository.query(query);
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
@@ -162,89 +159,97 @@ export class UserService {
     cgIAR?: 'Yes' | 'No';
     status?: 'Active' | 'Inactive';
   }) {
+    try {
+      const { user, cgIAR, status } = filters;
+      const query = this._userRepository.createQueryBuilder('users');
+      query.select([
+        'users.first_name AS "firstName"',
+        'users.last_name AS "lastName"',
+        'users.email AS "emailAddress"',
+        `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+        `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
+        'users.created_date AS "userCreationDate"',
+      ]);
 
-  try{
-    const { user, cgIAR, status } = filters;
-    const query = this._userRepository.createQueryBuilder('users');
-    query.select([
-      'users.first_name AS "firstName"',
-      'users.last_name AS "lastName"',
-      'users.email AS "emailAddress"',
-      `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
-      `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
-      'users.created_date AS "userCreationDate"',
-    ]);
+      query.where('1 = 1');
 
-    query.where('1 = 1');
+      if (user && user.trim() !== '') {
+        query.andWhere(
+          new Brackets((qb) => {
+            qb.where('users.first_name LIKE :searchTerm', {
+              searchTerm: `%${user}%`,
+            })
+              .orWhere('users.last_name LIKE :searchTerm', {
+                searchTerm: `%${user}%`,
+              })
+              .orWhere('users.email LIKE :searchTerm', {
+                searchTerm: `%${user}%`,
+              });
 
-    if (user && user.trim() !== '') {
-      query.andWhere(
-        new Brackets((qb) => {
-          qb.where('users.first_name LIKE :searchTerm', { searchTerm: `%${user}%` })
-            .orWhere('users.last_name LIKE :searchTerm', { searchTerm: `%${user}%` })
-            .orWhere('users.email LIKE :searchTerm', { searchTerm: `%${user}%` });
+            const yearRegex = /^\d{4}$/;
+            const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+            const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
 
-          const yearRegex = /^\d{4}$/;
-          const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
-          const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
+            if (fullDateRegex.test(user)) {
+              qb.orWhere('DATE(users.created_date) = :dateCondition', {
+                dateCondition: user,
+              });
+            } else if (yearMonthRegex.test(user)) {
+              const [year, month] = user.split('-').map(Number);
+              const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+              const endDate = new Date(year, month, 0)
+                .toISOString()
+                .split('T')[0];
 
-          if (fullDateRegex.test(user)) {
-            qb.orWhere('DATE(users.created_date) = :dateCondition', { dateCondition: user });
-          } else if (yearMonthRegex.test(user)) {
-            const [year, month] = user.split('-').map(Number);
-            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-            const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            } else if (yearRegex.test(user)) {
+              const startDate = `${user}-01-01`;
+              const endDate = `${user}-12-31`;
 
-            qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
-              startDate: startDate + ' 00:00:00',
-              endDate: endDate + ' 23:59:59',
-            });
-          } else if (yearRegex.test(user)) {
-            const startDate = `${user}-01-01`;
-            const endDate = `${user}-12-31`;
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            }
+          }),
+        );
+      }
 
-            qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
-              startDate: startDate + ' 00:00:00',
-              endDate: endDate + ' 23:59:59',
-            });
-          }
-        })
-      );
-    }
+      if (cgIAR) {
+        query.andWhere('users.is_cgiar = :isCgiar', {
+          isCgiar: cgIAR.toLowerCase() === 'yes' ? 1 : 0,
+        });
+      }
 
-    if (cgIAR) {
-      query.andWhere('users.is_cgiar = :isCgiar', {
-        isCgiar: cgIAR.toLowerCase() === 'yes' ? 1 : 0,
-      });
-    }
+      if (status) {
+        query.andWhere('users.active = :activeStatus', {
+          activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
+        });
+      }
 
-    if (status) {
-      query.andWhere('users.active = :activeStatus', {
-        activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
-      });
-    }
+      query.orderBy('users.created_date', 'DESC');
 
-    query.orderBy('users.created_date', 'DESC');
+      const users: User[] = await query.getRawMany();
+      console.log('Query result:', users);
 
-    const users: User[] = await query.getRawMany();
-    console.log('Query result:', users);
-
-    if (users.length === 0) {
+      if (users.length === 0) {
+        return {
+          response: [],
+          message: 'No users match the entered criteria',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
       return {
-        response: [],
-        message: 'No users match the entered criteria',
-        status: HttpStatus.NOT_FOUND,
+        response: users,
+        message: 'Successful response',
+        status: HttpStatus.OK,
       };
-    }
-    return {
-      response: users,
-      message: 'Successful response',
-      status: HttpStatus.OK,
-    };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
-    
   }
 
   async findOne(id: number): Promise<returnFormatUser | returnErrorDto> {

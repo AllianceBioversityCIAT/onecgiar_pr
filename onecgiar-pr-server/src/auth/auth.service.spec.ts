@@ -369,7 +369,9 @@ describe('AuthService', () => {
       const result = await service.validateAuthCode(mockAuthCodeDto);
 
       expect(result.status).toBe(HttpStatus.FORBIDDEN);
-      expect(result.message).toContain('The user test@example.com does not have any roles assigned. Please contact the administrator.');
+      expect(result.message).toContain(
+        'The user test@example.com does not have any roles assigned. Please contact the administrator.',
+      );
     });
   });
 
