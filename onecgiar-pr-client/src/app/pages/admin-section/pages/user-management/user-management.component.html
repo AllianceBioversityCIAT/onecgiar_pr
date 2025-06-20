@@ -13,51 +13,56 @@
   <!-- Filter and action controls -->
   <div class="controls-section">
     <div class="controls-row">
-      <!-- User search -->
-      <div class="search-container">
-        <label class="search-label">Search by user:</label>
-        <div class="p-input-icon-left">
-          <i class="pi pi-search"></i>
-          <input type="text" pInputText placeholder="Search" [value]="searchText()" (input)="onSearchInputChange($event)" class="search-field" />
+      <!-- Filters group -->
+      <div class="filters-group">
+        <!-- User search -->
+        <div class="search-container">
+          <label class="search-label">Search by user:</label>
+          <div class="p-input-icon-left">
+            <i class="pi pi-search"></i>
+            <input type="text" pInputText placeholder="Search" [value]="searchText()" (input)="onSearchInputChange($event)" class="search-field" />
+          </div>
+        </div>
+
+        <!-- Status filter -->
+        <div class="status-filter">
+          <label class="status-label">Status:</label>
+          <app-pr-select
+            #statusSelect
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All"
+            [ngModel]="selectedStatus()"
+            (ngModelChange)="onStatusChange($event)"
+            [required]="false"
+            [indexReference]="1"></app-pr-select>
+        </div>
+
+        <!-- CGIAR filter -->
+        <div class="cgiar-filter">
+          <label class="cgiar-label">Is CGIAR:</label>
+          <app-pr-select
+            #cgiarSelect
+            [options]="isCGIAROptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All"
+            [ngModel]="selectedCgiar()"
+            (ngModelChange)="onCgiarChange($event)"
+            [required]="false"
+            [indexReference]="2"></app-pr-select>
+        </div>
+
+        <!-- Clear filters button -->
+        <div class="clear-filter">
+          <label class="clear-label">&nbsp;</label>
+          <app-pr-button text="Clear filters" icon="filter_alt_off" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
         </div>
       </div>
 
-      <!-- Status filter -->
-      <div class="status-filter">
-        <label class="status-label">Status:</label>
-        <app-pr-select
-          #statusSelect
-          [options]="statusOptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="All"
-          [ngModel]="selectedStatus()"
-          (ngModelChange)="onStatusChange($event)"
-          [required]="false"></app-pr-select>
-      </div>
-
-      <!-- CGIAR filter -->
-      <div class="cgiar-filter">
-        <label class="cgiar-label">Is CGIAR:</label>
-        <app-pr-select
-          #cgiarSelect
-          [options]="isCGIAROptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="All"
-          [ngModel]="selectedCgiar()"
-          (ngModelChange)="onCgiarChange($event)"
-          [required]="false"></app-pr-select>
-      </div>
-
-      <!-- Clear filters button -->
-      <div class="clear-filter">
-        <label class="clear-label">&nbsp;</label>
-        <app-pr-button text="Clear filters" icon="clear" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="action-buttons">
+      <!-- Actions group -->
+      <div class="actions-group">
         <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
 
         <!-- <button

@@ -49,3 +49,65 @@
 - Leverage new control flow syntax (@if, @for, @defer)
 - Use Material 3 components when available
 - Implement proper SSR and hydration support
+
+## Communication and Problem-Solving Rules
+
+### 🔍 ALWAYS INSPECT EXISTING CODE FIRST
+
+- Before giving instructions, ALWAYS read the existing HTML/CSS structure
+- Use `read_file` to understand current implementation
+- Don't assume how things are organized - verify first
+- Look for existing patterns and follow them
+
+### 🏗️ EXPLAIN CODE STRUCTURE WITH ANALOGIES
+
+- Use building/architecture analogies: "containers", "groups", "sections"
+- Explain layout like furniture arrangement: "left side", "right side", "stacked"
+- Compare CSS to organizing a room: "everything has its place"
+- Example: "Think of flexbox like organizing books on shelves"
+
+### 🤔 ASK BEFORE ASSUMING
+
+- If structure is unclear, ask specific numbered questions
+- Propose solutions with alternatives: "Option 1: X, Option 2: Y"
+- When uncertain about approach, suggest: "Should I modify HTML structure or just CSS?"
+- Always confirm understanding before major changes
+
+### 🔄 AVOID ITERATION LOOPS
+
+- If solution doesn't work after 2 attempts, step back and re-analyze
+- Ask: "What am I missing about the current structure?"
+- Consider: "Is there a simpler architectural approach?"
+- Suggest: "Let me rethink this from scratch with a different approach"
+
+### 💬 LANGUAGE AND COMMUNICATION
+
+- **RESPOND IN THE SAME LANGUAGE THE USER WRITES**
+- If user writes in Spanish, respond in Spanish
+- If user writes in English, respond in English
+- If mixed languages, follow the dominant language
+- Maintain technical terms in their original language when appropriate
+
+### 🎯 PROBLEM-SOLVING STRATEGY
+
+1. **Understand first**: Read existing code structure
+2. **Explain current state**: "I see you have X organized as Y"
+3. **Propose solution**: "To achieve Z, we can modify A to become B"
+4. **Confirm approach**: "Does this approach make sense for your needs?"
+5. **Implement cleanly**: Remove old code, add new code clearly
+
+### 🚫 ANTI-PATTERNS TO AVOID
+
+- Don't layer multiple CSS rules that conflict
+- Don't assume HTML structure without checking
+- Don't iterate endlessly - rethink approach
+- Don't ignore user's language preference
+- Don't give solutions without understanding the problem context
+
+### ✅ BEST PRACTICES
+
+- Use analogies to explain complex layouts
+- Break down problems into simple steps
+- Always verify understanding before implementing
+- Clean up conflicting rules completely
+- Respond in user's preferred language
