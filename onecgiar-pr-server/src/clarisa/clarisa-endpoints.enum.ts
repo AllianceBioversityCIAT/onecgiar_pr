@@ -35,6 +35,7 @@ import { ClarisaSdgTargetDto } from './dtos/clarisa-sdg-target.dto';
 import { ClarisaTocPhase } from './clarisa-toc-phases/entities/clarisa-toc-phase.entity';
 import { ClarisaPhaseDto } from './dtos/clarisa-phase.dto';
 import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ClarisaInnovationUseLevel } from './clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
 
 /**
  * Represents a mapping of CLARISA parameters to their corresponding values.
@@ -235,6 +236,15 @@ export class ClarisaEndpoints<Entity, Dto> {
     'innovation-characteristics',
     'GET',
     ClarisaInnovationCharacteristic,
+  );
+
+  /**
+   * Represents the endpoint configuration for fetching all innovation use levels.
+   */
+  public static readonly INNOVATION_USE_LEVELS = new ClarisaEndpoints(
+    'innovation-use-levels',
+    'GET',
+    ClarisaInnovationUseLevel,
   );
 
   /**
