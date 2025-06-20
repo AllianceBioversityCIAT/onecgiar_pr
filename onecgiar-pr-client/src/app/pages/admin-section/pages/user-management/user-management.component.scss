@@ -47,76 +47,66 @@
 
   .controls-row {
     display: flex;
+    justify-content: space-between;
     align-items: flex-start;
     gap: 24px;
-    flex-wrap: wrap;
 
-    .search-container {
+    .filters-group {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      align-items: flex-start;
+      gap: 24px;
+      flex-wrap: nowrap; // Important: filters don't wrap
 
-      .search-label {
-        font-size: 14px;
-        font-weight: 500;
-        color: #374151;
-      }
+      .search-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+        min-width: 200px;
 
-      .p-input-icon-left {
-        width: 280px;
-
-        .search-field {
-          width: 100%;
-        }
-      }
-    }
-
-    .status-filter,
-    .cgiar-filter,
-    .clear-filter {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 200px;
-
-      .status-label,
-      .cgiar-label,
-      .clear-label {
-        font-size: 14px;
-        font-weight: 500;
-        color: #374151;
-        height: 20px; // Match label height for alignment
-      }
-    }
-
-    .clear-filter {
-      min-width: 150px; // Smaller width for the clear button
-      margin-top: -6px; // Move button up to align with action buttons
-    }
-
-    .action-buttons {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-left: auto;
-      margin-top: 22px; // Align with input fields
-
-      .info-button {
-        height: 32px;
-        width: 32px;
-        border-radius: 6px;
-        transition: all 0.2s ease;
-        padding: 0;
-
-        &:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
-        }
-
-        i {
+        .search-label {
           font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .p-input-icon-left {
+          width: 100%;
+
+          .search-field {
+            width: 100%;
+          }
         }
       }
+
+      .status-filter,
+      .cgiar-filter,
+      .clear-filter {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 180px;
+
+        .status-label,
+        .cgiar-label,
+        .clear-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          height: 20px;
+        }
+      }
+
+      .clear-filter {
+        min-width: 150px;
+        margin-top: -6px;
+      }
+    }
+
+    .actions-group {
+      display: flex;
+      align-items: center;
+      margin-top: 22px; // Align with input fields
     }
   }
 }
@@ -128,10 +118,9 @@
   box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  overflow: visible; // Allow pagination dropdown to show
-  position: relative; // For absolute positioning of counter
+  overflow: visible;
+  position: relative;
 
-  // Floating counter
   .counter {
     font-size: 14px;
     position: absolute;
@@ -180,10 +169,9 @@
       color: white !important;
     }
 
-    &:nth-child(3), // Is CGIAR header
-    &:nth-child(4), // Date header
+    &:nth-child(3),
+    &:nth-child(4),
     &:nth-child(5) {
-      // Status header
       .header-content {
         justify-content: center;
       }
@@ -204,10 +192,9 @@
       color: #374151;
       vertical-align: middle;
 
-      &:nth-child(3), // Is CGIAR column
-      &:nth-child(4), // Date column
+      &:nth-child(3),
+      &:nth-child(4),
       &:nth-child(5) {
-        // Status column
         text-align: center;
       }
     }
@@ -255,20 +242,27 @@
     }
   }
 
-  // Alternative approach - center the entire table footer
   .user-table .p-datatable-footer {
     text-align: center;
   }
 }
 
-// Responsive styles
-// Medium screens - description definitely wraps
-@media (max-width: 1000px) {
-  ::ng-deep .user-table .p-datatable-scrollable-body {
-    height: calc(100vh - 560px) !important; // Extra 40px for definite description wrap
+// Single clean responsive rule
+@media (max-width: 1300px) {
+  .controls-section {
+    .controls-row {
+      flex-direction: column;
+      gap: 0px; // No gap between groups when vertical
+
+      .actions-group {
+        align-self: flex-start; // Align to left
+        margin-top: 0px; // Remove top margin
+      }
+    }
   }
 }
 
+// Mobile adjustments
 @media (max-width: 768px) {
   .local_container {
     padding: 20px 24px;
@@ -277,48 +271,29 @@
 
   .controls-section {
     .controls-row {
-      flex-direction: column;
-      align-items: stretch;
+      .filters-group {
+        flex-direction: column;
+        gap: 16px;
 
-      .search-container .p-input-icon-left {
+        .search-container .p-input-icon-left {
+          width: 100%;
+        }
+
+        .status-filter,
+        .cgiar-filter,
+        .clear-filter {
+          min-width: auto;
+        }
+      }
+
+      .actions-group {
         width: 100%;
-      }
 
-      .status-filter {
-        min-width: auto;
-      }
-
-      .action-buttons {
-        margin-left: 0;
-        justify-content: flex-start;
+        ::ng-deep app-pr-button {
+          width: 100%;
+        }
       }
     }
-  }
-
-  // Mobile: stacked controls
-  ::ng-deep .user-table .p-datatable-scrollable-body {
-    height: calc(100vh - 620px) !important; // Extra 100px for stacked controls
-  }
-}
-
-@media (max-width: 1200px) {
-  .controls-section {
-    .controls-row {
-      flex-wrap: wrap;
-      gap: 12px; // Reduce gap in responsive
-
-      .action-buttons {
-        margin-left: 0;
-        margin-top: 0 !important; // No margin when buttons are below
-        width: 100%;
-        justify-content: flex-start;
-      }
-    }
-  }
-
-  // Adjust table scroll height when controls wrap to two lines
-  ::ng-deep .user-table .p-datatable-scrollable-body {
-    height: calc(100vh - 590px) !important; // Extra 70px when filters go below
   }
 }
 
