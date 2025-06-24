@@ -112,6 +112,21 @@
               {{ user.userStatus }}
             </span>
           </td>
+          <td>
+            <div class="action-buttons" [class.inactive-user]="user.userStatus === 'Inactive'">
+              <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                <i class="material-icons-round">edit</i>
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                (click)="onToggleUserStatus(user)"
+                [pTooltip]="user.userStatus === 'Active' ? 'Deactivate user' : 'Activate user'"
+                tooltipPosition="top">
+                <i class="material-icons-round">{{ user.userStatus === 'Active' ? 'person_off' : 'person' }}</i>
+              </button>
+            </div>
+          </td>
         </tr>
       </ng-template>
 

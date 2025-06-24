@@ -177,7 +177,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'Email', key: 'emailAddress', width: '300px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
-    { label: 'Status', key: 'status', width: '120px' }
+    { label: 'Status', key: 'status', width: '120px' },
+    { label: 'Actions', key: 'actions', width: '100px' }
   ];
 
   // Status filter options
@@ -314,6 +315,17 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onCancelAddUser(): void {
     this.showAddUserModal = false;
+  }
+
+  // User actions methods
+  onEditUser(user: any): void {
+    console.log('Edit user:', user);
+    // TODO: Implement edit user functionality
+  }
+
+  onToggleUserStatus(user: any): void {
+    console.log('Toggle user status:', user);
+    // TODO: Implement toggle user status functionality
   }
 
   get currentUserName(): string {
