@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -45,14 +45,27 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() truncateSelectionText?: boolean = false;
   @Input() inlineStylesContainer?: string = '';
   @Input() _value: string;
+  @Input() expandSpaceOnOpen?: boolean = false; // Enable 300px expansion when open
 
   @Output() selectOptionEvent = new EventEmitter();
 
   private _optionsIntance: any[];
   public fullValue: any = {};
   public searchText: string;
+  public isDropdownOpen?: boolean = false; // Track dropdown state
 
-  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService,
+    private elementRef: ElementRef
+  ) {}
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
+      this.isDropdownOpen = false;
+    }
+  }
 
   get value(): any {
     return this._value;
@@ -85,6 +98,11 @@ export class PrSelectComponent implements ControlValueAccessor {
     if (option?.disabled) return;
     const element: any = document.getElementById(this.optionValue + (this.indexReference || ''));
     element.blur();
+    this.isDropdownOpen = false; // Close dropdown
+  }
+
+  onDropdownOpen() {
+    this.isDropdownOpen = true;
   }
   get optionsIntance() {
     if (!this.options?.length) return [];
@@ -116,6 +134,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.value = option[this.optionValue];
     option.selected = true;
     this.selectOptionEvent.emit(option);
+    this.isDropdownOpen = false; // Close dropdown when selecting an option
   }
 
   labelName(value) {

@@ -51,7 +51,8 @@
             [ngModel]="selectedCgiar()"
             (ngModelChange)="onCgiarChange($event)"
             [required]="false"
-            [indexReference]="2"></app-pr-select>
+            [indexReference]="2"
+            [expandSpaceOnOpen]="true"></app-pr-select>
         </div>
 
         <!-- Clear filters button -->
@@ -158,7 +159,8 @@
           label="Select a user"
           [(ngModel)]="addUserForm.selectedUserEmail"
           (selectOptionEvent)="onUserSelect($event)"
-          [required]="true">
+          [required]="true"
+          [expandSpaceOnOpen]="true">
         </app-pr-select>
       </div>
 
