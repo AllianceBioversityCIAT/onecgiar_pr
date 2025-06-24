@@ -51,7 +51,8 @@
             [ngModel]="selectedCgiar()"
             (ngModelChange)="onCgiarChange($event)"
             [required]="false"
-            [indexReference]="2"></app-pr-select>
+            [indexReference]="2"
+            [expandSpaceOnOpen]="true"></app-pr-select>
         </div>
 
         <!-- Clear filters button -->
@@ -91,12 +92,14 @@
       responsiveLayout="scroll">
       <ng-template pTemplate="header">
         <tr>
-          <th *ngFor="let column of columns" [style.width]="column.width" [pSortableColumn]="column.key">
-            <div class="header-content">
-              {{ column.label }}
-              <p-sortIcon [field]="column.key"></p-sortIcon>
-            </div>
-          </th>
+          @for (column of columns; track column.key) {
+            <th [style.width]="column.width" [pSortableColumn]="column.key">
+              <div class="header-content">
+                {{ column.label }}
+                <p-sortIcon [field]="column.key"></p-sortIcon>
+              </div>
+            </th>
+          }
         </tr>
       </ng-template>
 
@@ -110,6 +113,21 @@
             <span [class]="getStatusClass(user.userStatus)">
               {{ user.userStatus }}
             </span>
+          </td>
+          <td>
+            <div class="action-buttons" [class.inactive-user]="user.userStatus === 'Inactive'">
+              <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                <i class="material-icons-round">edit</i>
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                (click)="onToggleUserStatus(user)"
+                [pTooltip]="user.userStatus === 'Active' ? 'Deactivate user' : 'Activate user'"
+                tooltipPosition="top">
+                <i class="material-icons-round">{{ user.userStatus === 'Active' ? 'person_off' : 'person' }}</i>
+              </button>
+            </div>
           </td>
         </tr>
       </ng-template>
@@ -143,73 +161,106 @@
       <div class="form-field">
         <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
         <div class="cgiar-buttons">
-          <button type="button" class="cgiar-btn" [class.active]="addUserForm.isCGIAR" (click)="onModalCgiarChange(true)">Yes</button>
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm.isCGIAR" (click)="onModalCgiarChange(false)">No</button>
+          <button type="button" class="cgiar-btn" [class.active]="addUserForm().isCGIAR" (click)="onModalCgiarChange(true)">Yes</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().isCGIAR" (click)="onModalCgiarChange(false)">No</button>
         </div>
       </div>
 
       <!-- CGIAR User Search -->
-      <div class="form-field" *ngIf="addUserForm.isCGIAR && !addUserForm.selectedUser">
-        <app-pr-select
-          [options]="cgiarUsers"
-          optionLabel="displayName"
-          optionValue="email"
-          placeholder="Select a user"
-          label="Select a user"
-          [(ngModel)]="addUserForm.selectedUserEmail"
-          (selectOptionEvent)="onUserSelect($event)"
-          [required]="true">
-        </app-pr-select>
-      </div>
+      @if (addUserForm().isCGIAR && !addUserForm().selectedUser) {
+        <div class="form-field">
+          <app-pr-select
+            [options]="cgiarUsers"
+            optionLabel="displayName"
+            optionValue="email"
+            placeholder="Select a user"
+            label="Select a user"
+            [ngModel]="addUserForm().selectedUserEmail"
+            (ngModelChange)="onUserEmailChange($event)"
+            (selectOptionEvent)="onUserSelect($event)"
+            [required]="true"
+            [expandSpaceOnOpen]="true">
+          </app-pr-select>
+        </div>
+      }
 
       <!-- Selected User Display (Read-only) -->
-      <div class="form-field" *ngIf="addUserForm.isCGIAR && addUserForm.selectedUser">
-        <label class="field-label">User:</label>
-        <div class="selected-user">{{ addUserForm.selectedUser.name }} ({{ addUserForm.selectedUser.email }})</div>
-      </div>
+      @if (addUserForm().isCGIAR && addUserForm().selectedUser) {
+        <div class="form-field">
+          <label class="field-label">User:</label>
+          <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
+        </div>
+      }
 
       <!-- Non-CGIAR User Form -->
-      <div *ngIf="!addUserForm.isCGIAR">
-        <div class="form-row">
-          <div class="form-field half-width">
-            <label class="field-label"> Name:<span class="required">*</span> </label>
-            <input type="text" pInputText placeholder="Enter name" [(ngModel)]="addUserForm.name" class="form-input" />
+      @if (!addUserForm().isCGIAR) {
+        <div>
+          <div class="form-row">
+            <div class="form-field half-width">
+              <label class="field-label"> Name:<span class="required">*</span> </label>
+              <input
+                type="text"
+                pInputText
+                placeholder="Enter name"
+                [ngModel]="addUserForm().name"
+                (ngModelChange)="onNameChange($event)"
+                class="form-input" />
+            </div>
+            <div class="form-field half-width">
+              <label class="field-label"> Last name:<span class="required">*</span> </label>
+              <input
+                type="text"
+                pInputText
+                placeholder="Enter last name"
+                [ngModel]="addUserForm().lastName"
+                (ngModelChange)="onLastNameChange($event)"
+                class="form-input" />
+            </div>
           </div>
-          <div class="form-field half-width">
-            <label class="field-label"> Last name:<span class="required">*</span> </label>
-            <input type="text" pInputText placeholder="Enter last name" [(ngModel)]="addUserForm.lastName" class="form-input" />
-          </div>
-        </div>
 
-        <div class="form-field">
-          <label class="field-label"> Email:<span class="required">*</span> </label>
-          <input type="email" pInputText placeholder="Enter Email" [(ngModel)]="addUserForm.email" class="form-input" />
+          <div class="form-field">
+            <label class="field-label"> Email:<span class="required">*</span> </label>
+            <input
+              type="email"
+              pInputText
+              placeholder="Enter Email"
+              [ngModel]="addUserForm().email"
+              (ngModelChange)="onEmailChange($event)"
+              class="form-input" />
+          </div>
         </div>
-      </div>
+      }
 
       <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
-      <div *ngIf="(addUserForm.isCGIAR && addUserForm.selectedUser) || !addUserForm.isCGIAR">
-        <!-- Admin Permissions -->
-        <div class="form-field" [class.extra-margin-top]="!addUserForm.isCGIAR">
-          <label class="field-label">Admin permissions</label>
-          <app-pr-checkbox
-            [(ngModel)]="addUserForm.hasAdminPermissions"
-            label="This user has admin permissions in the system."
-            [required]="false"></app-pr-checkbox>
-        </div>
+      @if ((addUserForm().isCGIAR && addUserForm().selectedUser) || !addUserForm().isCGIAR) {
+        <div>
+          <!-- Admin Permissions -->
+          <div class="form-field" [class.extra-margin-top]="!addUserForm().isCGIAR">
+            <app-pr-radio-button
+              label="Platform permissions"
+              [options]="adminPermissionsOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="addUserForm().hasAdminPermissions"
+              (ngModelChange)="onPermissionsChange($event)"
+              [required]="true"
+              [verticalAlignment]="true">
+            </app-pr-radio-button>
+          </div>
 
-        <!-- Created By -->
-        <div class="form-field">
-          <label class="field-label">Created by</label>
-          <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+          <!-- Created By -->
+          <div class="form-field">
+            <label class="field-label">Created by</label>
+            <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+          </div>
         </div>
-      </div>
+      }
     </div>
 
     <ng-template pTemplate="footer">
       <div class="modal-footer">
         <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
-        <button type="button" class="save-btn" [disabled]="!isFormValid" (click)="onSaveUser()">Save</button>
+        <button type="button" class="save-btn" [disabled]="!isFormValid()" (click)="onSaveUser()">Save</button>
       </div>
     </ng-template>
   </p-dialog>

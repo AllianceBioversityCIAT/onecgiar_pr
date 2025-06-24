@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -48,7 +48,7 @@ interface AddUserForm {
   name?: string;
   lastName?: string;
   email?: string;
-  hasAdminPermissions: boolean;
+  hasAdminPermissions: boolean | null;
 }
 
 @Component({
@@ -100,7 +100,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: error => {
-        console.error('Error fetching users:', error);
         this.loading.set(false);
         this.users.set([]);
       }
@@ -177,7 +176,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'Email', key: 'emailAddress', width: '300px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
-    { label: 'Status', key: 'status', width: '120px' }
+    { label: 'Status', key: 'status', width: '120px' },
+    { label: 'Actions', key: 'actions', width: '100px' }
   ];
 
   // Status filter options
@@ -193,10 +193,24 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Modal variables
   showAddUserModal: boolean = false;
-  addUserForm: AddUserForm = {
+  addUserForm = signal<AddUserForm>({
     isCGIAR: true,
-    hasAdminPermissions: false
-  };
+    hasAdminPermissions: null // Starts empty so user must choose
+  });
+
+  // Admin permissions options for radio button - computed based on CGIAR status
+  adminPermissionsOptions = computed(() => {
+    if (this.addUserForm().isCGIAR) {
+      // CGIAR users can choose between admin and guest
+      return [
+        { label: 'This user has admin permissions in the system.', value: true },
+        { label: 'This user has guest permissions in the platform.', value: false }
+      ];
+    } else {
+      // Non-CGIAR users can only have guest permissions
+      return [{ label: 'This user has guest permissions in the platform.', value: false }];
+    }
+  });
 
   // CGIAR users for autocomplete
   cgiarUsers: any[] = [
@@ -227,26 +241,72 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Modal methods
   resetAddUserForm(): void {
-    this.addUserForm = {
+    this.addUserForm.set({
       isCGIAR: true,
-      hasAdminPermissions: false
-    };
+      hasAdminPermissions: null // CGIAR starts empty so user must choose
+    });
   }
 
   onModalCgiarChange(isCgiar: boolean): void {
-    this.addUserForm.isCGIAR = isCgiar;
-    // Reset form fields when changing CGIAR status
-    this.addUserForm.selectedUser = undefined;
-    this.addUserForm.selectedUserEmail = '';
-    this.addUserForm.name = '';
-    this.addUserForm.lastName = '';
-    this.addUserForm.email = '';
+    this.addUserForm.update(form => ({
+      ...form,
+      isCGIAR: isCgiar,
+      // Reset form fields when changing CGIAR status
+      selectedUser: undefined,
+      selectedUserEmail: '',
+      name: '',
+      lastName: '',
+      email: '',
+      // Set permissions based on CGIAR status
+      hasAdminPermissions: isCgiar
+        ? null // CGIAR: clear field so user must choose between admin/guest
+        : false // Non-CGIAR: auto-select the only available option (guest)
+    }));
   }
 
   onUserSelect(event: any): void {
     // Find the selected user by email from the event
-    this.addUserForm.selectedUser = this.cgiarUsers.find(user => user.email === event.email);
-    this.addUserForm.selectedUserEmail = event.email;
+    const selectedUser = this.cgiarUsers.find(user => user.email === event.email);
+    this.addUserForm.update(form => ({
+      ...form,
+      selectedUser,
+      selectedUserEmail: event.email
+    }));
+  }
+
+  onUserEmailChange(email: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      selectedUserEmail: email
+    }));
+  }
+
+  onNameChange(name: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      name
+    }));
+  }
+
+  onLastNameChange(lastName: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      lastName
+    }));
+  }
+
+  onEmailChange(email: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      email
+    }));
+  }
+
+  onPermissionsChange(hasAdminPermissions: boolean): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      hasAdminPermissions
+    }));
   }
 
   onSaveUser(): void {
@@ -257,6 +317,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.showAddUserModal = false;
   }
 
+  // User actions methods
+  onEditUser(user: any): void {
+    // TODO: Implement edit user functionality
+  }
+
+  onToggleUserStatus(user: any): void {
+    // TODO: Implement toggle user status functionality
+  }
+
   get currentUserName(): string {
     return this.api.authSE?.localStorageUser?.user_name || 'Unknown User';
   }
@@ -265,11 +334,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     return this.api.authSE?.localStorageUser?.email || '';
   }
 
-  get isFormValid(): boolean {
-    if (this.addUserForm.isCGIAR) {
-      return !!this.addUserForm.selectedUser;
+  isFormValid = computed(() => {
+    const form = this.addUserForm();
+    if (form.isCGIAR) {
+      return !!form.selectedUser;
     } else {
-      return !!(this.addUserForm.name && this.addUserForm.lastName && this.addUserForm.email);
+      return !!(form.name && form.lastName && form.email);
     }
-  }
+  });
 }

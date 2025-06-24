@@ -50,6 +50,12 @@
 - Use Material 3 components when available
 - Implement proper SSR and hydration support
 
+## Icons
+
+- Always use `material-icons-round` instead of `material-icons` for consistent rounded design
+- Use primary app color (#3b82f6 or similar blue) for icons
+- Implement opacity variations for different states (inactive, disabled, etc.)
+
 ## Communication and Problem-Solving Rules
 
 ### 🔍 ALWAYS INSPECT EXISTING CODE FIRST
