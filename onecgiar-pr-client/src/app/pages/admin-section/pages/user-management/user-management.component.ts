@@ -48,7 +48,7 @@ interface AddUserForm {
   name?: string;
   lastName?: string;
   email?: string;
-  hasAdminPermissions: boolean;
+  hasAdminPermissions: boolean | null;
 }
 
 @Component({
@@ -195,7 +195,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
     isCGIAR: true,
-    hasAdminPermissions: false
+    hasAdminPermissions: null // Starts empty so user must choose
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
@@ -243,7 +243,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resetAddUserForm(): void {
     this.addUserForm.set({
       isCGIAR: true,
-      hasAdminPermissions: false // Default to guest permissions
+      hasAdminPermissions: null // CGIAR starts empty so user must choose
     });
   }
 
@@ -257,8 +257,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       name: '',
       lastName: '',
       email: '',
-      // Set default permissions based on CGIAR status and clear field
-      hasAdminPermissions: null // Always default to guest permissions when changing
+      // Set permissions based on CGIAR status
+      hasAdminPermissions: isCgiar
+        ? null // CGIAR: clear field so user must choose between admin/guest
+        : false // Non-CGIAR: auto-select the only available option (guest)
     }));
   }
 
