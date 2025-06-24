@@ -100,7 +100,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: error => {
-        console.error('Error fetching users:', error);
         this.loading.set(false);
         this.users.set([]);
       }
@@ -310,7 +309,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onSaveUser(): void {
     this.showAddUserModal = false;
-    console.log(this.addUserForm());
   }
 
   onCancelAddUser(): void {
@@ -319,12 +317,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // User actions methods
   onEditUser(user: any): void {
-    console.log('Edit user:', user);
     // TODO: Implement edit user functionality
   }
 
   onToggleUserStatus(user: any): void {
-    console.log('Toggle user status:', user);
     // TODO: Implement toggle user status functionality
   }
 
