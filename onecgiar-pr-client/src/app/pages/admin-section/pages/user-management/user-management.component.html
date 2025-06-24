@@ -191,11 +191,15 @@
       <div *ngIf="(addUserForm.isCGIAR && addUserForm.selectedUser) || !addUserForm.isCGIAR">
         <!-- Admin Permissions -->
         <div class="form-field" [class.extra-margin-top]="!addUserForm.isCGIAR">
-          <label class="field-label">Admin permissions</label>
-          <app-pr-checkbox
+          <app-pr-radio-button
+            label="Platform permissions"
+            [options]="adminPermissionsOptions"
+            optionLabel="label"
+            optionValue="value"
             [(ngModel)]="addUserForm.hasAdminPermissions"
-            label="This user has admin permissions in the system."
-            [required]="false"></app-pr-checkbox>
+            [required]="true"
+            [verticalAlignment]="true">
+          </app-pr-radio-button>
         </div>
 
         <!-- Created By -->

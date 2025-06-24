@@ -191,6 +191,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'No', value: 'No' }
   ];
 
+  // Admin permissions options for radio button
+  adminPermissionsOptions = [
+    { label: 'This user has admin permissions in the system.', value: true },
+    { label: 'This user has guest permissions in the platform.', value: false }
+  ];
+
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm: AddUserForm = {
