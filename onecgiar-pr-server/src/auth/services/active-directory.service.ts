@@ -1,5 +1,5 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-const ActiveDirectory = require('activedirectory');
+import ActiveDirectory from 'activedirectory';
 import config from '../../config/const.config';
 
 export interface ADUser {
