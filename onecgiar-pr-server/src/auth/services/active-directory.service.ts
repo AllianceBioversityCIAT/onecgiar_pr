@@ -1,5 +1,5 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import * as ActiveDirectory from 'activedirectory';
+const ActiveDirectory = require('activedirectory');
 import config from '../../config/const.config';
 
 export interface ADUser {
@@ -32,8 +32,7 @@ export class ActiveDirectoryService {
       const filter = `(|(cn=*${query}*)(mail=*${query}*))`;
 
       return new Promise((resolve, reject) => {
-        ad.search(
-          config.active_directory.baseDN,
+        ad.findUsers(
           {
             filter: filter,
             attributes: [
@@ -46,22 +45,20 @@ export class ActiveDirectoryService {
               'userPrincipalName',
             ],
           },
-          (err, results) => {
+          (err, users) => {
             if (err) {
               this.logger.error('AD search error:', err.message);
               reject(err);
               return;
             }
 
-            if (!results || !results.users) {
+            if (!users) {
               resolve([]);
               return;
             }
 
-            const users = Array.isArray(results.users)
-              ? results.users
-              : [results.users];
-            resolve(users);
+            const userArray = Array.isArray(users) ? users : [users];
+            resolve(userArray);
           },
         );
       });
