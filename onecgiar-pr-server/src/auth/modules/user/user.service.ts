@@ -184,15 +184,17 @@ export class UserService {
               qb.where('users.first_name LIKE :word', { word })
                 .orWhere('users.last_name LIKE :word', { word })
                 .orWhere('users.email LIKE :word', { word });
-
             } else if (keywords.length >= 2) {
               const first = `%${keywords[0]}%`;
               const last = `%${keywords[1]}%`;
 
-              qb.where('users.first_name LIKE :firstName AND users.last_name LIKE :lastName', {
-                firstName: first,
-                lastName: last,
-              });
+              qb.where(
+                'users.first_name LIKE :firstName AND users.last_name LIKE :lastName',
+                {
+                  firstName: first,
+                  lastName: last,
+                },
+              );
             }
 
             const yearRegex = /^\d{4}$/;
