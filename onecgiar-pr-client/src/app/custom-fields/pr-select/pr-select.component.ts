@@ -62,7 +62,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
-    if (this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
+    if (this.expandSpaceOnOpen && this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
       this.isDropdownOpen = false;
     }
   }
@@ -98,11 +98,15 @@ export class PrSelectComponent implements ControlValueAccessor {
     if (option?.disabled) return;
     const element: any = document.getElementById(this.optionValue + (this.indexReference || ''));
     element.blur();
-    this.isDropdownOpen = false; // Close dropdown
+    if (this.expandSpaceOnOpen) {
+      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    }
   }
 
   onDropdownOpen() {
-    this.isDropdownOpen = true;
+    if (this.expandSpaceOnOpen) {
+      this.isDropdownOpen = true; // Only track state if expansion is enabled
+    }
   }
   get optionsIntance() {
     if (!this.options?.length) return [];
@@ -134,7 +138,9 @@ export class PrSelectComponent implements ControlValueAccessor {
     this.value = option[this.optionValue];
     option.selected = true;
     this.selectOptionEvent.emit(option);
-    this.isDropdownOpen = false; // Close dropdown when selecting an option
+    if (this.expandSpaceOnOpen) {
+      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    }
   }
 
   labelName(value) {
