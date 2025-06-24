@@ -106,6 +106,34 @@ h2 {
   cursor: not-allowed;
 }
 
+.show-login-form-btn {
+  background-color: #5569dd;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  max-width: 330px;
+  width: 100%;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.show-login-form-btn:hover {
+  background-color: #4657b3;
+}
+
+.show-login-form-btn:disabled {
+  background-color: #556add85;
+  cursor: not-allowed;
+}
+
 .divider {
   display: flex;
   align-items: center;
@@ -202,6 +230,7 @@ input {
   width: 100%;
   gap: 5px;
   margin-bottom: 20px;
+  margin-top: 25px;
 
   @media (max-height: 780px) {
     margin-bottom: 10px;
