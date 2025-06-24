@@ -15,7 +15,6 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
-import { SearchUsersDto } from './dto/search-users.dto';
 import { ActiveDirectoryService } from './services/active-directory.service';
 
 @Controller()
@@ -89,8 +88,7 @@ export class AuthController {
   @Get('/users/search')
   @ApiOperation({
     summary: 'Search users in Active Directory',
-    description:
-      'Search for users in Active Directory by name, email, or username. Supports real-time search with caching for better performance.',
+    description: 'Search for users by name or email',
   })
   @ApiResponse({
     status: 200,
@@ -100,30 +98,21 @@ export class AuthController {
       properties: {
         message: { type: 'string', example: 'Users found successfully' },
         response: {
-          type: 'object',
-          properties: {
-            users: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  cn: { type: 'string', example: 'John Doe' },
-                  displayName: { type: 'string', example: 'John Doe' },
-                  mail: { type: 'string', example: 'john.doe@cgiar.org' },
-                  sAMAccountName: { type: 'string', example: 'jdoe' },
-                  givenName: { type: 'string', example: 'John' },
-                  sn: { type: 'string', example: 'Doe' },
-                  userPrincipalName: {
-                    type: 'string',
-                    example: 'john.doe@cgiar.org',
-                  },
-                  department: { type: 'string', example: 'IT Department' },
-                  title: { type: 'string', example: 'Software Developer' },
-                },
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              cn: { type: 'string', example: 'John Doe' },
+              displayName: { type: 'string', example: 'John Doe' },
+              mail: { type: 'string', example: 'john.doe@cgiar.org' },
+              sAMAccountName: { type: 'string', example: 'jdoe' },
+              givenName: { type: 'string', example: 'John' },
+              sn: { type: 'string', example: 'Doe' },
+              userPrincipalName: {
+                type: 'string',
+                example: 'john.doe@cgiar.org',
               },
             },
-            total: { type: 'number', example: 5 },
-            hasMore: { type: 'boolean', example: false },
           },
         },
         status: { type: 'number', example: 200 },
@@ -131,76 +120,21 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 400, description: 'Invalid search parameters' })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Valid authentication required',
-  })
-  @ApiResponse({
-    status: 503,
-    description: 'Active Directory service unavailable',
-  })
-  async searchUsers(@Query() searchDto: SearchUsersDto) {
-    const result = await this.activeDirectoryService.searchUsers(
-      searchDto.query,
-      searchDto.limit,
-      searchDto.useCache,
-    );
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async searchUsers(@Query('query') query: string) {
+    if (!query) {
+      return {
+        message: 'Query parameter is required',
+        response: [],
+        status: 400,
+      };
+    }
+
+    const users = await this.activeDirectoryService.searchUsers(query);
 
     return {
       message: 'Users found successfully',
-      response: result,
-      status: 200,
-    };
-  }
-
-  @Get('/users/search/status')
-  @ApiOperation({
-    summary: 'Get Active Directory service status',
-    description:
-      'Returns the current status of the Active Directory service, including configuration and cache statistics.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Service status retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          example: 'Service status retrieved successfully',
-        },
-        response: {
-          type: 'object',
-          properties: {
-            initialized: { type: 'boolean', example: true },
-            hasConfig: { type: 'boolean', example: true },
-            configDetails: {
-              type: 'object',
-              properties: {
-                hasUrl: { type: 'boolean', example: true },
-                hasBaseDN: { type: 'boolean', example: true },
-                hasDomain: { type: 'boolean', example: true },
-              },
-            },
-            cacheStats: {
-              type: 'object',
-              properties: {
-                size: { type: 'number', example: 5 },
-                keys: { type: 'array', items: { type: 'string' } },
-              },
-            },
-          },
-        },
-        status: { type: 'number', example: 200 },
-      },
-    },
-  })
-  async getSearchServiceStatus() {
-    const status = this.activeDirectoryService.getServiceStatus();
-
-    return {
-      message: 'Service status retrieved successfully',
-      response: status,
+      response: users,
       status: 200,
     };
   }

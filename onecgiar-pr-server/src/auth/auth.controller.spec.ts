@@ -6,7 +6,6 @@ import { HttpStatus } from '@nestjs/common';
 import { UserLoginDto } from './dto/login-user.dto';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
-import { SearchUsersDto } from './dto/search-users.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -62,41 +61,23 @@ describe('AuthController', () => {
     },
     status: HttpStatus.OK,
   };
+
   const mockPusherAuthResponse = {
     auth: 'pusher-auth-token',
   };
 
-  const mockSearchUsersResponse = {
-    users: [
-      {
-        cn: 'John Doe',
-        displayName: 'John Doe',
-        mail: 'john.doe@cgiar.org',
-        sAMAccountName: 'jdoe',
-        givenName: 'John',
-        sn: 'Doe',
-        userPrincipalName: 'john.doe@cgiar.org',
-        department: 'IT',
-        title: 'Developer',
-      },
-    ],
-    total: 1,
-    hasMore: false,
-  };
-
-  const mockServiceStatus = {
-    initialized: true,
-    hasConfig: true,
-    configDetails: {
-      hasUrl: true,
-      hasBaseDN: true,
-      hasDomain: true,
+  // SIMPLIFICADO: Array directo de usuarios
+  const mockSearchUsersResponse = [
+    {
+      cn: 'John Doe',
+      displayName: 'John Doe',
+      mail: 'john.doe@cgiar.org',
+      sAMAccountName: 'jdoe',
+      givenName: 'John',
+      sn: 'Doe',
+      userPrincipalName: 'john.doe@cgiar.org',
     },
-    cacheStats: {
-      size: 0,
-      keys: [],
-    },
-  };
+  ];
 
   const mockAuthService = {
     getAuthURL: jest.fn(),
@@ -107,10 +88,8 @@ describe('AuthController', () => {
 
   const mockActiveDirectoryService = {
     searchUsers: jest.fn(),
-    getServiceStatus: jest.fn(),
-    clearCache: jest.fn(),
-    getCacheStats: jest.fn(),
   };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -207,46 +186,44 @@ describe('AuthController', () => {
     });
   });
 
+  // SIMPLIFICADO: Test de búsqueda de usuarios
   describe('searchUsers', () => {
     it('should search users in Active Directory', async () => {
-      const searchDto: SearchUsersDto = {
-        query: 'john',
-        limit: 10,
-        useCache: true,
-      };
+      const query = 'john';
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
         mockSearchUsersResponse,
       );
 
-      const result = await controller.searchUsers(searchDto);
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
         message: 'Users found successfully',
         response: mockSearchUsersResponse,
         status: 200,
       });
-      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith(
-        'john',
-        10,
-        true,
-      );
+      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
-  });
 
-  describe('getSearchServiceStatus', () => {
-    it('should return Active Directory service status', async () => {
-      mockActiveDirectoryService.getServiceStatus.mockReturnValueOnce(
-        mockServiceStatus,
-      );
-
-      const result = await controller.getSearchServiceStatus();
+    it('should return error when query is missing', async () => {
+      const result = await controller.searchUsers('');
 
       expect(result).toEqual({
-        message: 'Service status retrieved successfully',
-        response: mockServiceStatus,
-        status: 200,
+        message: 'Query parameter is required',
+        response: [],
+        status: 400,
       });
-      expect(activeDirectoryService.getServiceStatus).toHaveBeenCalled();
+      expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
+    });
+
+    it('should handle search errors', async () => {
+      const query = 'john';
+      const errorMessage = 'AD connection failed';
+      mockActiveDirectoryService.searchUsers.mockRejectedValueOnce(
+        new Error(errorMessage),
+      );
+
+      await expect(controller.searchUsers(query)).rejects.toThrow(errorMessage);
+      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
   });
 });
