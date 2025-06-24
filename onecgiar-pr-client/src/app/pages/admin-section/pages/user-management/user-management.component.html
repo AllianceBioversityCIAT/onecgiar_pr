@@ -87,8 +87,6 @@
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
-      [scrollable]="true"
-      scrollHeight="calc(100vh - 520px)"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
       responsiveLayout="scroll">
       <ng-template pTemplate="header">
@@ -118,7 +116,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td [attr.colspan]="columns.length" class="no-data">No users found matching your criteria.</td>
+          <td [attr.colspan]="columns.length" class="no-data">No users match the entered criteria</td>
         </tr>
       </ng-template>
     </p-table>
