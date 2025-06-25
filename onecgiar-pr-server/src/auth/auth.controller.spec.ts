@@ -66,7 +66,6 @@ describe('AuthController', () => {
     auth: 'pusher-auth-token',
   };
 
-  // SIMPLIFICADO: Array directo de usuarios
   const mockSearchUsersResponse = [
     {
       cn: 'John Doe',
@@ -186,15 +185,14 @@ describe('AuthController', () => {
     });
   });
 
-  // SIMPLIFICADO: Test de búsqueda de usuarios
   describe('searchUsers', () => {
     it('should search users in Active Directory', async () => {
-      const query = 'john';
+      const body = { query: 'john' };
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
         mockSearchUsersResponse,
       );
 
-      const result = await controller.searchUsers(query);
+      const result = await controller.searchUsers(body);
 
       expect(result).toEqual({
         message: 'Users found successfully',
@@ -205,7 +203,20 @@ describe('AuthController', () => {
     });
 
     it('should return error when query is missing', async () => {
-      const result = await controller.searchUsers('');
+      const body = { query: '' };
+      const result = await controller.searchUsers(body);
+
+      expect(result).toEqual({
+        message: 'Query parameter is required',
+        response: [],
+        status: 400,
+      });
+      expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
+    });
+
+    it('should return error when query property is undefined', async () => {
+      const body = {} as { query: string };
+      const result = await controller.searchUsers(body);
 
       expect(result).toEqual({
         message: 'Query parameter is required',
@@ -216,13 +227,13 @@ describe('AuthController', () => {
     });
 
     it('should handle search errors', async () => {
-      const query = 'john';
+      const body = { query: 'john' };
       const errorMessage = 'AD connection failed';
       mockActiveDirectoryService.searchUsers.mockRejectedValueOnce(
         new Error(errorMessage),
       );
 
-      await expect(controller.searchUsers(query)).rejects.toThrow(errorMessage);
+      await expect(controller.searchUsers(body)).rejects.toThrow(errorMessage);
       expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
   });
