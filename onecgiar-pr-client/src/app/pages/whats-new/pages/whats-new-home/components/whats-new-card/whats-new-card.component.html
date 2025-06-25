@@ -35,7 +35,7 @@
       </div>
 
       <p class="whats-new-home_card_content_date">
-        {{ item?.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+        {{ item?.properties['Released date']?.date?.start | date: 'MMM d, yyyy' }}
       </p>
     </div>
 

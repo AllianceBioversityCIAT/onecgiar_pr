@@ -3,7 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { ResultsApiService } from './results-api.service';
 import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
-import { resultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
+import { ResultToResultInterfaceToc } from '../../../../app/pages/results/pages/result-detail/pages/rd-theory-of-change/model/theoryOfChangeBody';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
 
@@ -934,7 +934,7 @@ describe('ResultsApiService', () => {
         contributing_initiatives: [],
         contributing_np_projects: [],
         contributing_center: [],
-        result_toc_result: new resultToResultInterfaceToc(),
+        result_toc_result: new ResultToResultInterfaceToc(),
         contributors_result_toc_result: [],
         impacts: [],
         pending_contributing_initiatives: 'pending',
@@ -3556,6 +3556,37 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/change-submission-state?tocId=${tocId}`);
       expect(req.request.method).toBe('POST');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_loginWithAzureAd', () => {
+    it('should call GET_loginWithAzureAd and return expected data', done => {
+      const provider = 'CGIAR-AzureAD';
+      service.GET_loginWithAzureAd(provider).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_validateCognitoCode', () => {
+    it('should call POST_validateCognitoCode and return expected data', done => {
+      const code = 'test-code';
+      service.POST_validateCognitoCode(code).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/validate/code`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ code });
 
       req.flush(mockResponse);
     });

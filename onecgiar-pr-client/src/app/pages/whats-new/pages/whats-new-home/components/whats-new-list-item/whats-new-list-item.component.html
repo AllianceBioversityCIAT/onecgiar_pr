@@ -27,9 +27,9 @@
     </div>
   </div>
 
-  <div class="" style="grid-area: c; justify-self: end">
+  <div style="grid-area: c; justify-self: end; display: flex; align-items: center">
     <p class="whats-new-home_date">
-      {{ item.properties?.Created?.created_time | date: 'MMM d, yyyy' }}
+      {{ item.properties['Released date']?.date?.start | date: 'MMM d, yyyy' }}
     </p>
   </div>
 

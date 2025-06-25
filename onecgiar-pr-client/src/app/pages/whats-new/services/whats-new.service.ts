@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { forkJoin, Observable, of } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 type NotionDataError = {
   error: boolean;
@@ -18,10 +18,9 @@ export class WhatsNewService {
   notionDataError = signal<NotionDataError | null>(null);
   activeNotionPageData = signal<any>(null);
 
-  // Límite de profundidad para evitar recursión infinita
-  private maxRecursionDepth = 3;
+  private readonly maxRecursionDepth = 3;
 
-  constructor(private resultsApiService: ResultsApiService) {}
+  constructor(private readonly resultsApiService: ResultsApiService) {}
 
   getWhatsNewPages() {
     this.notionDataLoading.set(true);

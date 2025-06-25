@@ -25,7 +25,7 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.authService.inLogin = true;
+    this.authService.inLogin.set(true);
     document.body.style.overflow = 'hidden';
     this.getPdfData();
   }
@@ -63,7 +63,7 @@ export class PdfReportsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.authService.inLogin = false;
+    this.authService.inLogin.set(false);
     document.body.style.overflow = 'auto';
   }
 }

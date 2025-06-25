@@ -234,4 +234,32 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     ]);
     return result?.length ? result[0].max_role : null;
   }
+
+  /**
+   * Create a guest role for a user
+   * @param userId The ID of the user
+   * @returns The created RoleByUser entity
+   * @throws HandlersError if an error occurs during the operation
+   * @description This method creates a guest role for a user with the specified userId.
+   */
+  async createGuestRoleForUser(userId: number): Promise<RoleByUser> {
+    try {
+      const guestRoleId = 2;
+
+      const roleByUser = new RoleByUser();
+      roleByUser.user = userId;
+      roleByUser.role = guestRoleId;
+      roleByUser.initiative_id = null;
+      roleByUser.action_area_id = null;
+      roleByUser.active = true;
+
+      return await this.save(roleByUser);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

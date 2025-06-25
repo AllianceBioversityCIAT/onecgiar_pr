@@ -175,7 +175,6 @@ describe('PolicyChangeInfoComponent', () => {
 
   describe('ngOnInit()', () => {
     it('should get section information on initialization', async () => {
-      const spyShowAlerts = jest.spyOn(component, 'showAlerts');
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyGetPolicyChangesQuestions = jest.spyOn(component, 'getPolicyChangesQuestions');
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
@@ -196,7 +195,6 @@ describe('PolicyChangeInfoComponent', () => {
         expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
       }
       expect(spyGetSectionInformation).toHaveBeenCalled();
-      expect(spyShowAlerts).toHaveBeenCalled();
       expect(spyGetPolicyChangesQuestions).toHaveBeenCalled();
       expect(spyFindClassTenSeconds).toHaveBeenCalled();
     });

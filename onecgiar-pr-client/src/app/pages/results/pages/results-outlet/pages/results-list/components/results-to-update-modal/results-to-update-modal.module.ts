@@ -4,9 +4,7 @@ import { ResultsToUpdateModalComponent } from './results-to-update-modal.compone
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { TableModule } from 'primeng/table';
-import { FilterByTextModule } from '../../../../../../../../shared/pipes/filter-by-text.module';
 import { RouterModule } from '@angular/router';
-import { FilterByAttrWithValueModule } from '../../../../../../../../shared/pipes/filter-by-attr-with-value/filter-by-attr-with-value.module';
 import { ResultsToUpdateFilterPipe } from './results-to-update-filter.pipe';
 
 @NgModule({

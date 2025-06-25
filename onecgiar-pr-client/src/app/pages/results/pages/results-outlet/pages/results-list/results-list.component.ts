@@ -97,7 +97,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   }
 
   unSelectInits() {
-    this.api.dataControlSE.myInitiativesList.map(item => (item.selected = false));
+    this.api.dataControlSE.myInitiativesList.forEach(item => (item.selected = false));
   }
 
   onPressAction(result) {

@@ -160,7 +160,7 @@ describe('InnovationPackageListComponent', () => {
 
     component.GETAllInnovationPackages();
 
-    component.ipsrDataControlSE.ipsrResultList.map((inno: any) => {
+    component.ipsrDataControlSE.ipsrResultList.forEach((inno: any) => {
       inno.full_name = `${inno?.result_code} ${inno?.title} ${inno?.official_code}`;
       inno.result_code = Number(inno.result_code);
     });
