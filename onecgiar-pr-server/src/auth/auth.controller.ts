@@ -11,7 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
@@ -85,10 +85,24 @@ export class AuthController {
     return response.auth;
   }
 
-  @Get('/users/search')
+  @Post('/users/search')
   @ApiOperation({
     summary: 'Search users in Active Directory',
     description: 'Search for users by name or email',
+  })
+  @ApiBody({
+    description: 'Search query for finding users',
+    schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search term for finding users by name or email',
+          example: 'john.doe@cgiar.org',
+        },
+      },
+      required: ['query'],
+    },
   })
   @ApiResponse({
     status: 200,
@@ -121,8 +135,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Invalid search parameters' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async searchUsers(@Query('query') query: string) {
-    if (!query) {
+  async searchUsers(@Body() body: { query: string }) {
+    if (!body.query) {
       return {
         message: 'Query parameter is required',
         response: [],
@@ -130,7 +144,7 @@ export class AuthController {
       };
     }
 
-    const users = await this.activeDirectoryService.searchUsers(query);
+    const users = await this.activeDirectoryService.searchUsers(body.query);
 
     return {
       message: 'Users found successfully',

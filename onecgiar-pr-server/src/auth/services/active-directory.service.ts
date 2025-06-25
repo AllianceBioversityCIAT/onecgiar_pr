@@ -39,14 +39,23 @@ export class ActiveDirectoryService {
       return new Promise((resolve, reject) => {
         ad.findUser(query, (err, user) => {
           if (err) {
-            this.logger.error('AD findUser error:', err.message);
-            this.logger.error('Error details:', {
-              code: err.code,
-              errno: err.errno,
-              syscall: err.syscall,
-            });
-            reject(err);
-            return;
+            if (err.errno == 'ENOTFOUND') {
+              let notFound = {
+                name: 'SERVER_NOT_FOUND',
+                description: 'Domain Controller Server not found',
+                httpCode: 500,
+              };
+              reject(notFound);
+              return;
+            } else {
+              let e = {
+                name: 'SERVER_ERROR',
+                description: err.lde_message,
+                httpcode: 500,
+              };
+              reject(e);
+              return;
+            }
           }
 
           if (!user) {
