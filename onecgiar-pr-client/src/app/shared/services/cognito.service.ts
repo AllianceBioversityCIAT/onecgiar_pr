@@ -8,6 +8,7 @@ import { WebsocketService } from '../../sockets/websocket.service';
 import { RolesService } from './global/roles.service';
 import { UserAuth } from '../interfaces/user.interface';
 import { internationalizationData } from '../data/internationalization-data';
+import { environment } from '../../../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
@@ -37,7 +38,7 @@ export class CognitoService {
 
     this.isLoadingAzureAd.set(true);
 
-    this.api.resultsSE.GET_loginWithAzureAd('CGIAR-AzureAD').subscribe({
+    this.api.resultsSE.GET_loginWithAzureAd(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD').subscribe({
       next: res => {
         window.location.href = res?.response?.authUrl;
 

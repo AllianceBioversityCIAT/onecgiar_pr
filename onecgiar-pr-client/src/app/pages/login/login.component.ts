@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
@@ -19,6 +19,12 @@ export class LoginComponent implements OnInit, OnDestroy {
   cognito = inject(CognitoService);
   authService = inject(AuthService);
   router = inject(Router);
+
+  showLoginForm = signal(false);
+
+  toggleLoginForm(): void {
+    this.showLoginForm.set(!this.showLoginForm());
+  }
 
   ngOnInit(): void {
     if (this.authService.localStorageUser) {

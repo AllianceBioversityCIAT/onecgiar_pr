@@ -26,6 +26,7 @@ import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { In } from 'typeorm';
 
 @Injectable()
 export class ResultsPackageTocResultService {
@@ -142,6 +143,7 @@ export class ResultsPackageTocResultService {
           user.id,
           1,
         );
+
         for (const cpnp of cnpp) {
           let nonPP: NonPooledProject = null;
           if (cpnp?.grant_title?.length) {
@@ -160,8 +162,9 @@ export class ResultsPackageTocResultService {
                   1,
                 );
             }
+
             if (nonPP) {
-              this._nonPooledProjectRepository.update(nonPP.id, {
+              await this._nonPooledProjectRepository.update(nonPP.id, {
                 is_active: true,
                 center_grant_id: cpnp.center_grant_id,
                 funder_institution_id: cpnp.funder,
@@ -170,7 +173,7 @@ export class ResultsPackageTocResultService {
                 grant_title: cpnp.grant_title,
               });
             } else {
-              const newNpp = await this._nonPooledProjectRepository.save({
+              await this._nonPooledProjectRepository.save({
                 results_id: rip.id,
                 center_grant_id: cpnp.center_grant_id,
                 grant_title: cpnp.grant_title,
@@ -181,14 +184,42 @@ export class ResultsPackageTocResultService {
                 non_pooled_project_type_id: 1,
               });
 
-              await this._resultBilateralBudgetRepository.save({
-                non_pooled_projetct_id: newNpp.id,
-                created_by: user.id,
-                last_updated_by: user.id,
-              });
+              const existingNppRole2 =
+                await this._nonPooledProjectRepository.findOne({
+                  where: {
+                    results_id: rip.id,
+                    center_grant_id: cpnp.center_grant_id,
+                    grant_title: cpnp.grant_title,
+                    funder_institution_id: cpnp.funder,
+                    lead_center_id: cpnp.lead_center,
+                    non_pooled_project_type_id: 2,
+                  },
+                });
+
+              if (!existingNppRole2) {
+                const newNppRole2 = await this._nonPooledProjectRepository.save(
+                  {
+                    results_id: rip.id,
+                    center_grant_id: cpnp.center_grant_id,
+                    grant_title: cpnp.grant_title,
+                    funder_institution_id: cpnp.funder,
+                    lead_center_id: cpnp.lead_center,
+                    created_by: user.id,
+                    last_updated_by: user.id,
+                    non_pooled_project_type_id: 2,
+                  },
+                );
+
+                await this._resultBilateralBudgetRepository.save({
+                  non_pooled_projetct_id: newNppRole2.id,
+                  created_by: user.id,
+                  last_updated_by: user.id,
+                });
+              }
             }
           }
         }
+        await this.deleteRemovedNppCascade(rip.id, user.id);
       } else {
         await this._nonPooledProjectRepository.updateNPProjectById(
           rip.id,
@@ -196,6 +227,7 @@ export class ResultsPackageTocResultService {
           user.id,
           1,
         );
+        await this.deleteRemovedNppCascade(rip.id, user.id);
       }
 
       // * Save contributing center
@@ -561,6 +593,51 @@ export class ResultsPackageTocResultService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async deleteRemovedNppCascade(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      //
+      const inactiveNppRole1 = await this._nonPooledProjectRepository.find({
+        where: {
+          results_id: resultId,
+          non_pooled_project_type_id: 1,
+          is_active: false,
+        },
+      });
+
+      if (inactiveNppRole1.length > 0) {
+        const inactiveTitles = inactiveNppRole1.map((npp) => npp.grant_title);
+
+        const nppRole2ToDelete = await this._nonPooledProjectRepository.find({
+          where: {
+            results_id: resultId,
+            non_pooled_project_type_id: 2,
+            grant_title: In(inactiveTitles),
+            is_active: true,
+          },
+        });
+
+        if (nppRole2ToDelete.length > 0) {
+          const nppRole2Ids = nppRole2ToDelete.map((npp) => npp.id);
+
+          await this._resultBilateralBudgetRepository.update(
+            { non_pooled_projetct_id: In(nppRole2Ids) },
+            { is_active: false, last_updated_by: userId },
+          );
+
+          await this._nonPooledProjectRepository.update(
+            { id: In(nppRole2Ids) },
+            { is_active: false, last_updated_by: userId },
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error en deleteRemovedNppCascade:', error);
     }
   }
 }
