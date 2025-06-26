@@ -349,9 +349,7 @@ describe('AuthMicroserviceService', () => {
         } as InternalAxiosRequestConfig,
       };
 
-      jest
-        .spyOn(httpService, 'post')
-        .mockReturnValue(of(mockResponse));
+      jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
 
       const result = await service.createUser(mockUserData);
 
