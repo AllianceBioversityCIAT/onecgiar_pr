@@ -48,7 +48,7 @@ interface AddUserForm {
   first_name?: string;
   last_name?: string;
   email?: string;
-  hasAdminPermissions: boolean | null;
+  role_platform: number | null;
 }
 
 @Component({
@@ -195,7 +195,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
     is_cgiar: false,
-    hasAdminPermissions: false // Marcado por defecto como efecto placebo
+    role_platform: 2 // Marcado por defecto como guest (2)
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
@@ -203,12 +203,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     if (this.addUserForm().is_cgiar) {
       // CGIAR users can choose between admin and guest
       return [
-        { label: 'This user has admin permissions in the system.', value: true },
-        { label: 'This user has guest permissions in the platform.', value: false }
+        { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
+        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
       ];
     } else {
       // Non-CGIAR users can only have guest permissions
-      return [{ label: 'This user has guest permissions in the platform.', value: false }];
+      return [{ label: 'This user has guest permissions in the platform.', value: 2 }]; // Guest = 2
     }
   });
 
@@ -243,7 +243,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resetAddUserForm(): void {
     this.addUserForm.set({
       is_cgiar: false,
-      hasAdminPermissions: false // Marcado por defecto como efecto placebo
+      role_platform: 2 // Marcado por defecto como guest (2)
     });
   }
 
@@ -258,7 +258,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       last_name: '',
       email: '',
       // Set permissions based on CGIAR status
-      hasAdminPermissions: false // Siempre marcado como efecto placebo
+      role_platform: 2 // Siempre marcado como guest (2)
     }));
   }
 
@@ -300,15 +300,27 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }));
   }
 
-  onPermissionsChange(hasAdminPermissions: boolean): void {
+  onPermissionsChange(role_platform: number): void {
     this.addUserForm.update(form => ({
       ...form,
-      hasAdminPermissions
+      role_platform
     }));
   }
 
   onSaveUser(): void {
-    this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
+    const form = this.addUserForm();
+
+    // Crear el objeto que se enviará al backend
+    const userToCreate = {
+      first_name: form.first_name,
+      last_name: form.last_name,
+      email: form.email,
+      is_cgiar: form.is_cgiar,
+      role_platform: form.role_platform
+    };
+
+    console.log('Sending to backend:', userToCreate);
+    this.resultsApiService.POST_createUser(userToCreate).subscribe({
       next: res => {
         // Cerrar modal solo en caso de éxito
         this.showAddUserModal = false;
@@ -329,6 +341,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       },
       error: error => {
         // Determinar el mensaje de error
+        console.log(error);
         let errorMessage = 'Error while creating user';
 
         if (error?.error?.message) {
@@ -344,9 +357,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
         this.api.alertsFe.show({
           id: 'createUserError',
-          title: 'Error!',
+          title: 'Warning!',
           description: errorMessage,
-          status: 'error'
+          status: 'warning'
         });
 
         // El modal permanece abierto en caso de error para que el usuario pueda corregir
@@ -379,7 +392,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     const form = this.addUserForm();
 
     // Validar que se haya seleccionado una opción de permisos (efecto placebo)
-    if (form.hasAdminPermissions === null || form.hasAdminPermissions === undefined) {
+    if (form.role_platform === null || form.role_platform === undefined) {
       return false;
     }
 
