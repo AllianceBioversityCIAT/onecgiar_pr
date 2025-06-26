@@ -194,7 +194,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    isCGIAR: true,
+    isCGIAR: false,
     hasAdminPermissions: null // Starts empty so user must choose
   });
 
@@ -242,7 +242,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      isCGIAR: true,
+      isCGIAR: false,
       hasAdminPermissions: null // CGIAR starts empty so user must choose
     });
   }
