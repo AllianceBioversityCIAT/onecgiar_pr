@@ -389,6 +389,12 @@ export const TypePneReportRouting: PrRoute[] = [
     loadChildren: () =>
       import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule)
   },
+  {
+    prName: 'white',
+    underConstruction: false,
+    path: 'white',
+    loadComponent: () => import('../../pages/type-one-report/pages/tor-white/tor-white.component').then(m => m.TorWhiteComponent)
+  },
   { prName: '', path: '**', underConstruction: false, pathMatch: 'full', redirectTo: 'fact-sheet' }
 ];
 
