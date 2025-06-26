@@ -241,12 +241,11 @@
               [options]="adminPermissionsOptions()"
               optionLabel="label"
               optionValue="value"
-              [ngModel]="addUserForm().hasAdminPermissions"
-              (ngModelChange)="onPermissionsChange($event)"
               [required]="true"
               [verticalAlignment]="true">
             </app-pr-radio-button>
           </div>
+          <!-- [ngModel]="addUserForm().hasAdminPermissions" (ngModelChange)="onPermissionsChange($event)" -->
 
           <!-- Created By -->
           <div class="form-field">

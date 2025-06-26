@@ -48,7 +48,7 @@ interface AddUserForm {
   first_name?: string;
   last_name?: string;
   email?: string;
-  hasAdminPermissions: boolean | null;
+  // hasAdminPermissions: boolean | null;
 }
 
 @Component({
@@ -194,8 +194,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    is_cgiar: false,
-    hasAdminPermissions: null // Starts empty so user must choose
+    is_cgiar: false
+    // hasAdminPermissions: null // Starts empty so user must choose
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
@@ -242,8 +242,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      is_cgiar: false,
-      hasAdminPermissions: null // CGIAR starts empty so user must choose
+      is_cgiar: false
+      // hasAdminPermissions: null // CGIAR starts empty so user must choose
     });
   }
 
@@ -256,11 +256,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       selectedUserEmail: '',
       first_name: '',
       last_name: '',
-      email: '',
+      email: ''
       // Set permissions based on CGIAR status
-      hasAdminPermissions: isCgiar
-        ? null // CGIAR: clear field so user must choose between admin/guest
-        : false // Non-CGIAR: auto-select the only available option (guest)
+      // hasAdminPermissions: isCgiar
+      //   ? null // CGIAR: clear field so user must choose between admin/guest
+      //   : false // Non-CGIAR: auto-select the only available option (guest)
     }));
   }
 
@@ -312,15 +312,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onSaveUser(): void {
     this.showAddUserModal = false;
     console.log(this.addUserForm());
-    // this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
-    //   next: res => {
-    //     console.log(res);
-    //     this.getUsers();
-    //   },
-    //   error: error => {
-    //     console.log(error);
-    //   }
-    // });
+    this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
+      next: res => {
+        console.log(res);
+        this.getUsers();
+      },
+      error: error => {
+        console.log(error);
+      }
+    });
   }
 
   onCancelAddUser(): void {
