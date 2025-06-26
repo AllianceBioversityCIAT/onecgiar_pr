@@ -161,13 +161,13 @@
       <div class="form-field">
         <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
         <div class="cgiar-buttons">
-          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().isCGIAR" (click)="onModalCgiarChange(true)">Yes</button> -->
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().isCGIAR" (click)="onModalCgiarChange(false)">No</button>
+          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar" (click)="onModalCgiarChange(false)">No</button>
         </div>
       </div>
 
       <!-- CGIAR User Search -->
-      @if (addUserForm().isCGIAR && !addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
         <div class="form-field">
           <app-pr-select
             [options]="cgiarUsers"
@@ -185,7 +185,7 @@
       }
 
       <!-- Selected User Display (Read-only) -->
-      @if (addUserForm().isCGIAR && addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && addUserForm().selectedUser) {
         <div class="form-field">
           <label class="field-label">User:</label>
           <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
@@ -193,7 +193,7 @@
       }
 
       <!-- Non-CGIAR User Form -->
-      @if (!addUserForm().isCGIAR) {
+      @if (!addUserForm().is_cgiar) {
         <div>
           <div class="form-row">
             <div class="form-field half-width">
@@ -202,7 +202,7 @@
                 type="text"
                 pInputText
                 placeholder="Enter name"
-                [ngModel]="addUserForm().name"
+                [ngModel]="addUserForm().first_name"
                 (ngModelChange)="onNameChange($event)"
                 class="form-input" />
             </div>
@@ -212,7 +212,7 @@
                 type="text"
                 pInputText
                 placeholder="Enter last name"
-                [ngModel]="addUserForm().lastName"
+                [ngModel]="addUserForm().last_name"
                 (ngModelChange)="onLastNameChange($event)"
                 class="form-input" />
             </div>
@@ -232,10 +232,10 @@
       }
 
       <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
-      @if ((addUserForm().isCGIAR && addUserForm().selectedUser) || !addUserForm().isCGIAR) {
+      @if ((addUserForm().is_cgiar && addUserForm().selectedUser) || !addUserForm().is_cgiar) {
         <div>
           <!-- Admin Permissions -->
-          <div class="form-field" [class.extra-margin-top]="!addUserForm().isCGIAR">
+          <div class="form-field" [class.extra-margin-top]="!addUserForm().is_cgiar">
             <app-pr-radio-button
               label="Platform permissions"
               [options]="adminPermissionsOptions()"
