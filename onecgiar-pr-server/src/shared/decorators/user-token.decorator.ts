@@ -11,6 +11,13 @@ export const UserToken = createParamDecorator(
   },
 );
 
+export const DecodedUser = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+  },
+);
+
 function processUserToken(headerValue: string): TokenDto {
   const token: TokenDto = <TokenDto>(
     JSON.parse(Buffer.from(headerValue.split('.')[1], 'base64').toString())

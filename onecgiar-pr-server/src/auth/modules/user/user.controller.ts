@@ -7,13 +7,15 @@ import {
   UseInterceptors,
   Patch,
   Query,
+  ValidationPipe,
+  BadRequestException,
+  HttpStatus,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
-import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { DecodedUser } from '../../../shared/decorators/user-token.decorator';
 import {
   ApiTags,
   ApiHeader,
@@ -52,7 +54,6 @@ export class UserController {
           first_name: 'John',
           last_name: 'Doe',
           email: 'john.doe@example.com',
-          password: 'StrongPassword123',
           is_cgiar: true,
         },
       },
@@ -81,20 +82,16 @@ export class UserController {
       'Creates a new user with complete information including role assignment',
   })
   @ApiBody({
-    type: CreateFullUserDto,
-    description: 'User information with role',
+    type: CreateUserDto,
+    description: 'User information to create',
     examples: {
       example1: {
-        summary: 'Full user with role example',
+        summary: 'Basic user example',
         value: {
-          userData: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com',
-            password: 'StrongPassword123',
-            is_cgiar: true,
-          },
-          role: 3, // Guest role
+          first_name: 'John',
+          last_name: 'Doe',
+          email: 'john.doe@example.com',
+          is_cgiar: true,
         },
       },
     },
@@ -116,12 +113,25 @@ export class UserController {
     description: 'Not found - role does not exist',
   })
   async creteFull(
-    @Body() createFullUserDto: CreateFullUserDto,
-    @UserToken() user: TokenDto,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        exceptionFactory: () => {
+          const response = {};
+          return new BadRequestException({
+            response,
+            message:
+              'Some fields contain errors or are incomplete. Please review your input.',
+            status: HttpStatus.BAD_REQUEST,
+          });
+        },
+      }),
+    )
+    createFullUserDto: CreateUserDto,
+    @DecodedUser() user: TokenDto,
   ) {
-    const createUser: CreateUserDto = createFullUserDto.userData;
-    const role: number = createFullUserDto.role;
-    return this.userService.createFull(createUser, role, user);
+    return this.userService.createFull(createFullUserDto, user);
   }
 
   @Get('get/all')
