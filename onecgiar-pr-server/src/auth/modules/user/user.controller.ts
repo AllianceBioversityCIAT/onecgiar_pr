@@ -112,7 +112,7 @@ export class UserController {
     status: 404,
     description: 'Not found - role does not exist',
   })
-  async creteFull(
+  async createFull(
     @Body(
       new ValidationPipe({
         whitelist: true,
