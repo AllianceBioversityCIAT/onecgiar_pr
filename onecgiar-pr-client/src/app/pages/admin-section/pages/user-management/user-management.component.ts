@@ -48,7 +48,7 @@ interface AddUserForm {
   first_name?: string;
   last_name?: string;
   email?: string;
-  // hasAdminPermissions: boolean | null;
+  hasAdminPermissions: boolean | null;
 }
 
 @Component({
@@ -194,8 +194,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    is_cgiar: false
-    // hasAdminPermissions: null // Starts empty so user must choose
+    is_cgiar: false,
+    hasAdminPermissions: false // Marcado por defecto como efecto placebo
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
@@ -242,8 +242,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      is_cgiar: false
-      // hasAdminPermissions: null // CGIAR starts empty so user must choose
+      is_cgiar: false,
+      hasAdminPermissions: false // Marcado por defecto como efecto placebo
     });
   }
 
@@ -256,11 +256,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       selectedUserEmail: '',
       first_name: '',
       last_name: '',
-      email: ''
+      email: '',
       // Set permissions based on CGIAR status
-      // hasAdminPermissions: isCgiar
-      //   ? null // CGIAR: clear field so user must choose between admin/guest
-      //   : false // Non-CGIAR: auto-select the only available option (guest)
+      hasAdminPermissions: false // Siempre marcado como efecto placebo
     }));
   }
 
@@ -310,15 +308,48 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onSaveUser(): void {
-    this.showAddUserModal = false;
-    console.log(this.addUserForm());
     this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
       next: res => {
-        console.log(res);
+        // Cerrar modal solo en caso de éxito
+        this.showAddUserModal = false;
+
+        // Determinar el mensaje de éxito basado en la respuesta
+        const successMessage = res?.message || 'The user has been successfully created';
+        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
+
+        this.api.alertsFe.show({
+          id: 'createUserSuccess',
+          title: 'User created successfully',
+          description: `${userName} - ${successMessage}`,
+          status: 'success',
+          closeIn: 3000
+        });
+
         this.getUsers();
       },
       error: error => {
-        console.log(error);
+        // Determinar el mensaje de error
+        let errorMessage = 'Error while creating user';
+
+        if (error?.error?.message) {
+          const message = error.error.message;
+          if (message.includes('already exists')) {
+            errorMessage = 'The user already exists in the system';
+          } else if (message.includes('CGIAR email')) {
+            errorMessage = 'Non-CGIAR user cannot have a CGIAR email address';
+          } else {
+            errorMessage = message;
+          }
+        }
+
+        this.api.alertsFe.show({
+          id: 'createUserError',
+          title: 'Error!',
+          description: errorMessage,
+          status: 'error'
+        });
+
+        // El modal permanece abierto en caso de error para que el usuario pueda corregir
       }
     });
   }
@@ -346,6 +377,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   isFormValid = computed(() => {
     const form = this.addUserForm();
+
+    // Validar que se haya seleccionado una opción de permisos (efecto placebo)
+    if (form.hasAdminPermissions === null || form.hasAdminPermissions === undefined) {
+      return false;
+    }
+
     if (form.is_cgiar) {
       return !!form.selectedUser;
     } else {
