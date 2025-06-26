@@ -42,11 +42,11 @@ interface CgiarUser {
 }
 
 interface AddUserForm {
-  isCGIAR: boolean;
+  is_cgiar: boolean;
   selectedUser?: CgiarUser;
   selectedUserEmail?: string;
-  name?: string;
-  lastName?: string;
+  first_name?: string;
+  last_name?: string;
   email?: string;
   hasAdminPermissions: boolean | null;
 }
@@ -194,13 +194,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    isCGIAR: false,
+    is_cgiar: false,
     hasAdminPermissions: null // Starts empty so user must choose
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
-    if (this.addUserForm().isCGIAR) {
+    if (this.addUserForm().is_cgiar) {
       // CGIAR users can choose between admin and guest
       return [
         { label: 'This user has admin permissions in the system.', value: true },
@@ -242,7 +242,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      isCGIAR: false,
+      is_cgiar: false,
       hasAdminPermissions: null // CGIAR starts empty so user must choose
     });
   }
@@ -250,12 +250,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onModalCgiarChange(isCgiar: boolean): void {
     this.addUserForm.update(form => ({
       ...form,
-      isCGIAR: isCgiar,
+      is_cgiar: isCgiar,
       // Reset form fields when changing CGIAR status
       selectedUser: undefined,
       selectedUserEmail: '',
-      name: '',
-      lastName: '',
+      first_name: '',
+      last_name: '',
       email: '',
       // Set permissions based on CGIAR status
       hasAdminPermissions: isCgiar
@@ -281,17 +281,17 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }));
   }
 
-  onNameChange(name: string): void {
+  onNameChange(first_name: string): void {
     this.addUserForm.update(form => ({
       ...form,
-      name
+      first_name
     }));
   }
 
-  onLastNameChange(lastName: string): void {
+  onLastNameChange(last_name: string): void {
     this.addUserForm.update(form => ({
       ...form,
-      lastName
+      last_name
     }));
   }
 
@@ -311,6 +311,16 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onSaveUser(): void {
     this.showAddUserModal = false;
+    console.log(this.addUserForm());
+    // this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
+    //   next: res => {
+    //     console.log(res);
+    //     this.getUsers();
+    //   },
+    //   error: error => {
+    //     console.log(error);
+    //   }
+    // });
   }
 
   onCancelAddUser(): void {
@@ -336,10 +346,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   isFormValid = computed(() => {
     const form = this.addUserForm();
-    if (form.isCGIAR) {
+    if (form.is_cgiar) {
       return !!form.selectedUser;
     } else {
-      return !!(form.name && form.lastName && form.email);
+      return !!(form.first_name && form.last_name && form.email);
     }
   });
 }
