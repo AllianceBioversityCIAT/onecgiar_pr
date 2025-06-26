@@ -52,8 +52,8 @@ describe('UserManagementComponent', () => {
     expect(component.selectedStatus()).toBe('');
     expect(component.loading()).toBe(false);
     expect(component.showAddUserModal).toBe(false);
-    expect(component.addUserForm().isCGIAR).toBe(true);
-    expect(component.addUserForm().hasAdminPermissions).toBe(null);
+    expect(component.addUserForm().is_cgiar).toBe(false);
+    expect(component.addUserForm().role_platform).toBe(2);
   });
 
   it('should have proper column configuration', () => {
@@ -92,13 +92,13 @@ describe('UserManagementComponent', () => {
     // Modify form first
     component.addUserForm.update(form => ({
       ...form,
-      isCGIAR: false,
-      hasAdminPermissions: true
+      is_cgiar: true,
+      role_platform: 1
     }));
 
     component.resetAddUserForm();
-    expect(component.addUserForm().isCGIAR).toBe(true);
-    expect(component.addUserForm().hasAdminPermissions).toBe(null);
+    expect(component.addUserForm().is_cgiar).toBe(false);
+    expect(component.addUserForm().role_platform).toBe(2);
   });
 
   it('should handle CGIAR status change', () => {
@@ -106,34 +106,34 @@ describe('UserManagementComponent', () => {
     component.addUserForm.update(form => ({
       ...form,
       selectedUser: { name: 'Test', email: 'test@test.com' },
-      name: 'Test Name'
+      first_name: 'Test Name'
     }));
 
     component.onModalCgiarChange(false);
-    expect(component.addUserForm().isCGIAR).toBe(false);
+    expect(component.addUserForm().is_cgiar).toBe(false);
     expect(component.addUserForm().selectedUser).toBeUndefined();
-    expect(component.addUserForm().name).toBe('');
+    expect(component.addUserForm().first_name).toBe('');
   });
 
   it('should validate form correctly', () => {
     // Test CGIAR user form
     component.addUserForm.update(form => ({
       ...form,
-      isCGIAR: true,
+      is_cgiar: true,
       selectedUser: { name: 'Test', email: 'test@cgiar.org' },
-      hasAdminPermissions: true
+      role_platform: 1
     }));
     expect(component.isFormValid()).toBe(true);
 
     // Test non-CGIAR user form
     component.addUserForm.update(form => ({
       ...form,
-      isCGIAR: false,
+      is_cgiar: false,
       selectedUser: undefined,
-      name: 'Test',
-      lastName: 'User',
+      first_name: 'Test',
+      last_name: 'User',
       email: 'test@example.com',
-      hasAdminPermissions: false
+      role_platform: 2
     }));
     expect(component.isFormValid()).toBe(true);
   });

@@ -319,7 +319,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       role_platform: form.role_platform
     };
 
-    console.log('Sending to backend:', userToCreate);
     this.resultsApiService.POST_createUser(userToCreate).subscribe({
       next: res => {
         // Cerrar modal solo en caso de éxito
@@ -341,7 +340,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       },
       error: error => {
         // Determinar el mensaje de error
-        console.log(error);
         let errorMessage = 'Error while creating user';
 
         if (error?.error?.message) {
