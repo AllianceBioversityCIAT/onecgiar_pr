@@ -40,7 +40,7 @@ export class ActiveDirectoryService {
         ad.findUser(query, (err, user) => {
           if (err) {
             if (err.errno == 'ENOTFOUND') {
-              let notFound = {
+              const notFound = {
                 name: 'SERVER_NOT_FOUND',
                 description: 'Domain Controller Server not found',
                 httpCode: 500,
@@ -48,7 +48,7 @@ export class ActiveDirectoryService {
               reject(notFound);
               return;
             } else {
-              let e = {
+              const e = {
                 name: 'SERVER_ERROR',
                 description: err.lde_message,
                 httpcode: 500,
