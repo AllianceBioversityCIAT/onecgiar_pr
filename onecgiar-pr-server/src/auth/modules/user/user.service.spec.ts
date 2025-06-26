@@ -39,12 +39,6 @@ describe('UserService', () => {
     obj_role_by_user: [{ id: 1, role: 3, user: 1, active: true }],
   } as User;
 
-  const mockCgiarUser: User = {
-    ...mockUser,
-    email: 'test@cgiar.org',
-    is_cgiar: true,
-  } as User;
-
   const mockUsers: User[] = [
     mockUser,
     {
@@ -120,10 +114,6 @@ describe('UserService', () => {
     })),
   }));
 
-  const mockAWSUtilsService = {
-    createUser: jest.fn(),
-  };
-
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -170,7 +160,9 @@ describe('UserService', () => {
       module.get<RoleByUserRepository>(RoleByUserRepository);
     handlersError = module.get<HandlersError>(HandlersError);
     templateRepository = module.get<TemplateRepository>(TemplateRepository);
-    awsCognitoService = module.get<AuthMicroserviceService>(AuthMicroserviceService);
+    awsCognitoService = module.get<AuthMicroserviceService>(
+      AuthMicroserviceService,
+    );
   });
 
   it('should be defined', () => {

@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { HttpStatus } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -49,11 +48,6 @@ describe('UserController', () => {
     is_cgiar: true,
     created_by: 1,
     last_updated_by: 1,
-  };
-
-  const mockCreateFullUserDto: CreateFullUserDto = {
-    userData: mockCreateUserDto,
-    role: 3,
   };
 
   const mockTokenDto: TokenDto = {
