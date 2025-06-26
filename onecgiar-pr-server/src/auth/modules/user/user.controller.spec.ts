@@ -46,7 +46,6 @@ describe('UserController', () => {
     first_name: 'Test',
     last_name: 'User',
     email: 'test@example.com',
-    password: 'password123',
     is_cgiar: true,
     created_by: 1,
     last_updated_by: 1,
@@ -134,15 +133,14 @@ describe('UserController', () => {
 
   describe('creteFull', () => {
     it('should create a user with role', async () => {
-      const result = await controller.creteFull(
-        mockCreateFullUserDto,
+      const result = await controller.createFull(
+        mockCreateUserDto,
         mockTokenDto,
       );
 
       expect(result).toEqual(mockCreateUserResponse);
       expect(userService.createFull).toHaveBeenCalledWith(
         mockCreateUserDto,
-        mockCreateFullUserDto.role,
         mockTokenDto,
       );
     });
