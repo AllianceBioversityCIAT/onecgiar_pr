@@ -1126,4 +1126,8 @@ export class ResultsApiService {
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
   }
+
+  POST_createUser(body: any) {
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/user/create`, body);
+  }
 }
