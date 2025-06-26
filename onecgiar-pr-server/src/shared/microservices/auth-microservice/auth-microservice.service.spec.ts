@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { HttpException } from '@nestjs/common';
+import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { AuthMicroserviceService } from './auth-microservice.service';
 
 describe('AuthMicroserviceService', () => {
@@ -67,6 +68,23 @@ describe('AuthMicroserviceService', () => {
 
   const mockHttpService = {
     post: jest.fn(),
+  };
+
+  const mockUserData = {
+    username: 'natalia.higuita',
+    email: 'natalia@example.com',
+    firstName: 'Natalia',
+    lastName: 'Higuita',
+    emailConfig: {
+      sender_email: 'noreply@example.com',
+      sender_name: 'Example App',
+      welcome_subject: 'Welcome!',
+      app_name: 'AppName',
+      app_url: 'https://app.example.com',
+      support_email: 'support@example.com',
+      logo_url: 'https://example.com/logo.png',
+      welcome_html_template: '<p>Welcome {{firstName}}</p>',
+    },
   };
 
   beforeEach(async () => {
@@ -312,6 +330,60 @@ describe('AuthMicroserviceService', () => {
       await expect(
         service.authenticateWithCustomCredentials(username, password),
       ).rejects.toThrow(new HttpException('Authentication failed', 500));
+    });
+  });
+
+  describe('createUser', () => {
+    it('✅ debe crear el usuario correctamente', async () => {
+      const mockResponse: AxiosResponse = {
+        data: { id: 'user-123', username: 'natalia.higuita' },
+        status: 201,
+        statusText: 'Created',
+        headers: {},
+        config: {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          url: 'https://mock-auth-service.com/auth/register',
+          method: 'POST',
+        } as InternalAxiosRequestConfig,
+      };
+
+      jest
+        .spyOn(httpService, 'post')
+        .mockReturnValue(of(mockResponse));
+
+      const result = await service.createUser(mockUserData);
+
+      expect(httpService.post).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/register'),
+        mockUserData,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        }),
+      );
+      expect(result).toEqual(mockResponse.data);
+    });
+
+    it('❌ debe lanzar un error si la creación falla', async () => {
+      const errorResponse = {
+        response: {
+          data: { message: 'Creation failed' },
+          status: 400,
+        },
+        message: 'Request failed',
+        stack: 'stack trace',
+      };
+
+      jest
+        .spyOn(httpService, 'post')
+        .mockReturnValue(throwError(() => errorResponse));
+
+      await expect(service.createUser(mockUserData)).rejects.toThrowError(
+        'Creation failed',
+      );
     });
   });
 });

@@ -121,6 +121,7 @@ export class JwtMiddleware implements NestMiddleware {
       }
 
       res.locals.jwtPayload = jwtPayload;
+      req['user'] = jwtPayload;
 
       const newToken: string = await this._jwtService.signAsync(
         {
