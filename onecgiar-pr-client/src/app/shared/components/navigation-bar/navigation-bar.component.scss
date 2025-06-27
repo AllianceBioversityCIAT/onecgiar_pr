@@ -3,6 +3,9 @@
   display: flex;
   gap: 10px;
   padding: 10px 100px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 
   .section_active {
     background-color: white;
@@ -30,16 +33,4 @@
 
 .padding-right-40 {
   padding-right: 40px !important;
-}
-
-.navbar_fixed {
-  width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 6;
-}
-
-.block {
-  height: 55px;
 }
