@@ -131,7 +131,6 @@ export class JwtMiddleware implements NestMiddleware {
         },
         {
           secret: env.JWT_SKEY,
-          expiresIn: '7h',
         },
       );
 
