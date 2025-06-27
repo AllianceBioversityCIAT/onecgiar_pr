@@ -350,7 +350,6 @@ describe('JwtMiddleware', () => {
         },
         {
           secret: 'test-secret',
-          expiresIn: '7h',
         },
       );
     });
