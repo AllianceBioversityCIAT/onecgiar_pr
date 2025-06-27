@@ -39,6 +39,7 @@ export class ActiveDirectoryService {
       return new Promise((resolve, reject) => {
         ad.findUser(query, (err, user) => {
           if (err) {
+            this.logger.error(`Error searching user: ${err}`, err);
             if (err.errno == 'ENOTFOUND') {
               const notFound = {
                 name: 'SERVER_NOT_FOUND',
@@ -48,6 +49,7 @@ export class ActiveDirectoryService {
               reject(notFound);
               return;
             } else {
+              this.logger.error(`Error searching user: ${err}`, err.errno);
               const e = {
                 name: 'SERVER_ERROR',
                 description: err.lde_message,
