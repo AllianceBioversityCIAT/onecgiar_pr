@@ -516,7 +516,7 @@
 
     .material-icons-round {
       font-size: 20px;
-      color: #3b82f6; // Primary app color
+      color: var(--pr-color-primary);
       transition: all 0.2s ease;
     }
 
