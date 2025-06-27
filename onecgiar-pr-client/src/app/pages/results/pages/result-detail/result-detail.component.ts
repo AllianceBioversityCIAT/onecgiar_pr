@@ -1,6 +1,5 @@
 import { Component, DoCheck, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { NavigationBarService } from '../../../../shared/services/navigation-bar.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
@@ -20,7 +19,6 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     private readonly messageSE: MessageService,
     public currentResultSE: CurrentResultService,
     private readonly shareRequestModalSE: ShareRequestModalService,
-    public navigationBarSE: NavigationBarService,
     private readonly activatedRoute: ActivatedRoute,
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
