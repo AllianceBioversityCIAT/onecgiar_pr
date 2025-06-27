@@ -78,4 +78,52 @@ export class ActiveDirectoryService {
       );
     }
   }
+
+  /**
+   * Authenticate user with Active Directory credentials
+   */
+  async authenticate(username: string, password: string): Promise<boolean> {
+    try {
+      if (!username || !password) {
+        throw new HttpException(
+          'Username and password are required',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      this.logger.log(`Authenticating AD user: ${username}`);
+
+      const ad = new ActiveDirectory(config.active_directory);
+
+      return new Promise((resolve, reject) => {
+        ad.authenticate(username, password, (err, auth) => {
+          if (err) {
+            this.logger.error(`AD authentication error: ${err}`);
+            reject(
+              new HttpException(
+                'Authentication failed',
+                HttpStatus.UNAUTHORIZED,
+              ),
+            );
+            return;
+          }
+          if (auth) {
+            this.logger.log(`User ${username} authenticated successfully`);
+            resolve(true);
+          } else {
+            this.logger.warn(`Authentication failed for user: ${username}`);
+            reject(
+              new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED),
+            );
+          }
+        });
+      });
+    } catch (error) {
+      this.logger.error(`Error authenticating user: ${error.message}`);
+      throw new HttpException(
+        'Error authenticating user',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

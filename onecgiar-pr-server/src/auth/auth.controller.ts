@@ -152,4 +152,37 @@ export class AuthController {
       status: 200,
     };
   }
+
+  @Post('/login/ad')
+  @ApiOperation({
+    summary: 'Authenticate user with Active Directory',
+    description:
+      'Authenticate a user using Active Directory credentials (username and password)',
+  })
+  @ApiBody({
+    description: 'Active Directory login credentials',
+    schema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', example: 'john.doe@cgiar.org' },
+        password: { type: 'string', example: 'yourPassword123' },
+      },
+      required: ['username', 'password'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async loginWithAD(@Body() body: { username: string; password: string }) {
+    const { username, password } = body;
+    const authenticated = await this.activeDirectoryService.authenticate(
+      username,
+      password,
+    );
+    return {
+      message: 'Authentication successful',
+      authenticated,
+      status: 200,
+    };
+  }
 }
