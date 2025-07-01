@@ -86,6 +86,7 @@ export class UserService {
         }
 
         const htmlString = template(templateData);
+        
 
         const cognitoPayload = {
           username: createUserDto.email,
@@ -106,12 +107,9 @@ export class UserService {
           },
         };
         try {
-          console.log(
-            '📤 Enviando a AuthMicroservice:',
-            JSON.stringify(cognitoPayload, null, 2),
-          );
           await this._awsCognitoService.createUser(cognitoPayload);
         } catch (error) {
+          console.log(error);
           throw {
             response: { error },
             message: 'Error while creating user',
@@ -131,7 +129,6 @@ export class UserService {
       const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
-      console.log('currentUser:', currentUser);
       createUserDto.created_by = currentUser?.id || null;
       createUserDto.last_updated_by = currentUser?.id || null;
 
@@ -333,7 +330,6 @@ export class UserService {
       query.orderBy('users.created_date', 'DESC');
 
       const users: User[] = await query.getRawMany();
-      console.log('Query result:', users);
 
       if (users.length === 0) {
         return {
