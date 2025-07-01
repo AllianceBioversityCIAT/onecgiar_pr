@@ -12,7 +12,8 @@ export class AdminSectionComponent implements OnInit {
     { name: 'User roles', icon: 'people', path: '/admin-module/user-report' },
     { name: 'Phase management', icon: 'move_up', path: '/admin-module/phase-management' },
     { name: 'Knowledge Products', icon: 'auto_stories', path: '/admin-module/knowledge-products' },
-    { name: 'Tickets Dashboard', icon: 'query_stats', path: '/admin-module/tickets-dashboard' }
+    { name: 'Tickets Dashboard', icon: 'query_stats', path: '/admin-module/tickets-dashboard' },
+    { name: 'User management', icon: 'manage_accounts', path: '/admin-module/user-management' }
   ];
 
   constructor(private dataControlSE: DataControlService) {}
