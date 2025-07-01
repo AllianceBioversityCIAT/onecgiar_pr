@@ -186,7 +186,7 @@ describe('AuthController', () => {
   });
 
   describe('searchUsers', () => {
-    it('should search users in Active Directory', async () => {
+    it('should search users in Active Directory successfully', async () => {
       const body = { query: 'john' };
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
         mockSearchUsersResponse,
@@ -202,12 +202,42 @@ describe('AuthController', () => {
       expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
 
-    it('should return error when query is missing', async () => {
+    it('should return no users found message when search returns empty array', async () => {
+      const body = { query: 'nonexistent' };
+      mockActiveDirectoryService.searchUsers.mockResolvedValueOnce([]);
+
+      const result = await controller.searchUsers(body);
+
+      expect(result).toEqual({
+        message: 'No users found',
+        response: [],
+        status: 200,
+      });
+      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith(
+        'nonexistent',
+      );
+    });
+
+    it('should return error when query is empty string', async () => {
       const body = { query: '' };
       const result = await controller.searchUsers(body);
 
       expect(result).toEqual({
-        message: 'Query parameter is required',
+        message:
+          'Query parameter is required and must be at least 2 characters',
+        response: [],
+        status: 400,
+      });
+      expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
+    });
+
+    it('should return error when query is too short', async () => {
+      const body = { query: 'a' };
+      const result = await controller.searchUsers(body);
+
+      expect(result).toEqual({
+        message:
+          'Query parameter is required and must be at least 2 characters',
         response: [],
         status: 400,
       });
@@ -219,21 +249,44 @@ describe('AuthController', () => {
       const result = await controller.searchUsers(body);
 
       expect(result).toEqual({
-        message: 'Query parameter is required',
+        message:
+          'Query parameter is required and must be at least 2 characters',
         response: [],
         status: 400,
       });
       expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
     });
 
-    it('should handle search errors', async () => {
+    it('should handle search errors gracefully', async () => {
       const body = { query: 'john' };
       const errorMessage = 'AD connection failed';
       mockActiveDirectoryService.searchUsers.mockRejectedValueOnce(
         new Error(errorMessage),
       );
 
-      await expect(controller.searchUsers(body)).rejects.toThrow(errorMessage);
+      const result = await controller.searchUsers(body);
+
+      expect(result).toEqual({
+        message: 'Error searching users: Error: AD connection failed',
+        response: [],
+        status: 500,
+      });
+      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
+    });
+
+    it('should trim whitespace from query', async () => {
+      const body = { query: '  john  ' };
+      mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
+        mockSearchUsersResponse,
+      );
+
+      const result = await controller.searchUsers(body);
+
+      expect(result).toEqual({
+        message: 'Users found successfully',
+        response: mockSearchUsersResponse,
+        status: 200,
+      });
       expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
   });

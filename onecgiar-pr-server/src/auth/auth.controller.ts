@@ -99,6 +99,7 @@ export class AuthController {
           type: 'string',
           description: 'Search term for finding users by name or email',
           example: 'john.doe@cgiar.org',
+          minLength: 2,
         },
       },
       required: ['query'],
@@ -136,53 +137,32 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid search parameters' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async searchUsers(@Body() body: { query: string }) {
-    if (!body.query) {
+    if (!body.query || body.query.trim().length < 2) {
       return {
-        message: 'Query parameter is required',
+        message:
+          'Query parameter is required and must be at least 2 characters',
         response: [],
         status: 400,
       };
     }
 
-    const users = await this.activeDirectoryService.searchUsers(body.query);
+    try {
+      const users = await this.activeDirectoryService.searchUsers(
+        body.query.trim(),
+      );
 
-    return {
-      message: 'Users found successfully',
-      response: users,
-      status: 200,
-    };
-  }
-
-  @Post('/login/ad')
-  @ApiOperation({
-    summary: 'Authenticate user with Active Directory',
-    description:
-      'Authenticate a user using Active Directory credentials (username and password)',
-  })
-  @ApiBody({
-    description: 'Active Directory login credentials',
-    schema: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', example: 'john.doe@cgiar.org' },
-        password: { type: 'string', example: 'yourPassword123' },
-      },
-      required: ['username', 'password'],
-    },
-  })
-  @ApiResponse({ status: 200, description: 'Authentication successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async loginWithAD(@Body() body: { username: string; password: string }) {
-    const { username, password } = body;
-    const authenticated = await this.activeDirectoryService.authenticate(
-      username,
-      password,
-    );
-    return {
-      message: 'Authentication successful',
-      authenticated,
-      status: 200,
-    };
+      return {
+        message:
+          users.length > 0 ? 'Users found successfully' : 'No users found',
+        response: users,
+        status: 200,
+      };
+    } catch (error) {
+      return {
+        message: `Error searching users: ${error}`,
+        response: [],
+        status: 500,
+      };
+    }
   }
 }
