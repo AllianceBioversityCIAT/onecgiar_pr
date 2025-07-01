@@ -67,6 +67,14 @@ export class ActiveDirectoryService {
           'givenName',
           'sn',
           'userPrincipalName',
+          'title',
+          'department',
+          'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
         ],
         sizeLimit: 100,
       };
@@ -90,6 +98,14 @@ export class ActiveDirectoryService {
               'givenName',
               'sn',
               'userPrincipalName',
+              'title',
+              'department',
+              'company',
+              'manager',
+              'employeeID',
+              'employeeNumber',
+              'employeeType',
+              'description',
             ].includes(key)
           ) {
             const value = entry[key];
@@ -141,6 +157,14 @@ export class ActiveDirectoryService {
           'givenName',
           'sn',
           'userPrincipalName',
+          'title',
+          'department',
+          'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
         ],
       };
 
@@ -157,7 +181,6 @@ export class ActiveDirectoryService {
       const entry = searchResult.searchEntries[0];
       const user: ADUser = {};
 
-      //
       Object.keys(entry).forEach((key) => {
         if (
           key in user ||
@@ -169,6 +192,14 @@ export class ActiveDirectoryService {
             'givenName',
             'sn',
             'userPrincipalName',
+            'title',
+            'department',
+            'company',
+            'manager',
+            'employeeID',
+            'employeeNumber',
+            'employeeType',
+            'description',
           ].includes(key)
         ) {
           const value = entry[key];
