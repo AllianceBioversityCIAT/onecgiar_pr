@@ -162,7 +162,7 @@
         <div class="cgiar-buttons">
           <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
           <!-- (click)="onModalCgiarChange(false)" -->
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar" >No</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar">No</button>
         </div>
       </div>
 
@@ -260,7 +260,7 @@
     <ng-template pTemplate="footer">
       <div class="modal-footer">
         <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
-        <button type="button" class="save-btn" [disabled]="!isFormValid()" (click)="onSaveUser()">Save</button>
+        <button type="button" class="save-btn" [disabled]="!isFormValid() || creatingUser()" (click)="onSaveUser()">Save</button>
       </div>
     </ng-template>
   </p-dialog>
