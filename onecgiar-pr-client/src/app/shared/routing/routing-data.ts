@@ -140,6 +140,11 @@ export const adminModuleRouting: PrRoute[] = [
     loadComponent: () =>
       import('../../pages/admin-section/pages/tickets-dashboard/tickets-dashboard.component').then(m => m.TicketsDashboardComponent)
   },
+  {
+    prName: 'User management',
+    path: 'user-management',
+    loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 
