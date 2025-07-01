@@ -73,6 +73,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
   loading = signal<boolean>(false);
+  creatingUser = signal<boolean>(false);
 
   // Timeout for search debounce
   private searchTimeout: any;
@@ -310,7 +311,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onSaveUser(): void {
     const form = this.addUserForm();
 
-    // Crear el objeto que se enviará al backend
+    this.creatingUser.set(true);
+
     const userToCreate = {
       first_name: form.first_name,
       last_name: form.last_name,
@@ -321,10 +323,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
     this.resultsApiService.POST_createUser(userToCreate).subscribe({
       next: res => {
-        // Cerrar modal solo en caso de éxito
         this.showAddUserModal = false;
 
-        // Determinar el mensaje de éxito basado en la respuesta
         const successMessage = res?.message || 'The user has been successfully created';
         const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
 
@@ -336,6 +336,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           closeIn: 3000
         });
 
+        this.creatingUser.set(false);
         this.getUsers();
       },
       error: error => {
@@ -359,8 +360,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           description: errorMessage,
           status: 'warning'
         });
-
-        // El modal permanece abierto en caso de error para que el usuario pueda corregir
+        this.creatingUser.set(false);
       }
     });
   }
