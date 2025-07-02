@@ -187,7 +187,6 @@ describe('Result service unit test', () => {
       krs_url: `https://ciat.org/${v4()}`,
       is_krs: true,
       lead_contact_person: 'John Doe',
-      lead_contact_person_id: 1,
       is_discontinued: null,
       discontinued_options: [],
     };

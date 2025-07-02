@@ -1,4 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { ADUser } from '../../../auth/services/active-directory.service';
 import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
 
