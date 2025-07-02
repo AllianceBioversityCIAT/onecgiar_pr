@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { HttpStatus } from '@nestjs/common';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -46,15 +45,9 @@ describe('UserController', () => {
     first_name: 'Test',
     last_name: 'User',
     email: 'test@example.com',
-    password: 'password123',
     is_cgiar: true,
     created_by: 1,
     last_updated_by: 1,
-  };
-
-  const mockCreateFullUserDto: CreateFullUserDto = {
-    userData: mockCreateUserDto,
-    role: 3,
   };
 
   const mockTokenDto: TokenDto = {
@@ -134,15 +127,14 @@ describe('UserController', () => {
 
   describe('creteFull', () => {
     it('should create a user with role', async () => {
-      const result = await controller.creteFull(
-        mockCreateFullUserDto,
+      const result = await controller.createFull(
+        mockCreateUserDto,
         mockTokenDto,
       );
 
       expect(result).toEqual(mockCreateUserResponse);
       expect(userService.createFull).toHaveBeenCalledWith(
         mockCreateUserDto,
-        mockCreateFullUserDto.role,
         mockTokenDto,
       );
     });

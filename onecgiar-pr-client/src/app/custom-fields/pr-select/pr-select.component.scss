@@ -85,3 +85,16 @@
   text-overflow: ellipsis;
   overflow: hidden;
 }
+
+// Expandable space animation - Fixed 300px expansion
+.expandable-space {
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.3s ease-in-out;
+  background: transparent;
+
+  &.expanded {
+    height: 300px;
+  }
+}

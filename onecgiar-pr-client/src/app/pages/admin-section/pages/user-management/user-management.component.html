@@ -1,0 +1,267 @@
+<div class="local_container section_container">
+  <header>
+    <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
+    <h1>User Management</h1>
+  </header>
+  <div
+    class="description"
+    pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
+    tooltipPosition="bottom">
+    Welcome to the user management panel, here you can manage the users and their roles within the platform.
+  </div>
+
+  <!-- Filter and action controls -->
+  <div class="controls-section">
+    <div class="controls-row">
+      <!-- Filters group -->
+      <div class="filters-group">
+        <!-- User search -->
+        <div class="search-container">
+          <label class="search-label">Search by user:</label>
+          <div class="p-input-icon-left">
+            <i class="pi pi-search"></i>
+            <input type="text" pInputText placeholder="Search" [value]="searchText()" (input)="onSearchInputChange($event)" class="search-field" />
+          </div>
+        </div>
+
+        <!-- Status filter -->
+        <div class="status-filter">
+          <label class="status-label">Status:</label>
+          <app-pr-select
+            #statusSelect
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All"
+            [ngModel]="selectedStatus()"
+            (ngModelChange)="onStatusChange($event)"
+            [required]="false"
+            [indexReference]="1"></app-pr-select>
+        </div>
+
+        <!-- CGIAR filter -->
+        <div class="cgiar-filter">
+          <label class="cgiar-label">Is CGIAR:</label>
+          <app-pr-select
+            #cgiarSelect
+            [options]="isCGIAROptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All"
+            [ngModel]="selectedCgiar()"
+            (ngModelChange)="onCgiarChange($event)"
+            [required]="false"
+            [indexReference]="2"></app-pr-select>
+        </div>
+
+        <!-- Clear filters button -->
+        <div class="clear-filter">
+          <label class="clear-label">&nbsp;</label>
+          <app-pr-button text="Clear filters" icon="filter_alt_off" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
+        </div>
+      </div>
+
+      <!-- Actions group -->
+      <div class="actions-group">
+        <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
+
+        <!-- <button
+          class="info-button p-button p-button-secondary p-button-icon-only"
+          (click)="onShowInfo()"
+          [style]="{ backgroundColor: '#6366f1', color: '#fff' }"
+          pTooltip="Information"
+          tooltipPosition="top">
+          <i class="pi pi-info-circle"></i>
+        </button>
+
+        <app-pr-button text="Export data" icon="file_download" colorType="primary" (clickEvent)="onExportData()"></app-pr-button> -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="table-container">
+    <p-table
+      [value]="this.users()"
+      [loading]="this.loading()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      styleClass="p-datatable-gridlines p-datatable-sm user-table"
+      responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          @for (column of columns; track column.key) {
+            <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
+              <div class="header-content">
+                {{ column.label }}
+                <p-sortIcon [field]="column.key"></p-sortIcon>
+              </div>
+            </th>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <td>{{ user.firstName }} {{ user.lastName }}</td>
+          <td>{{ user.emailAddress }}</td>
+          <td>{{ user.cgIAR }}</td>
+          <td>{{ user.userCreationDate | date: 'yyyy-MM-dd' }}</td>
+          <td>
+            <span [class]="getStatusClass(user.userStatus)">
+              {{ user.userStatus }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons" [class.inactive-user]="user.userStatus === 'Inactive'">
+              <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                <i class="material-icons-round">edit</i>
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                (click)="onToggleUserStatus(user)"
+                [pTooltip]="user.userStatus === 'Active' ? 'Deactivate user' : 'Activate user'"
+                tooltipPosition="top">
+                <i class="material-icons-round">{{ user.userStatus === 'Active' ? 'person_off' : 'person' }}</i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="columns.length" class="no-data">No users match the entered criteria</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <!-- Floating counter like in global-completeness-status -->
+    <div class="counter">
+      <span class="name">Users |</span>
+      <span class="total">{{ this.users().length }} total</span>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <p-dialog
+    header="Add user"
+    [(visible)]="showAddUserModal"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="add-user-modal"
+    [style]="{ width: '600px' }">
+    <div class="modal-content">
+      <!-- Is CGIAR Question -->
+      <div class="form-field">
+        <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
+        <div class="cgiar-buttons">
+          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
+          <!-- (click)="onModalCgiarChange(false)" -->
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar">No</button>
+        </div>
+      </div>
+
+      <!-- CGIAR User Search -->
+      @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
+        <div class="form-field">
+          <app-pr-select
+            [options]="cgiarUsers"
+            optionLabel="displayName"
+            optionValue="email"
+            placeholder="Select a user"
+            label="Select a user"
+            [ngModel]="addUserForm().selectedUserEmail"
+            (ngModelChange)="onUserEmailChange($event)"
+            (selectOptionEvent)="onUserSelect($event)"
+            [required]="true"
+            [expandSpaceOnOpen]="true">
+          </app-pr-select>
+        </div>
+      }
+
+      <!-- Selected User Display (Read-only) -->
+      @if (addUserForm().is_cgiar && addUserForm().selectedUser) {
+        <div class="form-field">
+          <label class="field-label">User:</label>
+          <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
+        </div>
+      }
+
+      <!-- Non-CGIAR User Form -->
+      @if (!addUserForm().is_cgiar) {
+        <div>
+          <div class="form-row">
+            <div class="form-field half-width">
+              <label class="field-label"> Name:<span class="required">*</span> </label>
+              <input
+                type="text"
+                pInputText
+                placeholder="Enter name"
+                [ngModel]="addUserForm().first_name"
+                (ngModelChange)="onNameChange($event)"
+                class="form-input" />
+            </div>
+            <div class="form-field half-width">
+              <label class="field-label"> Last name:<span class="required">*</span> </label>
+              <input
+                type="text"
+                pInputText
+                placeholder="Enter last name"
+                [ngModel]="addUserForm().last_name"
+                (ngModelChange)="onLastNameChange($event)"
+                class="form-input" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label"> Email:<span class="required">*</span> </label>
+            <input
+              type="email"
+              pInputText
+              placeholder="Enter Email"
+              [ngModel]="addUserForm().email"
+              (ngModelChange)="onEmailChange($event)"
+              class="form-input" />
+          </div>
+        </div>
+      }
+
+      <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
+      @if ((addUserForm().is_cgiar && addUserForm().selectedUser) || !addUserForm().is_cgiar) {
+        <div>
+          <!-- Admin Permissions -->
+          <div class="form-field" [class.extra-margin-top]="!addUserForm().is_cgiar">
+            <app-pr-radio-button
+              label="Platform permissions"
+              [options]="adminPermissionsOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="addUserForm().role_platform"
+              (ngModelChange)="onPermissionsChange($event)"
+              [required]="true"
+              [verticalAlignment]="true">
+            </app-pr-radio-button>
+          </div>
+
+          <!-- Created By -->
+          <div class="form-field">
+            <label class="field-label">Created by</label>
+            <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <ng-template pTemplate="footer">
+      <div class="modal-footer">
+        <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
+        <button type="button" class="save-btn" [disabled]="!isFormValid() || creatingUser()" (click)="onSaveUser()">Save</button>
+      </div>
+    </ng-template>
+  </p-dialog>
+</div>
