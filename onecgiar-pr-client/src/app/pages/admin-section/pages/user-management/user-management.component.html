@@ -92,7 +92,7 @@
       <ng-template pTemplate="header">
         <tr>
           @for (column of columns; track column.key) {
-            <th [style.width]="column.width" [pSortableColumn]="column.key">
+            <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
               <div class="header-content">
                 {{ column.label }}
                 <p-sortIcon [field]="column.key"></p-sortIcon>
