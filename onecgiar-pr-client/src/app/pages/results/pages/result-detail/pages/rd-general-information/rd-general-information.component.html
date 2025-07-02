@@ -37,8 +37,33 @@
     [readOnly]="this.dataControlSE.isKnowledgeProduct" [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
-  <app-pr-input placeholder="Enter text" label="Lead contact person" type="text" [required]="false"
-    [(ngModel)]="this.generalInfoBody.lead_contact_person"> </app-pr-input>
+  <div class="lead-contact-search">
+    <label class="pr_label">Lead contact person</label>
+    <div class="search-container">
+      <input 
+        type="text" 
+        class="search-input"
+        placeholder="Search for a person (min 4 characters)"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput($event)"
+        [value]="selectedUser ? selectedUser.displayName : searchQuery"
+        autocomplete="off">
+      
+      <div class="search-results" *ngIf="searchResults.length > 0 && showResults">
+        <div 
+          class="search-result-item" 
+          *ngFor="let user of searchResults"
+          (click)="selectUser(user)">
+          <div class="user-name">{{ user.displayName }}</div>
+          <div class="user-details">{{ user.mail }} - {{ user.title }}</div>
+        </div>
+      </div>
+      
+      <div class="search-loading" *ngIf="isSearching">
+        Searching...
+      </div>
+    </div>
+  </div>
 
   <h1 class="segment_title pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>

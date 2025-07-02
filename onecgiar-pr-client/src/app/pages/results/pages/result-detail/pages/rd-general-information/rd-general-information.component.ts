@@ -9,6 +9,9 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { PusherService } from '../../../../../../shared/services/pusher.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { User } from './models/userSearchResponse';
+import { UserSearchService } from './services/user-search-service.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -19,8 +22,54 @@ export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
+  searchQuery: string = '';
+  searchResults: User[] = [];
+  selectedUser: User | null = null;
+  showResults: boolean = false;
+  isSearching: boolean = false;
+  private searchSubject = new Subject<string>();
 
-  constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+  constructor(
+    public api: ApiService,
+    private currentResultSE: CurrentResultService,
+    public scoreSE: ScoreService,
+    public institutionsSE: InstitutionsService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public pusherSE: PusherService,
+    private userSearchService: UserSearchService
+  ) {
+    this.searchSubject
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(query => {
+          if (query.length >= 4) {
+            this.isSearching = true;
+            return this.userSearchService.searchUsers(query);
+          } else {
+            this.searchResults = [];
+            this.showResults = false;
+            this.isSearching = false;
+            return [];
+          }
+        })
+      )
+      .subscribe({
+        next: response => {
+          this.searchResults = response.response || [];
+          this.showResults = true;
+          this.isSearching = false;
+        },
+        error: error => {
+          console.error('Error searching users:', error);
+          this.searchResults = [];
+          this.showResults = false;
+          this.isSearching = false;
+        }
+      });
+  }
 
   ngOnInit(): void {
     this.showAlerts();
@@ -49,7 +98,9 @@ export class RdGeneralInformationComponent implements OnInit {
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
     options.forEach(option => {
-      const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      const found = this.generalInfoBody.discontinued_options.find(
+        discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id
+      );
       if (found) {
         option.value = true;
         option.description = found?.description;
@@ -192,7 +243,10 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   sendIntitutionsTypes() {
-    this.generalInfoBody.institutions_type = [...(this.generalInfoBody?.institutions_type ?? []), ...(this.generalInfoBody?.institutions ?? [])] as any;
+    this.generalInfoBody.institutions_type = [
+      ...(this.generalInfoBody?.institutions_type ?? []),
+      ...(this.generalInfoBody?.institutions ?? [])
+    ] as any;
   }
 
   onChangeKrs() {
@@ -274,5 +328,21 @@ export class RdGeneralInformationComponent implements OnInit {
         console.error(error);
       }
     });
+  }
+
+  onSearchInput(event: any): void {
+    const query = event.target.value;
+    this.searchQuery = query;
+    this.selectedUser = null;
+    this.searchSubject.next(query);
+  }
+
+  selectUser(user: User): void {
+    this.selectedUser = user;
+    this.searchQuery = user.displayName;
+    this.searchResults = [];
+    this.showResults = false;
+
+    this.generalInfoBody.lead_contact_person = user.displayName;
   }
 }

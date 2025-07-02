@@ -75,6 +75,9 @@ describe('AuthController', () => {
       givenName: 'John',
       sn: 'Doe',
       userPrincipalName: 'john.doe@cgiar.org',
+      title: 'Senior Developer',
+      department: 'IT Department',
+      company: 'CGIAR',
     },
   ];
 
@@ -187,12 +190,12 @@ describe('AuthController', () => {
 
   describe('searchUsers', () => {
     it('should search users in Active Directory successfully', async () => {
-      const body = { query: 'john' };
+      const query = 'john';
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
         mockSearchUsersResponse,
       );
 
-      const result = await controller.searchUsers(body);
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
         message: 'Users found successfully',
@@ -203,10 +206,10 @@ describe('AuthController', () => {
     });
 
     it('should return no users found message when search returns empty array', async () => {
-      const body = { query: 'nonexistent' };
+      const query = 'nonexistent';
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce([]);
 
-      const result = await controller.searchUsers(body);
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
         message: 'No users found',
@@ -219,12 +222,11 @@ describe('AuthController', () => {
     });
 
     it('should return error when query is empty string', async () => {
-      const body = { query: '' };
-      const result = await controller.searchUsers(body);
+      const query = '';
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
-        message:
-          'Query parameter is required and must be at least 2 characters',
+        message: 'Query must be at least 2 characters',
         response: [],
         status: 400,
       });
@@ -232,25 +234,35 @@ describe('AuthController', () => {
     });
 
     it('should return error when query is too short', async () => {
-      const body = { query: 'a' };
-      const result = await controller.searchUsers(body);
+      const query = 'a';
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
-        message:
-          'Query parameter is required and must be at least 2 characters',
+        message: 'Query must be at least 2 characters',
         response: [],
         status: 400,
       });
       expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
     });
 
-    it('should return error when query property is undefined', async () => {
-      const body = {} as { query: string };
-      const result = await controller.searchUsers(body);
+    it('should return error when query is null', async () => {
+      const query = null as any;
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
-        message:
-          'Query parameter is required and must be at least 2 characters',
+        message: 'Query must be at least 2 characters',
+        response: [],
+        status: 400,
+      });
+      expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
+    });
+
+    it('should return error when query is undefined', async () => {
+      const query = undefined as any;
+      const result = await controller.searchUsers(query);
+
+      expect(result).toEqual({
+        message: 'Query must be at least 2 characters',
         response: [],
         status: 400,
       });
@@ -258,13 +270,13 @@ describe('AuthController', () => {
     });
 
     it('should handle search errors gracefully', async () => {
-      const body = { query: 'john' };
+      const query = 'john';
       const errorMessage = 'AD connection failed';
       mockActiveDirectoryService.searchUsers.mockRejectedValueOnce(
         new Error(errorMessage),
       );
 
-      const result = await controller.searchUsers(body);
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
         message: 'Error searching users: Error: AD connection failed',
@@ -275,17 +287,60 @@ describe('AuthController', () => {
     });
 
     it('should trim whitespace from query', async () => {
-      const body = { query: '  john  ' };
+      const query = '  john  ';
       mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
         mockSearchUsersResponse,
       );
 
-      const result = await controller.searchUsers(body);
+      const result = await controller.searchUsers(query);
 
       expect(result).toEqual({
         message: 'Users found successfully',
         response: mockSearchUsersResponse,
         status: 200,
+      });
+      expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
+    });
+
+    it('should handle query with only whitespace', async () => {
+      const query = '   ';
+      const result = await controller.searchUsers(query);
+
+      expect(result).toEqual({
+        message: 'Query must be at least 2 characters',
+        response: [],
+        status: 400,
+      });
+      expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
+    });
+
+    it('should return correct message for single user result', async () => {
+      const query = 'john';
+      const singleUserResponse = [mockSearchUsersResponse[0]];
+      mockActiveDirectoryService.searchUsers.mockResolvedValueOnce(
+        singleUserResponse,
+      );
+
+      const result = await controller.searchUsers(query);
+
+      expect(result).toEqual({
+        message: 'Users found successfully',
+        response: singleUserResponse,
+        status: 200,
+      });
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      const query = 'john';
+      const stringError = 'String error message';
+      mockActiveDirectoryService.searchUsers.mockRejectedValueOnce(stringError);
+
+      const result = await controller.searchUsers(query);
+
+      expect(result).toEqual({
+        message: 'Error searching users: String error message',
+        response: [],
+        status: 500,
       });
       expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith('john');
     });
