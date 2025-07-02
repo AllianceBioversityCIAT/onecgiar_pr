@@ -46,6 +46,7 @@ import { ContributionToIndicatorsModule } from './api/contribution-to-indicators
 import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 import { AuthMicroserviceService } from './shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
+import { AdUsersModule } from './api/ad_users/ad_users.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
     ContributionToIndicatorsModule,
     ResultQaedModule,
     AuthMicroserviceModule,
+    AdUsersModule,
   ],
   controllers: [AppController],
   providers: [

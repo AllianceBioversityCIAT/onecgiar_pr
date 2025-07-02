@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { env } from 'process';
 
+declare const __dirname: string;
+
 export const dataSource: DataSource = new DataSource({
   type: 'mysql',
   host: env.DB_HOST,
