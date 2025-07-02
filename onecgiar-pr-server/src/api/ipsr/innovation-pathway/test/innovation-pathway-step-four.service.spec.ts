@@ -18,9 +18,7 @@ import { HttpStatus } from '@nestjs/common';
 import { SaveStepFour } from '../dto/save-step-four.dto';
 import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
 import { Version } from '../../../versioning/entities/version.entity';
-
 import { UpdateResult } from 'typeorm';
-import { AdUser } from '../../../ad_users/entity/ad-user.entity';
 
 interface InstitutionsInterface {
   institutions_id: number;
