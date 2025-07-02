@@ -20,6 +20,7 @@ import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
 import { Version } from '../../../versioning/entities/version.entity';
 
 import { UpdateResult } from 'typeorm';
+import { AdUser } from '../../../ad_users/entity/ad-user.entity';
 
 interface InstitutionsInterface {
   institutions_id: number;
@@ -397,6 +398,30 @@ describe('InnovationPathwayStepFourService', () => {
         obj_result_notification: [],
         contribution_to_indicator_result_array: [],
         obj_result_qaed: [],
+        lead_contact_person_id: 1,
+        obj_lead_contact_person: {
+          id: 1,
+          cn: 'Test User',
+          display_name: 'Test User',
+          mail: 'test.user@cgiar.org',
+          sam_account_name: 'testuser',
+          given_name: 'Test',
+          sn: 'User',
+          user_principal_name: 'test.user@cgiar.org',
+          title: 'Test Position',
+          department: 'Test Department',
+          company: 'CGIAR',
+          manager: 'Test Manager',
+          employee_id: 'EMP001',
+          employee_number: '12345',
+          employee_type: 'Full-time',
+          description: 'Test user description',
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+          last_synced_at: new Date(),
+          obj_results: [],
+        },
       };
       const mockVersion: Version = {
         id: 1,
