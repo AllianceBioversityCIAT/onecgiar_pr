@@ -382,7 +382,6 @@ export class AuthService {
       },
       {
         secret: env.JWT_SKEY,
-        expiresIn: '7h',
       },
     );
 

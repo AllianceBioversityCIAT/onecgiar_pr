@@ -140,6 +140,11 @@ export const adminModuleRouting: PrRoute[] = [
     loadComponent: () =>
       import('../../pages/admin-section/pages/tickets-dashboard/tickets-dashboard.component').then(m => m.TicketsDashboardComponent)
   },
+  {
+    prName: 'User management',
+    path: 'user-management',
+    loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
 ];
 
@@ -383,6 +388,12 @@ export const TypePneReportRouting: PrRoute[] = [
     path: 'key-result-story',
     loadChildren: () =>
       import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule)
+  },
+  {
+    prName: 'white',
+    underConstruction: false,
+    path: 'white',
+    loadComponent: () => import('../../pages/type-one-report/pages/tor-white/tor-white.component').then(m => m.TorWhiteComponent)
   },
   { prName: '', path: '**', underConstruction: false, pathMatch: 'full', redirectTo: 'fact-sheet' }
 ];

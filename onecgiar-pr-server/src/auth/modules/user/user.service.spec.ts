@@ -9,14 +9,18 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { UserRepository } from './repositories/user.repository';
 import { RoleByUserRepository } from '../role-by-user/RoleByUser.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
+import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
+import * as Handlebars from 'handlebars';
 
 describe('UserService', () => {
   let service: UserService;
   let userRepository: UserRepository;
   let customUserRepository: UserRepository;
   let roleByUserRepository: RoleByUserRepository;
-  let bcryptPasswordEncoder: BcryptPasswordEncoder;
+  let templateRepository: TemplateRepository;
   let handlersError: HandlersError;
+  let awsCognitoService: AuthMicroserviceService;
 
   const mockUser: User = {
     id: 1,
@@ -33,12 +37,6 @@ describe('UserService', () => {
     last_login: new Date(),
     last_pop_up_viewed: null,
     obj_role_by_user: [{ id: 1, role: 3, user: 1, active: true }],
-  } as User;
-
-  const mockCgiarUser: User = {
-    ...mockUser,
-    email: 'test@cgiar.org',
-    is_cgiar: true,
   } as User;
 
   const mockUsers: User[] = [
@@ -66,16 +64,9 @@ describe('UserService', () => {
     first_name: 'Test',
     last_name: 'User',
     email: 'test@example.com',
-    password: 'password123',
     is_cgiar: false,
     created_by: 1,
     last_updated_by: 1,
-  };
-
-  const mockCreateCgiarUserDto: CreateUserDto = {
-    ...mockCreateUserDto,
-    email: 'test@cgiar.org',
-    is_cgiar: true,
   };
 
   const mockTokenDto: TokenDto = {
@@ -97,7 +88,13 @@ describe('UserService', () => {
     save: jest.fn(),
     update: jest.fn(),
     InitiativeByUser: jest.fn(),
+    createQueryBuilder: jest.fn(),
   }));
+
+  const mockTemplateRepository = {
+    findOne: jest.fn(), // no hace falta poner el mockResolvedValue aquí aún
+  };
+  const mockTemplateRepositoryFactory = () => mockTemplateRepository;
 
   const mockRoleByUserRepositoryFactory = jest.fn(() => ({
     save: jest.fn(),
@@ -143,6 +140,16 @@ describe('UserService', () => {
           provide: HandlersError,
           useFactory: mockHandlersErrorFactory,
         },
+        {
+          provide: TemplateRepository,
+          useFactory: mockTemplateRepositoryFactory,
+        },
+        {
+          provide: AuthMicroserviceService,
+          useValue: {
+            createUser: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -151,10 +158,11 @@ describe('UserService', () => {
     customUserRepository = module.get<UserRepository>(UserRepository);
     roleByUserRepository =
       module.get<RoleByUserRepository>(RoleByUserRepository);
-    bcryptPasswordEncoder = module.get<BcryptPasswordEncoder>(
-      BcryptPasswordEncoder,
-    );
     handlersError = module.get<HandlersError>(HandlersError);
+    templateRepository = module.get<TemplateRepository>(TemplateRepository);
+    awsCognitoService = module.get<AuthMicroserviceService>(
+      AuthMicroserviceService,
+    );
   });
 
   it('should be defined', () => {
@@ -170,141 +178,140 @@ describe('UserService', () => {
   });
 
   describe('createFull', () => {
-    it('should create a non-CGIAR user with password and role', async () => {
-      // Arrange
-      const role = 3; // Guest role
-      customUserRepository.findOne = jest.fn().mockResolvedValue(null);
-      userRepository.findOne = jest.fn().mockResolvedValue(mockUser);
-      userRepository.save = jest.fn().mockResolvedValue(mockUser);
-      roleByUserRepository.save = jest.fn().mockResolvedValue({
-        id: 1,
-        role,
-        user: mockUser.id,
+    it('should create the user correctly if it does not exist and is not CGIAR', async () => {
+      const createUserDto = {
+        email: 'user@example.com',
+        is_cgiar: false,
+        first_name: 'John',
+        last_name: 'Doe',
+        entity: 'Entity A',
+        role_entity: 3,
+      };
+
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
+        response: null,
+        message: null,
+        status: HttpStatus.OK,
       });
-      bcryptPasswordEncoder.encode = jest
+
+      mockTemplateRepository.findOne.mockResolvedValue({
+        name: 'EXTERNAL_USER',
+        html: '<p>{{assignedEntity}} - {{assignedRole}}</p>',
+      });
+      jest
+        .spyOn(Handlebars, 'compile')
+        .mockReturnValue(
+          (data: { assignedEntity: string; assignedRole: string }) => {
+            return `<p>${data.assignedEntity} - ${data.assignedRole}</p>`;
+          },
+        );
+
+      awsCognitoService.createUser = jest.fn().mockResolvedValue({});
+      userRepository.findOne = jest.fn().mockResolvedValue(null);
+      userRepository.save = jest
         .fn()
-        .mockReturnValue('hashedpassword123');
+        .mockResolvedValue({ id: 10, first_name: 'John', last_name: 'Doe' });
+      roleByUserRepository.save = jest.fn().mockResolvedValue({});
 
-      // Act
-      const result = await service.createFull(
-        mockCreateUserDto,
-        role,
-        mockTokenDto,
-      );
+      const result = await service.createFull(createUserDto, mockTokenDto);
 
-      // Assert
-      expect(result).toEqual({
-        response: {
-          id: mockUser.id,
-          first_name: mockUser.first_name,
-          last_name: mockUser.last_name,
-        },
-        message: 'User successfully created',
-        status: HttpStatus.CREATED,
-      });
-      expect(customUserRepository.findOne).toHaveBeenCalledWith({
-        where: { email: mockCreateUserDto.email },
-      });
-      // Corregir esta línea: bcryptPasswordEncoder.encode se llama con la contraseña sin hashear
-      expect(bcryptPasswordEncoder.encode).toHaveBeenCalledWith('password123');
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        where: { id: mockTokenDto.id },
-      });
-      expect(userRepository.save).toHaveBeenCalledWith({
-        ...mockCreateUserDto,
-        password: 'hashedpassword123',
-        created_by: 1,
-        last_updated_by: 1,
-      });
-      expect(roleByUserRepository.save).toHaveBeenCalledWith({
-        role,
-        user: mockUser.id,
-        created_by: 1,
-        last_updated_by: 1,
-      });
+      const user = result.response as User;
+
+      console.log('RESULT:', result);
+      expect(result.status).toBe(201);
+      expect(user.id).toBe(10);
+      expect(awsCognitoService.createUser).toHaveBeenCalled();
+      expect(userRepository.save).toHaveBeenCalled();
+      expect(roleByUserRepository.save).toHaveBeenCalledTimes(2); // platform + entity
     });
 
-    it('should create a CGIAR user without password', async () => {
-      const role = 3;
-      customUserRepository.findOne = jest.fn().mockResolvedValue(null);
-      userRepository.findOne = jest.fn().mockResolvedValue(mockUser);
-      userRepository.save = jest.fn().mockResolvedValue({
-        ...mockCgiarUser,
-        password: null,
-      });
-      roleByUserRepository.save = jest.fn().mockResolvedValue({
-        id: 1,
-        role,
-        user: mockCgiarUser.id,
+    it('❌ debe lanzar error si el usuario ya existe', async () => {
+      const dto = { email: 'exists@example.com', is_cgiar: false };
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
+        response: mockUser,
+        message: null,
+        status: HttpStatus.OK,
       });
 
-      const result = await service.createFull(
-        mockCreateCgiarUserDto,
-        role,
-        mockTokenDto,
+      const result = await service.createFull(dto as any, {} as any);
+      expect(result).toEqual(
+        expect.objectContaining({
+          message: 'The user already exists in the system',
+          status: 400,
+        }),
       );
-
-      expect(result).toEqual({
-        response: {
-          id: mockCgiarUser.id,
-          first_name: mockCgiarUser.first_name,
-          last_name: mockCgiarUser.last_name,
-        },
-        message: 'User successfully created',
-        status: HttpStatus.CREATED,
-      });
-      expect(userRepository.save).toHaveBeenCalledWith({
-        ...mockCreateCgiarUserDto,
-        password: null,
-        created_by: 1,
-        last_updated_by: 1,
-      });
     });
 
-    it('should throw an error if user already exists', async () => {
-      const role = 3;
-      customUserRepository.findOne = jest.fn().mockResolvedValue(mockUser);
-      handlersError.returnErrorRes = jest
-        .fn()
-        .mockReturnValue(mockErrorResponse);
+    it('❌ debe lanzar error si el correo es @cgiar.org y no es CGIAR', async () => {
+      const dto = {
+        email: 'someone@cgiar.org',
+        is_cgiar: false,
+      };
 
-      const result = await service.createFull(
-        mockCreateUserDto,
-        role,
-        mockTokenDto,
-      );
-
-      expect(result).toEqual(mockErrorResponse);
-      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
-        error: {
-          response: {},
-          message: 'Duplicates have been found in the data',
-          status: HttpStatus.BAD_REQUEST,
-        },
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
+        response: mockUser,
+        message: null,
+        status: HttpStatus.OK,
       });
+
+      const result = await service.createFull(dto as any, {} as any);
+      expect(result).toEqual(
+        expect.objectContaining({
+          message: 'Non-CGIAR user cannot have a CGIAR email address',
+          status: 400,
+        }),
+      );
     });
 
-    it('should throw an error if no role provided', async () => {
-      const role = null;
-      customUserRepository.findOne = jest.fn().mockResolvedValue(null);
-      handlersError.returnErrorRes = jest
-        .fn()
-        .mockReturnValue(mockErrorResponse);
+    it('❌ debe lanzar error si falla Cognito', async () => {
+      const dto = {
+        email: 'external@example.com',
+        is_cgiar: false,
+        first_name: 'Test',
+        last_name: 'User',
+      };
 
-      const result = await service.createFull(
-        mockCreateUserDto,
-        role,
-        mockTokenDto,
-      );
-
-      expect(result).toEqual(mockErrorResponse);
-      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
-        error: {
-          response: {},
-          message: 'No role provider',
-          status: HttpStatus.BAD_REQUEST,
-        },
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
+        response: null,
+        message: null,
+        status: HttpStatus.OK,
       });
+
+      templateRepository.findOne = jest
+        .fn()
+        .mockResolvedValue('<p>Welcome</p>');
+      jest
+        .spyOn(Handlebars, 'compile')
+        .mockReturnValue(() => '<p>template</p>');
+
+      awsCognitoService.createUser = jest
+        .fn()
+        .mockRejectedValue(new Error('Cognito error'));
+
+      const result = await service.createFull(dto as any, mockTokenDto);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          message: 'Error while creating user',
+          status: 500,
+        }),
+      );
+    });
+
+    it('❌ debe manejar error general con _handlersError', async () => {
+      jest.spyOn(service, 'findOneByEmail').mockImplementation(() => {
+        throw new Error('Unexpected failure');
+      });
+
+      handlersError.returnErrorRes = jest.fn().mockReturnValue({
+        message: 'Handled error',
+        status: 500,
+      });
+
+      const result = await service.createFull({ email: 'a' } as any, {} as any);
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalled();
+      expect(result.message).toBe('Handled error');
     });
   });
 
@@ -576,6 +583,111 @@ describe('UserService', () => {
       ).rejects.toThrow(
         'Failed to create or update user: Invalid user information in auth response',
       );
+    });
+  });
+
+  describe('getAllUsers', () => {
+    it('should return formatted users from raw SQL query', async () => {
+      const mockQueryResult = [
+        {
+          firstName: 'Test',
+          lastName: 'User',
+          emailAddress: 'test@example.com',
+          cgIAR: 'Yes',
+          userStatus: 'Active',
+          userCreationDate: new Date(),
+        },
+      ];
+      userRepository.query = jest.fn().mockResolvedValue(mockQueryResult);
+
+      const result = await service.getAllUsers();
+
+      expect(result).toEqual({
+        response: mockQueryResult,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      });
+      expect(userRepository.query).toHaveBeenCalled();
+    });
+
+    it('should handle errors in getAllUsers', async () => {
+      const error = new Error('Query failed');
+      userRepository.query = jest.fn().mockRejectedValue(error);
+      handlersError.returnErrorRes = jest
+        .fn()
+        .mockReturnValue(mockErrorResponse);
+
+      const result = await service.getAllUsers();
+
+      expect(result).toEqual(mockErrorResponse);
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  const createQueryBuilderMock = () => {
+    const mock = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      orWhere: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn(),
+    };
+    return mock;
+  };
+
+  describe('searchUsers', () => {
+    it('should return users based on filters', async () => {
+      const filters: {
+        user?: string;
+        cgIAR?: 'Yes' | 'No';
+        status?: 'Active' | 'Inactive';
+      } = {
+        user: 'Test',
+        cgIAR: 'Yes',
+        status: 'Active',
+      };
+
+      const mockQueryResult = [
+        {
+          firstName: 'Test',
+          lastName: 'User',
+          emailAddress: 'test@example.com',
+          cgIAR: 'Yes',
+          userStatus: 'Active',
+          userCreationDate: new Date(),
+        },
+      ];
+
+      const queryBuilderMock = createQueryBuilderMock();
+      queryBuilderMock.getRawMany.mockResolvedValue(mockQueryResult);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
+
+      const result = await service.searchUsers(filters);
+
+      expect(result).toEqual({
+        response: mockQueryResult,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      });
+      expect(queryBuilderMock.getRawMany).toHaveBeenCalled();
+    });
+
+    it('should handle errors in searchUsers', async () => {
+      const filters = { user: 'Fail' };
+      const error = new Error('Error message');
+      const queryBuilderMock = createQueryBuilderMock();
+      queryBuilderMock.getRawMany.mockRejectedValue(error);
+      (userRepository.createQueryBuilder as jest.Mock).mockReturnValue(
+        queryBuilderMock,
+      );
+
+      const result = await service.searchUsers(filters);
+
+      expect(result).toEqual(mockErrorResponse);
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
     });
   });
 });
