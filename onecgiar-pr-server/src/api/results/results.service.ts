@@ -1,6 +1,11 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { CreateResultDto } from './dto/create-result.dto';
-import { UpdateResultDto } from './dto/update-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -62,6 +67,7 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { AdUserRepository, AdUserService } from '../ad_users';
 
 @Injectable()
 export class ResultsService {
@@ -98,14 +104,16 @@ export class ResultsService {
     private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductFairScoreRepository: ResultsKnowledgeProductFairScoreRepository,
-    //private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
-    //private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _logRepository: LogRepository,
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    @Optional()
+    @Inject(AdUserService)
+    private readonly _adUserService?: AdUserService,
+    @Optional() private readonly _adUserRepository?: AdUserRepository,
   ) {}
 
   async createOwnerResult(
@@ -340,6 +348,11 @@ export class ResultsService {
     }
   }
 
+  /**
+   * Create a new result general information
+   * @param resultGeneralInformation
+   * @param user
+   */
   async createResultGeneralInformation(
     resultGeneralInformation: CreateGeneralInformationResultDto,
     user: TokenDto,
@@ -534,6 +547,49 @@ export class ResultsService {
         );
       }
 
+      let leadContactPersonId: number = null;
+
+      if (
+        resultGeneralInformation.lead_contact_person_data?.mail &&
+        this._adUserService
+      ) {
+        try {
+          let adUser = await this._adUserService.getUserByIdentifier(
+            resultGeneralInformation.lead_contact_person_data.mail,
+          );
+
+          if (!adUser) {
+            const adUserRepository = this._adUserService['adUserRepository'];
+            if (adUserRepository && adUserRepository.saveFromADUser) {
+              adUser = await adUserRepository.saveFromADUser(
+                resultGeneralInformation.lead_contact_person_data,
+              );
+
+              this._logger.log(
+                `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
+              );
+            }
+          } else {
+            this._logger.log(
+              `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
+            );
+          }
+
+          leadContactPersonId = adUser?.id || null;
+        } catch (error) {
+          this._logger.warn(
+            `Failed to process lead_contact_person_data: ${error.message}`,
+          );
+        }
+      } else if (
+        resultGeneralInformation.lead_contact_person_data?.mail &&
+        !this._adUserService
+      ) {
+        this._logger.warn(
+          'AdUserService not available, skipping lead_contact_person_data processing',
+        );
+      }
+
       const updateResult = await this._resultRepository.save({
         id: result.id,
         is_discontinued: resultGeneralInformation?.is_discontinued,
@@ -560,6 +616,7 @@ export class ResultsService {
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
         lead_contact_person: resultGeneralInformation.lead_contact_person,
+        lead_contact_person_id: leadContactPersonId,
         status_id:
           result.result_type_id == 7
             ? resultGeneralInformation?.is_discontinued
@@ -1129,6 +1186,11 @@ export class ResultsService {
     }
   }
 
+  /**
+   * Get general information of a result
+   * @param resultId
+   * @returns
+   */
   async getGeneralInformation(
     resultId: number,
   ): Promise<ReturnResponseDto<GeneralInformationDto> | returnErrorDto> {
@@ -1161,6 +1223,20 @@ export class ResultsService {
             is_active: true,
           },
         });
+
+      let leadContactPersonData = null;
+      if (result.lead_contact_person_id && this._adUserRepository) {
+        try {
+          leadContactPersonData = await this._adUserRepository.findOne({
+            where: { id: result.lead_contact_person_id, is_active: true },
+          });
+        } catch (error) {
+          this._logger.warn(
+            `Failed to get lead contact person data: ${error.message}`,
+          );
+        }
+      }
+
       return {
         response: {
           result_id: result.id,
@@ -1183,6 +1259,7 @@ export class ResultsService {
           krs_url: result.krs_url ?? null,
           is_krs: result.is_krs ? true : false,
           lead_contact_person: result.lead_contact_person ?? null,
+          lead_contact_person_data: leadContactPersonData,
           phase_name: result['phase_name'],
           phase_year: result['phase_year'],
           is_discontinued: result['is_discontinued'],
@@ -1343,14 +1420,6 @@ export class ResultsService {
         !EnvironmentExtractor.isProduction(),
       );
     }
-  }
-
-  update(id: number, updateResultDto: UpdateResultDto) {
-    return `This action updates a #${id} result ${updateResultDto}`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} result`;
   }
 
   async versioningResultsById(resultId: number, user: TokenDto) {

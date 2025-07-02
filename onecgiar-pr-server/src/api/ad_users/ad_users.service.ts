@@ -32,7 +32,6 @@ export class AdUserService {
 
     this.logger.log(`Searching users for query: ${query}`);
 
-    // 1. First search in local database
     const localUsers = await this.adUserRepository.searchLocalUsers(query);
 
     if (localUsers.length > 0) {
@@ -44,7 +43,6 @@ export class AdUserService {
       };
     }
 
-    // 2. If no local results, search in Active Directory
     this.logger.log(`No local results found, searching in Active Directory`);
 
     try {
@@ -61,11 +59,9 @@ export class AdUserService {
         };
       }
 
-      // 3. Save AD users to local database
       const savedUsers: AdUser[] = [];
       for (const adUser of adUsers) {
         if (adUser.mail) {
-          // Only save users with email
           try {
             const savedUser =
               await this.adUserRepository.saveFromADUser(adUser);
@@ -92,7 +88,6 @@ export class AdUserService {
         `Error searching in Active Directory: ${error.message}`,
       );
 
-      // Fallback: return empty results instead of throwing error
       return {
         users: [],
         fromCache: false,
@@ -109,11 +104,9 @@ export class AdUserService {
       return null;
     }
 
-    // First check local database
     let user = await this.adUserRepository.findByIdentifier(identifier);
 
     if (user) {
-      // Check if user data is stale (older than 7 days)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -125,7 +118,6 @@ export class AdUserService {
       return user;
     }
 
-    // If not found locally, search in AD
     try {
       const adUser =
         await this.activeDirectoryService.getUserDetails(identifier);

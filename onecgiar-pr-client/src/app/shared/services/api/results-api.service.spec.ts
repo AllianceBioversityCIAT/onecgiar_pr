@@ -405,7 +405,24 @@ describe('ResultsApiService', () => {
         is_discontinued: false,
         discontinued_options: [],
         is_replicated: false,
-        result_code: 200
+        result_code: 200,
+        lead_contact_person_data: {
+          cn: 'John Doe',
+          displayName: 'John Doe',
+          mail: 'john.doe@cgiar.org',
+          sAMAccountName: 'jdoe',
+          givenName: 'John',
+          sn: 'Doe',
+          userPrincipalName: 'john.doe@cgiar.org',
+          title: 'Senior Researcher',
+          department: 'Research Department',
+          company: 'CGIAR',
+          manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
+          employeeID: '12345',
+          employeeNumber: 'EMP001',
+          employeeType: 'Full-time',
+          description: 'Senior researcher in agricultural sciences'
+        }
       };
       const spyShowSaveSpinner = jest.spyOn(mockSaveButtonService, 'showSaveSpinner');
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
