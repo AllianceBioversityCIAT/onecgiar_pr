@@ -32,79 +32,56 @@
   right: -15px;
 }
 
-.lead-contact-search {
+// ...existing code...
+
+.search-results-container {
+  position: relative;
+  margin-top: -1rem; // Para acercar los resultados al input
   margin-bottom: 1rem;
 
-  .search-container {
-    position: relative;
-    width: 100%;
+  .search-results {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
 
-    .search-input {
-      width: 100%;
+    .search-result-item {
       padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
 
-      &:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      &:hover {
+        background-color: #f8f9fa;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .user-name {
+        font-weight: 500;
+        color: #333;
+      }
+
+      .user-details {
+        font-size: 12px;
+        color: #666;
+        margin-top: 2px;
       }
     }
+  }
 
-    .search-results {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ccc;
-      border-top: none;
-      border-radius: 0 0 4px 4px;
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 1000;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-      .search-result-item {
-        padding: 0.75rem;
-        cursor: pointer;
-        border-bottom: 1px solid #eee;
-
-        &:hover {
-          background-color: #f8f9fa;
-        }
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .user-name {
-          font-weight: 500;
-          color: #333;
-        }
-
-        .user-details {
-          font-size: 12px;
-          color: #666;
-          margin-top: 2px;
-        }
-      }
-    }
-
-    .search-loading {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ccc;
-      border-top: none;
-      padding: 0.75rem;
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-    }
+  .search-loading {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.75rem;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 }

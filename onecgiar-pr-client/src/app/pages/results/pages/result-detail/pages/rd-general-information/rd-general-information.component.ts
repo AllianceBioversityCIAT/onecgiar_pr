@@ -155,6 +155,11 @@ export class RdGeneralInformationComponent implements OnInit {
     </ul>`;
   }
 
+  leadContactPersonTextInfo() {
+    return `For more precise results, we recommend searching by email or username. 
+    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
+  }
+
   impactAreaScoresInfo() {
     return `Provide a score (0, 1 or 2) indicating the relevance of the result for each of the 5 Impact Areas (IAs). IA scores are defined as follows:
     <br/>
@@ -339,7 +344,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSearchInput(event: any): void {
-    const query = event.target.value;
+    const query = typeof event === 'string' ? event : event.target?.value || event;
     this.searchQuery = query;
     this.selectedUser = null;
     this.searchSubject.next(query);
