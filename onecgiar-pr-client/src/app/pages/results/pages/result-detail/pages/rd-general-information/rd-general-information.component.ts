@@ -344,10 +344,28 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSearchInput(event: any): void {
-    const query = typeof event === 'string' ? event : event.target?.value || event;
+    let query = '';
+
+    if (typeof event === 'string') {
+      query = event;
+    } else if (event?.target?.value !== undefined) {
+      query = event.target.value;
+    } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
+      query = event.toString();
+    }
+
+    query = query || '';
+
     this.searchQuery = query;
     this.selectedUser = null;
-    this.searchSubject.next(query);
+
+    if (query.trim()) {
+      this.searchSubject.next(query);
+    } else {
+      this.searchResults = [];
+      this.showResults = false;
+      this.isSearching = false;
+    }
   }
 
   selectUser(user: User): void {
@@ -357,6 +375,7 @@ export class RdGeneralInformationComponent implements OnInit {
     this.showResults = false;
 
     this.generalInfoBody.lead_contact_person = user.displayName;
+
     this.generalInfoBody.lead_contact_person_data = user;
   }
 }
