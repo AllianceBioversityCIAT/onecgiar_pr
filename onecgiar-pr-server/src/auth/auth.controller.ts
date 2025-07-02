@@ -11,7 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
-import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
@@ -85,71 +85,33 @@ export class AuthController {
     return response.auth;
   }
 
-  @Post('/users/search')
+  @Get('/users/search')
   @ApiOperation({
     summary: 'Search users in Active Directory',
-    description: 'Search for users by name or email',
+    description: 'Search for users by name or email with real-time suggestions',
   })
-  @ApiBody({
-    description: 'Search query for finding users',
-    schema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Search term for finding users by name or email',
-          example: 'john.doe@cgiar.org',
-          minLength: 2,
-        },
-      },
-      required: ['query'],
-    },
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query (minimum 2 characters)',
+    example: 'john.doe',
+    required: true,
   })
   @ApiResponse({
     status: 200,
     description: 'Users found successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string', example: 'Users found successfully' },
-        response: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              cn: { type: 'string', example: 'John Doe' },
-              displayName: { type: 'string', example: 'John Doe' },
-              mail: { type: 'string', example: 'john.doe@cgiar.org' },
-              sAMAccountName: { type: 'string', example: 'jdoe' },
-              givenName: { type: 'string', example: 'John' },
-              sn: { type: 'string', example: 'Doe' },
-              userPrincipalName: {
-                type: 'string',
-                example: 'john.doe@cgiar.org',
-              },
-            },
-          },
-        },
-        status: { type: 'number', example: 200 },
-      },
-    },
   })
-  @ApiResponse({ status: 400, description: 'Invalid search parameters' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async searchUsers(@Body() body: { query: string }) {
-    if (!body.query || body.query.trim().length < 2) {
+  @ApiResponse({ status: 400, description: 'Query too short' })
+  async searchUsers(@Query('q') query: string) {
+    if (!query || query.trim().length < 2) {
       return {
-        message:
-          'Query parameter is required and must be at least 2 characters',
+        message: 'Query must be at least 2 characters',
         response: [],
         status: 400,
       };
     }
 
     try {
-      const users = await this.activeDirectoryService.searchUsers(
-        body.query.trim(),
-      );
+      const users = await this.activeDirectoryService.searchUsers(query.trim());
 
       return {
         message:

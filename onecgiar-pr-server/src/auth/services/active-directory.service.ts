@@ -43,6 +43,7 @@ export class ActiveDirectoryService {
 
   /**
    * Search users by name, mail or sAMAccountName (partial match)
+   * Optimized for real-time search
    */
   async searchUsers(query: string): Promise<ADUser[]> {
     if (!query || query.trim().length < 2) {
@@ -54,10 +55,10 @@ export class ActiveDirectoryService {
     try {
       await this.bindClient(client);
 
-      this.logger.log(`Searching AD users: ${query}`);
+      this.logger.debug(`Searching AD users: ${query}`);
 
       const searchOptions = {
-        filter: `(|(displayName=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*))`,
+        filter: `(|(displayName=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)(givenName=*${query}*)(sn=*${query}*))`,
         scope: 'sub' as const,
         attributes: [
           'cn',
@@ -70,13 +71,9 @@ export class ActiveDirectoryService {
           'title',
           'department',
           'company',
-          'manager',
-          'employeeID',
-          'employeeNumber',
-          'employeeType',
-          'description',
         ],
-        sizeLimit: 100,
+        sizeLimit: 10,
+        timeLimit: 5,
       };
 
       const searchResult = await client.search(
@@ -87,27 +84,19 @@ export class ActiveDirectoryService {
       const users: ADUser[] = searchResult.searchEntries.map((entry) => {
         const user: ADUser = {};
 
-        Object.keys(entry).forEach((key) => {
-          if (
-            key in user ||
-            [
-              'cn',
-              'displayName',
-              'mail',
-              'sAMAccountName',
-              'givenName',
-              'sn',
-              'userPrincipalName',
-              'title',
-              'department',
-              'company',
-              'manager',
-              'employeeID',
-              'employeeNumber',
-              'employeeType',
-              'description',
-            ].includes(key)
-          ) {
+        [
+          'cn',
+          'displayName',
+          'mail',
+          'sAMAccountName',
+          'givenName',
+          'sn',
+          'userPrincipalName',
+          'title',
+          'department',
+          'company',
+        ].forEach((key) => {
+          if (entry[key]) {
             const value = entry[key];
             if (Array.isArray(value) && value.length > 0) {
               user[key as keyof ADUser] = value[0] as string;
@@ -120,7 +109,7 @@ export class ActiveDirectoryService {
         return user;
       });
 
-      this.logger.log(`Found ${users.length} user(s) for query: ${query}`);
+      this.logger.debug(`Found ${users.length} user(s) for query: ${query}`);
       return users;
     } catch (error) {
       this.logger.error(`Error searching users: ${error.message}`);

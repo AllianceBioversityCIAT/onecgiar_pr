@@ -21,6 +21,11 @@ import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/y
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { CustomizedAlertsFeService } from './../../../../../../shared/services/customized-alerts-fe.service';
+import { UserSearchService } from './services/user-search-service.service';
+import { DataControlService } from './../../../../../../shared/services/data-control.service';
+import { RolesService } from './../../../../../../shared/services/global/roles.service';
+import { InstitutionsService } from './../../../../../../shared/services/global/institutions.service';
+import { PusherService } from './../../../../../../shared/services/pusher.service';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -29,6 +34,12 @@ describe('RdGeneralInformationComponent', () => {
   let mockScoreService: any;
   let mockCurrentResultService: any;
   let mockCustomizedAlertsFeService: any;
+  let mockUserSearchService: any;
+  let mockDataControlService: any;
+  let mockRolesService: any;
+  let mockInstitutionsService: any;
+  let mockPusherService: any;
+
   const mockInstitutions_typeNoId = {
     name: 'name'
   };
@@ -69,6 +80,29 @@ describe('RdGeneralInformationComponent', () => {
       }
     ]
   };
+  const mockUserSearchResponse = {
+    message: 'Users found successfully',
+    response: [
+      {
+        cn: 'John Doe',
+        displayName: 'John Doe',
+        mail: 'john.doe@cgiar.org',
+        sAMAccountName: 'jdoe',
+        givenName: 'John',
+        sn: 'Doe',
+        userPrincipalName: 'john.doe@cgiar.org',
+        title: 'Senior Researcher',
+        department: 'Research Department',
+        company: 'CGIAR',
+        manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
+        employeeID: '12345',
+        employeeNumber: 'EMP001',
+        employeeType: 'Full-time',
+        description: 'Senior researcher in agricultural sciences'
+      }
+    ],
+    status: 200
+  };
 
   beforeEach(async () => {
     mockApiService = {
@@ -103,7 +137,19 @@ describe('RdGeneralInformationComponent', () => {
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
         },
-        showPartnersRequest: false
+        showPartnersRequest: false,
+        isKnowledgeProduct: false,
+        currentResult: {
+          result_type_id: 1,
+          status: false,
+          is_phase_open: true
+        }
+      },
+      rolesSE: {
+        readOnly: false,
+        access: {
+          canDdit: true
+        }
       }
     };
 
@@ -124,6 +170,30 @@ describe('RdGeneralInformationComponent', () => {
         callback();
       })
     };
+
+    mockUserSearchService = {
+      searchUsers: jest.fn().mockReturnValue(of(mockUserSearchResponse))
+    };
+
+    mockDataControlService = {
+      isKnowledgeProduct: false,
+      currentResult: {
+        result_type_id: 1,
+        status: false,
+        is_phase_open: true
+      }
+    };
+
+    mockRolesService = {
+      readOnly: false,
+      access: {
+        canDdit: true
+      }
+    };
+
+    mockInstitutionsService = {};
+
+    mockPusherService = {};
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -160,6 +230,26 @@ describe('RdGeneralInformationComponent', () => {
         {
           provide: CustomizedAlertsFeService,
           useValue: mockCustomizedAlertsFeService
+        },
+        {
+          provide: UserSearchService,
+          useValue: mockUserSearchService
+        },
+        {
+          provide: DataControlService,
+          useValue: mockDataControlService
+        },
+        {
+          provide: RolesService,
+          useValue: mockRolesService
+        },
+        {
+          provide: InstitutionsService,
+          useValue: mockInstitutionsService
+        },
+        {
+          provide: PusherService,
+          useValue: mockPusherService
         }
       ],
       imports: [HttpClientModule, FormsModule, DialogModule]
@@ -167,6 +257,20 @@ describe('RdGeneralInformationComponent', () => {
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);
     component = fixture.componentInstance;
+
+    component.generalInfoBody = {
+      ...mockGET_generalInformationByResultIdResponse,
+      lead_contact_person: '',
+      result_name: '',
+      result_description: ''
+    };
+    component.isPhaseOpen = true;
+
+    component.searchResults = [];
+    component.showResults = false;
+    component.isSearching = false;
+    component.searchQuery = '';
+    component.selectedUser = null;
   });
 
   describe('ngOnInit', () => {
@@ -486,6 +590,151 @@ describe('RdGeneralInformationComponent', () => {
       }
 
       expect(spyShowAlerts).toHaveBeenCalled();
+    });
+  });
+  describe('User Search Functionality', () => {
+    describe('onSearchInput', () => {
+      it('should update search query and reset selected user', () => {
+        const mockEvent = { target: { value: 'john' } };
+        const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
+
+        component.selectedUser = mockUserSearchResponse.response[0];
+        component.onSearchInput(mockEvent);
+
+        expect(component.searchQuery).toBe('john');
+        expect(component.selectedUser).toBeNull();
+        expect(spySearchSubject).toHaveBeenCalledWith('john');
+      });
+
+      it('should not trigger search for queries less than 4 characters', () => {
+        const mockEvent = { target: { value: 'jo' } };
+        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+
+        component.onSearchInput(mockEvent);
+
+        expect(component.searchQuery).toBe('jo');
+        expect(spySearchUsers).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('selectUser', () => {
+      it('should select user and update generalInfoBody', () => {
+        const mockUser = mockUserSearchResponse.response[0];
+
+        component.selectUser(mockUser);
+
+        expect(component.selectedUser).toBe(mockUser);
+        expect(component.searchQuery).toBe(mockUser.displayName);
+        expect(component.searchResults).toEqual([]);
+        expect(component.showResults).toBe(false);
+        expect(component.generalInfoBody.lead_contact_person).toBe(mockUser.displayName);
+      });
+    });
+
+    describe('searchSubject subscription', () => {
+      beforeEach(() => {
+        jest.useFakeTimers();
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it('should search users when query has 4 or more characters', () => {
+        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+
+        component['searchSubject'].next('john');
+        jest.advanceTimersByTime(300);
+
+        expect(spySearchUsers).toHaveBeenCalledWith('john');
+        expect(component.isSearching).toBe(false);
+        expect(component.searchResults).toEqual(mockUserSearchResponse.response);
+        expect(component.showResults).toBe(true);
+      });
+
+      it('should not search when query has less than 4 characters', () => {
+        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+
+        component['searchSubject'].next('jo');
+        jest.advanceTimersByTime(300);
+
+        expect(spySearchUsers).not.toHaveBeenCalled();
+        expect(component.searchResults).toEqual([]);
+        expect(component.showResults).toBe(false);
+        expect(component.isSearching).toBe(false);
+      });
+
+      it('should handle search errors gracefully', () => {
+        const spyConsoleError = jest.spyOn(console, 'error').mockImplementation();
+        const errorMessage = 'Search failed';
+        mockUserSearchService.searchUsers.mockReturnValue(throwError(errorMessage));
+
+        component['searchSubject'].next('john');
+        jest.advanceTimersByTime(300);
+
+        expect(spyConsoleError).toHaveBeenCalledWith('Error searching users:', errorMessage);
+        expect(component.searchResults).toEqual([]);
+        expect(component.showResults).toBe(false);
+        expect(component.isSearching).toBe(false);
+
+        spyConsoleError.mockRestore();
+      });
+
+      it('should debounce search requests', () => {
+        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+
+        component['searchSubject'].next('john');
+        component['searchSubject'].next('johnd');
+        component['searchSubject'].next('johndo');
+
+        jest.advanceTimersByTime(250);
+        expect(spySearchUsers).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(50);
+        expect(spySearchUsers).toHaveBeenCalledTimes(1);
+        expect(spySearchUsers).toHaveBeenCalledWith('johndo');
+      });
+
+      it('should set isSearching to true during search', () => {
+        mockUserSearchService.searchUsers.mockReturnValue(new Promise(resolve => setTimeout(() => resolve(mockUserSearchResponse), 100)));
+
+        component['searchSubject'].next('john');
+        jest.advanceTimersByTime(300);
+
+        expect(component.isSearching).toBe(true);
+      });
+    });
+
+    describe('search results display', () => {
+      it('should show search results when available', () => {
+        component.searchResults = mockUserSearchResponse.response;
+        component.showResults = true;
+
+        fixture.detectChanges();
+
+        const searchResultsElement = fixture.debugElement.nativeElement.querySelector('.search-results');
+        expect(searchResultsElement).toBeTruthy();
+      });
+
+      it('should hide search results when showResults is false', () => {
+        component.searchResults = mockUserSearchResponse.response;
+        component.showResults = false;
+
+        fixture.detectChanges();
+
+        const searchResultsElement = fixture.debugElement.nativeElement.querySelector('.search-results');
+        expect(searchResultsElement).toBeFalsy();
+      });
+
+      it('should show loading indicator when searching', () => {
+        component.isSearching = true;
+
+        fixture.detectChanges();
+
+        const loadingElement = fixture.debugElement.nativeElement.querySelector('.search-loading');
+        expect(loadingElement).toBeTruthy();
+        expect(loadingElement.textContent.trim()).toBe('Searching...');
+      });
     });
   });
 });

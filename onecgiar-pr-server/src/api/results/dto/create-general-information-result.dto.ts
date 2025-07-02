@@ -17,6 +17,7 @@ export class CreateGeneralInformationResultDto {
   public krs_url!: string;
   public is_krs!: boolean;
   public lead_contact_person!: string;
+  public lead_contact_person_id!: number;
   public is_discontinued!: boolean;
   public discontinued_options!: ResultsInvestmentDiscontinuedOption[];
 }

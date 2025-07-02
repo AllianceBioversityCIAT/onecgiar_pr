@@ -31,6 +31,7 @@ import { ResultsTocResult } from '../results-toc-results/entities/results-toc-re
 import { Notification } from '../../notification/entities/notification.entity';
 import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
+import { AdUser } from '../../ad_users/entity/ad-user.entity';
 
 @Entity()
 export class Result {
@@ -310,6 +311,19 @@ export class Result {
     nullable: true,
   })
   lead_contact_person!: string;
+
+  @Column({
+    name: 'lead_contact_person_id',
+    type: 'int',
+    nullable: true,
+  })
+  lead_contact_person_id!: number;
+
+  @ManyToOne(() => AdUser, (adUser) => adUser.obj_results, { nullable: true })
+  @JoinColumn({
+    name: 'lead_contact_person_id',
+  })
+  obj_lead_contact_person: AdUser;
 
   @Column({
     name: 'has_countries',
