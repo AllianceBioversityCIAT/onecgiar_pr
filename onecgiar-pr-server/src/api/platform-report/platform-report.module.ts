@@ -37,6 +37,7 @@ import { env } from 'process';
     ResultRepository,
     TemplateRepository,
   ],
+  exports: [TemplateRepository],
 })
 export class PlatformReportModule {
   public constructor() {

@@ -11,6 +11,11 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
+import { Brackets } from 'typeorm';
+import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
+import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import * as handlebars from 'handlebars';
 
 @Injectable()
 export class UserService {
@@ -23,6 +28,8 @@ export class UserService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _bcryptPasswordEncoder: BcryptPasswordEncoder,
     private readonly _handlersError: HandlersError,
+    private readonly _awsCognitoService: AuthMicroserviceService,
+    private readonly _templateRepository: TemplateRepository,
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -31,57 +38,119 @@ export class UserService {
 
   async createFull(
     createUserDto: CreateUserDto,
-    role: number,
     token: TokenDto,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
-      createUserDto.is_cgiar =
-        createUserDto.email.search(this.cgiarRegex) > -1 ? true : false;
-      const user = await this.findOneByEmail(createUserDto.email);
-      if (user.response) {
-        throw {
-          response: {},
-          message: 'Duplicates have been found in the data',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
+      const exists = await this.findOneByEmail(createUserDto.email);
+      console.log('createUserDto:', createUserDto);
 
       if (!createUserDto.is_cgiar) {
-        if (!('password' in createUserDto)) {
-          if (!createUserDto['password']) {
-            throw {
-              response: {},
-              message: 'No password provider',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
+        if (this.cgiarRegex.test(createUserDto.email)) {
+          throw {
+            response: {},
+            message: 'Non-CGIAR user cannot have a CGIAR email address',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+        if (exists.response) {
+          throw {
+            response: {},
+            message: 'The user already exists in the system',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        createUserDto.role_platform = 2;
+
+        const templateDB = await this._templateRepository.findOne({
+          where: { name: EmailTemplate.EXTERNAL_USER },
+        });
+
+        const template = handlebars.compile(templateDB.template);
+
+        const templateData: Record<string, any> = {
+          appName: '{{appName}}',
+          firstName: '{{firstName}}',
+          lastName: '{{lastName}}',
+          tempPassword: '{{tempPassword}}',
+          email: '{{email}}',
+          appUrl: '{{appUrl}}',
+          supportEmail: '{{supportEmail}}',
+          senderName: '{{senderName}}',
+        };
+        if (createUserDto.entity) {
+          templateData.assignedEntity = createUserDto.entity;
+        }
+        if (createUserDto.role_entity) {
+          templateData.assignedRole = createUserDto.role_entity;
+        }
+
+        const htmlString = template(templateData);
+
+        const cognitoPayload = {
+          username: createUserDto.email,
+          email: createUserDto.email,
+          firstName: createUserDto.first_name,
+          lastName: createUserDto.last_name,
+          emailConfig: {
+            sender_email: process.env.EMAIL_SENDER,
+            sender_name: 'PRMS Team',
+            welcome_subject:
+              'Welcome to the PRMS Reporting Tool – Your Account Details',
+            app_name: 'PRMS Reporting Tool',
+            app_url: 'https://reporting.cgiar.org/',
+            support_email: 'PRMSTechSupport@cgiar.org',
+            logo_url:
+              'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.svg',
+            welcome_html_template: htmlString,
+          },
+        };
+        try {
+          console.log(
+            '📤 Enviando a AuthMicroservice:',
+            JSON.stringify(cognitoPayload, null, 2),
+          );
+          await this._awsCognitoService.createUser(cognitoPayload);
+        } catch (error) {
+          throw {
+            response: { error },
+            message: 'Error while creating user',
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+          };
         }
       }
 
-      if (!role) {
+      if (exists.response) {
         throw {
           response: {},
-          message: 'No role provider',
+          message: 'The user already exists in the system',
           status: HttpStatus.BAD_REQUEST,
         };
       }
 
-      createUserDto.password = createUserDto.is_cgiar
-        ? null
-        : this._bcryptPasswordEncoder.encode(createUserDto.password.toString());
-      const createdBy: User = await this._userRepository.findOne({
+      const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
-      createUserDto.created_by = createdBy ? createdBy.id : null;
-      createUserDto.last_updated_by = createdBy ? createdBy.id : null;
+      console.log('currentUser:', currentUser);
+      createUserDto.created_by = currentUser?.id || null;
+      createUserDto.last_updated_by = currentUser?.id || null;
 
-      const newUser: User = await this._userRepository.save(createUserDto);
+      const newUser = await this._userRepository.save(createUserDto);
       await this._roleByUserRepository.save({
-        role: role,
+        role: createUserDto?.role_platform || 2,
         user: newUser.id,
-        created_by: createdBy ? createdBy.id : null,
-        last_updated_by: createdBy ? createdBy.id : null,
+        created_by: currentUser?.id,
+        last_updated_by: currentUser?.id,
       });
+
+      if (createUserDto.role_entity) {
+        await this._roleByUserRepository.save({
+          role: createUserDto.role_entity,
+          user: newUser.id,
+          created_by: currentUser?.id,
+          last_updated_by: currentUser?.id,
+        });
+      }
 
       return {
         response: {
@@ -89,7 +158,7 @@ export class UserService {
           first_name: newUser.first_name,
           last_name: newUser.last_name,
         } as User,
-        message: 'User successfully created',
+        message: 'The user has been successfully created',
         status: HttpStatus.CREATED,
       };
     } catch (error) {
@@ -116,6 +185,165 @@ export class UserService {
       });
       return {
         response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getAllUsers() {
+    try {
+      const query = ` SELECT  
+        first_name AS "firstName",
+        last_name AS "lastName",
+        email AS "emailAddress",
+        CASE 
+            WHEN is_cgiar = 1 THEN 'Yes'
+            ELSE 'No'
+        END AS "cgIAR",
+        CASE 
+            WHEN active = 1 THEN 'Active'
+            ELSE 'Inactive'
+        END AS "userStatus",
+        created_date AS "userCreationDate"
+      FROM 
+        users
+      ORDER BY 
+        created_date DESC;`;
+      const user: User[] = await this._userRepository.query(query);
+      return {
+        response: user,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async searchUsers(filters: {
+    user?: string;
+    cgIAR?: 'Yes' | 'No';
+    status?: 'Active' | 'Inactive';
+  }) {
+    try {
+      const { user, cgIAR, status } = filters;
+      const query = this._userRepository.createQueryBuilder('users');
+      query.select([
+        'users.first_name AS "firstName"',
+        'users.last_name AS "lastName"',
+        'users.email AS "emailAddress"',
+        `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+        `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
+        'users.created_date AS "userCreationDate"',
+      ]);
+
+      query.where('1 = 1');
+
+      if (user && user.trim() !== '') {
+        const keywords = user.trim().split(/\s+/);
+
+        query.andWhere(
+          new Brackets((qb) => {
+            // Search by first name, last name, email (single or multiple keywords)
+            if (keywords.length === 1) {
+              const word = `%${keywords[0]}%`;
+
+              qb.where('users.first_name LIKE :word', { word })
+                .orWhere('users.last_name LIKE :word', { word })
+                .orWhere('users.email LIKE :word', { word });
+            } else if (keywords.length >= 2) {
+              // Try to match first and last name in any order
+              const first = `%${keywords[0]}%`;
+              const last = `%${keywords[1]}%`;
+
+              qb.where(
+                '(users.first_name LIKE :firstName AND users.last_name LIKE :lastName)',
+                {
+                  firstName: first,
+                  lastName: last,
+                },
+              ).orWhere(
+                '(users.first_name LIKE :lastName2 AND users.last_name LIKE :firstName2)',
+                {
+                  firstName2: last,
+                  lastName2: first,
+                },
+              );
+
+              // If more than two keywords, try to match users with two names (first_name with two words)
+              if (keywords.length >= 2) {
+                const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
+                qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
+              }
+              if (keywords.length >= 3) {
+                // Try to match first_name with three words
+                const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
+                qb.orWhere('users.first_name LIKE :firstThree', { firstThree });
+              }
+            }
+
+            // Date-based search
+            const yearRegex = /^\d{4}$/;
+            const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+            const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
+
+            if (fullDateRegex.test(user)) {
+              qb.orWhere('DATE(users.created_date) = :dateCondition', {
+                dateCondition: user,
+              });
+            } else if (yearMonthRegex.test(user)) {
+              const [year, month] = user.split('-').map(Number);
+              const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+              const endDate = new Date(year, month, 0)
+                .toISOString()
+                .split('T')[0];
+
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            } else if (yearRegex.test(user)) {
+              const startDate = `${user}-01-01`;
+              const endDate = `${user}-12-31`;
+
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            }
+          }),
+        );
+      }
+
+      if (cgIAR) {
+        query.andWhere('users.is_cgiar = :isCgiar', {
+          isCgiar: cgIAR.toLowerCase() === 'yes' ? 1 : 0,
+        });
+      }
+
+      if (status) {
+        query.andWhere('users.active = :activeStatus', {
+          activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
+        });
+      }
+
+      query.orderBy('users.created_date', 'DESC');
+
+      const users: User[] = await query.getRawMany();
+      console.log('Query result:', users);
+
+      if (users.length === 0) {
+        return {
+          response: [],
+          message: 'No users match the entered criteria',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return {
+        response: users,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

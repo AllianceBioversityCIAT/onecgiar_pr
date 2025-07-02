@@ -6,13 +6,16 @@ import {
   Param,
   UseInterceptors,
   Patch,
+  Query,
+  ValidationPipe,
+  BadRequestException,
+  HttpStatus,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { CreateFullUserDto } from './dto/create-full-user.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
-import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { DecodedUser } from '../../../shared/decorators/user-token.decorator';
 import {
   ApiTags,
   ApiHeader,
@@ -21,6 +24,7 @@ import {
   ApiParam,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -50,7 +54,6 @@ export class UserController {
           first_name: 'John',
           last_name: 'Doe',
           email: 'john.doe@example.com',
-          password: 'StrongPassword123',
           is_cgiar: true,
         },
       },
@@ -79,20 +82,16 @@ export class UserController {
       'Creates a new user with complete information including role assignment',
   })
   @ApiBody({
-    type: CreateFullUserDto,
-    description: 'User information with role',
+    type: CreateUserDto,
+    description: 'User information to create',
     examples: {
       example1: {
-        summary: 'Full user with role example',
+        summary: 'Basic user example',
         value: {
-          userData: {
-            first_name: 'John',
-            last_name: 'Doe',
-            email: 'john.doe@example.com',
-            password: 'StrongPassword123',
-            is_cgiar: true,
-          },
-          role: 3, // Guest role
+          first_name: 'John',
+          last_name: 'Doe',
+          email: 'john.doe@example.com',
+          is_cgiar: true,
         },
       },
     },
@@ -113,13 +112,26 @@ export class UserController {
     status: 404,
     description: 'Not found - role does not exist',
   })
-  async creteFull(
-    @Body() createFullUserDto: CreateFullUserDto,
-    @UserToken() user: TokenDto,
+  async createFull(
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        exceptionFactory: () => {
+          const response = {};
+          return new BadRequestException({
+            response,
+            message:
+              'Some fields contain errors or are incomplete. Please review your input.',
+            status: HttpStatus.BAD_REQUEST,
+          });
+        },
+      }),
+    )
+    createFullUserDto: CreateUserDto,
+    @DecodedUser() user: TokenDto,
   ) {
-    const createUser: CreateUserDto = createFullUserDto.userData;
-    const role: number = createFullUserDto.role;
-    return this.userService.createFull(createUser, role, user);
+    return this.userService.createFull(createFullUserDto, user);
   }
 
   @Get('get/all')
@@ -133,6 +145,77 @@ export class UserController {
   })
   async findAll() {
     return this.userService.findAll();
+  }
+
+  @Get('get/users_list')
+  @ApiOperation({
+    summary: 'Get list users',
+    description: 'Get list of all users with their details',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users retrieved successfully',
+    schema: {
+      example: {
+        data: [
+          {
+            firstName: 'John',
+            lastName: 'Doe',
+            emailAddress: 'john.doe@example.com',
+            cgIAR: 'Yes',
+            userStatus: 'Active',
+            userCreationDate: '2024-03-10T12:00:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  async getAllUsers() {
+    return this.userService.getAllUsers();
+  }
+
+  @Get('search')
+  @ApiOperation({
+    summary: 'Search users by name, email, CGIAR, or status (partial match)',
+  })
+  @ApiQuery({ name: 'user', required: false, type: String })
+  @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
+  @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Returns list of users matching the search criteria or a message if none match',
+    schema: {
+      example: {
+        data: [
+          {
+            firstName: 'Jane',
+            lastName: 'Doe',
+            emailAddress: 'jane.doe@cgiar.org',
+            cgIAR: 'Yes',
+            userStatus: 'Active',
+            userCreationDate: '2024-05-10T14:33:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  async searchUsers(
+    @Query('user') user?: string,
+    @Query('cgIAR') cgIAR?: 'Yes' | 'No',
+    @Query('status') status?: 'Active' | 'Inactive',
+  ) {
+    const result = await this.userService.searchUsers({ user, cgIAR, status });
+
+    if (result.response.length === 0) {
+      return {
+        status: result.status,
+        message: 'No users match the entered criteria',
+        response: [],
+      };
+    }
+
+    return result;
   }
 
   @Get('get/all/:email')

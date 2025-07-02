@@ -231,4 +231,54 @@ export class AuthMicroserviceService {
       );
     }
   }
+
+  /**
+   * Create a new custom user in the Auth Microservice
+   * @param userData User information including email config
+   * @returns Created user response
+   */
+  async createUser(userData: {
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    emailConfig: {
+      sender_email: string;
+      sender_name: string;
+      welcome_subject: string;
+      app_name: string;
+      app_url: string;
+      support_email: string;
+      logo_url: string;
+      welcome_html_template: string;
+    };
+  }): Promise<any> {
+    try {
+      this.logger.log(`Creating user: ${userData.username}`);
+
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.authMicroserviceUrl}/auth/register`,
+          userData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              auth: JSON.stringify({
+                username: this.misId,
+                password: this.misSecret,
+              }),
+            },
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Error creating user: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.response?.data?.message ?? 'User creation failed',
+        error.response?.status ?? 500,
+      );
+    }
+  }
 }
