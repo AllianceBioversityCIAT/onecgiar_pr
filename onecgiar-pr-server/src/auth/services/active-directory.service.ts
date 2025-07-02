@@ -10,6 +10,14 @@ export interface ADUser {
   givenName?: string;
   sn?: string;
   userPrincipalName?: string;
+  title?: string;
+  department?: string;
+  company?: string;
+  manager?: string;
+  employeeID?: string;
+  employeeNumber?: string;
+  employeeType?: string;
+  description?: string;
 }
 
 @Injectable()
@@ -58,7 +66,7 @@ export class ActiveDirectoryService {
       this.logger.debug(`Searching AD users: ${query}`);
 
       const searchOptions = {
-        filter: `(|(displayName=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)(givenName=*${query}*)(sn=*${query}*))`,
+        filter: `(|(givenName=*${query}*)(displayName=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)(sn=*${query}*))`,
         scope: 'sub' as const,
         attributes: [
           'cn',
@@ -71,6 +79,11 @@ export class ActiveDirectoryService {
           'title',
           'department',
           'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
         ],
         sizeLimit: 10,
         timeLimit: 5,
@@ -95,6 +108,11 @@ export class ActiveDirectoryService {
           'title',
           'department',
           'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
         ].forEach((key) => {
           if (entry[key]) {
             const value = entry[key];

@@ -618,7 +618,7 @@ describe('RdGeneralInformationComponent', () => {
     });
 
     describe('selectUser', () => {
-      it('should select user and update generalInfoBody', () => {
+      it('should select user and update generalInfoBody with complete metadata', () => {
         const mockUser = mockUserSearchResponse.response[0];
 
         component.selectUser(mockUser);
@@ -628,6 +628,7 @@ describe('RdGeneralInformationComponent', () => {
         expect(component.searchResults).toEqual([]);
         expect(component.showResults).toBe(false);
         expect(component.generalInfoBody.lead_contact_person).toBe(mockUser.displayName);
+        expect(component.generalInfoBody.lead_contact_person_data).toBe(mockUser);
       });
     });
 

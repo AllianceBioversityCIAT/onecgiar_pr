@@ -84,6 +84,14 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+
+      if (this.generalInfoBody.lead_contact_person_data) {
+        this.selectedUser = this.generalInfoBody.lead_contact_person_data;
+        this.searchQuery = this.generalInfoBody.lead_contact_person_data.displayName;
+      } else if (this.generalInfoBody.lead_contact_person) {
+        this.searchQuery = this.generalInfoBody.lead_contact_person;
+      }
+
       this.GET_investmentDiscontinuedOptions(response.result_type_id);
       this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
     });
@@ -344,5 +352,6 @@ export class RdGeneralInformationComponent implements OnInit {
     this.showResults = false;
 
     this.generalInfoBody.lead_contact_person = user.displayName;
+    this.generalInfoBody.lead_contact_person_data = user;
   }
 }
