@@ -9,7 +9,10 @@ FROM base AS development
 
 RUN npm install && npm install --save-dev @types/node
 
-COPY . .
+COPY src ./src
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+COPY eslint.config.mjs ./
 
 RUN echo "{\"compilerOptions\": {\
     \"module\": \"commonjs\",\
@@ -43,7 +46,13 @@ CMD ["npm", "run", "start"]
 #################### BUILD STAGE ####################
 FROM base AS build
 RUN npm ci --only=production
-COPY . .
+
+COPY src ./src
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+COPY package*.json ./
+COPY eslint.config.mjs ./
+
 RUN npm run build
 
 #################### PRODUCTION STAGE ####################
