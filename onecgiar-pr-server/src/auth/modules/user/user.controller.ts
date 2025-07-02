@@ -91,7 +91,7 @@ export class UserController {
           first_name: 'John',
           last_name: 'Doe',
           email: 'john.doe@example.com',
-          is_cgiar: true,
+          is_cgiar: false,
         },
       },
     },
