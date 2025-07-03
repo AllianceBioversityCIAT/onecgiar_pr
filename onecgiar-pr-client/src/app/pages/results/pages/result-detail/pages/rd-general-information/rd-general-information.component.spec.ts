@@ -1079,4 +1079,169 @@ describe('RdGeneralInformationComponent', () => {
       expect(noResultsElement).toBeFalsy();
     });
   });
+
+  describe('filterValidUsers', () => {
+    const mockUsersWithFilters = [
+      {
+        cn: 'John Doe',
+        displayName: 'John Doe',
+        mail: 'john.doe@cgiar.org',
+        sAMAccountName: 'jdoe',
+        givenName: 'John',
+        sn: 'Doe',
+        userPrincipalName: 'john.doe@cgiar.org',
+        title: 'Senior Researcher',
+        department: 'Research Department',
+        company: 'CGIAR',
+        manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
+        employeeID: '12345',
+        employeeNumber: 'EMP001',
+        employeeType: 'Full-time',
+        description: 'Senior researcher in agricultural sciences'
+      },
+      {
+        cn: 'Test User',
+        displayName: 'Test User',
+        mail: 'test.user@cgiar.org',
+        sAMAccountName: 'tuser',
+        givenName: 'Test',
+        sn: 'User',
+        userPrincipalName: 'test.user@cgiar.org',
+        title: 'Test Account',
+        department: 'IT Department',
+        company: 'CGIAR',
+        manager: '',
+        employeeID: '99999',
+        employeeNumber: 'TEST001',
+        employeeType: 'Test',
+        description: 'Test account'
+      },
+      {
+        cn: 'No Email User',
+        displayName: 'No Email User',
+        mail: '',
+        sAMAccountName: 'noemail',
+        givenName: 'No',
+        sn: 'Email',
+        userPrincipalName: '',
+        title: 'No Email Account',
+        department: 'Test Department',
+        company: 'CGIAR',
+        manager: '',
+        employeeID: '88888',
+        employeeNumber: 'NOEMAIL001',
+        employeeType: 'Test',
+        description: 'Account without email'
+      },
+      {
+        cn: 'Jane Smith',
+        displayName: 'Jane Smith',
+        mail: 'jane.smith@cgiar.org',
+        sAMAccountName: 'jsmith',
+        givenName: 'Jane',
+        sn: 'Smith',
+        userPrincipalName: 'jane.smith@cgiar.org',
+        title: 'Research Coordinator',
+        department: 'Research Department',
+        company: 'CGIAR',
+        manager: '',
+        employeeID: '54321',
+        employeeNumber: 'EMP002',
+        employeeType: 'Full-time',
+        description: 'Research coordinator'
+      }
+    ];
+
+    it('should filter out users without email', () => {
+      const result = component['filterValidUsers'](mockUsersWithFilters);
+
+      expect(result).not.toContain(expect.objectContaining({ displayName: 'No Email User' }));
+    });
+
+    it('should filter out users with "test" in email', () => {
+      const result = component['filterValidUsers'](mockUsersWithFilters);
+
+      expect(result).not.toContain(expect.objectContaining({ displayName: 'Test User' }));
+    });
+
+    it('should keep valid users with proper email', () => {
+      const result = component['filterValidUsers'](mockUsersWithFilters);
+
+      expect(result).toContainEqual(expect.objectContaining({ displayName: 'John Doe' }));
+      expect(result).toContainEqual(expect.objectContaining({ displayName: 'Jane Smith' }));
+    });
+
+    it('should return only valid users', () => {
+      const result = component['filterValidUsers'](mockUsersWithFilters);
+
+      expect(result.length).toBe(2);
+      expect(result.every(user => user.mail && !user.mail.toLowerCase().includes('test'))).toBe(true);
+    });
+
+    it('should handle empty array', () => {
+      const result = component['filterValidUsers']([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should be case insensitive for test filtering', () => {
+      const testUsers = [
+        {
+          ...mockUsersWithFilters[0],
+          mail: 'user.TEST@cgiar.org'
+        },
+        {
+          ...mockUsersWithFilters[0],
+          mail: 'user.Test@cgiar.org'
+        },
+        {
+          ...mockUsersWithFilters[0],
+          mail: 'user.tEsT@cgiar.org'
+        }
+      ];
+
+      const result = component['filterValidUsers'](testUsers);
+
+      expect(result.length).toBe(0);
+    });
+  });
+
+  describe('search with filtering', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should apply filters to search results', () => {
+      const mockResponseWithFilters = {
+        message: 'Users found successfully',
+        response: [
+          mockUserSearchResponse.response[0],
+          {
+            ...mockUserSearchResponse.response[0],
+            displayName: 'Test User',
+            mail: 'test.user@cgiar.org'
+          },
+          {
+            ...mockUserSearchResponse.response[0],
+            displayName: 'No Email User',
+            mail: ''
+          }
+        ],
+        status: 200
+      };
+
+      mockUserSearchService.searchUsers.mockReturnValue(of(mockResponseWithFilters));
+
+      component.searchQuery = 'john';
+      component['searchSubject'].next('john');
+      jest.advanceTimersByTime(300);
+
+      expect(component.searchResults.length).toBe(1);
+      expect(component.searchResults[0].displayName).toBe('John Doe');
+    });
+  });
 });
