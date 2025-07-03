@@ -85,7 +85,7 @@ export class UserService {
           templateData.assignedRole = createUserDto.role_entity;
         }
 
-        const htmlString = template(templateData);   
+        const htmlString = template(templateData);
 
         const cognitoPayload = {
           username: createUserDto.email,
