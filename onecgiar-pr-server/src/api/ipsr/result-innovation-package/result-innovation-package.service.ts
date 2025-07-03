@@ -703,17 +703,20 @@ export class ResultInnovationPackageService {
 
       let leadContactPersonId: number = null;
 
-      if (req.lead_contact_person_data?.mail && this._adUserService) {
+      if (
+        resultGeneralInformation.lead_contact_person_data?.mail &&
+        this._adUserService
+      ) {
         try {
           let adUser = await this._adUserService.getUserByIdentifier(
-            req.lead_contact_person_data.mail,
+            resultGeneralInformation.lead_contact_person_data.mail,
           );
 
           if (!adUser) {
             const adUserRepository = this._adUserService['adUserRepository'];
             if (adUserRepository && adUserRepository.saveFromADUser) {
               adUser = await adUserRepository.saveFromADUser(
-                req.lead_contact_person_data,
+                resultGeneralInformation.lead_contact_person_data,
               );
 
               this._logger.log(
@@ -732,7 +735,10 @@ export class ResultInnovationPackageService {
             `Failed to process lead_contact_person_data: ${error.message}`,
           );
         }
-      } else if (req.lead_contact_person_data?.mail && !this._adUserService) {
+      } else if (
+        resultGeneralInformation.lead_contact_person_data?.mail &&
+        !this._adUserService
+      ) {
         this._logger.warn(
           'AdUserService not available, skipping lead_contact_person_data processing',
         );
