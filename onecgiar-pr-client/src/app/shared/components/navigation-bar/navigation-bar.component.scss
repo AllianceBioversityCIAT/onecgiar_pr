@@ -3,9 +3,14 @@
   display: flex;
   gap: 10px;
   padding: 10px 100px;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+
+  &.sticky {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 6;
+  }
 
   .section_active {
     background-color: white;
