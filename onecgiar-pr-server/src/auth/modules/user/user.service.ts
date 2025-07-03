@@ -86,6 +86,7 @@ export class UserService {
         }
 
         const htmlString = template(templateData);
+        
 
         const cognitoPayload = {
           username: createUserDto.email,
@@ -106,12 +107,9 @@ export class UserService {
           },
         };
         try {
-          console.log(
-            '📤 Enviando a AuthMicroservice:',
-            JSON.stringify(cognitoPayload, null, 2),
-          );
           await this._awsCognitoService.createUser(cognitoPayload);
         } catch (error) {
+          console.log(error);
           throw {
             response: { error },
             message: 'Error while creating user',
@@ -131,7 +129,6 @@ export class UserService {
       const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
-      console.log('currentUser:', currentUser);
       createUserDto.created_by = currentUser?.id || null;
       createUserDto.last_updated_by = currentUser?.id || null;
 
@@ -247,73 +244,73 @@ export class UserService {
 
         query.andWhere(
           new Brackets((qb) => {
-        // Search by first name, last name, email (single or multiple keywords)
-        if (keywords.length === 1) {
-          const word = `%${keywords[0]}%`;
+            // Search by first name, last name, email (single or multiple keywords)
+            if (keywords.length === 1) {
+              const word = `%${keywords[0]}%`;
 
-          qb.where('users.first_name LIKE :word', { word })
-            .orWhere('users.last_name LIKE :word', { word })
-            .orWhere('users.email LIKE :word', { word });
-        } else if (keywords.length >= 2) {
-          // Try to match first and last name in any order
-          const first = `%${keywords[0]}%`;
-          const last = `%${keywords[1]}%`;
+              qb.where('users.first_name LIKE :word', { word })
+                .orWhere('users.last_name LIKE :word', { word })
+                .orWhere('users.email LIKE :word', { word });
+            } else if (keywords.length >= 2) {
+              // Try to match first and last name in any order
+              const first = `%${keywords[0]}%`;
+              const last = `%${keywords[1]}%`;
 
-          qb.where(
-            '(users.first_name LIKE :firstName AND users.last_name LIKE :lastName)',
-            {
-          firstName: first,
-          lastName: last,
-            },
-          ).orWhere(
-            '(users.first_name LIKE :lastName2 AND users.last_name LIKE :firstName2)',
-            {
-          firstName2: last,
-          lastName2: first,
-            },
-          );
+              qb.where(
+                '(users.first_name LIKE :firstName AND users.last_name LIKE :lastName)',
+                {
+                  firstName: first,
+                  lastName: last,
+                },
+              ).orWhere(
+                '(users.first_name LIKE :lastName2 AND users.last_name LIKE :firstName2)',
+                {
+                  firstName2: last,
+                  lastName2: first,
+                },
+              );
 
-          // If more than two keywords, try to match users with two names (first_name with two words)
-          if (keywords.length >= 2) {
-            const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
-            qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
-          }
-          if (keywords.length >= 3) {
-            // Try to match first_name with three words
-            const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
-            qb.orWhere('users.first_name LIKE :firstThree', { firstThree });
-          }
-        }
+              // If more than two keywords, try to match users with two names (first_name with two words)
+              if (keywords.length >= 2) {
+                const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
+                qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
+              }
+              if (keywords.length >= 3) {
+                // Try to match first_name with three words
+                const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
+                qb.orWhere('users.first_name LIKE :firstThree', { firstThree });
+              }
+            }
 
-        // Date-based search
-        const yearRegex = /^\d{4}$/;
-        const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
-        const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
+            // Date-based search
+            const yearRegex = /^\d{4}$/;
+            const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+            const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
 
-        if (fullDateRegex.test(user)) {
-          qb.orWhere('DATE(users.created_date) = :dateCondition', {
-            dateCondition: user,
-          });
-        } else if (yearMonthRegex.test(user)) {
-          const [year, month] = user.split('-').map(Number);
-          const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-          const endDate = new Date(year, month, 0)
-            .toISOString()
-            .split('T')[0];
+            if (fullDateRegex.test(user)) {
+              qb.orWhere('DATE(users.created_date) = :dateCondition', {
+                dateCondition: user,
+              });
+            } else if (yearMonthRegex.test(user)) {
+              const [year, month] = user.split('-').map(Number);
+              const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+              const endDate = new Date(year, month, 0)
+                .toISOString()
+                .split('T')[0];
 
-          qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
-            startDate: startDate + ' 00:00:00',
-            endDate: endDate + ' 23:59:59',
-          });
-        } else if (yearRegex.test(user)) {
-          const startDate = `${user}-01-01`;
-          const endDate = `${user}-12-31`;
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            } else if (yearRegex.test(user)) {
+              const startDate = `${user}-01-01`;
+              const endDate = `${user}-12-31`;
 
-          qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
-            startDate: startDate + ' 00:00:00',
-            endDate: endDate + ' 23:59:59',
-          });
-        }
+              qb.orWhere('users.created_date BETWEEN :startDate AND :endDate', {
+                startDate: startDate + ' 00:00:00',
+                endDate: endDate + ' 23:59:59',
+              });
+            }
           }),
         );
       }
@@ -333,7 +330,6 @@ export class UserService {
       query.orderBy('users.created_date', 'DESC');
 
       const users: User[] = await query.getRawMany();
-      console.log('Query result:', users);
 
       if (users.length === 0) {
         return {
