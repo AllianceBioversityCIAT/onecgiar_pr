@@ -31,6 +31,20 @@ export class RdGeneralInformationComponent implements OnInit {
   showContactError: boolean = false;
   private searchSubject = new Subject<string>();
 
+  private filterValidUsers(users: User[]): User[] {
+    return users.filter(user => {
+      if (!user.mail || user.mail.trim() === '') {
+        return false;
+      }
+
+      if (user.mail.toLowerCase().includes('test')) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   constructor(
     public api: ApiService,
     private currentResultSE: CurrentResultService,
@@ -60,7 +74,8 @@ export class RdGeneralInformationComponent implements OnInit {
       )
       .subscribe({
         next: response => {
-          this.searchResults = response.response || [];
+          const filteredResults = this.filterValidUsers(response.response || []);
+          this.searchResults = filteredResults;
           this.showResults = true;
           this.isSearching = false;
 
