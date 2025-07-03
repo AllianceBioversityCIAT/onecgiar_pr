@@ -469,10 +469,24 @@ describe('InnovationPathwayStepOneService', () => {
       const resultId = 1;
       const updateDto: UpdateInnovationPathwayDto = {
         result_id: 1,
-        geographic_scope_id: 1,
+        geo_scope_id: 1,
+        result_by_innovation_package_id: 1,
+        title: 'Test Title',
+        experts: [],
+        result_ip: {} as any,
+        innovatonUse: {} as any,
+        institutions: [],
+        sdgTargets: [],
+        eoiOutcomes: [],
+        actionAreaOutcomes: [],
+        impactAreas: [],
+        experts_is_diverse: false,
+        is_not_diverse_justification: '',
         regions: [],
         countries: [],
-        result_ip_innovation_packaging_experts: [],
+        link_workshop_list: '',
+        result_ip_result_core: {} as any,
+        result_ip_expert_workshop_organized: [],
       };
       const user: TokenDto = {
         id: 1,
@@ -492,8 +506,9 @@ describe('InnovationPathwayStepOneService', () => {
 
       jest.spyOn(resultRepository, 'findOne').mockResolvedValue(mockResult);
       jest.spyOn(mockVersioningService, '$_findActivePhase').mockResolvedValue(mockVersion);
-      jest.spyOn(service, 'saveGeoScope').mockResolvedValue(undefined);
-      jest.spyOn(service, 'saveSpecifyAspiredOutcomesAndImpact').mockResolvedValue(undefined);
+      // Mock private methods using spyOn on the service instance
+      jest.spyOn(service as any, 'saveGeoScope').mockResolvedValue(undefined);
+      jest.spyOn(service as any, 'saveSpecifyAspiredOutcomesAndImpact').mockResolvedValue(undefined);
 
       const result = await service.updateMain(resultId, updateDto, user);
 
@@ -508,10 +523,24 @@ describe('InnovationPathwayStepOneService', () => {
       const resultId = 999;
       const updateDto: UpdateInnovationPathwayDto = {
         result_id: 999,
-        geographic_scope_id: 1,
+        geo_scope_id: 1,
+        result_by_innovation_package_id: 999,
+        title: 'Test Title',
+        experts: [],
+        result_ip: {} as any,
+        innovatonUse: {} as any,
+        institutions: [],
+        sdgTargets: [],
+        eoiOutcomes: [],
+        actionAreaOutcomes: [],
+        impactAreas: [],
+        experts_is_diverse: false,
+        is_not_diverse_justification: '',
         regions: [],
         countries: [],
-        result_ip_innovation_packaging_experts: [],
+        link_workshop_list: '',
+        result_ip_result_core: {} as any,
+        result_ip_expert_workshop_organized: [],
       };
       const user: TokenDto = {
         id: 1,

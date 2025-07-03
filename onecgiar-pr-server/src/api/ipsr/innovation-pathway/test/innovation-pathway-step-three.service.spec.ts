@@ -285,7 +285,7 @@ describe('InnovationPathwayStepThreeService', () => {
 
       jest.spyOn(resultRepository, 'findOne').mockResolvedValue(mockResult);
       jest.spyOn(mockVersioningService, '$_findActivePhase').mockResolvedValue(mockVersion);
-      jest.spyOn(service, 'saveInnovationUse').mockResolvedValue(undefined);
+      jest.spyOn(service as any, 'saveInnovationUse').mockResolvedValue(undefined);
 
       const result = await service.saveComplementaryinnovation(resultId, user, saveDto);
 
@@ -427,15 +427,31 @@ describe('InnovationPathwayStepThreeService', () => {
       };
       const updateDto: UpdateInnovationPathwayDto = {
         result_id: resultId,
+        geo_scope_id: 1,
+        result_by_innovation_package_id: resultId,
+        title: 'Test Title',
+        experts: [],
+        result_ip: {} as any,
+        innovatonUse: {} as any,
+        institutions: [],
+        sdgTargets: [],
+        eoiOutcomes: [],
+        actionAreaOutcomes: [],
+        impactAreas: [],
+        experts_is_diverse: false,
+        is_not_diverse_justification: '',
+        regions: [],
+        countries: [],
         result_ip_expert_workshop_organized: [
           {
             how_many_participants: 10,
             how_many_women: 5,
             how_many_men: 5,
             workshop_name: 'Test Workshop',
-          },
+          } as any,
         ],
         link_workshop_list: 'http://example.com/workshop',
+        result_ip_result_core: {} as any,
       };
 
       const mockResult = {
@@ -479,8 +495,24 @@ describe('InnovationPathwayStepThreeService', () => {
       };
       const updateDto: UpdateInnovationPathwayDto = {
         result_id: resultId,
+        geo_scope_id: 1,
+        result_by_innovation_package_id: resultId,
+        title: 'Test Title',
+        experts: [],
+        result_ip: {} as any,
+        innovatonUse: {} as any,
+        institutions: [],
+        sdgTargets: [],
+        eoiOutcomes: [],
+        actionAreaOutcomes: [],
+        impactAreas: [],
+        experts_is_diverse: false,
+        is_not_diverse_justification: '',
+        regions: [],
+        countries: [],
         result_ip_expert_workshop_organized: [],
         link_workshop_list: '',
+        result_ip_result_core: {} as any,
       };
 
       jest.spyOn(resultRepository, 'findOne').mockResolvedValue(null);
