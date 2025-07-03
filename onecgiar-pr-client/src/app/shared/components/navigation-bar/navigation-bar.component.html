@@ -1,4 +1,4 @@
-<div class="navigation_bar">
+<div class="navigation_bar" [ngClass]="{ sticky: isSticky }">
   @for (navOption of navigationOptions; track navOption.prName) {
     <a
       [hidden]="navOption.prHide || validateAdminModuleAndRole(navOption)"
