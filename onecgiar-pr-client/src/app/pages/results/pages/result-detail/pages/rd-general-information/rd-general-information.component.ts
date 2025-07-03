@@ -27,6 +27,8 @@ export class RdGeneralInformationComponent implements OnInit {
   selectedUser: User | null = null;
   showResults: boolean = false;
   isSearching: boolean = false;
+  hasValidContact: boolean = true;
+  showContactError: boolean = false;
   private searchSubject = new Subject<string>();
 
   constructor(
@@ -61,12 +63,20 @@ export class RdGeneralInformationComponent implements OnInit {
           this.searchResults = response.response || [];
           this.showResults = true;
           this.isSearching = false;
+
+          if (this.searchResults.length === 0 && this.searchQuery.trim()) {
+            this.hasValidContact = false;
+          }
         },
         error: error => {
           console.error('Error searching users:', error);
           this.searchResults = [];
           this.showResults = false;
           this.isSearching = false;
+
+          if (this.searchQuery.trim()) {
+            this.hasValidContact = false;
+          }
         }
       });
   }
@@ -124,6 +134,12 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
+    if (this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+      return;
+    }
+
     this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
@@ -131,7 +147,6 @@ export class RdGeneralInformationComponent implements OnInit {
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
       next: resp => {
         this.currentResultSE.GET_resultById();
-
         this.getSectionInformation();
       },
       error: err => {
@@ -359,13 +374,19 @@ export class RdGeneralInformationComponent implements OnInit {
 
     this.searchQuery = query;
     this.selectedUser = null;
+    this.showContactError = false;
 
     if (query.trim()) {
+      this.hasValidContact = false;
       this.searchSubject.next(query);
     } else {
+      this.generalInfoBody.lead_contact_person = null;
+      this.generalInfoBody.lead_contact_person_data = null;
       this.searchResults = [];
       this.showResults = false;
       this.isSearching = false;
+      this.hasValidContact = true;
+      this.showContactError = false;
     }
   }
 
@@ -374,9 +395,17 @@ export class RdGeneralInformationComponent implements OnInit {
     this.searchQuery = user.displayName;
     this.searchResults = [];
     this.showResults = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
 
     this.generalInfoBody.lead_contact_person = user.displayName;
-
     this.generalInfoBody.lead_contact_person_data = user;
+  }
+
+  onContactBlur(): void {
+    if (this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+    }
   }
 }

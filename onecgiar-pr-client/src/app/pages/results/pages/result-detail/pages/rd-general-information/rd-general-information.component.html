@@ -37,16 +37,25 @@
     [readOnly]="this.dataControlSE.isKnowledgeProduct" [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
-  <app-pr-input 
-    placeholder="Search for a person (min 4 characters)" 
-    label="Lead contact person" 
-    type="text" 
-    [description]="leadContactPersonTextInfo()"
-    [required]="false"
-    [(ngModel)]="searchQuery"
-    (input)="onSearchInput($event)"
-    autocomplete="off">
-  </app-pr-input>
+  <div class="lead-contact-container">
+    <app-pr-input 
+      placeholder="Search for a person (min 4 characters)" 
+      label="Lead contact person" 
+      type="text" 
+      [description]="leadContactPersonTextInfo()"
+      [required]="false"
+      [(ngModel)]="searchQuery"
+      (input)="onSearchInput($event)"
+      (blur)="onContactBlur()"
+      [class.invalid-contact]="!hasValidContact"
+      autocomplete="off">
+    </app-pr-input>
+
+    <div class="contact-error-message" *ngIf="showContactError">
+      <i class="warning-icon">⚠️</i>
+      The contact person entered was not found in the directory. Please select from the search results or leave empty.
+    </div>
+  </div>
 
   <div class="search-results-container" *ngIf="(searchResults.length > 0 && showResults) || isSearching">
     <div class="search-results" *ngIf="searchResults.length > 0 && showResults">
@@ -61,6 +70,10 @@
     
     <div class="search-loading" *ngIf="isSearching">
       Searching...
+    </div>
+
+    <div class="no-results" *ngIf="searchResults.length === 0 && !isSearching && showResults">
+      No users found matching "{{ searchQuery }}". Please try a different search term.
     </div>
   </div>
 
