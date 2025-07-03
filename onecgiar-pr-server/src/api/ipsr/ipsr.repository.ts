@@ -412,6 +412,7 @@ export class IpsrRepository
             IF((r.is_krs = 1), true, false ) AS is_krs,
             r.krs_url,
             r.lead_contact_person,
+            r.lead_contact_person_id,
             r.reported_year_id,
             r.is_replicated,
             r.is_discontinued
@@ -479,6 +480,27 @@ export class IpsrRepository
       ]);
       const sub_national: ResultCountriesSubNational[] =
         await this.dataSource.query(subNationalQuery, [resultId]);
+
+      if (resultInnovation[0]?.lead_contact_person_id) {
+        const leadContactQuery = `
+        SELECT id, mail, displayName, givenName, surname
+        FROM ad_users
+        WHERE id = ? AND is_active = 1
+      `;
+
+        try {
+          const leadContactData = await this.dataSource.query(
+            leadContactQuery,
+            [resultInnovation[0].lead_contact_person_id],
+          );
+
+          if (leadContactData.length > 0) {
+            resultInnovation[0].lead_contact_person_data = leadContactData[0];
+          }
+        } catch (error) {
+          console.warn('Failed to get lead contact person data:', error);
+        }
+      }
 
       resultInnovation.map((ri) => {
         ri['hasRegions'] = regions.filter((r) => {
