@@ -5,7 +5,7 @@ describe('Results List E2E Tests', () => {
     // Login first and then navigate to results list
     cy.visit('/');
     cy.login(); // Uses environment variables automatically
-    cy.url().should('include', '/results/results-list');
+    cy.url().should('include', '/result/results-outlet/results-list');
   });
 
   it('should display the results table with correct structure', () => {
@@ -36,7 +36,7 @@ describe('Results List E2E Tests', () => {
     cy.get('#resultListTable tbody').should('exist');
 
     // Either there should be data rows or an empty message
-    cy.get('#resultListTable tbody tr').then(($rows) => {
+    cy.get('#resultListTable tbody tr').then($rows => {
       if ($rows.length > 0) {
         // If there are rows, verify they contain data
         cy.get('#resultListTable tbody tr').should('have.length.at.least', 1);
@@ -67,7 +67,7 @@ describe('Results List E2E Tests', () => {
     cy.get('#resultListTable', { timeout: 10000 }).should('be.visible');
 
     // Check if pagination is visible (only if there are results)
-    cy.get('#resultListTable tbody tr').then(($rows) => {
+    cy.get('#resultListTable tbody tr').then($rows => {
       if ($rows.length > 0) {
         // If there are results, there might be pagination
         cy.get('.p-paginator').should('exist');

@@ -5,12 +5,12 @@ describe('Login E2E Tests - Simplified', () => {
     cy.visit('/');
   });
 
-      it('should successfully login with valid credentials using custom command and navigate to results list', () => {
+  it('should successfully login with valid credentials using custom command and navigate to results list', () => {
     // Use the custom login command (will use environment variables automatically)
     cy.login();
 
     // Verify successful login and navigation to results list
-    cy.url().should('include', '/results/results-list');
+    cy.url().should('include', '/result/results-outlet/results-list');
 
     // Verify that the results list page is loaded
     cy.get('#resultListTable', { timeout: 10000 }).should('be.visible');
