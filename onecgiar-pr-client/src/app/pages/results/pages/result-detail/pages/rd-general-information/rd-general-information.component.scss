@@ -123,3 +123,131 @@
     font-size: 14px;
   }
 }
+
+.contact-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.clear-contact-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  z-index: 10;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
+
+  .clear-icon {
+    font-size: 14px;
+    color: #666;
+    font-weight: bold;
+  }
+}
+
+.contact-locked {
+  background-color: #f8f9fa !important;
+  cursor: not-allowed;
+
+  input {
+    cursor: not-allowed;
+  }
+}
+
+.selected-contact-info {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #e8f4fd;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+
+  .selected-contact-details {
+    .selected-user-name {
+      font-weight: 600;
+      color: #0c5460;
+      margin-bottom: 4px;
+    }
+
+    .selected-user-info {
+      font-size: 0.9em;
+      color: #0c5460;
+    }
+  }
+}
+
+.search-results-container {
+  position: relative;
+  z-index: 1000;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1001;
+}
+
+.search-result-item {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: #f8f9fa;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .user-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .user-details {
+    font-size: 0.9em;
+    color: #666;
+  }
+}
+
+.search-loading,
+.no-results {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.contact-error-message {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 0.9em;
+
+  .warning-icon {
+    margin-right: 8px;
+  }
+}
