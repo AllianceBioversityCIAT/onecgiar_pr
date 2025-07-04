@@ -24,7 +24,7 @@ jobs:
           mkdir -p onecgiar-pr-client/src/environments
 
           SECRET=$(aws secretsmanager get-secret-value \
-            --secret-id dev/app/frontend/alliance/reportingtool \
+            --secret-id dev/app/frontend/prms/reportingtool \
             --query SecretString \
             --output text)
 
