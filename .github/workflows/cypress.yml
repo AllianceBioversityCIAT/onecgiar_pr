@@ -23,21 +23,17 @@ jobs:
         run: |
           mkdir -p onecgiar-pr-client/src/environments
 
-          # Obtener el secreto
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id dev/app/frontend/alliance/reportingtool \
             --query SecretString \
             --output text)
 
-          # DEBUG: Mostrar el secreto en logs (solo para pruebas)
           echo "===== Secret descargado de AWS Secrets Manager ====="
           echo "$SECRET"
           echo "===================================================="
 
-          # Guardar como archivo TypeScript válido
-          echo "export const environment = $SECRET;" > onecgiar-pr-client/src/environments/environment.ts
+          echo "$SECRET" > onecgiar-pr-client/src/environments/environment.ts
 
-          # Duplicar para producción
           cp onecgiar-pr-client/src/environments/environment.ts \
             onecgiar-pr-client/src/environments/environment.prod.ts
 
