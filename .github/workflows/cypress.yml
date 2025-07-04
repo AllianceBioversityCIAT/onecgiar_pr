@@ -26,6 +26,8 @@ jobs:
             --secret-id dev/app/frontend/alliance/reportingtool \
             --query SecretString \
             --output text > onecgiar-pr-client/src/environments/environment.ts
+          cp onecgiar-pr-client/src/environments/environment.ts \
+            onecgiar-pr-client/src/environments/environment.prod.ts
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
