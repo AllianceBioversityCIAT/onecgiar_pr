@@ -9,18 +9,25 @@
 // ***********************************************
 
 // Custom command for login
-Cypress.Commands.add('login', (email: string, password: string) => {
+Cypress.Commands.add('login', (email?: string, password?: string) => {
+  // Use provided credentials or default to environment variables
+  const testEmail = email || Cypress.env('testEmail');
+  const testPassword = password || Cypress.env('testPassword');
+
   cy.contains('Continue as an external user').click();
-  cy.get('#email').type(email);
-  cy.get('p-password input').type(password);
-  cy.get('.signin-btn').click();
+  cy.get('#email').should('be.visible').type(testEmail);
+  cy.get('p-password input').should('be.visible').type(testPassword);
+  cy.get('.signin-btn').should('be.visible').should('not.be.disabled').click();
+
+  // Wait for login to complete and navigation to results list
+  cy.url({ timeout: 15000 }).should('include', '/results/results-list');
 });
 
 // Type definitions for custom commands
 declare global {
   namespace Cypress {
     interface Chainable {
-      login(email: string, password: string): Chainable<void>
+      login(email?: string, password?: string): Chainable<void>
     }
   }
 }

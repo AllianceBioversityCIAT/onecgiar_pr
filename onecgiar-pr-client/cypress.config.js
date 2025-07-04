@@ -26,6 +26,8 @@ module.exports = defineConfig({
   responseTimeout: 10000,
   pageLoadTimeout: 30000,
   env: {
-    // Add your environment variables here
+    // Test credentials - these should be overridden by environment variables
+    testEmail: process.env.CYPRESS_TEST_EMAIL || 'yecksin.multimedia@gmail.com',
+    testPassword: process.env.CYPRESS_TEST_PASSWORD || 'Cypress@2'
   }
 });

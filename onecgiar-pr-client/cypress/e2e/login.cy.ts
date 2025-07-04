@@ -21,19 +21,19 @@ describe('Login E2E Tests', () => {
     cy.contains('Log in').should('be.visible');
   });
 
-  it('should successfully login with valid credentials', () => {
+      it('should successfully login with valid credentials and navigate to results list', () => {
     // Show the external user login form
     cy.contains('Continue as an external user').click();
 
-    // Fill in the email field
+    // Fill in the email field using environment variable
     cy.get('#email')
       .should('be.visible')
-      .type('yecksin.multimedia@gmail.com');
+      .type(Cypress.env('testEmail'));
 
-    // Fill in the password field (PrimeNG p-password component)
+    // Fill in the password field (PrimeNG p-password component) using environment variable
     cy.get('p-password input')
       .should('be.visible')
-      .type('Cypress@2');
+      .type(Cypress.env('testPassword'));
 
     // Click the login button
     cy.get('.signin-btn')
@@ -41,9 +41,33 @@ describe('Login E2E Tests', () => {
       .should('not.be.disabled')
       .click();
 
-    // Wait for navigation or login success
-    // Note: You might need to adjust this assertion based on your app's behavior after login
-    cy.url().should('not.include', '/login');
+    // Wait for navigation to results list page
+    cy.url().should('include', '/results/results-list');
+
+    // Verify that the results list page is loaded
+    cy.get('#resultListTable', { timeout: 10000 }).should('be.visible');
+
+    // Verify that the table has headers
+    cy.get('#resultListTable th').should('have.length.at.least', 5);
+    cy.contains('th', 'Result code').should('be.visible');
+    cy.contains('th', 'Title').should('be.visible');
+    cy.contains('th', 'Phase').should('be.visible');
+    cy.contains('th', 'Indicator category').should('be.visible');
+    cy.contains('th', 'Status').should('be.visible');
+
+    // Wait for data to load and verify the table has content
+    cy.get('#resultListTable tbody tr', { timeout: 15000 }).should('have.length.at.least', 1);
+
+    // Verify that the table shows data or loading state
+    cy.get('#resultListTable').within(() => {
+      // Either there should be data rows or a loading/empty message
+      cy.get('tbody').should('exist');
+      cy.get('tbody tr').should('have.length.at.least', 1);
+    });
+
+    // Verify other elements on the results page are visible
+    cy.contains('Download').should('be.visible');
+    cy.contains('Update result').should('be.visible');
   });
 
   it('should show validation when fields are empty', () => {
@@ -54,20 +78,26 @@ describe('Login E2E Tests', () => {
     cy.get('.signin-btn').should('be.disabled');
   });
 
-  it('should handle keyboard navigation (Enter key)', () => {
+      it('should handle keyboard navigation (Enter key) and navigate to results list', () => {
     // Show the external user login form
     cy.contains('Continue as an external user').click();
 
-    // Fill in the email field
+    // Fill in the email field using environment variable
     cy.get('#email')
-      .type('yecksin.multimedia@gmail.com');
+      .type(Cypress.env('testEmail'));
 
-    // Fill in the password field and press Enter
+    // Fill in the password field and press Enter using environment variable
     cy.get('p-password input')
-      .type('Cypress@2{enter}');
+      .type(Cypress.env('testPassword') + '{enter}');
 
-    // Should trigger login (same as clicking the button)
-    cy.url().should('not.include', '/login');
+    // Should trigger login and navigate to results list
+    cy.url().should('include', '/results/results-list');
+
+    // Verify that the results list page is loaded
+    cy.get('#resultListTable', { timeout: 10000 }).should('be.visible');
+
+    // Verify that the table has data or shows appropriate message
+    cy.get('#resultListTable tbody tr', { timeout: 15000 }).should('have.length.at.least', 1);
   });
 
   it('should display loading state during login', () => {
