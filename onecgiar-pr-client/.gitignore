@@ -48,3 +48,6 @@ Thumbs.db
 .angular
 
 /todo-list
+
+cypress/videos/*
+cypress/screenshots/*
