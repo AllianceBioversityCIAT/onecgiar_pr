@@ -28,10 +28,6 @@ jobs:
             --query SecretString \
             --output text)
 
-          echo "===== Secret descargado de AWS Secrets Manager ====="
-          echo "$SECRET"
-          echo "===================================================="
-
           echo "$SECRET" > onecgiar-pr-client/src/environments/environment.ts
 
           cp onecgiar-pr-client/src/environments/environment.ts \
