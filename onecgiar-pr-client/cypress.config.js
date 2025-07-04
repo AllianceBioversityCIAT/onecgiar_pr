@@ -1,4 +1,5 @@
 const { defineConfig } = require('cypress')
+const { registerArgosTask } = require('@argos-ci/cypress/task')
 
 module.exports = defineConfig({
   projectId: 'snnzit',
@@ -6,7 +7,14 @@ module.exports = defineConfig({
     baseUrl: 'http://localhost:4200',
     specPattern: 'cypress/e2e/**/*.{js,jsx,ts,tsx}',
     supportFile: 'cypress/support/e2e.ts',
-    setupNodeEvents(on, config) {
+    async setupNodeEvents(on, config) {
+      registerArgosTask(on, config, {
+        // Enable upload to Argos only when it runs on CI.
+        uploadToArgos: !!process.env.CI,
+        // Set your Argos token
+        token: 'argos_433e2da941cb4c279d0887acadeedfb25c',
+      })
+
       // implement node event listeners here
     },
   },

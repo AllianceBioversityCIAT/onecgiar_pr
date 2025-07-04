@@ -15,7 +15,9 @@
     "tunnel": "ng serve -c production --port 19971",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
+    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY",
+    "argos:upload": "ARGOS_TOKEN=argos_433e2da941cb4c279d0887acadeedfb25c npx argos upload ./cypress/screenshots",
+    "cypress:run:argos": "cypress run && npm run argos:upload"
   },
   "private": true,
   "dependencies": {
@@ -55,6 +57,8 @@
     "@angular-eslint/template-parser": "^18.4.3",
     "@angular/cli": "^18.2.20",
     "@angular/compiler-cli": "^18.2.13",
+    "@argos-ci/cli": "^2.5.7",
+    "@argos-ci/cypress": "^4.0.4",
     "@types/cypress": "^0.1.6",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.32",
