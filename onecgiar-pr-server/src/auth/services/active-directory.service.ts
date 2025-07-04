@@ -65,8 +65,30 @@ export class ActiveDirectoryService {
 
       this.logger.debug(`Searching AD users: ${query}`);
 
+      const words = query.trim().split(/\s+/);
+
+      const fields = [
+        'givenName',
+        'displayName',
+        'mail',
+        'sAMAccountName',
+        'sn',
+      ];
+
+      const filter =
+        '(&' +
+        words
+          .map(
+            (word) =>
+              '(|' +
+              fields.map((field) => `(${field}=*${word}*)`).join('') +
+              ')',
+          )
+          .join('') +
+        ')';
+
       const searchOptions = {
-        filter: `(|(givenName=*${query}*)(displayName=*${query}*)(mail=*${query}*)(sAMAccountName=*${query}*)(sn=*${query}*))`,
+        filter: filter,
         scope: 'sub' as const,
         attributes: [
           'cn',
