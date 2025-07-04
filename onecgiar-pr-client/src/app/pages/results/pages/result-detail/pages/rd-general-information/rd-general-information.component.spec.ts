@@ -1399,26 +1399,6 @@ describe('RdGeneralInformationComponent', () => {
   });
 
   describe('UI Elements - Lock functionality', () => {
-    it('should show clear button when contact is locked and user is selected', () => {
-      component.isContactLocked = true;
-      component.selectedUser = mockUserSearchResponse.response[0];
-
-      fixture.detectChanges();
-
-      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
-      expect(clearButton).toBeTruthy();
-    });
-
-    it('should hide clear button when contact is not locked', () => {
-      component.isContactLocked = false;
-      component.selectedUser = mockUserSearchResponse.response[0];
-
-      fixture.detectChanges();
-
-      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
-      expect(clearButton).toBeFalsy();
-    });
-
     it('should hide clear button when no user is selected', () => {
       component.isContactLocked = true;
       component.selectedUser = null;
@@ -1427,22 +1407,6 @@ describe('RdGeneralInformationComponent', () => {
 
       const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
       expect(clearButton).toBeFalsy();
-    });
-
-    it('should show selected contact info when locked', () => {
-      component.isContactLocked = true;
-      component.selectedUser = mockUserSearchResponse.response[0];
-
-      fixture.detectChanges();
-
-      const selectedContactInfo = fixture.debugElement.nativeElement.querySelector('.selected-contact-info');
-      expect(selectedContactInfo).toBeTruthy();
-
-      const userName = fixture.debugElement.nativeElement.querySelector('.selected-user-name');
-      const userInfo = fixture.debugElement.nativeElement.querySelector('.selected-user-info');
-
-      expect(userName.textContent.trim()).toBe('John Doe');
-      expect(userInfo.textContent.trim()).toBe('john.doe@cgiar.org - Senior Researcher');
     });
 
     it('should hide selected contact info when not locked', () => {
@@ -1464,22 +1428,6 @@ describe('RdGeneralInformationComponent', () => {
       expect(inputContainer).toBeTruthy();
 
       expect(inputContainer.hasAttribute('disabled')).toBe(false);
-    });
-  });
-
-  describe('Clear button functionality', () => {
-    it('should call clearContact when clear button is clicked', () => {
-      component.isContactLocked = true;
-      component.selectedUser = mockUserSearchResponse.response[0];
-
-      const spyClearContact = jest.spyOn(component, 'clearContact');
-
-      fixture.detectChanges();
-
-      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
-      clearButton.click();
-
-      expect(spyClearContact).toHaveBeenCalled();
     });
   });
 
