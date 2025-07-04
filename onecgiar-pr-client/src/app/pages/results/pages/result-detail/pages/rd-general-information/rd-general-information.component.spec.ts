@@ -274,6 +274,7 @@ describe('RdGeneralInformationComponent', () => {
     component.selectedUser = null;
     component.hasValidContact = true;
     component.showContactError = false;
+    component.isContactLocked = false;
   });
 
   describe('ngOnInit', () => {
@@ -1242,6 +1243,274 @@ describe('RdGeneralInformationComponent', () => {
 
       expect(component.searchResults.length).toBe(1);
       expect(component.searchResults[0].displayName).toBe('John Doe');
+    });
+  });
+
+  describe('Contact Lock/Unlock Functionality', () => {
+    describe('selectUser', () => {
+      it('should lock the contact field when user is selected', () => {
+        const mockUser = mockUserSearchResponse.response[0];
+        component.isContactLocked = false;
+
+        component.selectUser(mockUser);
+
+        expect(component.selectedUser).toBe(mockUser);
+        expect(component.searchQuery).toBe(mockUser.displayName);
+        expect(component.isContactLocked).toBe(true);
+        expect(component.hasValidContact).toBe(true);
+        expect(component.showContactError).toBe(false);
+        expect(component.generalInfoBody.lead_contact_person).toBe(mockUser.displayName);
+        expect(component.generalInfoBody.lead_contact_person_data).toBe(mockUser);
+      });
+
+      it('should hide search results when user is selected', () => {
+        const mockUser = mockUserSearchResponse.response[0];
+        component.searchResults = [mockUser];
+        component.showResults = true;
+
+        component.selectUser(mockUser);
+
+        expect(component.searchResults).toEqual([]);
+        expect(component.showResults).toBe(false);
+      });
+    });
+
+    describe('clearContact', () => {
+      it('should unlock the contact field and clear all data', () => {
+        component.selectedUser = mockUserSearchResponse.response[0];
+        component.searchQuery = 'John Doe';
+        component.isContactLocked = true;
+        component.generalInfoBody.lead_contact_person = 'John Doe';
+        component.generalInfoBody.lead_contact_person_data = mockUserSearchResponse.response[0];
+
+        component.clearContact();
+
+        expect(component.selectedUser).toBeNull();
+        expect(component.searchQuery).toBe('');
+        expect(component.isContactLocked).toBe(false);
+        expect(component.hasValidContact).toBe(true);
+        expect(component.showContactError).toBe(false);
+        expect(component.searchResults).toEqual([]);
+        expect(component.showResults).toBe(false);
+        expect(component.isSearching).toBe(false);
+        expect(component.generalInfoBody.lead_contact_person).toBeNull();
+        expect(component.generalInfoBody.lead_contact_person_data).toBeNull();
+      });
+    });
+
+    describe('onSearchInput - with lock functionality', () => {
+      it('should prevent search when contact is locked', () => {
+        component.isContactLocked = true;
+        const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
+
+        const mockEvent = { target: { value: 'john' } };
+        component.onSearchInput(mockEvent);
+
+        expect(spySearchSubject).not.toHaveBeenCalled();
+        expect(component.searchQuery).toBe('');
+      });
+
+      it('should allow search when contact is not locked', () => {
+        component.isContactLocked = false;
+        const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
+
+        const mockEvent = { target: { value: 'john' } };
+        component.onSearchInput(mockEvent);
+
+        expect(component.searchQuery).toBe('john');
+        expect(spySearchSubject).toHaveBeenCalledWith('john');
+      });
+    });
+
+    describe('onContactBlur - with lock functionality', () => {
+      it('should not validate when contact is locked', () => {
+        component.isContactLocked = true;
+        component.searchQuery = 'john doe';
+        component.selectedUser = null;
+
+        component.onContactBlur();
+
+        expect(component.hasValidContact).toBe(true);
+        expect(component.showContactError).toBe(false);
+      });
+
+      it('should validate when contact is not locked', () => {
+        component.isContactLocked = false;
+        component.searchQuery = 'john doe';
+        component.selectedUser = null;
+
+        component.onContactBlur();
+
+        expect(component.hasValidContact).toBe(false);
+        expect(component.showContactError).toBe(true);
+      });
+    });
+  });
+
+  describe('getSectionInformation - with lock functionality', () => {
+    it('should lock contact when lead_contact_person_data is available', () => {
+      const mockResponseWithContactData = {
+        ...mockGET_generalInformationByResultIdResponse,
+        lead_contact_person: 'John Doe',
+        lead_contact_person_data: mockUserSearchResponse.response[0]
+      };
+
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(of({ response: mockResponseWithContactData }));
+
+      component.getSectionInformation();
+
+      expect(component.selectedUser).toBe(mockUserSearchResponse.response[0]);
+      expect(component.searchQuery).toBe('John Doe');
+      expect(component.isContactLocked).toBe(true);
+      expect(component.hasValidContact).toBe(true);
+    });
+
+    it('should not lock contact when only lead_contact_person is available', () => {
+      const mockResponseWithContact = {
+        ...mockGET_generalInformationByResultIdResponse,
+        lead_contact_person: 'Jane Smith',
+        lead_contact_person_data: null
+      };
+
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(of({ response: mockResponseWithContact }));
+
+      component.getSectionInformation();
+
+      expect(component.selectedUser).toBeNull();
+      expect(component.searchQuery).toBe('Jane Smith');
+      expect(component.isContactLocked).toBe(false);
+    });
+
+    it('should initialize unlocked when no contact data available', () => {
+      const mockResponseNoContact = {
+        ...mockGET_generalInformationByResultIdResponse,
+        lead_contact_person: null,
+        lead_contact_person_data: null
+      };
+
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(of({ response: mockResponseNoContact }));
+
+      component.getSectionInformation();
+
+      expect(component.selectedUser).toBeNull();
+      expect(component.searchQuery).toBe('');
+      expect(component.isContactLocked).toBe(false);
+    });
+  });
+
+  describe('UI Elements - Lock functionality', () => {
+    it('should show clear button when contact is locked and user is selected', () => {
+      component.isContactLocked = true;
+      component.selectedUser = mockUserSearchResponse.response[0];
+
+      fixture.detectChanges();
+
+      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
+      expect(clearButton).toBeTruthy();
+    });
+
+    it('should hide clear button when contact is not locked', () => {
+      component.isContactLocked = false;
+      component.selectedUser = mockUserSearchResponse.response[0];
+
+      fixture.detectChanges();
+
+      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
+      expect(clearButton).toBeFalsy();
+    });
+
+    it('should hide clear button when no user is selected', () => {
+      component.isContactLocked = true;
+      component.selectedUser = null;
+
+      fixture.detectChanges();
+
+      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
+      expect(clearButton).toBeFalsy();
+    });
+
+    it('should show selected contact info when locked', () => {
+      component.isContactLocked = true;
+      component.selectedUser = mockUserSearchResponse.response[0];
+
+      fixture.detectChanges();
+
+      const selectedContactInfo = fixture.debugElement.nativeElement.querySelector('.selected-contact-info');
+      expect(selectedContactInfo).toBeTruthy();
+
+      const userName = fixture.debugElement.nativeElement.querySelector('.selected-user-name');
+      const userInfo = fixture.debugElement.nativeElement.querySelector('.selected-user-info');
+
+      expect(userName.textContent.trim()).toBe('John Doe');
+      expect(userInfo.textContent.trim()).toBe('john.doe@cgiar.org - Senior Researcher');
+    });
+
+    it('should hide selected contact info when not locked', () => {
+      component.isContactLocked = false;
+      component.selectedUser = mockUserSearchResponse.response[0];
+
+      fixture.detectChanges();
+
+      const selectedContactInfo = fixture.debugElement.nativeElement.querySelector('.selected-contact-info');
+      expect(selectedContactInfo).toBeFalsy();
+    });
+
+    it('should apply locked CSS class when contact is locked', () => {
+      component.isContactLocked = true;
+
+      fixture.detectChanges();
+
+      const inputContainer = fixture.debugElement.nativeElement.querySelector('app-pr-input');
+      expect(inputContainer).toBeTruthy();
+
+      expect(inputContainer.hasAttribute('disabled')).toBe(false);
+    });
+  });
+
+  describe('Clear button functionality', () => {
+    it('should call clearContact when clear button is clicked', () => {
+      component.isContactLocked = true;
+      component.selectedUser = mockUserSearchResponse.response[0];
+
+      const spyClearContact = jest.spyOn(component, 'clearContact');
+
+      fixture.detectChanges();
+
+      const clearButton = fixture.debugElement.nativeElement.querySelector('.clear-contact-btn');
+      clearButton.click();
+
+      expect(spyClearContact).toHaveBeenCalled();
+    });
+  });
+
+  describe('Component initialization - with lock properties', () => {
+    it('should initialize lock properties correctly', () => {
+      expect(component.isContactLocked).toBe(false);
+      expect(component.hasValidContact).toBe(true);
+      expect(component.showContactError).toBe(false);
+      expect(component.searchQuery).toBe('');
+      expect(component.selectedUser).toBeNull();
+      expect(component.searchResults).toEqual([]);
+      expect(component.showResults).toBe(false);
+      expect(component.isSearching).toBe(false);
+    });
+  });
+
+  describe('selectUser - updated', () => {
+    it('should select user and update generalInfoBody with complete metadata and lock', () => {
+      const mockUser = mockUserSearchResponse.response[0];
+
+      component.selectUser(mockUser);
+
+      expect(component.selectedUser).toBe(mockUser);
+      expect(component.searchQuery).toBe(mockUser.displayName);
+      expect(component.searchResults).toEqual([]);
+      expect(component.showResults).toBe(false);
+      expect(component.hasValidContact).toBe(true);
+      expect(component.showContactError).toBe(false);
+      expect(component.isContactLocked).toBe(true);
+      expect(component.generalInfoBody.lead_contact_person).toBe(mockUser.displayName);
+      expect(component.generalInfoBody.lead_contact_person_data).toBe(mockUser);
     });
   });
 });

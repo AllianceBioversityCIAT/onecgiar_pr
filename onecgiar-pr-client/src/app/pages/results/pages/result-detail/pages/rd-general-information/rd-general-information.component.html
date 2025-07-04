@@ -38,26 +38,46 @@
     [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
 
   <div class="lead-contact-container">
-    <app-pr-input 
-      placeholder="Search for a person (min 4 characters)" 
-      label="Lead contact person" 
-      type="text" 
-      [description]="leadContactPersonTextInfo()"
-      [required]="false"
-      [(ngModel)]="searchQuery"
-      (input)="onSearchInput($event)"
-      (blur)="onContactBlur()"
-      [class.invalid-contact]="!hasValidContact"
-      autocomplete="off">
-    </app-pr-input>
-
+    <div class="contact-select-wrapper">
+      <app-pr-input 
+        placeholder="Search for a person (min 4 characters)" 
+        label="Lead contact person" 
+        type="text" 
+        [description]="leadContactPersonTextInfo()"
+        [disabled]="isContactLocked"
+        [required]="false"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput($event)"
+        (blur)="onContactBlur()"
+        [class.invalid-contact]="!hasValidContact"
+        [class.contact-locked]="isContactLocked"
+        autocomplete="off">
+      </app-pr-input>
+  
+      <button 
+        *ngIf="isContactLocked && selectedUser" 
+        class="clear-contact-btn"
+        type="button"
+        (click)="clearContact()"
+        title="Clear selection">
+        <i class="clear-icon">✕</i>
+      </button>
+    </div>
+  
     <div class="contact-error-message" *ngIf="showContactError">
       <i class="warning-icon">⚠️</i>
       The contact person entered was not found in the directory. Please select from the search results or leave empty.
     </div>
+  
+    <div class="selected-contact-info" *ngIf="isContactLocked && selectedUser">
+      <div class="selected-contact-details">
+        <div class="selected-user-name">{{ selectedUser.displayName }}</div>
+        <div class="selected-user-info">{{ selectedUser.mail }} - {{ selectedUser.title }}</div>
+      </div>
+    </div>
   </div>
-
-  <div class="search-results-container" *ngIf="(searchResults.length > 0 && showResults) || isSearching">
+  
+  <div class="search-results-container" *ngIf="!isContactLocked && ((searchResults.length > 0 && showResults) || isSearching)">
     <div class="search-results" *ngIf="searchResults.length > 0 && showResults">
       <div 
         class="search-result-item" 
@@ -71,7 +91,7 @@
     <div class="search-loading" *ngIf="isSearching">
       Searching...
     </div>
-
+  
     <div class="no-results" *ngIf="searchResults.length === 0 && !isSearching && showResults">
       No users found matching "{{ searchQuery }}". Please try a different search term.
     </div>

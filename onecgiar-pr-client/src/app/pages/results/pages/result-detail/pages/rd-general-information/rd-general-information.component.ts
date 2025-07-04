@@ -29,6 +29,7 @@ export class RdGeneralInformationComponent implements OnInit {
   isSearching: boolean = false;
   hasValidContact: boolean = true;
   showContactError: boolean = false;
+  isContactLocked: boolean = false;
   private searchSubject = new Subject<string>();
 
   private filterValidUsers(users: User[]): User[] {
@@ -113,8 +114,11 @@ export class RdGeneralInformationComponent implements OnInit {
       if (this.generalInfoBody.lead_contact_person_data) {
         this.selectedUser = this.generalInfoBody.lead_contact_person_data;
         this.searchQuery = this.generalInfoBody.lead_contact_person_data.displayName;
+        this.isContactLocked = true;
+        this.hasValidContact = true;
       } else if (this.generalInfoBody.lead_contact_person) {
         this.searchQuery = this.generalInfoBody.lead_contact_person;
+        this.isContactLocked = false;
       }
 
       this.GET_investmentDiscontinuedOptions(response.result_type_id);
@@ -374,6 +378,10 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSearchInput(event: any): void {
+    if (this.isContactLocked) {
+      return;
+    }
+
     let query = '';
 
     if (typeof event === 'string') {
@@ -411,13 +419,28 @@ export class RdGeneralInformationComponent implements OnInit {
     this.showResults = false;
     this.hasValidContact = true;
     this.showContactError = false;
+    this.isContactLocked = true;
 
     this.generalInfoBody.lead_contact_person = user.displayName;
     this.generalInfoBody.lead_contact_person_data = user;
   }
 
+  clearContact(): void {
+    this.selectedUser = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
+    this.isContactLocked = false;
+
+    this.generalInfoBody.lead_contact_person = null;
+    this.generalInfoBody.lead_contact_person_data = null;
+  }
+
   onContactBlur(): void {
-    if (this.searchQuery.trim() && !this.selectedUser) {
+    if (!this.isContactLocked && this.searchQuery.trim() && !this.selectedUser) {
       this.hasValidContact = false;
       this.showContactError = true;
     }
