@@ -8,19 +8,22 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
+// Custom command for login
+Cypress.Commands.add('login', (email: string, password: string) => {
+  cy.contains('Continue as an external user').click();
+  cy.get('#email').type(email);
+  cy.get('p-password input').type(password);
+  cy.get('.signin-btn').click();
+});
 
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
+// Type definitions for custom commands
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      login(email: string, password: string): Chainable<void>
+    }
+  }
+}
 
 // -- This is a child command --
 // Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
