@@ -1,10 +1,11 @@
-name: Cypress Tests.
+name: Cypress Tests
 
 on: [push]
 
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
@@ -20,11 +21,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_SECRET }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          mkdir -p src/environments
+          mkdir -p onecgiar-pr-client/src/environments
           aws secretsmanager get-secret-value \
-            --secret-id dev/app/frontend/prms/reportingtool \
+            --secret-id dev/app/frontend/alliance/reportingtool \
             --query SecretString \
-            --output text > src/environments/environment.ts
+            --output text > onecgiar-pr-client/src/environments/environment.ts
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
