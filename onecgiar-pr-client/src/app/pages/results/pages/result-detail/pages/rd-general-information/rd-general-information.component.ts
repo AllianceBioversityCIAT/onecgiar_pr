@@ -117,7 +117,16 @@ export class RdGeneralInformationComponent implements OnInit {
         this.isContactLocked = true;
         this.hasValidContact = true;
       } else if (this.generalInfoBody.lead_contact_person) {
-        this.searchQuery = this.generalInfoBody.lead_contact_person;
+        if (this.selectedUser && this.selectedUser.displayName === this.generalInfoBody.lead_contact_person) {
+          this.isContactLocked = true;
+          this.hasValidContact = true;
+        } else {
+          this.searchQuery = this.generalInfoBody.lead_contact_person;
+          this.isContactLocked = false;
+        }
+      } else {
+        this.selectedUser = null;
+        this.searchQuery = '';
         this.isContactLocked = false;
       }
 
