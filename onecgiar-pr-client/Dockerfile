@@ -1,10 +1,16 @@
 #################### BUILD STAGE ####################
 FROM node:20-alpine AS build
 
+# Set timezone to Europe/Berlin (CET)
+ENV TZ=Europe/Berlin
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-#RUN npm ci
+# RUN npm ci
 RUN npm i
 
 COPY . .
@@ -15,10 +21,16 @@ RUN npm run build:dev
 #################### TESTING STAGE ####################
 FROM node:20-alpine AS test
 
+# Set timezone to Europe/Berlin (CET)
+ENV TZ=Europe/Berlin
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-#RUN npm ci
+# RUN npm ci
 RUN npm i
 
 COPY . .
