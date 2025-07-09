@@ -52,3 +52,6 @@ Thumbs.db
 cypress/videos/*
 cypress/screenshots/*
 cypress.env.json
+
+# Cursor rules
+/.cursorrules
