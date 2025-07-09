@@ -195,7 +195,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    is_cgiar: false,
+    is_cgiar: true,
     role_platform: 2 // Marcado por defecto como guest (2)
   });
 
@@ -243,7 +243,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      is_cgiar: false,
+      is_cgiar: true,
       role_platform: 2 // Marcado por defecto como guest (2)
     });
   }

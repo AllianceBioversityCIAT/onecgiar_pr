@@ -117,3 +117,36 @@
 - Always verify understanding before implementing
 - Clean up conflicting rules completely
 - Respond in user's preferred language
+
+## Git Commit Rules
+
+### 📝 CREATE COMMIT COMMAND
+
+When user says "create commit":
+
+1. **NEVER modify any files** - Only commit existing changes
+2. **Check pending changes** with `git status` and `git diff`
+3. **Analyze changes** to understand what was modified
+4. **Create semantic commit message** following project patterns:
+   - `✨` for new features/functionality
+   - `♻️` for refactoring/improvements/adjustments
+   - `🐛` for bug fixes
+   - `📝` for documentation
+   - `🎨` for UI/styling changes
+   - `🔧` for configuration changes
+   - `🚀` for performance improvements
+   - `🧪` for tests
+
+5. **Message format**: `[emoji] [Action] [component/area] [description]`
+   - Example: `✨ Add user management modal with CGIAR selection`
+   - Example: `♻️ Improve search functionality with debounce`
+   - Example: `🐛 Fix form validation in user creation`
+
+6. **Execute commit and push**:
+   ```bash
+   git add .
+   git commit -m "[generated message]"
+   git push
+   ```
+
+**IMPORTANT**: This command is ONLY for committing existing changes, never for making new modifications.

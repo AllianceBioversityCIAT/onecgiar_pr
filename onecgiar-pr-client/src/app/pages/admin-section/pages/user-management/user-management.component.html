@@ -160,9 +160,8 @@
       <div class="form-field">
         <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
         <div class="cgiar-buttons">
-          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
-          <!-- (click)="onModalCgiarChange(false)" -->
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar">No</button>
+          <button type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar" (click)="onModalCgiarChange(false)">No</button>
         </div>
       </div>
 
