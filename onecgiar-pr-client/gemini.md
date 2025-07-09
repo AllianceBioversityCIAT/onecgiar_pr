@@ -31,3 +31,4 @@ This is an Angular web application for the OneCGIAR PR project.
 -   **Commit Style**: When asked to create a commit, use semantic commit messages.
 -   **Commit Context**: Before creating a commit, analyze the last 100 git commits to understand the structure, including emojis and formatting. The typical format is: `emoji type(scope): description`.
 -   **Pushing**: After a successful commit, push the changes to the remote repository.
+-   **Confirmation**: Do not ask for confirmation. Analyze the changes, commit directly, and then push.
