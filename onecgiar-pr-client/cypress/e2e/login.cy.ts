@@ -2,11 +2,11 @@
 
 describe('Login E2E Tests', () => {
   beforeEach(() => {
-    cy.visit('/t');
+    cy.visit('/');
   });
 
   it('should display the login page correctly', () => {
-    cy.contains('Log in to your PRMS Reporting Tool').should('be.visible');
+    cy.contains('Log in to your PRMS Reporting Tool test').should('be.visible');
     cy.contains('Continue with your CGIAR account').should('be.visible');
     cy.contains('Continue as an external user').should('be.visible');
   });
