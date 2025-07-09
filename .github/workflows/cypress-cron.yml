@@ -1,4 +1,4 @@
-name: Cypress Tests with Slack Notifications
+name: Cypress E2E Tests con Notificaciones Slack
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: onecgiar-pr-client/package-lock.json
 
@@ -31,7 +31,7 @@ jobs:
     - name: Start Angular application
       run: |
         npm start &
-        npx wait-on http://localhost:4200 --timeout 300000
+        npx wait-on@8 http://localhost:4200 --timeout 300000
       env:
         CI: true
 
@@ -49,7 +49,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Cypress screenshots on failure
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: cypress-screenshots
@@ -57,7 +57,7 @@ jobs:
         retention-days: 7
 
     - name: Upload Cypress videos
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: cypress-videos
@@ -69,13 +69,13 @@ jobs:
       run: |
         curl -X POST -H 'Content-type: application/json' \
         --data '{
-          "text": "✅ Cypress Tests Passed Successfully",
+          "text": "✅ Pruebas de Cypress Exitosas",
           "blocks": [
             {
               "type": "header",
               "text": {
                 "type": "plain_text",
-                "text": "✅ Cypress Tests - SUCCESS"
+                "text": "✅ Cypress Tests - ÉXITO"
               }
             },
             {
@@ -83,15 +83,15 @@ jobs:
               "fields": [
                 {
                   "type": "mrkdwn",
-                  "text": "*Project:* OneCGIAR PR"
+                  "text": "*Proyecto:* OneCGIAR PR"
                 },
                 {
                   "type": "mrkdwn", 
-                  "text": "*Branch:* cypress-config"
+                  "text": "*Rama:* ${{ github.ref_name }}"
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Status:* All tests passed ✅"
+                  "text": "*Estado:* Todas las pruebas pasaron ✅"
                 },
                 {
                   "type": "mrkdwn",
@@ -100,11 +100,18 @@ jobs:
               ]
             },
             {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "🎉 *¡Excelente!* Todas las pruebas E2E de Cypress se ejecutaron correctamente sin errores."
+              }
+            },
+            {
               "type": "context",
               "elements": [
                 {
                   "type": "mrkdwn",
-                  "text": "Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action>"
+                  "text": "Ejecutado por: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver Action>"
                 }
               ]
             }
@@ -117,37 +124,49 @@ jobs:
       run: |
         # Get the latest test results
         CYPRESS_RESULTS=""
+        FAILED_TESTS=""
         
         # Check if there are any screenshots (indicating failures)
-        if [ -d "cypress/screenshots" ] && [ "$(ls -A cypress/screenshots)" ]; then
-          CYPRESS_RESULTS="Failed tests found with screenshots:\n"
+        if [ -d "cypress/screenshots" ] && [ "$(ls -A cypress/screenshots 2>/dev/null)" ]; then
+          CYPRESS_RESULTS="❌ **Tests que fallaron:**\n"
           for screenshot in cypress/screenshots/**/*.png; do
             if [ -f "$screenshot" ]; then
-              CYPRESS_RESULTS="${CYPRESS_RESULTS}• $(basename "$screenshot" .png)\n"
+              test_name=$(basename "$screenshot" .png | sed 's/.*-- //g' | sed 's/ (failed)//g')
+              FAILED_TESTS="${FAILED_TESTS}• \`${test_name}\`\n"
             fi
           done
+          CYPRESS_RESULTS="${CYPRESS_RESULTS}${FAILED_TESTS}"
+        fi
+        
+        # Check for videos to count total tests
+        VIDEO_COUNT=0
+        if [ -d "cypress/videos" ]; then
+          VIDEO_COUNT=$(find cypress/videos -name "*.mp4" | wc -l)
         fi
         
         # Get error information from Cypress output if available
         if [ -f "cypress/results/output.json" ]; then
-          CYPRESS_RESULTS="${CYPRESS_RESULTS}\nDetailed error information available in test artifacts."
+          CYPRESS_RESULTS="${CYPRESS_RESULTS}\n📋 **Información detallada disponible en artefactos**"
         fi
         
         # If no specific results, use generic message
         if [ -z "$CYPRESS_RESULTS" ]; then
-          CYPRESS_RESULTS="Cypress tests failed. Check the GitHub Action logs for details."
+          CYPRESS_RESULTS="⚠️ **Las pruebas de Cypress fallaron.** Revisa los logs del GitHub Action para más detalles."
         fi
+        
+        # Add test summary
+        CYPRESS_RESULTS="🎯 **Total de archivos de prueba:** ${VIDEO_COUNT}\n\n${CYPRESS_RESULTS}"
         
         # Send Slack notification
         curl -X POST -H 'Content-type: application/json' \
         --data '{
-          "text": "❌ Cypress Tests Failed",
+          "text": "❌ Pruebas de Cypress Fallaron",
           "blocks": [
             {
               "type": "header",
               "text": {
                 "type": "plain_text",
-                "text": "❌ Cypress Tests - FAILED"
+                "text": "❌ Cypress Tests - FALLÓ"
               }
             },
             {
@@ -155,15 +174,15 @@ jobs:
               "fields": [
                 {
                   "type": "mrkdwn",
-                  "text": "*Project:* OneCGIAR PR"
+                  "text": "*Proyecto:* OneCGIAR PR"
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Branch:* cypress-config"
+                  "text": "*Rama:* ${{ github.ref_name }}"
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Status:* Tests failed ❌"
+                  "text": "*Estado:* Pruebas fallaron ❌"
                 },
                 {
                   "type": "mrkdwn",
@@ -175,14 +194,14 @@ jobs:
               "type": "section",
               "text": {
                 "type": "mrkdwn",
-                "text": "*Failure Details:*\n'"$CYPRESS_RESULTS"'"
+                "text": "**Detalles del Error:**\n'"$CYPRESS_RESULTS"'"
               }
             },
             {
               "type": "section",
               "text": {
                 "type": "mrkdwn",
-                "text": "📎 *Artifacts Available:*\n• Screenshots of failed tests\n• Video recordings of all tests\n• Detailed logs in GitHub Action"
+                "text": "📎 **Artefactos Disponibles:**\n• 📸 Screenshots de las pruebas que fallaron\n• 🎥 Videos de todas las pruebas ejecutadas\n• 📋 Logs detallados en GitHub Action\n• 💾 Todos los archivos se conservan por 7 días"
               }
             },
             {
@@ -190,7 +209,7 @@ jobs:
               "elements": [
                 {
                   "type": "mrkdwn",
-                  "text": "Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action & Download Artifacts>"
+                  "text": "Ejecutado por: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver Action y Descargar Artefactos>"
                 }
               ]
             }
