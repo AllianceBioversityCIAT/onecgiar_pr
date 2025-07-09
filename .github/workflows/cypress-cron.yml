@@ -85,57 +85,33 @@ jobs:
     - name: Send Slack notification on success
       if: steps.cypress.outputs.cypress_exit_code == '0'
       run: |
-        curl -X POST -H 'Content-type: application/json' \
-        --data '{
-          "text": "✅ Pruebas de Cypress Exitosas",
-          "blocks": [
-            {
-              "type": "header",
-              "text": {
-                "type": "plain_text",
-                "text": "✅ Cypress Tests - ÉXITO"
-              }
-            },
-            {
-              "type": "section",
-              "fields": [
-                {
-                  "type": "mrkdwn",
-                  "text": "*Proyecto:* OneCGIAR PR"
-                },
-                {
-                  "type": "mrkdwn", 
-                  "text": "*Rama:* ${{ github.ref_name }}"
-                },
-                {
-                  "type": "mrkdwn",
-                  "text": "*Estado:* Todas las pruebas pasaron ✅"
-                },
-                {
-                  "type": "mrkdwn",
-                  "text": "*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
-                }
-              ]
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "🎉 *¡Excelente!* Todas las pruebas E2E de Cypress se ejecutaron correctamente sin errores."
-              }
-            },
-            {
-              "type": "context",
-              "elements": [
-                {
-                  "type": "mrkdwn",
-                  "text": "Ejecutado por: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver Action>"
-                }
-              ]
-            }
-          ]
-        }' \
-        ${{ secrets.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/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' }}
+        # Configurar URL de Slack desde secrets
+        SLACK_URL="${{ secrets.SLACK_WEBHOOK_URL }}"
+        if [ -z "$SLACK_URL" ]; then
+          echo "❌ Error: SLACK_WEBHOOK_URL no está configurado en GitHub Secrets"
+          exit 1
+        fi
+        echo "🔍 Verificando configuración de Slack..."
+        
+        # Prueba simple primero
+        echo "📤 Enviando notificación simple de éxito..."
+        RESPONSE=$(curl -w "HTTP_CODE:%{http_code}" -X POST -H 'Content-type: application/json' \
+        --data '{"text":"✅ Cypress Tests - ÉXITO: Todas las pruebas pasaron correctamente"}' \
+        "$SLACK_URL" 2>&1)
+        
+        HTTP_CODE=$(echo "$RESPONSE" | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
+        RESPONSE_BODY=$(echo "$RESPONSE" | sed 's/HTTP_CODE:[0-9]*$//')
+        
+        echo "📊 Código HTTP: $HTTP_CODE"
+        echo "📋 Respuesta: $RESPONSE_BODY"
+        
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "❌ Error enviando notificación a Slack"
+          echo "💡 Verifica la URL del webhook en los secrets de GitHub"
+          exit 1
+        else
+          echo "✅ Notificación enviada correctamente"
+        fi
 
     - name: Get Cypress test results and send Slack notification on failure
       if: steps.cypress.outputs.cypress_exit_code != '0'
@@ -175,65 +151,35 @@ jobs:
         # Add test summary
         CYPRESS_RESULTS="🎯 **Total de archivos de prueba:** ${VIDEO_COUNT}\n\n${CYPRESS_RESULTS}"
         
+        # Configurar URL de Slack desde secrets
+        SLACK_URL="${{ secrets.SLACK_WEBHOOK_URL }}"
+        if [ -z "$SLACK_URL" ]; then
+          echo "❌ Error: SLACK_WEBHOOK_URL no está configurado en GitHub Secrets"
+          exit 1
+        fi
+        echo "🔍 Verificando configuración de Slack..."
+        
+        # Mensaje simple con información básica del error
+        SIMPLE_MESSAGE="❌ Cypress Tests - FALLÓ: Las pruebas fallaron en la rama ${{ github.ref_name }}. ${CYPRESS_RESULTS}"
+        
         # Send Slack notification
-        curl -X POST -H 'Content-type: application/json' \
-        --data '{
-          "text": "❌ Pruebas de Cypress Fallaron",
-          "blocks": [
-            {
-              "type": "header",
-              "text": {
-                "type": "plain_text",
-                "text": "❌ Cypress Tests - FALLÓ"
-              }
-            },
-            {
-              "type": "section",
-              "fields": [
-                {
-                  "type": "mrkdwn",
-                  "text": "*Proyecto:* OneCGIAR PR"
-                },
-                {
-                  "type": "mrkdwn",
-                  "text": "*Rama:* ${{ github.ref_name }}"
-                },
-                {
-                  "type": "mrkdwn",
-                  "text": "*Estado:* Pruebas fallaron ❌"
-                },
-                {
-                  "type": "mrkdwn",
-                  "text": "*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
-                }
-              ]
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "**Detalles del Error:**\n'"$CYPRESS_RESULTS"'"
-              }
-            },
-            {
-              "type": "section",
-              "text": {
-                "type": "mrkdwn",
-                "text": "📎 **Artefactos Disponibles:**\n• 📸 Screenshots de las pruebas que fallaron\n• 🎥 Videos de todas las pruebas ejecutadas\n• 📋 Logs detallados en GitHub Action\n• 💾 Todos los archivos se conservan por 7 días"
-              }
-            },
-            {
-              "type": "context",
-              "elements": [
-                {
-                  "type": "mrkdwn",
-                  "text": "Ejecutado por: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver Action y Descargar Artefactos>"
-                }
-              ]
-            }
-          ]
-        }' \
-        ${{ secrets.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/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' }}
+        echo "📤 Enviando notificación de fallo..."
+        RESPONSE=$(curl -w "HTTP_CODE:%{http_code}" -X POST -H 'Content-type: application/json' \
+        --data "{\"text\":\"$SIMPLE_MESSAGE\"}" \
+        "$SLACK_URL" 2>&1)
+        
+        HTTP_CODE=$(echo "$RESPONSE" | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
+        RESPONSE_BODY=$(echo "$RESPONSE" | sed 's/HTTP_CODE:[0-9]*$//')
+        
+        echo "📊 Código HTTP: $HTTP_CODE"
+        echo "📋 Respuesta: $RESPONSE_BODY"
+        
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "❌ Error enviando notificación a Slack"
+          echo "💡 Verifica la URL del webhook en los secrets de GitHub"
+        else
+          echo "✅ Notificación de fallo enviada correctamente"
+        fi
 
     - name: Fail the job if Cypress tests failed
       if: steps.cypress.outputs.cypress_exit_code != '0'
