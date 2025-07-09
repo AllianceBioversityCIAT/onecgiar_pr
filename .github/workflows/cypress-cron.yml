@@ -1,0 +1,203 @@
+name: Cypress Tests with Slack Notifications
+
+on:
+  push:
+    branches: [ cypress-config ]
+  pull_request:
+    branches: [ cypress-config ]
+
+jobs:
+  cypress-tests:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: onecgiar-pr-client
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: onecgiar-pr-client/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Start Angular application
+      run: |
+        npm start &
+        npx wait-on http://localhost:4200 --timeout 300000
+      env:
+        CI: true
+
+    - name: Run Cypress tests
+      id: cypress
+      run: |
+        set +e
+        npm run cypress:run
+        CYPRESS_EXIT_CODE=$?
+        echo "cypress_exit_code=$CYPRESS_EXIT_CODE" >> $GITHUB_OUTPUT
+        exit $CYPRESS_EXIT_CODE
+      env:
+        CYPRESS_TEST_EMAIL: ${{ secrets.CYPRESS_TEST_EMAIL }}
+        CYPRESS_TEST_PASSWORD: ${{ secrets.CYPRESS_TEST_PASSWORD }}
+      continue-on-error: true
+
+    - name: Upload Cypress screenshots on failure
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: cypress-screenshots
+        path: onecgiar-pr-client/cypress/screenshots
+        retention-days: 7
+
+    - name: Upload Cypress videos
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: cypress-videos
+        path: onecgiar-pr-client/cypress/videos
+        retention-days: 7
+
+    - name: Send Slack notification on success
+      if: steps.cypress.outputs.cypress_exit_code == '0'
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "text": "✅ Cypress Tests Passed Successfully",
+          "blocks": [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "✅ Cypress Tests - SUCCESS"
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*Project:* OneCGIAR PR"
+                },
+                {
+                  "type": "mrkdwn", 
+                  "text": "*Branch:* cypress-config"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Status:* All tests passed ✅"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+              ]
+            },
+            {
+              "type": "context",
+              "elements": [
+                {
+                  "type": "mrkdwn",
+                  "text": "Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action>"
+                }
+              ]
+            }
+          ]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/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' }}
+
+    - name: Get Cypress test results and send Slack notification on failure
+      if: steps.cypress.outputs.cypress_exit_code != '0'
+      run: |
+        # Get the latest test results
+        CYPRESS_RESULTS=""
+        
+        # Check if there are any screenshots (indicating failures)
+        if [ -d "cypress/screenshots" ] && [ "$(ls -A cypress/screenshots)" ]; then
+          CYPRESS_RESULTS="Failed tests found with screenshots:\n"
+          for screenshot in cypress/screenshots/**/*.png; do
+            if [ -f "$screenshot" ]; then
+              CYPRESS_RESULTS="${CYPRESS_RESULTS}• $(basename "$screenshot" .png)\n"
+            fi
+          done
+        fi
+        
+        # Get error information from Cypress output if available
+        if [ -f "cypress/results/output.json" ]; then
+          CYPRESS_RESULTS="${CYPRESS_RESULTS}\nDetailed error information available in test artifacts."
+        fi
+        
+        # If no specific results, use generic message
+        if [ -z "$CYPRESS_RESULTS" ]; then
+          CYPRESS_RESULTS="Cypress tests failed. Check the GitHub Action logs for details."
+        fi
+        
+        # Send Slack notification
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "text": "❌ Cypress Tests Failed",
+          "blocks": [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "❌ Cypress Tests - FAILED"
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*Project:* OneCGIAR PR"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Branch:* cypress-config"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Status:* Tests failed ❌"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Failure Details:*\n'"$CYPRESS_RESULTS"'"
+              }
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "📎 *Artifacts Available:*\n• Screenshots of failed tests\n• Video recordings of all tests\n• Detailed logs in GitHub Action"
+              }
+            },
+            {
+              "type": "context",
+              "elements": [
+                {
+                  "type": "mrkdwn",
+                  "text": "Triggered by: ${{ github.actor }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action & Download Artifacts>"
+                }
+              ]
+            }
+          ]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/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' }}
+
+    - name: Fail the job if Cypress tests failed
+      if: steps.cypress.outputs.cypress_exit_code != '0'
+      run: exit 1 
