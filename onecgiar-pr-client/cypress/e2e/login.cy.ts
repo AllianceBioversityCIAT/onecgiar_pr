@@ -2,7 +2,7 @@
 
 describe('Login E2E Tests', () => {
   beforeEach(() => {
-    cy.visit('/');
+    cy.visit('/t');
   });
 
   it('should display the login page correctly', () => {
