@@ -40,4 +40,5 @@ This is an Angular web application for the OneCGIAR PR project.
     -   **Private Keys**: Cryptographic private keys (e.g., `-----BEGIN PRIVATE KEY-----`).
     -   **URLs with embedded tokens**: URLs that contain sensitive tokens as part of the query parameters or path.
     If sensitive information is detected, the agent will report it to the user and halt the commit process until the issue is resolved.
+-   **No Unrequested File Modifications During Commit**: When asked to create a commit, *never* modify any files in the codebase unless explicitly instructed to do so as part of the commit's purpose. Focus solely on staging and committing the changes that already exist and are intended for the commit.
 -   **Commit per Change**: When the command `create commit per change` is given, create separate commits for unrelated files or groups of related files. If files are unrelated, each should get its own commit. This is an extension of the `create commit` command and should not be the default behavior.
