@@ -1,4 +1,4 @@
-name: Cypress E2E Tests con Notificaciones Slack
+name: Cypress E2E Tests with Slack Notifications
 
 on:
   push:
