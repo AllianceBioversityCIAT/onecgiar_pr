@@ -1,4 +1,4 @@
-name: Cypress E2E Tests con Notificaciones Slack (Cada 6h)
+name: Cypress E2E Tests with Slack Notifications (Every 30min)
 
 on:
   push:
@@ -6,9 +6,8 @@ on:
   pull_request:
     branches: [ cypress-config ]
   schedule:
-    # Ejecutar cada 6 horas (00:00, 06:00, 12:00, 18:00 UTC)
-    # Equivale a: 7PM, 1AM, 7AM, 1PM hora de Colombia (UTC-5)
-    - cron: '0 */6 * * *'
+    # Run every 30 minutes for testing purposes
+    - cron: '*/30 * * * *'
 
 jobs:
   cypress-tests:
@@ -22,16 +21,16 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       
-    - name: Debug - Mostrar información del trigger
+    - name: Debug - Show trigger information
       run: |
-        echo "🔍 Información del trigger:"
+        echo "🔍 Trigger information:"
         echo "   Event name: ${{ github.event_name }}"
         echo "   Branch: ${{ github.ref_name }}"
         echo "   Actor: ${{ github.actor }}"
         if [ "${{ github.event_name }}" = "schedule" ]; then
-          echo "   🕐 Ejecución programada activada"
+          echo "   🕐 Scheduled execution activated"
         else
-          echo "   🚀 Ejecución por push/PR"
+          echo "   🚀 Push/PR execution"
         fi
 
     - name: Setup Node.js
@@ -103,39 +102,39 @@ jobs:
     - name: Send Slack notification on success
       if: steps.cypress.outputs.cypress_exit_code == '0'
       run: |
-        # Configurar URL de Slack desde secrets
+        # Configure Slack URL from secrets
         SLACK_URL="${{ secrets.SLACK_WEBHOOK_URL }}"
         if [ -z "$SLACK_URL" ]; then
-          echo "❌ Error: SLACK_WEBHOOK_URL no está configurado en GitHub Secrets"
+          echo "❌ Error: SLACK_WEBHOOK_URL is not configured in GitHub Secrets"
           exit 1
         fi
-        echo "🔍 Verificando configuración de Slack..."
+        echo "🔍 Verifying Slack configuration..."
         
-        # Determinar tipo de ejecución
+        # Determine execution type
         if [ "${{ github.event_name }}" = "schedule" ]; then
-          TRIGGER="🕐 Ejecución programada (cada 6 horas)"
+          TRIGGER="🕐 Scheduled execution (every 30 minutes)"
         else
-          TRIGGER="🚀 Push/PR en rama ${{ github.ref_name }}"
+          TRIGGER="🚀 Push/PR on branch ${{ github.ref_name }}"
         fi
         
-        # Prueba simple primero
-        echo "📤 Enviando notificación simple de éxito..."
+        # Send simple success notification
+        echo "📤 Sending simple success notification..."
         RESPONSE=$(curl -w "HTTP_CODE:%{http_code}" -X POST -H 'Content-type: application/json' \
-        --data "{\"text\":\"✅ Cypress Tests - ÉXITO: Todas las pruebas pasaron correctamente\n${TRIGGER}\"}" \
+        --data "{\"text\":\"✅ Cypress Tests - SUCCESS: All tests passed successfully\n${TRIGGER}\"}" \
         "$SLACK_URL" 2>&1)
         
         HTTP_CODE=$(echo "$RESPONSE" | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
         RESPONSE_BODY=$(echo "$RESPONSE" | sed 's/HTTP_CODE:[0-9]*$//')
         
-        echo "📊 Código HTTP: $HTTP_CODE"
-        echo "📋 Respuesta: $RESPONSE_BODY"
+        echo "📊 HTTP Code: $HTTP_CODE"
+        echo "📋 Response: $RESPONSE_BODY"
         
         if [ "$HTTP_CODE" != "200" ]; then
-          echo "❌ Error enviando notificación a Slack"
-          echo "💡 Verifica la URL del webhook en los secrets de GitHub"
+          echo "❌ Error sending notification to Slack"
+          echo "💡 Check the webhook URL in GitHub secrets"
           exit 1
         else
-          echo "✅ Notificación enviada correctamente"
+          echo "✅ Notification sent successfully"
         fi
 
     - name: Get Cypress test results and send Slack notification on failure
@@ -147,7 +146,7 @@ jobs:
         
         # Check if there are any screenshots (indicating failures)
         if [ -d "cypress/screenshots" ] && [ "$(ls -A cypress/screenshots 2>/dev/null)" ]; then
-          CYPRESS_RESULTS="❌ **Tests que fallaron:**\n"
+          CYPRESS_RESULTS="❌ **Failed tests:**\n"
           for screenshot in cypress/screenshots/**/*.png; do
             if [ -f "$screenshot" ]; then
               test_name=$(basename "$screenshot" .png | sed 's/.*-- //g' | sed 's/ (failed)//g')
@@ -165,37 +164,37 @@ jobs:
         
         # Get error information from Cypress output if available
         if [ -f "cypress/results/output.json" ]; then
-          CYPRESS_RESULTS="${CYPRESS_RESULTS}\n📋 **Información detallada disponible en artefactos**"
+          CYPRESS_RESULTS="${CYPRESS_RESULTS}\n📋 **Detailed information available in artifacts**"
         fi
         
         # If no specific results, use generic message
         if [ -z "$CYPRESS_RESULTS" ]; then
-          CYPRESS_RESULTS="⚠️ **Las pruebas de Cypress fallaron.** Revisa los logs del GitHub Action para más detalles."
+          CYPRESS_RESULTS="⚠️ **Cypress tests failed.** Check GitHub Action logs for more details."
         fi
         
         # Add test summary
-        CYPRESS_RESULTS="🎯 **Total de archivos de prueba:** ${VIDEO_COUNT}\n\n${CYPRESS_RESULTS}"
+        CYPRESS_RESULTS="🎯 **Total test files:** ${VIDEO_COUNT}\n\n${CYPRESS_RESULTS}"
         
-        # Configurar URL de Slack desde secrets
+        # Configure Slack URL from secrets
         SLACK_URL="${{ secrets.SLACK_WEBHOOK_URL }}"
         if [ -z "$SLACK_URL" ]; then
-          echo "❌ Error: SLACK_WEBHOOK_URL no está configurado en GitHub Secrets"
+          echo "❌ Error: SLACK_WEBHOOK_URL is not configured in GitHub Secrets"
           exit 1
         fi
-        echo "🔍 Verificando configuración de Slack..."
+        echo "🔍 Verifying Slack configuration..."
         
-        # Determinar tipo de ejecución
+        # Determine execution type
         if [ "${{ github.event_name }}" = "schedule" ]; then
-          TRIGGER="🕐 Ejecución programada (cada 6 horas)"
+          TRIGGER="🕐 Scheduled execution (every 30 minutes)"
         else
-          TRIGGER="🚀 Push/PR en rama ${{ github.ref_name }}"
+          TRIGGER="🚀 Push/PR on branch ${{ github.ref_name }}"
         fi
         
-        # Mensaje simple con información básica del error
-        SIMPLE_MESSAGE="❌ Cypress Tests - FALLÓ: Las pruebas fallaron.\n${TRIGGER}\n\n${CYPRESS_RESULTS}"
+        # Simple message with basic error information
+        SIMPLE_MESSAGE="❌ Cypress Tests - FAILED: Tests failed.\n${TRIGGER}\n\n${CYPRESS_RESULTS}"
         
         # Send Slack notification
-        echo "📤 Enviando notificación de fallo..."
+        echo "📤 Sending failure notification..."
         RESPONSE=$(curl -w "HTTP_CODE:%{http_code}" -X POST -H 'Content-type: application/json' \
         --data "{\"text\":\"$SIMPLE_MESSAGE\"}" \
         "$SLACK_URL" 2>&1)
@@ -203,14 +202,14 @@ jobs:
         HTTP_CODE=$(echo "$RESPONSE" | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
         RESPONSE_BODY=$(echo "$RESPONSE" | sed 's/HTTP_CODE:[0-9]*$//')
         
-        echo "📊 Código HTTP: $HTTP_CODE"
-        echo "📋 Respuesta: $RESPONSE_BODY"
+        echo "📊 HTTP Code: $HTTP_CODE"
+        echo "📋 Response: $RESPONSE_BODY"
         
         if [ "$HTTP_CODE" != "200" ]; then
-          echo "❌ Error enviando notificación a Slack"
-          echo "💡 Verifica la URL del webhook en los secrets de GitHub"
+          echo "❌ Error sending notification to Slack"
+          echo "💡 Check the webhook URL in GitHub secrets"
         else
-          echo "✅ Notificación de fallo enviada correctamente"
+          echo "✅ Failure notification sent successfully"
         fi
 
     - name: Fail the job if Cypress tests failed
