@@ -1,13 +1,13 @@
-name: Cypress E2E Tests with Slack Notifications (Every 30min)
+name: Cypress E2E Tests with Slack Notifications (Every 4h)
 
 on:
   push:
-    branches: [ cypress-config ]
+    branches: [ master, dev ]
   pull_request:
-    branches: [ cypress-config ]
+    branches: [ master, dev ]
   schedule:
-    # Run every 30 minutes for testing purposes
-    - cron: '*/30 * * * *'
+    # Run every 4 hours (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)
+    - cron: '0 */4 * * *'
 
 jobs:
   cypress-tests:
@@ -112,7 +112,7 @@ jobs:
         
         # Determine execution type
         if [ "${{ github.event_name }}" = "schedule" ]; then
-          TRIGGER="🕐 Scheduled execution (every 30 minutes)"
+          TRIGGER="🕐 Scheduled execution (every 4 hours)"
         else
           TRIGGER="🚀 Push/PR on branch ${{ github.ref_name }}"
         fi
@@ -185,7 +185,7 @@ jobs:
         
         # Determine execution type
         if [ "${{ github.event_name }}" = "schedule" ]; then
-          TRIGGER="🕐 Scheduled execution (every 30 minutes)"
+          TRIGGER="🕐 Scheduled execution (every 4 hours)"
         else
           TRIGGER="🚀 Push/PR on branch ${{ github.ref_name }}"
         fi
