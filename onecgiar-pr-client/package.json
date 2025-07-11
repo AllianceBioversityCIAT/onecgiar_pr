@@ -12,7 +12,10 @@
     "test:coverage": "jest --coverage",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
-    "tunnel": "ng serve -c production --port 19971"
+    "tunnel": "ng serve -c production --port 19971",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
   },
   "private": true,
   "dependencies": {
@@ -52,10 +55,12 @@
     "@angular-eslint/template-parser": "^18.4.3",
     "@angular/cli": "^18.2.20",
     "@angular/compiler-cli": "^18.2.13",
+    "@types/cypress": "^0.1.6",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.32",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
+    "cypress": "^14.5.1",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.5.0",

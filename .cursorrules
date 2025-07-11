@@ -1,0 +1,43 @@
+# Reglas de Seguridad para Cursor/Claude
+
+## ⚠️ REGLAS CRÍTICAS DE SEGURIDAD
+
+### 🔒 NUNCA EXPONER INFORMACIÓN SENSIBLE
+- **PROHIBIDO TOTALMENTE** imprimir, mostrar o exponer tokens, claves, URLs con tokens, webhooks, o cualquier información sensible en logs, debug o output
+- **NO** usar `echo`, `console.log`, `print` o similar para mostrar:
+  - Tokens de autenticación
+  - URLs de webhooks (completas o parciales)
+  - Claves API
+  - Passwords o credenciales
+  - Variables de entorno con información sensible
+  - Hashes de autenticación
+
+### 🛡️ BUENAS PRÁCTICAS
+- Usar únicamente mensajes genéricos como "Configurando autenticación..." o "Verificando credenciales..."
+- Almacenar información sensible en GitHub Secrets, AWS Secrets Manager, o variables de entorno
+- Validar la existencia de secrets sin exponerlos
+- En caso de debug, usar únicamente flags booleanos o estados genéricos
+
+### ✅ ALTERNATIVAS SEGURAS
+```bash
+# ❌ MAL - Expone información
+echo "Token: ${TOKEN:0:10}..."
+
+# ✅ BIEN - No expone nada
+echo "Verificando configuración de autenticación..."
+if [ -n "$TOKEN" ]; then
+  echo "✅ Token configurado correctamente"
+else
+  echo "❌ Token no encontrado"
+fi
+```
+
+### 🚨 CUMPLIMIENTO OBLIGATORIO
+Esta regla se aplica a:
+- Scripts de CI/CD (GitHub Actions, etc.)
+- Código de aplicación
+- Archivos de configuración
+- Documentación
+- Logs y debugging
+
+**TODA VIOLACIÓN DE ESTA REGLA ES CONSIDERADA UN GRAVE ERROR DE SEGURIDAD** 
