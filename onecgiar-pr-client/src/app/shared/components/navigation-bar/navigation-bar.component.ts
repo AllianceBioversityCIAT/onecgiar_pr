@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { PrRoute, routingApp } from '../../routing/routing-data';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
@@ -9,13 +9,37 @@ import { environment } from '../../../../environments/environment';
   templateUrl: './navigation-bar.component.html',
   styleUrls: ['./navigation-bar.component.scss']
 })
-export class NavigationBarComponent {
+export class NavigationBarComponent implements OnInit, OnDestroy {
   navigationOptions: PrRoute[] = routingApp;
+  isSticky = false;
+  private ticking = false;
 
   constructor(
     public rolesSE: RolesService,
     public dataControlSE: DataControlService
   ) {}
+
+  ngOnInit() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+    }
+  }
+
+  onScroll = () => {
+    if (!this.ticking) {
+      window.requestAnimationFrame(() => {
+        this.isSticky = window.scrollY > 70;
+        this.ticking = false;
+      });
+      this.ticking = true;
+    }
+  };
+
+  ngOnDestroy() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('scroll', this.onScroll);
+    }
+  }
 
   validateAdminModuleAndRole(option) {
     if (option.onlytest && environment.production) return true;

@@ -39,6 +39,7 @@ import { IpsrService } from '../ipsr.service';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { AdUsersModule } from '../../ad_users';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -79,7 +80,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
     ResultCountrySubnationalRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
   ],
-  imports: [VersionsModule, forwardRef(() => VersioningModule)],
+  imports: [VersionsModule, forwardRef(() => VersioningModule), AdUsersModule],
   exports: [ResultInnovationPackageRepository],
 })
 export class ResultInnovationPackageModule {}

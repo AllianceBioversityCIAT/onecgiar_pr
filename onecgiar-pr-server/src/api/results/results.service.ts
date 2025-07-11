@@ -17,11 +17,9 @@ import {
 } from '../../shared/handlers/error.utils';
 import { ResultTypesService } from './result_types/result_types.service';
 import { ResultType } from './result_types/entities/result_type.entity';
-import { VersionsService } from './versions/versions.service';
 import { returnFormatResult } from './dto/return-format-result.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
-import { ResultsByInititiativesService } from './results_by_inititiatives/results_by_inititiatives.service';
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
 import { ResultByEvidencesRepository } from './results_by_evidences/result_by_evidences.repository';
@@ -76,10 +74,8 @@ export class ResultsService {
     private readonly _resultRepository: ResultRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _resultTypesService: ResultTypesService,
-    private readonly _versionsService: VersionsService,
     private readonly _handlersError: HandlersError,
     private readonly _customResultRepository: ResultRepository,
-    private readonly _resultsByInititiativesService: ResultsByInititiativesService,
     private readonly _yearRepository: YearRepository,
     private readonly _resultByEvidencesRepository: ResultByEvidencesRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,

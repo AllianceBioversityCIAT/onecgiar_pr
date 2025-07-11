@@ -14,6 +14,15 @@ describe('NavigationBarComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(NavigationBarComponent);
     component = fixture.componentInstance;
+    Object.defineProperty(window, 'scrollY', {
+      value: 0,
+      writable: true,
+      configurable: true
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should create the app', () => {
@@ -53,5 +62,55 @@ describe('NavigationBarComponent', () => {
     const option = { onlytest: false };
     environment.production = false;
     expect(component.validateAdminModuleAndRole(option)).toBe(false);
+  });
+
+  it('should set isSticky to true when window.scrollY > 70 and ticking is false', () => {
+    Object.defineProperty(window, 'scrollY', { value: 100, configurable: true });
+    component.isSticky = false;
+    component['ticking'] = false;
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
+      cb(0);
+      return 1;
+    });
+    component.onScroll();
+    expect(component.isSticky).toBe(true);
+    expect(component['ticking']).toBe(true);
+    rafSpy.mockRestore();
+  });
+
+  it('should set isSticky to false when window.scrollY <= 70 and ticking is false', () => {
+    Object.defineProperty(window, 'scrollY', { value: 50, configurable: true });
+    component.isSticky = true;
+    component['ticking'] = false;
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
+      cb(0);
+      return 1;
+    });
+    component.onScroll();
+    expect(component.isSticky).toBe(false);
+    expect(component['ticking']).toBe(true);
+    rafSpy.mockRestore();
+  });
+
+  it('should not call requestAnimationFrame if ticking is true', () => {
+    component['ticking'] = true;
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame');
+    component.onScroll();
+    expect(rafSpy).not.toHaveBeenCalled();
+    rafSpy.mockRestore();
+  });
+
+  it('should remove scroll event listener on ngOnDestroy', () => {
+    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+    component.ngOnDestroy();
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', component.onScroll);
+    removeEventListenerSpy.mockRestore();
+  });
+
+  it('should add scroll event listener on ngOnInit', () => {
+    const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
+    component.ngOnInit();
+    expect(addEventListenerSpy).toHaveBeenCalledWith('scroll', component.onScroll, { passive: true });
+    addEventListenerSpy.mockRestore();
   });
 });

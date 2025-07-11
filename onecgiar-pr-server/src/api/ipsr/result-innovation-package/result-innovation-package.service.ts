@@ -1,4 +1,10 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { HandlersError } from 'src/shared/handlers/error.utils';
 import { ResultRepository } from '../../../api/results/result.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -46,9 +52,14 @@ import { ResultCountrySubnational } from '../../results/result-countries-sub-nat
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ClarisaSubnationalScope } from '../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { AdUserService, AdUserRepository } from '../../ad_users';
 
 @Injectable()
 export class ResultInnovationPackageService {
+  private readonly _logger: Logger = new Logger(
+    ResultInnovationPackageService.name,
+  );
+
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _resultRepository: ResultRepository,
@@ -82,6 +93,10 @@ export class ResultInnovationPackageService {
     private readonly _versioningService: VersioningService,
     private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    @Optional()
+    @Inject(AdUserService)
+    private readonly _adUserService?: AdUserService,
+    @Optional() private readonly _adUserRepository?: AdUserRepository,
   ) {}
 
   async findUnitTime() {
@@ -631,6 +646,12 @@ export class ResultInnovationPackageService {
     }
   }
 
+  /**
+   * Create a new IP result general information
+   * @param resultId
+   * @param updateGeneralInformationDto
+   * @param user
+   */
   async generalInformation(
     resultId: number,
     updateGeneralInformationDto: UpdateGeneralInformationDto,
@@ -680,10 +701,48 @@ export class ResultInnovationPackageService {
         status = resultExist.status_id;
       }
 
+      let leadContactPersonId: number = null;
+
+      if (req.lead_contact_person_data?.mail && this._adUserService) {
+        try {
+          let adUser = await this._adUserService.getUserByIdentifier(
+            req.lead_contact_person_data.mail,
+          );
+
+          if (!adUser) {
+            const adUserRepository = this._adUserService['adUserRepository'];
+            if (adUserRepository && adUserRepository.saveFromADUser) {
+              adUser = await adUserRepository.saveFromADUser(
+                req.lead_contact_person_data,
+              );
+
+              this._logger.log(
+                `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
+              );
+            }
+          } else {
+            this._logger.log(
+              `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
+            );
+          }
+
+          leadContactPersonId = adUser?.id || null;
+        } catch (error) {
+          this._logger.warn(
+            `Failed to process lead_contact_person_data: ${error.message}`,
+          );
+        }
+      } else if (req.lead_contact_person_data?.mail && !this._adUserService) {
+        this._logger.warn(
+          'AdUserService not available, skipping lead_contact_person_data processing',
+        );
+      }
+
       await this._resultRepository.update(resultId, {
         title: req?.title,
         description: req?.description,
         lead_contact_person: req?.lead_contact_person,
+        lead_contact_person_id: leadContactPersonId,
         gender_tag_level_id: req?.gender_tag_level_id,
         climate_change_tag_level_id: req?.climate_change_tag_level_id,
         nutrition_tag_level_id: req?.nutrition_tag_level_id,
