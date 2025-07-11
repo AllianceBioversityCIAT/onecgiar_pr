@@ -649,7 +649,7 @@ describe('RdGeneralInformationComponent', () => {
         const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
 
         component['searchSubject'].next('john');
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(500);
 
         expect(spySearchUsers).toHaveBeenCalledWith('john');
         expect(component.isSearching).toBe(false);
@@ -661,7 +661,7 @@ describe('RdGeneralInformationComponent', () => {
         const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
 
         component['searchSubject'].next('jo');
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(500);
 
         expect(spySearchUsers).not.toHaveBeenCalled();
         expect(component.searchResults).toEqual([]);
@@ -671,13 +671,13 @@ describe('RdGeneralInformationComponent', () => {
 
       it('should handle search errors gracefully', () => {
         const spyConsoleError = jest.spyOn(console, 'error').mockImplementation();
-        const errorMessage = 'Search failed';
+        const errorMessage = 'Test error';
         mockUserSearchService.searchUsers.mockReturnValue(throwError(errorMessage));
 
         component['searchSubject'].next('john');
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(500);
 
-        expect(spyConsoleError).toHaveBeenCalledWith('Error searching users:', errorMessage);
+        expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
         expect(component.searchResults).toEqual([]);
         expect(component.showResults).toBe(false);
         expect(component.isSearching).toBe(false);
@@ -692,10 +692,12 @@ describe('RdGeneralInformationComponent', () => {
         component['searchSubject'].next('johnd');
         component['searchSubject'].next('johndo');
 
+        // Only 250ms passed, debounceTime is 500ms, so no call yet
         jest.advanceTimersByTime(250);
         expect(spySearchUsers).not.toHaveBeenCalled();
 
-        jest.advanceTimersByTime(50);
+        // Advance by another 500ms to ensure debounce triggers
+        jest.advanceTimersByTime(500);
         expect(spySearchUsers).toHaveBeenCalledTimes(1);
         expect(spySearchUsers).toHaveBeenCalledWith('johndo');
       });
@@ -704,7 +706,7 @@ describe('RdGeneralInformationComponent', () => {
         mockUserSearchService.searchUsers.mockReturnValue(new Promise(resolve => setTimeout(() => resolve(mockUserSearchResponse), 100)));
 
         component['searchSubject'].next('john');
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(500);
 
         expect(component.isSearching).toBe(true);
       });
@@ -913,7 +915,7 @@ describe('RdGeneralInformationComponent', () => {
 
       component.searchQuery = 'nonexistent';
       component['searchSubject'].next('nonexistent');
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(500);
 
       expect(component.searchResults).toEqual([]);
       expect(component.hasValidContact).toBe(false);
@@ -925,20 +927,21 @@ describe('RdGeneralInformationComponent', () => {
 
       component.searchQuery = 'john';
       component['searchSubject'].next('john');
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(500);
 
       expect(component.searchResults).toEqual([]);
       expect(component.hasValidContact).toBe(false);
     });
 
     it('should not mark contact as invalid when search returns results', () => {
+      mockUserSearchService.searchUsers.mockReturnValue(of(mockUserSearchResponse));
       component.searchQuery = 'john';
       component.hasValidContact = false;
       component['searchSubject'].next('john');
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(500);
 
       expect(component.searchResults).toEqual(mockUserSearchResponse.response);
-      expect(component.hasValidContact).toBe(false);
+      expect(component.hasValidContact).toBe(true);
     });
   });
 
@@ -1239,7 +1242,7 @@ describe('RdGeneralInformationComponent', () => {
 
       component.searchQuery = 'john';
       component['searchSubject'].next('john');
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(500);
 
       expect(component.searchResults.length).toBe(1);
       expect(component.searchResults[0].displayName).toBe('John Doe');
