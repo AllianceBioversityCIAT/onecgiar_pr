@@ -42,7 +42,6 @@ export class UserService {
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       const exists = await this.findOneByEmail(createUserDto.email);
-      console.log('createUserDto:', createUserDto);
 
       if (!createUserDto.is_cgiar) {
         if (this.cgiarRegex.test(createUserDto.email)) {
@@ -69,6 +68,7 @@ export class UserService {
         const template = handlebars.compile(templateDB.template);
 
         const templateData: Record<string, any> = {
+          logoUrl: '{{logoUrl}}',
           appName: '{{appName}}',
           firstName: '{{firstName}}',
           lastName: '{{lastName}}',
@@ -86,7 +86,6 @@ export class UserService {
         }
 
         const htmlString = template(templateData);
-        
 
         const cognitoPayload = {
           username: createUserDto.email,
