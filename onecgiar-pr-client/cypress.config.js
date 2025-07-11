@@ -1,4 +1,5 @@
 const { defineConfig } = require('cypress')
+const { environment } = require('./cypress.env')
 
 module.exports = defineConfig({
   projectId: 'snnzit',
@@ -27,7 +28,7 @@ module.exports = defineConfig({
   pageLoadTimeout: 30000,
   env: {
     // Test credentials - these should be overridden by environment variables
-    testEmail: process.env.CYPRESS_TEST_EMAIL || 'yecksin.multimedia@gmail.com',
-    testPassword: process.env.CYPRESS_TEST_PASSWORD || 'Cypress@2'
+    testEmail: environment.cypress.testEmail,
+    testPassword: environment.cypress.testPassword
   }
 });
