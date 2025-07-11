@@ -1,0 +1,48 @@
+name: Cypress Tests
+
+on: [push]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download environment files from AWS Secrets Manager
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_SECRET }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_SECRET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          mkdir -p onecgiar-pr-client/src/environments
+
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id dev/app/frontend/prms/reportingtool \
+            --query SecretString \
+            --output text)
+
+          echo "$SECRET" > onecgiar-pr-client/src/environments/environment.ts
+
+          cp onecgiar-pr-client/src/environments/environment.ts \
+            onecgiar-pr-client/src/environments/environment.prod.ts
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: onecgiar-pr-client
+          start: npm start
+          wait-on: "http://localhost:4200"
+          record: true
+          parallel: true
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_TEST_EMAIL: ${{ secrets.CYPRESS_TEST_EMAIL }}
+          CYPRESS_TEST_PASSWORD: ${{ secrets.CYPRESS_TEST_PASSWORD }}

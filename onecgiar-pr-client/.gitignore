@@ -48,3 +48,10 @@ Thumbs.db
 .angular
 
 /todo-list
+
+cypress/videos/*
+cypress/screenshots/*
+cypress.env.json
+
+# Cursor rules
+/.cursorrules
