@@ -4,16 +4,17 @@ import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
-  selector: 'app-pr-textarea',
-  templateUrl: './pr-textarea.component.html',
-  styleUrls: ['./pr-textarea.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrTextareaComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-textarea',
+    templateUrl: './pr-textarea.component.html',
+    styleUrls: ['./pr-textarea.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrTextareaComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrTextareaComponent implements ControlValueAccessor {
   @Input() placeholder: string;

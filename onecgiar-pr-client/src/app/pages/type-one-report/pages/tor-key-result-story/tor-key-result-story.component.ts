@@ -4,9 +4,10 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
-  selector: 'app-tor-key-result-story',
-  templateUrl: './tor-key-result-story.component.html',
-  styleUrls: ['./tor-key-result-story.component.scss']
+    selector: 'app-tor-key-result-story',
+    templateUrl: './tor-key-result-story.component.html',
+    styleUrls: ['./tor-key-result-story.component.scss'],
+    standalone: false
 })
 export class TorKeyResultStoryComponent implements OnInit {
   constructor(

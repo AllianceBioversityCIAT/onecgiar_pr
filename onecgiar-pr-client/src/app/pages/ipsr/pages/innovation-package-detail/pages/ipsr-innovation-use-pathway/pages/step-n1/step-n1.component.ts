@@ -7,9 +7,10 @@ import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum
 import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
 
 @Component({
-  selector: 'app-step-n1',
-  templateUrl: './step-n1.component.html',
-  styleUrls: ['./step-n1.component.scss']
+    selector: 'app-step-n1',
+    templateUrl: './step-n1.component.html',
+    styleUrls: ['./step-n1.component.scss'],
+    standalone: false
 })
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();

@@ -3,16 +3,17 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
-  selector: 'app-pr-radio-button',
-  templateUrl: './pr-radio-button.component.html',
-  styleUrls: ['./pr-radio-button.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrRadioButtonComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-radio-button',
+    templateUrl: './pr-radio-button.component.html',
+    styleUrls: ['./pr-radio-button.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrRadioButtonComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() options: any;

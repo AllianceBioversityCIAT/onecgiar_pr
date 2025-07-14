@@ -4,9 +4,10 @@ import { OutcomeIndicatorService } from './services/outcome-indicator.service';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-  selector: 'app-outcome-indicator-module',
-  templateUrl: './outcome-indicator.component.html',
-  styleUrls: ['./outcome-indicator.component.scss']
+    selector: 'app-outcome-indicator-module',
+    templateUrl: './outcome-indicator.component.html',
+    styleUrls: ['./outcome-indicator.component.scss'],
+    standalone: false
 })
 export class OutcomeIndicatorComponent implements OnInit {
   readonly QUERY_PARAM_INITIATIVE = 'init';

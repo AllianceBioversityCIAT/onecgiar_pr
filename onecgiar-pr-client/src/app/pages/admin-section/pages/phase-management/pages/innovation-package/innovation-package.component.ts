@@ -8,9 +8,10 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-innovation-package',
-  templateUrl: './innovation-package.component.html',
-  styleUrls: ['./innovation-package.component.scss']
+    selector: 'app-innovation-package',
+    templateUrl: './innovation-package.component.html',
+    styleUrls: ['./innovation-package.component.scss'],
+    standalone: false
 })
 export class InnovationPackageComponent implements OnInit {
   columnOrder = [

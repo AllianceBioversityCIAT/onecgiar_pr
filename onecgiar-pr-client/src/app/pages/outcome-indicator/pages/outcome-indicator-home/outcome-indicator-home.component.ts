@@ -7,11 +7,10 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 @Component({
-  selector: 'app-outcome-indicator-home',
-  templateUrl: './outcome-indicator-home.component.html',
-  styleUrl: './outcome-indicator-home.component.scss',
-  standalone: true,
-  imports: [NgClass, RouterLink, ToastModule]
+    selector: 'app-outcome-indicator-home',
+    templateUrl: './outcome-indicator-home.component.html',
+    styleUrl: './outcome-indicator-home.component.scss',
+    imports: [NgClass, RouterLink, ToastModule]
 })
 export class OutcomeIndicatorHomeComponent {
   constructor(

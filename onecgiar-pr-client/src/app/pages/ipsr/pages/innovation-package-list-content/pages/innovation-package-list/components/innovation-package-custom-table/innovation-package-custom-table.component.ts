@@ -5,9 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { IpsrListService } from '../../services/ipsr-list.service';
 
 @Component({
-  selector: 'app-innovation-package-custom-table',
-  templateUrl: './innovation-package-custom-table.component.html',
-  styleUrls: ['./innovation-package-custom-table.component.scss']
+    selector: 'app-innovation-package-custom-table',
+    templateUrl: './innovation-package-custom-table.component.html',
+    styleUrls: ['./innovation-package-custom-table.component.scss'],
+    standalone: false
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;

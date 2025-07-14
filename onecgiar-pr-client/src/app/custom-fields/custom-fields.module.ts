@@ -15,7 +15,7 @@ import { PrMultiSelectComponent } from './pr-multi-select/pr-multi-select.compon
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PrYesOrNotComponent } from './pr-yes-or-not/pr-yes-or-not.component';
 import { PrTextareaComponent } from './pr-textarea/pr-textarea.component';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -35,11 +35,50 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, CustomValidationTooltipComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
+const fieldComponents = [
+  PrInputComponent,
+  PrSelectComponent,
+  PrRadioButtonComponent,
+  DetailSectionTitleComponent,
+  PrMultiSelectComponent,
+  PrFieldHeaderComponent,
+  PrYesOrNotComponent,
+  PrTextareaComponent,
+  PrCheckboxComponent,
+  SaveButtonComponent,
+  PrButtonComponent,
+  AlertStatusComponent,
+  EditOrDeleteItemButtonComponent,
+  NoDataTextComponent,
+  AddButtonComponent,
+  PrRangeLevelComponent,
+  SyncButtonComponent
+];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe, YesOrNotByBooleanPipe],
+  declarations: [
+    ...fieldComponents,
+    CustomValidationTooltipComponent,
+    PrFieldValidationsComponent,
+    PrWordCounterComponent,
+    ListFilterByTextAndAttrPipe,
+    UnderConstructionPointComponent,
+    LabelNamePipe,
+    YesOrNotByBooleanPipe
+  ],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule, InputNumberModule, TooltipModule]
+  imports: [
+    CommonModule,
+    FormsModule,
+    InputTextModule,
+    DropdownModule,
+    RadioButtonModule,
+    MultiSelectModule,
+    TextareaModule,
+    CheckboxModule,
+    ScrollingModule,
+    InputNumberModule,
+    TooltipModule
+  ]
 })
 export class CustomFieldsModule {}

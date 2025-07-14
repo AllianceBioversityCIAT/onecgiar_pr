@@ -3,9 +3,10 @@ import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-anticipated-innovation-user',
-  templateUrl: './anticipated-innovation-user.component.html',
-  styleUrls: ['./anticipated-innovation-user.component.scss']
+    selector: 'app-anticipated-innovation-user',
+    templateUrl: './anticipated-innovation-user.component.html',
+    styleUrls: ['./anticipated-innovation-user.component.scss'],
+    standalone: false
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();

@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-massive-phase-shift',
-  templateUrl: './massive-phase-shift.component.html',
-  styleUrls: ['./massive-phase-shift.component.scss']
+    selector: 'app-massive-phase-shift',
+    templateUrl: './massive-phase-shift.component.html',
+    styleUrls: ['./massive-phase-shift.component.scss'],
+    standalone: false
 })
 export class MassivePhaseShiftComponent implements OnInit {
   @Input() replicateIPSR: boolean = false;

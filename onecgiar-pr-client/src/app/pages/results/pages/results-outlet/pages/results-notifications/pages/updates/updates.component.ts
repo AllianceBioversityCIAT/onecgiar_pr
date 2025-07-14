@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { ResultsNotificationsService } from '../../results-notifications.service';
 
 @Component({
-  selector: 'app-updates',
-  templateUrl: './updates.component.html',
-  styleUrls: ['./updates.component.scss']
+    selector: 'app-updates',
+    templateUrl: './updates.component.html',
+    styleUrls: ['./updates.component.scss'],
+    standalone: false
 })
 export class UpdatesComponent {
   constructor(public api: ApiService, public resultsNotificationsSE: ResultsNotificationsService) {}

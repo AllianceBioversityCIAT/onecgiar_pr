@@ -11,9 +11,10 @@ import { PusherService } from '../../../../../../shared/services/pusher.service'
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 
 @Component({
-  selector: 'app-rd-general-information',
-  templateUrl: './rd-general-information.component.html',
-  styleUrls: ['./rd-general-information.component.scss']
+    selector: 'app-rd-general-information',
+    templateUrl: './rd-general-information.component.html',
+    styleUrls: ['./rd-general-information.component.scss'],
+    standalone: false
 })
 export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();

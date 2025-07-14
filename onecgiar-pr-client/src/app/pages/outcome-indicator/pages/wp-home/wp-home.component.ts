@@ -14,23 +14,22 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
 import { MessageService } from 'primeng/api';
 
 @Component({
-  selector: 'app-wp-home',
-  standalone: true,
-  imports: [
-    CommonModule,
-    TableModule,
-    ButtonModule,
-    CustomSpinnerModule,
-    RouterLink,
-    FilterIndicatorBySearchPipe,
-    FormsModule,
-    TooltipModule,
-    CustomFieldsModule
-  ],
-  templateUrl: './wp-home.component.html',
-  styleUrl: './wp-home.component.scss',
-  providers: [MessageService],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-wp-home',
+    imports: [
+        CommonModule,
+        TableModule,
+        ButtonModule,
+        CustomSpinnerModule,
+        RouterLink,
+        FilterIndicatorBySearchPipe,
+        FormsModule,
+        TooltipModule,
+        CustomFieldsModule
+    ],
+    templateUrl: './wp-home.component.html',
+    styleUrl: './wp-home.component.scss',
+    providers: [MessageService],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WpHomeComponent implements OnDestroy, OnInit {
   requesting = signal(false);

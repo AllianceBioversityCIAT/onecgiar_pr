@@ -4,9 +4,10 @@ import { RolesService } from '../../../../../../../../../../shared/services/glob
 import { InstitutionsService } from '../../../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
-  selector: 'app-step-n1-institutions',
-  templateUrl: './step-n1-institutions.component.html',
-  styleUrls: ['./step-n1-institutions.component.scss']
+    selector: 'app-step-n1-institutions',
+    templateUrl: './step-n1-institutions.component.html',
+    styleUrls: ['./step-n1-institutions.component.scss'],
+    standalone: false
 })
 export class StepN1InstitutionsComponent {
   @Input() body = new IpsrStep1Body();

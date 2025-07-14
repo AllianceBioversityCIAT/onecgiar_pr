@@ -5,9 +5,10 @@ import { InstitutionsService } from '../../../../../../../../../../shared/servic
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n1-experts',
-  templateUrl: './step-n1-experts.component.html',
-  styleUrls: ['./step-n1-experts.component.scss']
+    selector: 'app-step-n1-experts',
+    templateUrl: './step-n1-experts.component.html',
+    styleUrls: ['./step-n1-experts.component.scss'],
+    standalone: false
 })
 export class StepN1ExpertsComponent implements OnInit {
   @Input() body = new IpsrStep1Body();

@@ -3,12 +3,11 @@ import { OutcomeIndicatorService } from '../../../outcome-indicator/services/out
 import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
-  selector: 'app-progress-against-outcome',
-  standalone: true,
-  imports: [SkeletonModule],
-  templateUrl: './progress-against-outcome.component.html',
-  styleUrl: './progress-against-outcome.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-progress-against-outcome',
+    imports: [SkeletonModule],
+    templateUrl: './progress-against-outcome.component.html',
+    styleUrl: './progress-against-outcome.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProgressAgainstOutcomeComponent {
   @Input() isWPS: boolean = false;

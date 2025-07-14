@@ -5,16 +5,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-pr-input',
-  templateUrl: './pr-input.component.html',
-  styleUrls: ['./pr-input.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrInputComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-input',
+    templateUrl: './pr-input.component.html',
+    styleUrls: ['./pr-input.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrInputComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrInputComponent implements ControlValueAccessor {
   @Input() placeholder: string;

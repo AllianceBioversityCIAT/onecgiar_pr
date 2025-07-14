@@ -5,10 +5,11 @@ import { environment } from '../../../../../../../environments/environment';
 import { IpsrDataControlService } from '../../../../../ipsr/services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-pdf-actions',
-  templateUrl: './pdf-actions.component.html',
-  styleUrls: ['./pdf-actions.component.scss'],
-  providers: [MessageService]
+    selector: 'app-pdf-actions',
+    templateUrl: './pdf-actions.component.html',
+    styleUrls: ['./pdf-actions.component.scss'],
+    providers: [MessageService],
+    standalone: false
 })
 export class PdfActionsComponent {
   @Output() copyEvent = new EventEmitter();

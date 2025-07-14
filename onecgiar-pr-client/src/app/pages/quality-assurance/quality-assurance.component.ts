@@ -7,9 +7,10 @@ import { Observable } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
 
 @Component({
-  selector: 'app-quality-assurance',
-  templateUrl: './quality-assurance.component.html',
-  styleUrls: ['./quality-assurance.component.scss']
+    selector: 'app-quality-assurance',
+    templateUrl: './quality-assurance.component.html',
+    styleUrls: ['./quality-assurance.component.scss'],
+    standalone: false
 })
 export class QualityAssuranceComponent implements OnInit {
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public sanitizer: DomSanitizer, private qaSE: QualityAssuranceService) {}

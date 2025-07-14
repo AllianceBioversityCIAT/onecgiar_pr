@@ -8,10 +8,11 @@ interface Header {
 }
 
 @Component({
-  selector: 'app-simple-table-with-clipboard',
-  templateUrl: './simple-table-with-clipboard.component.html',
-  styleUrls: ['./simple-table-with-clipboard.component.scss'],
-  providers: [MessageService]
+    selector: 'app-simple-table-with-clipboard',
+    templateUrl: './simple-table-with-clipboard.component.html',
+    styleUrls: ['./simple-table-with-clipboard.component.scss'],
+    providers: [MessageService],
+    standalone: false
 })
 export class SimpleTableWithClipboardComponent {
   @Input() distribution: 'left' | 'normal' = 'normal';

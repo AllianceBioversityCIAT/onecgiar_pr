@@ -13,7 +13,8 @@
         <th></th>
         <th *ngIf="!this.rolesSE.readOnly"></th>
     </tr>
-    <tr *ngFor="let item of this.body.bilateral_expected_investment; let i=index" [hidden]="item.is_active == false">
+    @for (item of this.body.bilateral_expected_investment; track $index; let i = $index) {
+    <tr [hidden]="item.is_active == false">
         <td>
             <div class="editBilateral">
                 <div style="display: flex; align-items: center;">
@@ -29,12 +30,12 @@
         </td>
         <td>
             <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="this.item.in_kind">
+                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="item.in_kind">
             </app-pr-input>
         </td>
         <td>
             <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="this.item.in_cash">
+                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="item.in_cash">
             </app-pr-input>
         </td>
         <td>
@@ -55,6 +56,7 @@
 
         </td>
     </tr>
+    }
 </table>
 
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment,'non_pooled_projetct_budget_id')"

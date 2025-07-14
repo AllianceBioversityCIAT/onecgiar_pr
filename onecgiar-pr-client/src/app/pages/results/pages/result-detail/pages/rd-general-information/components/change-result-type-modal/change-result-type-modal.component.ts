@@ -13,9 +13,10 @@ interface IOption {
   selected: boolean;
 }
 @Component({
-  selector: 'app-change-result-type-modal',
-  templateUrl: './change-result-type-modal.component.html',
-  styleUrls: ['./change-result-type-modal.component.scss']
+    selector: 'app-change-result-type-modal',
+    templateUrl: './change-result-type-modal.component.html',
+    styleUrls: ['./change-result-type-modal.component.scss'],
+    standalone: false
 })
 export class ChangeResultTypeModalComponent implements OnChanges {
   @Input() body = new GeneralInfoBody();

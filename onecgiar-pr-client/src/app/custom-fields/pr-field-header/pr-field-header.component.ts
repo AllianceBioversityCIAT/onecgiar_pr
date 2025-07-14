@@ -2,9 +2,10 @@ import { Component, Input } from '@angular/core';
 import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-pr-field-header',
-  templateUrl: './pr-field-header.component.html',
-  styleUrls: ['./pr-field-header.component.scss']
+    selector: 'app-pr-field-header',
+    templateUrl: './pr-field-header.component.html',
+    styleUrls: ['./pr-field-header.component.scss'],
+    standalone: false
 })
 export class PrFieldHeaderComponent {
   @Input() simpleStyle: boolean;

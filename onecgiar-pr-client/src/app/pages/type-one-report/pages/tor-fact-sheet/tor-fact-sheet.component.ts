@@ -3,9 +3,10 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
-  selector: 'app-tor-fact-sheet',
-  templateUrl: './tor-fact-sheet.component.html',
-  styleUrls: ['./tor-fact-sheet.component.scss']
+    selector: 'app-tor-fact-sheet',
+    templateUrl: './tor-fact-sheet.component.html',
+    styleUrls: ['./tor-fact-sheet.component.scss'],
+    standalone: false
 })
 export class TorFactSheetComponent implements OnInit {
   loadingData = false;

@@ -6,9 +6,10 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { UnmappedMQAPInstitutionDto } from '../../models/partnersBody';
 
 @Component({
-  selector: 'app-knowledge-product-selector',
-  templateUrl: './knowledge-product-selector.component.html',
-  styleUrls: ['./knowledge-product-selector.component.scss']
+    selector: 'app-knowledge-product-selector',
+    templateUrl: './knowledge-product-selector.component.html',
+    styleUrls: ['./knowledge-product-selector.component.scss'],
+    standalone: false
 })
 export class KnowledgeProductSelectorComponent {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];

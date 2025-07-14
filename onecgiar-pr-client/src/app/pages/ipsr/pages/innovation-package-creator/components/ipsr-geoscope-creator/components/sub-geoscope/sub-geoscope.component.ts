@@ -4,9 +4,10 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-sub-geoscope',
-  templateUrl: './sub-geoscope.component.html',
-  styleUrls: ['./sub-geoscope.component.scss']
+    selector: 'app-sub-geoscope',
+    templateUrl: './sub-geoscope.component.html',
+    styleUrls: ['./sub-geoscope.component.scss'],
+    standalone: false
 })
 export class SubGeoscopeComponent {
   @Input() body: any = {};

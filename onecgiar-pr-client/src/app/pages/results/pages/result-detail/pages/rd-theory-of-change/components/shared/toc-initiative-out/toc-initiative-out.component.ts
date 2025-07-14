@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../../../shared/services/api/api.s
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-toc-initiative-out',
-  templateUrl: './toc-initiative-out.component.html',
-  styleUrls: ['./toc-initiative-out.component.scss']
+    selector: 'app-toc-initiative-out',
+    templateUrl: './toc-initiative-out.component.html',
+    styleUrls: ['./toc-initiative-out.component.scss'],
+    standalone: false
 })
 export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;

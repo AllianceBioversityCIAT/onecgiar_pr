@@ -1,9 +1,10 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
-  selector: 'app-pr-button',
-  templateUrl: './pr-button.component.html',
-  styleUrls: ['./pr-button.component.scss']
+    selector: 'app-pr-button',
+    templateUrl: './pr-button.component.html',
+    styleUrls: ['./pr-button.component.scss'],
+    standalone: false
 })
 export class PrButtonComponent implements OnInit {
   @Input() text: string;

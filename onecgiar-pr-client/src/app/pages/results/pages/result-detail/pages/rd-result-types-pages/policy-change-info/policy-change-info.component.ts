@@ -5,9 +5,10 @@ import { PolicyControlListService } from '../../../../../../../shared/services/g
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
 
 @Component({
-  selector: 'app-policy-change-info',
-  templateUrl: './policy-change-info.component.html',
-  styleUrls: ['./policy-change-info.component.scss']
+    selector: 'app-policy-change-info',
+    templateUrl: './policy-change-info.component.html',
+    styleUrls: ['./policy-change-info.component.scss'],
+    standalone: false
 })
 export class PolicyChangeInfoComponent implements OnInit {
   innovationUseInfoBody = new InnovationUseInfoBody();

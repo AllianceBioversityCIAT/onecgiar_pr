@@ -5,9 +5,10 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrGeneralInformationBody } from './model/ipsr-general-information.model';
 
 @Component({
-  selector: 'app-ipsr-general-information',
-  templateUrl: './ipsr-general-information.component.html',
-  styleUrls: ['./ipsr-general-information.component.scss']
+    selector: 'app-ipsr-general-information',
+    templateUrl: './ipsr-general-information.component.html',
+    styleUrls: ['./ipsr-general-information.component.scss'],
+    standalone: false
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();

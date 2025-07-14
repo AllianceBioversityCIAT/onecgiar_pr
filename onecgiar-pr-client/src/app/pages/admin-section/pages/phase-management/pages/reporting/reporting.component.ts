@@ -8,9 +8,10 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-reporting',
-  templateUrl: './reporting.component.html',
-  styleUrls: ['./reporting.component.scss']
+    selector: 'app-reporting',
+    templateUrl: './reporting.component.html',
+    styleUrls: ['./reporting.component.scss'],
+    standalone: false
 })
 export class ReportingComponent implements OnInit {
   columnOrder = [

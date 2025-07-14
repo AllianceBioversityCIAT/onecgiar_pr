@@ -14,12 +14,11 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LoggerService } from '../../../../shared/services/logger.service';
 
 @Component({
-  selector: 'app-tickets-dashboard',
-  standalone: true,
-  imports: [],
-  templateUrl: './tickets-dashboard.component.html',
-  styleUrls: ['./tickets-dashboard.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-tickets-dashboard',
+    imports: [],
+    templateUrl: './tickets-dashboard.component.html',
+    styleUrls: ['./tickets-dashboard.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketsDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   ticketsDashboardUrl: SafeResourceUrl = null;

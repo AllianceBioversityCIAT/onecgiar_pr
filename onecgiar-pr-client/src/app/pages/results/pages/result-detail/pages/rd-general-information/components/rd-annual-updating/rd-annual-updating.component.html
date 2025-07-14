@@ -24,7 +24,8 @@
     }
 
     <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
-      <div class="discontinued_option" *ngFor="let discontinuedOption of this.generalInfoBody.discontinued_options">
+      @for (discontinuedOption of this.generalInfoBody.discontinued_options; track $index; let i = $index) {
+      <div class="discontinued_option">
         <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value" [isStatic]="this.api.rolesSE.access.canDdit">
         </app-pr-checkbox>
         <app-pr-input
@@ -32,10 +33,11 @@
           placeholder="Enter text"
           type="text"
           [required]="false"
-          [ngModel]="!this.api.dataControlSE?.currentResult?.status && this.discontinuedOption.description"
-          (ngModelChange)="!this.api.dataControlSE?.currentResult?.status && (this.discontinuedOption.description = $event)">
+          [ngModel]="!this.api.dataControlSE?.currentResult?.status && discontinuedOption.description"
+          (ngModelChange)="!this.api.dataControlSE?.currentResult?.status && (discontinuedOption.description = $event)">
         </app-pr-input>
       </div>
+      }
     </div>
 
     <div appFeedbackValidation labelText="Annual Update" [isComplete]="generalInfoBody.is_discontinued !== null"></div>

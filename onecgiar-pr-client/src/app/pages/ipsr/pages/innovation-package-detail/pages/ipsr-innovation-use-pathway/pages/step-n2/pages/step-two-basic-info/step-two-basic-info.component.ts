@@ -4,9 +4,10 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-two-basic-info',
-  templateUrl: './step-two-basic-info.component.html',
-  styleUrls: ['./step-two-basic-info.component.scss']
+    selector: 'app-step-two-basic-info',
+    templateUrl: './step-two-basic-info.component.html',
+    styleUrls: ['./step-two-basic-info.component.scss'],
+    standalone: false
 })
 export class StepTwoBasicInfoComponent implements OnInit {
   informartion: any[] = [];

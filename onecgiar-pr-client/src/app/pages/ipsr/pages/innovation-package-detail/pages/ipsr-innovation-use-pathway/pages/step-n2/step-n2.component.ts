@@ -3,9 +3,10 @@ import { IpsrDataControlService } from '../../../../../../services/ipsr-data-con
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n2',
-  templateUrl: './step-n2.component.html',
-  styleUrls: ['./step-n2.component.scss']
+    selector: 'app-step-n2',
+    templateUrl: './step-n2.component.html',
+    styleUrls: ['./step-n2.component.scss'],
+    standalone: false
 })
 export class StepN2Component implements OnInit {
   constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}

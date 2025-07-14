@@ -4,9 +4,10 @@ import { ResultLevelService } from '../../services/result-level.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
-  selector: 'app-similar-results',
-  templateUrl: './similar-results.component.html',
-  styleUrls: ['./similar-results.component.scss']
+    selector: 'app-similar-results',
+    templateUrl: './similar-results.component.html',
+    styleUrls: ['./similar-results.component.scss'],
+    standalone: false
 })
 export class SimilarResultsComponent {
   @Input() options: any[];

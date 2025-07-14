@@ -5,9 +5,10 @@ import { InnovationControlListService } from '../../../../../../shared/services/
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 @Component({
-  selector: 'app-rd-evidences',
-  templateUrl: './rd-evidences.component.html',
-  styleUrls: ['./rd-evidences.component.scss']
+    selector: 'app-rd-evidences',
+    templateUrl: './rd-evidences.component.html',
+    styleUrls: ['./rd-evidences.component.scss'],
+    standalone: false
 })
 export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();

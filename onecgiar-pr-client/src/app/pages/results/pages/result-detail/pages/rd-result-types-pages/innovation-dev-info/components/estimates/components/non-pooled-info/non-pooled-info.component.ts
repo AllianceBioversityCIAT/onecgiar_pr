@@ -4,9 +4,10 @@ import { CentersService } from '../../../../../../../../../../../shared/services
 import { InstitutionsService } from '../../../../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
-  selector: 'app-non-pooled-info',
-  templateUrl: './non-pooled-info.component.html',
-  styleUrls: ['./non-pooled-info.component.scss']
+    selector: 'app-non-pooled-info',
+    templateUrl: './non-pooled-info.component.html',
+    styleUrls: ['./non-pooled-info.component.scss'],
+    standalone: false
 })
 export class NonPooledInfoComponent {
   @Input() body: any;

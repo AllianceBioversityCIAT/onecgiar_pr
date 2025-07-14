@@ -282,7 +282,7 @@ describe('RdTheoryOfChangeComponent', () => {
     it('should reload the page when initiative_id is different from changePrimaryInit', () => {
       const reloadMock = jest.fn();
       delete window.location;
-      window.location = { ...window.location, reload: reloadMock };
+      window.location = { ...window.location, reload: reloadMock } as any;
 
       component.theoryOfChangeBody.result_toc_result.initiative_id = 1;
       component.theoryOfChangeBody.changePrimaryInit = 2;

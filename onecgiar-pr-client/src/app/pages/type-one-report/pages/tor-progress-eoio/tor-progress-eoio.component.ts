@@ -5,9 +5,10 @@ import { MessageService } from 'primeng/api';
 import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
-  selector: 'app-tor-progress-eoio',
-  templateUrl: './tor-progress-eoio.component.html',
-  styleUrls: ['./tor-progress-eoio.component.scss']
+    selector: 'app-tor-progress-eoio',
+    templateUrl: './tor-progress-eoio.component.html',
+    styleUrls: ['./tor-progress-eoio.component.scss'],
+    standalone: false
 })
 export class TorProgressEoioComponent implements OnInit, OnDestroy {
   requesting: boolean = false;

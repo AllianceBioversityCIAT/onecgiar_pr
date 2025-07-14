@@ -1,4 +1,4 @@
-import { APP_INITIALIZER, NgModule } from '@angular/core';
+import { NgModule, inject, provideAppInitializer } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -29,10 +29,22 @@ import { WebsocketService } from './sockets/websocket.service';
 import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { providePrimeNG } from 'primeng/config';
+import Aura from '@primeng/themes/aura';
+import { definePreset } from '@primeng/themes';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
 }
+
+const myPreset = definePreset({
+  semantic: {
+    primary: {
+      DEFAULT: '#FF0000'
+    }
+  }
+});
 
 @NgModule({
   declarations: [
@@ -68,12 +80,19 @@ function initializeClarityService(clarityService: ClarityService) {
     provideHttpClient(withInterceptorsFromDi()),
     MessageService,
     ClarityService,
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initializeClarityService,
-      deps: [ClarityService],
-      multi: true
-    },
+    provideAnimationsAsync(),
+    provideAppInitializer(() => {
+      const initializerFn = initializeClarityService(inject(ClarityService));
+      return initializerFn();
+    }),
+    providePrimeNG({
+      theme: {
+        preset: Aura,
+        options: {
+          darkModeSelector: 'light'
+        }
+      }
+    }),
     WebsocketService
   ]
 })

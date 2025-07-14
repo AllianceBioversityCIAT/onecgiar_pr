@@ -1,20 +1,23 @@
-<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required">
-</app-pr-field-header>
-<div [ngSwitch]="(readOnly || this.rolesSE.readOnly ) && (!isStatic)" class="pr-field"
-    [ngClass]="{'mandatory': this.required,'complete': value,'readOnly':(readOnly || this.rolesSE.readOnly ) && (!isStatic)}">
-    <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || (this.required ?
-            this.notProvidedText :
-            'Not applicable')">
-    </div>
-    <div class="p-fluid input_container" *ngSwitchCase="false">
-        <textarea [rows]="rows" [cols]="30" pInputTextarea [autoResize]="true" [(ngModel)]="value"
-            [placeholder]="this.placeholder" 
-            [ngClass]="{'invalid' : (wordCount >  maxWords) && !autogenerate, 'warning' : (wordCount >  maxWords) && autogenerate}"></textarea>
+<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"> </app-pr-field-header>
+<div
+  [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+  class="pr-field"
+  [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
+  <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
+  <div class="p-fluid input_container" *ngSwitchCase="false">
+    <textarea
+      [rows]="rows"
+      [cols]="30"
+      pTextarea
+      [autoResize]="true"
+      [(ngModel)]="value"
+      [placeholder]="this.placeholder"
+      [ngClass]="{ invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
 
-        <div class="hints_container">
-            <div class="hint">{{this.hint}}</div>
-            <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
-        </div>
+    <div class="hints_container">
+      <div class="hint">{{ this.hint }}</div>
+      <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
     </div>
-    <app-pr-field-validations></app-pr-field-validations>
+  </div>
+  <app-pr-field-validations></app-pr-field-validations>
 </div>

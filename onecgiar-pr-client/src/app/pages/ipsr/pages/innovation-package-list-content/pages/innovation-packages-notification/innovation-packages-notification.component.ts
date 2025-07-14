@@ -4,9 +4,10 @@ import { ResultsNotificationsService } from '../../../../../results/pages/result
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/api.enum';
 
 @Component({
-  selector: 'app-innovation-packages-notification',
-  templateUrl: './innovation-packages-notification.component.html',
-  styleUrls: ['./innovation-packages-notification.component.scss']
+    selector: 'app-innovation-packages-notification',
+    templateUrl: './innovation-packages-notification.component.html',
+    styleUrls: ['./innovation-packages-notification.component.scss'],
+    standalone: false
 })
 export class InnovationPackagesNotificationComponent implements OnInit {
   allInitiatives = [];

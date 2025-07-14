@@ -5,9 +5,10 @@ import { ExportTablesService } from '../../../../../../../../shared/services/exp
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 @Component({
-  selector: 'app-ipsr-list-filters',
-  templateUrl: './ipsr-list-filters.component.html',
-  styleUrls: ['./ipsr-list-filters.component.scss']
+    selector: 'app-ipsr-list-filters',
+    templateUrl: './ipsr-list-filters.component.html',
+    styleUrls: ['./ipsr-list-filters.component.scss'],
+    standalone: false
 })
 export class IpsrListFiltersComponent {
   isLoadingReport = false;

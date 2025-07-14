@@ -3,16 +3,17 @@ import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-pr-range-level',
-  templateUrl: './pr-range-level.component.html',
-  styleUrls: ['./pr-range-level.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrRangeLevelComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-range-level',
+    templateUrl: './pr-range-level.component.html',
+    styleUrls: ['./pr-range-level.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrRangeLevelComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrRangeLevelComponent {
   @Input() size: number = 9;

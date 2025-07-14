@@ -9,9 +9,10 @@ import { Router } from '@angular/router';
 import { environment } from '../../../../../../../environments/environment';
 
 @Component({
-  selector: 'app-partners-request',
-  templateUrl: './partners-request.component.html',
-  styleUrls: ['./partners-request.component.scss']
+    selector: 'app-partners-request',
+    templateUrl: './partners-request.component.html',
+    styleUrls: ['./partners-request.component.scss'],
+    standalone: false
 })
 export class PartnersRequestComponent implements OnInit, DoCheck {
   partnersRequestBody = new PartnersRequestBody();

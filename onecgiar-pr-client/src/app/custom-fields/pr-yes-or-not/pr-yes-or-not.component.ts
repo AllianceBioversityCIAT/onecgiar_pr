@@ -4,16 +4,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-pr-yes-or-not',
-  templateUrl: './pr-yes-or-not.component.html',
-  styleUrls: ['./pr-yes-or-not.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrYesOrNotComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-yes-or-not',
+    templateUrl: './pr-yes-or-not.component.html',
+    styleUrls: ['./pr-yes-or-not.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrYesOrNotComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrYesOrNotComponent {
   @Input() label: string;

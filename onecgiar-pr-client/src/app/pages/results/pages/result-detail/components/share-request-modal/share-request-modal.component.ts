@@ -9,9 +9,10 @@ import { ResultsNotificationsService } from '../../../results-outlet/pages/resul
 import { RdTheoryOfChangesServicesService } from '../../pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-share-request-modal',
-  templateUrl: './share-request-modal.component.html',
-  styleUrls: ['./share-request-modal.component.scss']
+    selector: 'app-share-request-modal',
+    templateUrl: './share-request-modal.component.html',
+    styleUrls: ['./share-request-modal.component.scss'],
+    standalone: false
 })
 export class ShareRequestModalComponent implements OnInit {
   requesting = false;

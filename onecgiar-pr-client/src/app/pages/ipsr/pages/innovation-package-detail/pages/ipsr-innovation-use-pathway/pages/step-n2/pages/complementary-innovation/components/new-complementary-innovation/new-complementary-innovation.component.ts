@@ -17,9 +17,10 @@ export class CreateComplementaryInnovationDto {
 }
 
 @Component({
-  selector: 'app-new-complementary-innovation',
-  templateUrl: './new-complementary-innovation.component.html',
-  styleUrls: ['./new-complementary-innovation.component.scss']
+    selector: 'app-new-complementary-innovation',
+    templateUrl: './new-complementary-innovation.component.html',
+    styleUrls: ['./new-complementary-innovation.component.scss'],
+    standalone: false
 })
 export class NewComplementaryInnovationComponent {
   @Input() complementaryInnovationFunction: any;

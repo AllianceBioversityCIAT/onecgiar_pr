@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { ResultsNotificationsService } from '../../../../results-notifications.service';
 
 @Component({
-  selector: 'app-received-requests',
-  templateUrl: './received-requests.component.html',
-  styleUrls: ['./received-requests.component.scss']
+    selector: 'app-received-requests',
+    templateUrl: './received-requests.component.html',
+    styleUrls: ['./received-requests.component.scss'],
+    standalone: false
 })
 export class ReceivedRequestsComponent implements OnInit {
   constructor(public api: ApiService, public resultsNotificationsSE: ResultsNotificationsService) {}

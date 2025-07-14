@@ -10,10 +10,11 @@ import { CurrentResultService } from '../../../../shared/services/current-result
 import { MessageService } from 'primeng/api';
 
 @Component({
-  selector: 'app-result-detail',
-  templateUrl: './result-detail.component.html',
-  styleUrls: ['./result-detail.component.scss'],
-  providers: [MessageService]
+    selector: 'app-result-detail',
+    templateUrl: './result-detail.component.html',
+    styleUrls: ['./result-detail.component.scss'],
+    providers: [MessageService],
+    standalone: false
 })
 export class ResultDetailComponent implements OnInit, DoCheck {
   constructor(

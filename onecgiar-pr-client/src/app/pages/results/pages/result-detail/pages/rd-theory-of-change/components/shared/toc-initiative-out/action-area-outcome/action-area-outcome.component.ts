@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-action-area-outcome',
-  templateUrl: './action-area-outcome.component.html',
-  styleUrls: ['./action-area-outcome.component.scss']
+    selector: 'app-action-area-outcome',
+    templateUrl: './action-area-outcome.component.html',
+    styleUrls: ['./action-area-outcome.component.scss'],
+    standalone: false
 })
 export class ActionAreaOutcomeComponent implements OnInit {
   @Input() body = [];

@@ -4,9 +4,10 @@ import { SaveButtonService } from './save-button.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-save-button',
-  templateUrl: './save-button.component.html',
-  styleUrls: ['./save-button.component.scss']
+    selector: 'app-save-button',
+    templateUrl: './save-button.component.html',
+    styleUrls: ['./save-button.component.scss'],
+    standalone: false
 })
 export class SaveButtonComponent {
   @Input() editable: boolean;

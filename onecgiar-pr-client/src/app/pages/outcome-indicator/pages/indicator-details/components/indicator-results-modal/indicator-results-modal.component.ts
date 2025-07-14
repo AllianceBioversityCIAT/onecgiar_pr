@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Table, TableModule } from 'primeng/table';
+import { Table, TableModule, TableService } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
@@ -13,7 +13,6 @@ import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-indicator-results-modal',
-  standalone: true,
   imports: [
     CommonModule,
     TableModule,
@@ -27,6 +26,7 @@ import { ButtonModule } from 'primeng/button';
   ],
   templateUrl: './indicator-results-modal.component.html',
   styleUrl: './indicator-results-modal.component.scss',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IndicatorResultsModalComponent {

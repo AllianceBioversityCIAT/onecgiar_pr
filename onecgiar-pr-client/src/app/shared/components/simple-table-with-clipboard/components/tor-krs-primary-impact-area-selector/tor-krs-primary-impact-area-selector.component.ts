@@ -2,9 +2,10 @@ import { Component, Input } from '@angular/core';
 import { TypeOneReportService } from '../../../../../pages/type-one-report/type-one-report.service';
 
 @Component({
-  selector: 'app-tor-krs-primary-impact-area-selector',
-  templateUrl: './tor-krs-primary-impact-area-selector.component.html',
-  styleUrls: ['./tor-krs-primary-impact-area-selector.component.scss']
+    selector: 'app-tor-krs-primary-impact-area-selector',
+    templateUrl: './tor-krs-primary-impact-area-selector.component.html',
+    styleUrls: ['./tor-krs-primary-impact-area-selector.component.scss'],
+    standalone: false
 })
 export class TorKrsPrimaryImpactAreaSelectorComponent {
   isSaving = false;

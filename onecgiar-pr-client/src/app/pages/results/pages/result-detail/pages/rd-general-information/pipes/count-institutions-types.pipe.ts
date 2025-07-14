@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'countInstitutionsTypes'
+    name: 'countInstitutionsTypes',
+    standalone: false
 })
 export class CountInstitutionsTypesPipe implements PipeTransform {
   transform(list: any[], toggle: number): any {

@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-admin-section',
-  templateUrl: './admin-section.component.html',
-  styleUrls: ['./admin-section.component.scss']
+    selector: 'app-admin-section',
+    templateUrl: './admin-section.component.html',
+    styleUrls: ['./admin-section.component.scss'],
+    standalone: false
 })
 export class AdminSectionComponent implements OnInit {
   sections = [
