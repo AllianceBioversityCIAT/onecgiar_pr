@@ -11,6 +11,8 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
+import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
 
 interface UserColumn {
   label: string;
@@ -54,7 +56,17 @@ interface AddUserForm {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, DialogModule, CustomFieldsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    ButtonModule,
+    TooltipModule,
+    InputTextModule,
+    DialogModule,
+    CustomFieldsModule,
+    SearchUserSelectComponent
+  ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
@@ -77,10 +89,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Timeout for search debounce
   private searchTimeout: any;
-
-  constructor() {
-    // No effect needed - we'll handle API calls explicitly
-  }
 
   ngOnInit() {
     this.getUsers();

@@ -1,0 +1,7 @@
+<p-dropdown [options]="options()" [(ngModel)]="selectedCity" placeholder="Select a City">
+  <ng-template let-option pTemplate="item">
+    <div class="flex align-items-center">
+      <span>{{ option.displayName }}</span>
+    </div>
+  </ng-template>
+</p-dropdown>
