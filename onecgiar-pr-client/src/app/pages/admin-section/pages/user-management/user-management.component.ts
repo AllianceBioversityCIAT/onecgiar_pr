@@ -41,7 +41,7 @@ interface CgiarOption {
 
 interface AddUserForm {
   is_cgiar: boolean;
-  displayName?: string; // Solo para mostrar visualmente
+  displayName?: string; // Only for visual display
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -199,12 +199,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
-    role_platform: 2 // Marcado por defecto como guest (2)
+    role_platform: 2 // Marked as guest by default (2)
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
-    if (!this.addUserForm().is_cgiar) {
+    if (this.addUserForm().is_cgiar) {
       // CGIAR users only have guest permissions
       return [
         { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
@@ -249,7 +249,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resetAddUserForm(): void {
     this.addUserForm.set({
       is_cgiar: true,
-      role_platform: 2 // Marcado por defecto como guest (2)
+      role_platform: 2 // Marked as guest by default (2)
     });
   }
 
@@ -263,7 +263,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       last_name: '',
       email: '',
       // Set permissions based on CGIAR status
-      role_platform: 2 // Siempre marcado como guest (2)
+      role_platform: 2 // Always marked as guest (2)
     }));
   }
 
@@ -373,15 +373,17 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   isFormValid = computed(() => {
     const form = this.addUserForm();
 
-    // Validar que se haya seleccionado una opción de permisos (efecto placebo)
+    // Validate that a permission option has been selected
     if (form.role_platform === null || form.role_platform === undefined) {
       return false;
     }
 
+    // CGIAR users: Solo necesitamos el email
     if (form.is_cgiar) {
       return !!form.email;
-    } else {
-      return !!(form.first_name && form.last_name && form.email);
     }
+
+    // Non-CGIAR users: Necesitamos todos los campos del formulario
+    return !!(form.first_name && form.last_name && form.email);
   });
 }
