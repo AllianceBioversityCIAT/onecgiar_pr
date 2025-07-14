@@ -50,4 +50,12 @@ Thumbs.db
 /todo-list
 
 # cypress
+cypress/videos/*
+cypress/screenshots/*
 cypress.env.json
+
+# Cursor rules
+/.cursorrules
+
+# Cypress environment
+cypress.env.js
