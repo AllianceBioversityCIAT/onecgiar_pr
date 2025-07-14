@@ -336,7 +336,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       role_platform: form.role_platform
     };
 
-    console.log(form);
     this.resultsApiService.POST_createUser(userToCreate).subscribe({
       next: res => {
         this.showAddUserModal = false;
