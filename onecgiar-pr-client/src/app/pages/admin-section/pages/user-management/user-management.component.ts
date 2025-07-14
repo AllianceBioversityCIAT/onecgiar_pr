@@ -305,7 +305,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onSaveUser(): void {
     this.creatingUser.set(true);
-    this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
+
+    // Remove displayName from form data before sending to backend
+    const formData = { ...this.addUserForm() };
+    delete formData.displayName;
+
+    this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {
         this.showAddUserModal = false;
 
