@@ -11,6 +11,9 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
+import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
+import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
 
 interface UserColumn {
   label: string;
@@ -36,15 +39,9 @@ interface CgiarOption {
   value: string;
 }
 
-interface CgiarUser {
-  name: string;
-  email: string;
-}
-
 interface AddUserForm {
   is_cgiar: boolean;
-  selectedUser?: CgiarUser;
-  selectedUserEmail?: string;
+  displayName?: string; // Only for visual display
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -54,7 +51,17 @@ interface AddUserForm {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, DialogModule, CustomFieldsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    ButtonModule,
+    TooltipModule,
+    InputTextModule,
+    DialogModule,
+    CustomFieldsModule,
+    SearchUserSelectComponent
+  ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
 })
@@ -77,10 +84,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Timeout for search debounce
   private searchTimeout: any;
-
-  constructor() {
-    // No effect needed - we'll handle API calls explicitly
-  }
 
   ngOnInit() {
     this.getUsers();
@@ -195,21 +198,23 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal variables
   showAddUserModal: boolean = false;
   addUserForm = signal<AddUserForm>({
-    is_cgiar: false,
-    role_platform: 2 // Marcado por defecto como guest (2)
+    is_cgiar: true,
+    role_platform: 2 // Marked as guest by default (2)
   });
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
     if (this.addUserForm().is_cgiar) {
-      // CGIAR users can choose between admin and guest
+      // CGIAR users only have guest permissions
+      return [
+        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
+      ];
+    } else {
+      // Non-CGIAR users can choose between admin and guest
       return [
         { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
         { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
       ];
-    } else {
-      // Non-CGIAR users can only have guest permissions
-      return [{ label: 'This user has guest permissions in the platform.', value: 2 }]; // Guest = 2
     }
   });
 
@@ -243,8 +248,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Modal methods
   resetAddUserForm(): void {
     this.addUserForm.set({
-      is_cgiar: false,
-      role_platform: 2 // Marcado por defecto como guest (2)
+      is_cgiar: true,
+      role_platform: 2 // Marked as guest by default (2)
     });
   }
 
@@ -253,30 +258,20 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       ...form,
       is_cgiar: isCgiar,
       // Reset form fields when changing CGIAR status
-      selectedUser: undefined,
-      selectedUserEmail: '',
+      displayName: '',
       first_name: '',
       last_name: '',
       email: '',
       // Set permissions based on CGIAR status
-      role_platform: 2 // Siempre marcado como guest (2)
+      role_platform: 2 // Always marked as guest (2)
     }));
   }
 
-  onUserSelect(event: any): void {
-    // Find the selected user by email from the event
-    const selectedUser = this.cgiarUsers.find(user => user.email === event.email);
+  onUserSelect(event: SearchUser): void {
     this.addUserForm.update(form => ({
       ...form,
-      selectedUser,
-      selectedUserEmail: event.email
-    }));
-  }
-
-  onUserEmailChange(email: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      selectedUserEmail: email
+      displayName: `${event.sn}, ${event.givenName} (${event.mail})`,
+      email: event.mail
     }));
   }
 
@@ -309,19 +304,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onSaveUser(): void {
-    const form = this.addUserForm();
-
     this.creatingUser.set(true);
-
-    const userToCreate = {
-      first_name: form.first_name,
-      last_name: form.last_name,
-      email: form.email,
-      is_cgiar: form.is_cgiar,
-      role_platform: form.role_platform
-    };
-
-    this.resultsApiService.POST_createUser(userToCreate).subscribe({
+    this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
       next: res => {
         this.showAddUserModal = false;
 
@@ -389,15 +373,17 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   isFormValid = computed(() => {
     const form = this.addUserForm();
 
-    // Validar que se haya seleccionado una opción de permisos (efecto placebo)
+    // Validate that a permission option has been selected
     if (form.role_platform === null || form.role_platform === undefined) {
       return false;
     }
 
+    // CGIAR users: Solo necesitamos el email
     if (form.is_cgiar) {
-      return !!form.selectedUser;
-    } else {
-      return !!(form.first_name && form.last_name && form.email);
+      return !!form.email;
     }
+
+    // Non-CGIAR users: Necesitamos todos los campos del formulario
+    return !!(form.first_name && form.last_name && form.email);
   });
 }

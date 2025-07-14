@@ -160,35 +160,23 @@
       <div class="form-field">
         <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
         <div class="cgiar-buttons">
-          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
-          <!-- (click)="onModalCgiarChange(false)" -->
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar">No</button>
+          <button type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button>
+          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar" (click)="onModalCgiarChange(false)">No</button>
         </div>
       </div>
 
       <!-- CGIAR User Search -->
-      @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && !addUserForm().email) {
         <div class="form-field">
-          <app-pr-select
-            [options]="cgiarUsers"
-            optionLabel="displayName"
-            optionValue="email"
-            placeholder="Select a user"
-            label="Select a user"
-            [ngModel]="addUserForm().selectedUserEmail"
-            (ngModelChange)="onUserEmailChange($event)"
-            (selectOptionEvent)="onUserSelect($event)"
-            [required]="true"
-            [expandSpaceOnOpen]="true">
-          </app-pr-select>
+          <app-search-user-select (userSelected)="onUserSelect($event)"></app-search-user-select>
         </div>
       }
 
       <!-- Selected User Display (Read-only) -->
-      @if (addUserForm().is_cgiar && addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && addUserForm().email) {
         <div class="form-field">
-          <label class="field-label">User:</label>
-          <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
+          <label class="field-label">Selected user:</label>
+          <div class="selected-user-display">{{ addUserForm().displayName }}</div>
         </div>
       }
 
@@ -232,7 +220,7 @@
       }
 
       <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
-      @if ((addUserForm().is_cgiar && addUserForm().selectedUser) || !addUserForm().is_cgiar) {
+      @if ((addUserForm().is_cgiar && addUserForm().email) || !addUserForm().is_cgiar) {
         <div>
           <!-- Admin Permissions -->
           <div class="form-field" [class.extra-margin-top]="!addUserForm().is_cgiar">
