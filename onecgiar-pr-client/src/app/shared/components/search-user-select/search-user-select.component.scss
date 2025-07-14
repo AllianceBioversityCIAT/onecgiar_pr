@@ -34,17 +34,24 @@
   color: #666;
 }
 
-// Expandable space animation - Fixed 300px expansion
+// Expandable space - INSTANT expansion (no animation)
 .expandable-space {
   width: 100%;
   height: 0;
   overflow: hidden;
-  transition: height 0.3s ease-in-out;
   background: transparent;
+  // NO transition = instant expansion
 
   &.expanded {
     height: 300px;
   }
+}
+
+// Fixed height for testing - no animation
+.expandable-space-fixed {
+  width: 100%;
+  height: 300px;
+  background: transparent;
 }
 
 // Custom dropdown styling to match pr-select

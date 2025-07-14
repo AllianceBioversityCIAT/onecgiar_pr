@@ -41,7 +41,9 @@ export class SearchUserSelectComponent {
   }
 
   onUserChange(user: SearchUser) {
-    this.selectedUser.set(user);
-    this.userSelected.emit(user);
+    if (user) {
+      this.selectedUser.set(user);
+      this.userSelected.emit(user);
+    }
   }
 }
