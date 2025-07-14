@@ -1,7 +1,19 @@
-<p-dropdown [options]="options()" [(ngModel)]="selectedCity" placeholder="Select a City">
+<p-dropdown
+  [options]="options()"
+  [(ngModel)]="selectedUser"
+  placeholder="Select a user"
+  optionLabel="displayName"
+  (onShow)="onDropdownShow()"
+  (onHide)="onDropdownHide()"
+  (onChange)="onUserChange($event.value)"
+  [style]="{ width: '100%' }">
   <ng-template let-option pTemplate="item">
-    <div class="flex align-items-center">
-      <span>{{ option.displayName }}</span>
+    <div class="user-option">
+      <div class="user-display-name">{{ option.displayName }}</div>
+      <div class="user-email">{{ option.mail }}</div>
     </div>
   </ng-template>
 </p-dropdown>
+
+<!-- Expandable space when dropdown is open -->
+<div class="expandable-space" [ngClass]="{ expanded: isDropdownOpen() }"></div>

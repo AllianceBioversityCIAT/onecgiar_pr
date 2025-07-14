@@ -180,7 +180,7 @@
             [required]="true"
             [expandSpaceOnOpen]="true">
           </app-pr-select>
-          <app-search-user-select></app-search-user-select>
+          <app-search-user-select (userSelected)="onUserSelect($event)"></app-search-user-select>
         </div>
       }
 

@@ -13,6 +13,7 @@ import { ResultsApiService } from '../../../../shared/services/api/results-api.s
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
+import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
 
 interface UserColumn {
   label: string;
@@ -271,14 +272,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }));
   }
 
-  onUserSelect(event: any): void {
+  onUserSelect(event: SearchUser): void {
     // Find the selected user by email from the event
-    const selectedUser = this.cgiarUsers.find(user => user.email === event.email);
-    this.addUserForm.update(form => ({
-      ...form,
-      selectedUser,
-      selectedUserEmail: event.email
-    }));
+    console.log(event);
   }
 
   onUserEmailChange(email: string): void {
