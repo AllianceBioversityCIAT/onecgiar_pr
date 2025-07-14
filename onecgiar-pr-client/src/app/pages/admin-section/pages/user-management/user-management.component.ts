@@ -273,8 +273,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onUserSelect(event: SearchUser): void {
-    // Find the selected user by email from the event
-    console.log(event);
+    this.addUserForm.update(form => ({
+      ...form,
+      selectedUserEmail: event.mail
+    }));
   }
 
   onUserEmailChange(email: string): void {

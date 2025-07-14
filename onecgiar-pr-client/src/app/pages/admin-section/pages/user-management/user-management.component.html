@@ -168,7 +168,7 @@
       <!-- CGIAR User Search -->
       @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
         <div class="form-field">
-          <app-pr-select
+          <!-- <app-pr-select
             [options]="cgiarUsers"
             optionLabel="displayName"
             optionValue="email"
@@ -179,7 +179,7 @@
             (selectOptionEvent)="onUserSelect($event)"
             [required]="true"
             [expandSpaceOnOpen]="true">
-          </app-pr-select>
+          </app-pr-select> -->
           <app-search-user-select (userSelected)="onUserSelect($event)"></app-search-user-select>
         </div>
       }
