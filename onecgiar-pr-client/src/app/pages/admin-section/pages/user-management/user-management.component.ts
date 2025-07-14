@@ -39,16 +39,9 @@ interface CgiarOption {
   value: string;
 }
 
-interface CgiarUser {
-  name: string;
-  email: string;
-  displayName: string;
-}
-
 interface AddUserForm {
   is_cgiar: boolean;
-  selectedUser?: CgiarUser;
-  selectedUserEmail?: string;
+  displayName?: string; // Solo para mostrar visualmente
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -265,8 +258,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       ...form,
       is_cgiar: isCgiar,
       // Reset form fields when changing CGIAR status
-      selectedUser: undefined,
-      selectedUserEmail: '',
+      displayName: '',
       first_name: '',
       last_name: '',
       email: '',
@@ -278,20 +270,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onUserSelect(event: SearchUser): void {
     this.addUserForm.update(form => ({
       ...form,
-      selectedUser: {
-        name: event.displayName,
-        email: event.mail,
-        displayName: `${event.displayName} (${event.mail})`
-      },
-      selectedUserEmail: event.mail,
+      displayName: `${event.displayName} (${event.mail})`,
       email: event.mail
-    }));
-  }
-
-  onUserEmailChange(email: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      selectedUserEmail: email
     }));
   }
 
@@ -324,19 +304,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onSaveUser(): void {
-    const form = this.addUserForm();
-
     this.creatingUser.set(true);
-
-    const userToCreate = {
-      first_name: form.first_name,
-      last_name: form.last_name,
-      email: form.email,
-      is_cgiar: form.is_cgiar,
-      role_platform: form.role_platform
-    };
-
-    this.resultsApiService.POST_createUser(userToCreate).subscribe({
+    this.resultsApiService.POST_createUser(this.addUserForm()).subscribe({
       next: res => {
         this.showAddUserModal = false;
 
@@ -410,7 +379,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }
 
     if (form.is_cgiar) {
-      return !!form.selectedUser;
+      return !!form.email;
     } else {
       return !!(form.first_name && form.last_name && form.email);
     }
