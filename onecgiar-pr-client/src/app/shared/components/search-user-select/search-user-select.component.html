@@ -3,16 +3,46 @@
   [(ngModel)]="selectedUser"
   placeholder="Select a user"
   optionLabel="displayName"
+  [filter]="true"
+  filterPlaceholder="Search users... (min 3 characters)"
+  [loading]="isLoading()"
+  (onFilter)="onFilter($event)"
   (onShow)="onDropdownShow()"
   (onHide)="onDropdownHide()"
   (onChange)="onUserChange($event.value)"
   [style]="{ width: '100%' }">
   <ng-template let-option pTemplate="item">
     <div class="user-option">
+      <div class="user-display-name">{{ option.displayName }}</div>
       <div class="user-email">{{ option.mail }}</div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="empty">
+    <div class="empty-message">
+      @if (isLoading()) {
+        <div>
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Searching users...</span>
+        </div>
+      } @else {
+        @if (showMinCharsMessage()) {
+          <div>
+            <i class="pi pi-info-circle"></i>
+            <span>Please enter at least 3 characters to search</span>
+          </div>
+        } @else {
+          <div>
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>No users found. Try a different search term.</span>
+          </div>
+        }
+      }
     </div>
   </ng-template>
 </p-dropdown>
 
 <!-- Expandable space INSTANT (no animation) -->
-<div class="expandable-space" [ngClass]="{ expanded: isDropdownOpen() }"></div>
+@if (isDropdownOpen()) {
+  <div class="expandable-space expanded"></div>
+}
