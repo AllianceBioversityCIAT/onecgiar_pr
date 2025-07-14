@@ -168,18 +168,6 @@
       <!-- CGIAR User Search -->
       @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
         <div class="form-field">
-          <!-- <app-pr-select
-            [options]="cgiarUsers"
-            optionLabel="displayName"
-            optionValue="email"
-            placeholder="Select a user"
-            label="Select a user"
-            [ngModel]="addUserForm().selectedUserEmail"
-            (ngModelChange)="onUserEmailChange($event)"
-            (selectOptionEvent)="onUserSelect($event)"
-            [required]="true"
-            [expandSpaceOnOpen]="true">
-          </app-pr-select> -->
           <app-search-user-select (userSelected)="onUserSelect($event)"></app-search-user-select>
         </div>
       }
@@ -187,8 +175,8 @@
       <!-- Selected User Display (Read-only) -->
       @if (addUserForm().is_cgiar && addUserForm().selectedUser) {
         <div class="form-field">
-          <label class="field-label">User:</label>
-          <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
+          <label class="field-label">Selected user:</label>
+          <div class="selected-user-display">{{ addUserForm().selectedUser!.displayName }}</div>
         </div>
       }
 

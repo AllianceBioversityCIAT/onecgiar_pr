@@ -42,6 +42,7 @@ interface CgiarOption {
 interface CgiarUser {
   name: string;
   email: string;
+  displayName: string;
 }
 
 interface AddUserForm {
@@ -210,15 +211,17 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
-    if (this.addUserForm().is_cgiar) {
-      // CGIAR users can choose between admin and guest
+    if (!this.addUserForm().is_cgiar) {
+      // CGIAR users only have guest permissions
+      return [
+        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
+      ];
+    } else {
+      // Non-CGIAR users can choose between admin and guest
       return [
         { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
         { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
       ];
-    } else {
-      // Non-CGIAR users can only have guest permissions
-      return [{ label: 'This user has guest permissions in the platform.', value: 2 }]; // Guest = 2
     }
   });
 
@@ -275,7 +278,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onUserSelect(event: SearchUser): void {
     this.addUserForm.update(form => ({
       ...form,
-      selectedUserEmail: event.mail
+      selectedUser: {
+        name: event.displayName,
+        email: event.mail,
+        displayName: `${event.displayName} (${event.mail})`
+      },
+      selectedUserEmail: event.mail,
+      email: event.mail
     }));
   }
 
@@ -327,6 +336,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       role_platform: form.role_platform
     };
 
+    console.log(form);
     this.resultsApiService.POST_createUser(userToCreate).subscribe({
       next: res => {
         this.showAddUserModal = false;
