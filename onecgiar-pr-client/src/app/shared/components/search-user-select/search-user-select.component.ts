@@ -72,7 +72,12 @@ export class SearchUserSelectComponent {
 
     this.userSearchService.searchUsers(query).subscribe({
       next: res => {
-        this.options.set(res.response || []);
+        // Format users with "surname, givenName (email)" format
+        const formattedUsers = (res.response || []).map(user => ({
+          ...user,
+          formattedName: `${user.sn}, ${user.givenName} (${user.mail})`
+        }));
+        this.options.set(formattedUsers);
         this.isLoading.set(false);
       },
       error: error => {

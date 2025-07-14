@@ -270,7 +270,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onUserSelect(event: SearchUser): void {
     this.addUserForm.update(form => ({
       ...form,
-      displayName: `${event.displayName} (${event.mail})`,
+      displayName: `${event.sn}, ${event.givenName} (${event.mail})`,
       email: event.mail
     }));
   }

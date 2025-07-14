@@ -5,7 +5,7 @@
     [options]="options()"
     [(ngModel)]="selectedUser"
     placeholder="Select a user"
-    optionLabel="displayName"
+    optionLabel="formattedName"
     [filter]="true"
     filterPlaceholder="Search users... (min 3 characters)"
     [loading]="isLoading()"
@@ -16,8 +16,7 @@
     [style]="{ width: '100%' }">
     <ng-template let-option pTemplate="item">
       <div class="user-option">
-        <div class="user-display-name">{{ option.displayName }}</div>
-        <div class="user-email">{{ option.mail }}</div>
+        <div class="user-display-name">{{ option.sn }}, {{ option.givenName }} ({{ option.mail }})</div>
       </div>
     </ng-template>
 
