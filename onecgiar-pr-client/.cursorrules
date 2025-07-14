@@ -118,6 +118,58 @@
 - Clean up conflicting rules completely
 - Respond in user's preferred language
 
+## Testing Rules (Jest Framework)
+
+### 🧪 JEST TESTING REQUIREMENTS
+
+**CRITICAL**: This project uses **Jest**, NOT Jasmine
+
+1. **Always use Jest syntax**:
+   - `jest.fn()` instead of `jasmine.createSpy()`
+   - `jest.spyOn()` instead of `spyOn()`
+   - `jest.mock()` for mocking modules
+   - `.mockReturnValue()` instead of `.and.returnValue()`
+
+2. **Test Assumptions for Frontend Changes**:
+   - **ALWAYS assume tests are missing** when making frontend changes
+   - **ALWAYS check and update existing tests** when modifying components
+   - **ALWAYS create new tests** for new functionality
+   - **NEVER ignore failing tests** - fix them immediately
+
+3. **Test Standards**:
+   - All new components MUST have unit tests
+   - All new methods MUST be tested
+   - All user interactions MUST be tested
+   - All error scenarios MUST be tested
+   - Use `HttpClientTestingModule` for HTTP dependencies
+   - Mock external services properly
+
+4. **Test Execution**:
+   - Run tests with `npm test -- --testPathPattern=[component-name]`
+   - Ensure all tests pass before committing
+   - Fix any failing tests immediately
+   - Don't skip or ignore broken tests
+
+5. **Test Structure Example**:
+   ```typescript
+   describe('ComponentName', () => {
+     let component: ComponentName;
+     let mockService: any;
+
+     beforeEach(() => {
+       mockService = {
+         method: jest.fn().mockReturnValue(of({}))
+       };
+     });
+
+     it('should test behavior', () => {
+       jest.spyOn(component.output, 'emit');
+       // test logic
+       expect(component.output.emit).toHaveBeenCalledWith(value);
+     });
+   });
+   ```
+
 ## Git Commit Rules
 
 ### 📝 CREATE COMMIT COMMAND
