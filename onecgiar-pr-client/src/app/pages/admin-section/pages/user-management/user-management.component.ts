@@ -204,7 +204,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
-    if (this.addUserForm().is_cgiar) {
+    if (!this.addUserForm().is_cgiar) {
       // CGIAR users only have guest permissions
       return [
         { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
@@ -321,8 +321,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           id: 'createUserSuccess',
           title: 'User created successfully',
           description: `${userName} - ${successMessage}`,
-          status: 'success',
-          closeIn: 3000
+          status: 'success'
         });
 
         this.creatingUser.set(false);
