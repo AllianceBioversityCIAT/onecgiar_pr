@@ -1,3 +1,4 @@
+/// <reference types="cypress" />
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -29,11 +30,15 @@ Cypress.Commands.add('login', (role?: string, email?: string, password?: string)
   } else {
     // Get credentials from environment
     if (userRole === UserRole.GUEST) {
-      testEmail = Cypress.env('guestEmail') || Cypress.env('testEmail'); // Legacy support
-      testPassword = Cypress.env('guestPassword') || Cypress.env('testPassword'); // Legacy support
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      testEmail = (Cypress as any).env('guestEmail') || '';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      testPassword = (Cypress as any).env('guestPassword') || '';
     } else if (userRole === UserRole.ADMIN) {
-      testEmail = Cypress.env('adminEmail') || ''; // For future use
-      testPassword = Cypress.env('adminPassword') || ''; // For future use
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      testEmail = (Cypress as any).env('adminEmail') || ''; // For future use
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      testPassword = (Cypress as any).env('adminPassword') || ''; // For future use
     } else {
       throw new Error(`Unknown user role: ${userRole}`);
     }

@@ -69,8 +69,8 @@ jobs:
         // This file is created dynamically with credentials from GitHub secrets
         export const environment = {
           cypress: {
-            testEmail: '${CYPRESS_GUEST_EMAIL}',
-            testPassword: '${CYPRESS_GUEST_PASSWORD}'
+            guestEmail: '${CYPRESS_GUEST_EMAIL}',
+            guestPassword: '${CYPRESS_GUEST_PASSWORD}'
           }
         };
         EOF
