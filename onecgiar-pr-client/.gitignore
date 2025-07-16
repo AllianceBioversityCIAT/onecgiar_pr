@@ -55,3 +55,6 @@ cypress.env.json
 
 # Cursor rules
 /.cursorrules
+
+# Cypress environment
+cypress.env.js

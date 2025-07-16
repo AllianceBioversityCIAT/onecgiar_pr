@@ -1,5 +1,21 @@
 const { defineConfig } = require('cypress')
 
+// Try to import Cypress environment configuration
+let cypressEnvironment
+try {
+  cypressEnvironment = require('./cypress.env')
+} catch (error) {
+  console.warn('⚠️  cypress.env.js not found. Using empty credentials.')
+  cypressEnvironment = {
+    environment: {
+      cypress: {
+        testEmail: '',
+        testPassword: ''
+      }
+    }
+  }
+}
+
 module.exports = defineConfig({
   projectId: 'snnzit',
   e2e: {
@@ -26,8 +42,12 @@ module.exports = defineConfig({
   responseTimeout: 10000,
   pageLoadTimeout: 30000,
   env: {
-    // Test credentials - these should be overridden by environment variables
-    testEmail: process.env.CYPRESS_TEST_EMAIL || 'yecksin.multimedia@gmail.com',
-    testPassword: process.env.CYPRESS_TEST_PASSWORD || 'Cypress@2'
+    // Test credentials for Guest role
+    guestEmail: cypressEnvironment.environment.cypress.guestEmail,
+    guestPassword: cypressEnvironment.environment.cypress.guestPassword,
+
+    // Check if credentials are available
+    hasCredentials: cypressEnvironment.environment.cypress.guestEmail &&
+      cypressEnvironment.environment.cypress.guestPassword
   }
 });
