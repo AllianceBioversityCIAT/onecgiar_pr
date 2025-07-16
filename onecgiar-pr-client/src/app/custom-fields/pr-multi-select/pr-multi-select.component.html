@@ -10,10 +10,10 @@
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options">
             <div class="search_input_container">
-                <div class="p-input-icon-left p-fluid">
-                    <i class="pi pi-search"></i>
-                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
-                </div>
+                <p-iconfield>
+                    <p-inputicon styleClass="pi pi-search" />
+                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+                </p-iconfield>
             </div>
 
             <div class="util_container">

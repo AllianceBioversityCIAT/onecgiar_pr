@@ -10,6 +10,7 @@
       [cols]="30"
       pTextarea
       [autoResize]="true"
+      [style]="{ width: '100%' }"
       [(ngModel)]="value"
       [placeholder]="this.placeholder"
       [ngClass]="{ invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>

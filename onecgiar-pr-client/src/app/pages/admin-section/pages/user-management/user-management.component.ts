@@ -11,6 +11,8 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
 interface UserColumn {
   label: string;
@@ -52,10 +54,21 @@ interface AddUserForm {
 }
 
 @Component({
-    selector: 'app-user-management',
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, DialogModule, CustomFieldsModule],
-    templateUrl: './user-management.component.html',
-    styleUrl: './user-management.component.scss'
+  selector: 'app-user-management',
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    ButtonModule,
+    TooltipModule,
+    InputTextModule,
+    DialogModule,
+    CustomFieldsModule,
+    IconFieldModule,
+    InputIconModule
+  ],
+  templateUrl: './user-management.component.html',
+  styleUrl: './user-management.component.scss'
 })
 export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);

@@ -15,17 +15,17 @@
             <input *ngIf="this.type != 'currency' && this.type != 'number'" [disabled]="this.disabled" pInputText
                 [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
                 [ngClass]="{'pr-valid': true, 'invalid' : wordCount > maxWords && !autogenerate, 'warning' : wordCount > maxWords && autogenerate}"
-                [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto'}" />
+                [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%'}" />
 
             <p-inputNumber class="" *ngIf="this.type == 'number'" [(ngModel)]="value" [disabled]="this.disabled"
                 [mode]="this.numberMode" [minFractionDigits]="this.numberMode && 2"
                 [maxFractionDigits]="this.numberMode && this.maxDecimals" [min]="0"
-                [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto'}"
+                [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%'}"
                 [placeholder]="this.placeholder">
             </p-inputNumber>
 
             <p-inputNumber class="" *ngIf="this.type == 'currency'" [(ngModel)]="value" mode="currency" currency="USD"
-                locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder" [min]="0">
+                locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder" [min]="0" [style]="{width: '100%'}">
             </p-inputNumber>
             <div class="hints_container">
                 <div class="hint">{{this.hint}}</div>

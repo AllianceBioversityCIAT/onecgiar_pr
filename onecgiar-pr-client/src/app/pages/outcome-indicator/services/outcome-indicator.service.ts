@@ -94,6 +94,8 @@ export class OutcomeIndicatorService {
           });
 
         this.loadingWPs.set(false);
+        console.clear();
+        console.log(this.wpsData);
         this.expandAll();
       },
       error: error => {

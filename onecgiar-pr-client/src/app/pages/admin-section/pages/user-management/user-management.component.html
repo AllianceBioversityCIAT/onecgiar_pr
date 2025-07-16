@@ -18,10 +18,17 @@
         <!-- User search -->
         <div class="search-container">
           <label class="search-label">Search by user:</label>
-          <div class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input type="text" pInputText placeholder="Search" [value]="searchText()" (input)="onSearchInputChange($event)" class="search-field" />
-          </div>
+          <p-iconfield>
+            <p-inputicon styleClass="pi pi-search" />
+            <input
+              type="text"
+              pInputText
+              placeholder="Search"
+              [value]="searchText()"
+              (input)="onSearchInputChange($event)"
+              class="search-field"
+              style="height: 38px" />
+          </p-iconfield>
         </div>
 
         <!-- Status filter -->
@@ -90,7 +97,7 @@
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
       responsiveLayout="scroll">
       <ng-template pTemplate="header">
-        <tr>
+        <tr style="height: 54px">
           @for (column of columns; track column.key) {
             <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
               <div class="header-content">

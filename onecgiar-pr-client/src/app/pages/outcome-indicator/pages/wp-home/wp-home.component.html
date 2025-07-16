@@ -46,8 +46,8 @@
   rowGroupMode="subheader"
   groupRowsBy="workpackage_short_name"
   [expandedRowKeys]="this.outcomeIService.expandedRows">
-  <ng-template pTemplate="header">
-    <tr>
+  <ng-template #header>
+    <tr style="height: 50px">
       <th pSortableColumn="workpackage_short_name" style="width: 26%" id="outcome_header">
         Work Package Outcome <p-sortIcon field="workpackage_short_name" />
       </th>
@@ -60,7 +60,7 @@
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="groupheader" let-item let-rowIndex="rowIndex" let-expanded="expanded">
+  <ng-template #groupheader let-item let-rowIndex="rowIndex" let-expanded="expanded">
     <tr>
       <td colspan="7" style="background: #f3f5ff; cursor: pointer; border-bottom: 1px solid #e5e6f0" pRipple [pRowToggler]="item">
         <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem">
@@ -77,7 +77,7 @@
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="rowexpansion" let-item>
+  <ng-template #expandedrow let-item>
     @for (result of item.toc_results; track $index) {
       @if (result.indicators.length === 0 && result.isVisible) {
         <tr style="height: 50px">
@@ -132,13 +132,13 @@
     }
   </ng-template>
 
-  <ng-template pTemplate="emptymessage">
+  <ng-template #emptymessage>
     <tr style="height: 200px">
       <td colspan="7" class="noDataText">There are no results for the selected filters.</td>
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="loadingbody">
+  <ng-template #loadingbody>
     <tr
       [style]="{
         height: (this.outcomeIService.wpsData | appFilterIndicatorBySearch: this.outcomeIService.searchText() : true)?.length ? '100%' : '400px'

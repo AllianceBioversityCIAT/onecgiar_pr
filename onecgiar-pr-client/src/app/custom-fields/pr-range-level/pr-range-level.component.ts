@@ -3,17 +3,17 @@ import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
-    selector: 'app-pr-range-level',
-    templateUrl: './pr-range-level.component.html',
-    styleUrls: ['./pr-range-level.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrRangeLevelComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-range-level',
+  templateUrl: './pr-range-level.component.html',
+  styleUrls: ['./pr-range-level.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrRangeLevelComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrRangeLevelComponent {
   @Input() size: number = 9;
@@ -23,16 +23,30 @@ export class PrRangeLevelComponent {
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
   @Output() selectOptionEvent = new EventEmitter<any>();
+
+  private hoverTimeout: any;
+
   hoverData = {
     show: false,
     object: {},
     index: null,
     handleMouseEnter: (data: any, index: any) => {
-      this.hoverData.object = data;
-      this.hoverData.index = index;
-      this.hoverData.show = true;
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+      }
+
+      this.hoverTimeout = setTimeout(() => {
+        this.hoverData.object = data;
+        this.hoverData.index = index;
+        this.hoverData.show = true;
+      }, 200);
     },
     handleMouseLeave: () => {
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+        this.hoverTimeout = null;
+      }
+
       this.hoverData.object = {};
       this.hoverData.index = null;
       this.hoverData.show = false;

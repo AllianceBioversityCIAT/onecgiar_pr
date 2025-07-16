@@ -34,6 +34,8 @@ import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
 const fieldComponents = [
   PrInputComponent,
@@ -78,7 +80,9 @@ const fieldComponents = [
     CheckboxModule,
     ScrollingModule,
     InputNumberModule,
-    TooltipModule
+    TooltipModule,
+    IconFieldModule,
+    InputIconModule
   ]
 })
 export class CustomFieldsModule {}
