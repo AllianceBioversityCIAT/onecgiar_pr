@@ -20,6 +20,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AuthMicroserviceModule } from '../../../shared/microservices/auth-microservice/auth-microservice.module';
 import { PlatformReportModule } from '../../../api/platform-report/platform-report.module';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [UserController],
@@ -40,6 +41,7 @@ import { ActiveDirectoryService } from '../../services/active-directory.service'
     RoleByUserModule,
     AuthMicroserviceModule,
     PlatformReportModule,
+    EmailNotificationManagementModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })
