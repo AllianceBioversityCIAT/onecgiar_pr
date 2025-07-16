@@ -43,15 +43,11 @@ module.exports = defineConfig({
   pageLoadTimeout: 30000,
   env: {
     // Test credentials for Guest role
-    guestEmail: cypressEnvironment.environment.cypress.testEmail,
-    guestPassword: cypressEnvironment.environment.cypress.testPassword,
+    guestEmail: cypressEnvironment.environment.cypress.guestEmail,
+    guestPassword: cypressEnvironment.environment.cypress.guestPassword,
 
     // Check if credentials are available
-    hasCredentials: cypressEnvironment.environment.cypress.testEmail &&
-      cypressEnvironment.environment.cypress.testPassword,
-
-    // Legacy support (to be removed later)
-    testEmail: cypressEnvironment.environment.cypress.testEmail,
-    testPassword: cypressEnvironment.environment.cypress.testPassword
+    hasCredentials: cypressEnvironment.environment.cypress.guestEmail &&
+      cypressEnvironment.environment.cypress.guestPassword
   }
 });
