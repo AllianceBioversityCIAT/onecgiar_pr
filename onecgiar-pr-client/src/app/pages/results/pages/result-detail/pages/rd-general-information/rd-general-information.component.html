@@ -1,44 +1,131 @@
-<app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated"
-  [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
+<app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated" [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
 
 <app-detail-section-title sectionName="General information"></app-detail-section-title>
 
 <div class="detail_container">
-  <app-alert-status *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+  <app-alert-status
+    *ngIf="this.api.dataControlSE.isKnowledgeProduct"
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
   <div class="general_header">
-    <app-pr-input placeholder="Enter text" label="Result level" type="text" [required]="false" [readOnly]="true"
-      [(ngModel)]="this.generalInfoBody.result_level_name"> </app-pr-input>
+    <app-pr-input
+      placeholder="Enter text"
+      label="Result level"
+      type="text"
+      [required]="false"
+      [readOnly]="true"
+      [(ngModel)]="this.generalInfoBody.result_level_name">
+    </app-pr-input>
     <div class="reporting_year">
       <div class="pr_label segment_title">Reporting year</div>
       <div class="pr_description">{{ this.generalInfoBody.reporting_year }}</div>
     </div>
   </div>
 
-  <div style="display: flex; gap: 1rem; align-items: flex-end;">
-    <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text" label="Indicator category"
-      type="text" [required]="false" [readOnly]="true" [(ngModel)]="this.generalInfoBody.result_type_name" >
+  <div style="display: flex; gap: 1rem; align-items: flex-end">
+    <app-pr-input
+      [attr.attribute-you-are-targeting]="'expression'"
+      placeholder="Enter text"
+      label="Indicator category"
+      type="text"
+      [required]="false"
+      [readOnly]="true"
+      [(ngModel)]="this.generalInfoBody.result_type_name">
     </app-pr-input>
 
     <div *ngIf="!this.api.rolesSE.readOnly && isPhaseOpen">
-      <app-pr-button text="Change result type" icon="move_up" [reverse]="true"
-        (click)="this.api.dataControlSE.changeResultTypeModal = true;" [rotateRight]="true" [verticalMargin]="0">
+      <app-pr-button
+        text="Change result type"
+        icon="move_up"
+        [reverse]="true"
+        (click)="this.api.dataControlSE.changeResultTypeModal = true"
+        [rotateRight]="true"
+        [verticalMargin]="0">
       </app-pr-button>
     </div>
   </div>
 
-  <app-pr-input placeholder="Enter text" label="Title" type="text" [description]="titleTextInfo()"
-    [readOnly]="this.dataControlSE.isKnowledgeProduct" [(ngModel)]="this.generalInfoBody.result_name" [maxWords]="30">
+  <app-pr-input
+    placeholder="Enter text"
+    label="Title"
+    type="text"
+    [description]="titleTextInfo()"
+    [readOnly]="this.dataControlSE.isKnowledgeProduct"
+    [(ngModel)]="this.generalInfoBody.result_name"
+    [maxWords]="30">
   </app-pr-input>
 
-  <app-pr-textarea placeholder="Enter text" label="Description" type="text" [description]="descriptionTextInfo()"
-    [readOnly]="this.dataControlSE.isKnowledgeProduct" [required]="!this.dataControlSE.isKnowledgeProduct"
-    [(ngModel)]="this.generalInfoBody.result_description" [maxWords]="150"></app-pr-textarea>
+  <app-pr-textarea
+    placeholder="Enter text"
+    label="Description"
+    type="text"
+    [description]="descriptionTextInfo()"
+    [readOnly]="this.dataControlSE.isKnowledgeProduct"
+    [required]="!this.dataControlSE.isKnowledgeProduct"
+    [(ngModel)]="this.generalInfoBody.result_description"
+    [maxWords]="150"></app-pr-textarea>
 
-  <app-pr-input placeholder="Enter text" label="Lead contact person" type="text" [required]="false"
-    [(ngModel)]="this.generalInfoBody.lead_contact_person"> </app-pr-input>
+  <div class="lead-contact-container">
+    <div class="contact-select-wrapper">
+      <app-pr-input
+        placeholder="Search for a person (min 4 characters)"
+        label="Lead contact person"
+        type="text"
+        [description]="leadContactPersonTextInfo()"
+        [disabled]="isContactLocked"
+        [required]="false"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput($event)"
+        (blur)="onContactBlur()"
+        [class.invalid-contact]="!hasValidContact"
+        autocomplete="off">
+      </app-pr-input>
+
+      @if (isContactLocked && selectedUser) {
+        <button class="clear-contact-btn" type="button" (click)="clearContact()" title="Clear selection">
+          <i class="clear-icon">✕</i>
+        </button>
+      }
+    </div>
+
+    @if (showContactError) {
+      <div class="contact-error-message">
+        <i class="warning-icon">⚠️</i>
+        The contact person entered was not found in the directory. Please select from the search results or leave empty.
+      </div>
+    }
+
+    @if (isContactLocked && selectedUser) {
+      <div class="selected-contact-info">
+        <div class="selected-contact-details">
+          <div class="selected-user-name">{{ selectedUser.displayName }}</div>
+          <div class="selected-user-info">{{ selectedUser.mail }} - {{ selectedUser.title }}</div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (!isContactLocked && ((searchResults.length > 0 && showResults) || isSearching)) {
+    <div class="search-results-container">
+      @if (searchResults.length > 0 && showResults && !isSearching) {
+        <div class="search-results">
+          <div class="search-result-item" *ngFor="let user of searchResults" (click)="selectUser(user)">
+            <div class="user-name">{{ user.displayName }}</div>
+            <div class="user-details">{{ user.mail }} - {{ user.title }}</div>
+          </div>
+        </div>
+      }
+
+      @if (isSearching) {
+        <div class="search-loading">Searching...</div>
+      }
+
+      @if (searchResults.length === 0 && !isSearching && showResults) {
+        <div class="no-results">No users found matching "{{ searchQuery }}". Please try a different search term.</div>
+      }
+    </div>
+  }
 
   <h1 class="segment_title pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
@@ -46,8 +133,13 @@
   <div class="block_container">
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
-      <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Gender equality score" [(ngModel)]="this.generalInfoBody.gender_tag_id"> </app-pr-radio-button>
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Gender equality score"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
   </div>
@@ -55,18 +147,27 @@
   <div class="block_container">
     <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
-      <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Climate change score" [(ngModel)]="this.generalInfoBody.climate_change_tag_id"> </app-pr-radio-button>
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Climate change score"
+        [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
+      </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
   </div>
 
   <div class="block_container">
-    <app-alert-status [description]="nutritionInformation()">
-    </app-alert-status>
+    <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
     <div class="radio_grid">
-      <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Nutrition, health and food security score" [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id"> </app-pr-radio-button>
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Nutrition, health and food security score"
+        [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
+      </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
   </div>
@@ -74,33 +175,53 @@
   <div class="block_container">
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
-      <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Environmental health and biodiversity score" [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Environmental health and biodiversity score"
+        [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
-      <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3">
-      </div>
+      <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
   </div>
 
   <div class="block_container">
     <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
-      <app-pr-radio-button [options]="this.scoreSE.genderTagScoreList" optionLabel="full_name" optionValue="id"
-        label="Poverty reduction, livelihoods and jobs score" [(ngModel)]="this.generalInfoBody.poverty_tag_level_id"> </app-pr-radio-button>
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Poverty reduction, livelihoods and jobs score"
+        [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
+      </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
   </div>
 
-  <app-pr-yes-or-not label="Is this result featured in a Key Result Story for the reporting year?"
-    [(ngModel)]="this.generalInfoBody.is_krs" (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
+  <app-pr-yes-or-not
+    label="Is this result featured in a Key Result Story for the reporting year?"
+    [(ngModel)]="this.generalInfoBody.is_krs"
+    (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
-
-  <app-pr-input *ngIf="this.generalInfoBody.is_krs" placeholder="e.g. https://www.cgiar.org/example"
+  <app-pr-input
+    *ngIf="this.generalInfoBody.is_krs"
+    placeholder="e.g. https://www.cgiar.org/example"
     description="Link to Key Result Story. It is also possible to select “no” and then later update this to “yes” if the result is later selected as a key result story."
-    type="text" [required]="false" [(ngModel)]="this.generalInfoBody.krs_url"> </app-pr-input>
+    type="text"
+    [required]="false"
+    [(ngModel)]="this.generalInfoBody.krs_url">
+  </app-pr-input>
 
-  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"
-    [editable]="this.api.dataControlSE.currentResult?.result_type_id == 7 ?this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status :false"
+  <app-save-button
+    class="position_sticky"
+    (clickSave)="onSaveSection()"
+    [editable]="
+      this.api.dataControlSE.currentResult?.result_type_id == 7
+        ? this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status
+        : false
+    "
     [disabled]="!this.generalInfoBody.result_name"></app-save-button>
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

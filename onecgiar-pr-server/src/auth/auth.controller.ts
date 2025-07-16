@@ -11,16 +11,20 @@ import {
 import { AuthService } from './auth.service';
 import { PusherAuthDot } from './dto/pusher-auth.dto';
 import { ResponseInterceptor } from '../shared/Interceptors/Return-data.interceptor';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AuthCodeValidationDto } from './dto/auth-code-validation.dto';
 import { UserLoginDto } from './dto/login-user.dto';
 import { CompletePasswordChallengeDto } from './dto/complete-password-challenge.dto';
+import { ActiveDirectoryService } from './services/active-directory.service';
 
 @Controller()
 @ApiTags('Authentication')
 @UseInterceptors(ResponseInterceptor)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly activeDirectoryService: ActiveDirectoryService,
+  ) {}
 
   @Get('/login/provider')
   @ApiOperation({ summary: 'Get authentication URL for OAuth provider' })
@@ -79,5 +83,48 @@ export class AuthController {
       userId,
     );
     return response.auth;
+  }
+
+  @Get('/users/search')
+  @ApiOperation({
+    summary: 'Search users in Active Directory',
+    description: 'Search for users by name or email with real-time suggestions',
+  })
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query (minimum 2 characters)',
+    example: 'john.doe',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Users found successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Query too short' })
+  async searchUsers(@Query('q') query: string) {
+    if (!query || query.trim().length < 2) {
+      return {
+        message: 'Query must be at least 2 characters',
+        response: [],
+        status: 400,
+      };
+    }
+
+    try {
+      const users = await this.activeDirectoryService.searchUsers(query.trim());
+
+      return {
+        message:
+          users.length > 0 ? 'Users found successfully' : 'No users found',
+        response: users,
+        status: 200,
+      };
+    } catch (error) {
+      return {
+        message: `Error searching users: ${error}`,
+        response: [],
+        status: 500,
+      };
+    }
   }
 }

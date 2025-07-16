@@ -1,5 +1,6 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ADUser } from '../../../../auth/services/active-directory.service';
 
 export class CreateResultInnovationPackageDto {
   public result_id: number;
@@ -23,6 +24,7 @@ export class UpdateGeneralInformationDto {
   public title?: string;
   public description?: string;
   public lead_contact_person?: string;
+  public lead_contact_person_data?: ADUser;
   public gender_tag_level_id?: number;
   public evidence_gender_tag?: string;
   public climate_change_tag_level_id?: number;

@@ -9,6 +9,9 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { PusherService } from '../../../../../../shared/services/pusher.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { User } from './models/userSearchResponse';
+import { UserSearchService } from './services/user-search-service.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -19,13 +22,88 @@ export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
+  searchQuery: string = '';
+  searchResults: User[] = [];
+  selectedUser: User | null = null;
+  showResults: boolean = false;
+  isSearching: boolean = false;
+  hasValidContact: boolean = true;
+  showContactError: boolean = false;
+  isContactLocked: boolean = false;
+  private searchSubject = new Subject<string>();
 
-  constructor(public api: ApiService, private currentResultSE: CurrentResultService, public scoreSE: ScoreService, public institutionsSE: InstitutionsService, public rolesSE: RolesService, public dataControlSE: DataControlService, private customizedAlertsFeSE: CustomizedAlertsFeService, public pusherSE: PusherService) {}
+  private filterValidUsers(users: User[]): User[] {
+    return users.filter(user => {
+      if (!user.mail || user.mail.trim() === '') {
+        return false;
+      }
+
+      if (user.mail.toLowerCase().includes('test')) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  constructor(
+    public api: ApiService,
+    private currentResultSE: CurrentResultService,
+    public scoreSE: ScoreService,
+    public institutionsSE: InstitutionsService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public pusherSE: PusherService,
+    private userSearchService: UserSearchService
+  ) {
+    // Debounced user search with improved error handling and clear state management
+    this.searchSubject
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((query: string) => {
+          const trimmedQuery = query?.trim() ?? '';
+          if (trimmedQuery.length >= 4) {
+            this.isSearching = true;
+            this.showResults = false;
+            return this.userSearchService.searchUsers(trimmedQuery);
+          } else {
+            this.searchResults = [];
+            this.showResults = false;
+            this.isSearching = false;
+            return [];
+          }
+        })
+      )
+      .subscribe({
+        next: (response: any) => {
+          const filteredResults = this.filterValidUsers(response?.response || []);
+
+          if (filteredResults.length === 0) {
+            this.showContactError = true;
+          }
+
+          this.searchResults = filteredResults;
+          this.showResults = true;
+          this.isSearching = false;
+          this.hasValidContact = this.searchResults.length > 0 || !this.searchQuery.trim() ? true : false;
+        },
+        error: (error: any) => {
+          console.error(error);
+          this.searchResults = [];
+          this.showResults = false;
+          this.isSearching = false;
+          this.hasValidContact = this.searchQuery.trim() ? false : true;
+        }
+      });
+  }
 
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
   }
+
   get disableOptions() {
     return this.generalInfoBody.institutions;
   }
@@ -35,6 +113,26 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+
+      if (this.generalInfoBody.lead_contact_person_data) {
+        this.selectedUser = this.generalInfoBody.lead_contact_person_data;
+        this.searchQuery = this.generalInfoBody.lead_contact_person;
+        this.isContactLocked = true;
+        this.hasValidContact = true;
+      } else if (this.generalInfoBody.lead_contact_person) {
+        if (this.selectedUser && this.selectedUser.displayName === this.generalInfoBody.lead_contact_person) {
+          this.isContactLocked = true;
+          this.hasValidContact = true;
+        } else {
+          this.searchQuery = this.generalInfoBody.lead_contact_person;
+          this.isContactLocked = false;
+        }
+      } else {
+        this.selectedUser = null;
+        this.searchQuery = '';
+        this.isContactLocked = false;
+      }
+
       this.GET_investmentDiscontinuedOptions(response.result_type_id);
       this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
     });
@@ -49,7 +147,9 @@ export class RdGeneralInformationComponent implements OnInit {
   convertChecklistToDiscontinuedOptions(response) {
     const options = [...response];
     options.forEach(option => {
-      const found = this.generalInfoBody.discontinued_options.find(discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id);
+      const found = this.generalInfoBody.discontinued_options.find(
+        discontinuedOption => discontinuedOption.investment_discontinued_option_id == option.investment_discontinued_option_id
+      );
       if (found) {
         option.value = true;
         option.description = found?.description;
@@ -64,6 +164,12 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
+    if (this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+      return;
+    }
+
     this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
@@ -71,7 +177,6 @@ export class RdGeneralInformationComponent implements OnInit {
     this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
       next: resp => {
         this.currentResultSE.GET_resultById();
-
         this.getSectionInformation();
       },
       error: err => {
@@ -94,6 +199,11 @@ export class RdGeneralInformationComponent implements OnInit {
     <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>
     </ul>`;
+  }
+
+  leadContactPersonTextInfo() {
+    return `For more precise results, we recommend searching by email or username. 
+    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
   }
 
   impactAreaScoresInfo() {
@@ -192,7 +302,10 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   sendIntitutionsTypes() {
-    this.generalInfoBody.institutions_type = [...(this.generalInfoBody?.institutions_type ?? []), ...(this.generalInfoBody?.institutions ?? [])] as any;
+    this.generalInfoBody.institutions_type = [
+      ...(this.generalInfoBody?.institutions_type ?? []),
+      ...(this.generalInfoBody?.institutions ?? [])
+    ] as any;
   }
 
   onChangeKrs() {
@@ -274,5 +387,77 @@ export class RdGeneralInformationComponent implements OnInit {
         console.error(error);
       }
     });
+  }
+
+  onSearchInput(event: any): void {
+    if (this.isContactLocked) return;
+
+    let query: string = '';
+
+    if (typeof event === 'string') {
+      query = event;
+    } else if (event && 'target' in event && (event.target as HTMLInputElement)?.value !== undefined) {
+      query = (event.target as HTMLInputElement).value;
+    } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
+      query = event.toString();
+    }
+
+    query = query?.trim() ?? '';
+
+    this.searchQuery = query;
+    this.selectedUser = null;
+    this.showContactError = false;
+
+    if (query) {
+      this.hasValidContact = false;
+      this.showContactError = false;
+      this.searchSubject.next(query);
+    } else {
+      this.resetContactState();
+    }
+  }
+
+  selectUser(user: User): void {
+    this.selectedUser = user;
+    this.searchQuery = user.displayName;
+    this.searchResults = [];
+    this.showResults = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
+    this.isContactLocked = true;
+
+    this.generalInfoBody.lead_contact_person = user.displayName;
+    this.generalInfoBody.lead_contact_person_data = user;
+  }
+
+  clearContact(): void {
+    this.selectedUser = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
+    this.isContactLocked = false;
+
+    this.generalInfoBody.lead_contact_person = null;
+    this.generalInfoBody.lead_contact_person_data = null;
+  }
+
+  onContactBlur(): void {
+    if (!this.isContactLocked && this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+    }
+  }
+
+  private resetContactState(): void {
+    this.generalInfoBody.lead_contact_person = null;
+    this.generalInfoBody.lead_contact_person_data = null;
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
   }
 }
