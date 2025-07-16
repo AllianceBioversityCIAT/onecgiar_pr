@@ -13,6 +13,7 @@ import { TemplateRepository } from '../../../api/platform-report/repositories/te
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import * as Handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 
 describe('UserService', () => {
   let service: UserService;
@@ -158,6 +159,12 @@ describe('UserService', () => {
         {
           provide: ActiveDirectoryService,
           useValue: mockActiveDirectoryService,
+        },
+        {
+          provide: EmailNotificationManagementService,
+          useValue: {
+            sendEmail: jest.fn(),
+          },
         },
       ],
     }).compile();

@@ -163,14 +163,14 @@ export class UserService {
             error?.message?.includes('exists');
 
           if (isUserExistsError) {
-              shouldSendConfirmationEmail = true;
+            shouldSendConfirmationEmail = true;
           } else {
-              console.error(error);
-              throw {
-                response: { error },
-                message: 'Error while creating user',
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-              };
+            console.error(error);
+            throw {
+              response: { error },
+              message: 'Error while creating user',
+              status: HttpStatus.INTERNAL_SERVER_ERROR,
+            };
           }
         }
       }
@@ -225,54 +225,59 @@ export class UserService {
     };
   }
 
-  private async sendAccountConfirmationEmail(createUserDto: CreateUserDto): Promise<void> {
-  const confirmationTemplateDB = await this._templateRepository.findOne({
-    where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
-  });
+  private async sendAccountConfirmationEmail(
+    createUserDto: CreateUserDto,
+  ): Promise<void> {
+    const confirmationTemplateDB = await this._templateRepository.findOne({
+      where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
+    });
 
-  if (!confirmationTemplateDB) {
-    throw new Error('Email template ACCOUNT_CONFIRMATION not found');
-  }
+    if (!confirmationTemplateDB) {
+      throw new Error('Email template ACCOUNT_CONFIRMATION not found');
+    }
 
-  const compiledTemplate = handlebars.compile(confirmationTemplateDB.template);
+    const compiledTemplate = handlebars.compile(
+      confirmationTemplateDB.template,
+    );
 
-  const emailData: Record<string, any> = {
-    logoUrl: 'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.png',
-    appName: 'PRMS Reporting Tool',
-    firstName: createUserDto.first_name,
-    lastName: createUserDto.last_name,
-    email: createUserDto.email,
-    appUrl: 'https://reporting.cgiar.org/',
-    supportEmail: 'PRMSTechSupport@cgiar.org',
-    senderName: 'PRMS Team',
-    isCgiar: createUserDto.is_cgiar,
-  };
+    const emailData: Record<string, any> = {
+      logoUrl:
+        'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.png',
+      appName: 'PRMS Reporting Tool',
+      firstName: createUserDto.first_name,
+      lastName: createUserDto.last_name,
+      email: createUserDto.email,
+      appUrl: 'https://reporting.cgiar.org/',
+      supportEmail: 'PRMSTechSupport@cgiar.org',
+      senderName: 'PRMS Team',
+      isCgiar: createUserDto.is_cgiar,
+    };
 
-  if (createUserDto.entity) {
-    emailData.assignedEntity = createUserDto.entity;
-  }
+    if (createUserDto.entity) {
+      emailData.assignedEntity = createUserDto.entity;
+    }
 
-  if (createUserDto.role_entity) {
-    emailData.assignedRole = createUserDto.role_entity;
-  }
+    if (createUserDto.role_entity) {
+      emailData.assignedRole = createUserDto.role_entity;
+    }
 
-  this._emailNotificationManagementService.sendEmail({
-    from: {
-      email: process.env.EMAIL_SENDER,
-      name: 'PRMS Reporting Tool -',
-    },
-    emailBody: {
-      subject: 'Welcome to the PRMS Reporting Tool – Your Account Details',
-      to: [createUserDto.email],
-      cc: [],
-      bcc: '',
-      message: {
-        text: 'Account creation confirmation',
-        socketFile: compiledTemplate(emailData),
+    this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
       },
-    },
-  });
-}
+      emailBody: {
+        subject: 'Welcome to the PRMS Reporting Tool – Your Account Details',
+        to: [createUserDto.email],
+        cc: [],
+        bcc: '',
+        message: {
+          text: 'Account creation confirmation',
+          socketFile: compiledTemplate(emailData),
+        },
+      },
+    });
+  }
 
   async findAll(): Promise<returnFormatUser | returnErrorDto> {
     try {
