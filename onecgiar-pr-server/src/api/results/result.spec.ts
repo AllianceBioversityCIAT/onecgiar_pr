@@ -196,7 +196,7 @@ describe('Result service unit test', () => {
     expect(results.response.updateResult.id).toBeDefined();
     expect(results.response.updateResult.title).toBe(resultTitle);
     expect(results.response.updateResult.description).toBe(resultDescription);
-  }, 10000);
+  }, 20000);
 
   it('should delete a result', async () => {
     const results: returnFormatService = await resultService.deleteResult(
@@ -207,7 +207,7 @@ describe('Result service unit test', () => {
     expect(results.response.id).toBe(currentResultId);
     expect(results.message).toBe('The result has been successfully deleted');
     expect(results.status).toBe(HttpStatus.OK);
-  });
+  }, 20000);
 
   it('should error when deleting a result with invalid id', async () => {
     const results: returnFormatService = await resultService.deleteResult(

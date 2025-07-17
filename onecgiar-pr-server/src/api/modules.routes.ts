@@ -14,6 +14,7 @@ import { DeleteRecoverDataModule } from './delete-recover-data/delete-recover-da
 import { GlobalParameterModule } from './global-parameter/global-parameter.module';
 import { NotificationModule } from './notification/notification.module';
 import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
+import { AdUsersModule } from './ad_users/ad_users.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -66,5 +67,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'notification',
     module: NotificationModule,
+  },
+  {
+    path: 'ad-users',
+    module: AdUsersModule,
   },
 ];

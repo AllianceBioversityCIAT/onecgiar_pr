@@ -1,3 +1,4 @@
+import { ADUser } from '../../../auth/services/active-directory.service';
 import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
 import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultsByInstitution } from '../results_by_institutions/entities/results_by_institution.entity';
@@ -22,6 +23,7 @@ export class GeneralInformationDto {
   public krs_url: string | null;
   public is_krs: boolean;
   public lead_contact_person: string | null;
+  public lead_contact_person_data: ADUser | null;
   public phase_name: string;
   public phase_year: number;
   public is_discontinued: boolean;

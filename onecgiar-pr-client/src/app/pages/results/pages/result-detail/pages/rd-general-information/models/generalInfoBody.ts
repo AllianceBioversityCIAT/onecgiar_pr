@@ -1,3 +1,5 @@
+import { User } from './userSearchResponse';
+
 export class GeneralInfoBody {
   public result_type_name: string = null;
   public result_level_name: string = null;
@@ -15,6 +17,7 @@ export class GeneralInfoBody {
   public is_krs: boolean = null;
   public reporting_year: string = null;
   public lead_contact_person: string = null;
+  lead_contact_person_data: User | null;
   public nutrition_tag_level_id = null;
   public environmental_biodiversity_tag_level_id = null;
   public poverty_tag_level_id = null;
