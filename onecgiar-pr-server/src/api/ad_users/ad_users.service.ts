@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ActiveDirectoryService } from '../../auth/services/active-directory.service';
 import { AdUserRepository } from './repository/ad-users.repository';
 import { AdUser } from './entity/ad-user.entity';
+import { returnFormatService } from '../../shared/extendsGlobalDTO/returnServices.dto';
 
 export interface SearchUsersResponse {
   users: AdUser[];
@@ -21,12 +22,12 @@ export class AdUserService {
   /**
    * Search users with cache-first approach
    */
-  async searchUsers(query: string): Promise<SearchUsersResponse> {
+  async searchUsers(query: string): Promise<returnFormatService> {
     if (!query || query.trim().length < 2) {
       return {
-        users: [],
-        fromCache: true,
-        totalFound: 0,
+        response: [],
+        message: 'Query must be at least 2 characters long',
+        status: HttpStatus.BAD_REQUEST,
       };
     }
 
@@ -37,9 +38,9 @@ export class AdUserService {
     if (localUsers.length > 0) {
       this.logger.log(`Found ${localUsers.length} users in local cache`);
       return {
-        users: localUsers,
-        fromCache: true,
-        totalFound: localUsers.length,
+        response: localUsers,
+        message: 'Users found in local cache',
+        status: HttpStatus.OK,
       };
     }
 
@@ -53,9 +54,9 @@ export class AdUserService {
           `No users found in Active Directory for query: ${query}`,
         );
         return {
-          users: [],
-          fromCache: false,
-          totalFound: 0,
+          response: [],
+          message: 'No users found in Active Directory',
+          status: HttpStatus.NOT_FOUND,
         };
       }
 
@@ -79,9 +80,9 @@ export class AdUserService {
       );
 
       return {
-        users: savedUsers,
-        fromCache: false,
-        totalFound: savedUsers.length,
+        response: savedUsers,
+        message: 'Users found in Active Directory',
+        status: HttpStatus.OK,
       };
     } catch (error) {
       this.logger.error(
@@ -89,9 +90,9 @@ export class AdUserService {
       );
 
       return {
-        users: [],
-        fromCache: false,
-        totalFound: 0,
+        response: [],
+        message: 'Error searching in Active Directory',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
   }
