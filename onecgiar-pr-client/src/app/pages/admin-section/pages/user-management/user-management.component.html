@@ -160,9 +160,25 @@
       <!-- Is CGIAR Question -->
       <div class="form-field">
         <div class="field-label" id="cgiar-question-label"> Is CGIAR?<span class="required">*</span> </div>
-        <div class="cgiar-buttons" role="radiogroup" aria-labelledby="cgiar-question-label">
-          <button type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)" role="radio" [attr.aria-checked]="addUserForm().is_cgiar">Yes</button>
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar" (click)="onModalCgiarChange(false)" role="radio" [attr.aria-checked]="!addUserForm().is_cgiar">No</button>
+        <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
+          <label class="radio-option">
+            <input
+              type="radio"
+              name="is-cgiar"
+              [checked]="addUserForm().is_cgiar"
+              (change)="onModalCgiarChange(true)"
+              class="radio-input">
+            <span class="radio-label">Yes</span>
+          </label>
+          <label class="radio-option">
+            <input
+              type="radio"
+              name="is-cgiar"
+              [checked]="!addUserForm().is_cgiar"
+              (change)="onModalCgiarChange(false)"
+              class="radio-input">
+            <span class="radio-label">No</span>
+          </label>
         </div>
       </div>
 
