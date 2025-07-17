@@ -63,7 +63,7 @@ export class RdGeneralInformationComponent implements OnInit {
         debounceTime(500),
         distinctUntilChanged(),
         switchMap((query: string) => {
-          const trimmedQuery = query?.trim() ?? '';
+          const trimmedQuery = query ?? '';
           if (trimmedQuery.length >= 4) {
             this.isSearching = true;
             this.showResults = false;
@@ -402,7 +402,7 @@ export class RdGeneralInformationComponent implements OnInit {
       query = event.toString();
     }
 
-    query = query?.trim() ?? '';
+    query = query ?? '';
 
     this.searchQuery = query;
     this.selectedUser = null;
