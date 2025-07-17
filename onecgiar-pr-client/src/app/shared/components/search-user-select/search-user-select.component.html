@@ -1,7 +1,8 @@
 <div class="select-container">
-  <label class="select-label"> Select a user: <span class="required">*</span> </label>
+  <label class="select-label" for="user-select-dropdown"> Select a user: <span class="required">*</span> </label>
 
   <p-dropdown
+    id="user-select-dropdown"
     [options]="options()"
     [(ngModel)]="selectedUser"
     placeholder="Select a user"
