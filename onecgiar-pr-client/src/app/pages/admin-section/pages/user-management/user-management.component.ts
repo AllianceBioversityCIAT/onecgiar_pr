@@ -72,6 +72,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
   @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
+  @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -197,6 +198,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Modal variables
   showAddUserModal: boolean = false;
+  showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
     role_platform: 2 // Marked as guest by default (2)
@@ -251,6 +253,18 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       is_cgiar: true,
       role_platform: 2 // Marked as guest by default (2)
     });
+    this.clearUserSearch();
+  }
+
+  // Method to clear user search field by hiding and showing the component
+  private clearUserSearch(): void {
+    // Hide the component to force a complete reset
+    this.showUserSearchComponent.set(false);
+
+    // Show it again after 500ms delay
+    setTimeout(() => {
+      this.showUserSearchComponent.set(true);
+    }, 500);
   }
 
   onModalCgiarChange(isCgiar: boolean): void {
@@ -325,6 +339,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         });
 
         this.creatingUser.set(false);
+        this.resetAddUserForm(); // Reset form and clear user search
         this.getUsers();
       },
       error: error => {
@@ -355,6 +370,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onCancelAddUser(): void {
     this.showAddUserModal = false;
+    this.resetAddUserForm();
+  }
+
+  onModalHide(): void {
+    // This method is called when the modal is closed via X button, ESC key, or clicking outside
+    this.resetAddUserForm();
   }
 
   // User actions methods

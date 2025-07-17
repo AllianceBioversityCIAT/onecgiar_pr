@@ -153,6 +153,7 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
+    (onHide)="onModalHide()"
     styleClass="add-user-modal"
     [style]="{ width: '600px' }">
     <div class="modal-content">
@@ -168,7 +169,9 @@
       <!-- CGIAR User Search -->
       @if (addUserForm().is_cgiar && !addUserForm().email) {
         <div class="form-field">
-          <app-search-user-select (userSelected)="onUserSelect($event)"></app-search-user-select>
+          @if (showUserSearchComponent()) {
+            <app-search-user-select #userSearchSelect (userSelected)="onUserSelect($event)"></app-search-user-select>
+          }
         </div>
       }
 
