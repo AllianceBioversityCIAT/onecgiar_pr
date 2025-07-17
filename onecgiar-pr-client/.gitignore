@@ -49,6 +49,7 @@ Thumbs.db
 
 /todo-list
 
+# cypress
 cypress/videos/*
 cypress/screenshots/*
 cypress.env.json

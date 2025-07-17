@@ -67,6 +67,7 @@
         .search-label {
           font-size: 14px;
           font-weight: 500;
+          margin-bottom: 3px;
           color: #374151;
         }
 
@@ -89,7 +90,7 @@
 
         .status-label,
         .cgiar-label,
-        .clear-label {
+        .clear-spacer {
           font-size: 14px;
           font-weight: 500;
           color: #374151;
@@ -380,27 +381,49 @@
     gap: 16px;
   }
 
-  .cgiar-buttons {
+  .cgiar-radio-group {
     display: flex;
     gap: 12px;
 
-    .cgiar-btn {
+    .radio-option {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
       padding: 8px 20px;
       border: 2px solid #d1d5db;
       background-color: white;
       color: #374151;
       border-radius: 6px;
-      cursor: pointer;
       font-size: 14px;
       font-weight: 500;
       transition: all 0.2s ease;
+      position: relative;
 
       &:hover {
         border-color: #6366f1;
         background-color: #f8fafc;
       }
 
-      &.active {
+      .radio-input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        margin: 0;
+        padding: 0;
+      }
+
+      .radio-label {
+        pointer-events: none;
+      }
+
+      // When radio is checked, style the label
+      .radio-input:checked + .radio-label {
+        color: white;
+      }
+
+      // When radio is checked, style the container
+      &:has(.radio-input:checked) {
         border-color: #6366f1;
         background-color: #6366f1;
         color: white;
@@ -434,6 +457,19 @@
     border-radius: 6px;
     color: #374151;
     font-size: 14px;
+  }
+
+  .selected-user-display {
+    padding: 12px 16px;
+    background-color: #f8fafc;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 
   .created-by {

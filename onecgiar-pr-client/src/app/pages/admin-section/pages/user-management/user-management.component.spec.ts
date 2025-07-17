@@ -52,7 +52,7 @@ describe('UserManagementComponent', () => {
     expect(component.selectedStatus()).toBe('');
     expect(component.loading()).toBe(false);
     expect(component.showAddUserModal).toBe(false);
-    expect(component.addUserForm().is_cgiar).toBe(false);
+    expect(component.addUserForm().is_cgiar).toBe(true);
     expect(component.addUserForm().role_platform).toBe(2);
   });
 
@@ -92,12 +92,12 @@ describe('UserManagementComponent', () => {
     // Modify form first
     component.addUserForm.update(form => ({
       ...form,
-      is_cgiar: true,
+      is_cgiar: false,
       role_platform: 1
     }));
 
     component.resetAddUserForm();
-    expect(component.addUserForm().is_cgiar).toBe(false);
+    expect(component.addUserForm().is_cgiar).toBe(true);
     expect(component.addUserForm().role_platform).toBe(2);
   });
 
@@ -105,13 +105,14 @@ describe('UserManagementComponent', () => {
     // Set up initial state
     component.addUserForm.update(form => ({
       ...form,
-      selectedUser: { name: 'Test', email: 'test@test.com' },
+      displayName: 'Test User (test@test.com)',
+      email: 'test@test.com',
       first_name: 'Test Name'
     }));
 
     component.onModalCgiarChange(false);
     expect(component.addUserForm().is_cgiar).toBe(false);
-    expect(component.addUserForm().selectedUser).toBeUndefined();
+    expect(component.addUserForm().displayName).toBe('');
     expect(component.addUserForm().first_name).toBe('');
   });
 
@@ -120,7 +121,8 @@ describe('UserManagementComponent', () => {
     component.addUserForm.update(form => ({
       ...form,
       is_cgiar: true,
-      selectedUser: { name: 'Test', email: 'test@cgiar.org' },
+      displayName: 'Test User (test@cgiar.org)',
+      email: 'test@cgiar.org',
       role_platform: 1
     }));
     expect(component.isFormValid()).toBe(true);
@@ -129,7 +131,7 @@ describe('UserManagementComponent', () => {
     component.addUserForm.update(form => ({
       ...form,
       is_cgiar: false,
-      selectedUser: undefined,
+      displayName: '',
       first_name: 'Test',
       last_name: 'User',
       email: 'test@example.com',
