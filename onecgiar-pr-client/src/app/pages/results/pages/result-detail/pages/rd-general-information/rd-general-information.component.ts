@@ -57,14 +57,17 @@ export class RdGeneralInformationComponent implements OnInit {
     public pusherSE: PusherService,
     private userSearchService: UserSearchService
   ) {
+    // Debounced user search with improved error handling and clear state management
     this.searchSubject
       .pipe(
-        debounceTime(300),
+        debounceTime(500),
         distinctUntilChanged(),
-        switchMap(query => {
-          if (query.length >= 4) {
+        switchMap((query: string) => {
+          const trimmedQuery = query?.trim() ?? '';
+          if (trimmedQuery.length >= 4) {
             this.isSearching = true;
-            return this.userSearchService.searchUsers(query);
+            this.showResults = false;
+            return this.userSearchService.searchUsers(trimmedQuery);
           } else {
             this.searchResults = [];
             this.showResults = false;
@@ -74,25 +77,24 @@ export class RdGeneralInformationComponent implements OnInit {
         })
       )
       .subscribe({
-        next: response => {
-          const filteredResults = this.filterValidUsers(response.response || []);
+        next: (response: any) => {
+          const filteredResults = this.filterValidUsers(response?.response || []);
+
+          if (filteredResults.length === 0) {
+            this.showContactError = true;
+          }
+
           this.searchResults = filteredResults;
           this.showResults = true;
           this.isSearching = false;
-
-          if (this.searchResults.length === 0 && this.searchQuery.trim()) {
-            this.hasValidContact = false;
-          }
+          this.hasValidContact = this.searchResults.length > 0 || !this.searchQuery.trim() ? true : false;
         },
-        error: error => {
-          console.error('Error searching users:', error);
+        error: (error: any) => {
+          console.error(error);
           this.searchResults = [];
           this.showResults = false;
           this.isSearching = false;
-
-          if (this.searchQuery.trim()) {
-            this.hasValidContact = false;
-          }
+          this.hasValidContact = this.searchQuery.trim() ? false : true;
         }
       });
   }
@@ -101,6 +103,7 @@ export class RdGeneralInformationComponent implements OnInit {
     this.showAlerts();
     this.getSectionInformation();
   }
+
   get disableOptions() {
     return this.generalInfoBody.institutions;
   }
@@ -113,7 +116,7 @@ export class RdGeneralInformationComponent implements OnInit {
 
       if (this.generalInfoBody.lead_contact_person_data) {
         this.selectedUser = this.generalInfoBody.lead_contact_person_data;
-        this.searchQuery = this.generalInfoBody.lead_contact_person_data.displayName;
+        this.searchQuery = this.generalInfoBody.lead_contact_person;
         this.isContactLocked = true;
         this.hasValidContact = true;
       } else if (this.generalInfoBody.lead_contact_person) {
@@ -387,37 +390,30 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSearchInput(event: any): void {
-    if (this.isContactLocked) {
-      return;
-    }
+    if (this.isContactLocked) return;
 
-    let query = '';
+    let query: string = '';
 
     if (typeof event === 'string') {
       query = event;
-    } else if (event?.target?.value !== undefined) {
-      query = event.target.value;
+    } else if (event && 'target' in event && (event.target as HTMLInputElement)?.value !== undefined) {
+      query = (event.target as HTMLInputElement).value;
     } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
       query = event.toString();
     }
 
-    query = query || '';
+    query = query?.trim() ?? '';
 
     this.searchQuery = query;
     this.selectedUser = null;
     this.showContactError = false;
 
-    if (query.trim()) {
+    if (query) {
       this.hasValidContact = false;
+      this.showContactError = false;
       this.searchSubject.next(query);
     } else {
-      this.generalInfoBody.lead_contact_person = null;
-      this.generalInfoBody.lead_contact_person_data = null;
-      this.searchResults = [];
-      this.showResults = false;
-      this.isSearching = false;
-      this.hasValidContact = true;
-      this.showContactError = false;
+      this.resetContactState();
     }
   }
 
@@ -453,5 +449,15 @@ export class RdGeneralInformationComponent implements OnInit {
       this.hasValidContact = false;
       this.showContactError = true;
     }
+  }
+
+  private resetContactState(): void {
+    this.generalInfoBody.lead_contact_person = null;
+    this.generalInfoBody.lead_contact_person_data = null;
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
   }
 }
