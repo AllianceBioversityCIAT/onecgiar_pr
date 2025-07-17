@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdUserService } from './ad_users.service';
 import { AdUserRepository } from './repository/ad-users.repository';
 import { ActiveDirectoryService } from '../../auth/services/active-directory.service';
+import { HttpStatus } from '@nestjs/common';
 
 describe('AdUsersService', () => {
   let service: AdUserService;
@@ -66,9 +67,9 @@ describe('AdUsersService', () => {
       const result = await service.searchUsers(query);
 
       expect(result).toEqual({
-        users: mockUsers,
-        fromCache: true,
-        totalFound: 1,
+        response: mockUsers,
+        message: 'Users found in local cache',
+        status: HttpStatus.OK,
       });
       expect(adUserRepository.searchLocalUsers).toHaveBeenCalledWith(query);
       expect(activeDirectoryService.searchUsers).not.toHaveBeenCalled();
@@ -98,9 +99,9 @@ describe('AdUsersService', () => {
       const result = await service.searchUsers(query);
 
       expect(result).toEqual({
-        users: [mockSavedUser],
-        fromCache: false,
-        totalFound: 1,
+        response: [mockSavedUser],
+        message: 'Users found in Active Directory',
+        status: HttpStatus.OK,
       });
       expect(adUserRepository.searchLocalUsers).toHaveBeenCalledWith(query);
       expect(activeDirectoryService.searchUsers).toHaveBeenCalledWith(query);
@@ -113,9 +114,9 @@ describe('AdUsersService', () => {
       const result = await service.searchUsers('a');
 
       expect(result).toEqual({
-        users: [],
-        fromCache: true,
-        totalFound: 0,
+        response: [],
+        message: 'Query must be at least 2 characters long',
+        status: HttpStatus.BAD_REQUEST,
       });
       expect(adUserRepository.searchLocalUsers).not.toHaveBeenCalled();
     });
