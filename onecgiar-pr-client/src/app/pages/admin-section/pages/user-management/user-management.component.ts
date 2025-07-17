@@ -11,7 +11,7 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+
 import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
 import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
 
