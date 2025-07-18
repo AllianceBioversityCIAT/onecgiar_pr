@@ -743,6 +743,7 @@ export class VersioningService {
       status: updateVersioningDto.status,
       previous_phase: updateVersioningDto.previous_phase,
       phase_name: updateVersioningDto.phase_name,
+      portfolio_id: updateVersioningDto.portfolio_id,
     });
 
     return ReturnResponseUtil.format({
@@ -791,6 +792,7 @@ export class VersioningService {
       relations: {
         obj_previous_phase: true,
         obj_reporting_phase: true,
+        obj_portfolio: true,
       },
     });
 
