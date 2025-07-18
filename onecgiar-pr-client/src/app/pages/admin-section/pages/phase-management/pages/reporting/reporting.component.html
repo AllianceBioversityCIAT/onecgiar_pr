@@ -31,6 +31,19 @@
           </app-pr-select>
         </td>
         <td [style.width.px]="180">
+          <div class="text" *ngIf="!phase.editing">
+            {{phase?.obj_portfolio?.name || ''}}
+          </div>
+          <app-pr-select *ngIf="phase.editing"
+            class="segment_title_margin"
+            [options]="portfolioList"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select portfolio"
+            [(ngModel)]="phase.portfolio_id_ts">
+          </app-pr-select>
+        </td>
+        <td [style.width.px]="180">
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.tocPhaseList"
             optionLabel="fullText" optionValue="phase_id" placeholder="Select phase"
