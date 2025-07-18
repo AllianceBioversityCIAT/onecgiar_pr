@@ -31,6 +31,18 @@
             [(ngModel)]="phase.phase_year_ts">
           </app-pr-select>
         </td>
+        <td [style.width.px]="180">
+          <div class="text" *ngIf="!phase.editing">
+            {{phase?.obj_portfolio?.name || ''}}
+          </div>
+          <app-pr-select *ngIf="phase.editing"
+            class="segment_title_margin"
+            [options]="portfolioList"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select portfolio"
+            [(ngModel)]="phase.portfolio_id_ts">
+          </app-pr-select>
         <td>
           <div class="text" *ngIf="!phase.isNew">{{phase?.obj_reporting_phase?.phase_name}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.reportingPhasesList"

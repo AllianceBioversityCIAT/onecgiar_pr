@@ -98,7 +98,6 @@ export class ReportingComponent implements OnInit {
 
   getPortfolios() {
     this.resultsSE.GET_portfolioList().subscribe(response => {
-      console.log('🚀 ~ ReportingComponent ~ this.resultsSE.GET_portfolioList ~ response:', response);
       this.portfolioList = response;
     });
   }
