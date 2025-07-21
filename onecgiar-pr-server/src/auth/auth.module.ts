@@ -23,6 +23,8 @@ import { HandlersError } from '../shared/handlers/error.utils';
 import { RestrictionsByRoleModule } from './modules/restrictions-by-role/restrictions-by-role.module';
 import { RestrictionsModule } from './modules/restrictions/restrictions.module';
 import { AuthMicroserviceModule } from '../shared/microservices/auth-microservice/auth-microservice.module';
+import { ActiveDirectoryService } from './services/active-directory.service';
+import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middleware';
 
 @Module({
   controllers: [AuthController],
@@ -43,6 +45,8 @@ import { AuthMicroserviceModule } from '../shared/microservices/auth-microservic
   ],
   providers: [
     AuthService,
+    ActiveDirectoryService,
+    SearchThrottleMiddleware,
     JwtStrategy,
     JwtService,
     BcryptPasswordEncoder,
@@ -50,13 +54,26 @@ import { AuthMicroserviceModule } from '../shared/microservices/auth-microservic
     Repository,
     HandlersError,
   ],
-  exports: [BcryptPasswordEncoder, JwtMiddleware, AuthService, JwtService],
+  exports: [
+    BcryptPasswordEncoder,
+    JwtMiddleware,
+    AuthService,
+    JwtService,
+    ActiveDirectoryService,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes({
-      path: '/auth/signing/pusher/result/:resultId/:user',
-      method: RequestMethod.POST,
-    });
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes({
+        path: '/auth/signing/pusher/result/:resultId/:user',
+        method: RequestMethod.POST,
+      })
+      .apply(SearchThrottleMiddleware)
+      .forRoutes({
+        path: '/auth/users/search',
+        method: RequestMethod.GET,
+      });
   }
 }

@@ -19,6 +19,8 @@ import { RoleByUserModule } from '../role-by-user/role-by-user.module';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AuthMicroserviceModule } from '../../../shared/microservices/auth-microservice/auth-microservice.module';
 import { PlatformReportModule } from '../../../api/platform-report/platform-report.module';
+import { ActiveDirectoryService } from '../../services/active-directory.service';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [UserController],
@@ -29,6 +31,7 @@ import { PlatformReportModule } from '../../../api/platform-report/platform-repo
     UserRepository,
     AuthService,
     HandlersError,
+    ActiveDirectoryService,
   ],
   imports: [
     UserModule,
@@ -38,6 +41,7 @@ import { PlatformReportModule } from '../../../api/platform-report/platform-repo
     RoleByUserModule,
     AuthMicroserviceModule,
     PlatformReportModule,
+    EmailNotificationManagementModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })

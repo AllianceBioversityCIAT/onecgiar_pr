@@ -1,7 +1,10 @@
+import { User } from '../../../../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
+
 export class IpsrGeneralInformationBody {
   title = null;
   description = null;
   lead_contact_person = null;
+  lead_contact_person_data: User | null = null;
   gender_tag_level_id = null;
   climate_change_tag_level_id = null;
   is_krs: boolean = null;

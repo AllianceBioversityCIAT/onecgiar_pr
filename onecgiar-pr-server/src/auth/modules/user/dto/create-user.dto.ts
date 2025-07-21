@@ -7,13 +7,13 @@ import {
   IsNumber,
 } from 'class-validator';
 export class CreateUserDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  first_name: string;
+  first_name?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  last_name: string;
+  last_name?: string;
 
   @IsNotEmpty()
   @IsEmail()

@@ -1,3 +1,4 @@
+import { ADUser } from '../../../auth/services/active-directory.service';
 import { ResultsInvestmentDiscontinuedOption } from '../results-investment-discontinued-options/entities/results-investment-discontinued-option.entity';
 
 export class CreateGeneralInformationResultDto {
@@ -17,6 +18,7 @@ export class CreateGeneralInformationResultDto {
   public krs_url!: string;
   public is_krs!: boolean;
   public lead_contact_person!: string;
+  public lead_contact_person_data?: ADUser;
   public is_discontinued!: boolean;
   public discontinued_options!: ResultsInvestmentDiscontinuedOption[];
 }
