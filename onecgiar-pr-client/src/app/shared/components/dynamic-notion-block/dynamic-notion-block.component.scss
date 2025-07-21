@@ -160,13 +160,13 @@ p {
 
   i {
     font-size: 14px;
-    color: #666;
+    color: var(--pr-color-accents-5);
     transition: transform 0.2s ease;
   }
 
   &:hover {
     i {
-      color: #333;
+      color: var(--pr-color-accents-7);
     }
   }
 }
@@ -224,7 +224,7 @@ p {
 
       i {
         font-size: 24px;
-        color: #333;
+        color: var(--pr-color-accents-7);
       }
     }
   }

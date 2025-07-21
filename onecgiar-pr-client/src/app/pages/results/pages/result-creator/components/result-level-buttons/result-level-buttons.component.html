@@ -11,14 +11,14 @@
       tooltipStyleClass="tooltip-w-500"
       tooltipPosition="top"
       class="resultLevel shadow-1"
-      style="background-color: #fafafa"
+      style="background-color: var(--pr-color-accents-1)"
       [ngClass]="{ selected: resultLevel?.selected, local_disable: true }"
       [hidden]="i >= 2"
       *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index">
-      <div class="name" [style.background]="'#666'">
+      <div class="name" [style.background]="'var(--pr-color-accents-5)'">
         {{ resultLevel.name }}
       </div>
-      <div class="description" style="color: #888">{{ resultLevel.description }}</div>
+      <div class="description" style="color: var(--pr-color-accents-4)">{{ resultLevel.description }}</div>
     </a>
   </div>
 </div>

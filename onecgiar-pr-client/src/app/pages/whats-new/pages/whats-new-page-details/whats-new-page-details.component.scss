@@ -82,14 +82,14 @@ p {
 
 .whats-new-page-details_header_additional-info_item_last-updated {
   font-size: 14px;
-  color: #666;
+  color: var(--pr-color-accents-5);
   white-space: nowrap;
   font-weight: 500;
 }
 
 .go-back-button {
   font-size: 14px;
-  color: #666;
+  color: var(--pr-color-accents-5);
   white-space: nowrap;
   font-weight: 500;
   cursor: pointer;
@@ -98,7 +98,7 @@ p {
   transition: color 0.3s ease;
 
   &:hover {
-    color: #333;
+    color: var(--pr-color-accents-7);
   }
 }
 
