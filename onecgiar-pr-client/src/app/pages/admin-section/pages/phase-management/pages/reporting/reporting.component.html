@@ -52,13 +52,13 @@
         </td>
         <td [style.width.px]="120">
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
-          <p-calendar [touchUI]="true" placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
+          <p-calendar [touchUI]="false" placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
             dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="120">
 
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
-          <p-calendar [touchUI]="true" placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
+          <p-calendar [touchUI]="false" placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
             dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="90">

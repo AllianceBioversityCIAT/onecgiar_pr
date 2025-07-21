@@ -701,6 +701,7 @@ export class VersioningService {
       app_module_id: createVersioningDto.app_module_id,
       created_by: user.id,
       reporting_phase: createVersioningDto?.reporting_phase,
+      portfolio_id: createVersioningDto?.portfolio_id,
     });
 
     return ReturnResponseUtil.format({
@@ -860,6 +861,7 @@ export class VersioningService {
     const res = await this._versionRepository.find({
       relations: {
         obj_app_module: true,
+        obj_portfolio: true,
       },
     });
 
