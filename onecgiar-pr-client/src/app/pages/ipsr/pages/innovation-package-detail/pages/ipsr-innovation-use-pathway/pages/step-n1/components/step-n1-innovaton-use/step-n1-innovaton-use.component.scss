@@ -1,48 +1,48 @@
 .fields_list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 
-    .fields {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 30px;
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
 
-        .right_content {
-            display: flex;
-            gap: 10px;
-            position: relative;
+    .right_content {
+      display: flex;
+      gap: 10px;
+      position: relative;
 
-            .explanation_message {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: #556addd5;
-                color: white;
-                z-index: 2;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                font-size: 1.2em;
-                font-weight: 500;
-            }
+      .explanation_message {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(var(--pr-color-primary-300-rgb), 0.835);
+        color: white;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-size: 1.2em;
+        font-weight: 500;
+      }
 
-            app-pr-input,
-            app-pr-select {
-                width: 100%;
-            }
-        }
+      app-pr-input,
+      app-pr-select {
+        width: 100%;
+      }
     }
+  }
 }
 
 .title_list {
-    margin-bottom: 22px;
+  margin-bottom: 22px;
 }
 
 .one_field {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr 1fr;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr;
 }

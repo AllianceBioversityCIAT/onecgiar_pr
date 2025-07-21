@@ -102,7 +102,7 @@ h2 {
 }
 
 .corp-id-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-300-rgb), 0.5);
   cursor: not-allowed;
 }
 
@@ -130,7 +130,7 @@ h2 {
 }
 
 .show-login-form-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-300-rgb), 0.5);
   cursor: not-allowed;
 }
 
@@ -218,7 +218,7 @@ input {
 }
 
 .signin-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-300-rgb), 0.5);
   cursor: not-allowed;
 }
 

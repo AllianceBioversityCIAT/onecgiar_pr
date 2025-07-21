@@ -38,30 +38,7 @@ tr {
       color: transparent;
     }
 
-    .notCenter {
-      justify-content: unset !important;
-      text-align: left !important;
-    }
-
-    .point {
-      background-color: red;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 0px;
-      opacity: 0.5;
-      transition: all ease-in-out 0.2s;
-    }
-
-    &:hover {
-      .point {
-        height: 4px !important;
-      }
-    }
-
-    a,
-    .icon_container {
+    a {
       text-align: center;
       display: flex;
       align-items: center;
@@ -90,20 +67,6 @@ tr {
   color: var(--pr-color-primary-300);
 }
 
-.new_tag {
-  background-color: var(--pr-color-primary-300);
-  margin-right: 10px;
-  padding: 2px 3px;
-  font-size: 0.8em;
-  border-radius: 3px;
-  color: white;
-}
-
-.pre {
-  background-color: #1a91ff !important;
-  white-space: nowrap;
-}
-
 .table {
   position: relative;
   margin-bottom: 40px;
@@ -117,22 +80,11 @@ tr {
   }
 }
 
-.download_button_container {
-  display: flex;
-  justify-content: flex-end;
-  margin-right: 50px;
-}
-
 .actions {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
-
-  .view {
-    background-color: var(--pr-color-secondary) !important;
-    width: min-content !important;
-  }
 
   .link_button {
     color: white;
@@ -149,11 +101,6 @@ tr {
 }
 
 .actionsSelect {
-  .view {
-    background-color: var(--pr-color-secondary) !important;
-    width: min-content !important;
-  }
-
   .link_button {
     color: white;
     background-color: var(--pr-color-primary-300);
@@ -166,54 +113,4 @@ tr {
     align-content: center;
     justify-content: center;
   }
-}
-
-.modal_title {
-  width: auto;
-  font-size: 1.5em;
-  font-weight: 600;
-  color: var(--pr-color-primary-300);
-  padding: 10px;
-  border-bottom-right-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal_container {
-  padding: 20px 40px 80px 70px;
-  width: 100% !important;
-}
-
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  width: 100%;
-  margin-top: -50px;
-  padding-right: 50px;
-  padding-bottom: 10px;
-}
-
-.selectedInnovation {
-  display: flex;
-  flex-direction: row;
-}
-
-.p-dialog .p-dialog-header {
-  background: aqua !important;
-  background-color: aqua !important;
-}
-
-.container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.col0 {
-  border-right: 1px solid var(--pr-color-primary-300) 99;
-}
-
-.col1 {
-  margin-left: 10px;
 }

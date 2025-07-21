@@ -1,17 +1,17 @@
 .section_header {
-    background-color: #556add1c;
-    padding: 20px 20px;
-    border-radius: 10px;
-    margin-left: -20px;
+  background-color: rgba(var(--pr-color-primary-300-rgb), 0.11);
+  padding: 20px 20px;
+  border-radius: 10px;
+  margin-left: -20px;
 
-    .section_title {
-        color: rgb(48, 48, 48);
-        font-weight: 700;
-        font-size: 1.3em;
-    }
+  .section_title {
+    color: rgb(48, 48, 48);
+    font-weight: 700;
+    font-size: 1.3em;
+  }
 
-    .section_description {
-        color: rgb(73, 73, 73);
-        font-size: 1em;
-    }
+  .section_description {
+    color: rgb(73, 73, 73);
+    font-size: 1em;
+  }
 }

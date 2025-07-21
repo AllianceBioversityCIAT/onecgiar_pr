@@ -1,5 +1,6 @@
 :root {
   // primary colors
+  --pr-color-primary-25: #eef0fc;
   --pr-color-primary-50: #e6eafe;
   --pr-color-primary-100: #c6cdf4;
   --pr-color-primary-200: #8e9be8;
@@ -11,6 +12,8 @@
   --pr-color-primary-800: #101542;
   --pr-color-primary-900: #0a0c25;
   --pr-color-primary-950: #05071a;
+
+  --pr-color-primary-300-rgb: 85, 105, 221;
 
   //   secondary
 
@@ -27,6 +30,7 @@
   --pr-color-secondary-950: #050507;
 
   --pr-color-secondary: #2a2e45;
+  --pr-color-secondary-rgb: 42, 46, 69;
 
   --pr-color-tertiary: #04030f;
   --pr-color-success: #20aa57;

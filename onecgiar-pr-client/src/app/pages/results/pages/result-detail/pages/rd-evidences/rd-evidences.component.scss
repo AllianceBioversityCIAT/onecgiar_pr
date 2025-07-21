@@ -1,23 +1,14 @@
 .evidences {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 
-    .evidence {
-        border-radius: 10px;
-    }
+  .evidence {
+    border-radius: 10px;
+  }
 
-    .evidenceItem {
-        box-shadow: 0px 0px 5px #00000034;
-        border-top: 5px solid #2a2e4571;
-        // border-bottom: 4px solid #2a2e4571;
-    }
-
-    .supp_info {
-        box-shadow: 0px 0px 5px #00000034;
-        border-top: 5px solid #556add7c;
-        // border-bottom: 4px solid #556add7c;
-    }
-
-
+  .evidenceItem {
+    box-shadow: 0px 0px 5px #00000034;
+    border-top: 5px solid #2a2e4571;
+  }
 }

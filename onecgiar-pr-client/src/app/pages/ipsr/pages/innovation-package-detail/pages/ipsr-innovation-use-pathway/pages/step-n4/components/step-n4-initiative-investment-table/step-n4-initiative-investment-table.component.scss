@@ -1,10 +1,10 @@
 table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 td,
 th {
-    border: 2px solid #556add6e;
-    padding: 10px;
+  border: 2px solid rgba(var(--pr-color-primary-300-rgb), 0.431);
+  padding: 10px;
 }
