@@ -116,7 +116,7 @@ td {
 }
 
 .new_tag {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
   font-size: 0.8em;
@@ -127,7 +127,7 @@ td {
 
 .link_button {
   color: white;
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   padding: 3px 10px;
   width: 100px;
   border-radius: 3px;
@@ -157,7 +157,7 @@ td {
 
       .linked_title {
         a {
-          color: var(--pr-color-primary) !important;
+          color: var(--pr-color-primary-300) !important;
           text-decoration: none;
         }
       }

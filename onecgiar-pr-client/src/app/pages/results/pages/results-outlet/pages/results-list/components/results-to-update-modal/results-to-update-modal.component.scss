@@ -39,7 +39,7 @@
   font-size: 1.3em;
 
   strong {
-    color: var(--pr-color-primary);
+    color: var(--pr-color-primary-300);
   }
 }
 
@@ -167,11 +167,11 @@ td {
   padding: 50px 0px;
   font-size: 1.3em;
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .new_tag {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
   font-size: 0.8em;
@@ -202,6 +202,6 @@ td {
   }
 
   &.update {
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
   }
 }

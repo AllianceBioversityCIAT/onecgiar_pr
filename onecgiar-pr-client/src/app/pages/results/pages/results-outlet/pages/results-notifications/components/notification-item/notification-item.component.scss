@@ -19,11 +19,11 @@ p {
       justify-content: center;
       align-items: center;
       padding: 2px 15px;
-      border: 1px solid #5569dd;
+      border: 1px solid var(--pr-color-primary-300);
       border-radius: 0 0 10px 10px;
       border-top: none;
       background: #cfd5f6;
-      color: #5569dd;
+      color: var(--pr-color-primary-300);
 
       .notification_header_item_text {
         font-weight: 500;
@@ -50,8 +50,8 @@ p {
         text-align: center;
         font-size: 13px;
         padding: 5px 20px;
-        border-left: 1px solid var(--pr-color-primary);
-        border-right: 1px solid var(--pr-color-primary);
+        border-left: 1px solid var(--pr-color-primary-300);
+        border-right: 1px solid var(--pr-color-primary-300);
         border-radius: 10px;
       }
 

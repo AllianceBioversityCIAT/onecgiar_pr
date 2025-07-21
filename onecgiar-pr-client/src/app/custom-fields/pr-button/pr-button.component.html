@@ -11,7 +11,7 @@
     show_background: this.showBackground,
     animate__pulse_infinite: this.pulse || this.rotating
   }"
-  [ngStyle]="this.showBackground ? { 'background-color': 'var(--pr-color-' + this.colorType + ')' } : {}">
+  [ngStyle]="this.showBackground ? { 'background-color': generateColor() } : {}">
   <div class="text">{{ this.text }}</div>
 
   <i
@@ -31,7 +31,5 @@
 
   <div
     class="filter"
-    [ngStyle]="
-      this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + 'var(--pr-color-' + this.colorType + ')' + ' 85%)' } : {}
-    "></div>
+    [ngStyle]="this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + generateColor() + ' 85%)' } : {}"></div>
 </div>

@@ -1,89 +1,87 @@
 .title_component {
-    color: #808080;
+  color: #808080;
 }
 
 .local_container {
-    padding-bottom: 10px;
+  padding-bottom: 10px;
 
-    .phase_switcher {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background-color: #E7E7E7;
-        padding: 6px;
-        border-radius: 5px;
-        font-weight: 600;
-        font-size: .9rem;
+  .phase_switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #e7e7e7;
+    padding: 6px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 0.9rem;
+
+    .tag {
+      display: flex;
+      font-size: 0.9rem;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 3px;
+      gap: 4px;
+      background-color: white;
+      color: var(--pr-color-primary-300);
+
+      .text {
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      i {
+        font-size: 1.1rem;
+      }
+    }
+
+    .select_phase_button {
+      background-color: white;
+      border-radius: 5px;
+      padding: 6px 20px;
+      transition: all ease-in-out 0.3s;
+      cursor: pointer;
+      border: 1px solid white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      &.close.selected {
+        .tag {
+          background-color: rgb(207, 207, 207);
+          color: rgb(95, 95, 95);
+        }
+      }
+
+      &.open {
+        .tag {
+          background-color: var(--pr-color-primary-300);
+          color: white;
+        }
+      }
+
+      &.open.selected {
+        .tag {
+          background-color: white;
+          color: var(--pr-color-primary-300);
+        }
+      }
+
+      &.close {
+        background-color: #dcdcdc;
+        color: #7b7a7a;
 
         .tag {
-            display: flex;
-            font-size: .9rem;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 3px;
-            gap: 4px;
-            background-color: white;
-            color: var(--pr-color-primary);
-
-            .text {
-                font-size: .8rem;
-                font-weight: 500;
-            }
-
-            i {
-                font-size: 1.1rem;
-
-            }
+          background-color: gray;
+          color: white;
         }
+      }
 
-        .select_phase_button {
-            background-color: white;
-            border-radius: 5px;
-            padding: 6px 20px;
-            transition: all ease-in-out .3s;
-            cursor: pointer;
-            border: 1px solid white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            &.close.selected {
-                .tag {
-                    background-color: rgb(207, 207, 207);
-                    color: rgb(95, 95, 95);
-                }
-            }
-
-
-            &.open {
-                .tag {
-                    background-color: var(--pr-color-primary);
-                    color: white;
-                }
-            }
-
-            &.open.selected {
-                .tag {
-                    background-color: white;
-                    color: var(--pr-color-primary);
-                }
-            }
-
-            &.close {
-                background-color: #DCDCDC;
-                color: #7B7A7A;
-
-                .tag {
-                    background-color: gray;
-                    color: white;
-                }
-            }
-
-            &.selected {
-                background-color: var(--pr-color-primary);
-                color: white;
-                border-color: #3D50BD;
-            }
-        }
+      &.selected {
+        background-color: var(--pr-color-primary-300);
+        color: white;
+        border-color: #3d50bd;
+      }
     }
+  }
 }

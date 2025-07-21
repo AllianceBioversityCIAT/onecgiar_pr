@@ -6,9 +6,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #5569dd;
+  color: var(--pr-color-primary-300);
   padding: 0px 8px;
-  border: 1px solid #5569dd;
+  border: 1px solid var(--pr-color-primary-300);
   border-radius: 20px;
   width: fit-content;
   margin-bottom: 8px;
@@ -29,7 +29,7 @@
   unicode-bidi: isolate;
   padding: 15px 1.5rem 10px 1.5rem;
   background-color: #eef0fc;
-  border-bottom: 1px solid #5569dd;
+  border-bottom: 1px solid var(--pr-color-primary-300);
   color: #000;
 
   &:hover {

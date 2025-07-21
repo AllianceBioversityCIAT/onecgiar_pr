@@ -1,79 +1,80 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-html, body {
-    font-family: "Poppins", sans-serif;
+html,
+body {
+  font-family: 'Poppins', sans-serif;
 }
 
 .segment_title {
-    font-size: 1.1em;
-    font-weight: 500;
+  font-size: 1.1em;
+  font-weight: 500;
 }
 
 .segment_title_margin {
-    margin-top: 30px;
-    margin-bottom: 10px;
+  margin-top: 30px;
+  margin-bottom: 10px;
 }
 
 .open_route {
-    font-weight: 600;
-    color: var(--pr-color-primary);
-    cursor: pointer;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
 }
 
-.confidenceLevel{
-    font-weight: 600;
-    color: #1991ff;
+.confidenceLevel {
+  font-weight: 600;
+  color: #1991ff;
 }
 
 .description_header {
-    font-weight: 600;
-    color: black !important;
-    margin-right: 5px !important;
+  font-weight: 600;
+  color: black !important;
+  margin-right: 5px !important;
 }
 
 .read-only {
-    color: var(--pr-color-secondary);
+  color: var(--pr-color-secondary);
 }
 
 .not_provided_color {
-    color: #ec9a9a !important;
-    font-weight: 400;
-    font-style: italic;
+  color: #ec9a9a !important;
+  font-weight: 400;
+  font-style: italic;
 }
 
 .init-mapped {
-    color: white;
-    font-style: italic;
-    font-size: .8em;
-    background-color: var(--pr-color-primary);
-    padding: 0px 7px;
-    border-radius: 3px;
+  color: white;
+  font-style: italic;
+  font-size: 0.8em;
+  background-color: var(--pr-color-primary-300);
+  padding: 0px 7px;
+  border-radius: 3px;
 }
 
 .no-data-text-format {
-    font-style: italic;
-    color: gray;
+  font-style: italic;
+  color: gray;
 }
 
 .tor-fact-desc {
-    font-style: italic;
-    color: var(--pr-color-info);
+  font-style: italic;
+  color: var(--pr-color-info);
 }
 
 @media only screen and (max-width: 1400px) {
-    html {
-        font-size: 12px;
-    }
+  html {
+    font-size: 12px;
+  }
 }
 
 @media only screen and (min-width: 1400px) {
-    html {
-        font-size: 13px;
-    }
+  html {
+    font-size: 13px;
+  }
 }
 
 .tor_sub_title {
-    font-weight: 600;
-    font-size: 1.2em;
-    margin: 5px 0px 10px 0px;
+  font-weight: 600;
+  font-size: 1.2em;
+  margin: 5px 0px 10px 0px;
 }

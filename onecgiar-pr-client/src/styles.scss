@@ -19,7 +19,7 @@
 
 /* Handle */
 .custom_scroll::-webkit-scrollbar-thumb {
-  background: var(--pr-color-primary);
+  background: var(--pr-color-primary-300);
   border-radius: 10px;
 }
 
@@ -175,7 +175,7 @@ a {
 }
 
 .completeness-submitted {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
 }
 
 .completeness-editing {
@@ -199,7 +199,7 @@ a {
 }
 
 .toc_button {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   color: white;
   display: flex;
   flex-wrap: nowrap;

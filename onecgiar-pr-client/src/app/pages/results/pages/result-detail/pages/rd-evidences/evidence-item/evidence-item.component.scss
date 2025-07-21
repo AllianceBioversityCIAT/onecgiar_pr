@@ -7,7 +7,7 @@
   overflow: hidden;
 
   .cgspace-link-message {
-    width : 100%;
+    width: 100%;
     text-align: start;
   }
 
@@ -34,7 +34,7 @@
       .floating-line-animated {
         position: absolute;
         height: 100%;
-        background-color: var(--pr-color-primary);
+        background-color: var(--pr-color-primary-300);
         bottom: 0;
         left: 0;
         z-index: 0;
@@ -55,7 +55,7 @@
         }
 
         a {
-          color: var(--pr-color-primary);
+          color: var(--pr-color-primary-300);
           padding-top: 2px;
         }
       }
@@ -65,7 +65,7 @@
         z-index: 1;
         display: flex;
         align-items: center;
-        color: var(--pr-color-primary);
+        color: var(--pr-color-primary-300);
 
         .size {
           color: var(--pr-color-secondary);
@@ -84,12 +84,7 @@
           align-items: center;
           font-weight: 500;
         }
-
       }
-
-
-
-
     }
 
     .incorrect-file {
@@ -97,7 +92,6 @@
       font-weight: 500;
       margin-top: -10px;
       margin-bottom: 20px;
-
     }
   }
 
@@ -126,17 +120,16 @@
   }
 }
 
-
 .incorrect-drag-and-drop-field {
-  border: 2px dashed #EB4E4E !important;
+  border: 2px dashed #eb4e4e !important;
 
   .description {
-    color: #EB4E4E !important;
+    color: #eb4e4e !important;
   }
 }
 
 .drag-and-drop-field {
-  border: 2px dashed var(--pr-color-primary);
+  border: 2px dashed var(--pr-color-primary-300);
   display: flex;
   align-items: center;
   justify-content: center;

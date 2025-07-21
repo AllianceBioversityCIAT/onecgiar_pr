@@ -28,7 +28,7 @@ p {
   }
 
   .outcomes_desc_link {
-    color: #5569dd;
+    color: var(--pr-color-primary-300);
     text-decoration: underline;
 
     &:hover {
@@ -71,7 +71,7 @@ p {
       .outcomes_actions_item--text {
         font-size: 16px;
         margin: 0;
-        color: #5569dd;
+        color: var(--pr-color-primary-300);
         font-weight: 500;
       }
     }

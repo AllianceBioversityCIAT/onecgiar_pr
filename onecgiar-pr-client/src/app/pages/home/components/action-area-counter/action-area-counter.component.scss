@@ -1,22 +1,22 @@
 .primary_action_areas {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    justify-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  justify-items: center;
 
-    .action_area {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        padding: 50px 20px 50px 20px;
-        border-radius: 10px;
-        min-width: 250px;
-        gap: 20px;
+  .action_area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 50px 20px 50px 20px;
+    border-radius: 10px;
+    min-width: 250px;
+    gap: 20px;
 
-        .counter {
-            font-size: 2em;
-            font-weight: 500;
-            color: var(--pr-color-primary);
-        }
+    .counter {
+      font-size: 2em;
+      font-weight: 500;
+      color: var(--pr-color-primary-300);
     }
+  }
 }

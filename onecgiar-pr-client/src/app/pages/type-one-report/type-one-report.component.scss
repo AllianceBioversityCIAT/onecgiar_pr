@@ -6,7 +6,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
     color: white;
     padding: 6px 20px;
     border-radius: 0px 0px 5px 5px;
@@ -31,7 +31,7 @@
       .initiative {
         display: grid;
         grid-template-columns: 1fr;
-        border-bottom: 5px solid var(--pr-color-primary);
+        border-bottom: 5px solid var(--pr-color-primary-300);
 
         .dropdown {
           display: flex;
@@ -55,14 +55,14 @@
             width: max-content;
             white-space: nowrap;
             font-weight: 500;
-            color: var(--pr-color-primary);
+            color: var(--pr-color-primary-300);
             padding: 0px 10px;
             font-size: 1.1em;
           }
         }
 
         .title {
-          background-color: var(--pr-color-primary);
+          background-color: var(--pr-color-primary-300);
           color: white;
           display: flex;
           align-items: center;

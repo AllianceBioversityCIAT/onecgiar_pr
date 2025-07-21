@@ -13,7 +13,7 @@ p {
   margin: 2rem 0;
   gap: 1rem;
   width: fit-content;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
 
   &:hover {
@@ -89,7 +89,7 @@ p {
   z-index: 1000;
   padding: 8px 1.2rem;
   color: #fff;
-  background-color: #5569dd;
+  background-color: var(--pr-color-primary-300);
   border-top-right-radius: 10px;
   border-bottom-left-radius: 10px;
   font-weight: 500;
@@ -97,7 +97,7 @@ p {
 }
 
 ::ng-deep .p-button {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   color: #fff;
   border: none;
   box-shadow: none;

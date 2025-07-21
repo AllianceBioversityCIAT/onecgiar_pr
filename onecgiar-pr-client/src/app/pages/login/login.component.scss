@@ -79,7 +79,7 @@ h2 {
 }
 
 .corp-id-btn {
-  background-color: #5569dd;
+  background-color: var(--pr-color-primary-300);
   color: white;
   border: none;
   border-radius: 8px;
@@ -107,7 +107,7 @@ h2 {
 }
 
 .show-login-form-btn {
-  background-color: #5569dd;
+  background-color: var(--pr-color-primary-300);
   color: white;
   border: none;
   border-radius: 8px;
@@ -202,7 +202,7 @@ input {
 
 .signin-btn {
   font-family: 'Poppins', sans-serif;
-  background-color: #5569dd;
+  background-color: var(--pr-color-primary-300);
   color: white;
   border: none;
   border-radius: 10px;

@@ -49,7 +49,7 @@
         color: white;
         padding: 5px 10px;
         border-radius: 4px;
-        background-color: var(--pr-color-primary);
+        background-color: var(--pr-color-primary-300);
         display: flex;
         align-items: center;
         gap: 2px;
@@ -74,7 +74,7 @@
       font-size: 13px;
 
       .admin_tag {
-        background-color: var(--pr-color-primary);
+        background-color: var(--pr-color-primary-300);
         padding: 3px 10px;
         border-radius: 3px;
       }
@@ -122,12 +122,12 @@
           }
 
           .init {
-            background-color: var(--pr-color-primary);
+            background-color: var(--pr-color-primary-300);
           }
 
           .role {
             background-color: white;
-            color: var(--pr-color-primary);
+            color: var(--pr-color-primary-300);
           }
         }
       }
@@ -167,7 +167,7 @@
     overflow: auto;
     max-height: 500px;
     scrollbar-width: thin;
-    scrollbar-color: #5569dd #eef0fc;
+    scrollbar-color: var(--pr-color-primary-300) #eef0fc;
 
     &::-webkit-scrollbar {
       width: 2px;
@@ -175,7 +175,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background-color: #5569dd;
+      background-color: var(--pr-color-primary-300);
       border-radius: 10px;
     }
 
@@ -190,7 +190,7 @@
     .notification {
       padding: 15px 1.5rem 10px 1.5rem;
       background-color: #eef0fc;
-      border-bottom: 1px solid #5569dd;
+      border-bottom: 1px solid var(--pr-color-primary-300);
     }
   }
 
@@ -204,7 +204,7 @@
     .see_all_notifications {
       cursor: pointer;
       font-weight: 400;
-      color: var(--pr-color-primary);
+      color: var(--pr-color-primary-300);
       margin: 0;
       width: fit-content;
     }

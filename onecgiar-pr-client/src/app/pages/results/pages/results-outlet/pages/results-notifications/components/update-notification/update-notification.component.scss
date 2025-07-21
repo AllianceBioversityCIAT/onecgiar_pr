@@ -20,9 +20,9 @@ p {
       justify-content: center;
       align-items: center;
       padding: 1px 8px;
-      border: 1px solid #5569dd;
+      border: 1px solid var(--pr-color-primary-300);
       border-radius: 10px;
-      color: #5569dd;
+      color: var(--pr-color-primary-300);
 
       .update_notification_header_item_text {
         font-weight: 500;
@@ -39,7 +39,7 @@ p {
       .update_notification_header_announcement_text {
         font-size: 14px;
         font-weight: 700;
-        color: #5569dd;
+        color: var(--pr-color-primary-300);
       }
     }
   }
@@ -70,7 +70,7 @@ p {
     position: absolute;
     top: -1px;
     right: 30px;
-    background-color: #5569dd;
+    background-color: var(--pr-color-primary-300);
     display: flex;
     justify-content: center;
     align-items: center;

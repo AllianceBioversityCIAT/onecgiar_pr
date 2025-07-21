@@ -149,8 +149,8 @@
         font-family: 'Poppins', sans-serif;
         padding: 7px 14px;
         background-color: white;
-        color: var(--pr-color-primary);
-        border: 1px solid var(--pr-color-primary);
+        color: var(--pr-color-primary-300);
+        border: 1px solid var(--pr-color-primary-300);
         cursor: pointer;
         border-radius: 15px;
         font-weight: 500;
@@ -159,7 +159,7 @@
       }
 
       .delivery.active {
-        background-color: var(--pr-color-primary) !important;
+        background-color: var(--pr-color-primary-300) !important;
         color: white !important;
       }
     }

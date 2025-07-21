@@ -1,39 +1,38 @@
 .ymz-list-structure-item {
-    position: relative;
-    // overflow: hidden;
-    border-radius: 10px;
-    box-shadow: 0px 0px 3px 3px rgb(0 0 0 / 6%);
-    padding: 10px 20px;
-    margin: 0px 0px;
+  position: relative;
+  // overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0px 0px 3px 3px rgb(0 0 0 / 6%);
+  padding: 10px 20px;
+  margin: 0px 0px;
 
-    .deleteItem {
-        cursor: pointer;
-        position: absolute;
-        right: 0;
-        top: 0;
-        background-color: rgb(248, 97, 97);
-        padding: 1px 20px;
-        border-bottom-left-radius: 10px;
-        border-top-right-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+  .deleteItem {
+    cursor: pointer;
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-color: rgb(248, 97, 97);
+    padding: 1px 20px;
+    border-bottom-left-radius: 10px;
+    border-top-right-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        .ymz-lsi-delete-icon {
-            color: white;
-            font-size: 1.4em;
-
-        }
+    .ymz-lsi-delete-icon {
+      color: white;
+      font-size: 1.4em;
     }
+  }
 
-    .line {
-        position: absolute;
-        left: 0;
-        top: 0;
-        background-color: var(--pr-color-primary);
-        width: 8px;
-        height: 100%;
-        border-radius: 0px 4px 4px 0px;
-        opacity: .7;
-    }
+  .line {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: var(--pr-color-primary-300);
+    width: 8px;
+    height: 100%;
+    border-radius: 0px 4px 4px 0px;
+    opacity: 0.7;
+  }
 }

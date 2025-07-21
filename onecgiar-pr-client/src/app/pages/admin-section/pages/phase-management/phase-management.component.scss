@@ -11,19 +11,18 @@
     width: max-content;
 
     .active {
-      background-color: var(--pr-color-primary) !important;
+      background-color: var(--pr-color-primary-300) !important;
       color: white !important;
 
       &:hover {
         background-color: #556addea !important;
-
       }
     }
 
     .tab {
       font-weight: 600;
       background-color: var(--pr-color-medium-2);
-      color: var(--pr-color-primary);
+      color: var(--pr-color-primary-300);
       text-decoration: none;
       padding: 8px 100px;
       display: flex;
@@ -34,7 +33,6 @@
 
       &:hover {
         background-color: #1b1b1b15;
-
       }
     }
   }
@@ -46,6 +44,6 @@
 }
 
 .pass_steps {
-  background: #5569dd !important;
-  border-color: #5569dd !important;
+  background: var(--pr-color-primary-300) !important;
+  border-color: var(--pr-color-primary-300) !important;
 }

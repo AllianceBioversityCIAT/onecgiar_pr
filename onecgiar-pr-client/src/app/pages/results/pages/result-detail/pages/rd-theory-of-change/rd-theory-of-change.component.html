@@ -61,7 +61,7 @@
         <i
           *ngIf="!this.api.rolesSE.readOnly"
           class="material-icons-round"
-          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          [style.color]="item.is_active ? '#fd6d6d' : 'var(--pr-color-primary-300)'"
           (click)="onRemoveContribuiting(i, true)">
           {{ item.is_active ? 'backspace' : 'undo' }}
         </i>
@@ -74,7 +74,7 @@
         <i
           *ngIf="!this.api.rolesSE.readOnly"
           class="material-icons-round"
-          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          [style.color]="item.is_active ? '#fd6d6d' : 'var(--pr-color-primary-300)'"
           (click)="onRemoveContribuiting(i, false)">
           {{ item.is_active ? 'backspace' : 'undo' }}
         </i>
@@ -89,7 +89,7 @@
         <i
           *ngIf="!this.api.rolesSE.readOnly"
           class="material-icons-round"
-          [style.color]="item.is_active ? '#fd6d6d' : '#5569dd'"
+          [style.color]="item.is_active ? '#fd6d6d' : 'var(--pr-color-primary-300)'"
           (click)="toggleActiveContributor(item)">
           {{ item.is_active ? 'backspace' : 'undo' }}
         </i>

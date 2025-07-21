@@ -33,7 +33,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
   font-size: 22px;
 }
@@ -49,11 +49,11 @@
   padding: 50px 0px;
   font-size: 1.3em;
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .indicator_link {
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
   font-weight: 600;
 }

@@ -1,36 +1,36 @@
 .table_container {
-    display: grid;
-    grid-template-columns: 1fr;
-    padding: 10px;
-    overflow: hidden;
-    position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: 10px;
+  overflow: hidden;
+  position: relative;
 
-    .options {
-        display: flex;
-        justify-content: space-between;
+  .options {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .counter {
+    font-size: 1.1em;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    margin-bottom: 35px;
+    margin-left: 20px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .name {
+      color: var(--pr-color-primary-300);
     }
-
-    .counter {
-        font-size: 1.1em;
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        z-index: 3;
-        margin-bottom: 35px;
-        margin-left: 20px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-
-        .name {
-            color: var(--pr-color-primary);
-        }
-    }
+  }
 }
 
 .not_provided_text {
-    color: rgb(187, 187, 187);
-    font-style: italic;
-    font-size: .8em;
+  color: rgb(187, 187, 187);
+  font-style: italic;
+  font-size: 0.8em;
 }

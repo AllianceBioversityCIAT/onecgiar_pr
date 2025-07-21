@@ -1,44 +1,45 @@
 .modal_container {
-    padding: 20px 50px 80px 50px;
-    width: 100vw !important;
-    max-width: 60vw !important;
-    min-height: 50vh;
+  padding: 20px 50px 80px 50px;
+  width: 100vw !important;
+  max-width: 60vw !important;
+  min-height: 50vh;
 }
 
 .modal_title {
-    background-color: var(--pr-color-secondary);
-    width: 100%;
-    font-size: 1.3em;
-    font-weight: 600;
-    color: white;
-    padding: 10px 20px;
-    border-bottom-right-radius: 10px;
+  background-color: var(--pr-color-secondary);
+  width: 100%;
+  font-size: 1.3em;
+  font-weight: 600;
+  color: white;
+  padding: 10px 20px;
+  border-bottom-right-radius: 10px;
 }
 
 .buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    width: 100%;
-    margin-top: -50px;
-    padding-right: 50px;
-    padding-bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  margin-top: -50px;
+  padding-right: 50px;
+  padding-bottom: 10px;
 }
 
 .information {
-    text-align: center;
-    padding: 10px 50px;
-    font-size: 1.3em;
+  text-align: center;
+  padding: 10px 50px;
+  font-size: 1.3em;
 
-    strong {
-        color: var(--pr-color-primary);
-    }
+  strong {
+    color: var(--pr-color-primary-300);
+  }
 
-    .email {}
+  .email {
+  }
 }
 
 .not_provided_text {
-    color: rgb(187, 187, 187);
-    font-style: italic;
-    font-size: .8em;
+  color: rgb(187, 187, 187);
+  font-style: italic;
+  font-size: 0.8em;
 }

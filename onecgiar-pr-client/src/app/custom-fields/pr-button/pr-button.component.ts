@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
-    selector: 'app-pr-button',
-    templateUrl: './pr-button.component.html',
-    styleUrls: ['./pr-button.component.scss'],
-    standalone: false
+  selector: 'app-pr-button',
+  templateUrl: './pr-button.component.html',
+  styleUrls: ['./pr-button.component.scss'],
+  standalone: false
 })
 export class PrButtonComponent implements OnInit {
   @Input() text: string;
@@ -30,6 +30,21 @@ export class PrButtonComponent implements OnInit {
 
   ngOnInit(): void {
     this.icon && (this.use_png_icon = this.png_icons.includes(this.icon));
+  }
+
+  generateColor() {
+    switch (this.colorType) {
+      case 'primary':
+        return 'var(--pr-color-primary-300)';
+      case 'danger':
+        return 'var(--pr-color-danger)';
+      case 'secondary':
+        return 'var(--pr-color-secondary-400)';
+      case 'success':
+        return 'var(--pr-color-success)';
+      default:
+        return '';
+    }
   }
 
   onClick() {

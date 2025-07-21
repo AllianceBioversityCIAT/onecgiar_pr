@@ -149,7 +149,7 @@ input::placeholder,
           align-items: center;
           justify-content: center;
           height: 180px;
-          color: var(--pr-color-primary);
+          color: var(--pr-color-primary-300);
         }
 
         .option {
@@ -237,7 +237,7 @@ input::placeholder,
   .icon_container {
     position: absolute;
     right: 0;
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
     width: 43px;
     height: 100%;
     z-index: 1;
