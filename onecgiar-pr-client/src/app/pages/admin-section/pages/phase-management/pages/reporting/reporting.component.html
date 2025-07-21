@@ -31,6 +31,19 @@
           </app-pr-select>
         </td>
         <td [style.width.px]="180">
+          <div class="text" *ngIf="!phase.editing">
+            {{phase?.obj_portfolio?.name || ''}}
+          </div>
+          <app-pr-select *ngIf="phase.editing"
+            class="segment_title_margin"
+            [options]="portfolioList"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select portfolio"
+            [(ngModel)]="phase.portfolio_id_ts">
+          </app-pr-select>
+        </td>
+        <td [style.width.px]="180">
           <div class="text" *ngIf="!phase.isNew">{{this.getTocPhaseName(phase?.toc_pahse_id)}}</div>
           <app-pr-select *ngIf="phase.isNew" class="segment_title_margin" [options]="this.tocPhaseList"
             optionLabel="fullText" optionValue="phase_id" placeholder="Select phase"
@@ -39,13 +52,13 @@
         </td>
         <td [style.width.px]="120">
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
-          <p-calendar [touchUI]="true" placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
+          <p-calendar [touchUI]="false" placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
             dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="120">
 
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
-          <p-calendar [touchUI]="true" placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
+          <p-calendar [touchUI]="false" placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
             dateFormat="yy-mm-dd"></p-calendar>
         </td>
         <td [style.width.px]="90">

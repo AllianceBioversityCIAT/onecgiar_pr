@@ -703,6 +703,7 @@ export class VersioningService {
       app_module_id: createVersioningDto.app_module_id,
       created_by: user.id,
       reporting_phase: createVersioningDto?.reporting_phase,
+      portfolio_id: createVersioningDto?.portfolio_id,
     });
 
     return ReturnResponseUtil.format({
@@ -745,6 +746,7 @@ export class VersioningService {
       status: updateVersioningDto.status,
       previous_phase: updateVersioningDto.previous_phase,
       phase_name: updateVersioningDto.phase_name,
+      portfolio_id: updateVersioningDto.portfolio_id,
     });
 
     return ReturnResponseUtil.format({
@@ -793,6 +795,7 @@ export class VersioningService {
       relations: {
         obj_previous_phase: true,
         obj_reporting_phase: true,
+        obj_portfolio: true,
       },
     });
 
@@ -860,6 +863,7 @@ export class VersioningService {
     const res = await this._versionRepository.find({
       relations: {
         obj_app_module: true,
+        obj_portfolio: true,
       },
     });
 
