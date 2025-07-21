@@ -63,7 +63,7 @@
 
         <!-- Clear filters button -->
         <div class="clear-filter">
-          <label class="clear-label">&nbsp;</label>
+          <div class="clear-spacer">&nbsp;</div>
           <app-pr-button text="Clear filters" icon="filter_alt_off" colorType="secondary" (clickEvent)="onClearFilters()"></app-pr-button>
         </div>
       </div>
@@ -160,42 +160,39 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
+    (onHide)="onModalHide()"
     styleClass="add-user-modal"
     [style]="{ width: '600px' }">
     <div class="modal-content">
       <!-- Is CGIAR Question -->
       <div class="form-field">
-        <label class="field-label"> Is CGIAR?<span class="required">*</span> </label>
-        <div class="cgiar-buttons">
-          <!-- <button disabled type="button" class="cgiar-btn" [class.active]="addUserForm().is_cgiar" (click)="onModalCgiarChange(true)">Yes</button> -->
-          <!-- (click)="onModalCgiarChange(false)" -->
-          <button type="button" class="cgiar-btn" [class.active]="!addUserForm().is_cgiar">No</button>
+        <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
+        <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
+          <label class="radio-option">
+            <input type="radio" name="is-cgiar" [checked]="addUserForm().is_cgiar" (change)="onModalCgiarChange(true)" class="radio-input" />
+            <span class="radio-label">Yes</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="is-cgiar" [checked]="!addUserForm().is_cgiar" (change)="onModalCgiarChange(false)" class="radio-input" />
+            <span class="radio-label">No</span>
+          </label>
         </div>
       </div>
 
       <!-- CGIAR User Search -->
-      @if (addUserForm().is_cgiar && !addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && !addUserForm().email) {
         <div class="form-field">
-          <app-pr-select
-            [options]="cgiarUsers"
-            optionLabel="displayName"
-            optionValue="email"
-            placeholder="Select a user"
-            label="Select a user"
-            [ngModel]="addUserForm().selectedUserEmail"
-            (ngModelChange)="onUserEmailChange($event)"
-            (selectOptionEvent)="onUserSelect($event)"
-            [required]="true"
-            [expandSpaceOnOpen]="true">
-          </app-pr-select>
+          @if (showUserSearchComponent()) {
+            <app-search-user-select #userSearchSelect (userSelected)="onUserSelect($event)"></app-search-user-select>
+          }
         </div>
       }
 
       <!-- Selected User Display (Read-only) -->
-      @if (addUserForm().is_cgiar && addUserForm().selectedUser) {
+      @if (addUserForm().is_cgiar && addUserForm().email) {
         <div class="form-field">
-          <label class="field-label">User:</label>
-          <div class="selected-user">{{ addUserForm().selectedUser!.name }} ({{ addUserForm().selectedUser!.email }})</div>
+          <div class="field-label">Selected user:</div>
+          <div class="selected-user-display">{{ addUserForm().displayName }}</div>
         </div>
       }
 
@@ -204,42 +201,45 @@
         <div>
           <div class="form-row">
             <div class="form-field half-width">
-              <label class="field-label"> Name:<span class="required">*</span> </label>
+              <label class="field-label" for="user-first-name"> Name:<span class="required">*</span> </label>
               <input
                 type="text"
                 pInputText
                 placeholder="Enter name"
                 [ngModel]="addUserForm().first_name"
                 (ngModelChange)="onNameChange($event)"
-                class="form-input" />
+                class="form-input"
+                id="user-first-name" />
             </div>
             <div class="form-field half-width">
-              <label class="field-label"> Last name:<span class="required">*</span> </label>
+              <label class="field-label" for="user-last-name"> Last name:<span class="required">*</span> </label>
               <input
                 type="text"
                 pInputText
                 placeholder="Enter last name"
                 [ngModel]="addUserForm().last_name"
                 (ngModelChange)="onLastNameChange($event)"
-                class="form-input" />
+                class="form-input"
+                id="user-last-name" />
             </div>
           </div>
 
           <div class="form-field">
-            <label class="field-label"> Email:<span class="required">*</span> </label>
+            <label class="field-label" for="user-email"> Email:<span class="required">*</span> </label>
             <input
               type="email"
               pInputText
               placeholder="Enter Email"
               [ngModel]="addUserForm().email"
               (ngModelChange)="onEmailChange($event)"
-              class="form-input" />
+              class="form-input"
+              id="user-email" />
           </div>
         </div>
       }
 
       <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
-      @if ((addUserForm().is_cgiar && addUserForm().selectedUser) || !addUserForm().is_cgiar) {
+      @if ((addUserForm().is_cgiar && addUserForm().email) || !addUserForm().is_cgiar) {
         <div>
           <!-- Admin Permissions -->
           <div class="form-field" [class.extra-margin-top]="!addUserForm().is_cgiar">
@@ -257,7 +257,7 @@
 
           <!-- Created By -->
           <div class="form-field">
-            <label class="field-label">Created by</label>
+            <div class="field-label">Created by</div>
             <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
           </div>
         </div>

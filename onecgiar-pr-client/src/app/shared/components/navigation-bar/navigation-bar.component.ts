@@ -1,10 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { PrRoute, routingApp } from '../../routing/routing-data';
-import { NavigationBarService } from '../../services/navigation-bar.service';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
-import { AuthService } from '../../services/api/auth.service';
-import { ApiService } from '../../services/api/api.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -13,26 +10,36 @@ import { environment } from '../../../../environments/environment';
     styleUrls: ['./navigation-bar.component.scss'],
     standalone: false
 })
-export class NavigationBarComponent implements OnInit {
+export class NavigationBarComponent implements OnInit, OnDestroy {
   navigationOptions: PrRoute[] = routingApp;
+  isSticky = false;
+  private ticking = false;
 
   constructor(
-    public api: ApiService,
-    public _navigationBarService: NavigationBarService,
     public rolesSE: RolesService,
-    public dataControlSE: DataControlService,
-    public authSE: AuthService
+    public dataControlSE: DataControlService
   ) {}
 
-  ngOnInit(): void {
-    window.addEventListener('scroll', e => {
-      const scrollTopValue: number = window.scrollY || ((document.documentElement || document.body.parentNode || document.body) as any).scrollTop;
-      if (scrollTopValue > 70) {
-        this._navigationBarService.navbar_fixed = true;
-      } else {
-        this._navigationBarService.navbar_fixed = false;
-      }
-    });
+  ngOnInit() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', this.onScroll, { passive: true });
+    }
+  }
+
+  onScroll = () => {
+    if (!this.ticking) {
+      window.requestAnimationFrame(() => {
+        this.isSticky = window.scrollY > 70;
+        this.ticking = false;
+      });
+      this.ticking = true;
+    }
+  };
+
+  ngOnDestroy() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('scroll', this.onScroll);
+    }
   }
 
   validateAdminModuleAndRole(option) {
@@ -40,10 +47,6 @@ export class NavigationBarComponent implements OnInit {
     if (this.rolesSE.isAdmin) return false;
     if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     return false;
-  }
-
-  validateTypeOneReport(option) {
-    return option.path === 'type-one-report' && !this.api?.rolesSE?.isAdmin;
   }
 
   validateCoordAndLead() {

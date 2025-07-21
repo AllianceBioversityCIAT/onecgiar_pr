@@ -3,6 +3,9 @@ import { ScoreService } from '../../../../../../shared/services/global/score.ser
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrGeneralInformationBody } from './model/ipsr-general-information.model';
+import { User } from '../../../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 
 @Component({
     selector: 'app-ipsr-general-information',
@@ -12,8 +15,74 @@ import { IpsrGeneralInformationBody } from './model/ipsr-general-information.mod
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
+  searchQuery: string = '';
+  searchResults: User[] = [];
+  selectedUser: User | null = null;
+  showResults: boolean = false;
+  isSearching: boolean = false;
+  hasValidContact: boolean = true;
+  showContactError: boolean = false;
+  private searchSubject = new Subject<string>();
 
-  constructor(public api: ApiService, public scoreSE: ScoreService, public ipsrDataControlSE: IpsrDataControlService) {}
+  private filterValidUsers(users: User[]): User[] {
+    return users.filter(user => {
+      if (!user.mail || user.mail.trim() === '') {
+        return false;
+      }
+
+      if (user.mail.toLowerCase().includes('test')) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  constructor(
+    public api: ApiService,
+    public scoreSE: ScoreService,
+    public ipsrDataControlSE: IpsrDataControlService,
+    private userSearchService: UserSearchService
+  ) {
+    this.searchSubject
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(query => {
+          if (query.length >= 4) {
+            this.isSearching = true;
+            return this.userSearchService.searchUsers(query);
+          } else {
+            this.searchResults = [];
+            this.showResults = false;
+            this.isSearching = false;
+            return [];
+          }
+        })
+      )
+      .subscribe({
+        next: response => {
+          const filteredResults = this.filterValidUsers(response.response || []);
+          this.searchResults = filteredResults;
+          this.showResults = true;
+          this.isSearching = false;
+
+          if (this.searchResults.length === 0 && this.searchQuery.trim()) {
+            this.hasValidContact = false;
+          }
+        },
+        error: error => {
+          console.error('Error searching users:', error);
+          this.searchResults = [];
+          this.showResults = false;
+          this.isSearching = false;
+
+          if (this.searchQuery.trim()) {
+            this.hasValidContact = false;
+          }
+        }
+      });
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -23,8 +92,15 @@ export class IpsrGeneralInformationComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
-      this.ipsrGeneralInformationBody.is_krs = Boolean(Number(this.ipsrGeneralInformationBody.is_krs));
-      this.GET_investmentDiscontinuedOptions(response.result_type_id);
+
+      if (this.ipsrGeneralInformationBody.lead_contact_person_data) {
+        this.selectedUser = this.ipsrGeneralInformationBody.lead_contact_person_data;
+        this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person_data.displayName;
+      } else if (this.ipsrGeneralInformationBody.lead_contact_person) {
+        this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person;
+      } else {
+        this.searchQuery = '';
+      }
     });
   }
 
@@ -52,19 +128,20 @@ export class IpsrGeneralInformationComponent implements OnInit {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
 
-  onSaveSection(callback?) {
-    return this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
+  onSaveSection() {
+    if (this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+      return;
+    }
+
+    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
       next: resp => {
-        this.api.GETInnovationPackageDetail();
         this.getSectionInformation();
-        this.api.alertsFe.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
       },
       error: err => {
         console.error(err);
-        this.api.alertsFe.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
-      },
-      complete: () => {
-        callback?.();
+        this.getSectionInformation();
       }
     });
   }
@@ -167,5 +244,60 @@ export class IpsrGeneralInformationComponent implements OnInit {
     <li><strong>1 = Significant:</strong> Gender equality is an important and deliberate objective, but not the principal reason for undertaking the output/outcome/activity.</li>
     <li><strong>2 = Principal:</strong> Gender equality is the main objective of the output/outcome/activity and is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this gender equality objective.</li>
     </ul>`;
+  }
+
+  leadContactPersonTextInfo() {
+    return `For more precise results, we recommend searching by email or username. 
+    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
+  }
+
+  onSearchInput(event: any): void {
+    let query = '';
+
+    if (typeof event === 'string') {
+      query = event;
+    } else if (event?.target?.value !== undefined) {
+      query = event.target.value;
+    } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
+      query = event.toString();
+    }
+
+    query = query || '';
+
+    this.searchQuery = query;
+    this.selectedUser = null;
+    this.showContactError = false;
+
+    if (query.trim()) {
+      this.hasValidContact = false;
+      this.searchSubject.next(query);
+    } else {
+      this.ipsrGeneralInformationBody.lead_contact_person = null;
+      this.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      this.searchResults = [];
+      this.showResults = false;
+      this.isSearching = false;
+      this.hasValidContact = true;
+      this.showContactError = false;
+    }
+  }
+
+  selectUser(user: User): void {
+    this.selectedUser = user;
+    this.searchQuery = user.displayName;
+    this.searchResults = [];
+    this.showResults = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
+
+    this.ipsrGeneralInformationBody.lead_contact_person = user.displayName;
+    this.ipsrGeneralInformationBody.lead_contact_person_data = user;
+  }
+
+  onContactBlur(): void {
+    if (this.searchQuery.trim() && !this.selectedUser) {
+      this.hasValidContact = false;
+      this.showContactError = true;
+    }
   }
 }

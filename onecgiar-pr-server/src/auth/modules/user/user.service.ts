@@ -1,4 +1,11 @@
-import { Injectable, HttpStatus, HttpException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  HttpException,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +23,8 @@ import { AuthMicroserviceService } from '../../../shared/microservices/auth-micr
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import * as handlebars from 'handlebars';
+import { ActiveDirectoryService } from '../../services/active-directory.service';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 
 @Injectable()
 export class UserService {
@@ -30,6 +39,8 @@ export class UserService {
     private readonly _handlersError: HandlersError,
     private readonly _awsCognitoService: AuthMicroserviceService,
     private readonly _templateRepository: TemplateRepository,
+    private readonly activeDirectoryService: ActiveDirectoryService,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -43,26 +54,65 @@ export class UserService {
     try {
       const exists = await this.findOneByEmail(createUserDto.email);
 
-      if (!createUserDto.is_cgiar) {
-        if (this.cgiarRegex.test(createUserDto.email)) {
+      if (
+        !createUserDto.is_cgiar &&
+        this.cgiarRegex.test(createUserDto.email)
+      ) {
+        throw {
+          response: {},
+          message: 'Non-CGIAR user cannot have a CGIAR email address',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (exists.response) {
+        throw {
+          response: {},
+          message: 'The user already exists in the system',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      let shouldSendConfirmationEmail = false;
+
+      // CGIAR user handling
+      if (createUserDto.is_cgiar) {
+        const userFromAD = await this.activeDirectoryService.searchUsers(
+          createUserDto.email,
+        );
+        if (!userFromAD) {
+          throw new NotFoundException(
+            'No information was found for this CGIAR user.',
+          );
+        }
+        if (!this.cgiarRegex.test(createUserDto.email)) {
           throw {
             response: {},
-            message: 'Non-CGIAR user cannot have a CGIAR email address',
+            message: 'The user does not have CGIAR email address',
             status: HttpStatus.BAD_REQUEST,
           };
         }
-        if (exists.response) {
-          throw {
-            response: {},
-            message: 'The user already exists in the system',
-            status: HttpStatus.BAD_REQUEST,
-          };
+        createUserDto.first_name = userFromAD[0]?.givenName || 'CGIAR';
+        createUserDto.last_name = userFromAD[0]?.sn || 'User';
+
+        if (!createUserDto.role_platform) {
+          createUserDto.role_platform = 2;
         }
 
+        shouldSendConfirmationEmail = true;
+      }
+
+      // Non-CGIAR user handling
+      if (!createUserDto.is_cgiar) {
+        if (!createUserDto.first_name || !createUserDto.last_name) {
+          throw new BadRequestException(
+            'Some fields contain errors or are incomplete. Please review your input.',
+          );
+        }
         createUserDto.role_platform = 2;
 
         const templateDB = await this._templateRepository.findOne({
-          where: { name: EmailTemplate.EXTERNAL_USER },
+          where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
         });
 
         const template = handlebars.compile(templateDB.template);
@@ -108,58 +158,125 @@ export class UserService {
         try {
           await this._awsCognitoService.createUser(cognitoPayload);
         } catch (error) {
-          console.log(error);
-          throw {
-            response: { error },
-            message: 'Error while creating user',
-            status: HttpStatus.INTERNAL_SERVER_ERROR,
-          };
+          const isUserExistsError =
+            error?.name === 'UsernameExistsException' ||
+            error?.message?.includes('exists');
+
+          if (isUserExistsError) {
+            shouldSendConfirmationEmail = true;
+          } else {
+            console.error(error);
+            throw {
+              response: { error },
+              message: 'Error while creating user',
+              status: HttpStatus.INTERNAL_SERVER_ERROR,
+            };
+          }
         }
       }
 
-      if (exists.response) {
-        throw {
-          response: {},
-          message: 'The user already exists in the system',
-          status: HttpStatus.BAD_REQUEST,
-        };
+      const savedUser = this.saveUserToDB(createUserDto, token);
+      if (shouldSendConfirmationEmail) {
+        await this.sendAccountConfirmationEmail(createUserDto);
       }
 
-      const currentUser = await this._userRepository.findOne({
-        where: { id: token.id },
-      });
-      createUserDto.created_by = currentUser?.id || null;
-      createUserDto.last_updated_by = currentUser?.id || null;
+      return savedUser;
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 
-      const newUser = await this._userRepository.save(createUserDto);
+  private async saveUserToDB(
+    createUserDto: CreateUserDto,
+    token: TokenDto,
+  ): Promise<returnFormatUser> {
+    const currentUser = await this._userRepository.findOne({
+      where: { id: token.id },
+    });
+
+    createUserDto.created_by = currentUser?.id || null;
+    createUserDto.last_updated_by = currentUser?.id || null;
+
+    const newUser = await this._userRepository.save(createUserDto);
+    await this._roleByUserRepository.save({
+      role: createUserDto?.role_platform || 2,
+      user: newUser.id,
+      created_by: currentUser?.id,
+      last_updated_by: currentUser?.id,
+    });
+
+    if (createUserDto.role_entity) {
       await this._roleByUserRepository.save({
-        role: createUserDto?.role_platform || 2,
+        role: createUserDto.role_entity,
         user: newUser.id,
         created_by: currentUser?.id,
         last_updated_by: currentUser?.id,
       });
-
-      if (createUserDto.role_entity) {
-        await this._roleByUserRepository.save({
-          role: createUserDto.role_entity,
-          user: newUser.id,
-          created_by: currentUser?.id,
-          last_updated_by: currentUser?.id,
-        });
-      }
-
-      return {
-        response: {
-          id: newUser.id,
-          first_name: newUser.first_name,
-          last_name: newUser.last_name,
-        } as User,
-        message: 'The user has been successfully created',
-        status: HttpStatus.CREATED,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
     }
+
+    return {
+      response: {
+        id: newUser.id,
+        first_name: newUser.first_name,
+        last_name: newUser.last_name,
+      } as User,
+      message: 'The user has been successfully created',
+      status: HttpStatus.CREATED,
+    };
+  }
+
+  private async sendAccountConfirmationEmail(
+    createUserDto: CreateUserDto,
+  ): Promise<void> {
+    const confirmationTemplateDB = await this._templateRepository.findOne({
+      where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
+    });
+
+    if (!confirmationTemplateDB) {
+      throw new Error('Email template ACCOUNT_CONFIRMATION not found');
+    }
+
+    const compiledTemplate = handlebars.compile(
+      confirmationTemplateDB.template,
+    );
+
+    const emailData: Record<string, any> = {
+      logoUrl:
+        'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.png',
+      appName: 'PRMS Reporting Tool',
+      firstName: createUserDto.first_name,
+      lastName: createUserDto.last_name,
+      email: createUserDto.email,
+      appUrl: 'https://reporting.cgiar.org/',
+      supportEmail: 'PRMSTechSupport@cgiar.org',
+      senderName: 'PRMS Team',
+      isCgiar: createUserDto.is_cgiar,
+    };
+
+    if (createUserDto.entity) {
+      emailData.assignedEntity = createUserDto.entity;
+    }
+
+    if (createUserDto.role_entity) {
+      emailData.assignedRole = createUserDto.role_entity;
+    }
+
+    this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
+      },
+      emailBody: {
+        subject: 'Welcome to the PRMS Reporting Tool – Your Account Details',
+        to: [createUserDto.email],
+        cc: [],
+        bcc: '',
+        message: {
+          text: 'Account creation confirmation',
+          socketFile: compiledTemplate(emailData),
+        },
+      },
+    });
   }
 
   async findAll(): Promise<returnFormatUser | returnErrorDto> {

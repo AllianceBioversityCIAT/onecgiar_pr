@@ -12,6 +12,8 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import * as Handlebars from 'handlebars';
+import { ActiveDirectoryService } from '../../services/active-directory.service';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 
 describe('UserService', () => {
   let service: UserService;
@@ -114,6 +116,10 @@ describe('UserService', () => {
     })),
   }));
 
+  const mockActiveDirectoryService = {
+    searchUsers: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -148,6 +154,16 @@ describe('UserService', () => {
           provide: AuthMicroserviceService,
           useValue: {
             createUser: jest.fn(),
+          },
+        },
+        {
+          provide: ActiveDirectoryService,
+          useValue: mockActiveDirectoryService,
+        },
+        {
+          provide: EmailNotificationManagementService,
+          useValue: {
+            sendEmail: jest.fn(),
           },
         },
       ],

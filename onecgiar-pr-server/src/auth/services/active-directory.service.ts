@@ -1,5 +1,5 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import ActiveDirectory from 'activedirectory';
+import { Client } from 'ldapts';
 import config from '../../config/const.config';
 
 export interface ADUser {
@@ -10,70 +10,250 @@ export interface ADUser {
   givenName?: string;
   sn?: string;
   userPrincipalName?: string;
+  title?: string;
+  department?: string;
+  company?: string;
+  manager?: string;
+  employeeID?: string;
+  employeeNumber?: string;
+  employeeType?: string;
+  description?: string;
 }
 
 @Injectable()
 export class ActiveDirectoryService {
   private readonly logger = new Logger(ActiveDirectoryService.name);
 
+  private createClient(): Client {
+    return new Client({
+      url: config.active_directory.url,
+      timeout: 10000,
+      connectTimeout: 10000,
+    });
+  }
+
+  private async bindClient(
+    client: Client,
+    username?: string,
+    password?: string,
+  ): Promise<void> {
+    try {
+      const bindDN = username || config.active_directory.username;
+      const bindPassword = password || config.active_directory.password;
+
+      await client.bind(bindDN, bindPassword);
+      this.logger.debug('LDAP bind successful');
+    } catch (error) {
+      this.logger.error(`LDAP bind error: ${error.message}`);
+      throw error;
+    }
+  }
+
   /**
-   * Search users by name or email - TESTING WITH findUser FIRST
+   * Search users by name, mail or sAMAccountName (partial match)
+   * Optimized for real-time search
    */
   async searchUsers(query: string): Promise<ADUser[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const client = this.createClient();
+
     try {
-      if (!query || query.trim().length < 2) {
-        return [];
-      }
+      await this.bindClient(client);
 
-      this.logger.log(`Searching AD users: ${query}`);
+      this.logger.debug(`Searching AD users: ${query}`);
 
-      this.logger.debug('AD Config check:', {
-        hasConfig: !!config.active_directory,
-        hasUrl: !!config.active_directory?.url,
-        hasBaseDN: !!config.active_directory?.baseDN,
-        url: config.active_directory?.url ? 'SET' : 'MISSING',
-      });
+      const words = query.trim().split(/\s+/);
 
-      const ad = new ActiveDirectory(config.active_directory);
+      const fields = [
+        'givenName',
+        'displayName',
+        'mail',
+        'sAMAccountName',
+        'sn',
+      ];
 
-      return new Promise((resolve, reject) => {
-        ad.findUser(query, (err, user) => {
-          if (err) {
-            if (err.errno == 'ENOTFOUND') {
-              const notFound = {
-                name: 'SERVER_NOT_FOUND',
-                description: 'Domain Controller Server not found',
-                httpCode: 500,
-              };
-              reject(notFound);
-              return;
-            } else {
-              const e = {
-                name: 'SERVER_ERROR',
-                description: err.lde_message,
-                httpcode: 500,
-              };
-              reject(e);
-              return;
+      const filter =
+        '(&' +
+        words
+          .map(
+            (word) =>
+              '(|' +
+              fields.map((field) => `(${field}=*${word}*)`).join('') +
+              ')',
+          )
+          .join('') +
+        ')';
+
+      const searchOptions = {
+        filter: filter,
+        scope: 'sub' as const,
+        attributes: [
+          'cn',
+          'displayName',
+          'mail',
+          'sAMAccountName',
+          'givenName',
+          'sn',
+          'userPrincipalName',
+          'title',
+          'department',
+          'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
+        ],
+        sizeLimit: 10,
+        timeLimit: 5,
+      };
+
+      const searchResult = await client.search(
+        config.active_directory.baseDN,
+        searchOptions,
+      );
+
+      const users: ADUser[] = searchResult.searchEntries.map((entry) => {
+        const user: ADUser = {};
+
+        [
+          'cn',
+          'displayName',
+          'mail',
+          'sAMAccountName',
+          'givenName',
+          'sn',
+          'userPrincipalName',
+          'title',
+          'department',
+          'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
+        ].forEach((key) => {
+          if (entry[key]) {
+            const value = entry[key];
+            if (Array.isArray(value) && value.length > 0) {
+              user[key as keyof ADUser] = value[0] as string;
+            } else if (typeof value === 'string') {
+              user[key as keyof ADUser] = value;
             }
           }
-
-          if (!user) {
-            this.logger.debug(`User '${query}' not found`);
-            resolve([]);
-            return;
-          }
-
-          this.logger.log(`Found user: ${user.displayName || user.cn}`);
-          resolve([user]);
         });
+
+        return user;
       });
+
+      this.logger.debug(`Found ${users.length} user(s) for query: ${query}`);
+      return users;
     } catch (error) {
       this.logger.error(`Error searching users: ${error.message}`);
       throw new HttpException(
         'Error searching users',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    } finally {
+      try {
+        await client.unbind();
+      } catch (error) {
+        this.logger.warn(`Error unbinding client: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Get user details by username
+   */
+  async getUserDetails(username: string): Promise<ADUser | null> {
+    const client = this.createClient();
+
+    try {
+      await this.bindClient(client);
+
+      const searchOptions = {
+        filter: `(|(sAMAccountName=${username})(userPrincipalName=${username})(mail=${username}))`,
+        scope: 'sub' as const,
+        attributes: [
+          'cn',
+          'displayName',
+          'mail',
+          'sAMAccountName',
+          'givenName',
+          'sn',
+          'userPrincipalName',
+          'title',
+          'department',
+          'company',
+          'manager',
+          'employeeID',
+          'employeeNumber',
+          'employeeType',
+          'description',
+        ],
+      };
+
+      const searchResult = await client.search(
+        config.active_directory.baseDN,
+        searchOptions,
+      );
+
+      if (searchResult.searchEntries.length === 0) {
+        this.logger.log(`User not found: ${username}`);
+        return null;
+      }
+
+      const entry = searchResult.searchEntries[0];
+      const user: ADUser = {};
+
+      Object.keys(entry).forEach((key) => {
+        if (
+          key in user ||
+          [
+            'cn',
+            'displayName',
+            'mail',
+            'sAMAccountName',
+            'givenName',
+            'sn',
+            'userPrincipalName',
+            'title',
+            'department',
+            'company',
+            'manager',
+            'employeeID',
+            'employeeNumber',
+            'employeeType',
+            'description',
+          ].includes(key)
+        ) {
+          const value = entry[key];
+          if (Array.isArray(value) && value.length > 0) {
+            user[key as keyof ADUser] = value[0] as string;
+          } else if (typeof value === 'string') {
+            user[key as keyof ADUser] = value;
+          }
+        }
+      });
+
+      this.logger.log(`User details retrieved for: ${username}`);
+      return user;
+    } catch (error) {
+      this.logger.error(`Error getting user details: ${error.message}`);
+      throw new HttpException(
+        'Error getting user details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    } finally {
+      try {
+        await client.unbind();
+      } catch (error) {
+        this.logger.warn(`Error unbinding client: ${error.message}`);
+      }
     }
   }
 }

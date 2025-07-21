@@ -989,6 +989,7 @@ WHERE
     r.no_applicable_partner,
     r.geographic_scope_id,
     r.lead_contact_person,
+    r.lead_contact_person_id,
     if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
     v.id as version_id,
     v.phase_name,
