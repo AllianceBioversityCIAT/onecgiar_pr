@@ -6,7 +6,7 @@
 
 .notifications_description {
   font-size: 14px;
-  color: #2a2e45;
+  color: var(--pr-color-secondary-400);
   font-weight: 400;
   margin-bottom: 10px;
 }
@@ -32,7 +32,7 @@
       padding: 8px 25px;
       font-weight: 600;
       background-color: white !important;
-      color: #2a2e45;
+      color: var(--pr-color-secondary-400);
       text-decoration: none;
       display: flex;
       align-items: center;
@@ -54,7 +54,7 @@
 
 .request_description {
   font-size: 14px;
-  color: #2a2e45;
+  color: var(--pr-color-secondary-400);
   font-weight: 400;
   margin-top: 20px;
   margin-bottom: 0;

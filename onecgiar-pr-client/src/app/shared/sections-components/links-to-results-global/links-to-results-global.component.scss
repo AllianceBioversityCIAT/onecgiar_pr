@@ -11,7 +11,7 @@
 td {
   a {
     display: flex;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
   }
 }
 
@@ -143,7 +143,7 @@ td {
 
   .result_linked {
     background-color: var(--pr-color-primary-50);
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
     padding: 8px 10px;
     border-radius: 5px;
     display: flex;
@@ -174,7 +174,7 @@ td {
   display: flex;
 
   .view {
-    background-color: var(--pr-color-secondary) !important;
+    background-color: var(--pr-color-secondary-400) !important;
     width: min-content !important;
   }
 }

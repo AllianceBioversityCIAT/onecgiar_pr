@@ -7,14 +7,14 @@
   .ipsr_modal_description {
     font-weight: 700;
     text-align: center;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
     padding: 20px 20vw;
     font-size: 1.2rem;
   }
 }
 
 .ipsr_modal_title {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 100%;
   font-size: 1.3em;
   font-weight: 600;
@@ -64,7 +64,7 @@
   width: max-content;
 
   &.view {
-    background-color: var(--pr-color-secondary);
+    background-color: var(--pr-color-secondary-400);
     outline: none;
     color: white;
   }

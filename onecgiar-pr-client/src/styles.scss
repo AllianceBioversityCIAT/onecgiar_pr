@@ -261,7 +261,7 @@ a {
   position: absolute;
   height: 100%;
   width: 100%;
-  background-color: #2a2e4556;
+  background-color: rgba(var(--pr-color-secondary-rgb), 0.337);
   display: flex;
   justify-content: center;
   z-index: 10000;

@@ -51,7 +51,7 @@
   background: rgb(85, 105, 221);
   background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
   width: 50vw;
-  color: var(--pr-color-secondary);
+  color: var(--pr-color-secondary-400);
 
   &::before {
     content: '';
@@ -78,7 +78,7 @@
   background: rgb(0, 0, 0);
   background: linear-gradient(87deg, rgba(24, 25, 27, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
   width: max-content;
-  color: var(--pr-color-secondary);
+  color: var(--pr-color-secondary-400);
   margin-left: 30px;
   position: relative;
   padding-left: 8px;
@@ -89,7 +89,7 @@
     content: '';
     width: 17px;
     height: 17px;
-    background-color: #2a2e45be;
+    background-color: rgba(var(--pr-color-secondary-rgb), 0.745);
     transform: translateY(-50%);
     top: 50%;
   }

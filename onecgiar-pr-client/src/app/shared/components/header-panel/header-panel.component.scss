@@ -63,7 +63,7 @@
     }
 
     .user_tag {
-      background-color: var(--pr-color-secondary);
+      background-color: var(--pr-color-secondary-400);
       border-radius: 5px;
       color: white;
       display: flex;
@@ -86,7 +86,7 @@
 
     .my_initiatives {
       color: white;
-      background-color: var(--pr-color-secondary);
+      background-color: var(--pr-color-secondary-400);
       display: flex;
       align-items: center;
       padding: 5px 15px;
@@ -220,7 +220,7 @@
 
 .info_icon {
   color: white;
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   display: flex;
   justify-content: center;
   align-items: center;

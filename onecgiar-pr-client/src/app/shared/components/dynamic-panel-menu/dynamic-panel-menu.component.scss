@@ -1,5 +1,5 @@
 .dynamic_panel_menu {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 250px;
   height: calc(100vh - 54px);
   position: sticky;
@@ -21,14 +21,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all ease-in-out .5s;
+      transition: all ease-in-out 0.5s;
 
       i {
-        transition: all .3s ease-in-out;
-        color: var(--pr-color-secondary);
+        transition: all 0.3s ease-in-out;
+        color: var(--pr-color-secondary-400);
       }
     }
-
   }
 
   .section_title {
@@ -43,9 +42,8 @@
     margin-bottom: 15px;
     overflow: hidden;
     white-space: nowrap;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
     opacity: 1;
-
   }
 
   .options {
@@ -76,13 +74,11 @@
 
       .text {
         opacity: 1;
-        transition: all .4s ease-in-out;
-
+        transition: all 0.4s ease-in-out;
       }
     }
   }
 }
-
 
 .hidePanel {
   width: 63px !important;
@@ -94,7 +90,6 @@
 
   .option {
     .text {
-
       opacity: 0 !important;
     }
   }

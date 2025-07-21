@@ -1,120 +1,112 @@
 .page_alert {
-    background-color: rgb(255, 255, 255);
-    width: 100%;
-    height: 100vh;
+  background-color: rgb(255, 255, 255);
+  width: 100%;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+
+  .watermark {
     position: absolute;
-    top: 0;
     left: 0;
+    background-color: red;
+    bottom: 0;
+    width: 100px;
+    height: 100px;
+    z-index: 1;
+  }
+
+  .header_panel {
+    width: 100%;
+    height: 70px;
+    max-height: 70px;
+    overflow: hidden;
+    background-color: var(--pr-color-tertiary);
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    padding: 0px 60px;
+    box-sizing: border-box;
 
-    .watermark {
-        position: absolute;
-        left: 0;
-        background-color: red;
-        bottom: 0;
-        width: 100px;
-        height: 100px;
-        z-index: 1;
-    }
+    .logo {
+      display: flex;
+      gap: 20px;
+      cursor: pointer;
 
-    .header_panel {
-        width: 100%;
-        height: 70px;
-        max-height: 70px;
-        overflow: hidden;
-        background-color: var(--pr-color-tertiary);
+      .cgiar_logo {
+        width: 40px;
+        object-fit: cover;
+        filter: contrast(0) brightness(5);
+      }
+
+      .title {
+        color: white;
+        font-weight: 200;
+        font-size: 15px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 0px 60px;
-        box-sizing: border-box;
 
-        .logo {
-            display: flex;
-            gap: 20px;
-            cursor: pointer;
-
-            .cgiar_logo {
-                width: 40px;
-                object-fit: cover;
-                filter: contrast(0) brightness(5);
-            }
-
-            .title {
-                color: white;
-                font-weight: 200;
-                font-size: 15px;
-                display: flex;
-                align-items: center;
-
-                .first-text {
-                    font-weight: 300;
-                }
-
-                .second-text {
-                    margin-top: -4px;
-                    font-weight: 600;
-                }
-            }
+        .first-text {
+          font-weight: 300;
         }
 
-
-
-    }
-
-    .alert_content {
-
-        .alert_info {
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            gap: 20px;
-
-            .icon {
-
-
-                i {
-                    font-size: 6rem;
-                }
-            }
-
-            .title {
-                font-size: 3.2rem;
-                font-weight: 700;
-            }
-
-            .text {
-                font-size: 1.3rem;
-                font-weight: 600;
-                padding: 0px 30vw;
-                text-align: center;
-            }
+        .second-text {
+          margin-top: -4px;
+          font-weight: 600;
         }
-
+      }
     }
+  }
 
+  .alert_content {
+    .alert_info {
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      gap: 20px;
 
-    .footer_panel {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        background-color: var(--pr-color-secondary);
-        width: 100%;
-        height: 70px;
-        color: white;
-        padding: 10px 100px;
-        align-items: center;
-        position: relative;
-        z-index: 2;
+      .icon {
+        i {
+          font-size: 6rem;
+        }
+      }
+
+      .title {
+        font-size: 3.2rem;
+        font-weight: 700;
+      }
+
+      .text {
+        font-size: 1.3rem;
+        font-weight: 600;
+        padding: 0px 30vw;
+        text-align: center;
+      }
     }
+  }
+
+  .footer_panel {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    background-color: var(--pr-color-secondary-400);
+    width: 100%;
+    height: 70px;
+    color: white;
+    padding: 10px 100px;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
 }
 
 .warning-icon {
-    color: #FCC30E;
+  color: #fcc30e;
 }
 
 .error-icon {
-    color: var(--pr-color-danger);
+  color: var(--pr-color-danger);
 }

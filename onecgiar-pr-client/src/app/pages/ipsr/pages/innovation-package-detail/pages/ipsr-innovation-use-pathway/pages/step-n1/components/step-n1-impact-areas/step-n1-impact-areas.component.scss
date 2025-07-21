@@ -1,64 +1,60 @@
 .impact_areas_circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2vw;
+  justify-content: center;
+  margin-top: 10px;
+
+  .no_selected {
+    opacity: 0.3;
+    transform: scale(1) !important;
+    border-radius: 100px !important;
+  }
+
+  .name_no_selected {
+    opacity: 0.4;
+    color: black !important;
+  }
+
+  .iaitem {
+    flex-direction: column;
     display: flex;
-    flex-wrap: wrap;
-    gap: 2vw;
+    align-items: center;
     justify-content: center;
-    margin-top: 10px;
+    gap: 10px;
 
-    .no_selected {
-        opacity: .3;
-        transform: scale(1) !important;
-        border-radius: 100px !important;
-
-
+    .name {
+      text-align: center;
+      width: 200px;
+      transition: all ease-in-out 0.3s;
+      color: var(--pr-color-secondary-400);
     }
+  }
 
-    .name_no_selected {
-        opacity: .4;
-        color: black !important;
+  .impact_area_circle_item {
+    border-radius: 15px;
+    max-width: 80px !important;
+    max-height: 80px !important;
+    min-width: 80px !important;
+    min-height: 80px !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all ease-in-out 0.3s;
+    transform: scale(1.1);
+    box-shadow: 0px 0px 5px 1px rgb(0 0 0 / 40%);
+
+    .impact_area_image {
+      max-width: 50px;
+      max-height: 50px;
+      object-fit: fill;
     }
-
-    .iaitem {
-        flex-direction: column;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-
-        .name {
-            text-align: center;
-            width: 200px;
-            transition: all ease-in-out .3s;
-            color: var(--pr-color-secondary);
-        }
-    }
-
-    .impact_area_circle_item {
-        border-radius: 15px;
-        max-width: 80px !important;
-        max-height: 80px !important;
-        min-width: 80px !important;
-        min-height: 80px !important;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all ease-in-out .3s;
-        transform: scale(1.1);
-        box-shadow: 0px 0px 5px 1px rgb(0 0 0 / 40%);
-
-        .impact_area_image {
-            max-width: 50px;
-            max-height: 50px;
-            object-fit: fill;
-        }
-
-
-    }
+  }
 }
 
 .chips_container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
