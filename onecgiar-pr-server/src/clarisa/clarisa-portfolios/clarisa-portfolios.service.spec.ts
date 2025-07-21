@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClarisaPortfoliosService } from './clarisa-portfolios.service';
 import { ClarisaPortfoliosRepository } from './clarisa-portfolios.repository';
@@ -12,8 +11,20 @@ describe('ClarisaPortfoliosService', () => {
   beforeEach(async () => {
     const mockRepo = {
       find: jest.fn().mockResolvedValue([
-        { id: 2, name: 'Portfolio 2', startDate: 2022, endDate: 2024, isActive: true },
-        { id: 3, name: 'Portfolio 3', startDate: 2025, endDate: 2027, isActive: false },
+        {
+          id: 2,
+          name: 'Portfolio 2',
+          startDate: 2022,
+          endDate: 2024,
+          isActive: true,
+        },
+        {
+          id: 3,
+          name: 'Portfolio 3',
+          startDate: 2025,
+          endDate: 2027,
+          isActive: false,
+        },
       ] as ClarisaPortfolios[]),
     };
 
@@ -41,8 +52,20 @@ describe('ClarisaPortfoliosService', () => {
       where: { id: In([2, 3]) },
     });
     expect(result).toEqual([
-      { id: 2, name: 'Portfolio 2', startDate: 2022, endDate: 2024, isActive: true },
-      { id: 3, name: 'Portfolio 3', startDate: 2025, endDate: 2027, isActive: false },
+      {
+        id: 2,
+        name: 'Portfolio 2',
+        startDate: 2022,
+        endDate: 2024,
+        isActive: true,
+      },
+      {
+        id: 3,
+        name: 'Portfolio 3',
+        startDate: 2025,
+        endDate: 2027,
+        isActive: false,
+      },
     ]);
   });
 });

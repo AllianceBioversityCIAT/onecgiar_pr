@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ClarisaPortfolios } from './entities/clarisa-portfolios.entity';
 import { ClarisaPortfoliosRepository } from './clarisa-portfolios.repository';
 import { In } from 'typeorm';

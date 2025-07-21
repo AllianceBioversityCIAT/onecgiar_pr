@@ -17,7 +17,6 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
-  ApiResponse,
 } from '@nestjs/swagger';
 import { VersioningService } from './versioning.service';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
