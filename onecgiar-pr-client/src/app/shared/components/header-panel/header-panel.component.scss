@@ -167,7 +167,7 @@
     overflow: auto;
     max-height: 500px;
     scrollbar-width: thin;
-    scrollbar-color: var(--pr-color-primary-300) #eef0fc;
+    scrollbar-color: var(--pr-color-primary-300) var(--pr-color-primary-25);
 
     &::-webkit-scrollbar {
       width: 2px;
@@ -180,7 +180,7 @@
     }
 
     &::-webkit-scrollbar-track {
-      background-color: #eef0fc;
+      background-color: var(--pr-color-primary-25);
     }
 
     @media (max-height: 800px) {
@@ -189,7 +189,7 @@
 
     .notification {
       padding: 15px 1.5rem 10px 1.5rem;
-      background-color: #eef0fc;
+      background-color: var(--pr-color-primary-25);
       border-bottom: 1px solid var(--pr-color-primary-300);
     }
   }

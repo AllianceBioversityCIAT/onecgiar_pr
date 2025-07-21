@@ -2,7 +2,7 @@
   [ngSwitch]="notification?.request_status_id"
   class="notification"
   [ngStyle]="{
-    'background-color': notification?.request_status_id === 1 ? '#eef0fc' : '',
+    'background-color': notification?.request_status_id === 1 ? 'var(--pr-color-primary-25)' : '',
     border: notification?.request_status_id === 1 ? '1px solid #bac1e5' : ''
   }">
   <div class="notification_header">
