@@ -34,7 +34,7 @@
   position: relative;
   .h-ct {
     padding: 10px;
-    background-color: #e8ebff;
+    background-color: var(--pr-color-primary-50);
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1529411765);
     font-size: 1.1rem;
     position: relative;
@@ -76,7 +76,7 @@
     }
 
     .pr_chip_selected {
-      background-color: var(--pr-color-primary-2);
+      background-color: var(--pr-color-primary-50);
       color: var(--pr-color-secondary);
       font-size: 0.95em;
       padding: 6px 13px;

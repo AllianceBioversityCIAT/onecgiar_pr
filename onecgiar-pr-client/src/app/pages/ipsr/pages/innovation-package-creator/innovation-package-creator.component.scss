@@ -1,21 +1,21 @@
 .section_container {
-    margin-top: 30px;
-    min-height: calc(100vh - 200px);
-    padding: 30px 50px 50px 50px;
-    margin-bottom: 50px;
+  margin-top: 30px;
+  min-height: calc(100vh - 200px);
+  padding: 30px 50px 50px 50px;
+  margin-bottom: 50px;
 }
 
 .core_innovation_selected {
-    width: 100% !important;
-    background-color: var(--pr-color-primary-2);
-    padding: 5px 10px;
-    border-radius: 3px;
-    width: max-content;
-    gap: 30px;
-    display: flex;
-    align-items: center;
+  width: 100% !important;
+  background-color: var(--pr-color-primary-50);
+  padding: 5px 10px;
+  border-radius: 3px;
+  width: max-content;
+  gap: 30px;
+  display: flex;
+  align-items: center;
 
-    i {
-        cursor: pointer;
-    }
+  i {
+    cursor: pointer;
+  }
 }

@@ -7,7 +7,7 @@
 }
 
 .header-target {
-  background-color: #e8ebff;
+  background-color: var(--pr-color-primary-50);
   width: 100%;
   height: auto;
   border-radius: 10px 10px 0 0;
@@ -87,7 +87,7 @@ input:disabled {
 
   .target_header {
     display: flex;
-    background-color: #e8ebff;
+    background-color: var(--pr-color-primary-50);
     width: 100%;
     height: auto;
     padding: 15px 10px;

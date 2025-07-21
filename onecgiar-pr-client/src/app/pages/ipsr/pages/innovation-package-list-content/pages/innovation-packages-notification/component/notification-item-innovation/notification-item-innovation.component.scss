@@ -1,51 +1,51 @@
 .noti_container {
-    position: relative;
-    padding: 20px 30px;
-    background-color: var(--pr-color-primary-2);
+  position: relative;
+  padding: 20px 30px;
+  background-color: var(--pr-color-primary-50);
 
-    .title {
-        font-size: 1.2em;
-    }
+  .title {
+    font-size: 1.2em;
+  }
 
-    .sub_title {
-        margin-bottom: 10px;
-    }
+  .sub_title {
+    margin-bottom: 10px;
+  }
 
-    .direction_icon {
-        position: absolute;
-        left: 0;
-        top: 0;
-        rotate: 45deg;
-        margin-left: 5px;
-        margin-top: 5px;
-    }
+  .direction_icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    rotate: 45deg;
+    margin-left: 5px;
+    margin-top: 5px;
+  }
 
-    .text_icon {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
+  .text_icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    .buttons {
-        display: flex;
-        gap: 10px;
-    }
+  .buttons {
+    display: flex;
+    gap: 10px;
+  }
 
-    .pending {
-        color: gray;
-    }
+  .pending {
+    color: gray;
+  }
 
-    .accepted {
-        color: green;
-    }
+  .accepted {
+    color: green;
+  }
 
-    .rejected {
-        color: rgb(219, 50, 28);
-    }
+  .rejected {
+    color: rgb(219, 50, 28);
+  }
 }
 
 .result_submitted_text {
-    color: rgb(238, 71, 71);
-    font-weight: 700px;
-    font-size: 1em !important;
+  color: rgb(238, 71, 71);
+  font-weight: 700px;
+  font-size: 1em !important;
 }

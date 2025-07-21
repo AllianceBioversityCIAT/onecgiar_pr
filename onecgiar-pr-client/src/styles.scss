@@ -296,7 +296,7 @@ a {
   gap: 15px;
 
   .donor {
-    background-color: #e8ebff;
+    background-color: var(--pr-color-primary-50);
     padding: 10px 50px 40px 50px;
     position: relative;
     border-radius: 10px;
