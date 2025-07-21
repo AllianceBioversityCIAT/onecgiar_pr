@@ -2,7 +2,7 @@
   padding: 0px 150px;
 
   .line {
-    background-color: #d9d9d9;
+    background-color: var(--pr-color-neutral-1000);
     height: 6px;
     width: 100%;
     display: flex;
@@ -11,15 +11,8 @@
     margin-top: 50px;
     margin-bottom: 50px;
 
-    // .line_value {
-    //     position: absolute;
-    //     background-color: red;
-    //     width: 50%;
-    //     height: 12px;
-    // }
-
     .circle {
-      background-color: #d9d9d9;
+      background-color: var(--pr-color-neutral-1000);
       border-radius: 100px;
       min-width: 40px;
       min-height: 40px;
@@ -58,15 +51,6 @@
     background-color: var(--pr-color-primary-300) !important;
     color: white;
 
-    // &::after {
-    //     content: '';
-    //     background-color: red;
-    //     height: 12px;
-    //     width: 100%;
-    //     position: absolute;
-    //     transform: translateX(-50%);
-    //     z-index: 0;
-    // }
     .name {
       color: var(--pr-color-primary-300) !important;
     }
