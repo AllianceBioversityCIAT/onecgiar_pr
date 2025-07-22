@@ -28,7 +28,7 @@ import { EmailNotificationManagementService } from '../../../shared/microservice
 
 @Injectable()
 export class UserService {
-  private readonly cgiarRegex: RegExp = /@cgiar\.org/gi;
+  private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
     @InjectRepository(User)
