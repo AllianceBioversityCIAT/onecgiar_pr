@@ -63,18 +63,18 @@ export class UserService {
         };
       }
 
-      let shouldSendConfirmationEmail = false;
+      // true if the platform (not Cognito) must send the confirmation email.
+      // This happens for CGIAR users or when Cognito user already exists.
+      let shouldSendConfirmationEmail = true;
 
-      // CGIAR user handling
       if (createUserDto.is_cgiar) {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
-        this.handleNonCgiarUser(createUserDto);
+        await this.handleNonCgiarUser(createUserDto);
+        shouldSendConfirmationEmail = await this.registerInCognitoIfNeeded(createUserDto);
       }
 
-      await this.registerInCognitoIfNeeded(createUserDto, shouldSendConfirmationEmail);
-
-      const savedUser = this.saveUserToDB(createUserDto, token);
+      const savedUser = await this.saveUserToDB(createUserDto, token);
       if (shouldSendConfirmationEmail) {
         await this.sendAccountConfirmationEmail(createUserDto);
       }
@@ -121,7 +121,7 @@ export class UserService {
     return true;
   }
 
-  private handleNonCgiarUser(createUserDto: CreateUserDto): void {
+  private async  handleNonCgiarUser(createUserDto: CreateUserDto): Promise<void> {
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -131,10 +131,8 @@ export class UserService {
   }
 
   private async registerInCognitoIfNeeded(
-    createUserDto: CreateUserDto,
-    shouldSendConfirmationEmail: boolean,
-  ): Promise<void> {
-    if (!shouldSendConfirmationEmail) return;
+    createUserDto: CreateUserDto
+  ): Promise<boolean> {
 
     const templateDB = await this._templateRepository.findOne({
       where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
@@ -187,14 +185,13 @@ export class UserService {
 
     try {
       await this._awsCognitoService.createUser(cognitoPayload);
+      return false; // No confirmation email needed if Cognito registration is successful
     } catch (error) {
       const isUserExistsError =
         error?.name === 'UsernameExistsException' ||
         error?.message?.includes('exists');
 
-      if (isUserExistsError) {
-        shouldSendConfirmationEmail = true;
-      } else {
+      if (!isUserExistsError) {
         console.error(error);
         throw {
           response: { error },
@@ -202,6 +199,8 @@ export class UserService {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         };
       }
+
+      return true;
     }
   }
 

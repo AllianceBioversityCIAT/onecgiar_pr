@@ -222,7 +222,7 @@ describe('UserService', () => {
           },
         );
 
-      awsCognitoService.createUser = jest.fn().mockResolvedValue({});
+      (awsCognitoService.createUser as jest.Mock).mockResolvedValue({});
       userRepository.findOne = jest.fn().mockResolvedValue(null);
       userRepository.save = jest
         .fn()
@@ -256,6 +256,8 @@ describe('UserService', () => {
           status: 400,
         }),
       );
+
+      expect(awsCognitoService.createUser).not.toHaveBeenCalled();
     });
 
     it('❌ debe lanzar error si el correo es @cgiar.org y no es CGIAR', async () => {
@@ -300,9 +302,7 @@ describe('UserService', () => {
         .spyOn(Handlebars, 'compile')
         .mockReturnValue(() => '<p>template</p>');
 
-      awsCognitoService.createUser = jest
-        .fn()
-        .mockRejectedValue(new Error('Cognito error'));
+      (awsCognitoService.createUser as jest.Mock).mockRejectedValue(new Error('Cognito error'));
 
       const result = await service.createFull(dto as any, mockTokenDto);
 
