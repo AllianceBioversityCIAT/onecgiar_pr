@@ -1,119 +1,136 @@
-# Cypress E2E Tests Configuration
+# Cypress E2E Testing
 
-## Variables de Entorno
+Este proyecto utiliza Cypress para pruebas end-to-end automatizadas.
 
-Las credenciales de testing no deben estar hardcodeadas en el código. Este proyecto utiliza variables de entorno para configurar las credenciales de testing.
+## 🔧 Configuración
 
-### Configuración de Variables de Entorno
+### Credenciales por Roles
 
-#### 1. Archivo `cypress.env.json` (Desarrollo Local)
+El sistema ahora maneja diferentes roles de usuario:
 
-Crea un archivo `cypress.env.json` en la raíz del proyecto cliente:
+- **Guest**: Usuario básico para pruebas generales
+- **Admin**: Usuario administrativo (para uso futuro)
 
-```json
-{
-  "testEmail": "tu-email@ejemplo.com",
-  "testPassword": "tu-password"
-}
-```
+### Configuración Local
 
-**⚠️ IMPORTANTE:** Este archivo debe estar en `.gitignore` para no subir credenciales al repositorio.
+1. **Copia el archivo de ejemplo**:
+   ```bash
+   cp cypress.env.js.example cypress.env.js
+   ```
 
-#### 2. Variables de Sistema (CI/CD)
+2. **Configura tus credenciales**:
+   ```javascript
+   // cypress.env.js
+   export const environment = {
+     cypress: {
+       testEmail: 'tu-email@domain.com',
+       testPassword: 'tu-contraseña'
+     }
+   };
+   ```
 
-Para CI/CD, usa variables de entorno del sistema:
+3. **O usa variables de entorno**:
+   ```bash
+   export CYPRESS_GUEST_EMAIL=tu-email@domain.com
+   export CYPRESS_GUEST_PASSWORD=tu-contraseña
+   ```
 
-```bash
-export CYPRESS_TEST_EMAIL="tu-email@ejemplo.com"
-export CYPRESS_TEST_PASSWORD="tu-password"
-```
+### Configuración en Producción (GitHub Actions)
 
-#### 3. Configuración en GitHub Actions
+Las credenciales se configuran como GitHub Secrets:
+- `CYPRESS_GUEST_EMAIL`: Email del usuario Guest
+- `CYPRESS_GUEST_PASSWORD`: Contraseña del usuario Guest
 
-En el archivo `.github/workflows/cypress.yml`, agrega las variables de entorno:
+## 🚀 Uso
 
-```yaml
-env:
-  CYPRESS_TEST_EMAIL: ${{ secrets.CYPRESS_TEST_EMAIL }}
-  CYPRESS_TEST_PASSWORD: ${{ secrets.CYPRESS_TEST_PASSWORD }}
-```
-
-Y configura los secrets en GitHub:
-- Ve a Settings → Secrets and variables → Actions
-- Agrega `CYPRESS_TEST_EMAIL` y `CYPRESS_TEST_PASSWORD`
-
-### Uso en las Pruebas
-
-#### Comando Personalizado
-
-El comando `cy.login()` usa automáticamente las variables de entorno:
-
-```typescript
-// Usa las variables de entorno por defecto
-cy.login();
-
-// O proporciona credenciales específicas
-cy.login('email@ejemplo.com', 'password');
-```
-
-#### Acceso Directo a Variables
-
-En las pruebas, puedes acceder a las variables de entorno:
-
-```typescript
-cy.get('#email').type(Cypress.env('testEmail'));
-cy.get('#password').type(Cypress.env('testPassword'));
-```
-
-### Estructura de Archivos
-
-```
-onecgiar-pr-client/
-├── cypress/
-│   ├── e2e/
-│   │   ├── login.cy.ts
-│   │   ├── login-simplified.cy.ts
-│   │   └── results-list.cy.ts
-│   └── support/
-│       └── commands.ts
-├── cypress.config.js
-├── cypress.env.json (NO SUBIR A GIT)
-└── .gitignore
-```
-
-### Comandos de Ejecución
+### Comandos disponibles
 
 ```bash
+# Abrir Cypress en modo interactivo
+npm run cypress:open
+
 # Ejecutar todas las pruebas
 npm run cypress:run
 
 # Ejecutar pruebas específicas
-npx cypress run --spec "cypress/e2e/login*.cy.ts"
-
-# Abrir interfaz interactiva
-npm run cypress:open
-
-# Ejecutar con variables de entorno específicas
-CYPRESS_TEST_EMAIL=test@example.com CYPRESS_TEST_PASSWORD=password123 npm run cypress:run
+npm run cypress:run -- --spec "cypress/e2e/login-simplified.cy.ts"
 ```
 
-### Pruebas Disponibles
+### Comandos personalizados
 
-1. **login.cy.ts**: Pruebas completas de login con verificación de navegación a results list
-2. **login-simplified.cy.ts**: Pruebas simplificadas usando el comando personalizado
-3. **results-list.cy.ts**: Pruebas específicas de la funcionalidad de la tabla de resultados
+```javascript
+// Login con role por defecto (Guest)
+cy.login();
 
-### Credenciales de Testing
+// Login con role específico
+cy.login('guest');
 
-Las credenciales por defecto configuradas son:
-- Email: `yecksin.multimedia@gmail.com`
-- Password: `Cypress@2`
+// Login con credenciales específicas
+cy.login('guest', 'email@domain.com', 'password');
 
-Estas pueden ser sobrescritas usando las variables de entorno mencionadas anteriormente.
+// Verificar si hay credenciales disponibles
+cy.hasCredentials('guest');
+```
 
-### Seguridad
+## 🛡️ Seguridad
 
-- ✅ Las credenciales se manejan via variables de entorno
-- ✅ El archivo `cypress.env.json` está en `.gitignore`
-- ✅ Las credenciales no están hardcodeadas en el código
-- ✅ Se usan secrets de GitHub Actions para CI/CD 
+### Archivos ignorados por Git
+
+Los siguientes archivos NO se suben al repositorio:
+- `cypress.env.js` - Credenciales locales
+- `cypress.env.local.js` - Credenciales locales (legacy)
+- `cypress.env.json` - Credenciales locales (legacy)
+
+### Manejo de credenciales vacías
+
+Si no hay credenciales disponibles:
+- Las pruebas que requieren login se saltarán automáticamente
+- Se mostrarán mensajes informativos en los logs
+- La aplicación no fallará por falta de credenciales
+
+## 📁 Estructura
+
+```
+cypress/
+├── e2e/                    # Pruebas end-to-end
+│   ├── app.cy.ts          # Pruebas básicas de la aplicación
+│   ├── login-simplified.cy.ts  # Pruebas de login
+│   └── results-list.cy.ts # Pruebas de lista de resultados
+├── fixtures/              # Datos de prueba
+├── support/               # Comandos y configuración
+│   ├── commands.ts        # Comandos personalizados
+│   └── e2e.ts            # Configuración global
+├── screenshots/           # Capturas de errores
+├── videos/               # Videos de las pruebas
+└── cypress.env.js        # Credenciales locales (no en Git)
+```
+
+## 🕐 Ejecución Automática
+
+El sistema ejecuta pruebas automáticamente:
+- **Cada 4 horas** mediante GitHub Actions
+- **Al hacer push** a las ramas `master` o `dev`
+- **Al crear Pull Requests**
+
+Los resultados se notifican por Slack con:
+- ✅ Estado de éxito
+- ❌ Detalles de fallos
+- 📊 Resumen de pruebas ejecutadas
+
+## 🎯 Mejores Prácticas
+
+1. **Usa roles específicos**: Siempre especifica el role al hacer login
+2. **Verifica credenciales**: Usa `cy.hasCredentials()` antes de pruebas que requieran login
+3. **Maneja errores**: Las pruebas deben funcionar con o sin credenciales
+4. **Mantén seguridad**: Nunca subas credenciales al repositorio
+
+## 🔍 Debugging
+
+Para debug local:
+```bash
+# Ejecutar con debug
+DEBUG=cypress:* npm run cypress:run
+
+# Ejecutar con UI para ver en tiempo real
+npm run cypress:open
+``` 

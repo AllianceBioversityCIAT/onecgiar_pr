@@ -390,7 +390,7 @@ export const TypePneReportRouting: PrRoute[] = [
       import('../../pages/type-one-report/pages/tor-key-result-story/tor-key-result-story.module').then(m => m.TorKeyResultStoryModule)
   },
   {
-    prName: 'white',
+    prName: '',
     underConstruction: false,
     path: 'white',
     loadComponent: () => import('../../pages/type-one-report/pages/tor-white/tor-white.component').then(m => m.TorWhiteComponent)
