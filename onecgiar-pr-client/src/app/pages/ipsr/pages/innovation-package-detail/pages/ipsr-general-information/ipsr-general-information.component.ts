@@ -14,76 +14,13 @@ import { UserSearchService } from '../../../../../results/pages/result-detail/pa
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
-  searchQuery: string = '';
-  searchResults: User[] = [];
-  selectedUser: User | null = null;
-  showResults: boolean = false;
-  isSearching: boolean = false;
-  hasValidContact: boolean = true;
-  showContactError: boolean = false;
-  isContactLocked: boolean = false;
-  private searchSubject = new Subject<string>();
-
-  private filterValidUsers(users: User[]): User[] {
-    return users.filter(user => {
-      if (!user.mail || user.mail.trim() === '') {
-        return false;
-      }
-
-      if (user.mail.toLowerCase().includes('test')) {
-        return false;
-      }
-
-      return true;
-    });
-  }
 
   constructor(
     public api: ApiService,
     public scoreSE: ScoreService,
     public ipsrDataControlSE: IpsrDataControlService,
     private userSearchService: UserSearchService
-  ) {
-    this.searchSubject
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap((query: string) => {
-          const trimmedQuery = query;
-          if (trimmedQuery.length >= 4) {
-            this.isSearching = true;
-            this.showResults = false;
-            return this.userSearchService.searchUsers(trimmedQuery);
-          } else {
-            this.searchResults = [];
-            this.showResults = false;
-            this.isSearching = false;
-            return [];
-          }
-        })
-      )
-      .subscribe({
-        next: (response: any) => {
-          const filteredResults = this.filterValidUsers(response?.response || []);
-
-          if (filteredResults.length === 0) {
-            this.showContactError = true;
-          }
-
-          this.searchResults = filteredResults;
-          this.showResults = true;
-          this.isSearching = false;
-          this.hasValidContact = this.searchResults.length > 0 || !this.searchQuery.trim() ? true : false;
-        },
-        error: (error: any) => {
-          console.error(error);
-          this.searchResults = [];
-          this.showResults = false;
-          this.isSearching = false;
-          this.hasValidContact = this.searchQuery.trim() ? false : true;
-        }
-      });
-  }
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -93,25 +30,6 @@ export class IpsrGeneralInformationComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
-
-      if (this.ipsrGeneralInformationBody.lead_contact_person_data) {
-        this.selectedUser = this.ipsrGeneralInformationBody.lead_contact_person_data;
-        this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person;
-        this.isContactLocked = true;
-        this.hasValidContact = true;
-      } else if (this.ipsrGeneralInformationBody.lead_contact_person) {
-        if (this.selectedUser && this.selectedUser.displayName === this.ipsrGeneralInformationBody.lead_contact_person) {
-          this.isContactLocked = true;
-          this.hasValidContact = true;
-        } else {
-          this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person;
-          this.isContactLocked = false;
-        }
-      } else {
-        this.selectedUser = null;
-        this.searchQuery = '';
-        this.isContactLocked = false;
-      }
     });
   }
 
@@ -140,9 +58,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.searchQuery.trim() && !this.selectedUser) {
-      this.hasValidContact = false;
-      this.showContactError = true;
+    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+      this.userSearchService.hasValidContact = false;
+      this.userSearchService.showContactError = true;
       return;
     }
 
@@ -255,82 +173,5 @@ export class IpsrGeneralInformationComponent implements OnInit {
     <li><strong>1 = Significant:</strong> Gender equality is an important and deliberate objective, but not the principal reason for undertaking the output/outcome/activity.</li>
     <li><strong>2 = Principal:</strong> Gender equality is the main objective of the output/outcome/activity and is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this gender equality objective.</li>
     </ul>`;
-  }
-
-  leadContactPersonTextInfo() {
-    return `For more precise results, we recommend searching by email or username. 
-    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
-  }
-
-  onSearchInput(event: any): void {
-    if (this.isContactLocked) return;
-
-    let query: string = '';
-
-    if (typeof event === 'string') {
-      query = event;
-    } else if (event && 'target' in event && (event.target as HTMLInputElement)?.value !== undefined) {
-      query = (event.target as HTMLInputElement).value;
-    } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
-      query = event.toString();
-    }
-
-    query = query ?? '';
-
-    this.searchQuery = query;
-    this.selectedUser = null;
-    this.showContactError = false;
-
-    if (query) {
-      this.hasValidContact = false;
-      this.showContactError = false;
-      this.searchSubject.next(query);
-    } else {
-      this.resetContactState();
-    }
-  }
-
-  selectUser(user: User): void {
-    this.selectedUser = user;
-    this.searchQuery = user.displayName;
-    this.searchResults = [];
-    this.showResults = false;
-    this.hasValidContact = true;
-    this.showContactError = false;
-    this.isContactLocked = true;
-
-    this.ipsrGeneralInformationBody.lead_contact_person = user.displayName;
-    this.ipsrGeneralInformationBody.lead_contact_person_data = user;
-  }
-
-  clearContact(): void {
-    this.selectedUser = null;
-    this.searchQuery = '';
-    this.searchResults = [];
-    this.showResults = false;
-    this.isSearching = false;
-    this.hasValidContact = true;
-    this.showContactError = false;
-    this.isContactLocked = false;
-
-    this.ipsrGeneralInformationBody.lead_contact_person = null;
-    this.ipsrGeneralInformationBody.lead_contact_person_data = null;
-  }
-
-  onContactBlur(): void {
-    if (!this.isContactLocked && this.searchQuery.trim() && !this.selectedUser) {
-      this.hasValidContact = false;
-      this.showContactError = true;
-    }
-  }
-
-  private resetContactState(): void {
-    this.ipsrGeneralInformationBody.lead_contact_person = null;
-    this.ipsrGeneralInformationBody.lead_contact_person_data = null;
-    this.searchResults = [];
-    this.showResults = false;
-    this.isSearching = false;
-    this.hasValidContact = true;
-    this.showContactError = false;
   }
 }
