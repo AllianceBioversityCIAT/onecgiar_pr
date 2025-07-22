@@ -8,8 +8,12 @@ import { UserSearchResponse } from '../models/userSearchResponse';
   providedIn: 'root'
 })
 export class UserSearchService {
+  selectedUser: any = null;
+  searchQuery: string = '';
+  hasValidContact: boolean = true;
+  showContactError: boolean = false;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   searchUsers(query: string): Observable<UserSearchResponse> {
     return this.http.get<UserSearchResponse>(`${environment.apiBaseUrl}auth/users/search?q=${query}`);
