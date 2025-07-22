@@ -21,6 +21,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   isSearching: boolean = false;
   hasValidContact: boolean = true;
   showContactError: boolean = false;
+  isContactLocked: boolean = false;
   private searchSubject = new Subject<string>();
 
   private filterValidUsers(users: User[]): User[] {
@@ -45,12 +46,14 @@ export class IpsrGeneralInformationComponent implements OnInit {
   ) {
     this.searchSubject
       .pipe(
-        debounceTime(300),
+        debounceTime(500),
         distinctUntilChanged(),
-        switchMap(query => {
-          if (query.length >= 4) {
+        switchMap((query: string) => {
+          const trimmedQuery = query;
+          if (trimmedQuery.length >= 4) {
             this.isSearching = true;
-            return this.userSearchService.searchUsers(query);
+            this.showResults = false;
+            return this.userSearchService.searchUsers(trimmedQuery);
           } else {
             this.searchResults = [];
             this.showResults = false;
@@ -60,25 +63,24 @@ export class IpsrGeneralInformationComponent implements OnInit {
         })
       )
       .subscribe({
-        next: response => {
-          const filteredResults = this.filterValidUsers(response.response || []);
+        next: (response: any) => {
+          const filteredResults = this.filterValidUsers(response?.response || []);
+
+          if (filteredResults.length === 0) {
+            this.showContactError = true;
+          }
+
           this.searchResults = filteredResults;
           this.showResults = true;
           this.isSearching = false;
-
-          if (this.searchResults.length === 0 && this.searchQuery.trim()) {
-            this.hasValidContact = false;
-          }
+          this.hasValidContact = this.searchResults.length > 0 || !this.searchQuery.trim() ? true : false;
         },
-        error: error => {
-          console.error('Error searching users:', error);
+        error: (error: any) => {
+          console.error(error);
           this.searchResults = [];
           this.showResults = false;
           this.isSearching = false;
-
-          if (this.searchQuery.trim()) {
-            this.hasValidContact = false;
-          }
+          this.hasValidContact = this.searchQuery.trim() ? false : true;
         }
       });
   }
@@ -94,11 +96,21 @@ export class IpsrGeneralInformationComponent implements OnInit {
 
       if (this.ipsrGeneralInformationBody.lead_contact_person_data) {
         this.selectedUser = this.ipsrGeneralInformationBody.lead_contact_person_data;
-        this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person_data.displayName;
-      } else if (this.ipsrGeneralInformationBody.lead_contact_person) {
         this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person;
+        this.isContactLocked = true;
+        this.hasValidContact = true;
+      } else if (this.ipsrGeneralInformationBody.lead_contact_person) {
+        if (this.selectedUser && this.selectedUser.displayName === this.ipsrGeneralInformationBody.lead_contact_person) {
+          this.isContactLocked = true;
+          this.hasValidContact = true;
+        } else {
+          this.searchQuery = this.ipsrGeneralInformationBody.lead_contact_person;
+          this.isContactLocked = false;
+        }
       } else {
+        this.selectedUser = null;
         this.searchQuery = '';
+        this.isContactLocked = false;
       }
     });
   }
@@ -251,33 +263,30 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   onSearchInput(event: any): void {
-    let query = '';
+    if (this.isContactLocked) return;
+
+    let query: string = '';
 
     if (typeof event === 'string') {
       query = event;
-    } else if (event?.target?.value !== undefined) {
-      query = event.target.value;
+    } else if (event && 'target' in event && (event.target as HTMLInputElement)?.value !== undefined) {
+      query = (event.target as HTMLInputElement).value;
     } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
       query = event.toString();
     }
 
-    query = query || '';
+    query = query ?? '';
 
     this.searchQuery = query;
     this.selectedUser = null;
     this.showContactError = false;
 
-    if (query.trim()) {
+    if (query) {
       this.hasValidContact = false;
+      this.showContactError = false;
       this.searchSubject.next(query);
     } else {
-      this.ipsrGeneralInformationBody.lead_contact_person = null;
-      this.ipsrGeneralInformationBody.lead_contact_person_data = null;
-      this.searchResults = [];
-      this.showResults = false;
-      this.isSearching = false;
-      this.hasValidContact = true;
-      this.showContactError = false;
+      this.resetContactState();
     }
   }
 
@@ -288,15 +297,40 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.showResults = false;
     this.hasValidContact = true;
     this.showContactError = false;
+    this.isContactLocked = true;
 
     this.ipsrGeneralInformationBody.lead_contact_person = user.displayName;
     this.ipsrGeneralInformationBody.lead_contact_person_data = user;
   }
 
+  clearContact(): void {
+    this.selectedUser = null;
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
+    this.isContactLocked = false;
+
+    this.ipsrGeneralInformationBody.lead_contact_person = null;
+    this.ipsrGeneralInformationBody.lead_contact_person_data = null;
+  }
+
   onContactBlur(): void {
-    if (this.searchQuery.trim() && !this.selectedUser) {
+    if (!this.isContactLocked && this.searchQuery.trim() && !this.selectedUser) {
       this.hasValidContact = false;
       this.showContactError = true;
     }
+  }
+
+  private resetContactState(): void {
+    this.ipsrGeneralInformationBody.lead_contact_person = null;
+    this.ipsrGeneralInformationBody.lead_contact_person_data = null;
+    this.searchResults = [];
+    this.showResults = false;
+    this.isSearching = false;
+    this.hasValidContact = true;
+    this.showContactError = false;
   }
 }
