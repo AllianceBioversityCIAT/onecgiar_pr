@@ -58,10 +58,11 @@ import { UnitTimeRepository } from '../result-innovation-package/repositories/un
 import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { IpsrService } from '../ipsr.service';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
+import { AdUsersModule } from '../../ad_users';
 
 @Module({
   controllers: [InnovationPathwayController],
-  imports: [forwardRef(() => VersioningModule)],
+  imports: [forwardRef(() => VersioningModule), AdUsersModule],
   providers: [
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,
