@@ -1,13 +1,16 @@
 import { Component, inject, signal, Output, EventEmitter } from '@angular/core';
 import { UserSearchService } from '../../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { DropdownModule } from 'primeng/dropdown';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { SearchUser } from '../../interfaces/search-user.interface';
+import { User } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 
 @Component({
   selector: 'app-search-user-select',
   standalone: true,
-  imports: [DropdownModule, FormsModule],
+  imports: [DropdownModule, ButtonModule, InputTextModule, FormsModule],
   templateUrl: './search-user-select.component.html',
   styleUrl: './search-user-select.component.scss'
 })
@@ -18,6 +21,7 @@ export class SearchUserSelectComponent {
   isDropdownOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   currentQuery = signal<string>('');
+  filterValue = '';
 
   private searchTimeout: any;
 
@@ -35,8 +39,8 @@ export class SearchUserSelectComponent {
     this.isDropdownOpen.set(false);
   }
 
-  onFilter(event: any) {
-    const query = event.filter || '';
+  customFilterFunction(event: any, options: any) {
+    const query = event.target.value || '';
     this.currentQuery.set(query);
 
     // Clear previous timeout
@@ -51,6 +55,10 @@ export class SearchUserSelectComponent {
     if (query.length < 3) {
       // Clear options and show appropriate message
       this.options.set([]);
+      // Reset the dropdown's filter to show empty state
+      if (options && options.reset) {
+        options.reset();
+      }
       return; // DO NOT call the service
     }
 
@@ -58,6 +66,23 @@ export class SearchUserSelectComponent {
     this.searchTimeout = setTimeout(() => {
       this.searchUsers(query);
     }, 500);
+  }
+
+  resetFilter(options: any) {
+    this.filterValue = '';
+    this.currentQuery.set('');
+    this.options.set([]);
+    this.isLoading.set(false);
+
+    // Clear any pending search
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    // Reset the dropdown's filter
+    if (options && options.reset) {
+      options.reset();
+    }
   }
 
   private searchUsers(query: string) {
@@ -72,12 +97,15 @@ export class SearchUserSelectComponent {
 
     this.userSearchService.searchUsers(query).subscribe({
       next: res => {
-        // Format users with "surname, givenName (email)" format
-        const formattedUsers = (res.response || []).map(user => ({
-          ...user,
-          formattedName: `${user.sn}, ${user.givenName} (${user.mail})`
-        }));
-        this.options.set(formattedUsers);
+        console.log(res.response);
+        this.options.set(
+          res.response
+            .filter(user => user.mail && user.sn && user.givenName)
+            .map(user => ({
+              ...user,
+              formattedName: `${user.sn}, ${user.givenName} (${user.mail})`
+            }))
+        );
         this.isLoading.set(false);
       },
       error: error => {
