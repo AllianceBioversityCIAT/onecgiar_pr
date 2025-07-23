@@ -97,7 +97,6 @@ export class SearchUserSelectComponent {
 
     this.userSearchService.searchUsers(query).subscribe({
       next: res => {
-        console.log(res.response);
         this.options.set(
           res.response
             .filter(user => user.mail && user.sn && user.givenName)
