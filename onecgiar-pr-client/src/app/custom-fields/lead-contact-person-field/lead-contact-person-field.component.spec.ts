@@ -29,7 +29,8 @@ describe('LeadContactPersonFieldComponent', () => {
         employeeID: '12345',
         employeeNumber: 'EMP001',
         employeeType: 'Full-time',
-        description: 'Senior researcher in agricultural sciences'
+        description: 'Senior researcher in agricultural sciences',
+        formattedName: 'Doe, John (john.doe@cgiar.org)'
       }
     ],
     status: 200
@@ -442,7 +443,8 @@ describe('LeadContactPersonFieldComponent', () => {
           employeeID: '12345',
           employeeNumber: 'EMP001',
           employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences'
+          description: 'Senior researcher in agricultural sciences',
+          formattedName: 'Doe, John (john.doe@cgiar.org)'
         },
         {
           cn: 'Test User',
@@ -459,7 +461,8 @@ describe('LeadContactPersonFieldComponent', () => {
           employeeID: '99999',
           employeeNumber: 'TEST001',
           employeeType: 'Test',
-          description: 'Test account'
+          description: 'Test account',
+          formattedName: 'User, Test (test.user@cgiar.org)'
         },
         {
           cn: 'No Email User',
@@ -476,7 +479,8 @@ describe('LeadContactPersonFieldComponent', () => {
           employeeID: '88888',
           employeeNumber: 'NOEMAIL001',
           employeeType: 'Test',
-          description: 'Account without email'
+          description: 'Account without email',
+          formattedName: 'Email, No ()'
         },
         {
           cn: 'Jane Smith',
@@ -493,7 +497,8 @@ describe('LeadContactPersonFieldComponent', () => {
           employeeID: '54321',
           employeeNumber: 'EMP002',
           employeeType: 'Full-time',
-          description: 'Research coordinator'
+          description: 'Research coordinator',
+          formattedName: 'Smith, Jane (jane.smith@cgiar.org)'
         }
       ];
 
@@ -533,15 +538,18 @@ describe('LeadContactPersonFieldComponent', () => {
         const testUsers = [
           {
             ...mockUsersWithFilters[0],
-            mail: 'user.TEST@cgiar.org'
+            mail: 'user.TEST@cgiar.org',
+            formattedName: 'Doe, John (user.TEST@cgiar.org)'
           },
           {
             ...mockUsersWithFilters[0],
-            mail: 'user.Test@cgiar.org'
+            mail: 'user.Test@cgiar.org',
+            formattedName: 'Doe, John (user.Test@cgiar.org)'
           },
           {
             ...mockUsersWithFilters[0],
-            mail: 'user.tEsT@cgiar.org'
+            mail: 'user.tEsT@cgiar.org',
+            formattedName: 'Doe, John (user.tEsT@cgiar.org)'
           }
         ];
 
