@@ -1,12 +1,226 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DialogModule } from 'primeng/dialog';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
+import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
+import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
+
+interface AddUserForm {
+  is_cgiar: boolean;
+  displayName?: string; // Only for visual display
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role_platform: number | null;
+}
 
 @Component({
   selector: 'app-manage-user-modal',
   standalone: true,
-  imports: [],
+  imports: [CommonModule, FormsModule, DialogModule, CustomFieldsModule, SearchUserSelectComponent],
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })
-export class ManageUserModalComponent {
+export class ManageUserModalComponent implements OnChanges {
+  resultsApiService = inject(ResultsApiService);
+  api = inject(ApiService);
 
+  @Input() visible: boolean = false;
+  @Output() visibleChange = new EventEmitter<boolean>();
+  @Output() userCreated = new EventEmitter<void>();
+
+  // ViewChild reference for clearing user search
+  @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
+
+  // Signals for modal state
+  creatingUser = signal<boolean>(false);
+  showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
+  addUserForm = signal<AddUserForm>({
+    is_cgiar: true,
+    role_platform: 2 // Marked as guest by default (2)
+  });
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['visible'] && changes['visible'].currentValue) {
+      this.resetAddUserForm();
+    }
+  }
+
+  // Admin permissions options for radio button - computed based on CGIAR status
+  adminPermissionsOptions = computed(() => {
+    if (!this.addUserForm().is_cgiar) {
+      // CGIAR users only have guest permissions
+      return [
+        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
+      ];
+    } else {
+      // Non-CGIAR users can choose between admin and guest
+      return [
+        { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
+        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
+      ];
+    }
+  });
+
+  // Method to clear user search field by hiding and showing the component
+  private clearUserSearch(): void {
+    // Hide the component to force a complete reset
+    this.showUserSearchComponent.set(false);
+
+    // Show it again after 500ms delay
+    setTimeout(() => {
+      this.showUserSearchComponent.set(true);
+    }, 500);
+  }
+
+  resetAddUserForm(): void {
+    this.addUserForm.set({
+      is_cgiar: true,
+      role_platform: 2 // Marked as guest by default (2)
+    });
+    this.clearUserSearch();
+  }
+
+  onModalCgiarChange(isCgiar: boolean): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      is_cgiar: isCgiar,
+      // Reset form fields when changing CGIAR status
+      displayName: '',
+      first_name: '',
+      last_name: '',
+      email: '',
+      // Set permissions based on CGIAR status
+      role_platform: 2 // Always marked as guest (2)
+    }));
+  }
+
+  onUserSelect(event: SearchUser): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      displayName: `${event.sn}, ${event.givenName} (${event.mail})`,
+      email: event.mail
+    }));
+  }
+
+  onNameChange(first_name: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      first_name
+    }));
+  }
+
+  onLastNameChange(last_name: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      last_name
+    }));
+  }
+
+  onEmailChange(email: string): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      email
+    }));
+  }
+
+  onPermissionsChange(role_platform: number): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_platform
+    }));
+  }
+
+  onSaveUser(): void {
+    this.creatingUser.set(true);
+
+    // Remove displayName from form data before sending to backend
+    const formData = { ...this.addUserForm() };
+    delete formData.displayName;
+
+    this.resultsApiService.POST_createUser(formData).subscribe({
+      next: res => {
+        this.visible = false;
+        this.visibleChange.emit(false);
+
+        const successMessage = res?.message || 'The user has been successfully created';
+        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
+
+        this.api.alertsFe.show({
+          id: 'createUserSuccess',
+          title: 'User created successfully',
+          description: `${userName} - ${successMessage}`,
+          status: 'success'
+        });
+
+        this.creatingUser.set(false);
+        this.resetAddUserForm(); // Reset form and clear user search
+        this.userCreated.emit(); // Notify parent to refresh users list
+      },
+      error: error => {
+        // Determinar el mensaje de error
+        let errorMessage = 'Error while creating user';
+
+        if (error?.error?.message) {
+          const message = error.error.message;
+          if (message.includes('already exists')) {
+            errorMessage = 'The user already exists in the system';
+          } else if (message.includes('CGIAR email')) {
+            errorMessage = 'Non-CGIAR user cannot have a CGIAR email address';
+          } else {
+            errorMessage = message;
+          }
+        }
+
+        this.api.alertsFe.show({
+          id: 'createUserError',
+          title: 'Warning!',
+          description: errorMessage,
+          status: 'warning'
+        });
+        this.creatingUser.set(false);
+      }
+    });
+  }
+
+  onCancelAddUser(): void {
+    this.visible = false;
+    this.visibleChange.emit(false);
+    this.resetAddUserForm();
+  }
+
+  onModalHide(): void {
+    // This method is called when the modal is closed via X button, ESC key, or clicking outside
+    this.visible = false;
+    this.visibleChange.emit(false);
+    this.resetAddUserForm();
+  }
+
+  get currentUserName(): string {
+    return this.api.authSE?.localStorageUser?.user_name || 'Unknown User';
+  }
+
+  get currentUserEmail(): string {
+    return this.api.authSE?.localStorageUser?.email || '';
+  }
+
+  isFormValid = computed(() => {
+    const form = this.addUserForm();
+
+    // Validate that a permission option has been selected
+    if (form.role_platform === null || form.role_platform === undefined) {
+      return false;
+    }
+
+    // CGIAR users: Solo necesitamos el email
+    if (form.is_cgiar) {
+      return !!form.email;
+    }
+
+    // Non-CGIAR users: Necesitamos todos los campos del formulario
+    return !!(form.first_name && form.last_name && form.email);
+  });
 }
