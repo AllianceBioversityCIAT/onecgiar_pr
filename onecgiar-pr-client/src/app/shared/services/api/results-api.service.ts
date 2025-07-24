@@ -1117,8 +1117,8 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 
-  PATCH_updateUserStatus(email: string, body: UpdateUserStatus) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/${email}/status`, body);
+  PATCH_updateUserStatus(body: UpdateUserStatus) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
 
   GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {

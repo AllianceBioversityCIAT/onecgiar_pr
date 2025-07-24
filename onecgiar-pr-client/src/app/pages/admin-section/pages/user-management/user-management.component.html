@@ -130,9 +130,9 @@
                 type="button"
                 class="action-btn"
                 (click)="onToggleUserStatus(user)"
-                [pTooltip]="user.userStatus === 'Active' ? 'Deactivate user' : 'Activate user'"
+                [pTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
                 tooltipPosition="top">
-                <i class="material-icons-round">{{ user.userStatus === 'Active' ? 'person_off' : 'person' }}</i>
+                <i class="material-icons-round">{{ user.isActive ? 'person_off' : 'person' }}</i>
               </button>
             </div>
           </td>
@@ -152,6 +152,8 @@
       <span class="total">{{ this.users().length }} total</span>
     </div>
   </div>
+
+  <!-- <app-manage-user-modal></app-manage-user-modal> -->
 
   <!-- Add User Modal -->
   <p-dialog

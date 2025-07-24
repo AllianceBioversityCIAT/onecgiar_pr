@@ -14,6 +14,8 @@ import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 
 import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
 import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
+import { UpdateUserStatus } from '../../../../shared/interfaces/updateUserStatus.interface';
+import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 
 interface UserColumn {
   label: string;
@@ -60,7 +62,8 @@ interface AddUserForm {
     InputTextModule,
     DialogModule,
     CustomFieldsModule,
-    SearchUserSelectComponent
+    SearchUserSelectComponent,
+    ManageUserModalComponent
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -101,7 +104,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
       next: res => {
+        res.response.map(user => {
+          user.isActive = user.userStatus === 'Active';
+          user.isCGIAR = user.cgIAR === 'Yes';
+        });
         this.users.set(res.response);
+        console.log(this.users());
         this.loading.set(false);
       },
       error: error => {
@@ -219,18 +227,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       ];
     }
   });
-
-  // CGIAR users for autocomplete
-  cgiarUsers: any[] = [
-    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org', displayName: 'Svetlana Saakova (s.saakove@cgiar.org)' },
-    { name: 'Sara Lawson', email: 's.lawson@cgiar.org', displayName: 'Sara Lawson (s.lawson@cgiar.org)' },
-    { name: 'John Smith', email: 'j.smith@cgiar.org', displayName: 'John Smith (j.smith@cgiar.org)' },
-    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org', displayName: 'Maria Garcia (m.garcia@cgiar.org)' },
-    { name: 'David Johnson', email: 'd.johnson@cgiar.org', displayName: 'David Johnson (d.johnson@cgiar.org)' },
-    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org', displayName: 'Ana Rodriguez (a.rodriguez@cgiar.org)' },
-    { name: 'Michael Brown', email: 'm.brown@cgiar.org', displayName: 'Michael Brown (m.brown@cgiar.org)' },
-    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org', displayName: 'Elena Petrov (e.petrov@cgiar.org)' }
-  ];
 
   // Action methods
   onAddUser(): void {
@@ -383,8 +379,18 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     // TODO: Implement edit user functionality
   }
 
-  onToggleUserStatus(user: any): void {
+  onToggleUserStatus(user): void {
     // TODO: Implement toggle user status functionality
+    console.log(user);
+    // this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: !user.isActive, entityRoles: [] }).subscribe({
+    //   next: res => {
+    //     this.getUsers();
+    //   },
+    //   error: error => {
+    //     console.log(error);
+    //   }
+    // });
+    this.getUsers();
   }
 
   get currentUserName(): string {
