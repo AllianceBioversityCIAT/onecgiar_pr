@@ -72,7 +72,8 @@ export class UserService {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
         await this.handleNonCgiarUser(createUserDto);
-        shouldSendConfirmationEmail = await this.registerInCognitoIfNeeded(createUserDto);
+        shouldSendConfirmationEmail =
+          await this.registerInCognitoIfNeeded(createUserDto);
       }
 
       const savedUser = await this.saveUserToDB(createUserDto, token);
@@ -97,11 +98,17 @@ export class UserService {
     }
   }
 
-  private async handleCgiarUser(createUserDto: CreateUserDto): Promise<boolean> {
-    const userFromAD = await this.activeDirectoryService.getUserDetails(createUserDto.email);
+  private async handleCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<boolean> {
+    const userFromAD = await this.activeDirectoryService.getUserDetails(
+      createUserDto.email,
+    );
 
     if (!userFromAD) {
-      throw new NotFoundException('No information was found for this CGIAR user.');
+      throw new NotFoundException(
+        'No information was found for this CGIAR user.',
+      );
     }
 
     if (!this.cgiarRegex.test(createUserDto.email)) {
@@ -122,7 +129,9 @@ export class UserService {
     return true;
   }
 
-  private async  handleNonCgiarUser(createUserDto: CreateUserDto): Promise<void> {
+  private async handleNonCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<void> {
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -132,9 +141,8 @@ export class UserService {
   }
 
   private async registerInCognitoIfNeeded(
-    createUserDto: CreateUserDto
+    createUserDto: CreateUserDto,
   ): Promise<boolean> {
-
     const templateDB = await this._templateRepository.findOne({
       where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
     });
@@ -566,8 +574,12 @@ export class UserService {
     }
   }
 
-  async updateUserStatus(userId: number, dto: ChangeUserStatusDto, token: TokenDto): Promise<returnErrorDto | returnFormatUser> {
-    const user = await this.findUserWithRelations(userId);
+  async updateUserStatus(
+    userEmail: string,
+    dto: ChangeUserStatusDto,
+    token: TokenDto,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    const user = await this.findUserWithRelations(userEmail);
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
@@ -594,20 +606,14 @@ export class UserService {
       } else {
         return this.deactivateExternalUser(user, currentUser);
       }
-    } 
-
-    
+    }
   }
 
-  private async findUserWithRelations(userId: number): Promise<User> {
+  private async findUserWithRelations(userEmail: string): Promise<User> {
     const user = await this._userRepository.findOne({
-      where: { id: userId },
+      where: { email: userEmail },
       relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
     });
-
-    const roles = user.obj_role_by_user
-    .filter((rbu) => rbu.obj_role)
-    .map((rbu) => rbu.obj_role.description);
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -616,15 +622,23 @@ export class UserService {
     return user;
   }
 
-  private async activateUser(user: User, dto: ChangeUserStatusDto, currentUser: User): Promise<returnErrorDto | returnFormatUser> {
+  private async activateUser(
+    user: User,
+    dto: ChangeUserStatusDto,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
     if (user.is_cgiar) {
-      throw new BadRequestException('CGIAR users cannot be reactivated this way');
+      throw new BadRequestException(
+        'CGIAR users cannot be reactivated this way',
+      );
     }
 
     if (dto.activate) {
-      try{
+      try {
         if (!dto.entity || !dto.role_entity) {
-          throw new BadRequestException('To activate a user, you must provide entity and at least one role');
+          throw new BadRequestException(
+            'To activate a user, you must provide entity and at least one role',
+          );
         }
 
         user.active = true;
@@ -644,7 +658,7 @@ export class UserService {
           }
         }
 
-         if (dto.role_platform) {
+        if (dto.role_platform) {
           roleAssignments.push({
             user: newUser.id,
             role: dto.role_platform,
@@ -655,8 +669,6 @@ export class UserService {
 
         console.log('Role assignments:', roleAssignments);
         await this._roleByUserRepository.save(roleAssignments);
-
-        
       } catch (error) {
         return this._handlersError.returnErrorRes({ error });
       }
@@ -669,14 +681,15 @@ export class UserService {
     }
   }
 
-  private async deactivateCgiarUser(user: User, currentUser: User): Promise<returnErrorDto | returnFormatUser> {
+  private async deactivateCgiarUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
     const guestRole = 2; //2 is the ID for the Guest role
 
     await this._roleByUserRepository.update(
       { user: user.id },
-      { active: false,
-        last_updated_by: currentUser.id,
-       }
+      { active: false, last_updated_by: currentUser.id },
     );
 
     await this._roleByUserRepository.save({
@@ -692,12 +705,13 @@ export class UserService {
     };
   }
 
-  private async deactivateExternalUser(user: User, currentUser: User): Promise<returnErrorDto | returnFormatUser> {
+  private async deactivateExternalUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
     await this._roleByUserRepository.update(
       { user: user.id },
-      { active: false,
-        last_updated_by: currentUser.id,
-       }
+      { active: false, last_updated_by: currentUser.id },
     );
 
     user.active = false;
@@ -709,7 +723,6 @@ export class UserService {
       status: HttpStatus.OK,
     };
   }
-
 
   /**
    * Create or update user based on information from the authentication microservice
