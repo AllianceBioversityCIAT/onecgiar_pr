@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
+import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -59,6 +60,7 @@ interface AddUserForm {
     TooltipModule,
     InputTextModule,
     DialogModule,
+    OverlayPanelModule,
     CustomFieldsModule,
     SearchUserSelectComponent
   ],
@@ -72,6 +74,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
   @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
+  @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
 
   // Signals for data and filters
@@ -80,6 +83,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   searchQuery = signal<string>(''); // For API calls and filtering
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
+  selectedEntities = signal<string[]>([]);
   loading = signal<boolean>(false);
   creatingUser = signal<boolean>(false);
 
@@ -101,7 +105,31 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
       next: res => {
-        this.users.set(res.response);
+        console.log(res.response);
+        // add random entities to the user (0, 1, 2 or more entities randomly)
+        const entities = ['SGP-01', 'INIT-24', 'PLAT-04', 'INIT-09', 'INIT-26', 'INIT-32', 'INIT-10', 'PLAT-01', 'SGP-02', 'INIT-01'];
+        res.response.forEach((user: any) => {
+          // Generate random number of entities (1 to 5) to ensure users have at least 1 entity
+          const numEntities = Math.floor(Math.random() * 5) + 1; // 1, 2, 3, 4, or 5 entities
+          user.entities = [];
+
+          // Add random entities based on the generated number
+          const shuffledEntities = [...entities].sort(() => 0.5 - Math.random());
+          for (let i = 0; i < numEntities && i < entities.length; i++) {
+            user.entities.push(shuffledEntities[i]);
+          }
+        });
+
+        // Apply entity filtering if entities are selected
+        let filteredUsers = res.response;
+        if (this.selectedEntities().length > 0) {
+          filteredUsers = res.response.filter((user: any) => {
+            // Check if user has at least one of the selected entities
+            return user.entities.some((entity: string) => this.selectedEntities().includes(entity));
+          });
+        }
+
+        this.users.set(filteredUsers);
         this.loading.set(false);
       },
       error: error => {
@@ -145,6 +173,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.getUsers();
   }
 
+  // Method to handle entities filter changes
+  onEntitiesChange(value: any[]) {
+    // Extract entity values from the multi-select response
+    const entityValues = value ? value.map(item => item.value || item) : [];
+    this.selectedEntities.set(entityValues);
+    this.getUsers();
+  }
+
   // Method to clear all filters
   onClearFilters() {
     // Clear search timeout if exists
@@ -157,6 +193,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.searchQuery.set('');
     this.selectedStatus.set('');
     this.selectedCgiar.set('');
+    this.selectedEntities.set([]);
 
     // Clear the visual state of select components using writeValue
     if (this.statusSelect) {
@@ -171,6 +208,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       this.cgiarSelect.fullValue = {};
     }
 
+    if (this.entitiesSelect) {
+      this.entitiesSelect.writeValue([]);
+      this.entitiesSelect._value = [];
+    }
+
     // Reload data without filters
     this.getUsers();
   }
@@ -182,6 +224,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' },
+    { label: 'Entities', key: 'entities', width: '120px' },
     { label: 'Actions', key: 'actions', width: '100px' }
   ];
 
@@ -194,6 +237,20 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   isCGIAROptions: CgiarOption[] = [
     { label: 'Yes', value: 'Yes' },
     { label: 'No', value: 'No' }
+  ];
+
+  // Entity filter options
+  entityOptions = [
+    { label: 'SGP-01', value: 'SGP-01' },
+    { label: 'INIT-24', value: 'INIT-24' },
+    { label: 'PLAT-04', value: 'PLAT-04' },
+    { label: 'INIT-09', value: 'INIT-09' },
+    { label: 'INIT-26', value: 'INIT-26' },
+    { label: 'INIT-32', value: 'INIT-32' },
+    { label: 'INIT-10', value: 'INIT-10' },
+    { label: 'PLAT-01', value: 'PLAT-01' },
+    { label: 'SGP-02', value: 'SGP-02' },
+    { label: 'INIT-01', value: 'INIT-01' }
   ];
 
   // Modal variables
@@ -385,6 +442,27 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onToggleUserStatus(user: any): void {
     // TODO: Implement toggle user status functionality
+  }
+
+  // Entity display methods
+  getDisplayEntities(entities: string[]): string[] {
+    if (!entities || entities.length === 0) return [];
+    return entities.slice(0, 2); // Always show only first 2
+  }
+
+  hasMoreEntities(entities: string[]): boolean {
+    return entities && entities.length > 2;
+  }
+
+  getRemainingEntities(entities: string[]): string[] {
+    if (!entities || entities.length <= 2) return [];
+    return entities.slice(2); // Return entities from index 2 onwards
+  }
+
+  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
+    if (this.hasMoreEntities(entities)) {
+      overlay.toggle(event);
+    }
   }
 
   get currentUserName(): string {
