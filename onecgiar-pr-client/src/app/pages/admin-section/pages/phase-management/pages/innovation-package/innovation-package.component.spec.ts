@@ -16,14 +16,64 @@ describe('InnovationPackageComponent', () => {
     }
   };
 
+  const mockPortfolios = [
+    { id: 2, name: 'CGIAR portfolio 2022-2024​', startDate: 2022, endDate: 2024, isActive: 1 },
+    { id: 3, name: 'CGIAR portfolio 2025-2030', startDate: 2025, endDate: 2030, isActive: 0 }
+  ];
   const mockResultsApiService = {
     GET_resultYears: jest.fn().mockReturnValue(of({ response: [] })),
     GET_tocPhases: jest.fn().mockReturnValue(of({ response: [] })),
     GET_versioning: jest.fn().mockReturnValue(of({ response: [] })),
+    GET_portfolioList: jest.fn().mockReturnValue(of(mockPortfolios)),
     PATCH_updatePhase: jest.fn(),
     POST_createPhase: jest.fn(),
     DELETE_updatePhase: jest.fn()
   };
+  it('should fetch and set portfolioList', () => {
+    component.getPortfolios();
+    expect(mockResultsApiService.GET_portfolioList).toHaveBeenCalled();
+    expect(component.portfolioList).toEqual(mockPortfolios);
+  });
+
+  it('should map portfolio_id to portfolio_id_ts in updateVariablesToSave', () => {
+    const phase: any = { portfolio_id: mockPortfolios[0] };
+    component.updateVariablesToSave(phase);
+    expect(phase.portfolio_id_ts).toEqual(mockPortfolios[0]);
+  });
+
+  it('should map portfolio_id_ts to portfolio_id in updateMainVariables', () => {
+    const phase: any = { portfolio_id_ts: mockPortfolios[1] };
+    component.updateMainVariables(phase);
+    expect(phase.portfolio_id).toEqual(mockPortfolios[1]);
+  });
+
+  it('should require portfolio in getMandatoryIncompleteFields', () => {
+    const phase = {
+      phase_name_ts: 'Test',
+      phase_year_ts: 2024,
+      toc_pahse_id_ts: 1,
+      start_date_ts: '2024-01-01',
+      end_date_ts: '2024-12-31',
+      reporting_phase_ts: 'Reporting',
+      portfolio_id_ts: null
+    };
+    const result = component.getMandatoryIncompleteFields(phase);
+    expect(result).toContain('<strong> Portfolio </strong> is required to create');
+  });
+
+  it('should not require portfolio if present in getMandatoryIncompleteFields', () => {
+    const phase = {
+      phase_name_ts: 'Test',
+      phase_year_ts: 2024,
+      toc_pahse_id_ts: 1,
+      start_date_ts: '2024-01-01',
+      end_date_ts: '2024-12-31',
+      reporting_phase_ts: 'Reporting',
+      portfolio_id_ts: mockPortfolios[0]
+    };
+    const result = component.getMandatoryIncompleteFields(phase);
+    expect(result).not.toContain('<strong> Portfolio </strong> is required to create');
+  });
 
   const mockCustomizedAlertsFeService = {
     show: jest.fn()

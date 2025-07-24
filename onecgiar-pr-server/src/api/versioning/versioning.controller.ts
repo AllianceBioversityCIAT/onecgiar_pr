@@ -7,11 +7,20 @@ import {
   Param,
   Delete,
   Query,
+  UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { VersioningService } from './versioning.service';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
-import { UseInterceptors, UseGuards } from '@nestjs/common';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -26,12 +35,16 @@ import {
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { UpdateQaResults } from './dto/update-qa.dto';
 
-@Controller()
+@ApiBearerAuth()
+@ApiTags('Versioning')
 @UseInterceptors(ResponseInterceptor)
+@Controller()
 export class VersioningController {
   constructor(private readonly versioningService: VersioningService) {}
 
   @Patch('phase-change/process/result/:resultId')
+  @ApiOperation({ summary: 'Process phase change for a result' })
+  @ApiParam({ name: 'resultId', type: Number })
   phaseChangeProcess(
     @Param('resultId') result_id: string,
     @UserToken() user: TokenDto,
@@ -42,6 +55,8 @@ export class VersioningController {
   @Post()
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Create a new versioning phase' })
+  @ApiBody({ type: CreateVersioningDto })
   create(
     @Body() createVersioningDto: CreateVersioningDto,
     @UserToken() user: TokenDto,
@@ -52,6 +67,9 @@ export class VersioningController {
   @Patch(':id')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Update a versioning phase' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiBody({ type: UpdateVersioningDto })
   update(
     @Param('id') id: string,
     @Body() updateVersioningDto: UpdateVersioningDto,
@@ -60,6 +78,7 @@ export class VersioningController {
   }
 
   @Get('all')
+  @ApiOperation({ summary: 'Get all phases' })
   findAll() {
     return this.versioningService.getAllPhases();
   }
@@ -67,6 +86,7 @@ export class VersioningController {
   @Patch('execute/annual/replicate/result')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Replicate annual results' })
   updateAnnuallyResult(@UserToken() user: TokenDto) {
     return this.versioningService.annualReplicationProcessInnovationDev(user);
   }
@@ -74,6 +94,7 @@ export class VersioningController {
   @Patch('execute/annual/replicate/innovation-package')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Replicate annual innovation packages (IPSR)' })
   updateAnnuallyIPSR(@UserToken() user: TokenDto) {
     return this.versioningService.annualReplicationProcessInnovationPackage(
       user,
@@ -81,16 +102,22 @@ export class VersioningController {
   }
 
   @Patch('change/status/qa')
+  @ApiOperation({ summary: 'Update QA status for results' })
+  @ApiBody({ type: UpdateQaResults })
   updateStatusQa(@Body() QaResults: UpdateQaResults) {
     return this.versioningService.setQaStatus(QaResults);
   }
 
   @Patch('update/links-result/qa')
+  @ApiOperation({ summary: 'Update QA links for results' })
   updateLinksQa() {
     return this.versioningService.updateLinkResultQa();
   }
 
   @Get('number/results/status/:statusId/result-type/:resultTypeId')
+  @ApiOperation({ summary: 'Get number of results by status and type' })
+  @ApiParam({ name: 'statusId', type: Number })
+  @ApiParam({ name: 'resultTypeId', type: Number })
   getNumberResults(
     @Param('statusId') status_id: string,
     @Param('resultTypeId') result_type_id: string,
@@ -102,6 +129,10 @@ export class VersioningController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Find phases by module, status and active' })
+  @ApiQuery({ name: 'module', enum: ModuleTypeEnum, required: false })
+  @ApiQuery({ name: 'status', enum: StatusPhaseEnum, required: false })
+  @ApiQuery({ name: 'active', enum: ActiveEnum, required: false })
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,
     @Query('status') status: StatusPhaseEnum = StatusPhaseEnum.OPEN,
@@ -111,6 +142,8 @@ export class VersioningController {
   }
 
   @Get('result/:resultId')
+  @ApiOperation({ summary: 'Get version of a specific result' })
+  @ApiParam({ name: 'resultId', type: Number })
   findVersionOfAResult(@Param('resultId') result_id: string) {
     return this.versioningService.getVersionOfAResult(+result_id);
   }
@@ -118,6 +151,8 @@ export class VersioningController {
   @Delete(':id')
   @Roles(RoleEnum.ADMIN, RoleTypeEnum.APPLICATION)
   @UseGuards(ValidRoleGuard)
+  @ApiOperation({ summary: 'Delete a versioning phase' })
+  @ApiParam({ name: 'id', type: Number })
   remove(@Param('id') id: string) {
     return this.versioningService.delete(+id);
   }

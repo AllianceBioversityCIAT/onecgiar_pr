@@ -1130,4 +1130,8 @@ export class ResultsApiService {
   POST_createUser(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/user/create`, body);
   }
+
+  GET_portfolioList() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
 }

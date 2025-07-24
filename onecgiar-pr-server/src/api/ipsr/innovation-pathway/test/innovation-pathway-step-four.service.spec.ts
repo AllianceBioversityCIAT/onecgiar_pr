@@ -441,6 +441,8 @@ describe('InnovationPathwayStepFourService', () => {
         obj_reporting_phase: null,
         obj_app_module: null,
         obj_previous_phase: null,
+        obj_portfolio: null,
+        portfolio_id: null,
       };
 
       const mockUpdateResult: UpdateResult = {

@@ -48,6 +48,11 @@ describe('ReportingComponent', () => {
     { phase_id: 2, name: 'TOC Phase 2', status: 'Inactive' }
   ];
 
+  const mockPortfolios = [
+    { id: 2, name: 'CGIAR portfolio 2022-2024​', startDate: 2022, endDate: 2024, isActive: 1 },
+    { id: 3, name: 'CGIAR portfolio 2025-2030', startDate: 2025, endDate: 2030, isActive: 0 }
+  ];
+
   const mockResultYears = [{ year: 2024 }, { year: 2023 }, { year: 2022 }];
 
   beforeEach(async () => {
@@ -74,6 +79,8 @@ describe('ReportingComponent', () => {
         previousReportingPhase: { phaseName: 'Previous Phase' }
       }
     };
+
+    mockResultsApiService.GET_portfolioList = jest.fn().mockReturnValue(of(mockPortfolios));
 
     await TestBed.configureTestingModule({
       declarations: [ReportingComponent],
@@ -107,6 +114,7 @@ describe('ReportingComponent', () => {
       { title: '#', attr: 'id' },
       { title: 'Name', attr: 'phase_name' },
       { title: 'Reporting year', attr: 'phase_year' },
+      { title: 'Portfolio', attr: 'portfolio_id' },
       { title: 'Toc phase', attr: 'toc_pahse_id' },
       { title: 'Start date', attr: 'start_date' },
       { title: 'End date', attr: 'end_date' },
@@ -234,7 +242,8 @@ describe('ReportingComponent', () => {
         phase_year_ts: 2024,
         toc_pahse_id_ts: 1,
         start_date_ts: '2024-01-01',
-        end_date_ts: '2024-12-31'
+        end_date_ts: '2024-12-31',
+        portfolio_id_ts: 2
       };
 
       const result = component.getMandatoryIncompleteFields(phase);
@@ -247,7 +256,8 @@ describe('ReportingComponent', () => {
         phase_year_ts: null,
         toc_pahse_id_ts: null,
         start_date_ts: '',
-        end_date_ts: ''
+        end_date_ts: '',
+        portfolio_id_ts: null
       };
 
       const result = component.getMandatoryIncompleteFields(phase);
@@ -256,6 +266,8 @@ describe('ReportingComponent', () => {
       expect(result).toContain('<strong> Toc phase </strong> is required to create');
       expect(result).toContain('<strong> Start date </strong> is required to create');
       expect(result).toContain('<strong> End date </strong>is required to create');
+      expect(result).toContain('<strong> Portfolio </strong> is required to create');
+
     });
   });
 
@@ -483,6 +495,57 @@ describe('ReportingComponent', () => {
       // This method has a bug - it returns undefined due to forEach
       // Testing the current behavior
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getPortfolios', () => {
+    it('should fetch and set portfolioList', () => {
+      component.getPortfolios();
+      expect(mockResultsApiService.GET_portfolioList).toHaveBeenCalled();
+      expect(component.portfolioList).toEqual(mockPortfolios);
+    });
+  });
+
+  describe('updateVariablesToSave', () => {
+    it('should copy portfolio_id to portfolio_id_ts', () => {
+      const phase: any = { portfolio_id: 2 };
+      component.updateVariablesToSave(phase);
+      expect(phase.portfolio_id_ts).toBe(2);
+    });
+  });
+
+  describe('updateMainVariables', () => {
+    it('should copy portfolio_id_ts to portfolio_id', () => {
+      const phase: any = { portfolio_id_ts: 3 };
+      component.updateMainVariables(phase);
+      expect(phase.portfolio_id).toBe(3);
+    });
+  });
+
+  describe('getMandatoryIncompleteFields', () => {
+    it('should return error message if portfolio_id_ts is missing', () => {
+      const phase = {
+        phase_name_ts: 'Test',
+        phase_year_ts: 2024,
+        toc_pahse_id_ts: 1,
+        start_date_ts: '2024-01-01',
+        end_date_ts: '2024-12-31',
+        portfolio_id_ts: null
+      };
+      const result = component.getMandatoryIncompleteFields(phase);
+      expect(result).toContain('<strong> Portfolio </strong> is required to create');
+    });
+    it('should return empty string if portfolio_id_ts is present', () => {
+      const phase = {
+        phase_name_ts: 'Test',
+        phase_year_ts: 2024,
+        toc_pahse_id_ts: 1,
+        start_date_ts: '2024-01-01',
+        end_date_ts: '2024-12-31',
+        portfolio_id_ts: 2
+      };
+      const result = component.getMandatoryIncompleteFields(phase);
+      expect(result).toBe('');
     });
   });
 });

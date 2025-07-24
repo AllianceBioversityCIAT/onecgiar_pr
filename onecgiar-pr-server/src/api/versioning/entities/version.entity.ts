@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { VersionBaseEntity } from '../../../shared/entities/version-base-entity';
 import { ApplicationModules } from './application-modules.entity';
+import { ClarisaPortfolios } from '../../../clarisa/clarisa-portfolios/entities/clarisa-portfolios.entity';
 
 @Entity('version')
 export class Version extends VersionBaseEntity {
@@ -88,6 +89,13 @@ export class Version extends VersionBaseEntity {
   })
   reporting_phase!: number;
 
+  @Column({
+    name: 'portfolio_id',
+    type: 'int',
+    nullable: true,
+  })
+  portfolio_id: number;
+
   @ManyToOne(() => Version, (v) => v.id, { nullable: true })
   @JoinColumn({ name: 'reporting_phase' })
   obj_reporting_phase: Version;
@@ -99,4 +107,8 @@ export class Version extends VersionBaseEntity {
   @ManyToOne(() => Version, (v) => v.id)
   @JoinColumn({ name: 'previous_phase' })
   obj_previous_phase: Version;
+
+  @ManyToOne(() => ClarisaPortfolios, (portfolio) => portfolio.obj_version)
+  @JoinColumn({ name: 'portfolio_id' })
+  obj_portfolio: ClarisaPortfolios;
 }

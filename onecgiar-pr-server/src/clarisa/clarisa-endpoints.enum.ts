@@ -35,6 +35,8 @@ import { ClarisaSdgTargetDto } from './dtos/clarisa-sdg-target.dto';
 import { ClarisaTocPhase } from './clarisa-toc-phases/entities/clarisa-toc-phase.entity';
 import { ClarisaPhaseDto } from './dtos/clarisa-phase.dto';
 import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
+import { ClarisaPortfolios } from './clarisa-portfolios/entities/clarisa-portfolios.entity';
+import { ClarisaPortfolioDto } from './dtos/clarisa-portfolio.dto';
 
 /**
  * Represents a mapping of CLARISA parameters to their corresponding values.
@@ -312,6 +314,13 @@ export class ClarisaEndpoints<Entity, Dto> {
     ClarisaSubnationalScope,
   );
 
+  public static readonly PORTFOLIO = new ClarisaEndpoints(
+    'portfolios?show=all',
+    'GET',
+    ClarisaPortfolios,
+    ClarisaEndpoints.portfolioMapper,
+  );
+
   /**
    * Constructs a new CLARISA endpoint.
    *
@@ -532,6 +541,26 @@ export class ClarisaEndpoints<Entity, Dto> {
       return {
         ...item,
         phase_id: item.phaseId,
+      };
+    });
+  }
+
+  /**
+   * Maps an array of `ClarisaPortfolios` objects to an array of `DeepPartial<ClarisaPortfolios>` objects.
+   *
+   * @param data - An array of `ClarisaPortfolios` objects to be mapped.
+   * @returns An array of `DeepPartial<ClarisaPortfolios>` objects.
+   */
+  static portfolioMapper(
+    data: ClarisaPortfolioDto[],
+  ): DeepPartial<ClarisaPortfolios>[] {
+    return data.map((item) => {
+      return {
+        id: item.code,
+        name: item.name,
+        startDate: item.start_date,
+        endDate: item.end_date,
+        isActive: item.is_active,
       };
     });
   }
