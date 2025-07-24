@@ -135,7 +135,7 @@
     transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: #f8fafc;
+      background-color: var(--pr-color-primary-25);
     }
 
     &.p-highlight {

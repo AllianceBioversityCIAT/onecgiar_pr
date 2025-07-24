@@ -20,7 +20,7 @@
     $edit-color: #37db68;
     $cancel-color: #f75252;
     $delete-color: #f75252;
-    $save-color: #5286f7;
+    $save-color: var(--pr-color-primary-300);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -74,7 +74,7 @@
       }
     }
 
-    $disabled-color: #b8b8b8;
+    $disabled-color: var(--pr-color-accents-3);
 
     &.disabled {
       border-color: $disabled-color !important;

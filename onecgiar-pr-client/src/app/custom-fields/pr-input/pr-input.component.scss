@@ -12,7 +12,7 @@ input[type='number'] {
 
 .pr-input.readOnly {
   padding: 8px 10px;
-  box-shadow: 0px 0px 10px -1px #dcdcdc;
+  box-shadow: 0px 0px 10px -1px var(--pr-color-neutral-1000);
   border-radius: 5px;
 }
 

@@ -68,7 +68,7 @@
       }
 
       &.close {
-        background-color: #dcdcdc;
+        background-color: var(--pr-color-neutral-1000);
         color: #7b7a7a;
 
         .tag {

@@ -24,7 +24,7 @@
     h1 {
       font-size: 24px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--pr-color-primary-700);
       margin: 0;
     }
   }
@@ -68,7 +68,7 @@
           font-size: 14px;
           font-weight: 500;
           margin-bottom: 3px;
-          color: #374151;
+          color: var(--pr-color-secondary-400);
         }
 
         .p-input-icon-left {
@@ -93,7 +93,7 @@
         .clear-spacer {
           font-size: 14px;
           font-weight: 500;
-          color: #374151;
+          color: var(--pr-color-secondary-400);
           height: 20px;
         }
       }
@@ -148,12 +148,12 @@
 // Custom table styles
 ::ng-deep .user-table {
   .p-datatable-header {
-    background: #f8fafc;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--pr-color-primary-25);
+    border-bottom: 1px solid var(--pr-color-accents-2);
   }
 
   .p-datatable-thead > tr > th {
-    background: #374151 !important;
+    background: var(--pr-color-secondary-400) !important;
     color: white !important;
     font-weight: 600;
     font-size: 14px;
@@ -183,14 +183,14 @@
     transition: background-color 0.2s ease;
 
     &:hover {
-      background-color: #f9fafb !important;
+      background-color: var(--pr-color-primary-25) !important;
     }
 
     > td {
       padding: 8px 16px;
-      border-bottom: 1px solid #f3f4f6;
+      border-bottom: 1px solid var(--pr-color-primary-50);
       font-size: 14px;
-      color: #374151;
+      color: var(--pr-color-secondary-400);
       vertical-align: middle;
 
       &:nth-child(3),
@@ -309,7 +309,7 @@
 /* Add User Modal Styles */
 ::ng-deep .add-user-modal {
   .p-dialog-header {
-    background-color: #1f2937;
+    background-color: var(--pr-color-primary-700);
     color: white;
     padding: 20px 24px;
     border-radius: 8px 8px 0 0;
@@ -356,7 +356,7 @@
     .field-label {
       display: block;
       font-weight: 500;
-      color: #374151;
+      color: var(--pr-color-secondary-400);
       margin-bottom: 8px;
       font-size: 14px;
 
@@ -390,9 +390,9 @@
       align-items: center;
       cursor: pointer;
       padding: 8px 20px;
-      border: 2px solid #d1d5db;
+      border: 2px solid var(--pr-color-neutral-1000);
       background-color: white;
-      color: #374151;
+      color: var(--pr-color-secondary-400);
       border-radius: 6px;
       font-size: 14px;
       font-weight: 500;
@@ -400,8 +400,8 @@
       position: relative;
 
       &:hover {
-        border-color: #6366f1;
-        background-color: #f8fafc;
+        border-color: var(--pr-color-primary-300);
+        background-color: var(--pr-color-primary-25);
       }
 
       .radio-input {
@@ -424,8 +424,8 @@
 
       // When radio is checked, style the container
       &:has(.radio-input:checked) {
-        border-color: #6366f1;
-        background-color: #6366f1;
+        border-color: var(--pr-color-primary-300);
+        background-color: var(--pr-color-primary-300);
         color: white;
       }
     }
@@ -434,34 +434,34 @@
   .form-input {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--pr-color-neutral-1000);
     border-radius: 6px;
     font-size: 14px;
     transition: border-color 0.2s ease;
 
     &:focus {
       outline: none;
-      border-color: #6366f1;
+      border-color: var(--pr-color-primary-300);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
 
     &::placeholder {
-      color: #9ca3af;
+      color: var(--pr-color-secondary-100);
     }
   }
 
   .selected-user {
     padding: 10px 12px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background-color: var(--pr-color-primary-50);
+    border: 1px solid var(--pr-color-neutral-1000);
     border-radius: 6px;
-    color: #374151;
+    color: var(--pr-color-secondary-400);
     font-size: 14px;
   }
 
   .selected-user-display {
     padding: 12px 16px;
-    background-color: #f8fafc;
+    background-color: var(--pr-color-primary-25);
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     color: var(--pr-color-accents-7);
@@ -474,8 +474,8 @@
 
   .created-by {
     padding: 10px 12px;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background-color: var(--pr-color-primary-25);
+    border: 1px solid var(--pr-color-accents-2);
     border-radius: 6px;
     color: #6b7280;
     font-size: 14px;
@@ -484,17 +484,17 @@
 
 .modal-footer {
   padding: 20px 24px;
-  background-color: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  background-color: var(--pr-color-primary-25);
+  border-top: 1px solid var(--pr-color-accents-2);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 
   .cancel-btn {
     padding: 10px 20px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--pr-color-neutral-1000);
     background-color: white;
-    color: #374151;
+    color: var(--pr-color-secondary-400);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -502,15 +502,15 @@
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: #f3f4f6;
-      border-color: #9ca3af;
+      background-color: var(--pr-color-primary-50);
+      border-color: var(--pr-color-secondary-100);
     }
   }
 
   .save-btn {
     padding: 10px 20px;
-    border: 1px solid #6366f1;
-    background-color: #6366f1;
+    border: 1px solid var(--pr-color-primary-300);
+    background-color: var(--pr-color-primary-300);
     color: white;
     border-radius: 6px;
     cursor: pointer;
@@ -524,8 +524,8 @@
     }
 
     &:disabled {
-      background-color: #9ca3af;
-      border-color: #9ca3af;
+      background-color: var(--pr-color-secondary-100);
+      border-color: var(--pr-color-secondary-100);
       cursor: not-allowed;
       opacity: 0.6;
     }

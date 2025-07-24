@@ -35,7 +35,7 @@ ul {
   background-color: #fff;
   border-top-right-radius: 10px;
   border-bottom-right-radius: 10px;
-  border: 1px solid #b9b9b9;
+  border: 1px solid var(--pr-color-accents-3);
 }
 
 .progress_right_item:last-child {
@@ -44,7 +44,7 @@ ul {
 
 .progress_right_item {
   padding: 15px;
-  border-bottom: 1px solid #b9b9b9;
+  border-bottom: 1px solid var(--pr-color-accents-3);
 }
 
 .progress_right_item_title {
@@ -130,7 +130,7 @@ ul {
 }
 
 .indicator_info_item:not(:last-child) {
-  border-right: 1px solid #b9b9b9;
+  border-right: 1px solid var(--pr-color-accents-3);
 
   @media screen and (max-width: 1122px) {
     border-right: none;
@@ -139,7 +139,7 @@ ul {
 
 .indicator_info_item:nth-child(3) {
   @media screen and (max-width: 1422px) {
-    border-right: 1px solid #b9b9b9;
+    border-right: 1px solid var(--pr-color-accents-3);
   }
 
   @media screen and (max-width: 1122px) {

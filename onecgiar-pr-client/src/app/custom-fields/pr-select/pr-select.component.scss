@@ -45,13 +45,13 @@
   font-weight: 600;
   cursor: none;
   pointer-events: none;
-  border-top: 1px solid #adadad;
-  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  border-top: 1px solid var(--pr-color-accents-3);
+  box-shadow: 0px 0px 14px 0px var(--pr-color-neutral-1000);
   box-sizing: border-box;
 }
 
 .select-disable {
-  background-color: rgb(245, 245, 245) !important;
+  background-color: var(--pr-color-accents-1) !important;
   cursor: not-allowed;
 
   .text {
@@ -70,7 +70,7 @@
 
 .pr-field .read-only {
   padding: 8px 10px;
-  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  box-shadow: 0px 0px 14px 0px var(--pr-color-neutral-1000);
   border-radius: 5px;
 }
 

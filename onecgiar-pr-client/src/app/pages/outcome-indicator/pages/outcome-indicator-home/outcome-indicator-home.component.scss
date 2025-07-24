@@ -32,7 +32,7 @@ p {
     text-decoration: underline;
 
     &:hover {
-      color: #26337c;
+      color: var(--pr-color-primary-600);
       text-decoration: underline;
       cursor: pointer;
       transition: color 0.3s;
@@ -56,9 +56,9 @@ p {
       justify-content: center;
       gap: 1.2rem;
       width: 100%;
-      background-color: #f3f5ff;
+      background-color: var(--pr-color-primary-25);
       padding: 1.2rem 2rem;
-      border: 1px solid #8a94ce;
+      border: 1px solid var(--pr-color-secondary-100);
       border-radius: 6px;
       box-shadow: 4px 4px 4px 0px #00000040;
       transition: background-color 0.3s;
@@ -83,6 +83,6 @@ p {
   opacity: 0.8;
 
   &:hover {
-    background-color: #f3f5ff !important;
+    background-color: var(--pr-color-primary-25) !important;
   }
 }

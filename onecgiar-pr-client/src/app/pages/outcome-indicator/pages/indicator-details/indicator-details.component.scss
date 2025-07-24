@@ -17,7 +17,7 @@ p {
   cursor: pointer;
 
   &:hover {
-    color: #3a4792;
+    color: var(--pr-color-primary-400);
   }
 
   .indicator_header_title {
@@ -55,8 +55,8 @@ p {
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.2rem;
-    background-color: #f3f5ff;
-    border: 1px solid #a4afee;
+    background-color: var(--pr-color-primary-25);
+    border: 1px solid var(--pr-color-primary-100);
     border-radius: 5px;
 
     .indicator_info_item_header {

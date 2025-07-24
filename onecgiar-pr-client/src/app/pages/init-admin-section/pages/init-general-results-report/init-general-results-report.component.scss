@@ -15,11 +15,11 @@
     gap: 10px;
 
     .all {
-      border: 2px solid #6e6e6e !important;
-      color: #6e6e6e !important;
+      border: 2px solid var(--pr-color-accents-5) !important;
+      color: var(--pr-color-accents-5) !important;
 
       &.active {
-        background-color: #6e6e6e;
+        background-color: var(--pr-color-accents-5);
         color: white !important;
       }
     }
@@ -45,11 +45,11 @@
     }
 
     .year {
-      border: 2px solid #6e6e6e !important;
-      color: #6e6e6e !important;
+      border: 2px solid var(--pr-color-accents-5) !important;
+      color: var(--pr-color-accents-5) !important;
 
       &.active {
-        background-color: #6e6e6e;
+        background-color: var(--pr-color-accents-5);
         color: white !important;
       }
     }

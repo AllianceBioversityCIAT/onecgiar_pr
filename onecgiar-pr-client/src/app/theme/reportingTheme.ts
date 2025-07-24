@@ -7,7 +7,7 @@ export const reportingTheme = definePreset(Aura, {
       50: '#e6eafe',
       100: '#c6cdf4',
       200: '#8e9be8',
-      300: 'var(--pr-color-primary-300)', // Main custom Color
+      300: '#5569dd', // Main custom Color
       400: '#273ec5',
       500: '#1c2c8a',
       600: '#18246d',

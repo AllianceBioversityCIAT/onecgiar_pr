@@ -21,7 +21,7 @@
 }
 
 .p-radiobutton .p-radiobutton-box:not(.p-disabled):not(.p-highlight) {
-  border-color: #d4d4d8 !important;
+  border-color: var(--pr-color-neutral-1000) !important;
 }
 
 .p-radiobutton-icon {
@@ -34,7 +34,7 @@
 }
 
 .p-checkbox .p-checkbox-box:not(.p-disabled):not(.p-highlight) {
-  border-color: #d4d4d8 !important;
+  border-color: var(--pr-color-neutral-1000) !important;
 }
 
 .support_information .p-dialog .p-dialog-content {
