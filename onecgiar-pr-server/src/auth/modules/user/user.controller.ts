@@ -26,6 +26,7 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
+import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
@@ -131,6 +132,7 @@ export class UserController {
     createFullUserDto: CreateUserDto,
     @DecodedUser() user: TokenDto,
   ) {
+    console.log('currentUser:', user);
     return this.userService.createFull(createFullUserDto, user);
   }
 
@@ -326,4 +328,44 @@ export class UserController {
   async lastPopUpViewed(@Param('userId') userId: number) {
     return this.userService.lastPopUpViewed(userId);
   }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Activate or deactivate a user',
+    description:
+      'Allows an Admin to activate or deactivate a user. CGIAR users retain the Guest role when deactivated. External users lose access and are marked as inactive. Activation requires assigning an entity and role.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        activate: {
+          type: 'boolean',
+          example: false,
+          description: 'Whether to activate (true) or deactivate (false) the user',
+        },
+      },
+      required: ['activate'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User status updated successfully (activated or deactivated)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request (e.g., activation without entity/role, or invalid transition)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async changeUserStatus(
+    @DecodedUser() currentUser: TokenDto,
+    @Param('id') userId: number,
+    @Body() changeStatusDto: ChangeUserStatusDto,
+  ){
+    console.log('currentUser:', currentUser);
+    return this.userService.updateUserStatus(userId, changeStatusDto, currentUser);
+  }  
 }
