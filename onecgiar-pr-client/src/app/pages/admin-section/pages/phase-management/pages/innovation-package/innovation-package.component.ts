@@ -19,6 +19,7 @@ export class InnovationPackageComponent implements OnInit {
     { title: 'Reporting year', attr: 'phase_year' },
     { title: 'Results phase', attr: 'reporting_phase' },
     { title: 'Toc phase', attr: 'toc_pahse_id' },
+    { title: 'Portfolio', attr: 'portfolio_id' },
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
     { title: 'Status', attr: 'status' },
@@ -30,6 +31,7 @@ export class InnovationPackageComponent implements OnInit {
   tocPhaseList = [];
   resultYearsList = [];
   reportingPhasesList: any[] = [];
+  portfolioList: any[] = []; // Nueva lista de portfolios
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
   @ViewChild('dt') table: Table;
@@ -51,6 +53,7 @@ export class InnovationPackageComponent implements OnInit {
     this.getTocPhases();
     this.get_resultYears();
     this.getReportingPhases();
+    this.getPortfolios();
     this.api.dataControlSE.getCurrentIPSRPhase();
   }
 
@@ -67,6 +70,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.status_ts = phaseItem.status;
     phaseItem.previous_phase_ts = phaseItem.previous_phase;
     phaseItem.reporting_phase_ts = phaseItem.reporting_phase;
+    phaseItem.portfolio_id_ts = phaseItem.portfolio_id;
   }
 
   updateMainVariables(phaseItem) {
@@ -78,6 +82,7 @@ export class InnovationPackageComponent implements OnInit {
     phaseItem.status = phaseItem.status_ts;
     phaseItem.previous_phase = phaseItem.previous_phase_ts;
     phaseItem.reporting_phase = phaseItem.reporting_phase_ts;
+    phaseItem.portfolio_id = phaseItem.portfolio_id_ts;
   }
 
   getMandatoryIncompleteFields(phaseItem): string {
@@ -88,7 +93,14 @@ export class InnovationPackageComponent implements OnInit {
     if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
     if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
     if (!phaseItem.reporting_phase_ts) text += '<strong> Reporting phase </strong>is required to create <br>';
+    if (!phaseItem.portfolio_id_ts) text += '<strong> Portfolio </strong> is required to create <br>';
     return text;
+  }
+
+  getPortfolios() {
+    this.resultsSE.GET_portfolioList().subscribe((response) => {
+      this.portfolioList = response;
+    });
   }
 
   get_resultYears() {

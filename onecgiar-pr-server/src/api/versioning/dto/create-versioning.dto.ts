@@ -7,4 +7,5 @@ export class CreateVersioningDto {
   public previous_phase: number;
   public app_module_id: number;
   public reporting_phase: number;
+  public portfolio_id: number;
 }

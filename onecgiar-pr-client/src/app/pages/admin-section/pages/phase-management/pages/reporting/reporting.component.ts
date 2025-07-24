@@ -17,6 +17,7 @@ export class ReportingComponent implements OnInit {
     { title: '#', attr: 'id' },
     { title: 'Name', attr: 'phase_name' },
     { title: 'Reporting year', attr: 'phase_year' },
+    { title: 'Portfolio', attr: 'portfolio_id' },
     { title: 'Toc phase', attr: 'toc_pahse_id' },
     { title: 'Start date', attr: 'start_date' },
     { title: 'End date', attr: 'end_date' },
@@ -26,6 +27,7 @@ export class ReportingComponent implements OnInit {
 
   phaseList: any[] = [];
   previousPhaseList: any[] = [];
+  portfolioList = [];
   tocPhaseList = [];
   resultYearsList = [];
   textToFind = '';
@@ -42,12 +44,18 @@ export class ReportingComponent implements OnInit {
     }
   ];
 
-  constructor(public api: ApiService, public resultsSE: ResultsApiService, private readonly customizedAlertsFeSE: CustomizedAlertsFeService, public phasesService: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    public resultsSE: ResultsApiService,
+    private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
+    public phasesService: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.getAllPhases();
     this.getTocPhases();
     this.get_resultYears();
+    this.getPortfolios();
     this.api.dataControlSE.getCurrentPhases();
   }
 
@@ -58,6 +66,7 @@ export class ReportingComponent implements OnInit {
   updateVariablesToSave(phaseItem) {
     phaseItem.phase_name_ts = phaseItem.phase_name;
     phaseItem.phase_year_ts = phaseItem.phase_year;
+    phaseItem.portfolio_id_ts = phaseItem.portfolio_id;
     phaseItem.toc_pahse_id_ts = phaseItem.toc_pahse_id;
     phaseItem.start_date_ts = phaseItem.start_date;
     phaseItem.end_date_ts = phaseItem.end_date;
@@ -67,6 +76,7 @@ export class ReportingComponent implements OnInit {
 
   updateMainVariables(phaseItem) {
     phaseItem.phase_name = phaseItem.phase_name_ts;
+    phaseItem.portfolio_id = phaseItem.portfolio_id_ts;
     phaseItem.phase_year = phaseItem.phase_year_ts;
     phaseItem.toc_pahse_id = phaseItem.toc_pahse_id_ts;
     phaseItem.start_date = phaseItem.start_date_ts;
@@ -82,7 +92,14 @@ export class ReportingComponent implements OnInit {
     if (!phaseItem.toc_pahse_id_ts) text += '<strong> Toc phase </strong> is required to create <br>';
     if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
     if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
+    if (!phaseItem.portfolio_id_ts) text += '<strong> Portfolio </strong> is required to create <br>';
     return text;
+  }
+
+  getPortfolios() {
+    this.resultsSE.GET_portfolioList().subscribe(response => {
+      this.portfolioList = response;
+    });
   }
 
   get_resultYears() {
@@ -143,21 +160,42 @@ export class ReportingComponent implements OnInit {
       },
       error: err => {
         console.error(err);
-        this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Create phase', description: err?.error?.message, status: 'error', closeIn: 500 });
+        this.customizedAlertsFeSE.show({
+          id: 'manage-error',
+          title: 'Create phase',
+          description: err?.error?.message,
+          status: 'error',
+          closeIn: 500
+        });
       }
     });
   }
 
   deletePhase({ id }) {
-    this.customizedAlertsFeSE.show({ id: 'manage-phase', title: 'Delete phase', description: 'Are you sure you want to delete the current phase?', status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.resultsSE.DELETE_updatePhase(id).subscribe({
-        next: () => this.getAllPhases(),
-        error: err => {
-          console.error(err);
-          this.customizedAlertsFeSE.show({ id: 'manage-error', title: 'Delete phase', description: err?.error?.message, status: 'error', closeIn: 500 });
-        }
-      });
-    });
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'manage-phase',
+        title: 'Delete phase',
+        description: 'Are you sure you want to delete the current phase?',
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.resultsSE.DELETE_updatePhase(id).subscribe({
+          next: () => this.getAllPhases(),
+          error: err => {
+            console.error(err);
+            this.customizedAlertsFeSE.show({
+              id: 'manage-error',
+              title: 'Delete phase',
+              description: err?.error?.message,
+              status: 'error',
+              closeIn: 500
+            });
+          }
+        });
+      }
+    );
   }
 
   getTocPhaseName(toc_pahse_id) {
