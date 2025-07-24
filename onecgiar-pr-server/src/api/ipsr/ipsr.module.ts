@@ -24,6 +24,7 @@ import { ResultsInnovationPackagesValidationModuleModule } from './results-innov
 import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { AdUsersModule } from '../ad_users';
 
 @Module({
   controllers: [IpsrController],
@@ -48,6 +49,7 @@ import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-i
     ResultsInnovationPackagesValidationModuleModule,
     AssessedDuringExpertWorkshopModule,
     forwardRef(() => ResultsInvestmentDiscontinuedOptionsModule),
+    AdUsersModule,
   ],
   exports: [IpsrRepository, IpsrService],
 })
