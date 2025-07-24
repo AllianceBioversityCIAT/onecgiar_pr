@@ -60,6 +60,9 @@ export class UserModule implements NestModule {
         path: '/auth/user/create',
         method: RequestMethod.POST,
       },
+      { path: '/auth/user/:id/status',
+        method: RequestMethod.PATCH 
+      },
     );
   }
 }

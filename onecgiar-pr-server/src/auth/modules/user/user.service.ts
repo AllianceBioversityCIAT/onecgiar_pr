@@ -25,10 +25,11 @@ import { EmailTemplate } from '../../../shared/microservices/email-notification-
 import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 
 @Injectable()
 export class UserService {
-  private readonly cgiarRegex: RegExp = /@cgiar\.org/gi;
+  private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
     @InjectRepository(User)
@@ -71,7 +72,8 @@ export class UserService {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
         await this.handleNonCgiarUser(createUserDto);
-        shouldSendConfirmationEmail = await this.registerInCognitoIfNeeded(createUserDto);
+        shouldSendConfirmationEmail =
+          await this.registerInCognitoIfNeeded(createUserDto);
       }
 
       const savedUser = await this.saveUserToDB(createUserDto, token);
@@ -96,11 +98,17 @@ export class UserService {
     }
   }
 
-  private async handleCgiarUser(createUserDto: CreateUserDto): Promise<boolean> {
-    const userFromAD = await this.activeDirectoryService.getUserDetails(createUserDto.email);
+  private async handleCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<boolean> {
+    const userFromAD = await this.activeDirectoryService.getUserDetails(
+      createUserDto.email,
+    );
 
     if (!userFromAD) {
-      throw new NotFoundException('No information was found for this CGIAR user.');
+      throw new NotFoundException(
+        'No information was found for this CGIAR user.',
+      );
     }
 
     if (!this.cgiarRegex.test(createUserDto.email)) {
@@ -121,7 +129,9 @@ export class UserService {
     return true;
   }
 
-  private async  handleNonCgiarUser(createUserDto: CreateUserDto): Promise<void> {
+  private async handleNonCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<void> {
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -131,9 +141,8 @@ export class UserService {
   }
 
   private async registerInCognitoIfNeeded(
-    createUserDto: CreateUserDto
+    createUserDto: CreateUserDto,
   ): Promise<boolean> {
-
     const templateDB = await this._templateRepository.findOne({
       where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
     });
@@ -563,6 +572,156 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async updateUserStatus(
+    userEmail: string,
+    dto: ChangeUserStatusDto,
+    token: TokenDto,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    const user = await this.findUserWithRelations(userEmail);
+    const currentUser = await this._userRepository.findOne({
+      where: { id: token.id },
+    });
+
+    if (dto.activate) {
+      if (user.active) {
+        return {
+          response: { id: user.id, email: user.email },
+          message: 'User is already active',
+          status: HttpStatus.OK,
+        };
+      }
+      return this.activateUser(user, dto, currentUser);
+    } else {
+      if (!user.active) {
+        return {
+          response: { id: user.id, email: user.email },
+          message: 'User is already deactivated',
+          status: HttpStatus.OK,
+        };
+      }
+      if (user.is_cgiar) {
+        return this.deactivateCgiarUser(user, currentUser);
+      } else {
+        return this.deactivateExternalUser(user, currentUser);
+      }
+    }
+  }
+
+  private async findUserWithRelations(userEmail: string): Promise<User> {
+    const user = await this._userRepository.findOne({
+      where: { email: userEmail },
+      relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  private async activateUser(
+    user: User,
+    dto: ChangeUserStatusDto,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    if (user.is_cgiar) {
+      throw new BadRequestException(
+        'CGIAR users cannot be reactivated this way',
+      );
+    }
+
+    if (dto.activate) {
+      try {
+        if (!dto.entity || !dto.role_entity) {
+          throw new BadRequestException(
+            'To activate a user, you must provide entity and at least one role',
+          );
+        }
+
+        user.active = true;
+        const newUser = await this._userRepository.save(user);
+
+        const roleAssignments = [];
+
+        if (dto.role_entity?.length) {
+          for (const roleId of dto.role_entity) {
+            roleAssignments.push({
+              user: newUser.id,
+              role: roleId,
+              created_by: currentUser.id,
+              initiative_id: Number(dto.entity),
+              last_updated_by: currentUser.id,
+            });
+          }
+        }
+
+        if (dto.role_platform) {
+          roleAssignments.push({
+            user: newUser.id,
+            role: dto.role_platform,
+            created_by: currentUser.id,
+            last_updated_by: currentUser.id,
+          });
+        }
+
+        console.log('Role assignments:', roleAssignments);
+        await this._roleByUserRepository.save(roleAssignments);
+      } catch (error) {
+        return this._handlersError.returnErrorRes({ error });
+      }
+
+      return {
+        response: { id: user.id, email: user.email },
+        message: 'External user activated successfully',
+        status: HttpStatus.OK,
+      };
+    }
+  }
+
+  private async deactivateCgiarUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    const guestRole = 2; //2 is the ID for the Guest role
+
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    await this._roleByUserRepository.save({
+      user: user.id,
+      role: guestRole,
+      active: true,
+    });
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'User deactivated successfully',
+      status: HttpStatus.OK,
+    };
+  }
+
+  private async deactivateExternalUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    user.active = false;
+    await this._userRepository.save(user);
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'External user deactivated successfully',
+      status: HttpStatus.OK,
+    };
   }
 
   /**
