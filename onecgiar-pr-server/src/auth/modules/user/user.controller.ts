@@ -342,7 +342,8 @@ export class UserController {
         activate: {
           type: 'boolean',
           example: false,
-          description: 'Whether to activate (true) or deactivate (false) the user',
+          description:
+            'Whether to activate (true) or deactivate (false) the user',
         },
       },
       required: ['activate'],
@@ -354,7 +355,8 @@ export class UserController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request (e.g., activation without entity/role, or invalid transition)',
+    description:
+      'Bad request (e.g., activation without entity/role, or invalid transition)',
   })
   @ApiResponse({
     status: 404,
@@ -362,10 +364,14 @@ export class UserController {
   })
   async changeUserStatus(
     @DecodedUser() currentUser: TokenDto,
-    @Param('id') userId: number,
+    @Param('email') userEmail: string,
     @Body() changeStatusDto: ChangeUserStatusDto,
-  ){
+  ) {
     console.log('currentUser:', currentUser);
-    return this.userService.updateUserStatus(userId, changeStatusDto, currentUser);
-  }  
+    return this.userService.updateUserStatus(
+      userEmail,
+      changeStatusDto,
+      currentUser,
+    );
+  }
 }
