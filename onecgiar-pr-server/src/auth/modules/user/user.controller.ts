@@ -329,24 +329,51 @@ export class UserController {
     return this.userService.lastPopUpViewed(userId);
   }
 
-  @Patch(':id/status')
+  @Patch('change/status')
   @ApiOperation({
     summary: 'Activate or deactivate a user',
     description:
       'Allows an Admin to activate or deactivate a user. CGIAR users retain the Guest role when deactivated. External users lose access and are marked as inactive. Activation requires assigning an entity and role.',
   })
   @ApiBody({
+    description: 'Payload to activate or deactivate a user',
     schema: {
       type: 'object',
       properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'usuario@ejemplo.com',
+          description: 'Email of the user to be updated',
+        },
         activate: {
           type: 'boolean',
-          example: false,
+          example: true,
           description:
             'Whether to activate (true) or deactivate (false) the user',
         },
+        entityRoles: {
+          type: 'array',
+          description: 'List of entity-role assignments',
+          items: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'number',
+                example: 1,
+                description: 'Entity (initiative) ID',
+              },
+              role_id: {
+                type: 'number',
+                example: 2,
+                description: 'Role ID to assign within the entity',
+              },
+            },
+            required: ['id', 'role_id'],
+          },
+        },
       },
-      required: ['activate'],
+      required: ['email', 'activate'],
     },
   })
   @ApiResponse({
@@ -364,12 +391,10 @@ export class UserController {
   })
   async changeUserStatus(
     @DecodedUser() currentUser: TokenDto,
-    @Param('email') userEmail: string,
     @Body() changeStatusDto: ChangeUserStatusDto,
   ) {
-    console.log('currentUser:', currentUser);
     return this.userService.updateUserStatus(
-      userEmail,
+      changeStatusDto.email,
       changeStatusDto,
       currentUser,
     );

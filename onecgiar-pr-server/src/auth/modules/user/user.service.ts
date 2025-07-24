@@ -579,7 +579,13 @@ export class UserService {
     dto: ChangeUserStatusDto,
     token: TokenDto,
   ): Promise<returnErrorDto | returnFormatUser> {
-    const user = await this.findUserWithRelations(userEmail);
+    const cleanEmail = userEmail?.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      throw new BadRequestException('Invalid or missing email');
+    }
+
+    const user = await this.findUserWithRelations(cleanEmail);
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
@@ -610,12 +616,14 @@ export class UserService {
   }
 
   private async findUserWithRelations(userEmail: string): Promise<User> {
+    const cleanEmail = userEmail.trim().toLowerCase();
+
     const user = await this._userRepository.findOne({
-      where: { email: userEmail },
+      where: { email: cleanEmail },
       relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
     });
 
-    if (!user) {
+    if (!user || !user.email) {
       throw new NotFoundException('User not found');
     }
 
@@ -635,9 +643,9 @@ export class UserService {
 
     if (dto.activate) {
       try {
-        if (!dto.entity || !dto.role_entity) {
+        if (!dto.entityRoles?.length && !dto.role_platform) {
           throw new BadRequestException(
-            'To activate a user, you must provide entity and at least one role',
+            'To activate a user, you must provide at least one entity-role pair or a platform role',
           );
         }
 
@@ -646,13 +654,13 @@ export class UserService {
 
         const roleAssignments = [];
 
-        if (dto.role_entity?.length) {
-          for (const roleId of dto.role_entity) {
+        if (dto.entityRoles?.length) {
+          for (const item of dto.entityRoles) {
             roleAssignments.push({
               user: newUser.id,
-              role: roleId,
+              role: item.role_id,
+              initiative_id: item.id,
               created_by: currentUser.id,
-              initiative_id: Number(dto.entity),
               last_updated_by: currentUser.id,
             });
           }
@@ -667,7 +675,6 @@ export class UserService {
           });
         }
 
-        console.log('Role assignments:', roleAssignments);
         await this._roleByUserRepository.save(roleAssignments);
       } catch (error) {
         return this._handlersError.returnErrorRes({ error });
