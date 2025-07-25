@@ -94,11 +94,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
       next: res => {
         res.response.map(user => {
+          user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
           user.isActive = user.userStatus === 'Active';
           user.isCGIAR = user.cgIAR === 'Yes';
         });
         this.users.set(res.response);
-        console.log(this.users());
         this.loading.set(false);
       },
       error: error => {
@@ -185,7 +185,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Status filter options
   statusOptions: StatusOption[] = [
     { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' }
+    { label: 'Inactive', value: 'Inactive' },
+    { label: 'Read Only', value: 'Read Only' }
   ];
 
   isCGIAROptions: CgiarOption[] = [
@@ -201,12 +202,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onExportData(): void {}
 
   onShowInfo(): void {}
-
-  // Method to get status CSS class
-  getStatusClass(status: string): string {
-    return status === 'Active' ? 'status-active' : 'status-inactive';
-  }
-
   // Modal event handlers
   onUserCreated(): void {
     this.getUsers(); // Refresh users list when a user is created
@@ -217,17 +212,19 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     // TODO: Implement edit user functionality
   }
 
-  onToggleUserStatus(user): void {
+  onToggleUserStatus(user) {
     // TODO: Implement toggle user status functionality
     console.log(user);
-    // this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: !user.isActive, entityRoles: [] }).subscribe({
-    //   next: res => {
-    //     this.getUsers();
-    //   },
-    //   error: error => {
-    //     console.log(error);
-    //   }
-    // });
-    this.getUsers();
+    if (!user.isActive) return (this.showAddUserModal = true);
+
+    this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
+      next: res => {
+        this.getUsers();
+      },
+      error: error => {
+        console.log(error);
+      }
+    });
+    return {};
   }
 }

@@ -117,7 +117,7 @@
           <td>{{ user.cgIAR }}</td>
           <td>{{ user.userCreationDate | date: 'yyyy-MM-dd' }}</td>
           <td>
-            <span [class]="getStatusClass(user.userStatus)">
+            <span [class]="'status-' + user.userStatusClass">
               {{ user.userStatus }}
             </span>
           </td>

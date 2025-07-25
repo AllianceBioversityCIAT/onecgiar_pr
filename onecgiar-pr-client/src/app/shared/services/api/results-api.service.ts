@@ -1121,7 +1121,7 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '') {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);

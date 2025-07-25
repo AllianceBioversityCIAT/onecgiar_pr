@@ -232,6 +232,17 @@
   letter-spacing: 0.05em;
 }
 
+.status-read-only {
+  color: #6b7280;
+  font-weight: 500;
+  padding: 4px 8px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 // Center pagination globally for this component
 ::ng-deep {
   .user-table .p-paginator {
