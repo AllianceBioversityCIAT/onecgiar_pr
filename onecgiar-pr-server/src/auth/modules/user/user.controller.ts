@@ -182,7 +182,11 @@ export class UserController {
   })
   @ApiQuery({ name: 'user', required: false, type: String })
   @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
-  @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['Active', 'Inactive', 'Read Only'],
+  })
   @ApiResponse({
     status: 200,
     description:
@@ -205,7 +209,7 @@ export class UserController {
   async searchUsers(
     @Query('user') user?: string,
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
-    @Query('status') status?: 'Active' | 'Inactive',
+    @Query('status') status?: 'Active' | 'Inactive' | 'Read Only',
   ) {
     const result = await this.userService.searchUsers({ user, cgIAR, status });
 
