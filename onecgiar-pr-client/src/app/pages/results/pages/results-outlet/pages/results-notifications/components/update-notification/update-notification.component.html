@@ -24,7 +24,7 @@
 
   @if (notification?.notification_level === 2) {
     <div class="update_notification_read" (click)="this.resultsNotificationSE.readUpdatesNotifications(notification)">
-      <i class="material-icons-outlined" style="font-size: 18px; color: #fff">
+      <i class="material-icons-outlined" style="font-size: 18px; color: var(--pr-color-white)">
         {{ notification?.read ? 'mail' : 'drafts' }}
       </i>
     </div>
@@ -49,7 +49,7 @@
           The result
         }
 
-        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 

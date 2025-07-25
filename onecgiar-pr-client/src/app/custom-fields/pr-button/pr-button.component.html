@@ -31,5 +31,7 @@
 
   <div
     class="filter"
-    [ngStyle]="this.showBackground ? { background: 'linear-gradient(20deg, #ffffff4d 0%, ' + generateColor() + ' 85%)' } : {}"></div>
+    [ngStyle]="
+      this.showBackground ? { background: 'linear-gradient(20deg, rgba(var(--pr-color-white-rgb), 0.3) 0%, ' + generateColor() + ' 85%)' } : {}
+    "></div>
 </div>

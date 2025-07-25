@@ -88,7 +88,7 @@ p {
   right: 0;
   z-index: 1000;
   padding: 8px 1.2rem;
-  color: #fff;
+  color: var(--pr-color-white);
   background-color: var(--pr-color-primary-300);
   border-top-right-radius: 10px;
   border-bottom-left-radius: 10px;
@@ -98,7 +98,7 @@ p {
 
 ::ng-deep .p-button {
   background-color: var(--pr-color-primary-300);
-  color: #fff;
+  color: var(--pr-color-white);
   border: none;
   box-shadow: none;
 }
@@ -115,7 +115,7 @@ p {
   margin-right: 7.5vw;
   margin-bottom: 50px;
   z-index: 100;
-  background-color: #fff;
+  background-color: var(--pr-color-white);
   border-radius: 5px;
   padding: 0.5rem;
 }

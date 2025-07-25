@@ -25,7 +25,7 @@
 
   .modal_close_icon {
     cursor: pointer;
-    color: #fff;
+    color: var(--pr-color-white);
   }
 }
 
@@ -45,7 +45,7 @@
 
   .target_info_item {
     margin: 0;
-    color: #000;
+    color: var(--pr-color-black);
     font-size: 13px;
     font-weight: 400;
 
@@ -57,7 +57,7 @@
 
 .target_info_content_title {
   font-size: 16px;
-  color: #000;
+  color: var(--pr-color-black);
   font-weight: 600;
   margin-top: 20px;
 }
@@ -81,7 +81,7 @@
 .overall_progress_result {
   font-size: 16px;
   font-weight: 400;
-  color: #000;
+  color: var(--pr-color-black);
   margin-top: 20px;
   margin-bottom: 10px;
 }
