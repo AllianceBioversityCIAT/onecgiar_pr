@@ -302,7 +302,9 @@ describe('UserService', () => {
         .spyOn(Handlebars, 'compile')
         .mockReturnValue(() => '<p>template</p>');
 
-      (awsCognitoService.createUser as jest.Mock).mockRejectedValue(new Error('Cognito error'));
+      (awsCognitoService.createUser as jest.Mock).mockRejectedValue(
+        new Error('Cognito error'),
+      );
 
       const result = await service.createFull(dto as any, mockTokenDto);
 
@@ -641,15 +643,18 @@ describe('UserService', () => {
   });
 
   const createQueryBuilderMock = () => {
-    const mock = {
+    return {
       select: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
       orWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      having: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       getRawMany: jest.fn(),
     };
-    return mock;
   };
 
   describe('searchUsers', () => {
@@ -657,7 +662,7 @@ describe('UserService', () => {
       const filters: {
         user?: string;
         cgIAR?: 'Yes' | 'No';
-        status?: 'Active' | 'Inactive';
+        status?: 'Active' | 'Inactive' | 'Read Only';
       } = {
         user: 'Test',
         cgIAR: 'Yes',
