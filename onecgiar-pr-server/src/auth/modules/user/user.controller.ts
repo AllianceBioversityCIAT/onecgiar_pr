@@ -10,6 +10,7 @@ import {
   ValidationPipe,
   BadRequestException,
   HttpStatus,
+  ParseArrayPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -187,6 +188,13 @@ export class UserController {
     required: false,
     enum: ['Active', 'Inactive', 'Read Only'],
   })
+  @ApiQuery({
+    name: 'entityIds',
+    required: false,
+    type: [Number],
+    description: 'One or more entity IDs to filter users by',
+    isArray: true,
+  })
   @ApiResponse({
     status: 200,
     description:
@@ -201,6 +209,7 @@ export class UserController {
             cgIAR: 'Yes',
             userStatus: 'Active',
             userCreationDate: '2024-05-10T14:33:00.000Z',
+            entities: 'Entity A, Entity B',
           },
         ],
       },
@@ -210,8 +219,15 @@ export class UserController {
     @Query('user') user?: string,
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
     @Query('status') status?: 'Active' | 'Inactive' | 'Read Only',
+    @Query('entityIds', new ParseArrayPipe({ items: Number, optional: true }))
+    entityIds?: number[],
   ) {
-    const result = await this.userService.searchUsers({ user, cgIAR, status });
+    const result = await this.userService.searchUsers({
+      user,
+      cgIAR,
+      status,
+      entityIds,
+    });
 
     if (result.response.length === 0) {
       return {
