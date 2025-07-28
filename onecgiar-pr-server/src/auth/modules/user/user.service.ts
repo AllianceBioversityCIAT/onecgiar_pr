@@ -25,10 +25,11 @@ import { EmailTemplate } from '../../../shared/microservices/email-notification-
 import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 
 @Injectable()
 export class UserService {
-  private readonly cgiarRegex: RegExp = /@cgiar\.org/gi;
+  private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
     @InjectRepository(User)
@@ -71,7 +72,8 @@ export class UserService {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
         await this.handleNonCgiarUser(createUserDto);
-        shouldSendConfirmationEmail = await this.registerInCognitoIfNeeded(createUserDto);
+        shouldSendConfirmationEmail =
+          await this.registerInCognitoIfNeeded(createUserDto);
       }
 
       const savedUser = await this.saveUserToDB(createUserDto, token);
@@ -96,11 +98,17 @@ export class UserService {
     }
   }
 
-  private async handleCgiarUser(createUserDto: CreateUserDto): Promise<boolean> {
-    const userFromAD = await this.activeDirectoryService.getUserDetails(createUserDto.email);
+  private async handleCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<boolean> {
+    const userFromAD = await this.activeDirectoryService.getUserDetails(
+      createUserDto.email,
+    );
 
     if (!userFromAD) {
-      throw new NotFoundException('No information was found for this CGIAR user.');
+      throw new NotFoundException(
+        'No information was found for this CGIAR user.',
+      );
     }
 
     if (!this.cgiarRegex.test(createUserDto.email)) {
@@ -121,7 +129,9 @@ export class UserService {
     return true;
   }
 
-  private async  handleNonCgiarUser(createUserDto: CreateUserDto): Promise<void> {
+  private async handleNonCgiarUser(
+    createUserDto: CreateUserDto,
+  ): Promise<void> {
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -131,9 +141,8 @@ export class UserService {
   }
 
   private async registerInCognitoIfNeeded(
-    createUserDto: CreateUserDto
+    createUserDto: CreateUserDto,
   ): Promise<boolean> {
-
     const templateDB = await this._templateRepository.findOne({
       where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
     });
@@ -357,21 +366,40 @@ export class UserService {
   async searchUsers(filters: {
     user?: string;
     cgIAR?: 'Yes' | 'No';
-    status?: 'Active' | 'Inactive';
+    status?: 'Active' | 'Inactive' | 'Read Only';
   }) {
     try {
       const { user, cgIAR, status } = filters;
-      const query = this._userRepository.createQueryBuilder('users');
-      query.select([
-        'users.first_name AS "firstName"',
-        'users.last_name AS "lastName"',
-        'users.email AS "emailAddress"',
-        `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
-        `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
-        'users.created_date AS "userCreationDate"',
-      ]);
-
-      query.where('1 = 1');
+      const query = this._userRepository
+        .createQueryBuilder('users')
+        .leftJoin(
+          'role_by_user',
+          'rbu',
+          'rbu.user = users.id AND rbu.active = 1',
+        )
+        .select([
+          'users.first_name AS "firstName"',
+          'users.last_name AS "lastName"',
+          'users.email AS "emailAddress"',
+          `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+          `
+          CASE 
+            WHEN users.active = 0 THEN 'Inactive'
+            WHEN users.is_cgiar = 1 
+              AND COUNT(DISTINCT rbu.role) = 1 
+              AND MAX(rbu.role) = 2 
+              AND COUNT(rbu.initiative_id) = 0 THEN 'Read Only'
+            WHEN users.is_cgiar = 1 
+              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+            WHEN users.is_cgiar = 0 
+              AND users.active = 1 
+              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+            ELSE 'Inactive'
+          END AS "userStatus"
+          `,
+          'users.created_date AS "userCreationDate"',
+        ])
+        .groupBy('users.id');
 
       if (user && user.trim() !== '') {
         const keywords = user.trim().split(/\s+/);
@@ -385,7 +413,7 @@ export class UserService {
               qb.where('users.first_name LIKE :word', { word })
                 .orWhere('users.last_name LIKE :word', { word })
                 .orWhere('users.email LIKE :word', { word });
-            } else if (keywords.length >= 2) {
+            } else {
               // Try to match first and last name in any order
               const first = `%${keywords[0]}%`;
               const last = `%${keywords[1]}%`;
@@ -404,11 +432,10 @@ export class UserService {
                 },
               );
 
-              // If more than two keywords, try to match users with two names (first_name with two words)
-              if (keywords.length >= 2) {
-                const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
-                qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
-              }
+              // Try to match users with two names (first_name with two words)
+              const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
+              qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
+
               if (keywords.length >= 3) {
                 // Try to match first_name with three words
                 const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
@@ -455,13 +482,20 @@ export class UserService {
         });
       }
 
+      query
+        .groupBy('users.id')
+        .addGroupBy('users.first_name')
+        .addGroupBy('users.last_name')
+        .addGroupBy('users.email')
+        .addGroupBy('users.is_cgiar')
+        .addGroupBy('users.active')
+        .addGroupBy('users.created_date');
+
       if (status) {
-        query.andWhere('users.active = :activeStatus', {
-          activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
-        });
+        query.having(`userStatus = :status`, { status });
       }
 
-      query.orderBy('users.created_date', 'DESC');
+      query.orderBy('userCreationDate', 'DESC');
 
       const users: User[] = await query.getRawMany();
 
@@ -563,6 +597,163 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async updateUserStatus(
+    userEmail: string,
+    dto: ChangeUserStatusDto,
+    token: TokenDto,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    const cleanEmail = userEmail?.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      throw new BadRequestException('Invalid or missing email');
+    }
+
+    const user = await this.findUserWithRelations(cleanEmail);
+    const currentUser = await this._userRepository.findOne({
+      where: { id: token.id },
+    });
+
+    if (dto.activate) {
+      if (user.active) {
+        return {
+          response: { id: user.id, email: user.email },
+          message: 'User is already active',
+          status: HttpStatus.OK,
+        };
+      }
+      return this.activateUser(user, dto, currentUser);
+    } else {
+      if (!user.active) {
+        return {
+          response: { id: user.id, email: user.email },
+          message: 'User is already deactivated',
+          status: HttpStatus.OK,
+        };
+      }
+      if (user.is_cgiar) {
+        return this.deactivateCgiarUser(user, currentUser);
+      } else {
+        return this.deactivateExternalUser(user, currentUser);
+      }
+    }
+  }
+
+  private async findUserWithRelations(userEmail: string): Promise<User> {
+    const cleanEmail = userEmail.trim().toLowerCase();
+
+    const user = await this._userRepository.findOne({
+      where: { email: cleanEmail },
+      relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
+    });
+
+    if (!user || !user.email) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  private async activateUser(
+    user: User,
+    dto: ChangeUserStatusDto,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    if (user.is_cgiar) {
+      throw new BadRequestException(
+        'CGIAR users cannot be reactivated this way',
+      );
+    }
+
+    if (dto.activate) {
+      try {
+        if (!dto.entityRoles?.length && !dto.role_platform) {
+          throw new BadRequestException(
+            'To activate a user, you must provide at least one entity-role pair or a platform role',
+          );
+        }
+
+        user.active = true;
+        const newUser = await this._userRepository.save(user);
+
+        const roleAssignments = [];
+
+        if (dto.entityRoles?.length) {
+          for (const item of dto.entityRoles) {
+            roleAssignments.push({
+              user: newUser.id,
+              role: item.role_id,
+              initiative_id: item.id,
+              created_by: currentUser.id,
+              last_updated_by: currentUser.id,
+            });
+          }
+        }
+
+        if (dto.role_platform) {
+          roleAssignments.push({
+            user: newUser.id,
+            role: dto.role_platform,
+            created_by: currentUser.id,
+            last_updated_by: currentUser.id,
+          });
+        }
+
+        await this._roleByUserRepository.save(roleAssignments);
+      } catch (error) {
+        return this._handlersError.returnErrorRes({ error });
+      }
+
+      return {
+        response: { id: user.id, email: user.email },
+        message: 'External user activated successfully',
+        status: HttpStatus.OK,
+      };
+    }
+  }
+
+  private async deactivateCgiarUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    const guestRole = 2; //2 is the ID for the Guest role
+
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    await this._roleByUserRepository.save({
+      user: user.id,
+      role: guestRole,
+      active: true,
+    });
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'User deactivated successfully',
+      status: HttpStatus.OK,
+    };
+  }
+
+  private async deactivateExternalUser(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    user.active = false;
+    await this._userRepository.save(user);
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'External user deactivated successfully',
+      status: HttpStatus.OK,
+    };
   }
 
   /**

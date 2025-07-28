@@ -14,6 +14,7 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -1116,7 +1117,11 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {
+  PATCH_updateUserStatus(body: UpdateUserStatus) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
+
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '') {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
@@ -1129,5 +1134,9 @@ export class ResultsApiService {
 
   POST_createUser(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/user/create`, body);
+  }
+
+  GET_portfolioList() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 }

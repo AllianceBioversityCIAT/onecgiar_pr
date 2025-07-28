@@ -13,8 +13,8 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 
-import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
-import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
+import { UpdateUserStatus } from '../../../../shared/interfaces/updateUserStatus.interface';
+import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 
 interface UserColumn {
   label: string;
@@ -40,15 +40,6 @@ interface CgiarOption {
   value: string;
 }
 
-interface AddUserForm {
-  is_cgiar: boolean;
-  displayName?: string; // Only for visual display
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  role_platform: number | null;
-}
-
 @Component({
   selector: 'app-user-management',
   standalone: true,
@@ -62,7 +53,7 @@ interface AddUserForm {
     DialogModule,
     OverlayPanelModule,
     CustomFieldsModule,
-    SearchUserSelectComponent
+    ManageUserModalComponent
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -85,7 +76,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedCgiar = signal<string>('');
   selectedEntities = signal<string[]>([]);
   loading = signal<boolean>(false);
-  creatingUser = signal<boolean>(false);
+
+  // Modal variables
+  showAddUserModal: boolean = false;
 
   // Timeout for search debounce
   private searchTimeout: any;
@@ -130,6 +123,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         }
 
         this.users.set(filteredUsers);
+        res.response.map(user => {
+          user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
+          user.isActive = user.userStatus === 'Active';
+          user.isCGIAR = user.cgIAR === 'Yes';
+        });
+        this.users.set(res.response);
         this.loading.set(false);
       },
       error: error => {
@@ -231,7 +230,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Status filter options
   statusOptions: StatusOption[] = [
     { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' }
+    { label: 'Inactive', value: 'Inactive' },
+    { label: 'Read Only', value: 'Read Only' }
   ];
 
   isCGIAROptions: CgiarOption[] = [
@@ -291,148 +291,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Action methods
   onAddUser(): void {
-    this.resetAddUserForm();
     this.showAddUserModal = true;
   }
 
   onExportData(): void {}
 
   onShowInfo(): void {}
-
-  // Method to get status CSS class
-  getStatusClass(status: string): string {
-    return status === 'Active' ? 'status-active' : 'status-inactive';
-  }
-
-  // Modal methods
-  resetAddUserForm(): void {
-    this.addUserForm.set({
-      is_cgiar: true,
-      role_platform: 2 // Marked as guest by default (2)
-    });
-    this.clearUserSearch();
-  }
-
-  // Method to clear user search field by hiding and showing the component
-  private clearUserSearch(): void {
-    // Hide the component to force a complete reset
-    this.showUserSearchComponent.set(false);
-
-    // Show it again after 500ms delay
-    setTimeout(() => {
-      this.showUserSearchComponent.set(true);
-    }, 500);
-  }
-
-  onModalCgiarChange(isCgiar: boolean): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      is_cgiar: isCgiar,
-      // Reset form fields when changing CGIAR status
-      displayName: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      // Set permissions based on CGIAR status
-      role_platform: 2 // Always marked as guest (2)
-    }));
-  }
-
-  onUserSelect(event: SearchUser): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      displayName: `${event.sn}, ${event.givenName} (${event.mail})`,
-      email: event.mail
-    }));
-  }
-
-  onNameChange(first_name: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      first_name
-    }));
-  }
-
-  onLastNameChange(last_name: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      last_name
-    }));
-  }
-
-  onEmailChange(email: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      email
-    }));
-  }
-
-  onPermissionsChange(role_platform: number): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      role_platform
-    }));
-  }
-
-  onSaveUser(): void {
-    this.creatingUser.set(true);
-
-    // Remove displayName from form data before sending to backend
-    const formData = { ...this.addUserForm() };
-    delete formData.displayName;
-
-    this.resultsApiService.POST_createUser(formData).subscribe({
-      next: res => {
-        this.showAddUserModal = false;
-
-        const successMessage = res?.message || 'The user has been successfully created';
-        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
-
-        this.api.alertsFe.show({
-          id: 'createUserSuccess',
-          title: 'User created successfully',
-          description: `${userName} - ${successMessage}`,
-          status: 'success'
-        });
-
-        this.creatingUser.set(false);
-        this.resetAddUserForm(); // Reset form and clear user search
-        this.getUsers();
-      },
-      error: error => {
-        // Determinar el mensaje de error
-        let errorMessage = 'Error while creating user';
-
-        if (error?.error?.message) {
-          const message = error.error.message;
-          if (message.includes('already exists')) {
-            errorMessage = 'The user already exists in the system';
-          } else if (message.includes('CGIAR email')) {
-            errorMessage = 'Non-CGIAR user cannot have a CGIAR email address';
-          } else {
-            errorMessage = message;
-          }
-        }
-
-        this.api.alertsFe.show({
-          id: 'createUserError',
-          title: 'Warning!',
-          description: errorMessage,
-          status: 'warning'
-        });
-        this.creatingUser.set(false);
-      }
-    });
-  }
-
-  onCancelAddUser(): void {
-    this.showAddUserModal = false;
-    this.resetAddUserForm();
-  }
-
-  onModalHide(): void {
-    // This method is called when the modal is closed via X button, ESC key, or clicking outside
-    this.resetAddUserForm();
+  // Modal event handlers
+  onUserCreated(): void {
+    this.getUsers(); // Refresh users list when a user is created
   }
 
   // User actions methods
@@ -440,8 +307,20 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     // TODO: Implement edit user functionality
   }
 
-  onToggleUserStatus(user: any): void {
+  onToggleUserStatus(user) {
     // TODO: Implement toggle user status functionality
+    console.log(user);
+    if (!user.isActive) return (this.showAddUserModal = true);
+
+    this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
+      next: res => {
+        this.getUsers();
+      },
+      error: error => {
+        console.log(error);
+      }
+    });
+    return {};
   }
 
   // Entity display methods
