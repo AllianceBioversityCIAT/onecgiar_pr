@@ -366,21 +366,40 @@ export class UserService {
   async searchUsers(filters: {
     user?: string;
     cgIAR?: 'Yes' | 'No';
-    status?: 'Active' | 'Inactive';
+    status?: 'Active' | 'Inactive' | 'Read Only';
   }) {
     try {
       const { user, cgIAR, status } = filters;
-      const query = this._userRepository.createQueryBuilder('users');
-      query.select([
-        'users.first_name AS "firstName"',
-        'users.last_name AS "lastName"',
-        'users.email AS "emailAddress"',
-        `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
-        `CASE WHEN users.active = 1 THEN 'Active' ELSE 'Inactive' END AS "userStatus"`,
-        'users.created_date AS "userCreationDate"',
-      ]);
-
-      query.where('1 = 1');
+      const query = this._userRepository
+        .createQueryBuilder('users')
+        .leftJoin(
+          'role_by_user',
+          'rbu',
+          'rbu.user = users.id AND rbu.active = 1',
+        )
+        .select([
+          'users.first_name AS "firstName"',
+          'users.last_name AS "lastName"',
+          'users.email AS "emailAddress"',
+          `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+          `
+          CASE 
+            WHEN users.active = 0 THEN 'Inactive'
+            WHEN users.is_cgiar = 1 
+              AND COUNT(DISTINCT rbu.role) = 1 
+              AND MAX(rbu.role) = 2 
+              AND COUNT(rbu.initiative_id) = 0 THEN 'Read Only'
+            WHEN users.is_cgiar = 1 
+              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+            WHEN users.is_cgiar = 0 
+              AND users.active = 1 
+              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+            ELSE 'Inactive'
+          END AS "userStatus"
+          `,
+          'users.created_date AS "userCreationDate"',
+        ])
+        .groupBy('users.id');
 
       if (user && user.trim() !== '') {
         const keywords = user.trim().split(/\s+/);
@@ -394,7 +413,7 @@ export class UserService {
               qb.where('users.first_name LIKE :word', { word })
                 .orWhere('users.last_name LIKE :word', { word })
                 .orWhere('users.email LIKE :word', { word });
-            } else if (keywords.length >= 2) {
+            } else {
               // Try to match first and last name in any order
               const first = `%${keywords[0]}%`;
               const last = `%${keywords[1]}%`;
@@ -413,11 +432,10 @@ export class UserService {
                 },
               );
 
-              // If more than two keywords, try to match users with two names (first_name with two words)
-              if (keywords.length >= 2) {
-                const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
-                qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
-              }
+              // Try to match users with two names (first_name with two words)
+              const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
+              qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
+
               if (keywords.length >= 3) {
                 // Try to match first_name with three words
                 const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
@@ -464,13 +482,20 @@ export class UserService {
         });
       }
 
+      query
+        .groupBy('users.id')
+        .addGroupBy('users.first_name')
+        .addGroupBy('users.last_name')
+        .addGroupBy('users.email')
+        .addGroupBy('users.is_cgiar')
+        .addGroupBy('users.active')
+        .addGroupBy('users.created_date');
+
       if (status) {
-        query.andWhere('users.active = :activeStatus', {
-          activeStatus: status.toLowerCase() === 'active' ? 1 : 0,
-        });
+        query.having(`userStatus = :status`, { status });
       }
 
-      query.orderBy('users.created_date', 'DESC');
+      query.orderBy('userCreationDate', 'DESC');
 
       const users: User[] = await query.getRawMany();
 
@@ -579,7 +604,13 @@ export class UserService {
     dto: ChangeUserStatusDto,
     token: TokenDto,
   ): Promise<returnErrorDto | returnFormatUser> {
-    const user = await this.findUserWithRelations(userEmail);
+    const cleanEmail = userEmail?.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      throw new BadRequestException('Invalid or missing email');
+    }
+
+    const user = await this.findUserWithRelations(cleanEmail);
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
@@ -610,12 +641,14 @@ export class UserService {
   }
 
   private async findUserWithRelations(userEmail: string): Promise<User> {
+    const cleanEmail = userEmail.trim().toLowerCase();
+
     const user = await this._userRepository.findOne({
-      where: { email: userEmail },
+      where: { email: cleanEmail },
       relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
     });
 
-    if (!user) {
+    if (!user || !user.email) {
       throw new NotFoundException('User not found');
     }
 
@@ -635,9 +668,9 @@ export class UserService {
 
     if (dto.activate) {
       try {
-        if (!dto.entity || !dto.role_entity) {
+        if (!dto.entityRoles?.length && !dto.role_platform) {
           throw new BadRequestException(
-            'To activate a user, you must provide entity and at least one role',
+            'To activate a user, you must provide at least one entity-role pair or a platform role',
           );
         }
 
@@ -646,13 +679,13 @@ export class UserService {
 
         const roleAssignments = [];
 
-        if (dto.role_entity?.length) {
-          for (const roleId of dto.role_entity) {
+        if (dto.entityRoles?.length) {
+          for (const item of dto.entityRoles) {
             roleAssignments.push({
               user: newUser.id,
-              role: roleId,
+              role: item.role_id,
+              initiative_id: item.id,
               created_by: currentUser.id,
-              initiative_id: Number(dto.entity),
               last_updated_by: currentUser.id,
             });
           }
@@ -667,7 +700,6 @@ export class UserService {
           });
         }
 
-        console.log('Role assignments:', roleAssignments);
         await this._roleByUserRepository.save(roleAssignments);
       } catch (error) {
         return this._handlersError.returnErrorRes({ error });

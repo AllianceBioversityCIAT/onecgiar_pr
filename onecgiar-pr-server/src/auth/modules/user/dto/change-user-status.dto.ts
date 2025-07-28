@@ -1,28 +1,35 @@
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsOptional,
-  IsString,
   IsNumber,
   IsArray,
-  ArrayNotEmpty,
-  IsInt,
+  ValidateNested,
+  IsEmail,
 } from 'class-validator';
 
 export class ChangeUserStatusDto {
+  @IsEmail()
+  email: string;
+
   @IsBoolean()
   activate: boolean;
 
   @IsOptional()
-  @IsString()
-  entity?: string;
-
-  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
-  @IsInt({ each: true })
-  role_entity?: number[];
+  @ValidateNested({ each: true })
+  @Type(() => EntityRoleDto)
+  entityRoles?: EntityRoleDto[];
 
   @IsOptional()
   @IsNumber()
   role_platform?: number;
+}
+
+class EntityRoleDto {
+  @IsNumber()
+  id: number;
+
+  @IsNumber()
+  role_id: number;
 }
