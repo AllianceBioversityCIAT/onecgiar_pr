@@ -24,12 +24,7 @@ export class CreateUserDto {
   portfolio?: string;
 
   @IsOptional()
-  @IsString()
-  entity?: string;
-
-  @IsOptional()
-  @IsNumber()
-  role_entity?: number;
+  role_assignments?: RoleAssignmentDto[];
 
   @IsOptional()
   @IsNumber()
@@ -46,4 +41,14 @@ export class CreateUserDto {
   @IsOptional()
   @IsNumber()
   last_updated_by?: number;
+}
+
+export class RoleAssignmentDto {
+  @IsOptional()
+  @IsNumber()
+  role_id: number;
+
+  @IsOptional()
+  @IsNumber()
+  entity_id: number;
 }

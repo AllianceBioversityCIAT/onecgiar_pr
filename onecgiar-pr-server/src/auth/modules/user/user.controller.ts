@@ -10,7 +10,6 @@ import {
   ValidationPipe,
   BadRequestException,
   HttpStatus,
-  ParseArrayPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -94,6 +93,12 @@ export class UserController {
           last_name: 'Doe',
           email: 'john.doe@example.com',
           is_cgiar: false,
+          role_assignments: [
+            {
+              role_id: 2,
+              entity_id: 5,
+            },
+          ],
         },
       },
     },
@@ -133,7 +138,6 @@ export class UserController {
     createFullUserDto: CreateUserDto,
     @DecodedUser() user: TokenDto,
   ) {
-    console.log('currentUser:', user);
     return this.userService.createFull(createFullUserDto, user);
   }
 
@@ -191,7 +195,7 @@ export class UserController {
   @ApiQuery({
     name: 'entityIds',
     required: false,
-    type: [Number],
+    type: String,
     description: 'One or more entity IDs to filter users by',
     isArray: true,
   })
@@ -219,9 +223,15 @@ export class UserController {
     @Query('user') user?: string,
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
     @Query('status') status?: 'Active' | 'Inactive' | 'Read Only',
-    @Query('entityIds', new ParseArrayPipe({ items: Number, optional: true }))
-    entityIds?: number[],
+    @Query('entityIds') entityIdsRaw?: string,
   ) {
+    const entityIds = entityIdsRaw
+      ? entityIdsRaw
+          .split(',')
+          .map((id) => Number(id.trim()))
+          .filter(Boolean)
+      : undefined;
+
     const result = await this.userService.searchUsers({
       user,
       cgIAR,

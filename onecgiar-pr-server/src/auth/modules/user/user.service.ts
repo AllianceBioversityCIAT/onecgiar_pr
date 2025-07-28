@@ -26,6 +26,13 @@ import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
+import { ROLE_IDS } from './constants/roles';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleRepository } from '../role/Role.repository';
+import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Injectable()
 export class UserService {
@@ -42,6 +49,11 @@ export class UserService {
     private readonly _templateRepository: TemplateRepository,
     private readonly activeDirectoryService: ActiveDirectoryService,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleRepository: RoleRepository,
+
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   create(createUserDto: CreateUserDto) {
@@ -101,32 +113,42 @@ export class UserService {
   private async handleCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<boolean> {
-    const userFromAD = await this.activeDirectoryService.getUserDetails(
-      createUserDto.email,
-    );
+    try {
+      if (!this.cgiarRegex.test(createUserDto.email)) {
+        throw new HttpException(
+          'The user does not have a CGIAR email address.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
-    if (!userFromAD) {
-      throw new NotFoundException(
-        'No information was found for this CGIAR user.',
+      const userFromAD = await this.activeDirectoryService.getUserDetails(
+        createUserDto.email,
+      );
+
+      if (!userFromAD) {
+        throw new NotFoundException(
+          'No information was found for this CGIAR user.',
+        );
+      }
+
+      createUserDto.first_name = userFromAD.givenName || 'CGIAR';
+      createUserDto.last_name = userFromAD.sn || 'User';
+
+      if (!createUserDto.role_platform) {
+        createUserDto.role_platform = 2;
+      }
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Unexpected error while handling CGIAR user.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-
-    if (!this.cgiarRegex.test(createUserDto.email)) {
-      throw {
-        response: {},
-        message: 'The user does not have CGIAR email address',
-        status: HttpStatus.BAD_REQUEST,
-      };
-    }
-
-    createUserDto.first_name = userFromAD.givenName || 'CGIAR';
-    createUserDto.last_name = userFromAD.sn || 'User';
-
-    if (!createUserDto.role_platform) {
-      createUserDto.role_platform = 2;
-    }
-
-    return true;
   }
 
   private async handleNonCgiarUser(
@@ -152,6 +174,9 @@ export class UserService {
     }
 
     const template = handlebars.compile(templateDB.template);
+    const assignedRolesMessage = await this.buildAssignedRolesMessage(
+      createUserDto.role_assignments,
+    );
 
     const templateData: Record<string, any> = {
       logoUrl: '{{logoUrl}}',
@@ -164,11 +189,11 @@ export class UserService {
       supportEmail: '{{supportEmail}}',
       senderName: '{{senderName}}',
     };
-    if (createUserDto.entity) {
-      templateData.assignedEntity = createUserDto.entity;
-    }
-    if (createUserDto.role_entity) {
-      templateData.assignedRole = createUserDto.role_entity;
+    if (
+      createUserDto.role_assignments &&
+      createUserDto.role_assignments.length > 0
+    ) {
+      templateData.assignedRolesSummary = assignedRolesMessage;
     }
 
     const htmlString = template(templateData);
@@ -194,7 +219,7 @@ export class UserService {
 
     try {
       await this._awsCognitoService.createUser(cognitoPayload);
-      return false; // No confirmation email needed if Cognito registration is successful
+      return false;
     } catch (error) {
       const isUserExistsError =
         error?.name === 'UsernameExistsException' ||
@@ -217,39 +242,115 @@ export class UserService {
     createUserDto: CreateUserDto,
     token: TokenDto,
   ): Promise<returnFormatUser> {
-    const currentUser = await this._userRepository.findOne({
-      where: { id: token.id },
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    createUserDto.created_by = currentUser?.id || null;
-    createUserDto.last_updated_by = currentUser?.id || null;
+    try {
+      const currentUser = await this._userRepository.findOne({
+        where: { id: token.id },
+      });
 
-    const newUser = await this._userRepository.save(createUserDto);
-    await this._roleByUserRepository.save({
-      role: createUserDto?.role_platform || 2,
-      user: newUser.id,
-      created_by: currentUser?.id,
-      last_updated_by: currentUser?.id,
-    });
+      if (createUserDto.role_assignments?.length) {
+        const seenEntities = new Set<number>();
+        for (const assignment of createUserDto.role_assignments) {
+          if (seenEntities.has(assignment.entity_id)) {
+            throw new BadRequestException(
+              `Each user can only have one role per entity.`,
+            );
+          }
+          seenEntities.add(assignment.entity_id);
+        }
+      }
 
-    if (createUserDto.role_entity) {
-      await this._roleByUserRepository.save({
-        role: createUserDto.role_entity,
+      createUserDto.created_by = currentUser?.id || null;
+      createUserDto.last_updated_by = currentUser?.id || null;
+
+      const newUser = await queryRunner.manager.save(User, createUserDto);
+
+      await queryRunner.manager.save(RoleByUser, {
+        role: createUserDto?.role_platform || 2,
         user: newUser.id,
         created_by: currentUser?.id,
         last_updated_by: currentUser?.id,
       });
-    }
 
-    return {
-      response: {
-        id: newUser.id,
-        first_name: newUser.first_name,
-        last_name: newUser.last_name,
-      } as User,
-      message: 'The user has been successfully created',
-      status: HttpStatus.CREATED,
-    };
+      if (createUserDto.role_assignments?.length) {
+        for (const assignment of createUserDto.role_assignments) {
+          const { role_id, entity_id } = assignment;
+
+          const existingAssignment = await queryRunner.manager.findOne(
+            RoleByUser,
+            {
+              where: { user: newUser.id, initiative_id: entity_id },
+            },
+          );
+
+          if (existingAssignment) {
+            throw new BadRequestException(
+              `The user already has a role in the selected entity. Only one role per entity is allowed.`,
+            );
+          }
+
+          const entity = await queryRunner.manager.findOne(ClarisaInitiative, {
+            where: { id: entity_id },
+            relations: ['obj_portfolio'],
+          });
+
+          const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
+          const isExternal = !createUserDto.is_cgiar;
+
+          if (isExternal && role_id !== ROLE_IDS.MEMBER) {
+            throw new BadRequestException(
+              `External users can only be assigned the "Member" role.`,
+            );
+          }
+
+          if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
+            throw new BadRequestException(
+              `Only "Member" role is allowed in inactive portfolios.`,
+            );
+          }
+
+          if ([ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id)) {
+            const existingLead = await queryRunner.manager.findOne(RoleByUser, {
+              where: { initiative_id: entity_id, role: role_id },
+              relations: ['user'],
+            });
+
+            if (existingLead) {
+              throw new BadRequestException(
+                `This entity already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned.`,
+              );
+            }
+          }
+
+          await queryRunner.manager.save(RoleByUser, {
+            role: role_id,
+            user: newUser.id,
+            initiative: entity_id,
+            created_by: currentUser?.id,
+            last_updated_by: currentUser?.id,
+          });
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return {
+        response: {
+          id: newUser.id,
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
+        } as User,
+        message: 'The user has been successfully created',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private async sendAccountConfirmationEmail(
@@ -267,6 +368,10 @@ export class UserService {
       confirmationTemplateDB.template,
     );
 
+    const assignedRolesMessage = await this.buildAssignedRolesMessage(
+      createUserDto.role_assignments,
+    );
+
     const emailData: Record<string, any> = {
       logoUrl:
         'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.png',
@@ -279,13 +384,11 @@ export class UserService {
       senderName: 'PRMS Team',
       isCgiar: createUserDto.is_cgiar,
     };
-
-    if (createUserDto.entity) {
-      emailData.assignedEntity = createUserDto.entity;
-    }
-
-    if (createUserDto.role_entity) {
-      emailData.assignedRole = createUserDto.role_entity;
+    if (
+      createUserDto.role_assignments &&
+      createUserDto.role_assignments.length > 0
+    ) {
+      emailData.assignedRolesSummary = assignedRolesMessage;
     }
 
     this._emailNotificationManagementService.sendEmail({
@@ -304,6 +407,41 @@ export class UserService {
         },
       },
     });
+  }
+
+  private async buildAssignedRolesMessage(
+    roleAssignments: { entity_id: number; role_id: number }[] | undefined,
+  ): Promise<string> {
+    const [entities = [], roles = []] = await Promise.all([
+      this.clarisaInitiativesRepository.find(),
+      this._roleRepository.find(),
+    ]);
+
+    const entityMap = new Map(entities.map((e) => [e.id, e]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    if (roleAssignments?.length > 0) {
+      const assignmentsDetails: string[] = [];
+
+      for (const assignment of roleAssignments) {
+        const entity = entityMap.get(assignment.entity_id);
+        const role = roleMap.get(assignment.role_id);
+
+        if (entity && role) {
+          assignmentsDetails.push(
+            `${role.description} in ${entity.official_code}`,
+          );
+        }
+      }
+
+      if (assignmentsDetails.length > 0) {
+        return `<ul>${assignmentsDetails
+          .map((item) => `<li>${item}</li>`)
+          .join('')}</ul>`;
+      }
+    }
+
+    return 'No roles assigned.';
   }
 
   async findAll(): Promise<returnFormatUser | returnErrorDto> {
@@ -395,7 +533,7 @@ export class UserService {
               AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
             WHEN users.is_cgiar = 0 
               AND users.active = 1 
-              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
+              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL)) THEN 'Active'
             ELSE 'Inactive'
           END AS "userStatus"
           `,
@@ -523,7 +661,9 @@ export class UserService {
 
       const users = usersResp.map((user: any) => ({
         ...user,
-        entities: user.entities ? user.entities.split(', ').map((code: string) => code.trim()) : [],
+        entities: user.entities
+          ? user.entities.split(', ').map((code: string) => code.trim())
+          : [],
       }));
 
       if (users.length === 0) {
