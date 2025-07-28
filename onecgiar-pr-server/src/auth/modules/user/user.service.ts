@@ -367,9 +367,10 @@ export class UserService {
     user?: string;
     cgIAR?: 'Yes' | 'No';
     status?: 'Active' | 'Inactive' | 'Read Only';
+    entityIds?: number[];
   }) {
     try {
-      const { user, cgIAR, status } = filters;
+      const { user, cgIAR, status, entityIds } = filters;
       const query = this._userRepository
         .createQueryBuilder('users')
         .leftJoin(
@@ -377,6 +378,7 @@ export class UserService {
           'rbu',
           'rbu.user = users.id AND rbu.active = 1',
         )
+        .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
         .select([
           'users.first_name AS "firstName"',
           'users.last_name AS "lastName"',
@@ -390,14 +392,18 @@ export class UserService {
               AND MAX(rbu.role) = 2 
               AND COUNT(rbu.initiative_id) = 0 THEN 'Read Only'
             WHEN users.is_cgiar = 1 
-              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
             WHEN users.is_cgiar = 0 
               AND users.active = 1 
-              AND (COUNT(rbu.initiative_id) > 0 OR MAX(rbu.role) <> 2) THEN 'Active'
+              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
             ELSE 'Inactive'
           END AS "userStatus"
           `,
           'users.created_date AS "userCreationDate"',
+          `
+            GROUP_CONCAT(DISTINCT ent.official_code ORDER BY ent.official_code SEPARATOR ', ' )
+            AS "entities"
+          `,
         ])
         .groupBy('users.id');
 
@@ -480,6 +486,22 @@ export class UserService {
         query.andWhere('users.is_cgiar = :isCgiar', {
           isCgiar: cgIAR.toLowerCase() === 'yes' ? 1 : 0,
         });
+      }
+
+      if (entityIds && entityIds.length > 0) {
+        query.andWhere(
+          (qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('rbu_sub.user')
+              .from('role_by_user', 'rbu_sub')
+              .where('rbu_sub.initiative_id IN (:...entityIds)')
+              .andWhere('rbu_sub.active = 1')
+              .getQuery();
+            return 'users.id IN ' + subQuery;
+          },
+          { entityIds },
+        );
       }
 
       query

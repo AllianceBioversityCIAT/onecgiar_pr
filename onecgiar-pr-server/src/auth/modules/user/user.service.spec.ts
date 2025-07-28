@@ -663,10 +663,12 @@ describe('UserService', () => {
         user?: string;
         cgIAR?: 'Yes' | 'No';
         status?: 'Active' | 'Inactive' | 'Read Only';
+        entityIds?: number[];
       } = {
         user: 'Test',
         cgIAR: 'Yes',
         status: 'Active',
+        entityIds: [1, 2, 3],
       };
 
       const mockQueryResult = [
@@ -677,6 +679,7 @@ describe('UserService', () => {
           cgIAR: 'Yes',
           userStatus: 'Active',
           userCreationDate: new Date(),
+          entityIds: [1, 2, 3],
         },
       ];
 
