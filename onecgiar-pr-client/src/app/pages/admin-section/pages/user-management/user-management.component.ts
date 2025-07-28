@@ -12,9 +12,8 @@ import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-
-import { UpdateUserStatus } from '../../../../shared/interfaces/updateUserStatus.interface';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 
 interface UserColumn {
   label: string;
@@ -85,6 +84,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.getUsers();
+    this.getInitiatives();
+  }
+
+  getInitiatives() {
+    this.api.resultsSE.GET_AllInitiatives().subscribe((res: any) => {
+      console.log(res.response);
+    });
   }
 
   ngOnDestroy() {
@@ -99,30 +105,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
       next: res => {
         console.log(res.response);
-        // add random entities to the user (0, 1, 2 or more entities randomly)
-        const entities = ['SGP-01', 'INIT-24', 'PLAT-04', 'INIT-09', 'INIT-26', 'INIT-32', 'INIT-10', 'PLAT-01', 'SGP-02', 'INIT-01'];
-        res.response.forEach((user: any) => {
-          // Generate random number of entities (1 to 5) to ensure users have at least 1 entity
-          const numEntities = Math.floor(Math.random() * 5) + 1; // 1, 2, 3, 4, or 5 entities
-          user.entities = [];
-
-          // Add random entities based on the generated number
-          const shuffledEntities = [...entities].sort(() => 0.5 - Math.random());
-          for (let i = 0; i < numEntities && i < entities.length; i++) {
-            user.entities.push(shuffledEntities[i]);
-          }
-        });
-
-        // Apply entity filtering if entities are selected
-        let filteredUsers = res.response;
-        if (this.selectedEntities().length > 0) {
-          filteredUsers = res.response.filter((user: any) => {
-            // Check if user has at least one of the selected entities
-            return user.entities.some((entity: string) => this.selectedEntities().includes(entity));
-          });
-        }
-
-        this.users.set(filteredUsers);
+        this.users.set(res.response);
         res.response.map(user => {
           user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
           user.isActive = user.userStatus === 'Active';

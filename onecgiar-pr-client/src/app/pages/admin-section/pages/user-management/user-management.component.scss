@@ -41,6 +41,10 @@
   }
 }
 
+.status-chip {
+  white-space: nowrap;
+}
+
 .entities-container {
   display: flex;
   gap: 6px;
