@@ -679,7 +679,7 @@ describe('UserService', () => {
           cgIAR: 'Yes',
           userStatus: 'Active',
           userCreationDate: new Date(),
-          entityIds: [1, 2, 3],
+          entities: 'ENT-001, ENT-002',
         },
       ];
 
@@ -692,7 +692,12 @@ describe('UserService', () => {
       const result = await service.searchUsers(filters);
 
       expect(result).toEqual({
-        response: mockQueryResult,
+        response: [
+          {
+            ...mockQueryResult[0],
+            entities: ['ENT-001', 'ENT-002'],
+          },
+        ],
         message: 'Successful response',
         status: HttpStatus.OK,
       });

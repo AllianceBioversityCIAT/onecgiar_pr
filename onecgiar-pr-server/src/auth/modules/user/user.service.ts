@@ -519,7 +519,12 @@ export class UserService {
 
       query.orderBy('userCreationDate', 'DESC');
 
-      const users: User[] = await query.getRawMany();
+      const usersResp: User[] = await query.getRawMany();
+
+      const users = usersResp.map((user: any) => ({
+        ...user,
+        entities: user.entities ? user.entities.split(', ').map((code: string) => code.trim()) : [],
+      }));
 
       if (users.length === 0) {
         return {
