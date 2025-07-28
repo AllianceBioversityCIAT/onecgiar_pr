@@ -206,6 +206,9 @@ export class ClarisaTaskService {
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.SUBNATIONAL_SCOPES, index);
       },
+      async (index: number) => {
+        return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
+      },
     ];
 
     const results: PromiseSettledResult<unknown>[] = [];
