@@ -5,7 +5,6 @@ import { CustomizedAlertsFeService } from '../../services/customized-alerts-fe.s
 import { PhasesService } from '../../services/global/phases.service';
 import { ApiService } from '../../services/api/api.service';
 import { of } from 'rxjs';
-import { ModuleTypeEnum, StatusPhaseEnum } from '../../enum/api.enum';
 
 describe('PhaseManagementTableComponent', () => {
   let component: PhaseManagementTableComponent;
