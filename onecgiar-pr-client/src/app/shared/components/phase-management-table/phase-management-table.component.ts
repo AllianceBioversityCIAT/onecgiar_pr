@@ -17,7 +17,7 @@ export class PhaseManagementTableComponent implements OnInit {
   @Input() appModuleId: number;
   @Input() showReportingPhaseColumn: boolean = false;
   @Input() placeholderText: string = 'Provide input here...';
-  @Output() onPhaseUpdate = new EventEmitter<void>();
+  @Output() phaseUpdate = new EventEmitter<void>();
 
   columnOrder = [];
   phaseList: any[] = [];
@@ -53,12 +53,11 @@ export class PhaseManagementTableComponent implements OnInit {
     this.getTocPhases();
     this.get_resultYears();
     this.getPortfolios();
-    
+
     if (this.showReportingPhaseColumn) {
       this.getReportingPhases();
     }
-    
-    // Llamar al método específico según el tipo de módulo
+
     if (this.moduleType === ModuleTypeEnum.IPSR) {
       this.api.dataControlSE.getCurrentIPSRPhase();
     } else {
@@ -100,7 +99,7 @@ export class PhaseManagementTableComponent implements OnInit {
     phaseItem.end_date_ts = phaseItem.end_date;
     phaseItem.status_ts = phaseItem.status;
     phaseItem.previous_phase_ts = phaseItem.previous_phase;
-    
+
     if (this.showReportingPhaseColumn) {
       phaseItem.reporting_phase_ts = phaseItem.reporting_phase;
     }
@@ -115,7 +114,7 @@ export class PhaseManagementTableComponent implements OnInit {
     phaseItem.end_date = phaseItem.end_date_ts;
     phaseItem.status = phaseItem.status_ts;
     phaseItem.previous_phase = phaseItem.previous_phase_ts;
-    
+
     if (this.showReportingPhaseColumn) {
       phaseItem.reporting_phase = phaseItem.reporting_phase_ts;
     }
@@ -129,11 +128,11 @@ export class PhaseManagementTableComponent implements OnInit {
     if (!phaseItem.start_date_ts) text += '<strong> Start date </strong> is required to create <br>';
     if (!phaseItem.end_date_ts) text += '<strong> End date </strong>is required to create <br>';
     if (!phaseItem.portfolio_id_ts) text += '<strong> Portfolio </strong> is required to create <br>';
-    
+
     if (this.showReportingPhaseColumn && !phaseItem.reporting_phase_ts) {
       text += '<strong> Reporting phase </strong>is required to create <br>';
     }
-    
+
     return text;
   }
 
@@ -186,9 +185,8 @@ export class PhaseManagementTableComponent implements OnInit {
         this.getAllPhases();
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
         this.phasesService.getNewPhases();
-        this.onPhaseUpdate.emit();
-        
-        // Actualizar según el tipo de módulo
+        this.phaseUpdate.emit();
+
         if (this.moduleType === ModuleTypeEnum.IPSR) {
           this.api.dataControlSE.getCurrentIPSRPhase();
         } else {
@@ -212,9 +210,8 @@ export class PhaseManagementTableComponent implements OnInit {
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
         phase.isNew = false;
         this.phasesService.getNewPhases();
-        this.onPhaseUpdate.emit();
-        
-        // Actualizar según el tipo de módulo
+        this.phaseUpdate.emit();
+
         if (this.moduleType === ModuleTypeEnum.IPSR) {
           this.api.dataControlSE.getCurrentIPSRPhase();
         } else {
@@ -247,7 +244,7 @@ export class PhaseManagementTableComponent implements OnInit {
         this.resultsSE.DELETE_updatePhase(id).subscribe({
           next: () => {
             this.getAllPhases();
-            this.onPhaseUpdate.emit();
+            this.phaseUpdate.emit();
           },
           error: err => {
             console.error(err);

@@ -3,7 +3,7 @@
   [appModuleId]="appModuleId"
   [showReportingPhaseColumn]="true"
   [placeholderText]="'Provide input here...'"
-  (onPhaseUpdate)="onPhaseUpdate()">
+  (phaseUpdate)="onPhaseUpdate()">
   
   <div style="margin-top: 2rem;" *ngIf="this.api.dataControlSE.previousIPSRPhase.phaseName">
     <div class="setting_title">Other functionalities</div>
