@@ -21,6 +21,8 @@ import { AuthMicroserviceModule } from '../../../shared/microservices/auth-micro
 import { PlatformReportModule } from '../../../api/platform-report/platform-report.module';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { ClarisaPortfoliosModule } from '../../../clarisa/clarisa-portfolios/clarisa-portfolios.module';
+import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/clarisa-initiatives.module';
 
 @Module({
   controllers: [UserController],
@@ -42,6 +44,8 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
     AuthMicroserviceModule,
     PlatformReportModule,
     EmailNotificationManagementModule,
+    ClarisaPortfoliosModule,
+    ClarisaInitiativesModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })
@@ -60,9 +64,7 @@ export class UserModule implements NestModule {
         path: '/auth/user/create',
         method: RequestMethod.POST,
       },
-      { path: '/auth/user/:id/status',
-        method: RequestMethod.PATCH 
-      },
+      { path: '/auth/user/:id/status', method: RequestMethod.PATCH },
     );
   }
 }
