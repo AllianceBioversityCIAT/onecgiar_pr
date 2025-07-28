@@ -203,10 +203,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   columns: UserColumn[] = [
     { label: 'User name', key: 'firstName', width: '200px' },
     { label: 'Email', key: 'emailAddress', width: '300px' },
+    { label: 'Entities', key: 'entities', width: '120px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' },
-    { label: 'Entities', key: 'entities', width: '120px' },
     { label: 'Actions', key: 'actions', width: '100px' }
   ];
 
