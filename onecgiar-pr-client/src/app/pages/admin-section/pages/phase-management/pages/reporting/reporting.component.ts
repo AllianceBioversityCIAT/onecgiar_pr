@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { ModuleTypeEnum } from '../../../../../../shared/enum/api.enum';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
@@ -7,13 +7,13 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
   templateUrl: './reporting.component.html',
   styleUrls: ['./reporting.component.scss']
 })
-export class ReportingComponent implements OnInit {
+export class ReportingComponent {
   moduleType = ModuleTypeEnum.REPORTING;
   appModuleId = 1;
 
   constructor(public api: ApiService) {}
 
-  ngOnInit(): void {}
-
-  onPhaseUpdate(): void {}
+  onPhaseUpdate(): void {
+    // This method can be used to handle updates related to the phase management of the reporting module.
+  }
 }
