@@ -66,7 +66,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
   @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
-  @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
+  @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -253,41 +253,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'INIT-01', value: 'INIT-01' }
   ];
 
-  // Modal variables
-  showAddUserModal: boolean = false;
   showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
-  addUserForm = signal<AddUserForm>({
-    is_cgiar: true,
-    role_platform: 2 // Marked as guest by default (2)
-  });
-
-  // Admin permissions options for radio button - computed based on CGIAR status
-  adminPermissionsOptions = computed(() => {
-    if (!this.addUserForm().is_cgiar) {
-      // CGIAR users only have guest permissions
-      return [
-        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
-      ];
-    } else {
-      // Non-CGIAR users can choose between admin and guest
-      return [
-        { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
-        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
-      ];
-    }
-  });
-
-  // CGIAR users for autocomplete
-  cgiarUsers: any[] = [
-    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org', displayName: 'Svetlana Saakova (s.saakove@cgiar.org)' },
-    { name: 'Sara Lawson', email: 's.lawson@cgiar.org', displayName: 'Sara Lawson (s.lawson@cgiar.org)' },
-    { name: 'John Smith', email: 'j.smith@cgiar.org', displayName: 'John Smith (j.smith@cgiar.org)' },
-    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org', displayName: 'Maria Garcia (m.garcia@cgiar.org)' },
-    { name: 'David Johnson', email: 'd.johnson@cgiar.org', displayName: 'David Johnson (d.johnson@cgiar.org)' },
-    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org', displayName: 'Ana Rodriguez (a.rodriguez@cgiar.org)' },
-    { name: 'Michael Brown', email: 'm.brown@cgiar.org', displayName: 'Michael Brown (m.brown@cgiar.org)' },
-    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org', displayName: 'Elena Petrov (e.petrov@cgiar.org)' }
-  ];
 
   // Action methods
   onAddUser(): void {
@@ -343,29 +309,4 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       overlay.toggle(event);
     }
   }
-
-  get currentUserName(): string {
-    return this.api.authSE?.localStorageUser?.user_name || 'Unknown User';
-  }
-
-  get currentUserEmail(): string {
-    return this.api.authSE?.localStorageUser?.email || '';
-  }
-
-  isFormValid = computed(() => {
-    const form = this.addUserForm();
-
-    // Validate that a permission option has been selected
-    if (form.role_platform === null || form.role_platform === undefined) {
-      return false;
-    }
-
-    // CGIAR users: Solo necesitamos el email
-    if (form.is_cgiar) {
-      return !!form.email;
-    }
-
-    // Non-CGIAR users: Necesitamos todos los campos del formulario
-    return !!(form.first_name && form.last_name && form.email);
-  });
 }
