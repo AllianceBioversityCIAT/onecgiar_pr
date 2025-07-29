@@ -286,6 +286,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
       next: res => {
         this.getUsers();
+        this.api.alertsFe.show({
+          id: 'deactivateUserSuccess',
+          title: 'User deactivated successfully',
+          description: `${user.emailAddress} - ${user.firstName} ${user.lastName} - User deactivated successfully`,
+          status: 'success'
+        });
       },
       error: error => {
         console.log(error);
