@@ -830,13 +830,24 @@ export class UserService {
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
-    const isActive = await this._roleByUserRepository.findOne({
-      where: {
-        user: user.id,
-        active: true,
-        role: Not(2),
-      },
-    });
+    let isActive: RoleByUser;
+    
+    if (user.is_cgiar) {
+      isActive = await this._roleByUserRepository.findOne({
+        where: {
+          user: user.id,
+          active: true,
+          role: Not(2),
+        },
+      });
+    } else {
+      isActive = await this._roleByUserRepository.findOne({
+        where: {
+          user: user.id,
+          active: true,
+        },
+      });
+    }
 
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
