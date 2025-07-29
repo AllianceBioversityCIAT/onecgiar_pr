@@ -14,7 +14,6 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { Roles } from './roles.decorator';
 import { RoleApp } from './role.enum';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
-import { Role } from './entities/role.entity';
 
 @Controller('/')
 @UseInterceptors(ResponseInterceptor)
