@@ -245,10 +245,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onExportData(): void {}
 
   onShowInfo(): void {}
-  // Modal event handlers
-  onUserCreated(): void {
-    this.getUsers(); // Refresh users list when a user is created
-  }
 
   // User actions methods
   onEditUser(user: AddUser): void {

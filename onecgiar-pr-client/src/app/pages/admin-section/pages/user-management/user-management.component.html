@@ -207,6 +207,6 @@
     [editingMode]="isEditingUser"
     [userActivatorMode]="isActivatingUser"
     [(visible)]="showAddUserModal"
-    (userCreated)="onUserCreated()">
+    (managedUser)="this.getUsers()">
   </app-manage-user-modal>
 </div>

@@ -39,7 +39,7 @@ export class ManageUserModalComponent implements OnChanges {
 
   @Input() visible: boolean = false;
   @Output() visibleChange = new EventEmitter<boolean>();
-  @Output() userCreated = new EventEmitter<void>();
+  @Output() managedUser = new EventEmitter<void>();
   @Input() userActivatorMode: WritableSignal<boolean> = signal(false);
   @Input() editingMode: WritableSignal<boolean> = signal(false);
 
@@ -198,14 +198,14 @@ export class ManageUserModalComponent implements OnChanges {
       next: res => {
         this.visible = false;
         this.visibleChange.emit(false);
+        this.managedUser.emit();
 
         const successMessage = res?.message || 'The user has been successfully created';
-        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
 
         this.api.alertsFe.show({
           id: 'activateUserSuccess',
           title: 'User activated successfully',
-          description: `${this.addUserForm().email} - ${successMessage}`,
+          description: `${this.addUserForm().email} - ${this.addUserForm().first_name} ${this.addUserForm().last_name} - ${successMessage}`,
           status: 'success'
         });
       },
@@ -243,7 +243,7 @@ export class ManageUserModalComponent implements OnChanges {
 
         this.creatingUser.set(false);
         this.resetAddUserForm(); // Reset form and clear user search
-        this.userCreated.emit(); // Notify parent to refresh users list
+        this.managedUser.emit(); // Notify parent to refresh users list
       },
       error: error => {
         // Determinar el mensaje de error
