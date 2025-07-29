@@ -80,6 +80,7 @@ export class UserService {
       // This happens for CGIAR users or when Cognito user already exists.
       let shouldSendConfirmationEmail = true;
 
+      console.log('is_cgiar', createUserDto.is_cgiar);
       if (createUserDto.is_cgiar) {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
@@ -136,7 +137,7 @@ export class UserService {
 
       if (
         !createUserDto.role_platform ||
-        createUserDto.role_assignments.length === 0
+        !createUserDto.role_assignments || createUserDto.role_assignments.length === 0
       ) {
         createUserDto.role_platform = 2;
       }
@@ -318,7 +319,7 @@ export class UserService {
           const existingAssignment = await queryRunner.manager.findOne(
             RoleByUser,
             {
-              where: { user: newUser.id, initiative_id: entity_id },
+              where: { user: newUser.id, initiative_id: entity_id, active: true },
             },
           );
 
@@ -329,7 +330,7 @@ export class UserService {
           }
 
           const entity = await queryRunner.manager.findOne(ClarisaInitiative, {
-            where: { id: entity_id },
+            where: { id: entity_id, active: true },
             relations: ['obj_portfolio'],
           });
 
@@ -350,7 +351,7 @@ export class UserService {
 
           if ([ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id)) {
             const existingLead = await queryRunner.manager.findOne(RoleByUser, {
-              where: { initiative_id: entity_id, role: role_id },
+              where: { initiative_id: entity_id, role: role_id, active: true },
               relations: ['obj_user'],
             });
 
@@ -847,27 +848,38 @@ export class UserService {
     const user = await this.findUserWithRelations(cleanEmail);
     let isActive = false;
 
-    if (user.is_cgiar) {
-      const isUserActive = user.active;
-      const hasValidRoleOrInitiative = await this._roleByUserRepository.findOne({
-        where: [
-          { user: user.id, role: Not(2), active: true },
-          { user: user.id, initiative_id: Not(IsNull()), active: true }
-        ],
-      });
+    if (user.active) {
+      if (user.is_cgiar) {
+        const hasAdminRole = await this._roleByUserRepository.findOne({
+          where: {
+            user: user.id,
+            role: 1, // Admin
+            active: true,
+          },
+        });
+        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
+          where: {
+            user: user.id,
+            initiative_id: Not(IsNull()),
+            role: Not(IsNull()),
+            active: true,
+          },
+        });
 
-      isActive = isUserActive && !!hasValidRoleOrInitiative;
+        isActive = !!hasAdminRole || !!hasInitiativeWithRole;
 
-    } else {
-      const isUserActive = user.active;
-      const hasAnyAssignment = await this._roleByUserRepository.findOne({
-        where: [
-          { user: user.id, role: Not(IsNull()), active: true },
-          { user: user.id, initiative_id: Not(IsNull()), active: true }
-        ],
-      });
+      } else {
+        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
+          where: {
+            user: user.id,
+            initiative_id: Not(IsNull()),
+            role: Not(IsNull()),
+            active: true,
+          },
+        });
 
-      isActive = isUserActive && !!hasAnyAssignment;
+        isActive = !!hasInitiativeWithRole;
+      }
     }
 
     const currentUser = await this._userRepository.findOne({
