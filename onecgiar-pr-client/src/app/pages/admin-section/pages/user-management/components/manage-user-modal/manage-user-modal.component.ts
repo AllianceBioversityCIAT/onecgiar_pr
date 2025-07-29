@@ -192,6 +192,7 @@ export class ManageUserModalComponent implements OnChanges {
       ...form,
       activate: true
     }));
+    console.clear();
     console.log(this.addUserForm());
 
     this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
