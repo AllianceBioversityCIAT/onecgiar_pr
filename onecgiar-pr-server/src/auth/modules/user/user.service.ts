@@ -18,7 +18,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import { Brackets, Not } from 'typeorm';
+import { Brackets, IsNull, Not } from 'typeorm';
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -845,23 +845,29 @@ export class UserService {
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
-    let isActive: RoleByUser | User;
-    
+    let isActive = false;
+
     if (user.is_cgiar) {
-      isActive = await this._roleByUserRepository.findOne({
-        where: {
-          user: user.id,
-          active: true,
-          role: Not(2),
-        },
+      const isUserActive = user.active;
+      const hasValidRoleOrInitiative = await this._roleByUserRepository.findOne({
+        where: [
+          { user: user.id, role: Not(2), active: true },
+          { user: user.id, initiative_id: Not(IsNull()), active: true }
+        ],
       });
+
+      isActive = isUserActive && !!hasValidRoleOrInitiative;
+
     } else {
-      isActive = await this._userRepository.findOne({
-        where: {
-          id: user.id,
-          active: true,
-        },
+      const isUserActive = user.active;
+      const hasAnyAssignment = await this._roleByUserRepository.findOne({
+        where: [
+          { user: user.id, role: Not(IsNull()), active: true },
+          { user: user.id, initiative_id: Not(IsNull()), active: true }
+        ],
       });
+
+      isActive = isUserActive && !!hasAnyAssignment;
     }
 
     const currentUser = await this._userRepository.findOne({
