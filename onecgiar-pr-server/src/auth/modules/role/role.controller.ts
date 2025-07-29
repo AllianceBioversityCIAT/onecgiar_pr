@@ -14,8 +14,9 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { Roles } from './roles.decorator';
 import { RoleApp } from './role.enum';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { Role } from './entities/role.entity';
 
-@Controller('role')
+@Controller('/')
 @UseInterceptors(ResponseInterceptor)
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
@@ -27,8 +28,13 @@ export class RoleController {
   }
 
   @Get()
-  findAll() {
-    return this.roleService.findAll();
+  async findAll(): Promise<any> {
+    const roles = await this.roleService.findAll();
+    return {
+      response: roles,
+      statusCode: 200,
+      message: 'Roles fetched successfully',
+    };
   }
 
   @Get(':id')
