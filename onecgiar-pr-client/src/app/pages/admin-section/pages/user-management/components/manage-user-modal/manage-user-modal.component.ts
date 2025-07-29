@@ -110,9 +110,20 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   addRoleAssignment(): void {
+    const newAssignment = {
+      entity_id: null,
+      role_id: null
+    };
     this.addUserForm.update(form => ({
       ...form,
-      role_assignments: [...form.role_assignments, { role_id: null, entity_id: null }]
+      role_assignments: [...form.role_assignments, newAssignment]
+    }));
+  }
+
+  removeRoleAssignment(index: number) {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: form.role_assignments.filter((_, i) => i !== index)
     }));
   }
 

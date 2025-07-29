@@ -36,6 +36,7 @@
   gap: 16px;
   width: 100%;
   justify-content: space-between;
+  align-items: center;
 }
 
 .assignments-headers {
@@ -47,10 +48,43 @@
   margin-bottom: 10px;
 
   .header-item {
-    width: 50%;
+    width: 45%;
     text-align: center;
     font-weight: 600;
     padding: 4px 0;
+
+    &.actions {
+      width: 10%;
+    }
+  }
+}
+
+.remove-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.remove-role-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #dc2626;
+  background-color: transparent;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #dc2626;
+    color: white;
+  }
+
+  .pi {
+    font-size: 12px;
   }
 }
 
@@ -64,6 +98,18 @@
   color: #6777d8;
   border-radius: 15px;
   gap: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: #6777d8;
+    color: white;
+  }
+
+  .pi {
+    font-size: 16px;
+  }
 }
 
 .modal-content {

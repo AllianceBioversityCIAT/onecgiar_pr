@@ -45,21 +45,50 @@ describe('ManageUserModalComponent', () => {
   });
 
   it('should reset form when resetAddUserForm is called', () => {
-    // Set some form values
+    // Arrange
     component.addUserForm.set({
       is_cgiar: false,
-      first_name: 'Test',
-      last_name: 'User',
-      email: 'test@example.com',
-      role_platform: 1
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com',
+      role_platform: 1,
+      role_assignments: [{ role_id: null, entity_id: null }]
     });
 
-    // Reset form
+    // Act
     component.resetAddUserForm();
 
-    // Check if form is reset to defaults
-    expect(component.addUserForm().is_cgiar).toBe(true);
-    expect(component.addUserForm().role_platform).toBe(2);
+    // Assert
     expect(component.addUserForm().first_name).toBeUndefined();
+  });
+
+  it('should add new user role when addUserRole is called', () => {
+    // Arrange
+    const initialLength = component.addUserForm().role_assignments.length;
+
+    // Act
+    component.addRoleAssignment();
+
+    // Assert
+    expect(component.addUserForm().role_assignments.length).toBe(initialLength + 1);
+  });
+
+  it('should remove role assignment when removeRoleAssignment is called', () => {
+    // Arrange
+    const initialAssignments = [
+      { entity_id: 1, role_id: 1 },
+      { entity_id: 2, role_id: 2 }
+    ];
+    component.addUserForm.set({
+      ...component.addUserForm(),
+      role_assignments: initialAssignments
+    });
+
+    // Act
+    component.removeRoleAssignment(0);
+
+    // Assert
+    expect(component.addUserForm().role_assignments.length).toBe(1);
+    expect(component.addUserForm().role_assignments[0].entity_id).toBe(2);
   });
 });

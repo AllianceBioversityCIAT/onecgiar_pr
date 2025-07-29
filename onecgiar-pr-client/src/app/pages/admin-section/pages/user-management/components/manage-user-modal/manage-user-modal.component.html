@@ -93,11 +93,12 @@
       <div class="assignments-headers">
         <div class="header-item">Entity</div>
         <div class="header-item">Role</div>
+        <div class="header-item actions"></div>
       </div>
 
       @for (item of addUserForm().role_assignments; track $index) {
         <div class="selects-item">
-          <div style="width: 50%">
+          <div style="width: 45%">
             <app-pr-select
               [options]="initiativesService.allInitiatives()"
               optionLabel="official_code"
@@ -110,7 +111,7 @@
               [required]="false"></app-pr-select>
           </div>
 
-          <div style="width: 50%">
+          <div style="width: 45%">
             <app-pr-select
               [options]="getRolesService.roles()"
               optionLabel="role_description"
@@ -121,6 +122,12 @@
               [expandSpaceOnOpen]="true"
               [indexReference]="($index + 1) * 11"
               [required]="false"></app-pr-select>
+          </div>
+
+          <div style="width: 10%" class="remove-button-container">
+            <button type="button" class="remove-role-btn" (click)="removeRoleAssignment($index)" title="Remove role">
+              <i class="pi pi-times"></i>
+            </button>
           </div>
         </div>
         <br />
