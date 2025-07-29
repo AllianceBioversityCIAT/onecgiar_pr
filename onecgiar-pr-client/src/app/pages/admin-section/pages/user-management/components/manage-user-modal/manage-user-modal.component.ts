@@ -193,8 +193,6 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   manageUser() {
-    console.log(this.userActivatorMode());
-    console.log(this.editingMode());
     this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
   }
 
@@ -220,7 +218,6 @@ export class ManageUserModalComponent implements OnChanges {
         });
       },
       error: error => {
-        console.log(error);
         this.api.alertsFe.show({
           id: 'activateUserError',
           title: 'Warning!',

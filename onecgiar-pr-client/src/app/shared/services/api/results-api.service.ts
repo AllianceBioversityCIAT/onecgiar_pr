@@ -1127,7 +1127,6 @@ export class ResultsApiService {
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
-    console.log(entityIds);
     // Convert array of objects to array of ids if needed
 
     if (entityIds.length) {

@@ -14,7 +14,6 @@ export class GetRolesService {
 
   getRoles() {
     this.api.resultsSE.GET_roles().subscribe(roles => {
-      console.log(roles.response);
       this.roles.set(roles.response);
     });
   }
