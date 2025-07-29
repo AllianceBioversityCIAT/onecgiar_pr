@@ -203,7 +203,7 @@ describe('UserManagementComponent', () => {
     expect(getUsersSpy).toHaveBeenCalled();
   });
 
-  // getUsers actualiza loading y users
+  // getUsers loading loading y users
   it('should set loading true while fetching users and false after', () => {
     const spy = jest.spyOn(component.resultsApiService, 'GET_searchUser').mockReturnValue(of({ response: [{ email: 'a@b.com' }] }));
     component.getUsers();
@@ -212,7 +212,7 @@ describe('UserManagementComponent', () => {
     spy.mockRestore();
   });
 
-  // onSearchInputChange llama a onSearchChange
+  // onSearchInputChange calls onSearchChange
   it('should call onSearchChange with input value', () => {
     const spy = jest.spyOn(component, 'onSearchChange');
     const event = { target: { value: 'abc' } } as any;
@@ -220,7 +220,7 @@ describe('UserManagementComponent', () => {
     expect(spy).toHaveBeenCalledWith('abc');
   });
 
-  // onStatusChange actualiza filtro y llama a getUsers
+  // onStatusChange updates filter and calls getUsers
   it('should update selectedStatus and call getUsers on status change', () => {
     const spy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
     component.onStatusChange('Active');
@@ -228,7 +228,7 @@ describe('UserManagementComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  // onCgiarChange actualiza filtro y llama a getUsers
+  // onCgiarChange updates filter and calls getUsers
   it('should update selectedCgiar and call getUsers on CGIAR change', () => {
     const spy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
     component.onCgiarChange('Yes');
@@ -236,31 +236,31 @@ describe('UserManagementComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  // onNameChange actualiza el nombre en el formulario
+  // onNameChange updates first_name in the form
   it('should update first_name on name change', () => {
     component.onNameChange('NuevoNombre');
     expect(component.addUserForm().first_name).toBe('NuevoNombre');
   });
 
-  // onLastNameChange actualiza el apellido en el formulario
+  // onLastNameChange updates last_name in the form
   it('should update last_name on last name change', () => {
     component.onLastNameChange('Apellido');
     expect(component.addUserForm().last_name).toBe('Apellido');
   });
 
-  // onEmailChange actualiza el email en el formulario
+  // onEmailChange updates email in the form
   it('should update email on email change', () => {
     component.onEmailChange('nuevo@email.com');
     expect(component.addUserForm().email).toBe('nuevo@email.com');
   });
 
-  // onPermissionsChange actualiza el rol en el formulario
+  // onPermissionsChange updates role_platform in the form
   it('should update role_platform on permissions change', () => {
     component.onPermissionsChange(3);
     expect(component.addUserForm().role_platform).toBe(3);
   });
 
-  // onCancelAddUser cierra el modal y resetea el formulario
+  // onCancelAddUser closes the modal and resets the form
   it('should close modal and reset form on cancel', () => {
     component.showAddUserModal = true;
     const resetSpy = jest.spyOn(component, 'resetAddUserForm');
@@ -269,7 +269,7 @@ describe('UserManagementComponent', () => {
     expect(resetSpy).toHaveBeenCalled();
   });
 
-  // onModalHide resetea el formulario
+  // onModalHide resets the form
   it('should reset form on modal hide', () => {
     const resetSpy = jest.spyOn(component, 'resetAddUserForm');
     component.onModalHide();
