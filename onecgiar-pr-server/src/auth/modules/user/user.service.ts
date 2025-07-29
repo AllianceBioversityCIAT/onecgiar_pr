@@ -242,22 +242,35 @@ export class UserService {
   }
 
   private async saveUserToDB(
-    createUserDto: CreateUserDto,
+    dto: CreateUserDto | ChangeUserStatusDto,
     token: TokenDto,
+    changeStatus?: boolean,
   ): Promise<returnFormatUser> {
+    const cleanEmail = dto.email?.trim().toLowerCase();
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    console.log('User to save:', createUserDto);
+    console.log('User to save:', dto);
 
     try {
+      const needsRoles = !dto.role_assignments?.length && !dto.role_platform;
+      if (needsRoles) {
+        throw new BadRequestException(
+          'To save a user, you must provide at least one entity-role pair or an Admin role',
+        );
+      }
+
+      const user = await this._userRepository.findOne({
+        where: { email: cleanEmail },
+      });
+
       const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
 
-      if (createUserDto.role_assignments?.length) {
+      if (dto.role_assignments?.length) {
         const seenEntities = new Set<number>();
-        for (const assignment of createUserDto.role_assignments) {
+        for (const assignment of dto.role_assignments) {
           if (seenEntities.has(assignment.entity_id)) {
             throw new BadRequestException(
               `Each user can only have one role per entity.`,
@@ -267,25 +280,39 @@ export class UserService {
         }
       }
 
-      createUserDto.created_by = currentUser?.id || null;
-      createUserDto.last_updated_by = currentUser?.id || null;
+      dto.created_by = currentUser?.id || null;
+      dto.last_updated_by = currentUser?.id || null;
 
-      const newUser = await queryRunner.manager.save(User, createUserDto);
+      let newUser: User;
 
-      if (
-        !createUserDto.role_assignments ||
-        createUserDto.role_assignments.length === 0
-      ) {
+      if (user) {
+        await queryRunner.manager.update(User, user.id, {
+          active: changeStatus ? true : user.active,
+          last_updated_by: currentUser?.id,
+        });
+
+        newUser = await queryRunner.manager.findOneByOrFail(User, {
+          id: user.id,
+        });
+      } else {
+        dto.email = cleanEmail;
+        dto.created_by = currentUser?.id || null;
+        dto.last_updated_by = currentUser?.id || null;
+
+        newUser = await queryRunner.manager.save(User, dto);
+      }
+
+      if (!dto.role_assignments || dto.role_assignments.length === 0) {
         await queryRunner.manager.save(RoleByUser, {
-          role: createUserDto?.role_platform || ROLE_IDS.GUEST,
+          role: dto?.role_platform || ROLE_IDS.GUEST,
           user: newUser.id,
           created_by: currentUser?.id,
           last_updated_by: currentUser?.id,
         });
       }
 
-      if (createUserDto.role_assignments?.length) {
-        for (const assignment of createUserDto.role_assignments) {
+      if (dto.role_assignments?.length) {
+        for (const assignment of dto.role_assignments) {
           const { role_id, entity_id } = assignment;
 
           const existingAssignment = await queryRunner.manager.findOne(
@@ -307,7 +334,7 @@ export class UserService {
           });
 
           const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-          const isExternal = !createUserDto.is_cgiar;
+          const isExternal = !dto.is_cgiar;
 
           if (isExternal && role_id !== ROLE_IDS.MEMBER) {
             throw new BadRequestException(
@@ -349,15 +376,25 @@ export class UserService {
       }
 
       await queryRunner.commitTransaction();
-      return {
-        response: {
-          id: newUser.id,
-          first_name: newUser.first_name,
-          last_name: newUser.last_name,
-        } as User,
-        message: 'The user has been successfully created',
-        status: HttpStatus.CREATED,
-      };
+      if (changeStatus) {
+        return {
+          response: { id: newUser.id, email: newUser.email },
+          message: newUser.is_cgiar
+            ? 'CGIAR user activated successfully'
+            : 'External user activated successfully',
+          status: HttpStatus.OK,
+        };
+      } else {
+        return {
+          response: {
+            id: newUser.id,
+            first_name: newUser.first_name,
+            last_name: newUser.last_name,
+          } as User,
+          message: 'The user has been successfully created',
+          status: HttpStatus.CREATED,
+        };
+      }
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -720,6 +757,7 @@ export class UserService {
     email: string,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
+      console.log('Searching for user with email:', email);
       const user: User = await this._customUserRespository.findOne({
         where: { email: email },
       });
@@ -785,6 +823,7 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnErrorDto | returnFormatUser> {
     const cleanEmail = userEmail?.trim().toLowerCase();
+    const activeUSer = dto.activate;
 
     if (!cleanEmail) {
       throw new BadRequestException('Invalid or missing email');
@@ -811,7 +850,7 @@ export class UserService {
           status: HttpStatus.OK,
         };
       }
-      return this.activateUser(user, dto, currentUser);
+      return this.saveUserToDB(dto, token, activeUSer);
     } else {
       if (!isActive) {
         return {
@@ -841,59 +880,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  private async activateUser(
-    user: User,
-    dto: ChangeUserStatusDto,
-    currentUser: User,
-  ): Promise<returnErrorDto | returnFormatUser> {
-    try {
-      const needsRoles = !dto.role_assignments?.length && !dto.role_platform;
-
-      if (needsRoles) {
-        throw new BadRequestException(
-          'To activate a user, you must provide at least one entity-role pair or an Admin role',
-        );
-      }
-
-      user.active = true;
-      const newUser = await this._userRepository.save(user);
-
-      const roleAssignments = [];
-
-      if (dto.role_assignments?.length) {
-        for (const item of dto.role_assignments) {
-          roleAssignments.push({
-            user: newUser.id,
-            role: item.role_id,
-            initiative_id: item.entity_id,
-            created_by: currentUser.id,
-            last_updated_by: currentUser.id,
-          });
-        }
-      }
-
-      if (dto.role_platform) {
-        roleAssignments.push({
-          user: newUser.id,
-          role: dto.role_platform,
-          created_by: currentUser.id,
-          last_updated_by: currentUser.id,
-        });
-      }
-
-      await this._roleByUserRepository.save(roleAssignments);
-      return {
-        response: { id: user.id, email: user.email },
-        message: user.is_cgiar
-          ? 'CGIAR user activated successfully'
-          : 'External user activated successfully',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
-    }
   }
 
   private async deactivateCgiarUser(
