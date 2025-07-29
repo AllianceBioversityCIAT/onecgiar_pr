@@ -27,6 +27,7 @@ import { ClarisaTocPhasesModule } from './clarisa-toc-phases/clarisa-toc-phases.
 import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clarisa-subnational-scope.module';
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
 import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
+import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -140,5 +141,9 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'initiative-stages',
     module: ClarisaInitiativeStageModule,
+  },
+  {
+    path: 'portfolios',
+    module: ClarisaPortfoliosModule,
   },
 ];
