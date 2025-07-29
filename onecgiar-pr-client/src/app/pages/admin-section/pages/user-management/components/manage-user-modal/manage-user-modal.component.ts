@@ -192,8 +192,6 @@ export class ManageUserModalComponent implements OnChanges {
       ...form,
       activate: true
     }));
-    console.clear();
-    console.log(this.addUserForm());
 
     this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
       next: res => {
@@ -212,6 +210,12 @@ export class ManageUserModalComponent implements OnChanges {
       },
       error: error => {
         console.log(error);
+        this.api.alertsFe.show({
+          id: 'activateUserError',
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning'
+        });
       }
     });
   }
@@ -222,10 +226,6 @@ export class ManageUserModalComponent implements OnChanges {
     // Remove displayName from form data before sending to backend
     const formData = { ...this.addUserForm() };
     delete formData.displayName;
-
-    console.log(formData);
-
-    return;
 
     this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {

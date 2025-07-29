@@ -281,22 +281,39 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       return {};
     }
 
-    this.isActivatingUser.set(false);
-    this.isEditingUser.set(false);
-    this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
-      next: res => {
-        this.getUsers();
-        this.api.alertsFe.show({
-          id: 'deactivateUserSuccess',
-          title: 'User deactivated successfully',
-          description: `${user.emailAddress} - ${user.firstName} ${user.lastName} - User deactivated successfully`,
-          status: 'success'
-        });
+    console.log('mostrar alerta');
+
+    // confitm alert
+    this.api.alertsFe.show(
+      {
+        id: 'deactivateUserConfirm',
+        title: 'Deactivate user',
+        description: user.isCGIAR
+          ? "Deactivating a CGIAR user will remove all assigned roles and entities. The user will retain only the 'Guest' role. Are you sure you want to proceed with this action?"
+          : 'Deactivating a external user will remove all assigned roles and entities. The user will not be able to enter the platform again until a new entity and role is assigned. Are you sure you want to proceed with this action?',
+        status: 'warning',
+        confirmText: 'Deactivate'
       },
-      error: error => {
-        console.log(error);
+      () => {
+        this.isActivatingUser.set(false);
+        this.isEditingUser.set(false);
+        this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
+          next: res => {
+            this.getUsers();
+            this.api.alertsFe.show({
+              id: 'deactivateUserSuccess',
+              title: 'User deactivated successfully',
+              description: `${user.emailAddress} - ${user.firstName} ${user.lastName} - User deactivated successfully`,
+              status: 'success'
+            });
+          },
+          error: error => {
+            console.log(error);
+          }
+        });
       }
-    });
+    );
+
     return {};
   }
 
