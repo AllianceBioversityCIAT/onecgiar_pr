@@ -24,6 +24,18 @@ export class ChangeUserStatusDto {
   @IsOptional()
   @IsNumber()
   role_platform?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_cgiar?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  created_by?: number;
+
+  @IsOptional()
+  @IsNumber()
+  last_updated_by?: number;
 }
 
 class EntityRoleDto {
