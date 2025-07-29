@@ -19,7 +19,7 @@ export class ChangeUserStatusDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EntityRoleDto)
-  entityRoles?: EntityRoleDto[];
+  role_assignments?: EntityRoleDto[];
 
   @IsOptional()
   @IsNumber()
@@ -28,8 +28,8 @@ export class ChangeUserStatusDto {
 
 class EntityRoleDto {
   @IsNumber()
-  id: number;
+  role_id: number;
 
   @IsNumber()
-  role_id: number;
+  entity_id: number;
 }

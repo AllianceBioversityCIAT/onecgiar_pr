@@ -18,7 +18,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import { Brackets } from 'typeorm';
+import { Brackets, Not } from 'typeorm';
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -134,7 +134,10 @@ export class UserService {
       createUserDto.first_name = userFromAD.givenName || 'CGIAR';
       createUserDto.last_name = userFromAD.sn || 'User';
 
-      if (!createUserDto.role_platform) {
+      if (
+        !createUserDto.role_platform ||
+        createUserDto.role_assignments.length === 0
+      ) {
         createUserDto.role_platform = 2;
       }
 
@@ -245,6 +248,7 @@ export class UserService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    console.log('User to save:', createUserDto);
 
     try {
       const currentUser = await this._userRepository.findOne({
@@ -268,12 +272,17 @@ export class UserService {
 
       const newUser = await queryRunner.manager.save(User, createUserDto);
 
-      await queryRunner.manager.save(RoleByUser, {
-        role: createUserDto?.role_platform || 2,
-        user: newUser.id,
-        created_by: currentUser?.id,
-        last_updated_by: currentUser?.id,
-      });
+      if (
+        !createUserDto.role_assignments ||
+        createUserDto.role_assignments.length === 0
+      ) {
+        await queryRunner.manager.save(RoleByUser, {
+          role: createUserDto?.role_platform || ROLE_IDS.GUEST,
+          user: newUser.id,
+          created_by: currentUser?.id,
+          last_updated_by: currentUser?.id,
+        });
+      }
 
       if (createUserDto.role_assignments?.length) {
         for (const assignment of createUserDto.role_assignments) {
@@ -315,7 +324,7 @@ export class UserService {
           if ([ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id)) {
             const existingLead = await queryRunner.manager.findOne(RoleByUser, {
               where: { initiative_id: entity_id, role: role_id },
-              relations: ['user'],
+              relations: ['obj_user'],
             });
 
             if (existingLead) {
@@ -328,10 +337,14 @@ export class UserService {
           await queryRunner.manager.save(RoleByUser, {
             role: role_id,
             user: newUser.id,
-            initiative: entity_id,
+            initiative_id: entity_id,
             created_by: currentUser?.id,
             last_updated_by: currentUser?.id,
           });
+
+          console.log(
+            `Role ${role_id} assigned to user ${newUser.id} for entity ${entity_id}`,
+          );
         }
       }
 
@@ -429,15 +442,13 @@ export class UserService {
 
         if (entity && role) {
           assignmentsDetails.push(
-            `${role.description} in ${entity.official_code}`,
+            `${role.description} in ${entity.official_code}, `,
           );
         }
       }
 
       if (assignmentsDetails.length > 0) {
-        return `<ul>${assignmentsDetails
-          .map((item) => `<li>${item}</li>`)
-          .join('')}</ul>`;
+        return `${assignmentsDetails.map((item) => `${item}`).join('')}`;
       }
     }
 
@@ -778,12 +789,20 @@ export class UserService {
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
+    const isActive = await this._roleByUserRepository.findOne({
+      where: {
+        user: user.id,
+        active: true,
+        role: Not(2),
+      },
+    });
+
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
 
     if (dto.activate) {
-      if (user.active) {
+      if (isActive) {
         return {
           response: { id: user.id, email: user.email },
           message: 'User is already active',
@@ -792,7 +811,7 @@ export class UserService {
       }
       return this.activateUser(user, dto, currentUser);
     } else {
-      if (!user.active) {
+      if (!isActive) {
         return {
           response: { id: user.id, email: user.email },
           message: 'User is already deactivated',
@@ -827,56 +846,51 @@ export class UserService {
     dto: ChangeUserStatusDto,
     currentUser: User,
   ): Promise<returnErrorDto | returnFormatUser> {
-    if (user.is_cgiar) {
-      throw new BadRequestException(
-        'CGIAR users cannot be reactivated this way',
-      );
-    }
+    try {
+      const needsRoles = !dto.role_assignments?.length && !dto.role_platform;
 
-    if (dto.activate) {
-      try {
-        if (!dto.entityRoles?.length && !dto.role_platform) {
-          throw new BadRequestException(
-            'To activate a user, you must provide at least one entity-role pair or a platform role',
-          );
-        }
+      if (needsRoles) {
+        throw new BadRequestException(
+          'To activate a user, you must provide at least one entity-role pair or an Admin role',
+        );
+      }
 
-        user.active = true;
-        const newUser = await this._userRepository.save(user);
+      user.active = true;
+      const newUser = await this._userRepository.save(user);
 
-        const roleAssignments = [];
+      const roleAssignments = [];
 
-        if (dto.entityRoles?.length) {
-          for (const item of dto.entityRoles) {
-            roleAssignments.push({
-              user: newUser.id,
-              role: item.role_id,
-              initiative_id: item.id,
-              created_by: currentUser.id,
-              last_updated_by: currentUser.id,
-            });
-          }
-        }
-
-        if (dto.role_platform) {
+      if (dto.role_assignments?.length) {
+        for (const item of dto.role_assignments) {
           roleAssignments.push({
             user: newUser.id,
-            role: dto.role_platform,
+            role: item.role_id,
+            initiative_id: item.entity_id,
             created_by: currentUser.id,
             last_updated_by: currentUser.id,
           });
         }
-
-        await this._roleByUserRepository.save(roleAssignments);
-      } catch (error) {
-        return this._handlersError.returnErrorRes({ error });
       }
 
+      if (dto.role_platform) {
+        roleAssignments.push({
+          user: newUser.id,
+          role: dto.role_platform,
+          created_by: currentUser.id,
+          last_updated_by: currentUser.id,
+        });
+      }
+
+      await this._roleByUserRepository.save(roleAssignments);
       return {
         response: { id: user.id, email: user.email },
-        message: 'External user activated successfully',
+        message: user.is_cgiar
+          ? 'CGIAR user activated successfully'
+          : 'External user activated successfully',
         status: HttpStatus.OK,
       };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
