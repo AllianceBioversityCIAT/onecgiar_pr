@@ -90,32 +90,46 @@
         <div class="field-label">Please select the user role(s):</div>
       </div>
 
-      @for (item of addUserForm().role_assignments; track $index) {
-        <app-pr-select
-          [options]="initiativesService.allInitiatives()"
-          optionLabel="official_code"
-          optionValue="id"
-          placeholder="All"
-          [ngModel]="item.entity_id"
-          (ngModelChange)="onRoleEntityChange($event, $index)"
-          [expandSpaceOnOpen]="true"
-          [indexReference]="$index + 10"
-          [required]="false"></app-pr-select>
+      <div class="assignments-headers">
+        <div class="header-item">Entity</div>
+        <div class="header-item">Role</div>
+      </div>
 
-        <app-pr-select
-          [options]="getRolesService.roles()"
-          optionLabel="role_description"
-          optionValue="role_id"
-          placeholder="All"
-          [ngModel]="item.role_id"
-          (ngModelChange)="onRoleAssignmentChange($event, $index)"
-          [expandSpaceOnOpen]="true"
-          [indexReference]="($index + 1) * 11"
-          [required]="false"></app-pr-select>
+      @for (item of addUserForm().role_assignments; track $index) {
+        <div class="selects-item">
+          <div style="width: 50%">
+            <app-pr-select
+              [options]="initiativesService.allInitiatives()"
+              optionLabel="official_code"
+              optionValue="id"
+              placeholder="All"
+              [ngModel]="item.entity_id"
+              (ngModelChange)="onRoleEntityChange($event, $index)"
+              [expandSpaceOnOpen]="true"
+              [indexReference]="$index + 10"
+              [required]="false"></app-pr-select>
+          </div>
+
+          <div style="width: 50%">
+            <app-pr-select
+              [options]="getRolesService.roles()"
+              optionLabel="role_description"
+              optionValue="role_id"
+              placeholder="All"
+              [ngModel]="item.role_id"
+              (ngModelChange)="onRoleAssignmentChange($event, $index)"
+              [expandSpaceOnOpen]="true"
+              [indexReference]="($index + 1) * 11"
+              [required]="false"></app-pr-select>
+          </div>
+        </div>
         <br />
       }
 
-      <button (click)="addRoleAssignment()">Add role assignment</button>
+      <div class="add-role-assignment" (click)="addRoleAssignment()">
+        <i class="pi pi-plus-circle"></i>
+        {{ addUserForm().role_assignments.length ? 'Add other role' : 'Add role' }}
+      </div>
     }
 
     <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
