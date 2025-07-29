@@ -571,19 +571,34 @@ export class UserService {
           'users.email AS "emailAddress"',
           `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
           `
-          CASE 
+          CASE
             WHEN users.active = 0 THEN 'Inactive'
             WHEN users.is_cgiar = 1 
-              AND COUNT(DISTINCT rbu.role) = 1 
-              AND MAX(rbu.role) = 2 
-              AND COUNT(rbu.initiative_id) = 0 THEN 'Read Only'
-            WHEN users.is_cgiar = 1 
-              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
+              AND users.active = 1
+              AND COUNT(rbu.id) = 0 THEN 'Inactive'
             WHEN users.is_cgiar = 1
-              AND (COUNT(rbu.initiative_id) = 0 OR MAX(rbu.role) = 1) THEN 'Active'
+              AND users.active = 1
+              AND COUNT(rbu.id) > 0
+              AND COUNT(DISTINCT rbu.role) = 1
+              AND MAX(rbu.role) = 2 THEN 'Read Only'
+            WHEN users.is_cgiar = 1
+              AND users.active = 1
+              AND (
+                MAX(rbu.role) = 1 
+                OR (COUNT(rbu.initiative_id) > 0 AND MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
+              ) THEN 'Active'
             WHEN users.is_cgiar = 0 
               AND users.active = 1 
-              AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL)) THEN 'Active'
+              AND COUNT(rbu.id) = 0 THEN 'Inactive'
+            WHEN users.is_cgiar = 0
+              AND users.active = 1
+              AND COUNT(DISTINCT rbu.role) = 1
+              AND MAX(rbu.role) = 2 THEN 'Read Only'
+            WHEN users.is_cgiar = 0
+              AND users.active = 1
+              AND (
+                COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
+              ) THEN 'Active'
             ELSE 'Inactive'
           END AS "userStatus"
           `,
@@ -830,7 +845,7 @@ export class UserService {
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
-    let isActive: RoleByUser;
+    let isActive: RoleByUser | User;
     
     if (user.is_cgiar) {
       isActive = await this._roleByUserRepository.findOne({
@@ -841,9 +856,9 @@ export class UserService {
         },
       });
     } else {
-      isActive = await this._roleByUserRepository.findOne({
+      isActive = await this._userRepository.findOne({
         where: {
-          user: user.id,
+          id: user.id,
           active: true,
         },
       });
