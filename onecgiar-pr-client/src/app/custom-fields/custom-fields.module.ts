@@ -36,6 +36,7 @@ import { CustomValidationTooltipComponent } from './custom-validation-tooltip/cu
 import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 
 const fieldComponents = [
   PrInputComponent,
@@ -45,6 +46,7 @@ const fieldComponents = [
   PrMultiSelectComponent,
   PrFieldHeaderComponent,
   PrYesOrNotComponent,
+  CustomValidationTooltipComponent,
   PrTextareaComponent,
   PrCheckboxComponent,
   SaveButtonComponent,
@@ -68,7 +70,7 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule],
+  exports: [...fieldComponents, FormsModule, LeadContactPersonFieldComponent],
   imports: [
     CommonModule,
     FormsModule,
@@ -82,7 +84,8 @@ const fieldComponents = [
     InputNumberModule,
     TooltipModule,
     IconFieldModule,
-    InputIconModule
+    InputIconModule,
+    LeadContactPersonFieldComponent
   ]
 })
 export class CustomFieldsModule {}
