@@ -11,6 +11,7 @@ import { InitiativesService } from '../../../../../../shared/services/global/ini
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 
 interface AddUserForm {
+  activate: boolean;
   is_cgiar: boolean;
   displayName?: string; // Only for visual display
   first_name?: string;
@@ -51,7 +52,8 @@ export class ManageUserModalComponent implements OnChanges {
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
     role_platform: 2, // Marked as guest by default (2)
-    role_assignments: []
+    role_assignments: [],
+    activate: true
   });
 
   ngOnChanges(changes: SimpleChanges) {
@@ -91,7 +93,8 @@ export class ManageUserModalComponent implements OnChanges {
     this.addUserForm.set({
       is_cgiar: true,
       role_platform: 2, // Marked as guest by default (2)
-      role_assignments: []
+      role_assignments: [],
+      activate: true
     });
     this.clearUserSearch();
   }
@@ -179,10 +182,38 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   manageUser() {
+    console.log(this.userActivatorMode());
+    console.log(this.editingMode());
     this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
   }
 
-  onSaveUserActivator(): void {}
+  onSaveUserActivator(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      activate: true
+    }));
+    console.log(this.addUserForm());
+
+    this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
+      next: res => {
+        this.visible = false;
+        this.visibleChange.emit(false);
+
+        const successMessage = res?.message || 'The user has been successfully created';
+        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
+
+        this.api.alertsFe.show({
+          id: 'activateUserSuccess',
+          title: 'User activated successfully',
+          description: `${this.addUserForm().email} - ${successMessage}`,
+          status: 'success'
+        });
+      },
+      error: error => {
+        console.log(error);
+      }
+    });
+  }
 
   onSaveUser(): void {
     this.creatingUser.set(true);

@@ -1,6 +1,6 @@
 <!-- Add User Modal -->
 <p-dialog
-  header="Add user"
+  [header]="this.userActivatorMode() ? 'Activate user' : this.editingMode() ? 'Edit user' : 'Add user'"
   [(visible)]="visible"
   [modal]="true"
   [closable]="true"
@@ -169,7 +169,7 @@
   <ng-template pTemplate="footer">
     <div class="modal-footer">
       <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
-      <button type="button" class="save-btn" [disabled]="!isFormValid() || creatingUser()" (click)="onSaveUser()">Save</button>
+      <button type="button" class="save-btn" [disabled]="!isFormValid() || creatingUser()" (click)="manageUser()">Save</button>
     </div>
   </ng-template>
 </p-dialog>

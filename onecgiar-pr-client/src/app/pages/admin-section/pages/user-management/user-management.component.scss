@@ -467,7 +467,7 @@
   }
 
   // Reduced opacity for inactive users - only affects toggle button (second button)
-  &.inactive-user .action-btn:nth-child(2) .material-icons-round {
+  &.inactive-user .action-btn-toggle .material-icons-round {
     opacity: 0.4;
   }
 }

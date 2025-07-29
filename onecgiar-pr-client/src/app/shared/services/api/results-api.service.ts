@@ -1151,4 +1151,7 @@ export class ResultsApiService {
   GET_roles() {
     return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
   }
+  PATCH_changeUserStatus(body: any) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
 }

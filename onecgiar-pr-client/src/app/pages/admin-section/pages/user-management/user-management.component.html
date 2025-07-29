@@ -168,13 +168,15 @@
             </span>
           </td>
           <td>
-            <div class="action-buttons" [class.inactive-user]="user.userStatus === 'Inactive'">
-              <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
-                <i class="material-icons-round">edit</i>
-              </button>
+            <div class="action-buttons" [class.inactive-user]="!user.isActive">
+              @if (user.isActive) {
+                <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                  <i class="material-icons-round">edit</i>
+                </button>
+              }
               <button
                 type="button"
-                class="action-btn"
+                class="action-btn action-btn-toggle"
                 (click)="onToggleUserStatus(user)"
                 [pTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
                 tooltipPosition="top">

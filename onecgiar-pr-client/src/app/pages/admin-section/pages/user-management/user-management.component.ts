@@ -270,7 +270,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         last_name: lastName,
         email: emailAddress,
         role_platform: 2, // Marked as guest by default (2)
-        role_assignments: []
+        role_assignments: [],
+        activate: true
       });
     }, 500);
   }
