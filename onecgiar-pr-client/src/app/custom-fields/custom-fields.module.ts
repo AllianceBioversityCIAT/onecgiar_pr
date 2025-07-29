@@ -56,7 +56,8 @@ const fieldComponents = [
   NoDataTextComponent,
   AddButtonComponent,
   PrRangeLevelComponent,
-  SyncButtonComponent
+  SyncButtonComponent,
+  LeadContactPersonFieldComponent
 ];
 
 @NgModule({
@@ -70,7 +71,7 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule, LeadContactPersonFieldComponent],
+  exports: [...fieldComponents, FormsModule],
   imports: [
     CommonModule,
     FormsModule,
@@ -84,8 +85,7 @@ const fieldComponents = [
     InputNumberModule,
     TooltipModule,
     IconFieldModule,
-    InputIconModule,
-    LeadContactPersonFieldComponent
+    InputIconModule
   ]
 })
 export class CustomFieldsModule {}

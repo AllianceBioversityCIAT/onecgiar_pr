@@ -9,14 +9,7 @@ import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module'
 
 @NgModule({
   declarations: [PhaseManagementTableComponent],
-  imports: [
-    CommonModule,
-    TableModule,
-    CalendarModule,
-    TooltipModule,
-    FormsModule,
-    CustomFieldsModule
-  ],
+  imports: [CommonModule, TableModule, CalendarModule, TooltipModule, FormsModule, CustomFieldsModule],
   exports: [PhaseManagementTableComponent]
 })
-export class PhaseManagementTableModule { }
+export class PhaseManagementTableModule {}
