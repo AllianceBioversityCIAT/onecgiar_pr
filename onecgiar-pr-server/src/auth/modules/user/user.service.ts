@@ -542,6 +542,8 @@ export class UserService {
               AND COUNT(rbu.initiative_id) = 0 THEN 'Read Only'
             WHEN users.is_cgiar = 1 
               AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)) THEN 'Active'
+            WHEN users.is_cgiar = 1
+              AND (COUNT(rbu.initiative_id) = 0 OR MAX(rbu.role) = 1) THEN 'Active'
             WHEN users.is_cgiar = 0 
               AND users.active = 1 
               AND (COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL)) THEN 'Active'
