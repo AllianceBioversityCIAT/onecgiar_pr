@@ -78,6 +78,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedEntities = signal<number[]>([]);
   loading = signal<boolean>(false);
   isActivatingUser = signal<boolean>(false);
+  isEditingUser = signal<boolean>(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -250,33 +251,41 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   // User actions methods
-  onEditUser(user: any): void {
-    // TODO: Implement edit user functionality
+  onEditUser(user: AddUser): void {
+    this.isEditingUser.set(true);
+    this.showAddUserModal = true;
+    this.fillUserFormToEdit(user);
+  }
+
+  fillUserFormToEdit(user: AddUser) {
+    const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
+    console.log(cgIAR);
+    console.log(emailAddress);
+    console.log(user);
+    setTimeout(() => {
+      this.manageUserModal.addUserForm.set({
+        is_cgiar: isCGIAR,
+        displayName: `${firstName} ${lastName} (${emailAddress})`,
+        first_name: firstName,
+        last_name: lastName,
+        email: emailAddress,
+        role_platform: 2, // Marked as guest by default (2)
+        role_assignments: []
+      });
+    }, 500);
   }
 
   onToggleUserStatus(user: AddUser) {
     if (!user.isActive) {
       this.showAddUserModal = true;
       this.isActivatingUser.set(true);
-      const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
-      console.log(cgIAR);
-      console.log(emailAddress);
-      console.log(user);
-      setTimeout(() => {
-        this.manageUserModal.addUserForm.set({
-          is_cgiar: isCGIAR,
-          displayName: `${firstName} ${lastName} (${emailAddress})`,
-          first_name: firstName,
-          last_name: lastName,
-          email: emailAddress,
-          role_platform: 2, // Marked as guest by default (2)
-          role_assignments: []
-        });
-      }, 500);
+      this.isEditingUser.set(true);
+      this.fillUserFormToEdit(user);
       return {};
     }
 
     this.isActivatingUser.set(false);
+    this.isEditingUser.set(false);
     this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
       next: res => {
         this.getUsers();

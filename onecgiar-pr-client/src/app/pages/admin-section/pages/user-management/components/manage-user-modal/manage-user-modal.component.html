@@ -11,20 +11,21 @@
   [style]="{ width: '600px' }">
   <div class="modal-content">
     <!-- Is CGIAR Question -->
-    <div class="form-field">
-      <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
-      <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
-        <label class="radio-option">
-          <input type="radio" name="is-cgiar" [checked]="addUserForm().is_cgiar" (change)="onModalCgiarChange(true)" class="radio-input" />
-          <span class="radio-label">Yes</span>
-        </label>
-        <label class="radio-option">
-          <input type="radio" name="is-cgiar" [checked]="!addUserForm().is_cgiar" (change)="onModalCgiarChange(false)" class="radio-input" />
-          <span class="radio-label">No</span>
-        </label>
+    @if (!editingMode()) {
+      <div class="form-field">
+        <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
+        <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
+          <label class="radio-option">
+            <input type="radio" name="is-cgiar" [checked]="addUserForm().is_cgiar" (change)="onModalCgiarChange(true)" class="radio-input" />
+            <span class="radio-label">Yes</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="is-cgiar" [checked]="!addUserForm().is_cgiar" (change)="onModalCgiarChange(false)" class="radio-input" />
+            <span class="radio-label">No</span>
+          </label>
+        </div>
       </div>
-    </div>
-
+    }
     <!-- CGIAR User Search -->
     @if (addUserForm().is_cgiar && !addUserForm().email) {
       <div class="form-field">

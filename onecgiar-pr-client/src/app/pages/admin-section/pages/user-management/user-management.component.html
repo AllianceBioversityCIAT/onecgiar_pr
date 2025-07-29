@@ -200,6 +200,11 @@
   </div>
 
   <!-- Manage User Modal Component -->
-  <app-manage-user-modal #manageUserModal [userActivatorMode]="isActivatingUser" [(visible)]="showAddUserModal" (userCreated)="onUserCreated()">
+  <app-manage-user-modal
+    #manageUserModal
+    [editingMode]="isEditingUser"
+    [userActivatorMode]="isActivatingUser"
+    [(visible)]="showAddUserModal"
+    (userCreated)="onUserCreated()">
   </app-manage-user-modal>
 </div>

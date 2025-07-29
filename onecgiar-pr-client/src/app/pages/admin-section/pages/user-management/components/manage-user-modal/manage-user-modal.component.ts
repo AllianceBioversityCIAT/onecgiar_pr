@@ -40,6 +40,7 @@ export class ManageUserModalComponent implements OnChanges {
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() userCreated = new EventEmitter<void>();
   @Input() userActivatorMode: WritableSignal<boolean> = signal(false);
+  @Input() editingMode: WritableSignal<boolean> = signal(false);
 
   // ViewChild reference for clearing user search
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
@@ -249,6 +250,8 @@ export class ManageUserModalComponent implements OnChanges {
     // This method is called when the modal is closed via X button, ESC key, or clicking outside
     this.visible = false;
     this.visibleChange.emit(false);
+    this.editingMode.set(false);
+    this.userActivatorMode.set(false);
     this.resetAddUserForm();
   }
 
