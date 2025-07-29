@@ -7,6 +7,8 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
+import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
+import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 
 interface AddUserForm {
   is_cgiar: boolean;
@@ -15,6 +17,10 @@ interface AddUserForm {
   last_name?: string;
   email?: string;
   role_platform: number | null;
+  role_assignments: {
+    role_id: number;
+    entity_id: number;
+  }[];
 }
 
 @Component({
@@ -27,6 +33,8 @@ interface AddUserForm {
 export class ManageUserModalComponent implements OnChanges {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+  initiativesService = inject(InitiativesService);
+  getRolesService = inject(GetRolesService);
 
   @Input() visible: boolean = false;
   @Output() visibleChange = new EventEmitter<boolean>();
@@ -41,7 +49,8 @@ export class ManageUserModalComponent implements OnChanges {
   showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
-    role_platform: 2 // Marked as guest by default (2)
+    role_platform: 2, // Marked as guest by default (2)
+    role_assignments: []
   });
 
   ngOnChanges(changes: SimpleChanges) {
@@ -80,9 +89,31 @@ export class ManageUserModalComponent implements OnChanges {
   resetAddUserForm(): void {
     this.addUserForm.set({
       is_cgiar: true,
-      role_platform: 2 // Marked as guest by default (2)
+      role_platform: 2, // Marked as guest by default (2)
+      role_assignments: []
     });
     this.clearUserSearch();
+  }
+
+  onRoleEntityChange(event: number, index: number): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, entity_id: event } : item))
+    }));
+  }
+
+  onRoleAssignmentChange(event: number, index: number): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, role_id: event } : item))
+    }));
+  }
+
+  addRoleAssignment(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: [...form.role_assignments, { role_id: null, entity_id: null }]
+    }));
   }
 
   onModalCgiarChange(isCgiar: boolean): void {
@@ -147,6 +178,10 @@ export class ManageUserModalComponent implements OnChanges {
     // Remove displayName from form data before sending to backend
     const formData = { ...this.addUserForm() };
     delete formData.displayName;
+
+    console.log(formData);
+
+    return;
 
     this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {

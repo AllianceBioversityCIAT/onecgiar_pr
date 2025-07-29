@@ -11,7 +11,6 @@
   [style]="{ width: '600px' }">
   <div class="modal-content">
     <!-- Is CGIAR Question -->
-    <h1>is activating user: {{ userActivatorMode() }}</h1>
     <div class="form-field">
       <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
       <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
@@ -83,6 +82,40 @@
             id="user-email" />
         </div>
       </div>
+    }
+
+    @if (addUserForm().email) {
+      <br />
+      <div class="form-field" style="margin-bottom: 0px">
+        <div class="field-label">Please select the user role(s):</div>
+      </div>
+
+      @for (item of addUserForm().role_assignments; track $index) {
+        <app-pr-select
+          [options]="initiativesService.allInitiatives()"
+          optionLabel="official_code"
+          optionValue="id"
+          placeholder="All"
+          [ngModel]="item.entity_id"
+          (ngModelChange)="onRoleEntityChange($event, $index)"
+          [expandSpaceOnOpen]="true"
+          [indexReference]="$index + 10"
+          [required]="false"></app-pr-select>
+
+        <app-pr-select
+          [options]="getRolesService.roles()"
+          optionLabel="role_description"
+          optionValue="role_id"
+          placeholder="All"
+          [ngModel]="item.role_id"
+          (ngModelChange)="onRoleAssignmentChange($event, $index)"
+          [expandSpaceOnOpen]="true"
+          [indexReference]="($index + 1) * 11"
+          [required]="false"></app-pr-select>
+        <br />
+      }
+
+      <button (click)="addRoleAssignment()">Add role assignment</button>
     }
 
     <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->

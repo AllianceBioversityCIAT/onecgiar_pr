@@ -1147,4 +1147,8 @@ export class ResultsApiService {
   GET_portfolioList() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
+
+  GET_roles() {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
+  }
 }
