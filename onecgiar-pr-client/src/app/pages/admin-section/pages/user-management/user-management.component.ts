@@ -103,7 +103,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       .GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any, this.selectedEntities())
       .subscribe({
         next: res => {
-          console.log(res.response);
           this.users.set(res.response);
           res.response.map(user => {
             user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
@@ -156,7 +155,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Method to handle entities filter changes
   onEntitiesChange(value: any[]) {
-    console.log('change');
     this.selectedEntities.set(value);
     this.getUsers();
   }
@@ -255,9 +253,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   fillUserFormToEdit(user: AddUser) {
     const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
-    console.log(cgIAR);
-    console.log(emailAddress);
-    console.log(user);
     setTimeout(() => {
       this.manageUserModal.addUserForm.set({
         is_cgiar: isCGIAR,
@@ -280,8 +275,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       this.fillUserFormToEdit(user);
       return {};
     }
-
-    console.log('mostrar alerta');
 
     // confitm alert
     this.api.alertsFe.show(
@@ -307,9 +300,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
               status: 'success'
             });
           },
-          error: error => {
-            console.log(error);
-          }
+          error: error => {}
         });
       }
     );
