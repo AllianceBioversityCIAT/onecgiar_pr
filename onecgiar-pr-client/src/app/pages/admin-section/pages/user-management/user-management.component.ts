@@ -76,6 +76,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   selectedCgiar = signal<string>('');
   selectedEntities = signal<number[]>([]);
   loading = signal<boolean>(false);
+  isActivatingUser = signal<boolean>(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -235,6 +236,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Action methods
   onAddUser(): void {
+    this.isActivatingUser.set(false);
     this.showAddUserModal = true;
   }
 
@@ -252,10 +254,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   onToggleUserStatus(user) {
-    // TODO: Implement toggle user status functionality
-    console.log(user);
-    if (!user.isActive) return (this.showAddUserModal = true);
+    if (!user.isActive) {
+      this.showAddUserModal = true;
+      this.isActivatingUser.set(true);
+      return {};
+    }
 
+    this.isActivatingUser.set(false);
     this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
       next: res => {
         this.getUsers();

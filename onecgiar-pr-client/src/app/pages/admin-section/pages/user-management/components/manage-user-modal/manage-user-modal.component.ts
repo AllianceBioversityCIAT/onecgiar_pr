@@ -1,4 +1,4 @@
-import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, OnChanges, SimpleChanges, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -31,6 +31,7 @@ export class ManageUserModalComponent implements OnChanges {
   @Input() visible: boolean = false;
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() userCreated = new EventEmitter<void>();
+  @Input() userActivatorMode: WritableSignal<boolean> = signal(false);
 
   // ViewChild reference for clearing user search
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
@@ -133,6 +134,12 @@ export class ManageUserModalComponent implements OnChanges {
       role_platform
     }));
   }
+
+  manageUser() {
+    this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
+  }
+
+  onSaveUserActivator(): void {}
 
   onSaveUser(): void {
     this.creatingUser.set(true);
