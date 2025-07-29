@@ -60,6 +60,7 @@ interface CgiarOption {
 export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+  initiativesService = inject(InitiativesService);
 
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
@@ -73,7 +74,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   searchQuery = signal<string>(''); // For API calls and filtering
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
-  selectedEntities = signal<string[]>([]);
+  selectedEntities = signal<number[]>([]);
   loading = signal<boolean>(false);
 
   // Modal variables
@@ -84,13 +85,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.getUsers();
-    this.getInitiatives();
-  }
-
-  getInitiatives() {
-    this.api.resultsSE.GET_AllInitiatives().subscribe((res: any) => {
-      console.log(res.response);
-    });
   }
 
   ngOnDestroy() {
@@ -102,23 +96,25 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   getUsers() {
     this.loading.set(true);
-    this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
-      next: res => {
-        console.log(res.response);
-        this.users.set(res.response);
-        res.response.map(user => {
-          user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
-          user.isActive = user.userStatus === 'Active';
-          user.isCGIAR = user.cgIAR === 'Yes';
-        });
-        this.users.set(res.response);
-        this.loading.set(false);
-      },
-      error: error => {
-        this.loading.set(false);
-        this.users.set([]);
-      }
-    });
+    this.resultsApiService
+      .GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any, this.selectedEntities())
+      .subscribe({
+        next: res => {
+          console.log(res.response);
+          this.users.set(res.response);
+          res.response.map(user => {
+            user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
+            user.isActive = user.userStatus === 'Active';
+            user.isCGIAR = user.cgIAR === 'Yes';
+          });
+          this.users.set(res.response);
+          this.loading.set(false);
+        },
+        error: error => {
+          this.loading.set(false);
+          this.users.set([]);
+        }
+      });
   }
 
   // Method to handle search input changes with timeout
@@ -157,9 +153,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Method to handle entities filter changes
   onEntitiesChange(value: any[]) {
-    // Extract entity values from the multi-select response
-    const entityValues = value ? value.map(item => item.value || item) : [];
-    this.selectedEntities.set(entityValues);
+    console.log('change');
+    this.selectedEntities.set(value);
     this.getUsers();
   }
 

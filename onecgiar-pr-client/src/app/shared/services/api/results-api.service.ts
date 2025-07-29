@@ -1121,12 +1121,20 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '') {
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '', entityIds?: number[]) {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
+    console.log(entityIds);
+    // Convert array of objects to array of ids if needed
+
+    if (entityIds.length) {
+      const entityIdArray =
+        Array.isArray(entityIds) && entityIds.length && typeof entityIds[0] === 'object' ? entityIds.map((item: any) => item.id) : entityIds;
+      queryParams.push(`entityIds=${entityIdArray.map(id => id.toString()).join(',')}`);
+    }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);

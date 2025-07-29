@@ -65,12 +65,14 @@
         <!-- Entity filter -->
         <div class="entity-filter">
           <label class="entity-label">Entity:</label>
+          <h1>{{ selectedEntities().length }}</h1>
           <app-pr-multi-select
             #entitiesSelect
-            [options]="entityOptions"
-            optionLabel="label"
-            optionValue="value"
+            [options]="initiativesService.allInitiatives()"
+            optionLabel="official_code"
+            optionValue="id"
             placeholder="All"
+            (selectOptionEvent)="getUsers()"
             [ngModel]="selectedEntities()"
             (ngModelChange)="onEntitiesChange($event)"
             [required]="false"></app-pr-multi-select>
