@@ -5,13 +5,13 @@
   margin-left: -20px;
 
   .section_title {
-    color: rgb(48, 48, 48);
+    color: var(--pr-color-accents-7);
     font-weight: 700;
     font-size: 1.3em;
   }
 
   .section_description {
-    color: rgb(73, 73, 73);
+    color: var(--pr-color-accents-6);
     font-size: 1em;
   }
 }

@@ -35,11 +35,11 @@
     }
 
     .editing {
-      border: 2px solid #eba21b !important;
-      color: #eba21b !important;
+      border: 2px solid var(--pr-color-yellow-200) !important;
+      color: var(--pr-color-yellow-200) !important;
 
       &.active {
-        background-color: #eba21b;
+        background-color: var(--pr-color-yellow-200);
         color: white !important;
       }
     }
@@ -120,19 +120,18 @@
 }
 
 .not_provided_text {
-  color: rgb(187, 187, 187);
+  color: var(--pr-color-neutral-1000);
   font-style: italic;
   font-size: 0.8em;
 }
 
 .Pending {
-  color: rgb(182, 182, 182);
+  color: var(--pr-color-neutral-1000);
 }
 
 .Completed {
-  color: #23ac67;
+  color: var(--pr-color-green-500);
   font-weight: 500;
-  // border: 1px solid #23ac67;
   padding: 5px;
   border-radius: 4px;
   display: flex;
@@ -144,14 +143,14 @@
     width: 10px;
     height: 10px;
     border-radius: 100px;
-    background-color: #23ac67;
+    background-color: var(--pr-color-green-500);
   }
 }
 
 .results_selected {
   margin-top: 20px;
-  background-color: white;
-  box-shadow: 0px 0px 5px 5px rgb(238, 238, 238);
+  background-color: var(--pr-color-white);
+  box-shadow: 0px 0px 5px 5px var(--pr-color-neutral-1000);
   display: flex;
   flex-direction: column;
   border-radius: 10px;

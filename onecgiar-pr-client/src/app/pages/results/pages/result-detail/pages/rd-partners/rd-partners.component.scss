@@ -21,7 +21,7 @@
 
       .medal {
         transition: all ease-in-out 0.4s;
-        color: rgb(167, 167, 167);
+        color: var(--pr-color-accents-3);
       }
 
       .primary {
@@ -40,7 +40,7 @@ i {
   align-self: center;
   cursor: default !important;
   font-size: 1.5em;
-  color: rgb(68, 68, 68);
+  color: var(--pr-color-accents-6);
 }
 
 .column_title {

@@ -21,13 +21,13 @@
 
   .header {
     background-color: #2196f3;
-    color: white;
+    color: var(--pr-color-white);
     text-align: center;
     padding: 4px 0px;
   }
 
   .content {
-    background-color: #f7f7f7;
+    background-color: var(--pr-color-accents-1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -51,7 +51,7 @@
 
       .line {
         width: 2px;
-        background-color: rgb(202, 202, 202);
+        background-color: var(--pr-color-neutral-1000);
         height: 50px;
       }
 

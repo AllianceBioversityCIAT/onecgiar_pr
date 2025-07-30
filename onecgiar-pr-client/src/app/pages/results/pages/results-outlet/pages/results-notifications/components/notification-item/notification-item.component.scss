@@ -5,7 +5,7 @@ p {
 .notification {
   padding: 0 30px 15px 30px;
   background-color: var(--pr-color-accents-1);
-  border: 1px solid #808080;
+  border: 1px solid var(--pr-color-accents-4);
   border-radius: 10px;
 
   .notification_header {
@@ -114,20 +114,20 @@ p {
   }
 
   .pending {
-    color: gray;
+    color: var(--pr-color-accents-5);
   }
 
   .accepted {
-    color: green;
+    color: var(--pr-color-green-500);
   }
 
   .rejected {
-    color: rgb(219, 50, 28);
+    color: var(--pr-color-red-300);
   }
 }
 
 .result_submitted_text {
-  color: rgb(238, 71, 71);
+  color: var(--pr-color-red-200);
   font-weight: 700px;
   font-size: 1em !important;
 }

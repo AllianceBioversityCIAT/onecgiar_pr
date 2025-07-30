@@ -1,22 +1,22 @@
 .local_container {
-    padding: 0px 35px;
+  padding: 0px 35px;
 
-    .tesult_title {
-        background-color: #5c5f70;
-        color: white;
-        border-radius: 5px;
-        padding: 5px 10px;
-        font-style: italic;
-        font-size: .9em;
+  .tesult_title {
+    background-color: var(--pr-color-secondary-300);
+    color: var(--pr-color-white);
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-style: italic;
+    font-size: 0.9em;
 
-        display: flex;
-        gap: 5px;
+    display: flex;
+    gap: 5px;
 
-        .title {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: calc(100vw - 600px);
-        }
+    .title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: calc(100vw - 600px);
     }
+  }
 }

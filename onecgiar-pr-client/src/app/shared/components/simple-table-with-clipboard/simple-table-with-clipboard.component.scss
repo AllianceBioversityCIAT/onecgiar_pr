@@ -6,6 +6,7 @@ td {
 
 table {
   border-collapse: collapse;
+  width: 100%;
 }
 
 th {
@@ -20,10 +21,6 @@ td {
 .table_title {
   background-color: var(--pr-color-primary-300) !important;
   color: white;
-}
-
-table {
-  width: 100%;
 }
 
 .loader_info {
@@ -44,8 +41,8 @@ table {
 }
 
 .copy_to_clipboard_button {
-  background-color: rgb(255, 255, 255);
-  color: rgb(80, 80, 80);
+  background-color: var(--pr-color-white);
+  color: var(--pr-color-accents-5);
   margin: 5px;
   border-radius: 3px;
   display: flex;

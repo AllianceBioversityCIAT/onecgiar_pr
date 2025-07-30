@@ -49,17 +49,17 @@
 }
 
 .not_provided_text {
-  color: rgb(187, 187, 187);
+  color: var(--pr-color-accents-3);
   font-style: italic;
   font-size: 0.8em;
 }
 
 .Pending {
-  color: rgb(182, 182, 182);
+  color: var(--pr-color-accents-3);
 }
 
 .Completed {
-  color: #23ac67;
+  color: var(--pr-color-green-500);
   font-weight: 500;
   padding: 5px;
   border-radius: 4px;
@@ -72,6 +72,6 @@
     width: 10px;
     height: 10px;
     border-radius: 100px;
-    background-color: #23ac67;
+    background-color: var(--pr-color-green-500);
   }
 }

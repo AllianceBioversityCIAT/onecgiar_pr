@@ -20,7 +20,7 @@ p {
   border-radius: 16px;
 
   &:hover {
-    background-color: #f0f0f0;
+    background-color: var(--pr-color-accents-1);
   }
 
   @media (max-width: 800px) {
@@ -94,6 +94,6 @@ p {
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 4px;
-  background-color: #f0f0f0;
+  background-color: var(--pr-color-accents-1);
   color: white;
 }

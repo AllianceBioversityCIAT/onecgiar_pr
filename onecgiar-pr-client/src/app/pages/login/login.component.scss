@@ -302,7 +302,7 @@ input {
   padding: 15px;
   background-color: var(--pr-color-accents-1);
   border-radius: 8px;
-  border-left: 4px solid #427730;
+  border-left: 4px solid var(--pr-color-green-700);
 }
 
 .requirements-list {
@@ -331,18 +331,18 @@ input {
     }
 
     &.valid {
-      color: #28a745;
+      color: var(--pr-color-green-500);
 
       i {
-        color: #28a745;
+        color: var(--pr-color-green-500);
       }
     }
 
     &.invalid {
-      color: #dc3545;
+      color: var(--pr-color-red-400);
 
       i {
-        color: #dc3545;
+        color: var(--pr-color-red-400);
       }
     }
   }
@@ -366,13 +366,13 @@ input {
 }
 
 .password-match-error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border-color: #dc3545;
+  color: var(--pr-color-red-400);
+  background-color: var(--pr-color-red-50);
+  border-color: var(--pr-color-red-400);
 }
 
 .password-match-success {
-  color: #28a745;
-  background-color: #d4edda;
-  border-color: #28a745;
+  color: var(--pr-color-green-500);
+  background-color: var(--pr-color-green-50);
+  border-color: var(--pr-color-green-500);
 }

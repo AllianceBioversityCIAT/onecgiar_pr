@@ -41,15 +41,15 @@ a {
 }
 
 .error__link {
-  color: red;
+  color: var(--pr-color-red-300);
   margin: 0;
 
   a {
-    color: red;
+    color: var(--pr-color-red-300);
     font-weight: 600;
 
     &:hover {
-      color: #a70505;
+      color: var(--pr-color-red-500);
     }
   }
 }
@@ -105,7 +105,7 @@ a {
 }
 
 .dividerStyles {
-  border: 0.5px solid rgb(224, 224, 224);
+  border: 0.5px solid var(--pr-color-neutral-1000);
   border-radius: 100px;
 }
 
@@ -119,8 +119,8 @@ a {
   overflow: hidden;
 
   .index {
-    background-color: rgb(240, 240, 240);
-    color: rgb(109, 109, 109);
+    background-color: var(--pr-color-accents-1);
+    color: var(--pr-color-accents-5);
     width: 50px;
     height: 50px;
     display: flex;
@@ -142,8 +142,8 @@ a {
 }
 
 .in-qa-tag {
-  background-color: #ffc84f;
-  color: rgb(61, 61, 61);
+  background-color: var(--pr-color-yellow-300);
+  color: var(--pr-color-accents-6);
   margin-top: 2px;
   margin-bottom: 2px;
   padding: 1px 5px;
@@ -179,7 +179,7 @@ a {
 }
 
 .completeness-editing {
-  background-color: #eba21b;
+  background-color: var(--pr-color-yellow-200);
 }
 
 .completeness-all {
@@ -230,7 +230,7 @@ a {
   align-items: center;
   gap: 5px;
   font-style: italic;
-  color: rgb(255, 255, 255);
+  color: var(--pr-color-white);
   font-weight: 700;
   background-color: var(--pr-color-primary-200);
   border-radius: 5px 100px 100px 5px;

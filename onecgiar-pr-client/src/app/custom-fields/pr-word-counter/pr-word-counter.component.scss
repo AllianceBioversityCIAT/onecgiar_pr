@@ -3,7 +3,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 5px;
-  color: var(--pr-color-medium);
+  color: var(--pr-color-secondary-100);
   font-size: 0.9em;
 
   .limitBreaker {
@@ -16,7 +16,7 @@
 }
 
 .invalid {
-  color: red !important;
+  color: var(--pr-color-red-300) !important;
 }
 
 .warning {

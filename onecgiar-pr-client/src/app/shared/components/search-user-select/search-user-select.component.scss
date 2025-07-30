@@ -62,7 +62,7 @@
     }
 
     &.pi-exclamation-triangle {
-      color: #ef4444;
+      color: var(--pr-color-red-300);
       margin-right: 4px; // Margen adicional específico para el ícono de advertencia
     }
   }
@@ -91,7 +91,7 @@
 // Custom dropdown styling to match pr-select
 :host ::ng-deep {
   .p-dropdown {
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--pr-color-neutral-1000);
     border-radius: 8px;
     transition: border-color 0.2s ease;
 
@@ -120,7 +120,7 @@
   }
 
   .p-dropdown-panel {
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--pr-color-neutral-1000);
     border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     margin-top: 4px;

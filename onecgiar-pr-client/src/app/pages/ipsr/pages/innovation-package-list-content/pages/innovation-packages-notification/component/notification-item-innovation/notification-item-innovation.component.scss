@@ -32,20 +32,20 @@
   }
 
   .pending {
-    color: gray;
+    color: var(--pr-color-accents-5);
   }
 
   .accepted {
-    color: green;
+    color: var(--pr-color-green-500);
   }
 
   .rejected {
-    color: rgb(219, 50, 28);
+    color: var(--pr-color-red-300);
   }
 }
 
 .result_submitted_text {
-  color: rgb(238, 71, 71);
+  color: var(--pr-color-red-200);
   font-weight: 700px;
   font-size: 1em !important;
 }

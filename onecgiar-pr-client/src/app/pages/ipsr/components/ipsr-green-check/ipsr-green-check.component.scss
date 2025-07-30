@@ -1,16 +1,16 @@
 .ipsr_green_check_icon_container {
-    background-color: white;
-    padding: 1px;
-    border-radius: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background-color: var(--pr-color-white);
+  padding: 1px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    .gc_icon {
-        color: rgb(207, 207, 207);
-    }
+  .gc_icon {
+    color: var(--pr-color-neutral-1000);
+  }
 
-    .active {
-        color: rgb(22, 179, 22);
-    }
+  .active {
+    color: var(--pr-color-green-500);
+  }
 }

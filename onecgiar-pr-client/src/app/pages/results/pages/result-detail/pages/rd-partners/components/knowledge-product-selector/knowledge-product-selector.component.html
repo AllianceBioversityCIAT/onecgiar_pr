@@ -81,7 +81,7 @@
       <div class="chips_container partners_selected">
         <div appFeedbackValidation labelText="Partner role" [isComplete]="partner?.delivery.length > 0"></div>
         <div class="pr_chip_selected" style="background-color: white !important; padding: 0 !important">
-          <div class="type">Partner role: <span style="color: #f00">*</span></div>
+          <div class="type">Partner role: <span style="color: var(--pr-color-red-300)">*</span></div>
 
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
             @for (delivery of deliveryOptions; track $index) {

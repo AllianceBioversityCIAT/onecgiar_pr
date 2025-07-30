@@ -7,9 +7,7 @@
   height: 100%;
   box-sizing: border-box;
   background-color: white;
-  display: flex;
   justify-content: space-between;
-  flex-direction: column;
   overflow-y: auto;
 
   .back_button {
@@ -20,7 +18,7 @@
 
   .segment {
     .name {
-      color: var(--pr-color-medium);
+      color: var(--pr-color-secondary-100);
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -52,7 +50,6 @@
           width: 25px;
           right: 0;
           top: 0;
-          // background-color: red;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -60,11 +57,11 @@
           padding: 0px 15px;
 
           .valid {
-            color: #34b734;
+            color: var(--pr-color-green-500);
           }
 
           .invalid {
-            color: #c0c0c0;
+            color: var(--pr-color-neutral-900);
           }
         }
 

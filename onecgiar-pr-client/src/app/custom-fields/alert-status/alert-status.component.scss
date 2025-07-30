@@ -2,7 +2,7 @@
   padding-left: 20px;
 
   .warning {
-    color: #ffce31;
+    color: var(--pr-color-yellow-100);
   }
 
   .info {
@@ -17,7 +17,7 @@
     height: 100%;
 
     &.warning {
-      background-color: #ffce31;
+      background-color: var(--pr-color-yellow-100);
     }
 
     &.info {

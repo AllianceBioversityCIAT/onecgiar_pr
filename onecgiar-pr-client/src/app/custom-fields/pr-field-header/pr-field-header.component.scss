@@ -1,20 +1,18 @@
 .required::after {
   content: '*';
-  color: rgb(255, 92, 92);
+  color: var(--pr-color-red-100);
   margin-left: 2px;
 }
 
 .simpleStyle {
   color: var(--pr-color-primary-300) !important;
   opacity: 0.8;
-  // margin-bottom: -10px;
 }
 
 .pr_description.readOnly {
-  // color: var(--pr-color-primary-300) !important;
   font-weight: 400;
   font-style: italic;
-  background-color: rgb(247, 247, 247);
+  background-color: var(--pr-color-accents-1);
   border-radius: 7px;
   padding: 5px 10px;
   box-shadow: 0px 0px 2px 5px rgba(0, 0, 0, 0.034);
@@ -22,11 +20,9 @@
   font-size: 0.9em;
 
   &::before {
-    // content: 'Description:';
-    // display: block;
     font-size: 0.8em;
     font-style: italic;
     margin-left: 10px;
-    color: gray;
+    color: var(--pr-color-accents-5);
   }
 }

@@ -73,12 +73,12 @@ p {
 .whats-new-page-details_table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #ddd;
+  border: 1px solid var(--pr-color-neutral-1000);
 }
 
 .whats-new-page-details_table th,
 .whats-new-page-details_table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--pr-color-neutral-1000);
   padding: 8px;
   text-align: left;
 }
@@ -203,7 +203,7 @@ p {
   .video-player-placeholder {
     width: 100%;
     padding-top: 45%;
-    background-color: #e0e0e0;
+    background-color: var(--pr-color-neutral-1000);
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;

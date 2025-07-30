@@ -6,7 +6,7 @@
   .footer {
     width: 100%;
     height: 65px;
-    color: white;
+    color: var(--pr-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -37,20 +37,20 @@
           .f-button {
             cursor: pointer;
             font-size: 1.1rem;
-            color: white;
+            color: var(--pr-color-white);
           }
 
           .point {
             width: 8px;
             height: 8px;
-            background-color: white;
+            background-color: var(--pr-color-white);
             border-radius: 10px;
           }
         }
 
         .rights {
           font-weight: 200;
-          color: rgb(219, 219, 219);
+          color: var(--pr-color-neutral-1000);
           margin-top: 2px;
           text-align: center;
         }

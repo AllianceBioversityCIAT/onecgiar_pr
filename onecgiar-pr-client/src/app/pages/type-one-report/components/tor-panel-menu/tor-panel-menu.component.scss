@@ -17,7 +17,7 @@
 
   .segment {
     .name {
-      color: var(--pr-color-medium);
+      color: var(--pr-color-secondary-100);
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -56,11 +56,11 @@
           padding: 0px 15px;
 
           .valid {
-            color: #34b734;
+            color: var(--pr-color-green-500);
           }
 
           .invalid {
-            color: #c0c0c0;
+            color: var(--pr-color-neutral-900);
           }
         }
 

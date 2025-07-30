@@ -6,7 +6,7 @@
 
   .filter {
     .filter_title {
-      color: var(--pr-color-medium);
+      color: var(--pr-color-secondary-100);
       font-size: 0.9em;
       margin-bottom: 5px;
     }
@@ -22,7 +22,7 @@
       }
 
       .chip {
-        background-color: rgb(221, 221, 221);
+        background-color: var(--pr-color-neutral-1000);
         padding: 4px 10px;
         border-radius: 10px;
         font-size: 0.9em;

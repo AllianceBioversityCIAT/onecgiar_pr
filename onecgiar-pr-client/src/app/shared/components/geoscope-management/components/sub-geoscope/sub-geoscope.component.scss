@@ -23,7 +23,7 @@
 }
 
 .dhs {
-  color: rgb(167, 167, 167);
+  color: var(--pr-color-accents-3);
 }
 
 .content {
@@ -52,7 +52,7 @@
 .medal_info {
   display: flex;
   align-items: center;
-  color: rgb(167, 167, 167);
+  color: var(--pr-color-accents-3);
   gap: 10px;
 }
 
@@ -87,7 +87,7 @@
 
       .medal {
         transition: all ease-in-out 0.4s;
-        color: rgb(167, 167, 167);
+        color: var(--pr-color-accents-3);
       }
 
       .primary {
@@ -99,7 +99,7 @@
         align-self: center;
         cursor: pointer;
         font-size: 1.5em;
-        color: rgb(68, 68, 68);
+        color: var(--pr-color-accents-6);
       }
     }
   }

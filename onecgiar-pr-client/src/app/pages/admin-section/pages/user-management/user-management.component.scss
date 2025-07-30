@@ -30,7 +30,7 @@
   }
 
   .description {
-    color: #6b7280;
+    color: var(--pr-color-secondary-200);
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
@@ -133,7 +133,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    color: #6b7280;
+    color: var(--pr-color-secondary-200);
 
     .name {
       font-weight: 600;
@@ -204,17 +204,22 @@
   .p-datatable-emptymessage > td {
     text-align: center;
     padding: 24px 16px;
-    color: #6b7280;
+    color: var(--pr-color-secondary-200);
     font-style: italic;
+  }
+
+  .p-datatable-thead > tr > th:last-child,
+  .p-datatable-tbody > tr > td:last-child {
+    text-align: center !important;
   }
 }
 
 // User status styles
 .status-active {
-  color: #059669;
+  color: var(--pr-color-green-600);
   font-weight: 500;
   padding: 4px 8px;
-  background-color: #d1fae5;
+  background-color: var(--pr-color-green-50);
   border-radius: 6px;
   font-size: 12px;
   text-transform: uppercase;
@@ -222,10 +227,10 @@
 }
 
 .status-inactive {
-  color: #dc2626;
+  color: var(--pr-color-red-400);
   font-weight: 500;
   padding: 4px 8px;
-  background-color: #fee2e2;
+  background-color: var(--pr-color-red-50);
   border-radius: 6px;
   font-size: 12px;
   text-transform: uppercase;
@@ -301,7 +306,7 @@
 // Empty state message
 .empty-message {
   text-align: center;
-  color: #6b7280;
+  color: var(--pr-color-secondary-200);
   font-size: 14px;
   padding: 24px;
 }
@@ -361,7 +366,7 @@
       font-size: 14px;
 
       .required {
-        color: #ef4444;
+        color: var(--pr-color-red-300);
         margin-left: 2px;
       }
     }
@@ -462,7 +467,7 @@
   .selected-user-display {
     padding: 12px 16px;
     background-color: var(--pr-color-primary-25);
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--pr-color-neutral-1000);
     border-radius: 8px;
     color: var(--pr-color-accents-7);
     font-size: 14px;
@@ -477,7 +482,7 @@
     background-color: var(--pr-color-primary-25);
     border: 1px solid var(--pr-color-accents-2);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--pr-color-secondary-200);
     font-size: 14px;
   }
 }
@@ -519,8 +524,8 @@
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-      background-color: #5856eb;
-      border-color: #5856eb;
+      background-color: var(--pr-color-primary-300);
+      border-color: var(--pr-color-primary-300);
     }
 
     &:disabled {
@@ -572,13 +577,5 @@
   // Reduced opacity for inactive users - only affects toggle button (second button)
   &.inactive-user .action-btn:nth-child(2) .material-icons-round {
     opacity: 0.4;
-  }
-}
-
-// Make Actions column centered
-::ng-deep .user-table {
-  .p-datatable-thead > tr > th:last-child,
-  .p-datatable-tbody > tr > td:last-child {
-    text-align: center !important;
   }
 }

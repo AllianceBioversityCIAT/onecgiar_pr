@@ -23,16 +23,12 @@
 }
 
 .fields-feedback-list {
-  // pointer-events: none;
-  // opacity: .7;
   transition: all ease-in-out 0.3s;
-  background-color: rgb(240 240 240);
+  background-color: var(--pr-color-accents-1);
   position: absolute;
   box-shadow: 0px 0px 9px 4px rgba(var(--pr-color-black-rgb), 0.129);
-  // top: -100px;
   transform: translateY(-100%) scale(1);
   right: -80px;
-  // height: 120px;
   width: 130px;
   border-radius: 10px;
   display: flex;
@@ -88,7 +84,7 @@
         width: 10px;
         height: 10px;
         border-radius: 50px;
-        background-color: rgb(255, 51, 0);
+        background-color: var(--pr-color-red-200);
       }
 
       .text {

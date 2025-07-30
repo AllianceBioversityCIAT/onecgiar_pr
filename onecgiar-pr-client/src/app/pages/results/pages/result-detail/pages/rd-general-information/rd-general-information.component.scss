@@ -21,7 +21,7 @@
 .change_result_type {
   display: flex;
   align-items: center;
-  border: 1px solid #fed84e;
+  border: 1px solid var(--pr-color-yellow-100);
   padding: 1rem 1rem 0 1rem;
   position: relative;
 }
@@ -36,10 +36,10 @@
   position: relative;
 
   .contact-error-message {
-    background-color: #fee;
-    border: 1px solid #f5c6cb;
+    background-color: var(--pr-color-red-50);
+    border: 1px solid var(--pr-color-red-100);
     border-radius: 4px;
-    color: #721c24;
+    color: var(--pr-color-red-700);
     padding: 0.75rem;
     margin-top: 0.5rem;
     font-size: 14px;
@@ -55,7 +55,7 @@
   ::ng-deep .invalid-contact {
     .form-control,
     input {
-      border-color: #dc3545 !important;
+      border-color: var(--pr-color-red-400) !important;
       box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
     }
   }
@@ -65,6 +65,7 @@
   position: relative;
   margin-top: -1rem;
   margin-bottom: 1rem;
+  z-index: 1000;
 
   .search-results {
     background: white;
@@ -113,12 +114,12 @@
   }
 
   .no-results {
-    background: #fff3cd;
+    background: var(--pr-color-yellow-50);
     border: 1px solid #ffeaa7;
     border-radius: 4px;
     padding: 0.75rem;
     text-align: center;
-    color: #856404;
+    color: var(--pr-color-yellow-600);
     font-size: 14px;
   }
 }
@@ -145,7 +146,7 @@
   z-index: 10;
 
   &:hover {
-    background-color: #f0f0f0;
+    background-color: var(--pr-color-accents-1);
   }
 
   .clear-icon {
@@ -176,18 +177,13 @@
   }
 }
 
-.search-results-container {
-  position: relative;
-  z-index: 1000;
-}
-
 .search-results {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--pr-color-neutral-1000);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   max-height: 200px;
@@ -231,10 +227,10 @@
 .contact-error-message {
   margin-top: 8px;
   padding: 8px 12px;
-  background-color: #fff3cd;
+  background-color: var(--pr-color-yellow-50);
   border: 1px solid #ffeaa7;
   border-radius: 4px;
-  color: #856404;
+  color: var(--pr-color-yellow-600);
   font-size: 0.9em;
 
   .warning-icon {
