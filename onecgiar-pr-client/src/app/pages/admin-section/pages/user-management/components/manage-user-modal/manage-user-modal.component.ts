@@ -190,7 +190,33 @@ export class ManageUserModalComponent implements OnChanges {
     }));
   }
 
-  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.onCreateUser());
+  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.editingMode() ? this.onUpdateUserRoles() : this.onCreateUser());
+
+  onUpdateUserRoles(): void {
+    const { email, role_assignments, role_platform } = this.addUserForm();
+    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
+      next: res => {
+        this.visible = false;
+        this.visibleChange.emit(false);
+        this.managedUser.emit();
+
+        this.api.alertsFe.show({
+          id: 'updateUserRolesSuccess',
+          title: 'User roles updated successfully',
+          description: `${email} - ${role_assignments.map(assignment => assignment.role_id).join(', ')}`,
+          status: 'success'
+        });
+      },
+      error: error => {
+        this.api.alertsFe.show({
+          id: 'updateUserRolesError',
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning'
+        });
+      }
+    });
+  }
 
   onSaveUserActivator(): void {
     this.addUserForm.update(form => ({
@@ -252,9 +278,6 @@ export class ManageUserModalComponent implements OnChanges {
         this.managedUser.emit(); // Notify parent to refresh users list
       },
       error: error => {
-        // Determinar el mensaje de error
-        let errorMessage = 'Error while creating user';
-        console.clear();
         if (error.status === 409) {
           this.api.alertsFe.show(
             {
@@ -266,14 +289,12 @@ export class ManageUserModalComponent implements OnChanges {
             },
             () => {
               // i need add attr force_swap as true to de role id 3 and 4
-              console.log(this.addUserForm());
               this.addUserForm.update(form => ({
                 ...form,
                 role_assignments: form.role_assignments.map(assignment =>
                   assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
                 )
               }));
-              console.log(this.addUserForm());
               this.onCreateUser();
             }
           );
@@ -285,8 +306,6 @@ export class ManageUserModalComponent implements OnChanges {
             status: 'warning'
           });
         }
-        console.log(error.status);
-        console.log(error);
 
         this.creatingUser.set(false);
       }

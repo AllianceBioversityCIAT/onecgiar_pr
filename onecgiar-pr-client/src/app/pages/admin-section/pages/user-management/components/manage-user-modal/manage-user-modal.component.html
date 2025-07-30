@@ -176,7 +176,15 @@
   <ng-template pTemplate="footer">
     <div class="modal-footer">
       <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
-      <button type="button" class="save-btn" [disabled]="!isFormValid() || creatingUser()" (click)="manageUser()">Save</button>
+      <button
+        type="button"
+        class="save-btn"
+        [disabled]="
+          userActivatorMode() ? !isFormValid() || creatingUser() || this.addUserForm().role_assignments.length <= 0 : !isFormValid() || creatingUser()
+        "
+        (click)="manageUser()">
+        {{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}
+      </button>
     </div>
   </ng-template>
 </p-dialog>
