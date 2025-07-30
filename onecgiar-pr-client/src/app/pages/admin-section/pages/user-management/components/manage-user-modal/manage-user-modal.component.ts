@@ -193,7 +193,7 @@ export class ManageUserModalComponent implements OnChanges {
   manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.editingMode() ? this.onUpdateUserRoles() : this.onCreateUser());
 
   onUpdateUserRoles(): void {
-    const { email, role_assignments, role_platform } = this.addUserForm();
+    const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
     this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
       next: res => {
         this.visible = false;
@@ -202,8 +202,8 @@ export class ManageUserModalComponent implements OnChanges {
 
         this.api.alertsFe.show({
           id: 'updateUserRolesSuccess',
-          title: 'User roles updated successfully',
-          description: `${email} - ${role_assignments.map(assignment => assignment.role_id).join(', ')}`,
+          title: res.message,
+          description: `${email} - ${first_name} ${last_name}`,
           status: 'success'
         });
       },
@@ -230,12 +230,10 @@ export class ManageUserModalComponent implements OnChanges {
         this.visibleChange.emit(false);
         this.managedUser.emit();
 
-        const successMessage = res?.message || 'The user has been successfully created';
-
         this.api.alertsFe.show({
           id: 'activateUserSuccess',
-          title: 'User activated successfully',
-          description: `${this.addUserForm().email} - ${this.addUserForm().first_name} ${this.addUserForm().last_name} - ${successMessage}`,
+          title: res.message,
+          description: `${this.addUserForm().email} - ${this.addUserForm().first_name} ${this.addUserForm().last_name}`,
           status: 'success'
         });
       },
