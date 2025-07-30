@@ -14,6 +14,7 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -1116,12 +1117,23 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {
+  PATCH_updateUserStatus(body: UpdateUserStatus) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
+
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '', entityIds?: number[]) {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
+    // Convert array of objects to array of ids if needed
+
+    if (entityIds.length) {
+      const entityIdArray =
+        Array.isArray(entityIds) && entityIds.length && typeof entityIds[0] === 'object' ? entityIds.map((item: any) => item.id) : entityIds;
+      queryParams.push(`entityIds=${entityIdArray.map(id => id.toString()).join(',')}`);
+    }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
@@ -1133,5 +1145,15 @@ export class ResultsApiService {
 
   GET_portfolioList() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
+
+  GET_roles() {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
+  }
+  PATCH_changeUserStatus(body: any) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
+  GET_findRoleByEntity(email: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/find/role_by_entity?email=${email}`);
   }
 }
