@@ -1156,4 +1156,11 @@ export class ResultsApiService {
   GET_findRoleByEntity(email: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/find/role_by_entity?email=${email}`);
   }
+  PATCH_updateUserRoles(body: {
+    email: string;
+    role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    role_platform: number;
+  }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/update/roles`, body);
+  }
 }
