@@ -9,7 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 export class RoleService {
   constructor(
     @InjectRepository(Role)
-    private readonly _roleRepository: Repository<Role>) {}
+    private readonly _roleRepository: Repository<Role>,
+  ) {}
 
   create(createRoleDto: CreateRoleDto) {
     try {

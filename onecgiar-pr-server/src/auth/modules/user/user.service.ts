@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
@@ -33,6 +34,7 @@ import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -137,7 +139,8 @@ export class UserService {
 
       if (
         !createUserDto.role_platform ||
-        !createUserDto.role_assignments || createUserDto.role_assignments.length === 0
+        !createUserDto.role_assignments ||
+        createUserDto.role_assignments.length === 0
       ) {
         createUserDto.role_platform = 2;
       }
@@ -243,9 +246,11 @@ export class UserService {
   }
 
   private async saveUserToDB(
-    dto: CreateUserDto | ChangeUserStatusDto,
+    dto: CreateUserDto | ChangeUserStatusDto | UpdateUserDto,
     token: TokenDto,
     changeStatus?: boolean,
+    remove_roles?: false,
+    id_role_by_entity?: number,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
     const queryRunner = this.dataSource.createQueryRunner();
@@ -254,17 +259,20 @@ export class UserService {
     console.log('User to save:', dto);
 
     try {
-      const needsRoles = !dto.role_assignments?.length && !dto.role_platform;
+      const needsRoles =
+        !dto.role_assignments?.length && !dto.role_platform && remove_roles;
       if (needsRoles) {
         throw new BadRequestException(
           'To save a user, you must provide at least one entity-role pair or an Admin role',
         );
       }
 
+      // Bring info about the new user from the database
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
       });
 
+      // Get the current Admin user from the token
       const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
@@ -303,7 +311,34 @@ export class UserService {
         newUser = await queryRunner.manager.save(User, dto);
       }
 
-      if (!dto.role_assignments || dto.role_assignments.length === 0) {
+      const idRoleByUser = await queryRunner.manager.findOne(RoleByUser, {
+        where: { user: newUser.id },
+      });
+
+      if (dto.role_assignments?.length === 0 && idRoleByUser) {
+        // Si no se especifica un rol_platform, elimina todos los roles activos
+        await queryRunner.manager.update(
+          RoleByUser,
+          { user: newUser.id },
+          { active: false, last_updated_by: currentUser?.id },
+        );
+      }
+
+      if (remove_roles) {
+        await queryRunner.manager.update(
+          RoleByUser,
+          { user: newUser.id, active: true },
+          {
+            active: false,
+            last_updated_by: currentUser?.id,
+          },
+        );
+      }
+
+      if (
+        !dto.role_assignments ||
+        (dto.role_assignments.length === 0 && remove_roles)
+      ) {
         await queryRunner.manager.save(RoleByUser, {
           role: dto?.role_platform || ROLE_IDS.GUEST,
           user: newUser.id,
@@ -312,30 +347,36 @@ export class UserService {
         });
       }
 
+      console.log('user', user);
       if (dto.role_assignments?.length) {
         for (const assignment of dto.role_assignments) {
-          const { role_id, entity_id } = assignment;
+          const { role_id, entity_id, id_role_by_entity, force_swap } =
+            assignment;
 
           const existingAssignment = await queryRunner.manager.findOne(
             RoleByUser,
             {
-              where: { user: newUser.id, initiative_id: entity_id, active: true },
+              where: {
+                user: newUser.id,
+                initiative_id: entity_id,
+                active: true,
+              },
             },
           );
 
-          if (existingAssignment) {
+          if (existingAssignment && !id_role_by_entity) {
             throw new BadRequestException(
               `The user already has a role in the selected entity. Only one role per entity is allowed.`,
             );
           }
 
+          //Validate entity existence
           const entity = await queryRunner.manager.findOne(ClarisaInitiative, {
             where: { id: entity_id, active: true },
             relations: ['obj_portfolio'],
           });
-
           const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-          const isExternal = !dto.is_cgiar;
+          const isExternal = !user.is_cgiar;
 
           if (isExternal && role_id !== ROLE_IDS.MEMBER) {
             throw new BadRequestException(
@@ -352,27 +393,33 @@ export class UserService {
           if ([ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id)) {
             const existingLead = await queryRunner.manager.findOne(RoleByUser, {
               where: { initiative_id: entity_id, role: role_id, active: true },
-              relations: ['obj_user'],
+              relations: ['obj_user', 'obj_initiative'],
             });
 
             if (existingLead) {
-              throw new BadRequestException(
-                `This entity already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned.`,
-              );
+              if (!force_swap) {
+                throw new ConflictException(
+                  `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
+                    `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
+                    `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+                );
+              } else {
+                await queryRunner.manager.update(RoleByUser, existingLead.id, {
+                  role: ROLE_IDS.COORDINATOR,
+                  last_updated_by: currentUser?.id,
+                });
+              }
             }
+
+            await queryRunner.manager.save(RoleByUser, {
+              id: id_role_by_entity ? id_role_by_entity : undefined,
+              role: role_id,
+              user: newUser.id,
+              initiative_id: entity_id,
+              created_by: currentUser?.id,
+              last_updated_by: currentUser?.id,
+            });
           }
-
-          await queryRunner.manager.save(RoleByUser, {
-            role: role_id,
-            user: newUser.id,
-            initiative_id: entity_id,
-            created_by: currentUser?.id,
-            last_updated_by: currentUser?.id,
-          });
-
-          console.log(
-            `Role ${role_id} assigned to user ${newUser.id} for entity ${entity_id}`,
-          );
         }
       }
 
@@ -383,6 +430,12 @@ export class UserService {
           message: newUser.is_cgiar
             ? 'CGIAR user activated successfully'
             : 'External user activated successfully',
+          status: HttpStatus.OK,
+        };
+      } else if (id_role_by_entity) {
+        return {
+          response: { id: newUser.id, email: newUser.email },
+          message: 'Roles saved successfully',
           status: HttpStatus.OK,
         };
       } else {
@@ -867,7 +920,6 @@ export class UserService {
         });
 
         isActive = !!hasAdminRole || !!hasInitiativeWithRole;
-
       } else {
         const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
           where: {
@@ -1032,6 +1084,91 @@ export class UserService {
         error.stack,
       );
       throw new Error(`Failed to create or update user: ${error.message}`);
+    }
+  }
+
+  async updateUserRoles(
+    dto: UpdateUserDto,
+    token: TokenDto,
+  ): Promise<returnFormatUser> {
+    const cleanEmail = dto.email?.trim().toLowerCase();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await queryRunner.manager.findOneByOrFail(User, {
+        email: cleanEmail,
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      let remove_roles = false;
+      if (!dto.role_assignments || dto.role_assignments.length === 0) {
+        remove_roles = true;
+      }
+      // Asignar nuevos roles
+      await this.saveUserToDB(dto, token, remove_roles);
+
+      await queryRunner.commitTransaction();
+
+      return {
+        response: { id: user.id, email: user.email },
+        message: 'Roles updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findRoleByEntity(email: string): Promise<any> {
+    console.log('Finding role by entity for email:', email);
+    try {
+      const cleanEmail = email?.trim().toLowerCase();
+
+      console.log('Looking for user with email:', cleanEmail);
+      const user = await this._userRepository.findOne({
+        where: { email: cleanEmail },
+      });
+
+      console.log('User found:', user);
+
+      if (!user) {
+        return {
+          response: [],
+          message: 'User not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const roleByEntity = await this._roleByUserRepository
+        .createQueryBuilder('rbu')
+        .leftJoin('role', 'rol', 'rol.id = rbu.role')
+        .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
+        .where('rbu.obj_user = :userId', { userId: user.id })
+        .andWhere('rbu.active = true')
+        .select([
+          'rbu.id',
+          'rbu.role as role_id',
+          'rol.description as role_name',
+          'rbu.initiative_id as entity_id',
+          'ent.official_code as entity_name',
+        ])
+        .getRawMany();
+
+      return {
+        response: roleByEntity,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 }

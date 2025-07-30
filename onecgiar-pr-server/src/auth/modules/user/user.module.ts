@@ -64,7 +64,18 @@ export class UserModule implements NestModule {
         path: '/auth/user/create',
         method: RequestMethod.POST,
       },
-      { path: '/auth/user/:id/status', method: RequestMethod.PATCH },
+      {
+        path: '/auth/user/change/status',
+        method: RequestMethod.PATCH,
+      },
+      {
+        path: '/auth/user/update/roles',
+        method: RequestMethod.PATCH,
+      },
+      {
+        path: '/auth/user/find/role_by_entity',
+        method: RequestMethod.GET,
+      },
     );
   }
 }
