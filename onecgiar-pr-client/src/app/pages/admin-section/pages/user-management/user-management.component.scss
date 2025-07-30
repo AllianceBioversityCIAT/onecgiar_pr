@@ -41,6 +41,112 @@
   }
 }
 
+.status-chip {
+  white-space: nowrap;
+}
+
+.entities-container {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap; // Horizontal alignment - no wrapping
+
+  .entity-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: #c6cdf4; // Fixed background color
+    color: #5569dd; // Fixed text color
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    min-height: 20px;
+    white-space: nowrap; // Prevent text wrapping
+
+    span {
+      line-height: 1;
+    }
+  }
+
+  .view-more-btn {
+    background: none;
+    border: none;
+    color: #5569dd; // Match entity text color
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-decoration: underline;
+    white-space: nowrap; // Prevent text wrapping
+    flex-shrink: 0; // Don't shrink the button
+
+    &:hover {
+      background-color: #c6cdf4; // Match entity background on hover
+      text-decoration: none;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .no-entities {
+    font-size: 12px;
+    color: #9ca3af;
+    font-style: italic;
+  }
+}
+
+// Overlay Panel styles for entities
+.overlay-entities-container {
+  padding: 8px;
+
+  .overlay-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+  }
+
+  .overlay-entities-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+
+    .entity-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background-color: #c6cdf4;
+      color: #5569dd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      min-height: 20px;
+      white-space: nowrap;
+
+      span {
+        line-height: 1;
+      }
+    }
+  }
+}
+
 // Controls section
 .controls-section {
   margin-bottom: 32px;
@@ -82,6 +188,7 @@
 
       .status-filter,
       .cgiar-filter,
+      .entity-filter,
       .clear-filter {
         display: flex;
         flex-direction: column;
@@ -90,12 +197,17 @@
 
         .status-label,
         .cgiar-label,
+        .entity-label,
         .clear-spacer {
           font-size: 14px;
           font-weight: 500;
           color: #374151;
           height: 20px;
         }
+      }
+
+      .entity-filter {
+        min-width: 200px; // Entity filter needs more space for multi-select
       }
 
       .clear-filter {
@@ -232,6 +344,17 @@
   letter-spacing: 0.05em;
 }
 
+.status-read-only {
+  color: #6b7280;
+  font-weight: 500;
+  padding: 4px 8px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 // Center pagination globally for this component
 ::ng-deep {
   .user-table .p-paginator {
@@ -306,232 +429,6 @@
   padding: 24px;
 }
 
-/* Add User Modal Styles */
-::ng-deep .add-user-modal {
-  .p-dialog-header {
-    background-color: #1f2937;
-    color: white;
-    padding: 20px 24px;
-    border-radius: 8px 8px 0 0;
-
-    .p-dialog-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0;
-    }
-
-    .p-dialog-header-icon {
-      color: white;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-    }
-  }
-
-  .p-dialog-content {
-    padding: 0;
-  }
-
-  .p-dialog-footer {
-    padding: 0;
-    border-top: none;
-  }
-}
-
-.modal-content {
-  padding: 24px;
-
-  .form-field {
-    margin-bottom: 20px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    &.extra-margin-top {
-      margin-top: 32px;
-    }
-
-    .field-label {
-      display: block;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 8px;
-      font-size: 14px;
-
-      .required {
-        color: #ef4444;
-        margin-left: 2px;
-      }
-    }
-
-    &.half-width {
-      flex: 1;
-      margin-right: 16px;
-
-      &:last-child {
-        margin-right: 0;
-      }
-    }
-  }
-
-  .form-row {
-    display: flex;
-    gap: 16px;
-  }
-
-  .cgiar-radio-group {
-    display: flex;
-    gap: 12px;
-
-    .radio-option {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      padding: 8px 20px;
-      border: 2px solid #d1d5db;
-      background-color: white;
-      color: #374151;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      position: relative;
-
-      &:hover {
-        border-color: #6366f1;
-        background-color: #f8fafc;
-      }
-
-      .radio-input {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-        margin: 0;
-        padding: 0;
-      }
-
-      .radio-label {
-        pointer-events: none;
-      }
-
-      // When radio is checked, style the label
-      .radio-input:checked + .radio-label {
-        color: white;
-      }
-
-      // When radio is checked, style the container
-      &:has(.radio-input:checked) {
-        border-color: #6366f1;
-        background-color: #6366f1;
-        color: white;
-      }
-    }
-  }
-
-  .form-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: border-color 0.2s ease;
-
-    &:focus {
-      outline: none;
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    &::placeholder {
-      color: #9ca3af;
-    }
-  }
-
-  .selected-user {
-    padding: 10px 12px;
-    background-color: #f3f4f6;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    color: #374151;
-    font-size: 14px;
-  }
-
-  .selected-user-display {
-    padding: 12px 16px;
-    background-color: #f8fafc;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    color: #333;
-    font-size: 14px;
-    font-weight: 500;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-  }
-
-  .created-by {
-    padding: 10px 12px;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    color: #6b7280;
-    font-size: 14px;
-  }
-}
-
-.modal-footer {
-  padding: 20px 24px;
-  background-color: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-
-  .cancel-btn {
-    padding: 10px 20px;
-    border: 1px solid #d1d5db;
-    background-color: white;
-    color: #374151;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #f3f4f6;
-      border-color: #9ca3af;
-    }
-  }
-
-  .save-btn {
-    padding: 10px 20px;
-    border: 1px solid #6366f1;
-    background-color: #6366f1;
-    color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      background-color: #5856eb;
-      border-color: #5856eb;
-    }
-
-    &:disabled {
-      background-color: #9ca3af;
-      border-color: #9ca3af;
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-  }
-}
-
 // Action buttons in table
 .action-buttons {
   display: flex;
@@ -570,7 +467,7 @@
   }
 
   // Reduced opacity for inactive users - only affects toggle button (second button)
-  &.inactive-user .action-btn:nth-child(2) .material-icons-round {
+  &.inactive-user .action-btn-toggle .material-icons-round {
     opacity: 0.4;
   }
 }
