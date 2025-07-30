@@ -28,7 +28,7 @@
 </div>
 
 <div *ngIf="!this.initiative.result_toc_results.length && (isContributor || isIpsr)" class="pr-message">
-  <i class="material-icons-round" style="font-size: 20px; color: #fba237">info</i>
+  <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-other-4)">info</i>
   <p>
     <b> {{ initiative?.official_code }} {{ initiative.short_name }} </b>
     has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.

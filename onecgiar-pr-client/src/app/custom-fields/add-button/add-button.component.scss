@@ -6,7 +6,7 @@
 
   .add_button_content {
     transition: all ease 0.3s;
-    background-color: rgba(var(--pr-color-primary-300-rgb), 0.925);
+    background-color: rgba(var(--pr-color-primary-rgb), 0.925);
     border-radius: 20px 5px 20px 5px;
     display: flex;
     justify-content: space-between;
@@ -51,7 +51,7 @@
         align-items: center;
 
         i {
-          color: rgba(var(--pr-color-primary-300-rgb), 0.925);
+          color: rgba(var(--pr-color-primary-rgb), 0.925);
         }
       }
     }

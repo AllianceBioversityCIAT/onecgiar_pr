@@ -7,7 +7,7 @@
 
   .tabs {
     display: flex;
-    border-bottom: 3px solid rgba(var(--pr-color-primary-300-rgb), 0.212);
+    border-bottom: 3px solid rgba(var(--pr-color-primary-rgb), 0.212);
     width: max-content;
 
     .active {
@@ -15,7 +15,7 @@
       color: var(--pr-color-white) !important;
 
       &:hover {
-        background-color: rgba(var(--pr-color-primary-300-rgb), 0.918) !important;
+        background-color: rgba(var(--pr-color-primary-rgb), 0.918) !important;
       }
     }
 

@@ -6,7 +6,10 @@
 <div
   [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"
   class="update_notification"
-  [ngStyle]="{ 'background-color': !notification?.read ? 'var(--pr-color-primary-25)' : '', border: !notification?.read ? '1px solid #bac1e5' : '' }">
+  [ngStyle]="{
+    'background-color': !notification?.read ? 'var(--pr-color-primary-25)' : '',
+    border: !notification?.read ? '1px solid var(--pr-color-primary-100)' : ''
+  }">
   <div class="update_notification_header">
     @if (notification?.notification_level === 2) {
       <div class="update_notification_header_item">
