@@ -101,7 +101,7 @@
                     @for (result of indicator.indicator_supporting_results; track $index) {
                       @let phase_year = result?.phase_name?.split(' ')[1] ?? '';
 
-                      <div style="display: flex; align-items: center; gap: 5px; color: #1a91ff">
+                      <div style="display: flex; align-items: center; gap: 5px; color: var(--pr-color-blue-500)">
                         &#8226;
                         <a class="progress_right_item_linked_results_item" [href]="generatePDFLink(result)" target="_blank" rel="noopener noreferrer">
                           <span style="color: var(--pr-color-black)">({{ phase_year }})</span> {{ ' ' }}

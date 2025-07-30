@@ -77,7 +77,7 @@ p {
 
 .whats-new-home_date {
   font-size: 14px;
-  color: #777;
+  color: var(--pr-color-accents-5);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -95,5 +95,5 @@ p {
   padding: 4px 8px;
   border-radius: 4px;
   background-color: var(--pr-color-accents-1);
-  color: white;
+  color: var(--pr-color-white);
 }

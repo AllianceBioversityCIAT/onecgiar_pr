@@ -36,7 +36,7 @@
 
   .back_icon {
     background-color: var(--pr-color-primary-300);
-    color: white;
+    color: var(--pr-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -61,7 +61,7 @@
     }
 
     i {
-      color: #ff8a00;
+      color: var(--pr-color-other-4);
       margin-bottom: 3px;
     }
   }
@@ -77,7 +77,7 @@
       gap: 10px;
 
       i {
-        color: #ff8a00;
+        color: var(--pr-color-other-4);
       }
 
       .status {

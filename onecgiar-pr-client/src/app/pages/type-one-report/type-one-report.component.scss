@@ -7,7 +7,7 @@
     align-items: center;
     justify-content: center;
     background-color: var(--pr-color-primary-300);
-    color: white;
+    color: var(--pr-color-white);
     padding: 6px 20px;
     border-radius: 0px 0px 5px 5px;
     margin: 3px;
@@ -21,7 +21,7 @@
 
   .initiatives_selector {
     padding: 10px;
-    background-color: white;
+    background-color: var(--pr-color-white);
   }
 
   .router {
@@ -63,7 +63,7 @@
 
         .title {
           background-color: var(--pr-color-primary-300);
-          color: white;
+          color: var(--pr-color-white);
           display: flex;
           align-items: center;
           justify-content: center;

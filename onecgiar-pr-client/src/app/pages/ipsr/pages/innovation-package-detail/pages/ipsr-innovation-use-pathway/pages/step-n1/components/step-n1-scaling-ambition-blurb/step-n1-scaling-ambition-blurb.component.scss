@@ -28,7 +28,7 @@
     justify-content: flex-end;
 
     .copy_button {
-      background-color: white;
+      background-color: var(--pr-color-white);
       padding: 7px 10px;
       border-radius: 6px;
       display: flex;
@@ -43,7 +43,7 @@
 
       &:hover {
         background-color: var(--pr-color-primary-300);
-        color: white;
+        color: var(--pr-color-white);
       }
     }
   }

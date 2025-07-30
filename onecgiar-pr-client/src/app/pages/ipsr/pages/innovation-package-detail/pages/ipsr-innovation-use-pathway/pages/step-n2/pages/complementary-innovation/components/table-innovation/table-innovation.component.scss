@@ -87,7 +87,7 @@ tr {
   gap: 0.5rem;
 
   .link_button {
-    color: white;
+    color: var(--pr-color-white);
     background-color: var(--pr-color-primary-300);
     padding: 3px 10px;
     width: 35px;
@@ -102,7 +102,7 @@ tr {
 
 .actionsSelect {
   .link_button {
-    color: white;
+    color: var(--pr-color-white);
     background-color: var(--pr-color-primary-300);
     padding: 3px 10px;
     width: 40px;

@@ -10,7 +10,7 @@
   width: 100%;
   font-size: 1.3em;
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px 20px;
   border-bottom-right-radius: 10px;
 }
@@ -176,7 +176,7 @@ td {
   padding: 2px 3px;
   font-size: 0.8em;
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
   height: 17px;
 }
 
@@ -187,7 +187,7 @@ td {
 }
 
 .link_button {
-  color: white;
+  color: var(--pr-color-white);
   padding: 3px 10px;
   border-radius: 3px;
   cursor: pointer;
@@ -198,7 +198,7 @@ td {
   &.view {
     background-color: var(--pr-color-secondary-400);
     outline: none;
-    color: white;
+    color: var(--pr-color-white);
   }
 
   &.update {

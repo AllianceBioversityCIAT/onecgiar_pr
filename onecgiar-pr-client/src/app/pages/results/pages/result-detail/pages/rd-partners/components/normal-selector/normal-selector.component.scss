@@ -11,12 +11,6 @@
     display: flex;
     flex-direction: column;
 
-    .name {
-    }
-
-    .type {
-    }
-
     i {
       position: absolute;
       right: 0;
@@ -32,7 +26,7 @@
 
       .delivery {
         padding: 7px 14px;
-        background-color: white;
+        background-color: var(--pr-color-white);
         color: var(--pr-color-primary-300);
         cursor: pointer;
         border-radius: 15px;
@@ -41,7 +35,7 @@
 
       .delivery.active {
         background-color: var(--pr-color-primary-300) !important;
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
   }

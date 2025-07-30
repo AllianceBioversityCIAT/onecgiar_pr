@@ -121,12 +121,12 @@ td {
   padding: 2px 3px;
   font-size: 0.8em;
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
   height: 17px;
 }
 
 .link_button {
-  color: white;
+  color: var(--pr-color-white);
   background-color: var(--pr-color-primary-300);
   padding: 3px 10px;
   width: 100px;

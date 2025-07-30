@@ -82,7 +82,7 @@ input:disabled {
 }
 
 .target_content {
-  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0px 0px 2px rgba(var(--pr-color-black-rgb), 0.4);
   border-radius: 5px;
 
   .target_header {

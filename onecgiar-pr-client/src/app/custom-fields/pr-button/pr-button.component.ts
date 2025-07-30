@@ -37,11 +37,11 @@ export class PrButtonComponent implements OnInit {
       case 'primary':
         return 'var(--pr-color-primary-300)';
       case 'danger':
-        return 'var(--pr-color-danger)';
+        return 'var(--pr-color-red-300)';
       case 'secondary':
         return 'var(--pr-color-secondary-400)';
       case 'success':
-        return 'var(--pr-color-success)';
+        return 'var(--pr-color-green-500)';
       default:
         return '';
     }

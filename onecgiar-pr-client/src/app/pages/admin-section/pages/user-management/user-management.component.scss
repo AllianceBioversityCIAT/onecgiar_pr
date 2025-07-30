@@ -3,13 +3,6 @@
   margin-bottom: 50px;
   width: 95% !important;
   padding: 40px 50px;
-  // font-family:
-  //   'Inter',
-  //   -apple-system,
-  //   BlinkMacSystemFont,
-  //   'Segoe UI',
-  //   Roboto,
-  //   sans-serif;
 
   header {
     display: flex;
@@ -114,11 +107,11 @@
 
 // Table container
 .table-container {
-  background: white;
+  background: var(--pr-color-white);
   border-radius: 12px;
   box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    0 1px 3px 0 rgba(var(--pr-color-black-rgb), 0.1),
+    0 1px 2px 0 rgba(var(--pr-color-black-rgb), 0.06);
   overflow: visible;
   position: relative;
 
@@ -154,7 +147,7 @@
 
   .p-datatable-thead > tr > th {
     background: var(--pr-color-secondary-400) !important;
-    color: white !important;
+    color: var(--pr-color-white) !important;
     font-weight: 600;
     font-size: 14px;
     padding: 8px 16px;
@@ -167,7 +160,7 @@
     }
 
     .p-sortable-column-icon {
-      color: white !important;
+      color: var(--pr-color-white) !important;
     }
 
     &:nth-child(3),
@@ -315,7 +308,7 @@
 ::ng-deep .add-user-modal {
   .p-dialog-header {
     background-color: var(--pr-color-primary-700);
-    color: white;
+    color: var(--pr-color-white);
     padding: 20px 24px;
     border-radius: 8px 8px 0 0;
 
@@ -326,10 +319,10 @@
     }
 
     .p-dialog-header-icon {
-      color: white;
+      color: var(--pr-color-white);
 
       &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: rgba(var(--pr-color-white-rgb), 0.1);
       }
     }
   }
@@ -396,7 +389,7 @@
       cursor: pointer;
       padding: 8px 20px;
       border: 2px solid var(--pr-color-neutral-1000);
-      background-color: white;
+      background-color: var(--pr-color-white);
       color: var(--pr-color-secondary-400);
       border-radius: 6px;
       font-size: 14px;
@@ -424,14 +417,14 @@
 
       // When radio is checked, style the label
       .radio-input:checked + .radio-label {
-        color: white;
+        color: var(--pr-color-white);
       }
 
       // When radio is checked, style the container
       &:has(.radio-input:checked) {
         border-color: var(--pr-color-primary-300);
         background-color: var(--pr-color-primary-300);
-        color: white;
+        color: var(--pr-color-white);
       }
     }
   }
@@ -447,7 +440,7 @@
     &:focus {
       outline: none;
       border-color: var(--pr-color-primary-300);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      box-shadow: 0 0 0 3px rgba(var(--pr-color-blue-rgb), 0.1);
     }
 
     &::placeholder {
@@ -498,7 +491,7 @@
   .cancel-btn {
     padding: 10px 20px;
     border: 1px solid var(--pr-color-neutral-1000);
-    background-color: white;
+    background-color: var(--pr-color-white);
     color: var(--pr-color-secondary-400);
     border-radius: 6px;
     cursor: pointer;
@@ -516,7 +509,7 @@
     padding: 10px 20px;
     border: 1px solid var(--pr-color-primary-300);
     background-color: var(--pr-color-primary-300);
-    color: white;
+    color: var(--pr-color-white);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;

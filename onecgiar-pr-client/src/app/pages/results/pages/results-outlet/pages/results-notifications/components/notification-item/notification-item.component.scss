@@ -22,7 +22,7 @@ p {
       border: 1px solid var(--pr-color-primary-300);
       border-radius: 0 0 10px 10px;
       border-top: none;
-      background: #cfd5f6;
+      background: var(--pr-color-primary-100);
       color: var(--pr-color-primary-300);
 
       .notification_header_item_text {
@@ -85,7 +85,7 @@ p {
     justify-content: flex-end;
     align-items: center;
     width: 100%;
-    color: #76716a;
+    color: var(--pr-color-accents-5);
     margin-top: 5px;
     font-size: 12px;
   }
@@ -127,7 +127,7 @@ p {
 }
 
 .result_submitted_text {
-  color: var(--pr-color-red-200);
+  color: var(--pr-color-red-100);
   font-weight: 700px;
   font-size: 1em !important;
 }

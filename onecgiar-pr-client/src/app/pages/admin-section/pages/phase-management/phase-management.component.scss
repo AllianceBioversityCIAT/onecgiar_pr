@@ -12,7 +12,7 @@
 
     .active {
       background-color: var(--pr-color-primary-300) !important;
-      color: white !important;
+      color: var(--pr-color-white) !important;
 
       &:hover {
         background-color: rgba(var(--pr-color-primary-300-rgb), 0.918) !important;
@@ -32,7 +32,7 @@
       transition: all ease-in-out 0.2s;
 
       &:hover {
-        background-color: var(--pr-color-secondary-600);
+        background-color: rgba(var(--pr-color-black-rgb), 0.05);
       }
     }
   }

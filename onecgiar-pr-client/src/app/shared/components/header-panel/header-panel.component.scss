@@ -3,7 +3,7 @@
   height: 70px;
   max-height: 70px;
   overflow: hidden;
-  background-color: var(--pr-color-tertiary);
+  background-color: var(--pr-color-primary-950);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -22,7 +22,7 @@
     }
 
     .title {
-      color: white;
+      color: var(--pr-color-white);
       font-weight: 200;
       font-size: 15px;
       display: flex;
@@ -46,7 +46,7 @@
 
     .admin_module {
       .admin_module_btn {
-        color: white;
+        color: var(--pr-color-white);
         padding: 5px 10px;
         border-radius: 4px;
         background-color: var(--pr-color-primary-300);
@@ -57,7 +57,7 @@
         transition: all ease 0.3s;
 
         &:hover {
-          background-color: #4557bb;
+          background-color: var(--pr-color-primary-400);
         }
       }
     }
@@ -65,7 +65,7 @@
     .user_tag {
       background-color: var(--pr-color-secondary-400);
       border-radius: 5px;
-      color: white;
+      color: var(--pr-color-white);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -80,12 +80,12 @@
       }
 
       .icon {
-        color: white;
+        color: var(--pr-color-white);
       }
     }
 
     .my_initiatives {
-      color: white;
+      color: var(--pr-color-white);
       background-color: var(--pr-color-secondary-400);
       display: flex;
       align-items: center;
@@ -126,7 +126,7 @@
           }
 
           .role {
-            background-color: white;
+            background-color: var(--pr-color-white);
             color: var(--pr-color-primary-300);
           }
         }
@@ -213,13 +213,13 @@
   .overlay_panel_separator {
     width: 100%;
     height: 1px;
-    background-color: #dddddd;
+    background-color: var(--pr-color-neutral-1000);
     margin: 10px 0;
   }
 }
 
 .info_icon {
-  color: white;
+  color: var(--pr-color-white);
   background-color: var(--pr-color-secondary-400);
   display: flex;
   justify-content: center;

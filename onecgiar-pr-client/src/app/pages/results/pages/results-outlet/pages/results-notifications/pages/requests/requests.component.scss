@@ -21,6 +21,11 @@ p {
     border-radius: 10px;
     background-color: var(--pr-color-neutral-1000);
     color: var(--pr-color-secondary-400);
+    transition: all ease-in-out 0.2s;
+
+    &:hover {
+      background-color: rgba(var(--pr-color-black-rgb), 0.2) !important;
+    }
   }
 }
 

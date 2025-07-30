@@ -9,7 +9,7 @@
     *ngFor="let item of options"
     [hidden]="!options?.length"
     [ngStyle]="
-      item?.phase?.status ? { 'border-left': '3px solid var(--pr-color-green-500)' } : { 'border-left': '3px solid var(--pr-color-danger)' }
+      item?.phase?.status ? { 'border-left': '3px solid var(--pr-color-green-500)' } : { 'border-left': '3px solid var(--pr-color-red-300)' }
     ">
     <div class="line" [style.background]="'var(--pr-color-result-level-' + item?.result_level_id + ')'"></div>
     <div class="texts">
@@ -20,7 +20,7 @@
             <span class="resultCode">(Result code: {{ item?.result_code }})</span> {{ item?.title }}
             <i class="material-icons-round" style="font-size: 13px"> open_in_new </i>
           </h1>
-          <p style="margin: 0; color: var(--pr-color-danger)" *ngIf="!item?.phase?.status">This result does not exist in this reporting phase</p>
+          <p style="margin: 0; color: var(--pr-color-red-300)" *ngIf="!item?.phase?.status">This result does not exist in this reporting phase</p>
         </a>
         <div class="typeAndPhases">
           <p class="typeAndPhasesItem">{{ item?.type }}</p>

@@ -22,7 +22,7 @@
     margin: 20px 0;
 
     .active {
-      background-color: white !important;
+      background-color: var(--pr-color-white) !important;
       color: var(--pr-color-primary-300) !important;
       border-bottom: 3px solid var(--pr-color-primary-300) !important;
     }
@@ -31,16 +31,18 @@
       border-bottom: 3px solid transparent;
       padding: 8px 25px;
       font-weight: 600;
-      background-color: white !important;
+      background-color: var(--pr-color-white) !important;
       color: var(--pr-color-secondary-400);
       text-decoration: none;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 5px;
+      transition: all ease-in-out 0.2s;
+      border-radius: 5px;
 
       &:hover {
-        background-color: var(--pr-color-secondary-600);
+        background-color: rgba(var(--pr-color-black-rgb), 0.05) !important;
       }
     }
   }
@@ -49,7 +51,7 @@
 .line {
   width: 100%;
   height: 1px;
-  background-color: #e2e0e7;
+  background-color: var(--pr-color-accents-2);
 }
 
 .request_description {

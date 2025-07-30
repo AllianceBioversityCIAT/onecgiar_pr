@@ -6,7 +6,7 @@
   }
 
   .info {
-    color: var(--pr-color-info);
+    color: var(--pr-color-blue-500);
   }
 
   .line {
@@ -21,7 +21,7 @@
     }
 
     &.info {
-      background-color: var(--pr-color-info);
+      background-color: var(--pr-color-blue-500);
     }
   }
 
@@ -31,7 +31,7 @@
     top: -4px;
     width: 10px;
     height: 15px;
-    background-color: black;
+    background-color: var(--pr-color-black);
     z-index: 0;
   }
 }

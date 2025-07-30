@@ -42,7 +42,7 @@ describe('PrButtonComponent', () => {
 
   it('should generate the correct color for the danger color type', () => {
     component.colorType = 'danger';
-    expect(component.generateColor()).toBe('var(--pr-color-danger)');
+    expect(component.generateColor()).toBe('var(--pr-color-red-300)');
   });
 
   it('should generate the correct color for the secondary color type', () => {
@@ -52,6 +52,6 @@ describe('PrButtonComponent', () => {
 
   it('should generate the correct color for the success color type', () => {
     component.colorType = 'success';
-    expect(component.generateColor()).toBe('var(--pr-color-success)');
+    expect(component.generateColor()).toBe('var(--pr-color-green-500)');
   });
 });

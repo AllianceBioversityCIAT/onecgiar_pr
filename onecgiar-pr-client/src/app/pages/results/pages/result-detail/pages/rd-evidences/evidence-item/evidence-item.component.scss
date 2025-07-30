@@ -88,7 +88,7 @@
     }
 
     .incorrect-file {
-      color: var(--pr-color-danger);
+      color: var(--pr-color-red-300);
       font-weight: 500;
       margin-top: -10px;
       margin-bottom: 20px;
@@ -149,7 +149,7 @@
     }
 
     .description {
-      color: rgba(0, 0, 0, 0.5);
+      color: rgba(var(--pr-color-black-rgb), 0.5);
       transition: all 0.3s ease-in-out;
     }
   }

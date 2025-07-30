@@ -1,13 +1,13 @@
 .pr_description {
   font-size: 1em;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   margin-bottom: 5px;
 }
 
 .pr_label {
   margin-top: 20px;
   margin-bottom: 7px;
-  color: black;
+  color: var(--pr-color-black);
   text-align: left;
 }
 
@@ -30,7 +30,7 @@ input::placeholder,
 .p-dropdown .p-dropdown-label.p-placeholder,
 .p-inputtextarea::placeholder,
 .select_placeholder {
-  color: var(--pr-color-neutral-1000);
+  color: var(--pr-color-accents-3);
   font-weight: 400;
   font-size: 1rem;
 }
@@ -70,7 +70,7 @@ input::placeholder,
 }
 
 .pr_chip_selected.pending {
-  background-color: #ffe7ca !important;
+  background-color: var(--pr-color-other-5) !important;
 }
 
 .custom_select {
@@ -83,7 +83,7 @@ input::placeholder,
     border-radius: 5px;
     align-items: center;
     position: relative;
-    background-color: white;
+    background-color: var(--pr-color-white);
     font-size: 14px;
     font-family: 'Poppins', sans-serif !important;
     width: 100%;
@@ -118,7 +118,7 @@ input::placeholder,
       transform: scale(0);
       opacity: 0;
       position: absolute;
-      background-color: white;
+      background-color: var(--pr-color-white);
       max-height: 300px;
       box-shadow: 0px 0px 5px var(--pr-color-neutral-1000);
       width: 100%;
@@ -227,18 +227,18 @@ input::placeholder,
 }
 
 .icon_container_active {
-  background-color: gray !important;
+  background-color: var(--pr-color-accents-5) !important;
 }
 
 .icon_dropdown {
   position: relative;
   z-index: 2;
   pointer-events: none;
-  color: white !important;
+  color: var(--pr-color-white) !important;
 }
 
 .select_item_description {
   font-size: 0.8em;
   font-style: italic;
-  color: gray;
+  color: var(--pr-color-accents-5);
 }

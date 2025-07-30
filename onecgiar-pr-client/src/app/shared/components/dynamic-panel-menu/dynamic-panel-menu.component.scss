@@ -14,7 +14,7 @@
     cursor: pointer;
 
     .icon_container {
-      background-color: white;
+      background-color: var(--pr-color-white);
       width: 60px;
       height: 25px;
       border-radius: 4px;
@@ -33,12 +33,12 @@
   .section_title {
     font-size: 1.2em;
     font-weight: 500;
-    color: white;
+    color: var(--pr-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
     height: 85px;
-    background-color: rgba(0, 0, 0, 0.315);
+    background-color: rgba(var(--pr-color-black-rgb), 0.315);
     margin-bottom: 15px;
     overflow: hidden;
     white-space: nowrap;
@@ -48,14 +48,14 @@
 
   .options {
     .active {
-      background-color: rgba(0, 0, 0, 0.315);
+      background-color: rgba(var(--pr-color-black-rgb), 0.315);
       position: relative;
 
       &::after {
         content: '';
         width: 5px;
         height: 100%;
-        background-color: white;
+        background-color: var(--pr-color-white);
         position: absolute;
         left: 0;
         top: 0;
@@ -63,7 +63,7 @@
     }
 
     .option {
-      color: white;
+      color: var(--pr-color-white);
       display: flex;
       align-items: center;
       gap: 15px;

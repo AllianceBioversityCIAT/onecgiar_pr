@@ -17,7 +17,7 @@ p {
 
   &:hover {
     transform: scale(1.01);
-    border: 1px solid #d8d8d8;
+    border: 1px solid var(--pr-color-neutral-1000);
   }
 }
 
@@ -69,7 +69,7 @@ p {
 
 .whats-new-home_card_content_date {
   font-size: 14px;
-  color: #777;
+  color: var(--pr-color-accents-5);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -83,7 +83,7 @@ p {
   justify-content: center;
   font-size: 14px;
   font-weight: 600;
-  color: #777;
+  color: var(--pr-color-accents-5);
 }
 
 .whats-new-home_card_content_text {
@@ -110,7 +110,7 @@ p {
   padding: 4px 8px;
   border-radius: 4px;
   background-color: var(--pr-color-accents-1);
-  color: white;
+  color: var(--pr-color-white);
 }
 
 .scale {

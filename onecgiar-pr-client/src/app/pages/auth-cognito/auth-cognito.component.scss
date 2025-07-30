@@ -15,7 +15,7 @@
   justify-content: center;
   gap: 1.25rem;
   text-align: center;
-  color: white;
+  color: var(--pr-color-white);
 }
 
 .auth-title {
@@ -33,8 +33,8 @@
   border-radius: 9999px;
   height: 2rem;
   width: 2rem;
-  border-top: 2px solid white;
-  border-bottom: 2px solid white;
+  border-top: 2px solid var(--pr-color-white);
+  border-bottom: 2px solid var(--pr-color-white);
 }
 
 @keyframes spin {

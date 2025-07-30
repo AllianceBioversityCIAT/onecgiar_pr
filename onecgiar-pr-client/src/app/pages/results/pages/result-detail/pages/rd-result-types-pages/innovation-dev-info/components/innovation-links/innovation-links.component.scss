@@ -7,7 +7,7 @@
   gap: 10px;
 
   .index {
-    background-color: #7b8be746;
+    background-color: rgba(var(--pr-color-primary-rgb), 0.275);
     color: var(--pr-color-primary-300);
     width: 30px;
     height: 30px;
@@ -24,7 +24,7 @@
   }
 
   .icon {
-    background-color: var(--pr-color-danger-2);
+    background-color: var(--pr-color-red-100);
     width: 32px;
     height: 32px;
     display: flex;
@@ -35,7 +35,7 @@
     cursor: pointer;
 
     i {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 1.5rem;
     }
   }

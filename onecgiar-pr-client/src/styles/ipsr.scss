@@ -26,7 +26,7 @@
   text-align: center;
   font-weight: 500;
   font-size: 1.3em;
-  color: gray;
+  color: var(--pr-color-accents-5);
 }
 
 .step_divider {
@@ -37,7 +37,7 @@
 }
 
 .fragment_section_divider {
-  border-top: 2px solid gray;
+  border-top: 2px solid var(--pr-color-accents-5);
   opacity: 0.2;
   margin: 25px 150px 40px 150px;
 }
@@ -49,7 +49,7 @@
   font-size: 1.2em;
   font-weight: 500;
   background: var(--pr-color-primary-300);
-  background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(87deg, rgba(var(--pr-color-primary-300-rgb), 0.116) 4%, rgba(var(--pr-color-white-rgb), 0) 100%);
   width: 50vw;
   color: var(--pr-color-secondary-400);
 
@@ -76,7 +76,7 @@
   font-size: 1.2em;
   font-weight: 500;
   background: var(--pr-color-black);
-  background: linear-gradient(87deg, rgba(24, 25, 27, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(87deg, rgba(var(--pr-color-secondary-rgb), 0.116) 4%, rgba(var(--pr-color-white-rgb), 0) 100%);
   width: max-content;
   color: var(--pr-color-secondary-400);
   margin-left: 30px;
@@ -138,8 +138,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50px;
-  background-color: var(--pr-color-danger);
-  color: white;
+  background-color: var(--pr-color-red-300);
+  color: var(--pr-color-white);
   width: 35px;
   height: 35px;
   cursor: pointer;
@@ -155,7 +155,7 @@
   justify-content: center;
   border-radius: 50px;
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   width: 35px;
   height: 35px;
   cursor: pointer;

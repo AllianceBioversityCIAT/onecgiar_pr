@@ -13,12 +13,6 @@
     display: flex;
     flex-direction: column;
 
-    .name {
-    }
-
-    .type {
-    }
-
     .remove_button {
       position: absolute;
       right: 0;
@@ -35,7 +29,7 @@
 
       .delivery {
         padding: 7px 14px;
-        background-color: white;
+        background-color: var(--pr-color-white);
         color: var(--pr-color-primary-300);
         cursor: pointer;
         border-radius: 15px;
@@ -44,7 +38,7 @@
 
       .delivery.active {
         background-color: var(--pr-color-primary-300) !important;
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
   }
@@ -63,7 +57,6 @@
 }
 
 .info_button {
-  // position: relative;
   i {
     color: var(--pr-color-primary-300);
   }
@@ -71,7 +64,7 @@
 
 .content {
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.205);
+  background-color: rgba(var(--pr-color-black-rgb), 0.205);
   transform: translateY(-50%);
   top: 50%;
   left: 0;
@@ -93,10 +86,10 @@
     height: max-content;
     gap: 5px;
     z-index: 3;
-    background-color: white;
+    background-color: var(--pr-color-white);
     position: relative;
     border-radius: 5px;
-    box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.055);
+    box-shadow: 0px 0px 5px 5px rgba(var(--pr-color-black-rgb), 0.055);
 
     .close_content {
       position: absolute;

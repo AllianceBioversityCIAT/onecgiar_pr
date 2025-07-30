@@ -18,14 +18,14 @@
     }
 
     .no {
-      background-color: var(--pr-color-danger) !important;
+      background-color: var(--pr-color-red-300) !important;
     }
 
     .choice {
-      background-color: var(--pr-color-secondary-100);
+      background-color: var(--pr-color-accents-4);
       padding: 1px 10px;
       border-radius: 5px;
-      color: white;
+      color: var(--pr-color-white);
       cursor: pointer;
       transition: all ease-in-out 0.3s;
       font-weight: 500;

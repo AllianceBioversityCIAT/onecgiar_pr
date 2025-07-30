@@ -38,7 +38,7 @@
         min-width: 8px;
         max-width: 8px;
         border-radius: 50%;
-        background-color: #7ab800;
+        background-color: var(--pr-color-other-2);
       }
 
       .partner_item_header-prename {
@@ -62,7 +62,7 @@
       padding: 8px 20px;
       border: 1px solid var(--pr-color-neutral-1000);
       border-radius: 3px;
-      background-color: #fefeff;
+      background-color: var(--pr-color-white);
       width: 100%;
       position: relative;
       margin: 0 10px;
@@ -91,7 +91,7 @@
         .partner_item_content-predicted-text {
           font-size: 12px;
           font-weight: 500;
-          color: white;
+          color: var(--pr-color-white);
           margin: 0;
         }
       }
@@ -148,7 +148,7 @@
       .delivery {
         font-family: 'Poppins', sans-serif;
         padding: 7px 14px;
-        background-color: white;
+        background-color: var(--pr-color-white);
         color: var(--pr-color-primary-300);
         border: 1px solid var(--pr-color-primary-300);
         cursor: pointer;
@@ -160,7 +160,7 @@
 
       .delivery.active {
         background-color: var(--pr-color-primary-300) !important;
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
   }
@@ -178,6 +178,6 @@
   .type-link {
     cursor: pointer;
     font-weight: 500;
-    color: #369fff;
+    color: var(--pr-color-blue-500);
   }
 }

@@ -11,7 +11,7 @@
       opacity: 1 !important;
       transform: translateY(-100%) scale(1) !important;
       background-color: rgba(var(--pr-color-primary-300-rgb), 0.91);
-      color: white;
+      color: var(--pr-color-white);
 
       .status {
         background-color: var(--pr-color-red-200) !important;

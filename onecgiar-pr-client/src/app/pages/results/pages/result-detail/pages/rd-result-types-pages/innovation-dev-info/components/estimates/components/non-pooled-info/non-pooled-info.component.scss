@@ -3,7 +3,7 @@
   width: 250px;
   font-size: 1.5em;
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px;
   border-bottom-right-radius: 10px;
 }
@@ -30,7 +30,7 @@
   justify-content: center;
   border-radius: 5px;
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   width: 25px;
   height: 26px;
   cursor: pointer;

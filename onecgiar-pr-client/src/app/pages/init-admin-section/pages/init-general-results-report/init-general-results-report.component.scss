@@ -20,7 +20,7 @@
 
       &.active {
         background-color: var(--pr-color-accents-5);
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
 
@@ -30,7 +30,7 @@
 
       &.active {
         background-color: var(--pr-color-primary-300);
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
 
@@ -40,7 +40,7 @@
 
       &.active {
         background-color: var(--pr-color-yellow-200);
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
 
@@ -50,32 +50,32 @@
 
       &.active {
         background-color: var(--pr-color-accents-5);
-        color: white !important;
+        color: var(--pr-color-white) !important;
       }
     }
 
     .quality-assessed {
-      border: 2px solid #1ba9eb !important;
-      color: #1ba9eb !important;
+      border: 2px solid var(--pr-color-blue-500) !important;
+      color: var(--pr-color-blue-500) !important;
 
       &.active {
-        background-color: #1ba9eb;
-        color: white !important;
+        background-color: var(--pr-color-blue-500);
+        color: var(--pr-color-white) !important;
       }
     }
 
     .discontinued {
-      border: 2px solid #eb4c1b !important;
-      color: #eb4c1b !important;
+      border: 2px solid var(--pr-color-other-3) !important;
+      color: var(--pr-color-other-3) !important;
 
       &.active {
-        background-color: #eb4c1b;
-        color: white !important;
+        background-color: var(--pr-color-other-3);
+        color: var(--pr-color-white) !important;
       }
     }
 
     .option {
-      color: white;
+      color: var(--pr-color-white);
       text-align: center;
       border-radius: 2px;
       padding: 2px 0px;
@@ -180,7 +180,7 @@
       gap: 10px;
 
       .index {
-        color: white;
+        color: var(--pr-color-white);
         font-weight: 500;
         background-color: var(--pr-color-primary-300);
         padding: 0px 6px;

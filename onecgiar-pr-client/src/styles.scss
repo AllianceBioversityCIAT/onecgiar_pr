@@ -155,7 +155,7 @@ a {
 }
 
 .label-status-styles {
-  color: white;
+  color: var(--pr-color-white);
   display: inline;
   font-style: italic;
   font-weight: 500;
@@ -187,11 +187,11 @@ a {
 }
 
 .completeness-quality-assessed {
-  background-color: #1ba9eb;
+  background-color: var(--pr-color-blue-500);
 }
 
 .completeness-discontinued {
-  background-color: #eb4c1b;
+  background-color: var(--pr-color-other-3);
 }
 
 .support_information .p-dialog .p-dialog-content {
@@ -200,7 +200,7 @@ a {
 
 .toc_button {
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   display: flex;
   flex-wrap: nowrap;
   gap: 10px;
@@ -218,7 +218,7 @@ a {
   img {
     width: 15px;
     height: 15px;
-    background-color: white;
+    background-color: var(--pr-color-white);
     border-radius: 10px;
     padding: 2px;
   }
@@ -241,7 +241,7 @@ a {
 
   img {
     width: 17px;
-    background-color: white;
+    background-color: var(--pr-color-white);
     border-radius: 100px;
     padding: 1px;
   }
@@ -272,19 +272,19 @@ a {
     align-items: center;
     flex-direction: column;
     gap: 10px;
-    background-color: rgba(0, 0, 0, 0.24);
+    background-color: rgba(var(--pr-color-black-rgb), 0.24);
     height: min-content;
     padding: 30px;
     border-radius: 10px;
 
     .icon {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 4em;
       transform: scaleX(-1);
     }
 
     .text {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 1.2em;
     }
   }
@@ -336,7 +336,7 @@ a {
 }
 
 .notion-code {
-  color: #eb5757;
+  color: var(--pr-color-red-200);
   padding: 2px;
   background-color: var(--pr-color-accents-1);
 }

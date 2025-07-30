@@ -50,7 +50,7 @@
 
 .login-description {
   font-size: 12px;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   width: 100%;
   text-align: start;
   margin: 0;
@@ -80,7 +80,7 @@ h2 {
 
 .corp-id-btn {
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   border: none;
   border-radius: 8px;
   padding: 10px;
@@ -108,7 +108,7 @@ h2 {
 
 .show-login-form-btn {
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   border: none;
   border-radius: 8px;
   padding: 10px;
@@ -140,7 +140,7 @@ h2 {
   text-align: center;
   margin: 20px 0;
   width: 100%;
-  color: var(--pr-color-secondary-100) !important;
+  color: var(--pr-color-accents-4) !important;
 
   @media (max-height: 780px) {
     margin: 10px 0;
@@ -162,7 +162,7 @@ h2 {
 .external-users-text {
   font-weight: 400;
   font-size: 12px;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   width: 100%;
   text-align: start;
   margin: 0;
@@ -176,7 +176,7 @@ h2 {
 
 label {
   display: block;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   margin-bottom: 5px;
   font-weight: 400;
   font-size: 12px;
@@ -191,19 +191,10 @@ input {
   box-sizing: border-box;
 }
 
-.forgot-password {
-  display: block;
-  text-align: left;
-  color: #0a4c81;
-  text-decoration: none;
-  margin: 10px 0 20px;
-  font-size: 14px;
-}
-
 .signin-btn {
   font-family: 'Poppins', sans-serif;
   background-color: var(--pr-color-primary-300);
-  color: white;
+  color: var(--pr-color-white);
   border: none;
   border-radius: 10px;
   width: 100%;
@@ -239,13 +230,13 @@ input {
 
 .need-help-text {
   font-size: 10px;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   margin: 0;
 }
 
 .global-link {
   font-size: 10px;
-  color: #1689ca;
+  color: var(--pr-color-blue-600);
   margin: 0;
   text-decoration: underline;
   transition: color 0.3s ease;
@@ -253,56 +244,15 @@ input {
 }
 
 .global-link:hover {
-  color: #0a4c81;
+  color: var(--pr-color-blue-900);
 }
 
 .terms-and-conditions-text {
   font-size: 10px;
-  color: var(--pr-color-secondary-100);
+  color: var(--pr-color-accents-4);
   margin: 0;
   text-align: start;
   width: 100%;
-}
-
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  svg {
-    margin-right: 8px;
-    width: 20px;
-    height: 20px;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-.signup-link {
-  text-align: center;
-  font-size: 14px;
-  color: var(--pr-color-accents-5);
-}
-
-.signup-link a {
-  color: #0a4c81;
-  text-decoration: none;
-}
-
-.password-requirements {
-  margin: 15px 0;
-  padding: 15px;
-  background-color: var(--pr-color-accents-1);
-  border-radius: 8px;
-  border-left: 4px solid var(--pr-color-green-700);
 }
 
 .requirements-list {

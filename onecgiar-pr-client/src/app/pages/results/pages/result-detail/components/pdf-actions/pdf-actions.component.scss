@@ -4,7 +4,7 @@
   justify-content: space-between;
   height: 66px;
   border-radius: 4px !important;
-  box-shadow: 5px 5px 5px 5px rgba(0, 0, 0, 0.0274509804) !important;
+  box-shadow: 5px 5px 5px 5px rgba(var(--pr-color-black-rgb), 0.0274509804) !important;
 }
 .header_horizontal {
   display: flex;
@@ -15,12 +15,12 @@
 }
 
 .pdf_actions_container {
-  box-shadow: 4px 4px 10px 1px rgba(0, 0, 0, 0.205);
+  box-shadow: 4px 4px 10px 1px rgba(var(--pr-color-black-rgb), 0.205);
   border-radius: 10px 10px 10px 10px;
   overflow: hidden;
 
   .header {
-    background-color: #2196f3;
+    background-color: var(--pr-color-blue-500);
     color: var(--pr-color-white);
     text-align: center;
     padding: 4px 0px;
@@ -64,7 +64,7 @@
 
         i {
           font-size: 25px;
-          color: #2196f3;
+          color: var(--pr-color-blue-500);
           margin-bottom: 5px;
         }
       }

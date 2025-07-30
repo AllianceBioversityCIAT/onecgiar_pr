@@ -69,7 +69,7 @@
 
       &.close {
         background-color: var(--pr-color-neutral-1000);
-        color: #7b7a7a;
+        color: var(--pr-color-accents-5);
 
         .tag {
           background-color: var(--pr-color-accents-5);
@@ -80,7 +80,7 @@
       &.selected {
         background-color: var(--pr-color-primary-300);
         color: var(--pr-color-white);
-        border-color: #3d50bd;
+        border-color: var(--pr-color-primary-400);
       }
     }
   }

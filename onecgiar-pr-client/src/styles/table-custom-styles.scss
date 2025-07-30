@@ -1,5 +1,5 @@
 .table_container {
-  background-color: white;
+  background-color: var(--pr-color-white);
 
   .first_options {
     display: grid;
@@ -36,7 +36,7 @@
 
     &:hover {
       text-decoration: underline;
-      color: #697dee;
+      color: var(--pr-color-primary-300);
     }
   }
 }

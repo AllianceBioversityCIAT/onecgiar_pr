@@ -33,7 +33,7 @@
   color: var(--pr-color-black);
 
   &:hover {
-    background-color: #f5f6fd;
+    background-color: var(--pr-color-primary-50);
     cursor: pointer;
   }
 }

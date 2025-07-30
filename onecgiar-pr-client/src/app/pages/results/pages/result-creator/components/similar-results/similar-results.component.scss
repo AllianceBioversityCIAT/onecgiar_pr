@@ -51,7 +51,7 @@
 
     .line {
       content: '';
-      background-color: rgb(0, 162, 255);
+      background-color: var(--pr-color-blue-500);
       width: 7px;
       height: 100%;
       position: absolute;

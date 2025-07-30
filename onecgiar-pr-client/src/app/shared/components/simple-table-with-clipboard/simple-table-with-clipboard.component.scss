@@ -1,7 +1,7 @@
 table,
 th,
 td {
-  border: 1px solid black;
+  border: 1px solid var(--pr-color-black);
 }
 
 table {
@@ -15,12 +15,12 @@ th {
 
 td {
   padding: 5px;
-  background-color: white;
+  background-color: var(--pr-color-white);
 }
 
 .table_title {
   background-color: var(--pr-color-primary-300) !important;
-  color: white;
+  color: var(--pr-color-white);
 }
 
 .loader_info {
@@ -34,8 +34,8 @@ td {
     font-size: 14.5px !important;
 
     .table_title {
-      color: black;
-      background-color: white !important;
+      color: var(--pr-color-black);
+      background-color: var(--pr-color-white) !important;
     }
   }
 }

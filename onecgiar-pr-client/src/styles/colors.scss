@@ -89,6 +89,24 @@
 
   --pr-color-green-rgb: 56, 223, 123;
 
+  // Blue
+  --pr-color-blue-50: #eff6ff;
+  --pr-color-blue-100: #dbeafe;
+  --pr-color-blue-200: #bfdbfe;
+  --pr-color-blue-300: #93c5fd;
+  --pr-color-blue-400: #60a5fa;
+  --pr-color-blue-500: #3b82f6; // Main custom Color
+  --pr-color-blue-600: #2563eb;
+  --pr-color-blue-700: #1d4ed8;
+  --pr-color-blue-800: #1e40af;
+  --pr-color-blue-900: #1e3a8a;
+  --pr-color-blue-950: #0b2556;
+
+  --pr-color-blue-rgb: 59, 130, 246;
+
+  --pr-color-blue-other-1: #173f5f;
+  --pr-color-blue-other-2: #2891be;
+
   // accents
   --pr-color-black: #000;
   --pr-color-white: #fff;
@@ -105,15 +123,15 @@
   --pr-color-accents-7: #333;
   --pr-color-accents-8: #111;
 
-  --pr-color-tertiary: #04030f;
-  --pr-color-warning: black;
-  --pr-color-danger: #d84242;
-  --pr-color-danger-2: #fc7c7c;
+  --pr-color-result-level-1: var(--pr-color-green-500);
+  --pr-color-result-level-2: var(--pr-color-blue-other-1);
+  --pr-color-result-level-3: var(--pr-color-red-400);
+  --pr-color-result-level-4: var(--pr-color-blue-other-2);
 
-  --pr-color-result-level-1: #2bbe28;
-  --pr-color-result-level-2: #173f5f;
-  --pr-color-result-level-3: #be2828;
-  --pr-color-result-level-4: #2891be;
-
-  --pr-color-info: #4275e4;
+  // Other colors
+  --pr-color-other-1: #774100;
+  --pr-color-other-2: #7ab800;
+  --pr-color-other-3: #eb4c1b;
+  --pr-color-other-4: #ff8a00;
+  --pr-color-other-5: #ffe7ca;
 }

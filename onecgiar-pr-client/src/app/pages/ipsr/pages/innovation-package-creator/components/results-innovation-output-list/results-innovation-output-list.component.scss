@@ -44,8 +44,6 @@ tr {
     }
 
     .point {
-      width: 10px;
-      height: 10px;
       background-color: var(--pr-color-red-300);
       position: absolute;
       bottom: 0;
@@ -102,11 +100,11 @@ tr {
   padding: 2px 3px;
   font-size: 0.8em;
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
 }
 
 .pre {
-  background-color: #1a91ff !important;
+  background-color: var(--pr-color-blue-500) !important;
   white-space: nowrap;
 }
 
@@ -139,7 +137,7 @@ tr {
   }
 
   .link_button {
-    color: white;
+    color: var(--pr-color-white);
     background-color: var(--pr-color-primary-300);
     padding: 3px 10px;
     width: 100px;

@@ -15,19 +15,19 @@
     align-items: center;
     flex-direction: column;
     gap: 10px;
-    background-color: rgba(0, 0, 0, 0.24);
+    background-color: rgba(var(--pr-color-black-rgb), 0.24);
     height: min-content;
     padding: 30px;
     border-radius: 10px;
 
     .icon {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 4em;
       transform: scaleX(-1);
     }
 
     .text {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 1.2em;
     }
   }

@@ -28,15 +28,17 @@
     <div class="partner_item_content">
       <div
         class="partner_item_content-line"
-        [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : 'var(--pr-color-neutral-1000)' }"></div>
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-neutral-1000)' }"></div>
 
       <div
         class="partner_item_content_predicted"
-        [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : 'var(--pr-color-primary-300)' }">
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-primary-300)' }">
         <p class="partner_item_content-predicted-text">
           {{ partner.is_predicted ? 'Predicted by M-QAP AI' : 'Manual match' }}
         </p>
-        <i class="material-icons-round" style="color: white; font-size: 14px">{{ partner.is_predicted ? 'auto_awesome' : 'ads_click' }}</i>
+        <i class="material-icons-round" style="color: var(--pr-color-white); font-size: 14px">{{
+          partner.is_predicted ? 'auto_awesome' : 'ads_click'
+        }}</i>
       </div>
 
       <div style="width: 100%">

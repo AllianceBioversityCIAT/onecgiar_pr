@@ -13,14 +13,14 @@
   }
 
   .section_active {
-    background-color: white;
+    background-color: var(--pr-color-white);
     font-weight: 700;
-    color: var(--pr-color-tertiary);
+    color: var(--pr-color-primary-950);
   }
 
   a {
     text-decoration: none;
-    color: white;
+    color: var(--pr-color-white);
     padding: 8px 15px;
     border-radius: 7px;
     font-weight: 300;

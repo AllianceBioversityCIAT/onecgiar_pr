@@ -64,7 +64,7 @@ p {
       transition: background-color 0.3s;
 
       &:hover {
-        background-color: #e8eefc;
+        background-color: var(--pr-color-primary-50);
         cursor: pointer;
       }
 
