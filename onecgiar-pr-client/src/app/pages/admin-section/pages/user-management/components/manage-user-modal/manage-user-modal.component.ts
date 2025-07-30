@@ -9,6 +9,7 @@ import { SearchUserSelectComponent } from '../../../../../../shared/components/s
 import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 interface AddUserForm {
   activate: boolean;
@@ -27,7 +28,7 @@ interface AddUserForm {
 @Component({
   selector: 'app-manage-user-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, CustomFieldsModule, SearchUserSelectComponent],
+  imports: [CommonModule, FormsModule, DialogModule, CustomFieldsModule, SearchUserSelectComponent, ProgressSpinnerModule],
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })
@@ -42,6 +43,7 @@ export class ManageUserModalComponent implements OnChanges {
   @Output() managedUser = new EventEmitter<void>();
   @Input() userActivatorMode: WritableSignal<boolean> = signal(false);
   @Input() editingMode: WritableSignal<boolean> = signal(false);
+  @Input() loadingUserRole: WritableSignal<boolean> = signal(false);
 
   // ViewChild reference for clearing user search
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
@@ -59,9 +61,6 @@ export class ManageUserModalComponent implements OnChanges {
   entities = computed(() => {
     return this.initiativesService.allInitiatives().map(entity => {
       if (this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id)) entity.disabledd = true;
-
-      // entity.disabledd = true;
-      console.log(entity);
       return entity;
     });
   });
@@ -193,6 +192,8 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   manageUser() {
+    console.log(this.addUserForm());
+    return;
     this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
   }
 

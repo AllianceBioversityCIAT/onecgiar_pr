@@ -79,6 +79,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(false);
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
+  loadingUserRole = signal<boolean>(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -245,26 +246,49 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onShowInfo(): void {}
 
   // User actions methods
-  onEditUser(user: AddUser): void {
+  async onEditUser(user: AddUser): Promise<void> {
     this.isEditingUser.set(true);
     this.showAddUserModal = true;
-    this.fillUserFormToEdit(user);
+    await this.fillUserFormToEdit(user);
+    this.getUserRoleByEntity(user.emailAddress);
+  }
+
+  getUserRoleByEntity(email: string) {
+    this.loadingUserRole.set(true);
+    this.resultsApiService.GET_findRoleByEntity(email).subscribe({
+      next: res => {
+        console.log(res.response);
+        this.manageUserModal.addUserForm.update(form => ({
+          ...form,
+          role_assignments: res.response
+        }));
+        console.log(this.manageUserModal.addUserForm());
+        this.loadingUserRole.set(false);
+      },
+      error: error => {
+        this.loadingUserRole.set(false);
+      }
+    });
   }
 
   fillUserFormToEdit(user: AddUser) {
-    const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
-    setTimeout(() => {
-      this.manageUserModal.addUserForm.set({
-        is_cgiar: isCGIAR,
-        displayName: `${firstName} ${lastName} (${emailAddress})`,
-        first_name: firstName,
-        last_name: lastName,
-        email: emailAddress,
-        role_platform: 2, // Marked as guest by default (2)
-        role_assignments: [],
-        activate: true
-      });
-    }, 500);
+    return new Promise(resolve => {
+      const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
+      setTimeout(() => {
+        this.manageUserModal.addUserForm.set({
+          is_cgiar: isCGIAR,
+          displayName: `${firstName} ${lastName} (${emailAddress})`,
+          first_name: firstName,
+          last_name: lastName,
+          email: emailAddress,
+          role_platform: 2, // Marked as guest by default (2)
+          role_assignments: [],
+          activate: true
+        });
+        resolve(true);
+      }, 500);
+      return;
+    });
   }
 
   onToggleUserStatus(user: AddUser) {
@@ -277,6 +301,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }
 
     // confitm alert
+    this.getUserRoleByEntity(user.emailAddress);
     this.api.alertsFe.show(
       {
         id: 'deactivateUserConfirm',

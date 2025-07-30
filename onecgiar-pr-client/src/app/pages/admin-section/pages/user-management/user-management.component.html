@@ -206,6 +206,7 @@
     #manageUserModal
     [editingMode]="isEditingUser"
     [userActivatorMode]="isActivatingUser"
+    [loadingUserRole]="loadingUserRole"
     [(visible)]="showAddUserModal"
     (managedUser)="this.getUsers()">
   </app-manage-user-modal>

@@ -1153,4 +1153,7 @@ export class ResultsApiService {
   PATCH_changeUserStatus(body: any) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
   }
+  GET_findRoleByEntity(email: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/find/role_by_entity?email=${email}`);
+  }
 }
