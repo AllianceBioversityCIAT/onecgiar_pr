@@ -20,6 +20,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsBoolean()
   force_swap?: boolean;
 
+  @IsOptional()
+  @IsNumber()
+  role_platform?: number;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => RoleAssignmentDto)

@@ -19,7 +19,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import { Brackets, IsNull, Not } from 'typeorm';
+import { Brackets, In, IsNull, Not } from 'typeorm';
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -116,6 +116,7 @@ export class UserService {
   private async handleCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<boolean> {
+    console.log('METHOD -- handleCgiarUser');
     try {
       if (!this.cgiarRegex.test(createUserDto.email)) {
         throw new HttpException(
@@ -161,6 +162,7 @@ export class UserService {
   private async handleNonCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<void> {
+    console.log('METHOD -- handleNonCgiarUser');
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -252,6 +254,7 @@ export class UserService {
     remove_roles?: false,
     id_role_by_entity?: number,
   ): Promise<returnFormatUser> {
+    console.log('METHOD -- saveUserToDB');
     const cleanEmail = dto.email?.trim().toLowerCase();
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -267,7 +270,7 @@ export class UserService {
         );
       }
 
-      // Bring info about the new user from the database
+      // Bring info about user from the database
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
       });
@@ -315,8 +318,11 @@ export class UserService {
         where: { user: newUser.id },
       });
 
-      if (dto.role_assignments?.length === 0 && idRoleByUser) {
-        // Si no se especifica un rol_platform, elimina todos los roles activos
+      if (
+        (!dto.role_assignments || dto.role_assignments.length === 0) &&
+        idRoleByUser
+      ) {
+        // Si no se especifica un rol, elimina todos los roles activos
         await queryRunner.manager.update(
           RoleByUser,
           { user: newUser.id },
@@ -335,16 +341,33 @@ export class UserService {
         );
       }
 
-      if (
-        !dto.role_assignments ||
-        (dto.role_assignments.length === 0 && remove_roles)
-      ) {
-        await queryRunner.manager.save(RoleByUser, {
-          role: dto?.role_platform || ROLE_IDS.GUEST,
+      const rolesPlat = await queryRunner.manager.find(RoleByUser, {
+        where: {
           user: newUser.id,
-          created_by: currentUser?.id,
-          last_updated_by: currentUser?.id,
-        });
+          active: true,
+          role: In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST]),
+        },
+      });
+
+      if (dto?.role_platform) {
+        if (rolesPlat.length) {
+          for (const rolePlat of rolesPlat) {
+            await queryRunner.manager.save(RoleByUser, {
+              id: rolePlat.id,
+              role: dto.role_platform,
+              user: newUser.id,
+              created_by: currentUser?.id,
+              last_updated_by: currentUser?.id,
+            });
+          }
+        } else {
+          await queryRunner.manager.save(RoleByUser, {
+            role: dto.role_platform ? dto.role_platform : ROLE_IDS.GUEST,
+            user: newUser.id,
+            created_by: currentUser?.id,
+            last_updated_by: currentUser?.id,
+          });
+        }
       }
 
       console.log('user', user);
@@ -376,7 +399,7 @@ export class UserService {
             relations: ['obj_portfolio'],
           });
           const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-          const isExternal = !user.is_cgiar;
+          const isExternal = !(user?.is_cgiar || dto?.is_cgiar);
 
           if (isExternal && role_id !== ROLE_IDS.MEMBER) {
             throw new BadRequestException(
@@ -408,9 +431,20 @@ export class UserService {
                   role: ROLE_IDS.COORDINATOR,
                   last_updated_by: currentUser?.id,
                 });
+
+                console.log('Asignando role swap');
+                await queryRunner.manager.save(RoleByUser, {
+                  id: id_role_by_entity ? id_role_by_entity : undefined,
+                  role: role_id,
+                  user: newUser.id,
+                  initiative_id: entity_id,
+                  created_by: currentUser?.id,
+                  last_updated_by: currentUser?.id,
+                });
               }
             }
-
+          } else {
+            console.log('Asignando roles normales');
             await queryRunner.manager.save(RoleByUser, {
               id: id_role_by_entity ? id_role_by_entity : undefined,
               role: role_id,
@@ -1105,6 +1139,12 @@ export class UserService {
         throw new NotFoundException('User not found');
       }
 
+      const existingLead = await queryRunner.manager.findOne(RoleByUser, {
+        where: { user: user.id, active: true },
+        relations: ['obj_user', 'obj_initiative'],
+      });
+
+      console.log('Existing lead:', existingLead);
       let remove_roles = false;
       if (!dto.role_assignments || dto.role_assignments.length === 0) {
         remove_roles = true;
@@ -1128,11 +1168,9 @@ export class UserService {
   }
 
   async findRoleByEntity(email: string): Promise<any> {
-    console.log('Finding role by entity for email:', email);
     try {
       const cleanEmail = email?.trim().toLowerCase();
 
-      console.log('Looking for user with email:', cleanEmail);
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
       });
