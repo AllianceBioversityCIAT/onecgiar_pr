@@ -252,7 +252,7 @@ export class UserService {
     token: TokenDto,
     changeStatus?: boolean,
     remove_roles?: false,
-    id_role_by_entity?: number,
+    rbu_id?: number,
   ): Promise<returnFormatUser> {
     console.log('METHOD -- saveUserToDB');
     const cleanEmail = dto.email?.trim().toLowerCase();
@@ -373,7 +373,7 @@ export class UserService {
       console.log('user', user);
       if (dto.role_assignments?.length) {
         for (const assignment of dto.role_assignments) {
-          const { role_id, entity_id, id_role_by_entity, force_swap } =
+          const { role_id, entity_id, rbu_id, force_swap } =
             assignment;
 
           const existingAssignment = await queryRunner.manager.findOne(
@@ -387,7 +387,7 @@ export class UserService {
             },
           );
 
-          if (existingAssignment && !id_role_by_entity) {
+          if (existingAssignment && !rbu_id) {
             throw new BadRequestException(
               `The user already has a role in the selected entity. Only one role per entity is allowed.`,
             );
@@ -434,7 +434,7 @@ export class UserService {
 
                 console.log('Asignando role swap');
                 await queryRunner.manager.save(RoleByUser, {
-                  id: id_role_by_entity ? id_role_by_entity : undefined,
+                  id: rbu_id ? rbu_id : undefined,
                   role: role_id,
                   user: newUser.id,
                   initiative_id: entity_id,
@@ -446,7 +446,7 @@ export class UserService {
           } else {
             console.log('Asignando roles normales');
             await queryRunner.manager.save(RoleByUser, {
-              id: id_role_by_entity ? id_role_by_entity : undefined,
+              id: rbu_id ? rbu_id : undefined,
               role: role_id,
               user: newUser.id,
               initiative_id: entity_id,
@@ -466,7 +466,7 @@ export class UserService {
             : 'External user activated successfully',
           status: HttpStatus.OK,
         };
-      } else if (id_role_by_entity) {
+      } else if (rbu_id) {
         return {
           response: { id: newUser.id, email: newUser.email },
           message: 'Roles saved successfully',
@@ -1194,9 +1194,7 @@ export class UserService {
         .select([
           'rbu.id',
           'rbu.role as role_id',
-          'rol.description as role_name',
           'rbu.initiative_id as entity_id',
-          'ent.official_code as entity_name',
         ])
         .getRawMany();
 

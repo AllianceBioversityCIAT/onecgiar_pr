@@ -36,7 +36,7 @@ class RoleAssignmentDto {
   force_swap?: boolean;
 
   @IsNumber()
-  id_role_by_entity: number;
+  rbu_id: number;
 
   @IsNumber()
   entity_id: number;
