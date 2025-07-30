@@ -41,7 +41,7 @@ export class ChangeUserStatusDto {
 class EntityRoleDto {
   @IsOptional()
   @IsNumber()
-  id_role_by_entity?: number;
+  rbu_id?: number;
 
   @IsOptional()
   @IsBoolean()

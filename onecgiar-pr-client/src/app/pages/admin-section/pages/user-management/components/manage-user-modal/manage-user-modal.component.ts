@@ -190,10 +190,7 @@ export class ManageUserModalComponent implements OnChanges {
     }));
   }
 
-  manageUser() {
-    return;
-    this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
-  }
+  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.onCreateUser());
 
   onSaveUserActivator(): void {
     this.addUserForm.update(form => ({
@@ -227,12 +224,13 @@ export class ManageUserModalComponent implements OnChanges {
     });
   }
 
-  onSaveUser(): void {
+  onCreateUser(): void {
     this.creatingUser.set(true);
 
     // Remove displayName from form data before sending to backend
     const formData = { ...this.addUserForm() };
     delete formData.displayName;
+    delete formData.activate;
 
     this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {
@@ -256,24 +254,40 @@ export class ManageUserModalComponent implements OnChanges {
       error: error => {
         // Determinar el mensaje de error
         let errorMessage = 'Error while creating user';
-
-        if (error?.error?.message) {
-          const message = error.error.message;
-          if (message.includes('already exists')) {
-            errorMessage = 'The user already exists in the system';
-          } else if (message.includes('CGIAR email')) {
-            errorMessage = 'Non-CGIAR user cannot have a CGIAR email address';
-          } else {
-            errorMessage = message;
-          }
+        console.clear();
+        if (error.status === 409) {
+          this.api.alertsFe.show(
+            {
+              id: 'createUserError',
+              title: 'Warning!',
+              description: error.error.message,
+              status: 'warning',
+              confirmText: 'Confirm'
+            },
+            () => {
+              // i need add attr force_swap as true to de role id 3 and 4
+              console.log(this.addUserForm());
+              this.addUserForm.update(form => ({
+                ...form,
+                role_assignments: form.role_assignments.map(assignment =>
+                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
+                )
+              }));
+              console.log(this.addUserForm());
+              this.onCreateUser();
+            }
+          );
+        } else {
+          this.api.alertsFe.show({
+            id: 'createUserError',
+            title: 'Warning!',
+            description: error.error.message,
+            status: 'warning'
+          });
         }
+        console.log(error.status);
+        console.log(error);
 
-        this.api.alertsFe.show({
-          id: 'createUserError',
-          title: 'Warning!',
-          description: errorMessage,
-          status: 'warning'
-        });
         this.creatingUser.set(false);
       }
     });
