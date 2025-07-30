@@ -440,7 +440,6 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'User found' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async findRoleByEntity(@Query('email') email: string) {
-    console.log('Email recibido en controlador:', email);
     return this.userService.findRoleByEntity(email);
   }
 
