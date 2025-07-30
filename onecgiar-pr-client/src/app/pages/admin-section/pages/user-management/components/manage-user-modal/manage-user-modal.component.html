@@ -115,7 +115,6 @@
                 placeholder="Select entity"
                 [ngModel]="item.entity_id"
                 (ngModelChange)="onRoleEntityChange($event, $index)"
-                [expandSpaceOnOpen]="true"
                 [indexReference]="$index + 10"
                 [required]="false"></app-pr-select>
             </div>
@@ -128,7 +127,6 @@
                 placeholder="Select role"
                 [ngModel]="item.role_id"
                 (ngModelChange)="onRoleAssignmentChange($event, $index)"
-                [expandSpaceOnOpen]="true"
                 [indexReference]="($index + 1) * 11"
                 [required]="false"></app-pr-select>
             </div>
