@@ -219,31 +219,11 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'No', value: 'No' }
   ];
 
-  // Entity filter options
-  entityOptions = [
-    { label: 'SGP-01', value: 'SGP-01' },
-    { label: 'INIT-24', value: 'INIT-24' },
-    { label: 'PLAT-04', value: 'PLAT-04' },
-    { label: 'INIT-09', value: 'INIT-09' },
-    { label: 'INIT-26', value: 'INIT-26' },
-    { label: 'INIT-32', value: 'INIT-32' },
-    { label: 'INIT-10', value: 'INIT-10' },
-    { label: 'PLAT-01', value: 'PLAT-01' },
-    { label: 'SGP-02', value: 'SGP-02' },
-    { label: 'INIT-01', value: 'INIT-01' }
-  ];
-
-  showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
-
   // Action methods
   onAddUser(): void {
     this.isActivatingUser.set(false);
     this.showAddUserModal = true;
   }
-
-  onExportData(): void {}
-
-  onShowInfo(): void {}
 
   // User actions methods
   async onEditUser(user: AddUser): Promise<void> {
@@ -292,6 +272,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   onToggleUserStatus(user: AddUser) {
     if (!user.isActive) {
+      this.manageUserModal.resetAddUserForm();
       this.showAddUserModal = true;
       this.isActivatingUser.set(true);
       this.isEditingUser.set(true);
@@ -319,8 +300,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
             this.getUsers();
             this.api.alertsFe.show({
               id: 'deactivateUserSuccess',
-              title: 'User deactivated successfully',
-              description: `${user.emailAddress} - ${user.firstName} ${user.lastName} - User deactivated successfully`,
+              title: res.message,
+              description: `${user.emailAddress} - ${user.firstName} ${user.lastName}`,
               status: 'success'
             });
           },
