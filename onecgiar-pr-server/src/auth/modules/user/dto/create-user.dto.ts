@@ -46,6 +46,14 @@ export class CreateUserDto {
 export class RoleAssignmentDto {
   @IsOptional()
   @IsNumber()
+  id_role_by_entity?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  force_swap?: boolean;
+
+  @IsOptional()
+  @IsNumber()
   role_id: number;
 
   @IsOptional()

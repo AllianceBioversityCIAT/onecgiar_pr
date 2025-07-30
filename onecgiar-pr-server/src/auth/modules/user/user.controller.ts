@@ -27,6 +27,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { Token } from 'aws-sdk';
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
@@ -428,5 +430,79 @@ export class UserController {
       changeStatusDto,
       currentUser,
     );
+  }
+
+  @Get('find/role_by_entity')
+  @ApiOperation({
+    summary: 'Find user role by entity',
+    description: 'Retrieves user role(s) in entities by email',
+  })
+  @ApiQuery({ name: 'email', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async findRoleByEntity(@Query('email') email: string,) {
+     console.log('Email recibido en controlador:', email);
+    return this.userService.findRoleByEntity(email);
+  }
+  
+
+  @Patch('update/roles')
+  @ApiOperation({
+    summary: 'Update user role assignments',
+    description:
+      'Allows an Admin to update the roles and entity assignments of a user. This replaces all current role-entity associations for the user.',
+  })
+  @ApiBody({
+    description: 'Payload to update a user\'s assigned roles and entities',
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'usuario@ejemplo.com',
+          description: 'Email of the user whose roles are to be updated',
+        },
+        role_assignments: {
+          type: 'array',
+          description: 'List of entity-role assignments',
+          items: {
+            type: 'object',
+            properties: {
+              entity_id: {
+                type: 'number',
+                example: 1,
+                description: 'Entity (initiative) ID',
+              },
+              role_id: {
+                type: 'number',
+                example: 2,
+                description: 'Role ID to assign within the entity',
+              },
+            },
+            required: ['entity_id', 'role_id'],
+          },
+        },
+      },
+      required: ['email', 'role_assignments'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User roles updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request (e.g., duplicate entities, invalid roles)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async updateUserRoles(
+    @DecodedUser() token: TokenDto,
+    @Body() updateDto: UpdateUserDto,
+  ) {
+    return this.userService.updateUserRoles(updateDto, token);
   }
 }
