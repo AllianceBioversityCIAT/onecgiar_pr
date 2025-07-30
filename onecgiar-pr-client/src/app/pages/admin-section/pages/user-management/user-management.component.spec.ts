@@ -4,25 +4,43 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import UserManagementComponent from './user-management.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { of } from 'rxjs';
+import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 
 // Mock simple para ApiService
 const mockApiService = {
   getUsers: () => [],
   createUser: () => {},
   updateUser: () => {},
+  alertsFe: {
+    show: jest.fn()
+  },
   authSE: {
     localStorageUser: {
       user_name: 'Test User',
       email: 'test@example.com'
     }
+  },
+  resultsSE: {
+    GET_AllInitiatives: () => of({ response: [] }),
+    GET_roles: () => of({ response: [] })
   }
 };
 
 // Mock para ResultsApiService
 const mockResultsApiService = {
   GET_usersList: () => of({ response: [] }),
-  GET_searchUser: () => of({ response: [] })
+  GET_searchUser: () => of({ response: [] }),
+  PATCH_updateUserStatus: () => of({ message: 'User updated' }),
+  GET_findRoleByEntity: () => of({ response: [] })
+};
+
+// Mock para InitiativesService
+const mockInitiativesService = {
+  allInitiatives: jest.fn().mockReturnValue([]),
+  allInitiativesList: [],
+  GET_AllWithoutResults: jest.fn()
 };
 
 describe('UserManagementComponent', () => {
@@ -34,7 +52,8 @@ describe('UserManagementComponent', () => {
       imports: [UserManagementComponent, HttpClientTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
-        { provide: ResultsApiService, useValue: mockResultsApiService }
+        { provide: ResultsApiService, useValue: mockResultsApiService },
+        { provide: InitiativesService, useValue: mockInitiativesService }
       ]
     }).compileComponents();
 
@@ -52,97 +71,58 @@ describe('UserManagementComponent', () => {
     expect(component.selectedStatus()).toBe('');
     expect(component.loading()).toBe(false);
     expect(component.showAddUserModal).toBe(false);
-    expect(component.addUserForm().is_cgiar).toBe(true);
-    expect(component.addUserForm().role_platform).toBe(2);
+    expect(component.isActivatingUser()).toBe(false);
+    expect(component.isEditingUser()).toBe(false);
   });
 
   it('should have proper column configuration', () => {
     expect(component.columns).toBeDefined();
-    expect(component.columns.length).toBe(6);
+    expect(component.columns.length).toBe(7);
     expect(component.columns[0].label).toBe('User name');
     expect(component.columns[1].label).toBe('Email');
   });
 
   it('should filter users by status', () => {
     // Set up some mock users
-    const mockUsers = [
-      { firstName: 'John', lastName: 'Doe', emailAddress: 'john@test.com', cgIAR: 'Yes', userCreationDate: '2022-01-01', userStatus: 'Active' },
-      { firstName: 'Jane', lastName: 'Smith', emailAddress: 'jane@test.com', cgIAR: 'No', userCreationDate: '2022-01-02', userStatus: 'Inactive' }
+    const mockUsers: AddUser[] = [
+      {
+        firstName: 'John',
+        lastName: 'Doe',
+        emailAddress: 'john@test.com',
+        cgIAR: 'Yes',
+        userCreationDate: '2022-01-01',
+        userStatus: 'Active',
+        isCGIAR: true,
+        isActive: true
+      },
+      {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        emailAddress: 'jane@test.com',
+        cgIAR: 'No',
+        userCreationDate: '2022-01-02',
+        userStatus: 'Inactive',
+        isCGIAR: false,
+        isActive: false
+      }
     ];
     component.users.set(mockUsers);
 
     component.selectedStatus.set('Active');
     const allUsers = component.users();
     const activeUsers = allUsers.filter(user => user.userStatus === 'Active');
-    expect(activeUsers.length).toBeGreaterThan(0);
-  });
-
-  it('should return correct status class', () => {
-    expect(component.getStatusClass('Active')).toBe('status-active');
-    expect(component.getStatusClass('Inactive')).toBe('status-inactive');
-    expect(component.getStatusClass('Other')).toBe('status-inactive');
+    expect(activeUsers.length).toBe(1);
   });
 
   it('should open add user modal', () => {
     component.onAddUser();
     expect(component.showAddUserModal).toBe(true);
-  });
-
-  it('should reset add user form', () => {
-    // Modify form first
-    component.addUserForm.update(form => ({
-      ...form,
-      is_cgiar: false,
-      role_platform: 1
-    }));
-
-    component.resetAddUserForm();
-    expect(component.addUserForm().is_cgiar).toBe(true);
-    expect(component.addUserForm().role_platform).toBe(2);
+    expect(component.isActivatingUser()).toBe(false);
   });
 
   it('should handle CGIAR status change', () => {
-    // Set up initial state
-    component.addUserForm.update(form => ({
-      ...form,
-      displayName: 'Test User (test@test.com)',
-      email: 'test@test.com',
-      first_name: 'Test Name'
-    }));
-
-    component.onModalCgiarChange(false);
-    expect(component.addUserForm().is_cgiar).toBe(false);
-    expect(component.addUserForm().displayName).toBe('');
-    expect(component.addUserForm().first_name).toBe('');
-  });
-
-  it('should validate form correctly', () => {
-    // Test CGIAR user form
-    component.addUserForm.update(form => ({
-      ...form,
-      is_cgiar: true,
-      displayName: 'Test User (test@cgiar.org)',
-      email: 'test@cgiar.org',
-      role_platform: 1
-    }));
-    expect(component.isFormValid()).toBe(true);
-
-    // Test non-CGIAR user form
-    component.addUserForm.update(form => ({
-      ...form,
-      is_cgiar: false,
-      displayName: '',
-      first_name: 'Test',
-      last_name: 'User',
-      email: 'test@example.com',
-      role_platform: 2
-    }));
-    expect(component.isFormValid()).toBe(true);
-  });
-
-  it('should return current user information', () => {
-    expect(component.currentUserName).toBe('Test User');
-    expect(component.currentUserEmail).toBe('test@example.com');
+    component.onCgiarChange('Yes');
+    expect(component.selectedCgiar()).toBe('Yes');
   });
 
   it('should handle search with timeout', done => {
@@ -201,5 +181,46 @@ describe('UserManagementComponent', () => {
 
     // Verify getUsers was called
     expect(getUsersSpy).toHaveBeenCalled();
+  });
+
+  it('should handle entity display methods', () => {
+    const entities = ['Entity1', 'Entity2', 'Entity3', 'Entity4'];
+
+    expect(component.getDisplayEntities(entities)).toEqual(['Entity1', 'Entity2']);
+    expect(component.hasMoreEntities(entities)).toBe(true);
+    expect(component.getRemainingEntities(entities)).toEqual(['Entity3', 'Entity4']);
+
+    const shortEntities = ['Entity1', 'Entity2'];
+    expect(component.hasMoreEntities(shortEntities)).toBe(false);
+    expect(component.getRemainingEntities(shortEntities)).toEqual([]);
+  });
+
+  it('should handle user editing', async () => {
+    const mockUser: AddUser = {
+      firstName: 'John',
+      lastName: 'Doe',
+      emailAddress: 'john@test.com',
+      cgIAR: 'Yes',
+      userCreationDate: '2022-01-01',
+      userStatus: 'Active',
+      isCGIAR: true,
+      isActive: true
+    };
+
+    // Mock the manageUserModal
+    component.manageUserModal = {
+      addUserForm: {
+        set: jest.fn(),
+        update: jest.fn()
+      }
+    } as any;
+
+    const getUserRoleSpy = jest.spyOn(component, 'getUserRoleByEntity').mockImplementation(() => {});
+
+    await component.onEditUser(mockUser);
+
+    expect(component.isEditingUser()).toBe(true);
+    expect(component.showAddUserModal).toBe(true);
+    expect(getUserRoleSpy).toHaveBeenCalledWith(mockUser.emailAddress);
   });
 });
