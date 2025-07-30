@@ -50,6 +50,7 @@
           <div class="form-field half-width">
             <label class="field-label" for="user-first-name"> Name:<span class="required">*</span> </label>
             <input
+              [disabled]="editingMode()"
               type="text"
               pInputText
               placeholder="Enter name"
@@ -61,6 +62,7 @@
           <div class="form-field half-width">
             <label class="field-label" for="user-last-name"> Last name:<span class="required">*</span> </label>
             <input
+              [disabled]="editingMode()"
               type="text"
               pInputText
               placeholder="Enter last name"
@@ -74,6 +76,7 @@
         <div class="form-field">
           <label class="field-label" for="user-email"> Email:<span class="required">*</span> </label>
           <input
+            [disabled]="editingMode()"
             type="email"
             pInputText
             placeholder="Enter Email"
