@@ -82,7 +82,6 @@ export class UserService {
       // This happens for CGIAR users or when Cognito user already exists.
       let shouldSendConfirmationEmail = true;
 
-      console.log('is_cgiar', createUserDto.is_cgiar);
       if (createUserDto.is_cgiar) {
         shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
       } else {
@@ -116,7 +115,6 @@ export class UserService {
   private async handleCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<boolean> {
-    console.log('METHOD -- handleCgiarUser');
     try {
       if (!this.cgiarRegex.test(createUserDto.email)) {
         throw new HttpException(
@@ -162,7 +160,6 @@ export class UserService {
   private async handleNonCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<void> {
-    console.log('METHOD -- handleNonCgiarUser');
     if (!createUserDto.first_name || !createUserDto.last_name) {
       throw new BadRequestException(
         'Some fields contain errors or are incomplete. Please review your input.',
@@ -254,22 +251,12 @@ export class UserService {
     remove_roles?: false,
     rbu_id?: number,
   ): Promise<returnFormatUser> {
-    console.log('METHOD -- saveUserToDB');
     const cleanEmail = dto.email?.trim().toLowerCase();
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    console.log('User to save:', dto);
 
     try {
-      const needsRoles =
-        !dto.role_assignments?.length && !dto.role_platform && remove_roles;
-      if (needsRoles) {
-        throw new BadRequestException(
-          'To save a user, you must provide at least one entity-role pair or an Admin role',
-        );
-      }
-
       // Bring info about user from the database
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
@@ -362,7 +349,7 @@ export class UserService {
           }
         } else {
           await queryRunner.manager.save(RoleByUser, {
-            role: dto.role_platform ? dto.role_platform : ROLE_IDS.GUEST,
+            role: dto.role_platform,
             user: newUser.id,
             created_by: currentUser?.id,
             last_updated_by: currentUser?.id,
@@ -370,11 +357,9 @@ export class UserService {
         }
       }
 
-      console.log('user', user);
       if (dto.role_assignments?.length) {
         for (const assignment of dto.role_assignments) {
-          const { role_id, entity_id, rbu_id, force_swap } =
-            assignment;
+          const { role_id, entity_id, rbu_id, force_swap } = assignment;
 
           const existingAssignment = await queryRunner.manager.findOne(
             RoleByUser,
@@ -432,7 +417,6 @@ export class UserService {
                   last_updated_by: currentUser?.id,
                 });
 
-                console.log('Asignando role swap');
                 await queryRunner.manager.save(RoleByUser, {
                   id: rbu_id ? rbu_id : undefined,
                   role: role_id,
@@ -444,7 +428,6 @@ export class UserService {
               }
             }
           } else {
-            console.log('Asignando roles normales');
             await queryRunner.manager.save(RoleByUser, {
               id: rbu_id ? rbu_id : undefined,
               role: role_id,
@@ -860,7 +843,6 @@ export class UserService {
     email: string,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
-      console.log('Searching for user with email:', email);
       const user: User = await this._customUserRespository.findOne({
         where: { email: email },
       });
@@ -1126,12 +1108,9 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const user = await queryRunner.manager.findOneByOrFail(User, {
+      const user = await this._userRepository.findOneByOrFail({
         email: cleanEmail,
       });
 
@@ -1139,20 +1118,37 @@ export class UserService {
         throw new NotFoundException('User not found');
       }
 
-      const existingLead = await queryRunner.manager.findOne(RoleByUser, {
-        where: { user: user.id, active: true },
-        relations: ['obj_user', 'obj_initiative'],
+      const existingRoles = await this._roleByUserRepository.find({
+        where: {
+          user: user.id,
+          active: true,
+          role: Not(In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST])),
+        },
       });
 
-      console.log('Existing lead:', existingLead);
+      const dtoRoles = dto.role_assignments || [];
+      const incomingRoleKeys = new Set(
+        dtoRoles.map((r) => `${r.role_id}-${r.entity_id}`),
+      );
+
+      const rolesToRemove = existingRoles.filter((existing) => {
+        const key = `${existing.role}-${existing.initiative_id}`;
+        return !incomingRoleKeys.has(key);
+      });
+
+      for (const role of rolesToRemove) {
+        role.active = false;
+        role.last_updated_by = token.id;
+        await this._roleByUserRepository.save(role);
+      }
+
       let remove_roles = false;
       if (!dto.role_assignments || dto.role_assignments.length === 0) {
         remove_roles = true;
       }
       // Asignar nuevos roles
+      console.log('Assigning new roles:', dtoRoles);
       await this.saveUserToDB(dto, token, remove_roles);
-
-      await queryRunner.commitTransaction();
 
       return {
         response: { id: user.id, email: user.email },
@@ -1160,10 +1156,7 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       throw error;
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -1174,8 +1167,6 @@ export class UserService {
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
       });
-
-      console.log('User found:', user);
 
       if (!user) {
         return {
