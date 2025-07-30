@@ -109,7 +109,6 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   onRoleEntityChange(event: number, index: number): void {
-    console.log(event);
     this.addUserForm.update(form => ({
       ...form,
       role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, entity_id: event } : item))
@@ -192,7 +191,6 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   manageUser() {
-    console.log(this.addUserForm());
     return;
     this.userActivatorMode() ? this.onSaveUserActivator() : this.onSaveUser();
   }

@@ -257,12 +257,10 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.loadingUserRole.set(true);
     this.resultsApiService.GET_findRoleByEntity(email).subscribe({
       next: res => {
-        console.log(res.response);
         this.manageUserModal.addUserForm.update(form => ({
           ...form,
           role_assignments: res.response
         }));
-        console.log(this.manageUserModal.addUserForm());
         this.loadingUserRole.set(false);
       },
       error: error => {
