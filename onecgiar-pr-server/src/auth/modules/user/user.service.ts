@@ -35,7 +35,6 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { token } from 'aws-sdk/clients/sns';
 
 @Injectable()
 export class UserService {
@@ -140,7 +139,8 @@ export class UserService {
 
       if (
         !createUserDto.role_platform ||
-        !createUserDto.role_assignments || createUserDto.role_assignments.length === 0
+        !createUserDto.role_assignments ||
+        createUserDto.role_assignments.length === 0
       ) {
         createUserDto.role_platform = 2;
       }
@@ -259,7 +259,8 @@ export class UserService {
     console.log('User to save:', dto);
 
     try {
-      const needsRoles = !dto.role_assignments?.length && !dto.role_platform && remove_roles;
+      const needsRoles =
+        !dto.role_assignments?.length && !dto.role_platform && remove_roles;
       if (needsRoles) {
         throw new BadRequestException(
           'To save a user, you must provide at least one entity-role pair or an Admin role',
@@ -310,16 +311,17 @@ export class UserService {
         newUser = await queryRunner.manager.save(User, dto);
       }
 
-      const idRoleByUser = await queryRunner.manager.findOne(
-        RoleByUser,
-        {
-          where: { user: newUser.id },
-        },
-      );
+      const idRoleByUser = await queryRunner.manager.findOne(RoleByUser, {
+        where: { user: newUser.id },
+      });
 
       if (dto.role_assignments?.length === 0 && idRoleByUser) {
         // Si no se especifica un rol_platform, elimina todos los roles activos
-        await queryRunner.manager.update(RoleByUser, { user: newUser.id }, { active: false, last_updated_by: currentUser?.id });
+        await queryRunner.manager.update(
+          RoleByUser,
+          { user: newUser.id },
+          { active: false, last_updated_by: currentUser?.id },
+        );
       }
 
       if (remove_roles) {
@@ -333,7 +335,10 @@ export class UserService {
         );
       }
 
-      if (!dto.role_assignments || dto.role_assignments.length === 0 && remove_roles) {
+      if (
+        !dto.role_assignments ||
+        (dto.role_assignments.length === 0 && remove_roles)
+      ) {
         await queryRunner.manager.save(RoleByUser, {
           role: dto?.role_platform || ROLE_IDS.GUEST,
           user: newUser.id,
@@ -342,15 +347,20 @@ export class UserService {
         });
       }
 
-      console.log('user', user)
+      console.log('user', user);
       if (dto.role_assignments?.length) {
         for (const assignment of dto.role_assignments) {
-          const { role_id, entity_id, id_role_by_entity, force_swap } = assignment;
+          const { role_id, entity_id, id_role_by_entity, force_swap } =
+            assignment;
 
           const existingAssignment = await queryRunner.manager.findOne(
             RoleByUser,
             {
-              where: { user: newUser.id, initiative_id: entity_id, active: true },
+              where: {
+                user: newUser.id,
+                initiative_id: entity_id,
+                active: true,
+              },
             },
           );
 
@@ -386,32 +396,32 @@ export class UserService {
               relations: ['obj_user', 'obj_initiative'],
             });
 
-          if (existingLead) {
-            if (!force_swap) {
-              throw new ConflictException(
-                `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
-                `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
-                `If you continue, the other user will be set as a Coordinator. Do you want to continue?`
-              );
-            } else {
-              await queryRunner.manager.update(RoleByUser, existingLead.id, {
-                role: ROLE_IDS.COORDINATOR,
-                last_updated_by: currentUser?.id,
-              });
+            if (existingLead) {
+              if (!force_swap) {
+                throw new ConflictException(
+                  `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
+                    `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
+                    `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+                );
+              } else {
+                await queryRunner.manager.update(RoleByUser, existingLead.id, {
+                  role: ROLE_IDS.COORDINATOR,
+                  last_updated_by: currentUser?.id,
+                });
+              }
             }
-          }
 
             await queryRunner.manager.save(RoleByUser, {
-              id: id_role_by_entity? id_role_by_entity : undefined,
+              id: id_role_by_entity ? id_role_by_entity : undefined,
               role: role_id,
               user: newUser.id,
               initiative_id: entity_id,
               created_by: currentUser?.id,
               last_updated_by: currentUser?.id,
             });
+          }
         }
       }
-    }
 
       await queryRunner.commitTransaction();
       if (changeStatus) {
@@ -910,7 +920,6 @@ export class UserService {
         });
 
         isActive = !!hasAdminRole || !!hasInitiativeWithRole;
-
       } else {
         const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
           where: {
@@ -1078,7 +1087,6 @@ export class UserService {
     }
   }
 
-
   async updateUserRoles(
     dto: UpdateUserDto,
     token: TokenDto,
@@ -1139,20 +1147,20 @@ export class UserService {
         };
       }
 
-    const roleByEntity = await this._roleByUserRepository
-      .createQueryBuilder('rbu')
-      .leftJoin('role', 'rol', 'rol.id = rbu.role')
-      .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
-      .where('rbu.obj_user = :userId', { userId: user.id })
-      .andWhere('rbu.active = true')
-      .select([
-        'rbu.id',
-        'rbu.role as role_id',
-        'rol.description as role_name',
-        'rbu.initiative_id as entity_id',
-        'ent.official_code as entity_name',
-      ])
-      .getRawMany();
+      const roleByEntity = await this._roleByUserRepository
+        .createQueryBuilder('rbu')
+        .leftJoin('role', 'rol', 'rol.id = rbu.role')
+        .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
+        .where('rbu.obj_user = :userId', { userId: user.id })
+        .andWhere('rbu.active = true')
+        .select([
+          'rbu.id',
+          'rbu.role as role_id',
+          'rol.description as role_name',
+          'rbu.initiative_id as entity_id',
+          'ent.official_code as entity_name',
+        ])
+        .getRawMany();
 
       return {
         response: roleByEntity,
@@ -1163,5 +1171,4 @@ export class UserService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
-
 }

@@ -28,7 +28,6 @@ import {
 } from '@nestjs/swagger';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Token } from 'aws-sdk';
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
@@ -440,11 +439,10 @@ export class UserController {
   @ApiQuery({ name: 'email', required: true, type: String })
   @ApiResponse({ status: 200, description: 'User found' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async findRoleByEntity(@Query('email') email: string,) {
-     console.log('Email recibido en controlador:', email);
+  async findRoleByEntity(@Query('email') email: string) {
+    console.log('Email recibido en controlador:', email);
     return this.userService.findRoleByEntity(email);
   }
-  
 
   @Patch('update/roles')
   @ApiOperation({
@@ -453,7 +451,7 @@ export class UserController {
       'Allows an Admin to update the roles and entity assignments of a user. This replaces all current role-entity associations for the user.',
   })
   @ApiBody({
-    description: 'Payload to update a user\'s assigned roles and entities',
+    description: "Payload to update a user's assigned roles and entities",
     schema: {
       type: 'object',
       properties: {
