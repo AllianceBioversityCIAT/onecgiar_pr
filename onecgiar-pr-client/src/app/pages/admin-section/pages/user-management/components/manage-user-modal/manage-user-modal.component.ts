@@ -59,10 +59,13 @@ export class ManageUserModalComponent implements OnChanges {
   });
 
   entities = computed(() => {
-    return this.initiativesService.allInitiatives().map(entity => {
+    const list = this.initiativesService.allInitiatives().map(entity => {
       if (this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id)) entity.disabledd = true;
       return entity;
     });
+    console.log(this.addUserForm().role_assignments);
+    console.log(list);
+    return list;
   });
 
   ngOnChanges(changes: SimpleChanges) {
@@ -208,12 +211,34 @@ export class ManageUserModalComponent implements OnChanges {
         });
       },
       error: error => {
-        this.api.alertsFe.show({
-          id: 'updateUserRolesError',
-          title: 'Warning!',
-          description: error.error.message,
-          status: 'warning'
-        });
+        console.log(error);
+        if (error.status === 409) {
+          this.api.alertsFe.show(
+            {
+              id: 'updateUserRolesError',
+              title: 'Warning!',
+              description: error.error.message,
+              status: 'warning',
+              confirmText: 'Confirm'
+            },
+            () => {
+              this.addUserForm.update(form => ({
+                ...form,
+                role_assignments: form.role_assignments.map(assignment =>
+                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
+                )
+              }));
+              this.onUpdateUserRoles();
+            }
+          );
+        } else {
+          this.api.alertsFe.show({
+            id: 'updateUserRolesError',
+            title: 'Warning!',
+            description: error.error.message,
+            status: 'warning'
+          });
+        }
       }
     });
   }
