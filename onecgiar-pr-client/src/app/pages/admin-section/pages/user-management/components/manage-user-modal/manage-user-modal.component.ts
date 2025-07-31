@@ -63,8 +63,6 @@ export class ManageUserModalComponent implements OnChanges {
       if (this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id)) entity.disabledd = true;
       return entity;
     });
-    console.log(this.addUserForm().role_assignments);
-    console.log(list);
     return list;
   });
 
@@ -211,7 +209,6 @@ export class ManageUserModalComponent implements OnChanges {
         });
       },
       error: error => {
-        console.log(error);
         if (error.status === 409) {
           this.api.alertsFe.show(
             {
