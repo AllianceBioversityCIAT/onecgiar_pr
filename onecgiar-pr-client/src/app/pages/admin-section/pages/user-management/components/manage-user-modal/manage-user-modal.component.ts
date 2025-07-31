@@ -260,12 +260,33 @@ export class ManageUserModalComponent implements OnChanges {
         });
       },
       error: error => {
-        this.api.alertsFe.show({
-          id: 'activateUserError',
-          title: 'Warning!',
-          description: error.error.message,
-          status: 'warning'
-        });
+        if (error.status === 409) {
+          this.api.alertsFe.show(
+            {
+              id: 'activateUserError',
+              title: 'Warning!',
+              description: error.error.message,
+              status: 'warning',
+              confirmText: 'Confirm'
+            },
+            () => {
+              this.addUserForm.update(form => ({
+                ...form,
+                role_assignments: form.role_assignments.map(assignment =>
+                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
+                )
+              }));
+              this.onSaveUserActivator();
+            }
+          );
+        } else {
+          this.api.alertsFe.show({
+            id: 'activateUserError',
+            title: 'Warning!',
+            description: error.error.message,
+            status: 'warning'
+          });
+        }
       }
     });
   }
