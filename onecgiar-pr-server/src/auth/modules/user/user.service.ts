@@ -8,8 +8,9 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
+import { DataSource, Brackets, In, IsNull, Not } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { returnFormatUser } from './dto/return-create-user.dto';
 import { UserRepository } from './repositories/user.repository';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
@@ -19,7 +20,6 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../../shared/handlers/error.utils';
-import { Brackets, In, IsNull, Not } from 'typeorm';
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -30,8 +30,6 @@ import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { ROLE_IDS } from './constants/roles';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleRepository } from '../role/Role.repository';
-import { DataSource } from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -416,7 +414,7 @@ export class UserService {
                 });
 
                 await queryRunner.manager.save(RoleByUser, {
-                  id: rbu_id ? rbu_id : undefined,
+                  id: rbu_id,
                   role: role_id,
                   user: newUser.id,
                   initiative_id: entity_id,

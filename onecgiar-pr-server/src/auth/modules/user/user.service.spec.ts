@@ -319,8 +319,6 @@ describe('UserService', () => {
       expect(result.status).toBe(201);
       expect(user.id).toBe(10);
       expect(awsCognitoService.createUser).toHaveBeenCalled();
-      //expect(userRepository.save).toHaveBeenCalled();
-      //expect(roleByUserRepository.save).toHaveBeenCalledTimes(2); // platform + entity
     });
 
     it('❌ debe lanzar error si el usuario ya existe', async () => {
