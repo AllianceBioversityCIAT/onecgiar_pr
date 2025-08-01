@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { SearchUser } from '../../interfaces/search-user.interface';
-import { User } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 
 @Component({
   selector: 'app-search-user-select',
@@ -56,9 +55,6 @@ export class SearchUserSelectComponent {
       // Clear options and show appropriate message
       this.options.set([]);
       // Reset the dropdown's filter to show empty state
-      if (options && options.reset) {
-        options.reset();
-      }
       return; // DO NOT call the service
     }
 
@@ -80,9 +76,6 @@ export class SearchUserSelectComponent {
     }
 
     // Reset the dropdown's filter
-    if (options && options.reset) {
-      options.reset();
-    }
   }
 
   private searchUsers(query: string) {
@@ -108,7 +101,6 @@ export class SearchUserSelectComponent {
         this.isLoading.set(false);
       },
       error: error => {
-        console.error('Error searching CGIAR users:', error);
         this.options.set([]);
         this.isLoading.set(false);
       }

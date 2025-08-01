@@ -1,4 +1,4 @@
-import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, OnChanges, SimpleChanges, WritableSignal } from '@angular/core';
+import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -358,7 +358,6 @@ export class ManageUserModalComponent {
   }
 
   onModalHide(): void {
-    // This method is called when the modal is closed via X button, ESC key, or clicking outside
     this.visible = false;
     this.visibleChange.emit(false);
     this.editingMode.set(false);
