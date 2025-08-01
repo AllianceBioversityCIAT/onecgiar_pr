@@ -422,13 +422,12 @@ export class UserService {
         });
 
         const isLeadAlreadyAssigned = !!existingLead && !force_swap;
-        if (isLeadAlreadyAssigned) {
+        if (isLeadAlreadyAssigned)
           throw new ConflictException(
             `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
               `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
               `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
           );
-        }
 
         // If there are not any Lead or Co-Lead assigned, save the new role assignment
         const notLeadAlreadyAssigned = !!existingLead && force_swap;
