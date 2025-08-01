@@ -248,7 +248,6 @@ export class UserService {
     dto: CreateUserDto | ChangeUserStatusDto | UpdateUserDto,
     token: TokenDto,
     changeStatus?: boolean,
-    remove_roles?: false,
     rbu_id?: number,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
@@ -267,6 +266,7 @@ export class UserService {
         where: { id: token.id },
       });
 
+      // Create an array of role assignments checking if there are duplicates
       if (dto.role_assignments?.length) {
         const seenEntities = new Set<number>();
         for (const assignment of dto.role_assignments) {
@@ -284,7 +284,10 @@ export class UserService {
 
       let newUser: User;
 
+      
       if (user) {
+        // Just in case the user exists (Deactivate / Activate / Update Roles) NOT to create a new user
+        // changeStatus true? Then update the user status to active, if not, stay the same as before
         await queryRunner.manager.update(User, user.id, {
           active: changeStatus ? true : user.active,
           last_updated_by: currentUser?.id,
@@ -294,6 +297,7 @@ export class UserService {
           id: user.id,
         });
       } else {
+        // Create a new user
         dto.email = cleanEmail;
         dto.created_by = currentUser?.id || null;
         dto.last_updated_by = currentUser?.id || null;
@@ -309,7 +313,7 @@ export class UserService {
         (!dto.role_assignments || dto.role_assignments.length === 0) &&
         idRoleByUser
       ) {
-        // If there are no role assignments and idRoleByUser exists, deactivate all roles for the user
+        // If there are no role assignments and the user had roles, deactivate all roles for the user
         await queryRunner.manager.update(
           RoleByUser,
           { user: newUser.id },
@@ -317,17 +321,7 @@ export class UserService {
         );
       }
 
-      if (remove_roles) {
-        await queryRunner.manager.update(
-          RoleByUser,
-          { user: newUser.id, active: true },
-          {
-            active: false,
-            last_updated_by: currentUser?.id,
-          },
-        );
-      }
-
+      // Obtain the roles platform for the user (there are cases where the user has more than one register with an platform role)
       const rolesPlat = await queryRunner.manager.find(RoleByUser, {
         where: {
           user: newUser.id,
@@ -336,6 +330,7 @@ export class UserService {
         },
       });
 
+      // If the update/create/activate brings role_platform and the user has more than one register with an platform role, then update all of the register to the new role_platform
       if (dto?.role_platform) {
         if (rolesPlat.length) {
           for (const rolePlat of rolesPlat) {
@@ -348,6 +343,7 @@ export class UserService {
             });
           }
         } else {
+          // If the user does not have any platform role, create a new one
           await queryRunner.manager.save(RoleByUser, {
             role: dto.role_platform,
             user: newUser.id,
@@ -357,6 +353,7 @@ export class UserService {
         }
       }
 
+      // Handle validations if there are role assignments to be saved or updated
       if (dto.role_assignments?.length) {
         for (const assignment of dto.role_assignments) {
           const { role_id, entity_id, rbu_id, force_swap } = assignment;
@@ -398,6 +395,7 @@ export class UserService {
             );
           }
 
+          // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
           if ([ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id)) {
             const existingLead = await queryRunner.manager.findOne(RoleByUser, {
               where: { initiative_id: entity_id, role: role_id, active: true },
@@ -428,6 +426,7 @@ export class UserService {
               }
             }
           } else {
+            // If there are not any Lead or Co-Lead assigned, save the new role assignment
             await queryRunner.manager.save(RoleByUser, {
               id: rbu_id ? rbu_id : undefined,
               role: role_id,
@@ -1145,13 +1144,9 @@ export class UserService {
         await this._roleByUserRepository.save(role);
       }
 
-      let remove_roles = false;
-      if (!dto.role_assignments || dto.role_assignments.length === 0) {
-        remove_roles = true;
-      }
       // Asignar nuevos roles
       console.log('Assigning new roles:', incomingIds);
-      await this.saveUserToDB(dto, token, remove_roles);
+      await this.saveUserToDB(dto, token);
 
       return {
         response: { id: user.id, email: user.email },
