@@ -45,6 +45,7 @@
   // Varied
   // Red
   --pr-color-red-50: #fff5f5;
+  --pr-color-red-75: #ffe3e3;
   --pr-color-red-100: #fc7c7c;
   --pr-color-red-200: #f34756;
   --pr-color-red-300: #d00416; // Main custom Color
@@ -60,6 +61,7 @@
 
   // Yellow
   --pr-color-yellow-50: #fffbe6;
+  --pr-color-yellow-75: #fff3c2;
   --pr-color-yellow-100: #fdc82f;
   --pr-color-yellow-200: #fcc000;
   --pr-color-yellow-300: #dfb400; // Main custom Color
@@ -107,6 +109,20 @@
   --pr-color-blue-other-1: #173f5f;
   --pr-color-blue-other-2: #2891be;
 
+  // Orange
+  --pr-color-orange-50: #fff8ed;
+  --pr-color-orange-75: #fff1e4;
+  --pr-color-orange-100: #ffedd5;
+  --pr-color-orange-200: #fed7aa;
+  --pr-color-orange-300: #fdba74;
+  --pr-color-orange-400: #fb923c;
+  --pr-color-orange-500: #f97316;
+  --pr-color-orange-600: #ea580c;
+  --pr-color-orange-700: #c2410c;
+  --pr-color-orange-800: #9a3412;
+  --pr-color-orange-900: #7c2d12;
+  --pr-color-orange-950: #5c1f08;
+
   // accents
   --pr-color-black: #000;
   --pr-color-white: #fff;
@@ -127,11 +143,4 @@
   --pr-color-result-level-2: var(--pr-color-blue-other-1);
   --pr-color-result-level-3: var(--pr-color-red-400);
   --pr-color-result-level-4: var(--pr-color-blue-other-2);
-
-  // Other colors
-  --pr-color-other-1: #774100;
-  --pr-color-other-2: #7ab800;
-  --pr-color-other-3: #eb4c1b;
-  --pr-color-other-4: #ff8a00;
-  --pr-color-other-5: #ffe7ca;
 }

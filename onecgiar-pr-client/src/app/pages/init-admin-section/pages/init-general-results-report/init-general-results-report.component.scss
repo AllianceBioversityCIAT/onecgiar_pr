@@ -65,11 +65,11 @@
     }
 
     .discontinued {
-      border: 2px solid var(--pr-color-other-3) !important;
-      color: var(--pr-color-other-3) !important;
+      border: 2px solid var(--pr-color-orange-500) !important;
+      color: var(--pr-color-orange-500) !important;
 
       &.active {
-        background-color: var(--pr-color-other-3);
+        background-color: var(--pr-color-orange-500);
         color: var(--pr-color-white) !important;
       }
     }

@@ -78,3 +78,57 @@ body {
   font-size: 1.2em;
   margin: 5px 0px 10px 0px;
 }
+
+@mixin generate-typography($family, $weight, $size, $line-height: 1, $letter-spacing: 0, $case: none) {
+  font-family: $family;
+  font-weight: $weight;
+  font-size: $size;
+  line-height: $line-height;
+  letter-spacing: $letter-spacing;
+  text-transform: $case;
+}
+
+// H1 - Principal Title
+.pr-h1 {
+  @include generate-typography('Poppins', 900, 20px, 60px, 0px);
+}
+
+// H2 - Subtitle
+.pr-h2 {
+  @include generate-typography('Poppins', 700, 18px, 51px, 0px);
+}
+
+// H3 - Context Title
+.pr-h3 {
+  @include generate-typography('Poppins', 600, 16px, 42px, 0px);
+}
+
+// H4 - Action Title
+.pr-h4 {
+  @include generate-typography('Poppins', 500, 14px, normal, 0px);
+}
+
+// Body 1 - Principal Text
+.pr-body-1 {
+  @include generate-typography('Poppins', 400, 14px, 21px, 0px);
+}
+
+// Body 2 - Secondary Text
+.pr-body-2 {
+  @include generate-typography('Poppins', 400, 12px, 18px, 0px);
+}
+
+// Body 3 - Secondary Text
+.pr-body-3 {
+  @include generate-typography('Poppins', 400, 10px, 15px, 0px);
+}
+
+// Body 4 - Secondary Text
+.pr-body-4 {
+  @include generate-typography('Poppins', 400, 8px, 12px, 0px);
+}
+
+// Body 5 - Secondary Text
+.pr-body-5 {
+  @include generate-typography('Poppins', 400, 6px, 9px, 0px);
+}
