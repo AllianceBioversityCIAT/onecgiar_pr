@@ -32,7 +32,7 @@ interface AddUserForm {
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })
-export class ManageUserModalComponent implements OnChanges {
+export class ManageUserModalComponent {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
@@ -65,11 +65,6 @@ export class ManageUserModalComponent implements OnChanges {
     });
     return list;
   });
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['visible'] && changes['visible'].currentValue) {
-      this.resetAddUserForm();
-    }
-  }
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
@@ -190,7 +185,11 @@ export class ManageUserModalComponent implements OnChanges {
     }));
   }
 
-  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.editingMode() ? this.onUpdateUserRoles() : this.onCreateUser());
+  manageUser = () => {
+    if (this.userActivatorMode()) return this.onSaveUserActivator();
+    if (this.editingMode()) return this.onUpdateUserRoles();
+    return this.onCreateUser();
+  };
 
   onUpdateUserRoles(): void {
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();

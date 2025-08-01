@@ -3,19 +3,8 @@ import { CommonModule } from '@angular/common';
 
 import { ReportingRoutingModule } from './reporting-routing.module';
 import { ReportingComponent } from './reporting.component';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { DropdownModule } from 'primeng/dropdown';
-import { TagModule } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableModule } from 'primeng/table';
-import { FormsModule } from '@angular/forms';
-import { ResultHistoryOfChangesModalModule } from '../../../completeness-status/components/result-history-of-changes-modal/result-history-of-changes-modal.module';
-import { TooltipModule } from 'primeng/tooltip';
-import { CalendarModule } from 'primeng/calendar';
 import { OtherFunctionalitiesModule } from '../../other-functionalities/other-functionalities.module';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
-import { FilterByTextModule } from '../../../../../../shared/pipes/filter-by-text.module';
+import { PhaseManagementTableModule } from '../../../../../../shared/components/phase-management-table/phase-management-table.module';
 
 @NgModule({
   declarations: [ReportingComponent],
@@ -23,18 +12,7 @@ import { FilterByTextModule } from '../../../../../../shared/pipes/filter-by-tex
     CommonModule,
     ReportingRoutingModule,
     OtherFunctionalitiesModule,
-    DialogModule,
-    ButtonModule,
-    DropdownModule,
-    TagModule,
-    InputTextModule,
-    TableModule,
-    FormsModule,
-    CustomFieldsModule,
-    ResultHistoryOfChangesModalModule,
-    FilterByTextModule,
-    TooltipModule,
-    CalendarModule
+    PhaseManagementTableModule
   ]
 })
 export class ReportingModule {}

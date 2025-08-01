@@ -34,9 +34,10 @@
         <!-- Status filter -->
 
         <div class="status-filter">
-          <label class="status-label">Status:</label>
+          <label class="status-label" for="statusSelect">Status:</label>
           <app-pr-select
             #statusSelect
+            id="statusSelect"
             [options]="statusOptions"
             optionLabel="label"
             optionValue="value"
@@ -49,9 +50,10 @@
 
         <!-- CGIAR filter -->
         <div class="cgiar-filter">
-          <label class="cgiar-label">Is CGIAR:</label>
+          <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
           <app-pr-select
             #cgiarSelect
+            id="cgiarSelect"
             [options]="isCGIAROptions"
             optionLabel="label"
             optionValue="value"
@@ -64,9 +66,10 @@
 
         <!-- Entity filter -->
         <div class="entity-filter">
-          <label class="entity-label">Entity:</label>
+          <label class="entity-label" for="entitiesSelect">Entity:</label>
           <app-pr-multi-select
             #entitiesSelect
+            id="entitiesSelect"
             [options]="initiativesService.allInitiatives()"
             optionLabel="official_code"
             optionValue="id"
