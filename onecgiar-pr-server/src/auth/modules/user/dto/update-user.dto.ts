@@ -7,6 +7,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -30,17 +31,21 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   role_assignments: RoleAssignmentDto[];
 }
 
-class RoleAssignmentDto {
+export class RoleAssignmentDto {
+  @IsOptional()
+  @IsNumber()
+  rbu_id?: number;
+
   @IsOptional()
   @IsBoolean()
   force_swap?: boolean;
 
-  @IsNumber()
-  rbu_id: number;
-
-  @IsNumber()
-  entity_id: number;
-
-  @IsNumber()
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'role_id must be a number' })
   role_id: number;
+
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
+  entity_id: number;
 }
+

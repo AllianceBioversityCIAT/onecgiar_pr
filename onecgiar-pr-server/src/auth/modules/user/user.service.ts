@@ -426,7 +426,7 @@ export class UserService {
           } else {
             // If there are not any Lead or Co-Lead assigned, save the new role assignment
             await queryRunner.manager.save(RoleByUser, {
-              id: rbu_id ? rbu_id : undefined,
+              id: rbu_id,
               role: role_id,
               user: newUser.id,
               initiative_id: entity_id,

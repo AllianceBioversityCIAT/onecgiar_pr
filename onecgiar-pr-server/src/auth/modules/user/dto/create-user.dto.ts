@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsNumber,
+  ValidateIf,
 } from 'class-validator';
 export class CreateUserDto {
   @IsOptional()
@@ -52,11 +53,12 @@ export class RoleAssignmentDto {
   @IsBoolean()
   force_swap?: boolean;
 
-  @IsOptional()
-  @IsNumber()
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'role_id must be a number' })
   role_id: number;
 
-  @IsOptional()
-  @IsNumber()
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
   entity_id: number;
 }
+
