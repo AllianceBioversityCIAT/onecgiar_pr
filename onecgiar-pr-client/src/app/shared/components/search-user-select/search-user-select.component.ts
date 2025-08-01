@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { SearchUser } from '../../interfaces/search-user.interface';
-import { User } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 
 @Component({
   selector: 'app-search-user-select',
