@@ -385,7 +385,8 @@ export class UserService {
         where: { user: user.id, initiative_id: entity_id, active: true },
       });
 
-      if (existingAssignment && !rbu_id) {
+      const isDuplicateRoleAssignment = existingAssignment && !rbu_id;
+      if (isDuplicateRoleAssignment) {
         throw new BadRequestException(
           `The user already has a role in the selected entity.`,
         );
@@ -399,7 +400,8 @@ export class UserService {
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
       const isExternal = !(user?.is_cgiar);
 
-      if (isExternal && role_id !== ROLE_IDS.MEMBER) {
+      const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
+      if (isInvalidExternalRole) {
         throw new BadRequestException(
           `External users can only be assigned the "Member" role.`,
         );
@@ -419,7 +421,8 @@ export class UserService {
           relations: ['obj_user', 'obj_initiative'],
         });
 
-        if (existingLead && !force_swap) {
+        const isLeadAlreadyAssigned = existingLead && !force_swap;
+        if (isLeadAlreadyAssigned) {
           throw new ConflictException(
             `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
               `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
@@ -428,7 +431,8 @@ export class UserService {
         }
 
         // If there are not any Lead or Co-Lead assigned, save the new role assignment
-        if (existingLead && force_swap) {
+        const notLeadAlreadyAssigned = existingLead && force_swap;
+        if (notLeadAlreadyAssigned) {
           await queryRunner.manager.update(RoleByUser, existingLead.id, {
             role: ROLE_IDS.COORDINATOR,
             last_updated_by: currentUser.id,
