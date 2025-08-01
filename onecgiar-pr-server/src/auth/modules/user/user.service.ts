@@ -400,14 +400,14 @@ export class UserService {
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
       const isExternal = !(user?.is_cgiar);
 
-      const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
+      const isInvalidExternalRole = isExternal && (role_id !== ROLE_IDS.MEMBER);
       if (isInvalidExternalRole) {
         throw new BadRequestException(
           `External users can only be assigned the "Member" role.`,
         );
       }
 
-      if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
+      if (!portfolioIsActive && (role_id !== ROLE_IDS.MEMBER)) {
         throw new BadRequestException(
           `Only "Member" role is allowed in inactive portfolios.`,
         );
@@ -421,7 +421,7 @@ export class UserService {
           relations: ['obj_user', 'obj_initiative'],
         });
 
-        const isLeadAlreadyAssigned = existingLead && !force_swap;
+        const isLeadAlreadyAssigned = !!existingLead && !force_swap;
         if (isLeadAlreadyAssigned) {
           throw new ConflictException(
             `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
@@ -431,7 +431,7 @@ export class UserService {
         }
 
         // If there are not any Lead or Co-Lead assigned, save the new role assignment
-        const notLeadAlreadyAssigned = existingLead && force_swap;
+        const notLeadAlreadyAssigned = !!existingLead && force_swap;
         if (notLeadAlreadyAssigned) {
           await queryRunner.manager.update(RoleByUser, existingLead.id, {
             role: ROLE_IDS.COORDINATOR,
