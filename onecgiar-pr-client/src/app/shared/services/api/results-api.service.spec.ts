@@ -421,7 +421,8 @@ describe('ResultsApiService', () => {
           employeeID: '12345',
           employeeNumber: 'EMP001',
           employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences'
+          description: 'Senior researcher in agricultural sciences',
+          formattedName: 'Doe, John (john.doe@cgiar.org)'
         }
       };
       const spyShowSaveSpinner = jest.spyOn(mockSaveButtonService, 'showSaveSpinner');

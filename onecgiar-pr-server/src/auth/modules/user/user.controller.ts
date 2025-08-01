@@ -26,6 +26,8 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
+import { ChangeUserStatusDto } from './dto/change-user-status.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
@@ -92,6 +94,12 @@ export class UserController {
           last_name: 'Doe',
           email: 'john.doe@example.com',
           is_cgiar: false,
+          role_assignments: [
+            {
+              role_id: 2,
+              entity_id: 5,
+            },
+          ],
         },
       },
     },
@@ -180,7 +188,18 @@ export class UserController {
   })
   @ApiQuery({ name: 'user', required: false, type: String })
   @ApiQuery({ name: 'cgIAR', required: false, enum: ['Yes', 'No'] })
-  @ApiQuery({ name: 'status', required: false, enum: ['Active', 'Inactive'] })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['Active', 'Inactive', 'Read Only'],
+  })
+  @ApiQuery({
+    name: 'entityIds',
+    required: false,
+    type: String,
+    description: 'One or more entity IDs to filter users by',
+    isArray: true,
+  })
   @ApiResponse({
     status: 200,
     description:
@@ -195,6 +214,7 @@ export class UserController {
             cgIAR: 'Yes',
             userStatus: 'Active',
             userCreationDate: '2024-05-10T14:33:00.000Z',
+            entities: 'Entity A, Entity B',
           },
         ],
       },
@@ -203,9 +223,22 @@ export class UserController {
   async searchUsers(
     @Query('user') user?: string,
     @Query('cgIAR') cgIAR?: 'Yes' | 'No',
-    @Query('status') status?: 'Active' | 'Inactive',
+    @Query('status') status?: 'Active' | 'Inactive' | 'Read Only',
+    @Query('entityIds') entityIdsRaw?: string,
   ) {
-    const result = await this.userService.searchUsers({ user, cgIAR, status });
+    const entityIds = entityIdsRaw
+      ? entityIdsRaw
+          .split(',')
+          .map((id) => Number(id.trim()))
+          .filter(Boolean)
+      : undefined;
+
+    const result = await this.userService.searchUsers({
+      user,
+      cgIAR,
+      status,
+      entityIds,
+    });
 
     if (result.response.length === 0) {
       return {
@@ -325,5 +358,148 @@ export class UserController {
   })
   async lastPopUpViewed(@Param('userId') userId: number) {
     return this.userService.lastPopUpViewed(userId);
+  }
+
+  @Patch('change/status')
+  @ApiOperation({
+    summary: 'Activate or deactivate a user',
+    description:
+      'Allows an Admin to activate or deactivate a user. CGIAR users retain the Guest role when deactivated. External users lose access and are marked as inactive. Activation requires assigning an entity and role.',
+  })
+  @ApiBody({
+    description: 'Payload to activate or deactivate a user',
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'usuario@ejemplo.com',
+          description: 'Email of the user to be updated',
+        },
+        activate: {
+          type: 'boolean',
+          example: true,
+          description:
+            'Whether to activate (true) or deactivate (false) the user',
+        },
+        entityRoles: {
+          type: 'array',
+          description: 'List of entity-role assignments',
+          items: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'number',
+                example: 1,
+                description: 'Entity (initiative) ID',
+              },
+              role_id: {
+                type: 'number',
+                example: 2,
+                description: 'Role ID to assign within the entity',
+              },
+            },
+            required: ['id', 'role_id'],
+          },
+        },
+      },
+      required: ['email', 'activate'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User status updated successfully (activated or deactivated)',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request (e.g., activation without entity/role, or invalid transition)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async changeUserStatus(
+    @DecodedUser() currentUser: TokenDto,
+    @Body() changeStatusDto: ChangeUserStatusDto,
+  ) {
+    return this.userService.updateUserStatus(
+      changeStatusDto.email,
+      changeStatusDto,
+      currentUser,
+    );
+  }
+
+  @Get('find/role_by_entity')
+  @ApiOperation({
+    summary: 'Find user role by entity',
+    description: 'Retrieves user role(s) in entities by email',
+  })
+  @ApiQuery({ name: 'email', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async findRoleByEntity(@Query('email') email: string) {
+    return this.userService.findRoleByEntity(email);
+  }
+
+  @Patch('update/roles')
+  @ApiOperation({
+    summary: 'Update user role assignments',
+    description:
+      'Allows an Admin to update the roles and entity assignments of a user. This replaces all current role-entity associations for the user.',
+  })
+  @ApiBody({
+    description: "Payload to update a user's assigned roles and entities",
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'usuario@ejemplo.com',
+          description: 'Email of the user whose roles are to be updated',
+        },
+        role_assignments: {
+          type: 'array',
+          description: 'List of entity-role assignments',
+          items: {
+            type: 'object',
+            properties: {
+              entity_id: {
+                type: 'number',
+                example: 1,
+                description: 'Entity (initiative) ID',
+              },
+              role_id: {
+                type: 'number',
+                example: 2,
+                description: 'Role ID to assign within the entity',
+              },
+            },
+            required: ['entity_id', 'role_id'],
+          },
+        },
+      },
+      required: ['email', 'role_assignments'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User roles updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request (e.g., duplicate entities, invalid roles)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async updateUserRoles(
+    @DecodedUser() token: TokenDto,
+    @Body() updateDto: UpdateUserDto,
+  ) {
+    return this.userService.updateUserRoles(updateDto, token);
   }
 }

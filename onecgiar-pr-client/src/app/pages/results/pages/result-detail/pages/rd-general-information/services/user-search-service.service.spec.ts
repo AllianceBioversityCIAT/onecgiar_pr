@@ -26,7 +26,8 @@ describe('UserSearchService', () => {
         employeeID: '12345',
         employeeNumber: 'EMP001',
         employeeType: 'Full-time',
-        description: 'Senior researcher in agricultural sciences'
+        description: 'Senior researcher in agricultural sciences',
+        formattedName: 'Doe, John (john.doe@cgiar.org)'
       }
     ],
     status: 200
@@ -135,7 +136,8 @@ describe('UserSearchService', () => {
           employeeID: '12345',
           employeeNumber: 'EMP001',
           employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences'
+          description: 'Senior researcher in agricultural sciences',
+          formattedName: 'Doe, John (john.doe@cgiar.org)'
         },
         {
           cn: 'Jane Doe',
@@ -152,7 +154,8 @@ describe('UserSearchService', () => {
           employeeID: '12346',
           employeeNumber: 'EMP002',
           employeeType: 'Part-time',
-          description: 'Research assistant in agricultural sciences'
+          description: 'Research assistant in agricultural sciences',
+          formattedName: 'Doe, Jane (jane.doe@cgiar.org)'
         }
       ],
       status: 200

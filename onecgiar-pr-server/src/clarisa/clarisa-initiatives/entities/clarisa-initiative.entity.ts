@@ -4,6 +4,7 @@ import { ClarisaCgiarEntityType } from '../../clarisa-cgiar-entity-types/entitie
 import { UserNotificationSetting } from '../../../api/user-notification-settings/entities/user-notification-settings.entity';
 import { ResultsByInititiative } from '../../../api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ClarisaInitiativeStage } from '../../clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
+import { ClarisaPortfolios } from '../../clarisa-portfolios/entities/clarisa-portfolios.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -46,6 +47,13 @@ export class ClarisaInitiative {
   active: boolean;
 
   @Column({
+    name: 'portfolio_id',
+    type: 'int',
+    nullable: true,
+  })
+  portfolio_id?: number;
+
+  @Column({
     name: 'toc_id',
     type: 'text',
     nullable: true,
@@ -79,4 +87,10 @@ export class ClarisaInitiative {
 
   @OneToMany(() => ClarisaInitiativeStage, (cis) => cis.initiative_object)
   initiative_stage_array: ClarisaInitiativeStage[];
+
+  @ManyToOne(() => ClarisaPortfolios, (portfolio) => portfolio.initiatives, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'portfolio_id' })
+  obj_portfolio?: ClarisaPortfolios;
 }
