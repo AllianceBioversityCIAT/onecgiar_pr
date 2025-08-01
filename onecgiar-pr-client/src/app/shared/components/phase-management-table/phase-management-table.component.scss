@@ -1,0 +1,147 @@
+.setting_title {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.local_container {
+  margin-bottom: 20px;
+
+  &.phase_table {
+    ::ng-deep {
+      .p-datatable {
+        .p-datatable-tbody {
+          tr {
+            td {
+              padding: 10px;
+
+              .text {
+                font-size: 14px;
+              }
+
+              .tag_container {
+                padding: 4px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 500;
+                text-align: center;
+                width: fit-content;
+
+                &.open {
+                background-color: #C6CDF4;
+                color: #5569DD;
+                }
+                
+                &.closed {
+                background-color: #F7F7F8;
+                color: #1A1C2A;
+                }
+              }
+
+              .actions {
+                display: flex;
+                gap: 8px;
+
+                .action_button {
+                  cursor: pointer;
+                  padding: 4px;
+                  border-radius: 4px;
+                  transition: all 0.3s;
+
+                  &:hover {
+                    background-color: #f0f0f0;
+                  }
+
+                  &.disabled {
+                    cursor: not-allowed;
+                    opacity: 0.5;
+                  }
+
+                  i {
+                    font-size: 18px;
+                  }
+
+                  &.edit i {
+                  color: #5569DD;
+                  }
+                  
+                  &.delete i {
+                  color: #D00416;
+                  }
+
+                  &.save i {
+                    color: #38DF7B;
+                  }
+
+                  &.cancel i {
+                    color: #8c8c8c;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.center_flex_100 {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+
+  .add_new_phase_button {
+    position: relative;
+
+    &.disabled {
+      .button {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+    }
+
+    .feedback {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #ff4d4f;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      margin-bottom: 8px;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #ff4d4f;
+      }
+    }
+
+    .button {
+      background-color: #1890ff;
+      color: white;
+      padding: 8px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s;
+
+      &:hover {
+        background-color: #40a9ff;
+      }
+    }
+  }
+}
+
+.segment_title_margin {
+  margin-top: 0;
+}
