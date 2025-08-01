@@ -56,9 +56,6 @@ export class SearchUserSelectComponent {
       // Clear options and show appropriate message
       this.options.set([]);
       // Reset the dropdown's filter to show empty state
-      if (options && options.reset) {
-        options.reset();
-      }
       return; // DO NOT call the service
     }
 
@@ -80,9 +77,6 @@ export class SearchUserSelectComponent {
     }
 
     // Reset the dropdown's filter
-    if (options && options.reset) {
-      options.reset();
-    }
   }
 
   private searchUsers(query: string) {
@@ -108,7 +102,6 @@ export class SearchUserSelectComponent {
         this.isLoading.set(false);
       },
       error: error => {
-        console.error('Error searching CGIAR users:', error);
         this.options.set([]);
         this.isLoading.set(false);
       }

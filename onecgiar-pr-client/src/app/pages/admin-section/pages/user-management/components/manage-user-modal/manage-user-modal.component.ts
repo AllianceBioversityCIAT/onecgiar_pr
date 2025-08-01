@@ -358,7 +358,6 @@ export class ManageUserModalComponent {
   }
 
   onModalHide(): void {
-    // This method is called when the modal is closed via X button, ESC key, or clicking outside
     this.visible = false;
     this.visibleChange.emit(false);
     this.editingMode.set(false);
