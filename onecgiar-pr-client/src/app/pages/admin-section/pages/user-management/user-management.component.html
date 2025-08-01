@@ -64,9 +64,10 @@
 
         <!-- Entity filter -->
         <div class="entity-filter">
-          <label class="entity-label">Entity:</label>
+          <label class="entity-label" for="entitiesSelect">Entity:</label>
           <app-pr-multi-select
             #entitiesSelect
+            id="entitiesSelect"
             [options]="initiativesService.allInitiatives()"
             optionLabel="official_code"
             optionValue="id"
