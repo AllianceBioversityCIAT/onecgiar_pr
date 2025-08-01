@@ -6,6 +6,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { DataSource, Brackets, In, IsNull, Not } from 'typeorm';
@@ -553,7 +554,7 @@ export class UserService {
       }
 
       if (assignmentsDetails.length > 0) {
-        return `${assignmentsDetails.map((item) => `${item}`).join('')}`;
+          return assignmentsDetails.join('');
       }
     }
 
@@ -984,7 +985,7 @@ export class UserService {
       relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
     });
 
-    if (!user || !user.email) {
+    if (!user?.email) {
       throw new NotFoundException('User not found');
     }
 
@@ -1152,8 +1153,12 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      throw error;
-    }
+        console.error('Error updating user roles:', error);
+
+        throw new InternalServerErrorException(
+          'An error occurred while updating user roles',
+        );
+      }
   }
 
   async findRoleByEntity(email: string): Promise<any> {
