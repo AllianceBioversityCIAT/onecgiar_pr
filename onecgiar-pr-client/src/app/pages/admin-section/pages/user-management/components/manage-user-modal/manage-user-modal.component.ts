@@ -185,7 +185,11 @@ export class ManageUserModalComponent {
     }));
   }
 
-  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.editingMode() ? this.onUpdateUserRoles() : this.onCreateUser());
+  manageUser = () => {
+    if (this.userActivatorMode()) return this.onSaveUserActivator();
+    if (this.editingMode()) return this.onUpdateUserRoles();
+    return this.onCreateUser();
+  };
 
   onUpdateUserRoles(): void {
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
