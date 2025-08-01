@@ -59,13 +59,12 @@ export class ManageUserModalComponent implements OnChanges {
   });
 
   entities = computed(() => {
-    const list = this.initiativesService.allInitiatives().map(entity => {
-      if (this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id)) entity.disabledd = true;
-      return entity;
+    let list: any[] = [];
+    this.initiativesService.allInitiatives().forEach(entity => {
+      list.push({ ...entity, disabledd: this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id) });
     });
     return list;
   });
-
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible'] && changes['visible'].currentValue) {
       this.resetAddUserForm();
