@@ -59,7 +59,7 @@ export class ManageUserModalComponent implements OnChanges {
   });
 
   entities = computed(() => {
-    let list: any[] = [];
+    const list: any[] = [];
     this.initiativesService.allInitiatives().forEach(entity => {
       list.push({ ...entity, disabledd: this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id) });
     });
