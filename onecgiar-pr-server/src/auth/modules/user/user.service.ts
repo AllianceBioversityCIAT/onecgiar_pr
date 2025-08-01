@@ -309,7 +309,7 @@ export class UserService {
         (!dto.role_assignments || dto.role_assignments.length === 0) &&
         idRoleByUser
       ) {
-        // Si no se especifica un rol, elimina todos los roles activos
+        // If there are no role assignments and idRoleByUser exists, deactivate all roles for the user
         await queryRunner.manager.update(
           RoleByUser,
           { user: newUser.id },
@@ -922,7 +922,7 @@ export class UserService {
         const hasAdminRole = await this._roleByUserRepository.findOne({
           where: {
             user: user.id,
-            role: 1, // Admin
+            role: 1,
             active: true,
           },
         });
@@ -934,7 +934,7 @@ export class UserService {
             active: true,
           },
         });
-
+        // User is active (Not Read Only or Inactive) if they have an admin role or an active role in any initiative
         isActive = !!hasAdminRole || !!hasInitiativeWithRole;
       } else {
         const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
@@ -945,7 +945,7 @@ export class UserService {
             active: true,
           },
         });
-
+        // User is active (Not Read Only or Inactive) if they have an active role in any initiative
         isActive = !!hasInitiativeWithRole;
       }
     }
@@ -998,17 +998,21 @@ export class UserService {
     user: User,
     currentUser: User,
   ): Promise<returnErrorDto | returnFormatUser> {
-    const guestRole = 2; //2 is the ID for the Guest role
+    const guestRole = ROLE_IDS.GUEST; //2 is the ID for the Guest role
 
+    // Update the user's roles to deactivate all active roles in entities 
     await this._roleByUserRepository.update(
       { user: user.id },
       { active: false, last_updated_by: currentUser.id },
     );
 
+    // Set the user as inactive (Guest Role)
     await this._roleByUserRepository.save({
       user: user.id,
       role: guestRole,
       active: true,
+      created_by: currentUser.id,
+      last_updated_by: currentUser.id,
     });
 
     return {
@@ -1108,6 +1112,7 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
+    console.log('Admin user', token);
 
     try {
       const user = await this._userRepository.findOneByOrFail({
@@ -1124,18 +1129,16 @@ export class UserService {
           active: true,
           role: Not(In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST])),
         },
-      });
+      }); 
 
-      const dtoRoles = dto.role_assignments || [];
-      const incomingRoleKeys = new Set(
-        dtoRoles.map((r) => `${r.role_id}-${r.entity_id}`),
-      );
+      // Bring incoming role assignments ids
+      const incomingIds = new Set(dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean));
 
       const rolesToRemove = existingRoles.filter((existing) => {
-        const key = `${existing.role}-${existing.initiative_id}`;
-        return !incomingRoleKeys.has(key);
+        return !incomingIds.has(existing.id);
       });
 
+      console.log('Roles to remove:', rolesToRemove);
       for (const role of rolesToRemove) {
         role.active = false;
         role.last_updated_by = token.id;
@@ -1147,7 +1150,7 @@ export class UserService {
         remove_roles = true;
       }
       // Asignar nuevos roles
-      console.log('Assigning new roles:', dtoRoles);
+      console.log('Assigning new roles:', incomingIds);
       await this.saveUserToDB(dto, token, remove_roles);
 
       return {
