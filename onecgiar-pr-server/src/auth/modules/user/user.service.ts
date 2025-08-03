@@ -416,29 +416,7 @@ export class UserService {
       // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
       const isLeadRole = role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
       if (isLeadRole) {
-        const existingLead = await queryRunner.manager.findOne(RoleByUser, {
-          where: { initiative_id: entity_id, role: role_id, active: true },
-          relations: ['obj_user', 'obj_initiative'],
-        });
-
-        if (existingLead) {
-          if (!force_swap) {
-            const leadType = role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead';
-            const { official_code } = existingLead.obj_initiative;
-            const { first_name, last_name, email } = existingLead.obj_user;
-
-            throw new ConflictException(
-              `The entity ${official_code} already has a ${leadType} assigned: ` +
-              `${first_name} ${last_name} – ${email}. ` +
-              `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
-            );
-          }
-
-          await queryRunner.manager.update(RoleByUser, existingLead.id, {
-            role: ROLE_IDS.COORDINATOR,
-            last_updated_by: currentUser.id,
-          });
-        }
+        await this.handleLeadRole(queryRunner, entity_id, role_id, force_swap, currentUser);
       }
 
       await queryRunner.manager.save(RoleByUser, {
@@ -450,6 +428,45 @@ export class UserService {
         last_updated_by: currentUser.id,
       });
     }
+  }
+
+  private async handleLeadRole(
+    queryRunner: QueryRunner,
+    entity_id: number,
+    role_id: number,
+    force_swap: boolean,
+    currentUser: User,
+  ) {
+    const existingLead = await queryRunner.manager.findOne(RoleByUser, {
+      where: { initiative_id: entity_id, role: role_id, active: true },
+      relations: ['obj_user', 'obj_initiative'],
+    });
+
+    if (existingLead && !force_swap) {
+      this.throwIfLeadAlreadyAssigned(existingLead, role_id);
+    }
+
+    if (existingLead && force_swap) {
+      await queryRunner.manager.update(RoleByUser, existingLead.id, {
+        role: ROLE_IDS.COORDINATOR,
+        last_updated_by: currentUser.id,
+      });
+    }
+  }
+
+  private throwIfLeadAlreadyAssigned(
+    existingLead: RoleByUser,
+    role_id: number,
+  ): void {
+    const leadType = role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead';
+    const { official_code } = existingLead.obj_initiative;
+    const { first_name, last_name, email } = existingLead.obj_user;
+
+    throw new ConflictException(
+      `The entity ${official_code} already has a ${leadType} assigned: ` +
+      `${first_name} ${last_name} – ${email}. ` +
+      `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+    );
   }
   
   private buildSuccessResponse(
