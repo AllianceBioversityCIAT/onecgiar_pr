@@ -414,24 +414,26 @@ export class UserService {
       }
 
       // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
-      const isLead = [ROLE_IDS.LEAD, ROLE_IDS.COLEAD].includes(role_id);
-      if (isLead) {
+      const isLeadRole = role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
+      if (isLeadRole) {
         const existingLead = await queryRunner.manager.findOne(RoleByUser, {
           where: { initiative_id: entity_id, role: role_id, active: true },
           relations: ['obj_user', 'obj_initiative'],
         });
 
-        const isLeadAlreadyAssigned = !!existingLead && !force_swap;
-        if (isLeadAlreadyAssigned)
-          throw new ConflictException(
-            `The entity ${existingLead.obj_initiative.official_code} already has a ${role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead'} assigned: ` +
-              `${existingLead.obj_user.first_name} ${existingLead.obj_user.last_name} – ${existingLead.obj_user.email}. ` +
-              `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
-          );
+        if (existingLead) {
+          if (!force_swap) {
+            const leadType = role_id === ROLE_IDS.LEAD ? 'Lead' : 'Co-Lead';
+            const { official_code } = existingLead.obj_initiative;
+            const { first_name, last_name, email } = existingLead.obj_user;
 
-        // If there are not any Lead or Co-Lead assigned, save the new role assignment
-        const notLeadAlreadyAssigned = !!existingLead && force_swap;
-        if (notLeadAlreadyAssigned) {
+            throw new ConflictException(
+              `The entity ${official_code} already has a ${leadType} assigned: ` +
+              `${first_name} ${last_name} – ${email}. ` +
+              `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+            );
+          }
+
           await queryRunner.manager.update(RoleByUser, existingLead.id, {
             role: ROLE_IDS.COORDINATOR,
             last_updated_by: currentUser.id,
