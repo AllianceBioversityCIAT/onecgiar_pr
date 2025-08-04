@@ -283,7 +283,6 @@ export class UserService {
 
       let newUser: User;
 
-      
       if (user) {
         // Just in case the user exists (Deactivate / Activate / Update Roles) NOT to create a new user
         // changeStatus true? Then update the user status to active, if not, stay the same as before
@@ -583,7 +582,7 @@ export class UserService {
       }
 
       if (assignmentsDetails.length > 0) {
-          return assignmentsDetails.join('');
+        return assignmentsDetails.join('');
       }
     }
 
@@ -663,11 +662,14 @@ export class UserService {
           'rbu.user = users.id AND rbu.active = 1',
         )
         .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
+        .leftJoin('role', 'rol', 'rol.id = rbu.role')
+        .leftJoin('role_levels', 'rlvl', 'rol.role_level_id = rlvl.id')
         .select([
           'users.first_name AS "firstName"',
           'users.last_name AS "lastName"',
           'users.email AS "emailAddress"',
           `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+          `MAX(CASE WHEN rol.role_level_id = 1 THEN rol.description ELSE NULL END) AS "appRole"`,
           `
           CASE
             WHEN users.active = 0 THEN 'Inactive'
@@ -702,8 +704,10 @@ export class UserService {
           `,
           'users.created_date AS "userCreationDate"',
           `
-            GROUP_CONCAT(DISTINCT ent.official_code ORDER BY ent.official_code SEPARATOR ', ' )
-            AS "entities"
+          GROUP_CONCAT(
+            DISTINCT CONCAT(ent.official_code, ' - ', rol.description)
+            ORDER BY ent.official_code SEPARATOR ', '
+          ) AS "entities"
           `,
         ])
         .groupBy('users.id');
@@ -1027,7 +1031,7 @@ export class UserService {
   ): Promise<returnErrorDto | returnFormatUser> {
     const guestRole = ROLE_IDS.GUEST; //2 is the ID for the Guest role
 
-    // Update the user's roles to deactivate all active roles in entities 
+    // Update the user's roles to deactivate all active roles in entities
     await this._roleByUserRepository.update(
       { user: user.id },
       { active: false, last_updated_by: currentUser.id },
@@ -1156,10 +1160,12 @@ export class UserService {
           active: true,
           role: Not(In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST])),
         },
-      }); 
+      });
 
       // Bring incoming role assignments ids
-      const incomingIds = new Set(dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean));
+      const incomingIds = new Set(
+        dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean),
+      );
 
       const rolesToRemove = existingRoles.filter((existing) => {
         return !incomingIds.has(existing.id);
@@ -1182,12 +1188,12 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-        console.error('Error updating user roles:', error);
+      console.error('Error updating user roles:', error);
 
-        throw new InternalServerErrorException(
-          'An error occurred while updating user roles',
-        );
-      }
+      throw new InternalServerErrorException(
+        'An error occurred while updating user roles',
+      );
+    }
   }
 
   async findRoleByEntity(email: string): Promise<any> {

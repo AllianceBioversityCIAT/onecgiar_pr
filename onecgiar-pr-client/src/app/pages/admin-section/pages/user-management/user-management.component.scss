@@ -147,6 +147,27 @@
   }
 }
 
+.app-role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #fff7d6; // Amarillo claro
+  color: #b59f3b; // Amarillo oscuro
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  min-height: 20px;
+  white-space: nowrap;
+
+  span {
+    line-height: 1;
+  }
+}
+
 // Controls section
 .controls-section {
   margin-bottom: 32px;
@@ -264,7 +285,7 @@
     border-bottom: 1px solid #e5e7eb;
   }
 
-  .p-datatable-thead > tr > th {
+  .p-datatable-thead>tr>th {
     background: #374151 !important;
     color: white !important;
     font-weight: 600;
@@ -291,14 +312,14 @@
     }
   }
 
-  .p-datatable-tbody > tr {
+  .p-datatable-tbody>tr {
     transition: background-color 0.2s ease;
 
     &:hover {
       background-color: #f9fafb !important;
     }
 
-    > td {
+    >td {
       padding: 8px 16px;
       border-bottom: 1px solid #f3f4f6;
       font-size: 14px;
@@ -313,7 +334,7 @@
     }
   }
 
-  .p-datatable-emptymessage > td {
+  .p-datatable-emptymessage>td {
     text-align: center;
     padding: 24px 16px;
     color: #6b7280;
@@ -474,8 +495,9 @@
 
 // Make Actions column centered
 ::ng-deep .user-table {
-  .p-datatable-thead > tr > th:last-child,
-  .p-datatable-tbody > tr > td:last-child {
+
+  .p-datatable-thead>tr>th:last-child,
+  .p-datatable-tbody>tr>td:last-child {
     text-align: center !important;
   }
 }

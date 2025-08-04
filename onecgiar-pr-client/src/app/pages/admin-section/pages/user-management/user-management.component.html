@@ -158,8 +158,12 @@
                     </div>
                   </p-overlayPanel>
                 }
+              } @else if (user.appRole) {
+                <div class="app-role-chip">
+                  <span>{{ user.appRole }}</span>
+                </div>
               } @else {
-                <span class="no-entities">No entities</span>
+                <span class="no-entities">No app role or entities.</span>
               }
             </div>
           </td>
