@@ -252,7 +252,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   fillUserFormToEdit(user: AddUser) {
     return new Promise(resolve => {
-      const { firstName, lastName, emailAddress, cgIAR, isCGIAR } = user;
+      const { firstName, lastName, emailAddress, isCGIAR } = user;
       setTimeout(() => {
         this.manageUserModal.addUserForm.set({
           is_cgiar: isCGIAR,
@@ -266,7 +266,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         });
         resolve(true);
       }, 500);
-      return;
     });
   }
 

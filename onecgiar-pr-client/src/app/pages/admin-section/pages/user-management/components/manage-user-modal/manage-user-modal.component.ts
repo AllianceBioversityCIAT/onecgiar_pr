@@ -1,4 +1,4 @@
-import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, OnChanges, SimpleChanges, WritableSignal } from '@angular/core';
+import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -32,7 +32,7 @@ interface AddUserForm {
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })
-export class ManageUserModalComponent implements OnChanges {
+export class ManageUserModalComponent {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
@@ -65,11 +65,6 @@ export class ManageUserModalComponent implements OnChanges {
     });
     return list;
   });
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['visible'] && changes['visible'].currentValue) {
-      this.resetAddUserForm();
-    }
-  }
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
@@ -190,51 +185,20 @@ export class ManageUserModalComponent implements OnChanges {
     }));
   }
 
-  manageUser = () => (this.userActivatorMode() ? this.onSaveUserActivator() : this.editingMode() ? this.onUpdateUserRoles() : this.onCreateUser());
+  manageUser = () => {
+    if (this.userActivatorMode()) return this.onSaveUserActivator();
+    if (this.editingMode()) return this.onUpdateUserRoles();
+    return this.onCreateUser();
+  };
 
   onUpdateUserRoles(): void {
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
     this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-        this.managedUser.emit();
-
-        this.api.alertsFe.show({
-          id: 'updateUserRolesSuccess',
-          title: res.message,
-          description: `${email} - ${first_name} ${last_name}`,
-          status: 'success'
-        });
+        this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'updateUserRolesError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onUpdateUserRoles();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'updateUserRolesError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
+        this.handleError(error, 'updateUserRolesError', () => this.onUpdateUserRoles());
       }
     });
   }
@@ -247,45 +211,11 @@ export class ManageUserModalComponent implements OnChanges {
 
     this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-        this.managedUser.emit();
-
-        this.api.alertsFe.show({
-          id: 'activateUserSuccess',
-          title: res.message,
-          description: `${this.addUserForm().email} - ${this.addUserForm().first_name} ${this.addUserForm().last_name}`,
-          status: 'success'
-        });
+        const form = this.addUserForm();
+        this.handleSuccessResponse('activateUserSuccess', res.message, `${form.email} - ${form.first_name} ${form.last_name}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'activateUserError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onSaveUserActivator();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'activateUserError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
+        this.handleError(error, 'activateUserError', () => this.onSaveUserActivator());
       }
     });
   }
@@ -300,56 +230,106 @@ export class ManageUserModalComponent implements OnChanges {
 
     this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-
         const successMessage = res?.message || 'The user has been successfully created';
         const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
 
-        this.api.alertsFe.show({
-          id: 'createUserSuccess',
-          title: 'User created successfully',
-          description: `${userName} - ${successMessage}`,
-          status: 'success'
-        });
-
-        this.creatingUser.set(false);
-        this.resetAddUserForm(); // Reset form and clear user search
-        this.managedUser.emit(); // Notify parent to refresh users list
+        this.handleCreateUserSuccess('User created successfully', `${userName} - ${successMessage}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'createUserError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              // i need add attr force_swap as true to de role id 3 and 4
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onCreateUser();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'createUserError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
-
-        this.creatingUser.set(false);
+        this.handleCreateUserError(error);
       }
     });
+  }
+
+  // Helper methods to reduce code duplication
+  private handleSuccessResponse(id: string, title: string, description: string): void {
+    this.visible = false;
+    this.visibleChange.emit(false);
+    this.managedUser.emit();
+
+    this.api.alertsFe.show({
+      id,
+      title,
+      description,
+      status: 'success'
+    });
+  }
+
+  private handleError(error: any, errorId: string, retryCallback: () => void): void {
+    if (error.status === 409) {
+      this.api.alertsFe.show(
+        {
+          id: errorId,
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning',
+          confirmText: 'Confirm'
+        },
+        () => {
+          this.addForceSwapToRoleAssignments();
+          retryCallback();
+        }
+      );
+    } else {
+      this.api.alertsFe.show({
+        id: errorId,
+        title: 'Warning!',
+        description: error.error.message,
+        status: 'warning'
+      });
+    }
+  }
+
+  private addForceSwapToRoleAssignments(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: form.role_assignments.map(assignment =>
+        assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
+      )
+    }));
+  }
+
+  private handleCreateUserSuccess(title: string, description: string): void {
+    this.visible = false;
+    this.visibleChange.emit(false);
+
+    this.api.alertsFe.show({
+      id: 'createUserSuccess',
+      title,
+      description,
+      status: 'success'
+    });
+
+    this.creatingUser.set(false);
+    this.resetAddUserForm(); // Reset form and clear user search
+    this.managedUser.emit(); // Notify parent to refresh users list
+  }
+
+  private handleCreateUserError(error: any): void {
+    if (error.status === 409) {
+      this.api.alertsFe.show(
+        {
+          id: 'createUserError',
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning',
+          confirmText: 'Confirm'
+        },
+        () => {
+          this.addForceSwapToRoleAssignments();
+          this.onCreateUser();
+        }
+      );
+    } else {
+      this.api.alertsFe.show({
+        id: 'createUserError',
+        title: 'Warning!',
+        description: error.error.message,
+        status: 'warning'
+      });
+    }
+
+    this.creatingUser.set(false);
   }
 
   onCancelAddUser(): void {
@@ -359,7 +339,6 @@ export class ManageUserModalComponent implements OnChanges {
   }
 
   onModalHide(): void {
-    // This method is called when the modal is closed via X button, ESC key, or clicking outside
     this.visible = false;
     this.visibleChange.emit(false);
     this.editingMode.set(false);

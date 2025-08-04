@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsEmail,
+  ValidateIf,
 } from 'class-validator';
 
 export class ChangeUserStatusDto {
@@ -38,7 +39,7 @@ export class ChangeUserStatusDto {
   last_updated_by?: number;
 }
 
-class EntityRoleDto {
+export class EntityRoleDto {
   @IsOptional()
   @IsNumber()
   rbu_id?: number;
@@ -47,9 +48,11 @@ class EntityRoleDto {
   @IsBoolean()
   force_swap?: boolean;
 
-  @IsNumber()
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'role_id must be a number' })
   role_id: number;
 
-  @IsNumber()
+  @ValidateIf((o) => o !== undefined)
+  @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
   entity_id: number;
 }
