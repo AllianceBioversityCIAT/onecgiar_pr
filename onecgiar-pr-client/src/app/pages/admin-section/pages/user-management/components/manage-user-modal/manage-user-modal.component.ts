@@ -195,45 +195,10 @@ export class ManageUserModalComponent {
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
     this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-        this.managedUser.emit();
-
-        this.api.alertsFe.show({
-          id: 'updateUserRolesSuccess',
-          title: res.message,
-          description: `${email} - ${first_name} ${last_name}`,
-          status: 'success'
-        });
+        this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'updateUserRolesError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onUpdateUserRoles();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'updateUserRolesError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
+        this.handleError(error, 'updateUserRolesError', () => this.onUpdateUserRoles());
       }
     });
   }
@@ -246,45 +211,11 @@ export class ManageUserModalComponent {
 
     this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-        this.managedUser.emit();
-
-        this.api.alertsFe.show({
-          id: 'activateUserSuccess',
-          title: res.message,
-          description: `${this.addUserForm().email} - ${this.addUserForm().first_name} ${this.addUserForm().last_name}`,
-          status: 'success'
-        });
+        const form = this.addUserForm();
+        this.handleSuccessResponse('activateUserSuccess', res.message, `${form.email} - ${form.first_name} ${form.last_name}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'activateUserError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onSaveUserActivator();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'activateUserError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
+        this.handleError(error, 'activateUserError', () => this.onSaveUserActivator());
       }
     });
   }
@@ -299,56 +230,106 @@ export class ManageUserModalComponent {
 
     this.resultsApiService.POST_createUser(formData).subscribe({
       next: res => {
-        this.visible = false;
-        this.visibleChange.emit(false);
-
         const successMessage = res?.message || 'The user has been successfully created';
         const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
 
-        this.api.alertsFe.show({
-          id: 'createUserSuccess',
-          title: 'User created successfully',
-          description: `${userName} - ${successMessage}`,
-          status: 'success'
-        });
-
-        this.creatingUser.set(false);
-        this.resetAddUserForm(); // Reset form and clear user search
-        this.managedUser.emit(); // Notify parent to refresh users list
+        this.handleCreateUserSuccess('User created successfully', `${userName} - ${successMessage}`);
       },
       error: error => {
-        if (error.status === 409) {
-          this.api.alertsFe.show(
-            {
-              id: 'createUserError',
-              title: 'Warning!',
-              description: error.error.message,
-              status: 'warning',
-              confirmText: 'Confirm'
-            },
-            () => {
-              // i need add attr force_swap as true to de role id 3 and 4
-              this.addUserForm.update(form => ({
-                ...form,
-                role_assignments: form.role_assignments.map(assignment =>
-                  assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
-                )
-              }));
-              this.onCreateUser();
-            }
-          );
-        } else {
-          this.api.alertsFe.show({
-            id: 'createUserError',
-            title: 'Warning!',
-            description: error.error.message,
-            status: 'warning'
-          });
-        }
-
-        this.creatingUser.set(false);
+        this.handleCreateUserError(error);
       }
     });
+  }
+
+  // Helper methods to reduce code duplication
+  private handleSuccessResponse(id: string, title: string, description: string): void {
+    this.visible = false;
+    this.visibleChange.emit(false);
+    this.managedUser.emit();
+
+    this.api.alertsFe.show({
+      id,
+      title,
+      description,
+      status: 'success'
+    });
+  }
+
+  private handleError(error: any, errorId: string, retryCallback: () => void): void {
+    if (error.status === 409) {
+      this.api.alertsFe.show(
+        {
+          id: errorId,
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning',
+          confirmText: 'Confirm'
+        },
+        () => {
+          this.addForceSwapToRoleAssignments();
+          retryCallback();
+        }
+      );
+    } else {
+      this.api.alertsFe.show({
+        id: errorId,
+        title: 'Warning!',
+        description: error.error.message,
+        status: 'warning'
+      });
+    }
+  }
+
+  private addForceSwapToRoleAssignments(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      role_assignments: form.role_assignments.map(assignment =>
+        assignment.role_id === 3 || assignment.role_id === 4 ? { ...assignment, force_swap: true } : assignment
+      )
+    }));
+  }
+
+  private handleCreateUserSuccess(title: string, description: string): void {
+    this.visible = false;
+    this.visibleChange.emit(false);
+
+    this.api.alertsFe.show({
+      id: 'createUserSuccess',
+      title,
+      description,
+      status: 'success'
+    });
+
+    this.creatingUser.set(false);
+    this.resetAddUserForm(); // Reset form and clear user search
+    this.managedUser.emit(); // Notify parent to refresh users list
+  }
+
+  private handleCreateUserError(error: any): void {
+    if (error.status === 409) {
+      this.api.alertsFe.show(
+        {
+          id: 'createUserError',
+          title: 'Warning!',
+          description: error.error.message,
+          status: 'warning',
+          confirmText: 'Confirm'
+        },
+        () => {
+          this.addForceSwapToRoleAssignments();
+          this.onCreateUser();
+        }
+      );
+    } else {
+      this.api.alertsFe.show({
+        id: 'createUserError',
+        title: 'Warning!',
+        description: error.error.message,
+        status: 'warning'
+      });
+    }
+
+    this.creatingUser.set(false);
   }
 
   onCancelAddUser(): void {
