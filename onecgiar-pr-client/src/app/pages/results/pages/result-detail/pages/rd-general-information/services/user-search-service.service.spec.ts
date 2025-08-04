@@ -8,28 +8,48 @@ describe('UserSearchService', () => {
   let service: UserSearchService;
   let httpMock: HttpTestingController;
 
+  // Reusable mock user objects to avoid duplication
+  const mockJohnDoe = {
+    cn: 'John Doe',
+    displayName: 'John Doe',
+    mail: 'john.doe@cgiar.org',
+    sAMAccountName: 'jdoe',
+    givenName: 'John',
+    sn: 'Doe',
+    userPrincipalName: 'john.doe@cgiar.org',
+    title: 'Senior Researcher',
+    department: 'Research Department',
+    company: 'CGIAR',
+    manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
+    employeeID: '12345',
+    employeeNumber: 'EMP001',
+    employeeType: 'Full-time',
+    description: 'Senior researcher in agricultural sciences',
+    formattedName: 'Doe, John (john.doe@cgiar.org)'
+  };
+
+  const mockJaneDoe = {
+    cn: 'Jane Doe',
+    displayName: 'Jane Doe',
+    mail: 'jane.doe@cgiar.org',
+    sAMAccountName: 'jadoe',
+    givenName: 'Jane',
+    sn: 'Doe',
+    userPrincipalName: 'jane.doe@cgiar.org',
+    title: 'Research Assistant',
+    department: 'Research Department',
+    company: 'CGIAR',
+    manager: 'CN=John Smith,OU=Users,DC=cgiar,DC=org',
+    employeeID: '12346',
+    employeeNumber: 'EMP002',
+    employeeType: 'Part-time',
+    description: 'Research assistant in agricultural sciences',
+    formattedName: 'Doe, Jane (jane.doe@cgiar.org)'
+  };
+
   const mockUserSearchResponse: UserSearchResponse = {
     message: 'Users found successfully',
-    response: [
-      {
-        cn: 'John Doe',
-        displayName: 'John Doe',
-        mail: 'john.doe@cgiar.org',
-        sAMAccountName: 'jdoe',
-        givenName: 'John',
-        sn: 'Doe',
-        userPrincipalName: 'john.doe@cgiar.org',
-        title: 'Senior Researcher',
-        department: 'Research Department',
-        company: 'CGIAR',
-        manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
-        employeeID: '12345',
-        employeeNumber: 'EMP001',
-        employeeType: 'Full-time',
-        description: 'Senior researcher in agricultural sciences',
-        formattedName: 'Doe, John (john.doe@cgiar.org)'
-      }
-    ],
+    response: [mockJohnDoe],
     status: 200
   };
 
@@ -120,44 +140,7 @@ describe('UserSearchService', () => {
     const query = 'doe';
     const multipleUsersResponse: UserSearchResponse = {
       message: 'Users found successfully',
-      response: [
-        {
-          cn: 'John Doe',
-          displayName: 'John Doe',
-          mail: 'john.doe@cgiar.org',
-          sAMAccountName: 'jdoe',
-          givenName: 'John',
-          sn: 'Doe',
-          userPrincipalName: 'john.doe@cgiar.org',
-          title: 'Senior Researcher',
-          department: 'Research Department',
-          company: 'CGIAR',
-          manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
-          employeeID: '12345',
-          employeeNumber: 'EMP001',
-          employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences',
-          formattedName: 'Doe, John (john.doe@cgiar.org)'
-        },
-        {
-          cn: 'Jane Doe',
-          displayName: 'Jane Doe',
-          mail: 'jane.doe@cgiar.org',
-          sAMAccountName: 'jadoe',
-          givenName: 'Jane',
-          sn: 'Doe',
-          userPrincipalName: 'jane.doe@cgiar.org',
-          title: 'Research Assistant',
-          department: 'Research Department',
-          company: 'CGIAR',
-          manager: 'CN=John Smith,OU=Users,DC=cgiar,DC=org',
-          employeeID: '12346',
-          employeeNumber: 'EMP002',
-          employeeType: 'Part-time',
-          description: 'Research assistant in agricultural sciences',
-          formattedName: 'Doe, Jane (jane.doe@cgiar.org)'
-        }
-      ],
+      response: [mockJohnDoe, mockJaneDoe],
       status: 200
     };
 
