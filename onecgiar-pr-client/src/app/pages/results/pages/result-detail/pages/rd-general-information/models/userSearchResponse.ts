@@ -20,4 +20,5 @@ export interface User {
   employeeNumber: string;
   employeeType: string;
   description: string;
+  formattedName: string;
 }
