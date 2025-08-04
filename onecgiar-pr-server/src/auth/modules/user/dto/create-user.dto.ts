@@ -61,4 +61,3 @@ export class RoleAssignmentDto {
   @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
   entity_id: number;
 }
-
