@@ -11,28 +11,86 @@ describe('LeadContactPersonFieldComponent', () => {
   let fixture: ComponentFixture<LeadContactPersonFieldComponent>;
   let mockUserSearchService: any;
 
+  // Reusable mock user objects to avoid duplication
+  const mockJohnDoe = {
+    cn: 'John Doe',
+    displayName: 'John Doe',
+    mail: 'john.doe@cgiar.org',
+    sAMAccountName: 'jdoe',
+    givenName: 'John',
+    sn: 'Doe',
+    userPrincipalName: 'john.doe@cgiar.org',
+    title: 'Senior Researcher',
+    department: 'Research Department',
+    company: 'CGIAR',
+    manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
+    employeeID: '12345',
+    employeeNumber: 'EMP001',
+    employeeType: 'Full-time',
+    description: 'Senior researcher in agricultural sciences',
+    formattedName: 'Doe, John (john.doe@cgiar.org)'
+  };
+
+  const mockJaneSmith = {
+    cn: 'Jane Smith',
+    displayName: 'Jane Smith',
+    mail: 'jane.smith@cgiar.org',
+    sAMAccountName: 'jsmith',
+    givenName: 'Jane',
+    sn: 'Smith',
+    userPrincipalName: 'jane.smith@cgiar.org',
+    title: 'Research Coordinator',
+    department: 'Research Department',
+    company: 'CGIAR',
+    manager: '',
+    employeeID: '54321',
+    employeeNumber: 'EMP002',
+    employeeType: 'Full-time',
+    description: 'Research coordinator',
+    formattedName: 'Smith, Jane (jane.smith@cgiar.org)'
+  };
+
+  const mockTestUser = {
+    cn: 'Test User',
+    displayName: 'Test User',
+    mail: 'test.user@cgiar.org',
+    sAMAccountName: 'tuser',
+    givenName: 'Test',
+    sn: 'User',
+    userPrincipalName: 'test.user@cgiar.org',
+    title: 'Test Account',
+    department: 'IT Department',
+    company: 'CGIAR',
+    manager: '',
+    employeeID: '99999',
+    employeeNumber: 'TEST001',
+    employeeType: 'Test',
+    description: 'Test account',
+    formattedName: 'User, Test (test.user@cgiar.org)'
+  };
+
+  const mockNoEmailUser = {
+    cn: 'No Email User',
+    displayName: 'No Email User',
+    mail: '',
+    sAMAccountName: 'noemail',
+    givenName: 'No',
+    sn: 'Email',
+    userPrincipalName: '',
+    title: 'No Email Account',
+    department: 'Test Department',
+    company: 'CGIAR',
+    manager: '',
+    employeeID: '88888',
+    employeeNumber: 'NOEMAIL001',
+    employeeType: 'Test',
+    description: 'Account without email',
+    formattedName: 'Email, No ()'
+  };
+
   const mockUserSearchResponse = {
     message: 'Users found successfully',
-    response: [
-      {
-        cn: 'John Doe',
-        displayName: 'John Doe',
-        mail: 'john.doe@cgiar.org',
-        sAMAccountName: 'jdoe',
-        givenName: 'John',
-        sn: 'Doe',
-        userPrincipalName: 'john.doe@cgiar.org',
-        title: 'Senior Researcher',
-        department: 'Research Department',
-        company: 'CGIAR',
-        manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
-        employeeID: '12345',
-        employeeNumber: 'EMP001',
-        employeeType: 'Full-time',
-        description: 'Senior researcher in agricultural sciences',
-        formattedName: 'Doe, John (john.doe@cgiar.org)'
-      }
-    ],
+    response: [mockJohnDoe],
     status: 200
   };
 
@@ -65,7 +123,7 @@ describe('LeadContactPersonFieldComponent', () => {
         const mockEvent = { target: { value: 'john' } };
         const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
 
-        mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+        mockUserSearchService.selectedUser = mockJohnDoe;
         component.onSearchInput(mockEvent);
 
         expect(mockUserSearchService.searchQuery).toBe('john');
@@ -86,7 +144,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
     describe('selectUser', () => {
       it('should select user and update generalInfoBody with complete metadata', () => {
-        const mockUser = mockUserSearchResponse.response[0];
+        const mockUser = mockJohnDoe;
         component.body = {
           lead_contact_person: 'John Doe',
           lead_contact_person_data: mockUser
@@ -236,7 +294,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
       it('should not mark contact as invalid when user is selected', () => {
         mockUserSearchService.searchQuery = 'John Doe';
-        mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+        mockUserSearchService.selectedUser = mockJohnDoe;
         mockUserSearchService.isContactLocked = true;
 
         component.onContactBlur();
@@ -251,9 +309,9 @@ describe('LeadContactPersonFieldComponent', () => {
         // Ensure body is defined before setting properties
         component.body = {
           lead_contact_person: 'John Doe',
-          lead_contact_person_data: mockUserSearchResponse.response[0]
+          lead_contact_person_data: mockJohnDoe
         };
-        mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+        mockUserSearchService.selectedUser = mockJohnDoe;
 
         const mockEvent = { target: { value: '' } };
         component.onSearchInput(mockEvent);
@@ -298,7 +356,7 @@ describe('LeadContactPersonFieldComponent', () => {
         mockUserSearchService.hasValidContact = false;
         mockUserSearchService.showContactError = true;
 
-        const mockUser = mockUserSearchResponse.response[0];
+        const mockUser = mockJohnDoe;
         component.selectUser(mockUser);
 
         expect(mockUserSearchService.hasValidContact).toBe(true);
@@ -427,80 +485,7 @@ describe('LeadContactPersonFieldComponent', () => {
     });
 
     describe('filterValidUsers', () => {
-      const mockUsersWithFilters = [
-        {
-          cn: 'John Doe',
-          displayName: 'John Doe',
-          mail: 'john.doe@cgiar.org',
-          sAMAccountName: 'jdoe',
-          givenName: 'John',
-          sn: 'Doe',
-          userPrincipalName: 'john.doe@cgiar.org',
-          title: 'Senior Researcher',
-          department: 'Research Department',
-          company: 'CGIAR',
-          manager: 'CN=Jane Smith,OU=Users,DC=cgiar,DC=org',
-          employeeID: '12345',
-          employeeNumber: 'EMP001',
-          employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences',
-          formattedName: 'Doe, John (john.doe@cgiar.org)'
-        },
-        {
-          cn: 'Test User',
-          displayName: 'Test User',
-          mail: 'test.user@cgiar.org',
-          sAMAccountName: 'tuser',
-          givenName: 'Test',
-          sn: 'User',
-          userPrincipalName: 'test.user@cgiar.org',
-          title: 'Test Account',
-          department: 'IT Department',
-          company: 'CGIAR',
-          manager: '',
-          employeeID: '99999',
-          employeeNumber: 'TEST001',
-          employeeType: 'Test',
-          description: 'Test account',
-          formattedName: 'User, Test (test.user@cgiar.org)'
-        },
-        {
-          cn: 'No Email User',
-          displayName: 'No Email User',
-          mail: '',
-          sAMAccountName: 'noemail',
-          givenName: 'No',
-          sn: 'Email',
-          userPrincipalName: '',
-          title: 'No Email Account',
-          department: 'Test Department',
-          company: 'CGIAR',
-          manager: '',
-          employeeID: '88888',
-          employeeNumber: 'NOEMAIL001',
-          employeeType: 'Test',
-          description: 'Account without email',
-          formattedName: 'Email, No ()'
-        },
-        {
-          cn: 'Jane Smith',
-          displayName: 'Jane Smith',
-          mail: 'jane.smith@cgiar.org',
-          sAMAccountName: 'jsmith',
-          givenName: 'Jane',
-          sn: 'Smith',
-          userPrincipalName: 'jane.smith@cgiar.org',
-          title: 'Research Coordinator',
-          department: 'Research Department',
-          company: 'CGIAR',
-          manager: '',
-          employeeID: '54321',
-          employeeNumber: 'EMP002',
-          employeeType: 'Full-time',
-          description: 'Research coordinator',
-          formattedName: 'Smith, Jane (jane.smith@cgiar.org)'
-        }
-      ];
+      const mockUsersWithFilters = [mockJohnDoe, mockTestUser, mockNoEmailUser, mockJaneSmith];
 
       it('should filter out users without email', () => {
         const result = component['filterValidUsers'](mockUsersWithFilters);
@@ -537,17 +522,17 @@ describe('LeadContactPersonFieldComponent', () => {
       it('should be case insensitive for test filtering', () => {
         const testUsers = [
           {
-            ...mockUsersWithFilters[0],
+            ...mockJohnDoe,
             mail: 'user.TEST@cgiar.org',
             formattedName: 'Doe, John (user.TEST@cgiar.org)'
           },
           {
-            ...mockUsersWithFilters[0],
+            ...mockJohnDoe,
             mail: 'user.Test@cgiar.org',
             formattedName: 'Doe, John (user.Test@cgiar.org)'
           },
           {
-            ...mockUsersWithFilters[0],
+            ...mockJohnDoe,
             mail: 'user.tEsT@cgiar.org',
             formattedName: 'Doe, John (user.tEsT@cgiar.org)'
           }
@@ -572,19 +557,7 @@ describe('LeadContactPersonFieldComponent', () => {
     it('should apply filters to search results', () => {
       const mockResponseWithFilters = {
         message: 'Users found successfully',
-        response: [
-          mockUserSearchResponse.response[0],
-          {
-            ...mockUserSearchResponse.response[0],
-            displayName: 'Test User',
-            mail: 'test.user@cgiar.org'
-          },
-          {
-            ...mockUserSearchResponse.response[0],
-            displayName: 'No Email User',
-            mail: ''
-          }
-        ],
+        response: [mockJohnDoe, mockTestUser, mockNoEmailUser],
         status: 200
       };
 
@@ -602,7 +575,7 @@ describe('LeadContactPersonFieldComponent', () => {
   describe('Contact Lock/Unlock Functionality', () => {
     describe('selectUser', () => {
       it('should lock the contact field when user is selected', () => {
-        const mockUser = mockUserSearchResponse.response[0];
+        const mockUser = mockJohnDoe;
         component.isContactLocked = false;
 
         if (!component.body) {
@@ -621,12 +594,12 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should hide search results when user is selected', () => {
-        const mockUser = mockUserSearchResponse.response[0];
+        const mockUser = mockJohnDoe;
         component.searchResults = [mockUser];
         component.showResults = true;
         component.body = {
           lead_contact_person: 'John Doe',
-          lead_contact_person_data: mockUserSearchResponse.response[0]
+          lead_contact_person_data: mockJohnDoe
         };
 
         component.selectUser(mockUser);
@@ -638,13 +611,13 @@ describe('LeadContactPersonFieldComponent', () => {
 
     describe('clearContact', () => {
       it('should unlock the contact field and clear all data', () => {
-        mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+        mockUserSearchService.selectedUser = mockJohnDoe;
         mockUserSearchService.searchQuery = 'John Doe';
         component.isContactLocked = true;
 
         component.body = {
           lead_contact_person: 'John Doe',
-          lead_contact_person_data: mockUserSearchResponse.response[0]
+          lead_contact_person_data: mockJohnDoe
         };
 
         component.clearContact();
@@ -724,7 +697,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
     it('should hide selected contact info when not locked', () => {
       component.isContactLocked = false;
-      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+              mockUserSearchService.selectedUser = mockJohnDoe;
 
       fixture.detectChanges();
 
