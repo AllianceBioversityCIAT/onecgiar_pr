@@ -118,14 +118,24 @@ export class ManageUserModalComponent {
   }
 
   addRoleAssignment(): void {
-    const newAssignment = {
-      entity_id: null,
-      role_id: null
-    };
-    this.addUserForm.update(form => ({
-      ...form,
-      role_assignments: [...form.role_assignments, newAssignment]
-    }));
+    if (!this.addUserForm().is_cgiar) {
+      const memberRole = this.getRolesService.roles().find(role => role.role_description === 'Member');
+      if (memberRole) {
+        this.addUserForm.update(form => ({
+          ...form,
+          role_assignments: [...form.role_assignments, { entity_id: null, role_id: memberRole.role_id }]
+        }));
+      }
+    } else {
+      const newAssignment = {
+        entity_id: null,
+        role_id: null
+      };
+      this.addUserForm.update(form => ({
+        ...form,
+        role_assignments: [...form.role_assignments, newAssignment]
+      }));
+    }
   }
 
   removeRoleAssignment(index: number) {
@@ -145,7 +155,8 @@ export class ManageUserModalComponent {
       last_name: '',
       email: '',
       // Set permissions based on CGIAR status
-      role_platform: 2 // Always marked as guest (2)
+      role_platform: 2, // Always marked as guest (2)
+      role_assignments: []
     }));
   }
 

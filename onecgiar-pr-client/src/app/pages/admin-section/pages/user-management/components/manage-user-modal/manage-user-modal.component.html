@@ -122,6 +122,7 @@
             <div style="width: 45%">
               <app-pr-select
                 [options]="getRolesService.roles()"
+                [ngClass]="{ globalDisabled: !addUserForm().is_cgiar }"
                 optionLabel="role_description"
                 optionValue="role_id"
                 placeholder="Select role"
