@@ -18,7 +18,7 @@
       [(ngModel)]="this.generalInfoBody.result_level_name">
     </app-pr-input>
     <div class="reporting_year">
-      <div class="pr_label segment_title">Reporting year</div>
+      <div class="pr_label pr-h4">Reporting year</div>
       <div class="pr_description">{{ this.generalInfoBody.reporting_year }}</div>
     </div>
   </div>
@@ -68,7 +68,7 @@
 
   <app-lead-contact-person-field [body]="this.generalInfoBody"></app-lead-contact-person-field>
 
-  <h1 class="segment_title pr_label">Impact Area scores:</h1>
+  <h1 class="pr-h4 pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 
   <div class="block_container">
