@@ -9,7 +9,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { DataSource, Brackets, In, IsNull, Not, QueryRunner } from 'typeorm';
+import { DataSource, Brackets, In, Not, QueryRunner } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { returnFormatUser } from './dto/return-create-user.dto';
@@ -320,12 +320,22 @@ export class UserService {
       }
 
       if (dto.role_platform) {
-        await this.updatePlatformRoles(queryRunner, newUser.id, currentUser.id, dto.role_platform);
+        await this.updatePlatformRoles(
+          queryRunner,
+          newUser.id,
+          currentUser.id,
+          dto.role_platform,
+        );
       }
 
       const hasAssignments = dto.role_assignments?.length > 0;
       if (hasAssignments) {
-        await this.validateAndAssignRoles(queryRunner, dto.role_assignments, newUser, currentUser);
+        await this.validateAndAssignRoles(
+          queryRunner,
+          dto.role_assignments,
+          newUser,
+          currentUser,
+        );
       }
 
       await queryRunner.commitTransaction();
@@ -397,25 +407,32 @@ export class UserService {
       });
 
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-      const isExternal = !(user?.is_cgiar);
+      const isExternal = !user?.is_cgiar;
 
-      const isInvalidExternalRole = isExternal && (role_id !== ROLE_IDS.MEMBER);
+      const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
       if (isInvalidExternalRole) {
         throw new BadRequestException(
           `External users can only be assigned the "Member" role.`,
         );
       }
 
-      if (!portfolioIsActive && (role_id !== ROLE_IDS.MEMBER)) {
+      if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
         throw new BadRequestException(
           `Only "Member" role is allowed in inactive portfolios.`,
         );
       }
 
       // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
-      const isLeadRole = role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
+      const isLeadRole =
+        role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
       if (isLeadRole) {
-        await this.handleLeadRole(queryRunner, entity_id, role_id, force_swap, currentUser);
+        await this.handleLeadRole(
+          queryRunner,
+          entity_id,
+          role_id,
+          force_swap,
+          currentUser,
+        );
       }
 
       await queryRunner.manager.save(RoleByUser, {
@@ -463,11 +480,11 @@ export class UserService {
 
     throw new ConflictException(
       `The entity ${official_code} already has a ${leadType} assigned: ` +
-      `${first_name} ${last_name} – ${email}. ` +
-      `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+        `${first_name} ${last_name} – ${email}. ` +
+        `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
     );
   }
-  
+
   private buildSuccessResponse(
     user: User,
     changeStatus?: boolean,
@@ -671,34 +688,8 @@ export class UserService {
           `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
           `MAX(CASE WHEN rol.role_level_id = 1 THEN rol.description ELSE NULL END) AS "appRole"`,
           `
-          CASE
-            WHEN users.active = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 1 
-              AND users.active = 1
-              AND COUNT(rbu.id) = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 1
-              AND users.active = 1
-              AND COUNT(rbu.id) > 0
-              AND COUNT(DISTINCT rbu.role) = 1
-              AND MAX(rbu.role) = 2 THEN 'Read Only'
-            WHEN users.is_cgiar = 1
-              AND users.active = 1
-              AND (
-                MAX(rbu.role) = 1 
-                OR (COUNT(rbu.initiative_id) > 0 AND MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
-              ) THEN 'Active'
-            WHEN users.is_cgiar = 0 
-              AND users.active = 1 
-              AND COUNT(rbu.id) = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 0
-              AND users.active = 1
-              AND COUNT(DISTINCT rbu.role) = 1
-              AND MAX(rbu.role) = 2 THEN 'Read Only'
-            WHEN users.is_cgiar = 0
-              AND users.active = 1
-              AND (
-                COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
-              ) THEN 'Active'
+          CASE 
+            WHEN users.active = 1 THEN 'Active'
             ELSE 'Inactive'
           END AS "userStatus"
           `,
@@ -939,75 +930,71 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnErrorDto | returnFormatUser> {
     const cleanEmail = userEmail?.trim().toLowerCase();
-    const activeUSer = dto.activate;
 
     if (!cleanEmail) {
       throw new BadRequestException('Invalid or missing email');
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
-    let isActive = false;
-
-    if (user.active) {
-      if (user.is_cgiar) {
-        const hasAdminRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            role: 1,
-            active: true,
-          },
-        });
-        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            initiative_id: Not(IsNull()),
-            role: Not(IsNull()),
-            active: true,
-          },
-        });
-        // User is active (Not Read Only or Inactive) if they have an admin role or an active role in any initiative
-        isActive = !!hasAdminRole || !!hasInitiativeWithRole;
-      } else {
-        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            initiative_id: Not(IsNull()),
-            role: Not(IsNull()),
-            active: true,
-          },
-        });
-        // User is active (Not Read Only or Inactive) if they have an active role in any initiative
-        isActive = !!hasInitiativeWithRole;
-      }
-    }
 
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
 
     if (dto.activate) {
-      if (isActive) {
-        return {
-          response: { id: user.id, email: user.email },
-          message: 'User is already active',
-          status: HttpStatus.OK,
-        };
+      const wasInactive = !user.active;
+      user.active = true;
+      user.last_updated_by = currentUser?.id;
+      await this._userRepository.save(user);
+
+      if (
+        wasInactive &&
+        dto.role_assignments &&
+        dto.role_assignments.length > 0
+      ) {
+        await this.validateAndAssignRoles(
+          this.dataSource.createQueryRunner(),
+          dto.role_assignments,
+          user,
+          currentUser,
+        );
       }
-      return this.saveUserToDB(dto, token, activeUSer);
+
+      return {
+        response: { id: user.id, email: user.email },
+        message: 'User activated successfully',
+        status: HttpStatus.OK,
+      };
     } else {
-      if (!isActive) {
+      if (!user.active) {
         return {
           response: { id: user.id, email: user.email },
           message: 'User is already deactivated',
           status: HttpStatus.OK,
         };
       }
-      if (user.is_cgiar) {
-        return this.deactivateCgiarUser(user, currentUser);
-      } else {
-        return this.deactivateExternalUser(user, currentUser);
-      }
+      return this.deactivateUserCompletely(user, currentUser);
     }
+  }
+
+  private async deactivateUserCompletely(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    user.active = false;
+    user.last_updated_by = currentUser.id;
+    await this._userRepository.save(user);
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'User deactivated successfully',
+      status: HttpStatus.OK,
+    };
   }
 
   private async findUserWithRelations(userEmail: string): Promise<User> {
