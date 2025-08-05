@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -14,19 +14,12 @@ import { ResultsApiService } from '../../../../shared/services/api/results-api.s
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
 
 interface UserColumn {
   label: string;
   key: string;
   width?: string;
-}
-
-interface User {
-  username: string;
-  email: string;
-  isCGIAR: string;
-  userCreationDate: string;
-  status: string;
 }
 
 interface StatusOption {
@@ -61,6 +54,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
+  dynamicPanelService = inject(DynamicPanelServiceService);
 
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;

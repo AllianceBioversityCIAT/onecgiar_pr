@@ -1,4 +1,6 @@
-<div class="local_container section_container">
+<div
+  class="local_container section_container"
+  [style]="{ width: this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 305px)' : 'calc(100vw - 118px)' }">
   <header>
     <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
     <h1>User Management</h1>
@@ -15,68 +17,70 @@
     <div class="controls-row">
       <!-- Filters group -->
       <div class="filters-group">
-        <!-- User search -->
-        <div class="search-container">
-          <label class="search-label" for="search-user-input">Search by user:</label>
-          <div class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input
-              type="text"
-              pInputText
-              placeholder="Search"
-              [value]="searchText()"
-              (input)="onSearchInputChange($event)"
-              class="search-field"
-              id="search-user-input" />
+        <div class="filters-row">
+          <!-- User search -->
+          <div class="search-container">
+            <label class="search-label" for="search-user-input">Search by user:</label>
+            <div class="p-input-icon-left">
+              <i class="pi pi-search"></i>
+              <input
+                type="text"
+                pInputText
+                placeholder="Search"
+                [value]="searchText()"
+                (input)="onSearchInputChange($event)"
+                class="search-field"
+                id="search-user-input" />
+            </div>
           </div>
-        </div>
 
-        <!-- Status filter -->
+          <!-- Status filter -->
 
-        <div class="status-filter">
-          <label class="status-label" for="statusSelect">Status:</label>
-          <app-pr-select
-            #statusSelect
-            id="statusSelect"
-            [options]="statusOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All"
-            [ngModel]="selectedStatus()"
-            (ngModelChange)="onStatusChange($event)"
-            [required]="false"
-            [indexReference]="1"></app-pr-select>
-        </div>
+          <div class="status-filter">
+            <label class="status-label" for="statusSelect">Status:</label>
+            <app-pr-select
+              #statusSelect
+              id="statusSelect"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All"
+              [ngModel]="selectedStatus()"
+              (ngModelChange)="onStatusChange($event)"
+              [required]="false"
+              [indexReference]="1"></app-pr-select>
+          </div>
 
-        <!-- CGIAR filter -->
-        <div class="cgiar-filter">
-          <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
-          <app-pr-select
-            #cgiarSelect
-            id="cgiarSelect"
-            [options]="isCGIAROptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All"
-            [ngModel]="selectedCgiar()"
-            (ngModelChange)="onCgiarChange($event)"
-            [required]="false"
-            [indexReference]="2"></app-pr-select>
-        </div>
+          <!-- CGIAR filter -->
+          <div class="cgiar-filter">
+            <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
+            <app-pr-select
+              #cgiarSelect
+              id="cgiarSelect"
+              [options]="isCGIAROptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All"
+              [ngModel]="selectedCgiar()"
+              (ngModelChange)="onCgiarChange($event)"
+              [required]="false"
+              [indexReference]="2"></app-pr-select>
+          </div>
 
-        <!-- Entity filter -->
-        <div class="entity-filter">
-          <label class="entity-label" for="entitiesSelect">Entity:</label>
-          <app-pr-multi-select
-            #entitiesSelect
-            id="entitiesSelect"
-            [options]="initiativesService.allInitiatives()"
-            optionLabel="official_code"
-            optionValue="id"
-            placeholder="All"
-            (selectOptionEvent)="getUsers()"
-            [ngModel]="selectedEntities()"
-            [required]="false"></app-pr-multi-select>
+          <!-- Entity filter -->
+          <div class="entity-filter">
+            <label class="entity-label" for="entitiesSelect">Entity:</label>
+            <app-pr-multi-select
+              #entitiesSelect
+              id="entitiesSelect"
+              [options]="initiativesService.allInitiatives()"
+              optionLabel="official_code"
+              optionValue="id"
+              placeholder="All"
+              (selectOptionEvent)="getUsers()"
+              [ngModel]="selectedEntities()"
+              [required]="false"></app-pr-multi-select>
+          </div>
         </div>
 
         <!-- Clear filters button -->
@@ -89,17 +93,6 @@
       <!-- Actions group -->
       <div class="actions-group">
         <app-pr-button text="Add a user" icon="add_circle" colorType="primary" (clickEvent)="onAddUser()"></app-pr-button>
-
-        <!-- <button
-          class="info-button p-button p-button-secondary p-button-icon-only"
-          (click)="onShowInfo()"
-          [style]="{ backgroundColor: '#6366f1', color: '#fff' }"
-          pTooltip="Information"
-          tooltipPosition="top">
-          <i class="pi pi-info-circle"></i>
-        </button>
-
-        <app-pr-button text="Export data" icon="file_download" colorType="primary" (clickEvent)="onExportData()"></app-pr-button> -->
       </div>
     </div>
   </div>
@@ -113,7 +106,12 @@
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
-      responsiveLayout="scroll">
+      responsiveLayout="scroll"
+      [style]="{
+        'min-width': '200px',
+        'max-width': this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 365px)' : 'calc(100vw - 178px)',
+        transition: 'max-width 0.3s ease-in-out'
+      }">
       <ng-template pTemplate="header">
         <tr>
           @for (column of columns; track column.key) {
