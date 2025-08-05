@@ -189,6 +189,14 @@ export class ManageUserModalComponent {
     }));
   }
 
+  removeUser(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      displayName: '',
+      email: ''
+    }));
+  }
+
   onPermissionsChange(role_platform: number): void {
     this.addUserForm.update(form => ({
       ...form,

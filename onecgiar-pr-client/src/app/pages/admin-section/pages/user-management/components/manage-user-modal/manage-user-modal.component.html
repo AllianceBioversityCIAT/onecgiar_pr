@@ -44,7 +44,11 @@
       @if (addUserForm().is_cgiar && addUserForm().email) {
         <div class="form-field">
           <div class="field-label">Selected user:</div>
-          <div class="selected-user-display">{{ addUserForm().displayName }}</div>
+          <div class="selected-user-display">
+            {{ addUserForm().displayName }}
+
+            <i class="pi pi-times remove-user-btn" (click)="removeUser()"></i>
+          </div>
         </div>
       }
 
