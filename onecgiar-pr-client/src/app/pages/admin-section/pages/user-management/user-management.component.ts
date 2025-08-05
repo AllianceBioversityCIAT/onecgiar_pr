@@ -15,6 +15,7 @@ import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
+import { MultiSelectModule } from 'primeng/multiselect';
 
 interface UserColumn {
   label: string;
@@ -45,7 +46,8 @@ interface CgiarOption {
     DialogModule,
     OverlayPanelModule,
     CustomFieldsModule,
-    ManageUserModalComponent
+    ManageUserModalComponent,
+    MultiSelectModule
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -145,12 +147,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
-    this.getUsers();
-  }
-
-  // Method to handle entities filter changes
-  onEntitiesChange(value: any[]) {
-    this.selectedEntities.set(value);
     this.getUsers();
   }
 

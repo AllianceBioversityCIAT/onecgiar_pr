@@ -70,16 +70,17 @@
           <!-- Entity filter -->
           <div class="entity-filter">
             <label class="entity-label" for="entitiesSelect">Entity:</label>
-            <app-pr-multi-select
+            <p-multiSelect
               #entitiesSelect
               id="entitiesSelect"
               [options]="initiativesService.allInitiatives()"
+              [(ngModel)]="selectedEntities"
               optionLabel="official_code"
-              optionValue="id"
               placeholder="All"
-              (selectOptionEvent)="getUsers()"
+              (onChange)="getUsers()"
               [ngModel]="selectedEntities()"
-              [required]="false"></app-pr-multi-select>
+              [required]="false"
+              [style]="{ width: '100%', height: '38px' }"></p-multiSelect>
           </div>
         </div>
 
