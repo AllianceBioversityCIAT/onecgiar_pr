@@ -1,7 +1,8 @@
 .local_container {
-  width: calc(100% - 40px) !important;
   padding: 30px 30px;
   margin: 20px 20px 50px 20px !important;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
 
   font-family:
     'Inter',
@@ -34,7 +35,6 @@
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: help;
@@ -176,20 +176,27 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
+    gap: 15px;
+    flex-wrap: nowrap;
 
     .filters-group {
-      display: flex;
-      align-items: flex-start;
-      gap: 24px;
-      flex-wrap: nowrap; // Important: filters don't wrap
+      display: grid;
+      grid-template-columns: 1fr 100px;
+      gap: 15px;
+      width: 100%;
+
+      .filters-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+      }
 
       .search-container {
         display: flex;
         flex-direction: column;
         gap: 8px;
         flex: 1;
-        min-width: 200px;
+        width: 100%;
 
         .search-label {
           font-size: 14px;
@@ -214,7 +221,6 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 180px;
 
         .status-label,
         .cgiar-label,
@@ -232,7 +238,6 @@
       }
 
       .clear-filter {
-        min-width: 150px;
         margin-top: -6px;
       }
     }
@@ -252,7 +257,7 @@
   box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 
   .counter {
@@ -285,7 +290,7 @@
     border-bottom: 1px solid #e5e7eb;
   }
 
-  .p-datatable-thead>tr>th {
+  .p-datatable-thead > tr > th {
     background: #374151 !important;
     color: white !important;
     font-weight: 600;
@@ -312,14 +317,14 @@
     }
   }
 
-  .p-datatable-tbody>tr {
+  .p-datatable-tbody > tr {
     transition: background-color 0.2s ease;
 
     &:hover {
       background-color: #f9fafb !important;
     }
 
-    >td {
+    > td {
       padding: 8px 16px;
       border-bottom: 1px solid #f3f4f6;
       font-size: 14px;
@@ -334,11 +339,16 @@
     }
   }
 
-  .p-datatable-emptymessage>td {
+  .p-datatable-emptymessage > td {
     text-align: center;
     padding: 24px 16px;
     color: #6b7280;
     font-style: italic;
+  }
+
+  .p-datatable-thead > tr > th:last-child,
+  .p-datatable-tbody > tr > td:last-child {
+    text-align: center !important;
   }
 }
 
@@ -392,21 +402,6 @@
   }
 }
 
-// Single clean responsive rule
-@media (max-width: 1300px) {
-  .controls-section {
-    .controls-row {
-      flex-direction: column;
-      gap: 0px; // No gap between groups when vertical
-
-      .actions-group {
-        align-self: flex-start; // Align to left
-        margin-top: 0px; // Remove top margin
-      }
-    }
-  }
-}
-
 // Mobile adjustments
 @media (max-width: 768px) {
   .local_container {
@@ -422,12 +417,6 @@
 
         .search-container .p-input-icon-left {
           width: 100%;
-        }
-
-        .status-filter,
-        .cgiar-filter,
-        .clear-filter {
-          min-width: auto;
         }
       }
 
@@ -490,14 +479,5 @@
   // Reduced opacity for inactive users - only affects toggle button (second button)
   &.inactive-user .action-btn-toggle .material-icons-round {
     opacity: 0.4;
-  }
-}
-
-// Make Actions column centered
-::ng-deep .user-table {
-
-  .p-datatable-thead>tr>th:last-child,
-  .p-datatable-tbody>tr>td:last-child {
-    text-align: center !important;
   }
 }
