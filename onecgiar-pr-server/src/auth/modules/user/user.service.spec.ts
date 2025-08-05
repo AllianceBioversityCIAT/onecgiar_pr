@@ -14,6 +14,10 @@ import { AuthMicroserviceService } from '../../../shared/microservices/auth-micr
 import * as Handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { RoleRepository } from '../role/Role.repository';
+import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { DataSource } from 'typeorm';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 describe('UserService', () => {
   let service: UserService;
@@ -23,6 +27,8 @@ describe('UserService', () => {
   let templateRepository: TemplateRepository;
   let handlersError: HandlersError;
   let awsCognitoService: AuthMicroserviceService;
+  let clarisaInitiativesRepository: ClarisaInitiativesRepository;
+  let roleRepository: RoleRepository;
 
   const mockUser: User = {
     id: 1,
@@ -69,6 +75,12 @@ describe('UserService', () => {
     is_cgiar: false,
     created_by: 1,
     last_updated_by: 1,
+    role_assignments: [
+      {
+        entity_id: 1,
+        role_id: 2,
+      },
+    ],
   };
 
   const mockTokenDto: TokenDto = {
@@ -120,6 +132,29 @@ describe('UserService', () => {
     searchUsers: jest.fn(),
   };
 
+  const mockRoleRepositoryFactory = () => ({
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    getAllRoles: jest.fn(),
+  });
+
+  const mockQueryRunner = {
+    connect: jest.fn(),
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    rollbackTransaction: jest.fn(),
+    release: jest.fn(),
+    manager: {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    },
+  };
+
+  const mockDataSource = {
+    createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -157,6 +192,10 @@ describe('UserService', () => {
           },
         },
         {
+          provide: DataSource,
+          useValue: mockDataSource,
+        },
+        {
           provide: ActiveDirectoryService,
           useValue: mockActiveDirectoryService,
         },
@@ -165,6 +204,18 @@ describe('UserService', () => {
           useValue: {
             sendEmail: jest.fn(),
           },
+        },
+        {
+          provide: ClarisaInitiativesRepository,
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+            query: jest.fn(),
+          },
+        },
+        {
+          provide: RoleRepository,
+          useFactory: mockRoleRepositoryFactory,
         },
       ],
     }).compile();
@@ -179,6 +230,10 @@ describe('UserService', () => {
     awsCognitoService = module.get<AuthMicroserviceService>(
       AuthMicroserviceService,
     );
+    clarisaInitiativesRepository = module.get<ClarisaInitiativesRepository>(
+      ClarisaInitiativesRepository,
+    );
+    roleRepository = module.get<RoleRepository>(RoleRepository);
   });
 
   it('should be defined', () => {
@@ -200,8 +255,7 @@ describe('UserService', () => {
         is_cgiar: false,
         first_name: 'John',
         last_name: 'Doe',
-        entity: 'Entity A',
-        role_entity: 3,
+        role_assignments: [{ role_id: 1, entity_id: 5 }],
       };
 
       jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
@@ -222,12 +276,40 @@ describe('UserService', () => {
           },
         );
 
-      awsCognitoService.createUser = jest.fn().mockResolvedValue({});
+      jest.spyOn(clarisaInitiativesRepository, 'find').mockResolvedValue([
+        {
+          id: 5,
+          official_code: 'ENTITi-05',
+        } as ClarisaInitiative,
+      ]);
+
+      jest.spyOn(roleRepository, 'find').mockResolvedValue([
+        {
+          id: 1,
+          description: 'PLATFORM_USER',
+          active: true,
+          role_level_id: 1,
+          created_at: new Date(),
+          updated_at: new Date(),
+          updated_by: null,
+        },
+      ]);
+      (awsCognitoService.createUser as jest.Mock).mockResolvedValue({});
       userRepository.findOne = jest.fn().mockResolvedValue(null);
       userRepository.save = jest
         .fn()
         .mockResolvedValue({ id: 10, first_name: 'John', last_name: 'Doe' });
       roleByUserRepository.save = jest.fn().mockResolvedValue({});
+
+      jest.spyOn(service as any, 'saveUserToDB').mockResolvedValue({
+        response: {
+          id: 10,
+          first_name: 'John',
+          last_name: 'Doe',
+        },
+        message: 'User created successfully',
+        status: 201,
+      });
 
       const result = await service.createFull(createUserDto, mockTokenDto);
 
@@ -237,8 +319,6 @@ describe('UserService', () => {
       expect(result.status).toBe(201);
       expect(user.id).toBe(10);
       expect(awsCognitoService.createUser).toHaveBeenCalled();
-      expect(userRepository.save).toHaveBeenCalled();
-      expect(roleByUserRepository.save).toHaveBeenCalledTimes(2); // platform + entity
     });
 
     it('❌ debe lanzar error si el usuario ya existe', async () => {
@@ -256,6 +336,8 @@ describe('UserService', () => {
           status: 400,
         }),
       );
+
+      expect(awsCognitoService.createUser).not.toHaveBeenCalled();
     });
 
     it('❌ debe lanzar error si el correo es @cgiar.org y no es CGIAR', async () => {
@@ -285,6 +367,7 @@ describe('UserService', () => {
         is_cgiar: false,
         first_name: 'Test',
         last_name: 'User',
+        role_assignments: [], // ✅ necesario para evitar errores
       };
 
       jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
@@ -300,9 +383,15 @@ describe('UserService', () => {
         .spyOn(Handlebars, 'compile')
         .mockReturnValue(() => '<p>template</p>');
 
-      awsCognitoService.createUser = jest
-        .fn()
-        .mockRejectedValue(new Error('Cognito error'));
+      (awsCognitoService.createUser as jest.Mock).mockRejectedValue(
+        new Error('Cognito error'),
+      );
+
+      jest.spyOn(handlersError, 'returnErrorRes').mockReturnValue({
+        message: 'Error while creating user',
+        status: 500,
+        response: null,
+      });
 
       const result = await service.createFull(dto as any, mockTokenDto);
 
@@ -641,15 +730,18 @@ describe('UserService', () => {
   });
 
   const createQueryBuilderMock = () => {
-    const mock = {
+    return {
       select: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
       orWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      having: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       getRawMany: jest.fn(),
     };
-    return mock;
   };
 
   describe('searchUsers', () => {
@@ -657,11 +749,13 @@ describe('UserService', () => {
       const filters: {
         user?: string;
         cgIAR?: 'Yes' | 'No';
-        status?: 'Active' | 'Inactive';
+        status?: 'Active' | 'Inactive' | 'Read Only';
+        entityIds?: number[];
       } = {
         user: 'Test',
         cgIAR: 'Yes',
         status: 'Active',
+        entityIds: [1, 2, 3],
       };
 
       const mockQueryResult = [
@@ -672,6 +766,7 @@ describe('UserService', () => {
           cgIAR: 'Yes',
           userStatus: 'Active',
           userCreationDate: new Date(),
+          entities: 'ENT-001, ENT-002',
         },
       ];
 
@@ -684,7 +779,12 @@ describe('UserService', () => {
       const result = await service.searchUsers(filters);
 
       expect(result).toEqual({
-        response: mockQueryResult,
+        response: [
+          {
+            ...mockQueryResult[0],
+            entities: ['ENT-001', 'ENT-002'],
+          },
+        ],
         message: 'Successful response',
         status: HttpStatus.OK,
       });

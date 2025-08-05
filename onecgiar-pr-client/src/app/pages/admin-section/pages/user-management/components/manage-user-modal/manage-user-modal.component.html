@@ -1,0 +1,190 @@
+<!-- Add User Modal -->
+<p-dialog
+  [header]="this.userActivatorMode() ? 'Activate user' : this.editingMode() ? 'Edit user' : 'Add user'"
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="onModalHide()"
+  styleClass="add-user-modal"
+  [style]="{ width: '600px' }">
+  @if (loadingUserRole()) {
+    <div class="loading-user-role">
+      <p-progressSpinner ariaLabel="Loading user role" styleClass="loading-user-role-spinner" />
+    </div>
+  } @else {
+    <div class="modal-content">
+      <!-- Is CGIAR Question -->
+      @if (!editingMode()) {
+        <div class="form-field">
+          <div class="field-label" id="cgiar-question-label">Is CGIAR?<span class="required">*</span></div>
+          <div class="cgiar-radio-group" role="radiogroup" aria-labelledby="cgiar-question-label">
+            <label class="radio-option">
+              <input type="radio" name="is-cgiar" [checked]="addUserForm().is_cgiar" (change)="onModalCgiarChange(true)" class="radio-input" />
+              <span class="radio-label">Yes</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="is-cgiar" [checked]="!addUserForm().is_cgiar" (change)="onModalCgiarChange(false)" class="radio-input" />
+              <span class="radio-label">No</span>
+            </label>
+          </div>
+        </div>
+      }
+      <!-- CGIAR User Search -->
+      @if (addUserForm().is_cgiar && !addUserForm().email) {
+        <div class="form-field">
+          @if (showUserSearchComponent()) {
+            <app-search-user-select #userSearchSelect (userSelected)="onUserSelect($event)"></app-search-user-select>
+          }
+        </div>
+      }
+
+      <!-- Selected User Display (Read-only) -->
+      @if (addUserForm().is_cgiar && addUserForm().email) {
+        <div class="form-field">
+          <div class="field-label">Selected user:</div>
+          <div class="selected-user-display">{{ addUserForm().displayName }}</div>
+        </div>
+      }
+
+      <!-- Non-CGIAR User Form -->
+      @if (!addUserForm().is_cgiar) {
+        <div>
+          <div class="form-row">
+            <div class="form-field half-width">
+              <label class="field-label" for="user-first-name"> Name:<span class="required">*</span> </label>
+              <input
+                [disabled]="editingMode()"
+                type="text"
+                pInputText
+                placeholder="Enter name"
+                [ngModel]="addUserForm().first_name"
+                (ngModelChange)="onNameChange($event)"
+                class="form-input"
+                id="user-first-name" />
+            </div>
+            <div class="form-field half-width">
+              <label class="field-label" for="user-last-name"> Last name:<span class="required">*</span> </label>
+              <input
+                [disabled]="editingMode()"
+                type="text"
+                pInputText
+                placeholder="Enter last name"
+                [ngModel]="addUserForm().last_name"
+                (ngModelChange)="onLastNameChange($event)"
+                class="form-input"
+                id="user-last-name" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label" for="user-email"> Email:<span class="required">*</span> </label>
+            <input
+              [disabled]="editingMode()"
+              type="email"
+              pInputText
+              placeholder="Enter Email"
+              [ngModel]="addUserForm().email"
+              (ngModelChange)="onEmailChange($event)"
+              class="form-input"
+              id="user-email" />
+          </div>
+        </div>
+      }
+
+      @if (addUserForm().email) {
+        <br />
+        <div class="form-field" style="margin-bottom: 0px">
+          <div class="field-label">Please select the user role(s):</div>
+        </div>
+
+        <div class="assignments-headers">
+          <div class="header-item">Entity</div>
+          <div class="header-item">Role</div>
+          <div class="header-item actions"></div>
+        </div>
+
+        @for (item of addUserForm().role_assignments; track $index) {
+          <div class="selects-item">
+            <div style="width: 45%">
+              <app-pr-select
+                [options]="entities()"
+                optionLabel="official_code"
+                optionValue="id"
+                placeholder="Select entity"
+                [ngModel]="item.entity_id"
+                (ngModelChange)="onRoleEntityChange($event, $index)"
+                [indexReference]="$index + 10"
+                [required]="false"></app-pr-select>
+            </div>
+
+            <div style="width: 45%">
+              <app-pr-select
+                [options]="getRolesService.roles()"
+                optionLabel="role_description"
+                optionValue="role_id"
+                placeholder="Select role"
+                [ngModel]="item.role_id"
+                (ngModelChange)="onRoleAssignmentChange($event, $index)"
+                [indexReference]="($index + 1) * 11"
+                [required]="false"></app-pr-select>
+            </div>
+
+            <div style="width: 10%" class="remove-button-container">
+              <button type="button" class="remove-role-btn" (click)="removeRoleAssignment($index)" title="Remove role">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+          <br />
+        }
+
+        <div class="add-role-assignment" (click)="addRoleAssignment()">
+          <i class="pi pi-plus-circle"></i>
+          {{ addUserForm().role_assignments.length ? 'Add other role' : 'Add role' }}
+        </div>
+      }
+
+      <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
+      @if ((addUserForm().is_cgiar && addUserForm().email) || !addUserForm().is_cgiar) {
+        <div>
+          <!-- Admin Permissions -->
+          <div class="form-field" [class.extra-margin-top]="!addUserForm().is_cgiar">
+            <app-pr-radio-button
+              label="Platform permissions"
+              [options]="adminPermissionsOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="addUserForm().role_platform"
+              (ngModelChange)="onPermissionsChange($event)"
+              [required]="true"
+              [verticalAlignment]="true">
+            </app-pr-radio-button>
+          </div>
+
+          <!-- Created By -->
+          <div class="form-field">
+            <div class="field-label">Created by</div>
+            <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <div class="modal-footer">
+      <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
+      <button
+        type="button"
+        class="save-btn"
+        [disabled]="
+          userActivatorMode() ? !isFormValid() || creatingUser() || this.addUserForm().role_assignments.length <= 0 : !isFormValid() || creatingUser()
+        "
+        (click)="manageUser()">
+        {{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
