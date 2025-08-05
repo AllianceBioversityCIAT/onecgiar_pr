@@ -145,7 +145,9 @@
    - Mock external services properly
 
 4. **Test Execution**:
-   - Run tests with `npm test -- --testPathPattern=[component-name]`
+   - **FOR SPECIFIC TESTS**: Run tests directly by file path: `npm test src/path/to/component.spec.ts`
+   - **AVOID** using `--testPathPattern` for specific tests to prevent running all tests and overloading the system
+   - **ONLY** use `--testPathPattern` when absolutely necessary for pattern-based filtering
    - Ensure all tests pass before committing
    - Fix any failing tests immediately
    - Don't skip or ignore broken tests

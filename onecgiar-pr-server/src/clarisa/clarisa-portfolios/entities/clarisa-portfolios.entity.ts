@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Version } from '../../../api/versioning/entities/version.entity';
+import { ClarisaInitiative } from '../../clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Entity('clarisa_portfolios')
 export class ClarisaPortfolios {
@@ -27,4 +28,7 @@ export class ClarisaPortfolios {
 
   @OneToMany(() => Version, (version) => version.obj_portfolio)
   obj_version: Version[];
+
+  @OneToMany(() => ClarisaInitiative, (initiative) => initiative.obj_portfolio)
+  initiatives: ClarisaInitiative[];
 }
