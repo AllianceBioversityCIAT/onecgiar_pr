@@ -3,7 +3,7 @@
   [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
   class="pr-field"
   [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
-  <div class="read-only" *ngSwitchCase="true" [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
+  <div class="text-secondary-400" *ngSwitchCase="true" [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
   <div class="p-fluid input_container" *ngSwitchCase="false">
     <textarea
       [rows]="rows"

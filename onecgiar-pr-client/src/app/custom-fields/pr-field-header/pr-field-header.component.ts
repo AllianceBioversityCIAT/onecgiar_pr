@@ -2,10 +2,10 @@ import { Component, Input } from '@angular/core';
 import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
-    selector: 'app-pr-field-header',
-    templateUrl: './pr-field-header.component.html',
-    styleUrls: ['./pr-field-header.component.scss'],
-    standalone: false
+  selector: 'app-pr-field-header',
+  templateUrl: './pr-field-header.component.html',
+  styleUrls: ['./pr-field-header.component.scss'],
+  standalone: false
 })
 export class PrFieldHeaderComponent {
   @Input() simpleStyle: boolean;
@@ -21,6 +21,6 @@ export class PrFieldHeaderComponent {
   constructor(public rolesSE: RolesService) {}
 
   get descriptionLabel() {
-    return this.showDescriptionLabel && !this.rolesSE.readOnly ? `<strong class="description_header">Description:</strong>` : '';
+    return this.showDescriptionLabel && !this.rolesSE.readOnly ? `<strong class="mr-5 font-weight-600 text-black">Description:</strong>` : '';
   }
 }

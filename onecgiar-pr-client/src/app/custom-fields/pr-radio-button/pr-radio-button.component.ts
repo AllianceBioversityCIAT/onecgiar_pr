@@ -3,17 +3,17 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 @Component({
-    selector: 'app-pr-radio-button',
-    templateUrl: './pr-radio-button.component.html',
-    styleUrls: ['./pr-radio-button.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrRadioButtonComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-radio-button',
+  templateUrl: './pr-radio-button.component.html',
+  styleUrls: ['./pr-radio-button.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrRadioButtonComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() options: any;
@@ -36,7 +36,10 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
-  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
     return this._value;
@@ -89,7 +92,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   get valueName() {
     const optionFinded = this.options.find((option: any) => option[this.optionValue] == this.value);
     if (optionFinded) return optionFinded[this.optionLabel];
-    return "<div class='not_provided_color'>Not provided</div>";
+    return "<div class='text-red-100 italic'>Not provided</div>";
   }
 
   setAnswerTextToNull(option) {

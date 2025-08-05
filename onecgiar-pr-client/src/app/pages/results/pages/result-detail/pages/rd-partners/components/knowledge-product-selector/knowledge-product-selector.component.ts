@@ -6,10 +6,10 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { UnmappedMQAPInstitutionDto } from '../../models/partnersBody';
 
 @Component({
-    selector: 'app-knowledge-product-selector',
-    templateUrl: './knowledge-product-selector.component.html',
-    styleUrls: ['./knowledge-product-selector.component.scss'],
-    standalone: false
+  selector: 'app-knowledge-product-selector',
+  templateUrl: './knowledge-product-selector.component.html',
+  styleUrls: ['./knowledge-product-selector.component.scss'],
+  standalone: false
 })
 export class KnowledgeProductSelectorComponent {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
@@ -46,7 +46,7 @@ export class KnowledgeProductSelectorComponent {
     const confidenceLevel = partner.result_kp_mqap_institution_object.confidant;
 
     if (partner.is_predicted) {
-      return `The confidence level for the predicted match is <span class="confidenceLevel">${confidenceLevel}%</span>. Feel free to select a different partner only if necessary.`;
+      return `The confidence level for the predicted match is <span class="text-blue-500 font-weight-600">${confidenceLevel}%</span>. Feel free to select a different partner only if necessary.`;
     } else {
       return `We couldn't find a matching partner for this author affiliation. Please check the partners list or <a class='open_route alert-event'>request</a> to add it if needed.`;
     }

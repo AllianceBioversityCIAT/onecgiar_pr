@@ -358,3 +358,50 @@ a {
   font-weight: 500 !important;
   padding: 0.375rem 0.75rem !important;
 }
+
+.init-mapped {
+  background-color: var(--pr-color-primary-300);
+  padding: 0px 7px;
+  border-radius: 3px;
+  margin-right: 5px;
+}
+
+@function generate-margin-right($value) {
+  @return #{$value}px;
+}
+
+@mixin generate-margin-right-classes($max: 100) {
+  @for $i from 1 through $max {
+    .m-#{$i} {
+      margin: generate-margin-right($i);
+    }
+
+    .mr-#{$i} {
+      margin-right: generate-margin-right($i);
+    }
+
+    .ml-#{$i} {
+      margin-left: generate-margin-right($i);
+    }
+
+    .mt-#{$i} {
+      margin-top: generate-margin-right($i);
+    }
+
+    .mb-#{$i} {
+      margin-bottom: generate-margin-right($i);
+    }
+
+    .mx-#{$i} {
+      margin-left: generate-margin-right($i);
+      margin-right: generate-margin-right($i);
+    }
+
+    .my-#{$i} {
+      margin-top: generate-margin-right($i);
+      margin-bottom: generate-margin-right($i);
+    }
+  }
+}
+
+@include generate-margin-right-classes(100);

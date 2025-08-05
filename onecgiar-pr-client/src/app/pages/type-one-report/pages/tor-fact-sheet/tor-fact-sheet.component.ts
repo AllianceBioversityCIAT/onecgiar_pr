@@ -3,10 +3,10 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { TypeOneReportService } from '../../type-one-report.service';
 
 @Component({
-    selector: 'app-tor-fact-sheet',
-    templateUrl: './tor-fact-sheet.component.html',
-    styleUrls: ['./tor-fact-sheet.component.scss'],
-    standalone: false
+  selector: 'app-tor-fact-sheet',
+  templateUrl: './tor-fact-sheet.component.html',
+  styleUrls: ['./tor-fact-sheet.component.scss'],
+  standalone: false
 })
 export class TorFactSheetComponent implements OnInit {
   loadingData = false;
@@ -74,16 +74,16 @@ export class TorFactSheetComponent implements OnInit {
         this.concatGeo(data);
         this.data[8].value = data?.climateGenderScore[0]?.adaptation_score
           ? `<strong>${data?.climateGenderScore[0]?.adaptation_score}</strong><br>${data?.climateGenderScore[0]?.adaptation_desc}`
-          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
+          : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>';
         this.data[9].value = data.climateGenderScore[0]?.mitigation_score
           ? `<strong>${data.climateGenderScore[0]?.mitigation_score}</strong><br>${data.climateGenderScore[0]?.mitigation_desc}`
-          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
+          : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>';
         this.data[10].value = data.climateGenderScore[0]?.gender_score
           ? `<strong>Score ${data.climateGenderScore[0]?.gender_score}</strong><br>${data.climateGenderScore[0]?.gender_desc}`
-          : '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong>';
+          : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Gender equity marker score</strong>';
         this.data[11].value = data?.web_page
           ? `<a href="${data?.web_page}" target="_blank">${data?.web_page}</a>`
-          : '<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>';
+          : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have Links to webpage</strong>';
         this.loadingData = false;
       });
   }
@@ -113,12 +113,12 @@ export class TorFactSheetComponent implements OnInit {
     this.data[7].value += '<strong>Regions:</strong><br>';
     this.data[7].value += regions
       ? `${regions}<br>`
-      : '<div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div>';
+      : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have regions targeted in the proposal</div>';
 
     this.data[7].value += '<br><strong>Countries:</strong><br>';
     this.data[7].value += countries
       ? `${countries}<br>`
-      : '<div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
+      : '<div class="pr-body-2 italic text-accent-5">This Initiative does not have countries targeted in the proposal</div>';
   }
 
   concatEoiOutcome(data) {
@@ -130,7 +130,7 @@ export class TorFactSheetComponent implements OnInit {
         })
         .join('');
     } else {
-      this.data[8].value = `<div class="no-data-text-format">This Initiative does not have a Measurable three-year outcome</div>`;
+      this.data[8].value = `<div class="pr-body-2 italic text-accent-5">This Initiative does not have a Measurable three-year outcome</div>`;
     }
   }
 }

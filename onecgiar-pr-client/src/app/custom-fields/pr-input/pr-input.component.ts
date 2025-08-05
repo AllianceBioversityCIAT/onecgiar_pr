@@ -5,17 +5,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-pr-input',
-    templateUrl: './pr-input.component.html',
-    styleUrls: ['./pr-input.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrInputComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-input',
+  templateUrl: './pr-input.component.html',
+  styleUrls: ['./pr-input.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrInputComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrInputComponent implements ControlValueAccessor {
   @Input() placeholder: string;
@@ -43,9 +43,13 @@ export class PrInputComponent implements ControlValueAccessor {
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
-  public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
+  public notProvidedText = "<div class='text-red-100 italic'>Not provided</div>";
 
-  constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  constructor(
+    private readonly wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
     if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
@@ -64,7 +68,9 @@ export class PrInputComponent implements ControlValueAccessor {
   }
 
   get badLink() {
-    const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/\S*)?$/i);
+    const regex = new RegExp(
+      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/\S*)?$/i
+    );
 
     const value = this.value ? this.value.trim() : '';
 

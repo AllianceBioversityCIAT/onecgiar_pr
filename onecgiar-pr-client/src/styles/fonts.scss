@@ -1,3 +1,4 @@
+@use 'sass:map';
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 html,
@@ -16,46 +17,6 @@ body {
   cursor: pointer;
 }
 
-.confidenceLevel {
-  font-weight: 600;
-  color: var(--pr-color-blue-500);
-}
-
-.description_header {
-  font-weight: 600;
-  color: var(--pr-color-black) !important;
-  margin-right: 5px !important;
-}
-
-.read-only {
-  color: var(--pr-color-secondary-400);
-}
-
-.not_provided_color {
-  color: var(--pr-color-red-100) !important;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.init-mapped {
-  color: var(--pr-color-white);
-  font-style: italic;
-  font-size: 0.8em;
-  background-color: var(--pr-color-primary-300);
-  padding: 0px 7px;
-  border-radius: 3px;
-}
-
-.no-data-text-format {
-  font-style: italic;
-  color: var(--pr-color-accents-5);
-}
-
-.tor-fact-desc {
-  font-style: italic;
-  color: var(--pr-color-blue-500);
-}
-
 @media only screen and (max-width: 1400px) {
   html {
     font-size: 12px;
@@ -68,62 +29,135 @@ body {
   }
 }
 
-.tor_sub_title {
-  font-weight: 600;
-  font-size: 1.2em;
-  margin: 5px 0px 10px 0px;
+// Improved and DRY typography system for PR app
+
+// Centralized typography map for scalable, maintainable font styles
+$pr-typography: (
+  'h1': (
+    weight: 900,
+    size: 20px,
+    line: 60px,
+    letter: 0,
+    case: none
+  ),
+  'h2': (
+    weight: 700,
+    size: 18px,
+    line: 51px,
+    letter: 0,
+    case: none
+  ),
+  'h3': (
+    weight: 600,
+    size: 16px,
+    line: 42px,
+    letter: 0,
+    case: none
+  ),
+  'h4': (
+    weight: 500,
+    size: 14px,
+    line: normal,
+    letter: 0,
+    case: none
+  ),
+  'body-1': (
+    weight: 400,
+    size: 14px,
+    line: 21px,
+    letter: 0,
+    case: none
+  ),
+  'body-2': (
+    weight: 400,
+    size: 12px,
+    line: 18px,
+    letter: 0,
+    case: none
+  ),
+  'body-3': (
+    weight: 400,
+    size: 10px,
+    line: 15px,
+    letter: 0,
+    case: none
+  ),
+  'body-4': (
+    weight: 400,
+    size: 8px,
+    line: 12px,
+    letter: 0,
+    case: none
+  ),
+  'body-5': (
+    weight: 400,
+    size: 6px,
+    line: 9px,
+    letter: 0,
+    case: none
+  )
+);
+
+@mixin pr-typography($type) {
+  $style: map.get($pr-typography, $type);
+  @if $style {
+    font-family: 'Poppins', sans-serif;
+    font-weight: map.get($style, weight);
+    font-size: map.get($style, size);
+    line-height: map.get($style, line);
+    letter-spacing: map.get($style, letter);
+    text-transform: map.get($style, case);
+  } @else {
+    @warn "Unknown typography type: #{$type}";
+  }
 }
 
-@mixin generate-typography($family, $weight, $size, $line-height: 1, $letter-spacing: 0, $case: none) {
-  font-family: $family;
-  font-weight: $weight;
-  font-size: $size;
-  line-height: $line-height;
-  letter-spacing: $letter-spacing;
-  text-transform: $case;
+@each $type, $style in $pr-typography {
+  .pr-#{$type} {
+    @include pr-typography($type);
+  }
 }
 
-// H1 - Principal Title
-.pr-h1 {
-  @include generate-typography('Poppins', 900, 20px, 60px, 0px);
+@each $fontStyle in (italic, normal) {
+  .#{$fontStyle} {
+    font-style: $fontStyle;
+  }
 }
 
-// H2 - Subtitle
-.pr-h2 {
-  @include generate-typography('Poppins', 700, 18px, 51px, 0px);
+@each $cursor in (pointer, default, help, wait, move, not-allowed, none) {
+  .cursor-#{$cursor} {
+    cursor: $cursor;
+  }
 }
 
-// H3 - Context Title
-.pr-h3 {
-  @include generate-typography('Poppins', 600, 16px, 42px, 0px);
+// Colors
+
+$pr-color-types: ('primary', 'secondary', 'neutral', 'red', 'yellow', 'green', 'blue', 'orange');
+
+$pr-color-steps: (25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950);
+
+@each $color in $pr-color-types {
+  @each $i in $pr-color-steps {
+    .text-#{$color}-#{$i} {
+      color: var(--pr-color-#{$color}-#{$i});
+    }
+  }
 }
 
-// H4 - Action Title
-.pr-h4 {
-  @include generate-typography('Poppins', 500, 14px, normal, 0px);
+@for $i from 1 through 8 {
+  .text-accent-#{$i} {
+    color: var(--pr-color-accents-#{$i});
+  }
 }
 
-// Body 1 - Principal Text
-.pr-body-1 {
-  @include generate-typography('Poppins', 400, 14px, 21px, 0px);
+@each $color in ('black', 'white') {
+  .text-#{$color} {
+    color: var(--pr-color-#{$color});
+  }
 }
 
-// Body 2 - Secondary Text
-.pr-body-2 {
-  @include generate-typography('Poppins', 400, 12px, 18px, 0px);
-}
-
-// Body 3 - Secondary Text
-.pr-body-3 {
-  @include generate-typography('Poppins', 400, 10px, 15px, 0px);
-}
-
-// Body 4 - Secondary Text
-.pr-body-4 {
-  @include generate-typography('Poppins', 400, 8px, 12px, 0px);
-}
-
-// Body 5 - Secondary Text
-.pr-body-5 {
-  @include generate-typography('Poppins', 400, 6px, 9px, 0px);
+@each $i in (100, 200, 300, 400, 500, 600, 700, 800, 900, 950) {
+  .font-weight-#{$i} {
+    font-weight: $i;
+  }
 }

@@ -7,7 +7,7 @@
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)"
         [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         class="pr-input position-relative" [style]="InlineStyles">
-        <div class="read-only" *ngSwitchCase="true" [innerHtml]="this.type == 'link'? aTag(value):(value == '0' ? 0 : ((value|yesOrNotByBoolean)) ||this.noDataText ||
+        <div class="text-secondary-400" *ngSwitchCase="true" [innerHtml]="this.type == 'link'? aTag(value):(value == '0' ? 0 : ((value|yesOrNotByBoolean)) ||this.noDataText ||
         (this.required ? this.notProvidedText : 'Not applicable'))">
         </div>
         <div class="p-fluid input_container" *ngSwitchCase="false">
