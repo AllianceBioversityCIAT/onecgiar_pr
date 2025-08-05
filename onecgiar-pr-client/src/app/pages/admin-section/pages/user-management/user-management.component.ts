@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -15,8 +15,6 @@ import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 
-import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
-import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 
@@ -59,7 +57,6 @@ interface CgiarOption {
     CustomFieldsModule,
     IconFieldModule,
     InputIconModule,
-    SearchUserSelectComponent,
     ManageUserModalComponent
   ],
   templateUrl: './user-management.component.html',

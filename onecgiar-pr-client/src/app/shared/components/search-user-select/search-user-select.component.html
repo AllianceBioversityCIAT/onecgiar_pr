@@ -1,7 +1,7 @@
 <div class="select-container">
   <label class="select-label" for="user-select-dropdown"> Select a user: <span class="required">*</span> </label>
 
-  <p-dropdown
+  <p-select
     id="user-select-dropdown"
     [options]="options()"
     [(ngModel)]="selectedUser"
@@ -16,17 +16,16 @@
     <!-- Custom Filter Template -->
     <ng-template pTemplate="filter" let-options="options">
       <div class="custom-filter-container" (click)="$event.stopPropagation()">
-        <div class="p-inputgroup">
-          <span class="p-inputgroup-addon">
-            <i class="pi pi-search"></i>
-          </span>
+        <p-iconfield [style]="{ width: '100%' }">
+          <p-inputicon styleClass="pi pi-search" />
           <input
             type="text"
             pInputText
             placeholder="Search users... (min 3 characters)"
             [(ngModel)]="filterValue"
-            (keyup)="customFilterFunction($event, options)" />
-        </div>
+            (keyup)="customFilterFunction($event, options)"
+            style="height: 38px; width: 100%" />
+        </p-iconfield>
         @if (filterValue) {
           <button pButton icon="pi pi-times" (click)="resetFilter(options)" severity="secondary" [text]="true" size="small"></button>
         }
@@ -63,7 +62,7 @@
         }
       </div>
     </ng-template>
-  </p-dropdown>
+  </p-select>
 </div>
 
 <!-- Expandable space INSTANT (no animation) -->

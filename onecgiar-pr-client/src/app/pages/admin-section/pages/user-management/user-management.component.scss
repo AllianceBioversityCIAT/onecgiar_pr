@@ -59,12 +59,12 @@
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
-    background-color: #c6cdf4; // Fixed background color
-    color: #5569dd; // Fixed text color
+    background-color: var(--pr-color-primary-25); // Fixed background color
+    color: var(--pr-color-primary-300); // Fixed text color
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 2px rgba(var(--pr-color-black), 0.1);
     min-height: 20px;
     white-space: nowrap; // Prevent text wrapping
 
@@ -76,7 +76,7 @@
   .view-more-btn {
     background: none;
     border: none;
-    color: #5569dd; // Match entity text color
+    color: var(--pr-color-primary-300); // Match entity text color
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -88,7 +88,7 @@
     flex-shrink: 0; // Don't shrink the button
 
     &:hover {
-      background-color: #c6cdf4; // Match entity background on hover
+      background-color: var(--pr-color-primary-25); // Match entity background on hover
       text-decoration: none;
     }
 
@@ -99,7 +99,7 @@
 
   .no-entities {
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--pr-color-secondary-200);
     font-style: italic;
   }
 }
@@ -111,9 +111,9 @@
   .overlay-title {
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
+    color: var(--pr-color-secondary-400);
     margin-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--pr-color-accents-2);
     padding-bottom: 8px;
   }
 
@@ -131,12 +131,12 @@
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
-      background-color: #c6cdf4;
-      color: #5569dd;
+      background-color: var(--pr-color-primary-25);
+      color: var(--pr-color-primary-300);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border: none;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 2px rgba(var(--pr-color-black), 0.1);
       min-height: 20px;
       white-space: nowrap;
 
@@ -350,10 +350,10 @@
 }
 
 .status-read-only {
-  color: #6b7280;
+  color: var(--pr-color-secondary-200);
   font-weight: 500;
   padding: 4px 8px;
-  background-color: #f3f4f6;
+  background-color: var(--pr-color-accents-1);
   border-radius: 6px;
   font-size: 12px;
   text-transform: uppercase;
