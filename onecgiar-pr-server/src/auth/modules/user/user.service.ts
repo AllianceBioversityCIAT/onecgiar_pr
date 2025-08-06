@@ -37,6 +37,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
+  private readonly _logger: Logger = new Logger(UserService.name);
   private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
@@ -1177,8 +1178,11 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      this._logger.error(
+        `An error occurred while updating user role: ${error}`,
+      );
       throw new InternalServerErrorException(
-        'An error occurred while updating user roles',
+        `An error occurred while updating user role: ${error}`,
       );
     }
   }
