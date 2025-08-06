@@ -283,11 +283,6 @@ export class AuthService {
           message: 'User not found or could not be created/updated.',
           status: HttpStatus.NOT_FOUND,
         };
-      } else if (!user.active) {
-        throw {
-          message: 'User is inactive. Please contact support.',
-          status: HttpStatus.FORBIDDEN,
-        };
       }
 
       await this._userRepository.update(

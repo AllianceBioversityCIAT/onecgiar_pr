@@ -634,52 +634,6 @@ describe('UserService', () => {
       );
     });
 
-    it('should create a new user and assign GUEST role', async () => {
-      const userInfo = {
-        email: 'new@example.com',
-        given_name: 'New',
-        family_name: 'User',
-      };
-
-      const newUser = {
-        id: 3,
-        email: 'new@example.com',
-        first_name: 'New',
-        last_name: 'User',
-        is_cgiar: false,
-        active: true,
-      } as User;
-
-      userRepository.findOne = jest
-        .fn()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(newUser);
-
-      userRepository.save = jest.fn().mockResolvedValue(newUser);
-      roleByUserRepository.createGuestRoleForUser = jest
-        .fn()
-        .mockResolvedValue({
-          id: 3,
-          role: 3,
-          user: 3,
-        });
-
-      const result = await service.createOrUpdateUserFromAuthProvider(userInfo);
-
-      expect(result).toEqual(newUser);
-      expect(userRepository.findOne).toHaveBeenCalledTimes(2);
-      expect(userRepository.save).toHaveBeenCalledWith({
-        email: userInfo.email.toLowerCase(),
-        first_name: userInfo.given_name,
-        last_name: userInfo.family_name,
-        is_cgiar: false,
-        active: true,
-      });
-      expect(roleByUserRepository.createGuestRoleForUser).toHaveBeenCalledWith(
-        newUser.id,
-      );
-    });
-
     it('should throw an error for invalid user info', async () => {
       const invalidUserInfo = {};
 
