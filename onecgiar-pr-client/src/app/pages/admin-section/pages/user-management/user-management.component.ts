@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
@@ -64,6 +64,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
+  @ViewChild('userTable') userTable!: Table;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -108,6 +109,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           });
           this.users.set(res.response);
           this.loading.set(false);
+          this.userTable?.reset();
         },
         error: error => {
           this.loading.set(false);
@@ -200,8 +202,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Status filter options
   statusOptions: StatusOption[] = [
     { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' },
-    { label: 'Read Only', value: 'Read Only' }
+    { label: 'Inactive', value: 'Inactive' }
   ];
 
   isCGIAROptions: CgiarOption[] = [
