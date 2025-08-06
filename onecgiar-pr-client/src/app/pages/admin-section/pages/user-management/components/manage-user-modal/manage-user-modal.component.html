@@ -178,15 +178,21 @@
 
   <ng-template pTemplate="footer">
     <div class="modal-footer">
-      <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
+      <button type="button" class="cancel-btn" (click)="onCancelAddUser()" [disabled]="isLoading()" [ngClass]="{ globalDisabled: isLoading() }">
+        Cancel
+      </button>
       <button
         type="button"
         class="save-btn"
         [disabled]="
-          userActivatorMode() ? !isFormValid() || creatingUser() || this.addUserForm().role_assignments.length <= 0 : !isFormValid() || creatingUser()
+          userActivatorMode() ? !isFormValid() || this.addUserForm().role_assignments.length <= 0 || isLoading() : !isFormValid() || isLoading()
         "
+        [ngClass]="{ globalDisabled: isLoading() }"
         (click)="manageUser()">
         {{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}
+        @if (isLoading()) {
+          <i class="pi pi-spin pi-spinner"></i>
+        }
       </button>
     </div>
   </ng-template>

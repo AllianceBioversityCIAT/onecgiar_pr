@@ -109,7 +109,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           });
           this.users.set(res.response);
           this.loading.set(false);
-          this.userTable?.reset();
         },
         error: error => {
           this.loading.set(false);
@@ -131,6 +130,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.searchTimeout = setTimeout(() => {
       this.searchQuery.set(value); // Update search query after timeout
       this.getUsers(); // Execute API call
+      this.userTable?.reset();
     }, 1000);
   }
 
@@ -144,12 +144,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onStatusChange(value: string) {
     this.selectedStatus.set(value);
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to clear all filters
@@ -186,6 +188,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
     // Reload data without filters
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Column configuration
