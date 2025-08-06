@@ -1076,11 +1076,11 @@ export class UserService {
 
       logger.log(`Checking if user exists: ${email}`);
       const user = await this._userRepository.findOne({
-        where: { email, active: true },
+        where: { email },
         relations: ['obj_role_by_user'],
       });
 
-      if (user) {
+      if (user && user.active === true) {
         logger.log(`User found in database: ${email}`);
         await this._userRepository.update(
           {
@@ -1092,7 +1092,7 @@ export class UserService {
           },
         );
         return user;
-      } else if (user.active === false) {
+      } else if (user && user.active === false) {
         logger.log(`User found but inactive: ${email}`);
         throw new Error('User is inactive. Please contact support.');
       }
@@ -1181,11 +1181,19 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
       this._logger.error(
-        `An error occurred while updating user role: ${error}`,
+        `An unexpected error occurred while updating user role: ${error}`,
       );
       throw new InternalServerErrorException(
-        `An error occurred while updating user role: ${error}`,
+        `An unexpected error occurred while updating user role: ${error.message}`,
       );
     }
   }

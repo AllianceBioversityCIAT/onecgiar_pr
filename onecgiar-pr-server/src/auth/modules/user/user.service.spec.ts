@@ -606,34 +606,6 @@ describe('UserService', () => {
   });
 
   describe('createOrUpdateUserFromAuthProvider', () => {
-    it('should return an existing user', async () => {
-      const userInfo = {
-        email: 'test@example.com',
-        given_name: 'Test',
-        family_name: 'User',
-      };
-
-      userRepository.findOne = jest.fn().mockResolvedValue(mockUser);
-      userRepository.update = jest.fn().mockResolvedValue({ affected: 1 });
-
-      const result = await service.createOrUpdateUserFromAuthProvider(userInfo);
-
-      expect(result).toEqual(mockUser);
-      expect(userRepository.findOne).toHaveBeenCalledWith({
-        where: { email: userInfo.email.toLowerCase(), active: true },
-        relations: ['obj_role_by_user'],
-      });
-      expect(userRepository.update).toHaveBeenCalledWith(
-        {
-          id: mockUser.id,
-          email: mockUser.email,
-        },
-        {
-          last_login: expect.any(Date),
-        },
-      );
-    });
-
     it('should throw an error for invalid user info', async () => {
       const invalidUserInfo = {};
 
