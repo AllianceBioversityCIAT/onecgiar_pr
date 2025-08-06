@@ -1092,6 +1092,9 @@ export class UserService {
           },
         );
         return user;
+      } else if (user.active === false) {
+        logger.log(`User found but inactive: ${email}`);
+        throw new Error('User is inactive. Please contact support.');
       }
 
       logger.log(`Creating new user from authentication provider: ${email}`);
