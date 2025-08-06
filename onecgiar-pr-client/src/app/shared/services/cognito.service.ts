@@ -72,12 +72,22 @@ export class CognitoService {
       },
       error: err => {
         console.error(err);
-        this.customAlertService.show({
-          id: 'loginAlert',
-          title: 'Oops!',
-          description: 'Error while trying to login with Azure AD',
-          status: 'warning'
-        });
+
+        this.customAlertService.show(
+          {
+            id: 'loginAlert',
+            title: 'Oops!',
+            description: err?.error?.message?.includes('User is inactive')
+              ? 'User is inactive. Please contact support.'
+              : 'Error while trying to login with Azure AD',
+            status: 'warning',
+            confirmText: 'Return to login',
+            hideCancelButton: true
+          },
+          () => {
+            this.router.navigate(['/login']);
+          }
+        );
         this.isLoadingAzureAd.set(false);
       }
     });

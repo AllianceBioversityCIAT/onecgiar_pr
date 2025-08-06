@@ -101,19 +101,25 @@ describe('CognitoService', () => {
 
     it('should handle error during code validation', () => {
       const mockCode = 'test-code';
-      const mockError = new Error('Validation failed');
+      const mockError = { error: { message: 'Some error' } };
       service.activatedRoute.snapshot.queryParams = { code: mockCode };
       jest.spyOn(service.api.resultsSE, 'POST_validateCognitoCode').mockReturnValue(throwError(() => mockError));
       const alertSpy = jest.spyOn(service.customAlertService, 'show');
 
       service.validateCognitoCode();
 
-      expect(alertSpy).toHaveBeenCalledWith({
-        id: 'loginAlert',
-        title: 'Oops!',
-        description: 'Error while trying to login with Azure AD',
-        status: 'warning'
-      });
+      // Check only the first argument (object) for deep equality, and the second argument is a function
+      expect(alertSpy).toHaveBeenCalledWith(
+        {
+          id: 'loginAlert',
+          title: 'Oops!',
+          description: 'Error while trying to login with Azure AD',
+          confirmText: 'Return to login',
+          status: 'warning',
+          hideCancelButton: true
+        },
+        expect.any(Function)
+      );
       expect(service.isLoadingAzureAd()).toBe(false);
     });
   });

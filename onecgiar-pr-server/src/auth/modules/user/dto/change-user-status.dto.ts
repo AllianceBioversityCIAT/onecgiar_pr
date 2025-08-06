@@ -1,46 +1,45 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateUserDto } from './create-user.dto';
-import {
-  IsArray,
-  IsBoolean,
-  IsEmail,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateIf,
-  ValidateNested,
-} from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+  IsEmail,
+  ValidateIf,
+} from 'class-validator';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
-  @IsNotEmpty()
+export class ChangeUserStatusDto {
   @IsEmail()
   email: string;
 
-  @IsOptional()
   @IsBoolean()
-  force_swap?: boolean;
+  activate: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EntityRoleDto)
+  role_assignments?: EntityRoleDto[];
 
   @IsOptional()
   @IsNumber()
   role_platform?: number;
 
   @IsOptional()
-  @IsString()
-  first_name?: string;
+  @IsBoolean()
+  is_cgiar?: boolean;
 
   @IsOptional()
-  @IsString()
-  last_name?: string;
+  @IsNumber()
+  created_by?: number;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => RoleAssignmentDto)
-  role_assignments: RoleAssignmentDto[];
+  @IsOptional()
+  @IsNumber()
+  last_updated_by?: number;
 }
 
-export class RoleAssignmentDto {
+export class EntityRoleDto {
   @IsOptional()
   @IsNumber()
   rbu_id?: number;
