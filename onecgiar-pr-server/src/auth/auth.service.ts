@@ -278,13 +278,6 @@ export class AuthService {
       const user =
         await this._userService.createOrUpdateUserFromAuthProvider(userInfo);
 
-      if (!user) {
-        throw {
-          message: 'User not found or could not be created/updated.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
       await this._userRepository.update(
         {
           id: user.id,
