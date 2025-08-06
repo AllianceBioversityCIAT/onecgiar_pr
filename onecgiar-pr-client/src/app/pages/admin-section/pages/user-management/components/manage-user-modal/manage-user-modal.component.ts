@@ -49,7 +49,6 @@ export class ManageUserModalComponent {
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
 
   // Signals for modal state
-  creatingUser = signal<boolean>(false);
   showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
@@ -57,6 +56,7 @@ export class ManageUserModalComponent {
     role_assignments: [],
     activate: true
   });
+  isLoading = signal<boolean>(false);
 
   entities = computed(() => {
     const list: any[] = [];
@@ -211,6 +211,8 @@ export class ManageUserModalComponent {
   };
 
   onUpdateUserRoles(): void {
+    this.isLoading.set(true);
+
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
     this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform, first_name, last_name }).subscribe({
       next: res => {
@@ -223,6 +225,8 @@ export class ManageUserModalComponent {
   }
 
   onSaveUserActivator(): void {
+    this.isLoading.set(true);
+
     this.addUserForm.update(form => ({
       ...form,
       activate: true
@@ -240,7 +244,7 @@ export class ManageUserModalComponent {
   }
 
   onCreateUser(): void {
-    this.creatingUser.set(true);
+    this.isLoading.set(true);
 
     // Remove displayName from form data before sending to backend
     const formData = { ...this.addUserForm() };
@@ -265,6 +269,7 @@ export class ManageUserModalComponent {
     this.visible = false;
     this.visibleChange.emit(false);
     this.managedUser.emit();
+    this.isLoading.set(false);
 
     this.api.alertsFe.show({
       id,
@@ -275,6 +280,8 @@ export class ManageUserModalComponent {
   }
 
   private handleError(error: any, errorId: string, retryCallback: () => void): void {
+    this.isLoading.set(false);
+
     if (error.status === 409) {
       this.api.alertsFe.show(
         {
@@ -319,7 +326,7 @@ export class ManageUserModalComponent {
       status: 'success'
     });
 
-    this.creatingUser.set(false);
+    this.isLoading.set(false);
     this.resetAddUserForm(); // Reset form and clear user search
     this.managedUser.emit(); // Notify parent to refresh users list
   }
@@ -348,7 +355,7 @@ export class ManageUserModalComponent {
       });
     }
 
-    this.creatingUser.set(false);
+    this.isLoading.set(false);
   }
 
   onCancelAddUser(): void {
