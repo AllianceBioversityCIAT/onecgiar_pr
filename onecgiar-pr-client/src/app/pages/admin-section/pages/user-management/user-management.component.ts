@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
@@ -14,19 +14,13 @@ import { ResultsApiService } from '../../../../shared/services/api/results-api.s
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
+import { MultiSelectModule } from 'primeng/multiselect';
 
 interface UserColumn {
   label: string;
   key: string;
   width?: string;
-}
-
-interface User {
-  username: string;
-  email: string;
-  isCGIAR: string;
-  userCreationDate: string;
-  status: string;
 }
 
 interface StatusOption {
@@ -52,7 +46,8 @@ interface CgiarOption {
     DialogModule,
     OverlayPanelModule,
     CustomFieldsModule,
-    ManageUserModalComponent
+    ManageUserModalComponent,
+    MultiSelectModule
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -61,6 +56,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
+  dynamicPanelService = inject(DynamicPanelServiceService);
 
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
@@ -68,6 +64,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
+  @ViewChild('userTable') userTable!: Table;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -133,6 +130,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.searchTimeout = setTimeout(() => {
       this.searchQuery.set(value); // Update search query after timeout
       this.getUsers(); // Execute API call
+      this.userTable?.reset();
     }, 1000);
   }
 
@@ -146,18 +144,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onStatusChange(value: string) {
     this.selectedStatus.set(value);
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
     this.getUsers();
-  }
-
-  // Method to handle entities filter changes
-  onEntitiesChange(value: any[]) {
-    this.selectedEntities.set(value);
-    this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to clear all filters
@@ -194,6 +188,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
     // Reload data without filters
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Column configuration
@@ -210,8 +205,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Status filter options
   statusOptions: StatusOption[] = [
     { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' },
-    { label: 'Read Only', value: 'Read Only' }
+    { label: 'Inactive', value: 'Inactive' }
   ];
 
   isCGIAROptions: CgiarOption[] = [

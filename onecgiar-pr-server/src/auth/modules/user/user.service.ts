@@ -9,7 +9,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { DataSource, Brackets, In, IsNull, Not, QueryRunner } from 'typeorm';
+import { DataSource, Brackets, In, Not, QueryRunner } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { returnFormatUser } from './dto/return-create-user.dto';
@@ -37,6 +37,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
+  private readonly _logger: Logger = new Logger(UserService.name);
   private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
@@ -231,7 +232,6 @@ export class UserService {
         error?.message?.includes('exists');
 
       if (!isUserExistsError) {
-        console.error(error);
         throw {
           response: { error },
           message: 'Error while creating user',
@@ -283,7 +283,6 @@ export class UserService {
 
       let newUser: User;
 
-      
       if (user) {
         // Just in case the user exists (Deactivate / Activate / Update Roles) NOT to create a new user
         // changeStatus true? Then update the user status to active, if not, stay the same as before
@@ -321,12 +320,22 @@ export class UserService {
       }
 
       if (dto.role_platform) {
-        await this.updatePlatformRoles(queryRunner, newUser.id, currentUser.id, dto.role_platform);
+        await this.updatePlatformRoles(
+          queryRunner,
+          newUser.id,
+          currentUser.id,
+          dto.role_platform,
+        );
       }
 
       const hasAssignments = dto.role_assignments?.length > 0;
       if (hasAssignments) {
-        await this.validateAndAssignRoles(queryRunner, dto.role_assignments, newUser, currentUser);
+        await this.validateAndAssignRoles(
+          queryRunner,
+          dto.role_assignments,
+          newUser,
+          currentUser,
+        );
       }
 
       await queryRunner.commitTransaction();
@@ -398,25 +407,32 @@ export class UserService {
       });
 
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-      const isExternal = !(user?.is_cgiar);
+      const isExternal = !user?.is_cgiar;
 
-      const isInvalidExternalRole = isExternal && (role_id !== ROLE_IDS.MEMBER);
+      const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
       if (isInvalidExternalRole) {
         throw new BadRequestException(
           `External users can only be assigned the "Member" role.`,
         );
       }
 
-      if (!portfolioIsActive && (role_id !== ROLE_IDS.MEMBER)) {
+      if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
         throw new BadRequestException(
           `Only "Member" role is allowed in inactive portfolios.`,
         );
       }
 
       // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
-      const isLeadRole = role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
+      const isLeadRole =
+        role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
       if (isLeadRole) {
-        await this.handleLeadRole(queryRunner, entity_id, role_id, force_swap, currentUser);
+        await this.handleLeadRole(
+          queryRunner,
+          entity_id,
+          role_id,
+          force_swap,
+          currentUser,
+        );
       }
 
       await queryRunner.manager.save(RoleByUser, {
@@ -464,11 +480,11 @@ export class UserService {
 
     throw new ConflictException(
       `The entity ${official_code} already has a ${leadType} assigned: ` +
-      `${first_name} ${last_name} – ${email}. ` +
-      `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
+        `${first_name} ${last_name} – ${email}. ` +
+        `If you continue, the other user will be set as a Coordinator. Do you want to continue?`,
     );
   }
-  
+
   private buildSuccessResponse(
     user: User,
     changeStatus?: boolean,
@@ -583,7 +599,7 @@ export class UserService {
       }
 
       if (assignmentsDetails.length > 0) {
-          return assignmentsDetails.join('');
+        return assignmentsDetails.join('');
       }
     }
 
@@ -663,47 +679,26 @@ export class UserService {
           'rbu.user = users.id AND rbu.active = 1',
         )
         .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
+        .leftJoin('role', 'rol', 'rol.id = rbu.role')
+        .leftJoin('role_levels', 'rlvl', 'rol.role_level_id = rlvl.id')
         .select([
           'users.first_name AS "firstName"',
           'users.last_name AS "lastName"',
           'users.email AS "emailAddress"',
           `CASE WHEN users.is_cgiar = 1 THEN 'Yes' ELSE 'No' END AS "cgIAR"`,
+          `MAX(CASE WHEN rol.role_level_id = 1 THEN rol.description ELSE NULL END) AS "appRole"`,
           `
-          CASE
-            WHEN users.active = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 1 
-              AND users.active = 1
-              AND COUNT(rbu.id) = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 1
-              AND users.active = 1
-              AND COUNT(rbu.id) > 0
-              AND COUNT(DISTINCT rbu.role) = 1
-              AND MAX(rbu.role) = 2 THEN 'Read Only'
-            WHEN users.is_cgiar = 1
-              AND users.active = 1
-              AND (
-                MAX(rbu.role) = 1 
-                OR (COUNT(rbu.initiative_id) > 0 AND MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
-              ) THEN 'Active'
-            WHEN users.is_cgiar = 0 
-              AND users.active = 1 
-              AND COUNT(rbu.id) = 0 THEN 'Inactive'
-            WHEN users.is_cgiar = 0
-              AND users.active = 1
-              AND COUNT(DISTINCT rbu.role) = 1
-              AND MAX(rbu.role) = 2 THEN 'Read Only'
-            WHEN users.is_cgiar = 0
-              AND users.active = 1
-              AND (
-                COUNT(rbu.initiative_id) > 0 OR (MAX(rbu.role) IS NOT NULL AND MAX(rbu.role) <> 2)
-              ) THEN 'Active'
+          CASE 
+            WHEN users.active = 1 THEN 'Active'
             ELSE 'Inactive'
           END AS "userStatus"
           `,
           'users.created_date AS "userCreationDate"',
           `
-            GROUP_CONCAT(DISTINCT ent.official_code ORDER BY ent.official_code SEPARATOR ', ' )
-            AS "entities"
+          GROUP_CONCAT(
+            DISTINCT CONCAT(ent.official_code, ' - ', rol.description)
+            ORDER BY ent.official_code SEPARATOR ', '
+          ) AS "entities"
           `,
         ])
         .groupBy('users.id');
@@ -935,75 +930,71 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnErrorDto | returnFormatUser> {
     const cleanEmail = userEmail?.trim().toLowerCase();
-    const activeUSer = dto.activate;
 
     if (!cleanEmail) {
       throw new BadRequestException('Invalid or missing email');
     }
 
     const user = await this.findUserWithRelations(cleanEmail);
-    let isActive = false;
-
-    if (user.active) {
-      if (user.is_cgiar) {
-        const hasAdminRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            role: 1,
-            active: true,
-          },
-        });
-        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            initiative_id: Not(IsNull()),
-            role: Not(IsNull()),
-            active: true,
-          },
-        });
-        // User is active (Not Read Only or Inactive) if they have an admin role or an active role in any initiative
-        isActive = !!hasAdminRole || !!hasInitiativeWithRole;
-      } else {
-        const hasInitiativeWithRole = await this._roleByUserRepository.findOne({
-          where: {
-            user: user.id,
-            initiative_id: Not(IsNull()),
-            role: Not(IsNull()),
-            active: true,
-          },
-        });
-        // User is active (Not Read Only or Inactive) if they have an active role in any initiative
-        isActive = !!hasInitiativeWithRole;
-      }
-    }
 
     const currentUser = await this._userRepository.findOne({
       where: { id: token.id },
     });
 
     if (dto.activate) {
-      if (isActive) {
-        return {
-          response: { id: user.id, email: user.email },
-          message: 'User is already active',
-          status: HttpStatus.OK,
-        };
+      const wasInactive = !user.active;
+      user.active = true;
+      user.last_updated_by = currentUser?.id;
+      await this._userRepository.save(user);
+
+      if (
+        wasInactive &&
+        dto.role_assignments &&
+        dto.role_assignments.length > 0
+      ) {
+        await this.validateAndAssignRoles(
+          this.dataSource.createQueryRunner(),
+          dto.role_assignments,
+          user,
+          currentUser,
+        );
       }
-      return this.saveUserToDB(dto, token, activeUSer);
+
+      return {
+        response: { id: user.id, email: user.email },
+        message: 'User activated successfully',
+        status: HttpStatus.OK,
+      };
     } else {
-      if (!isActive) {
+      if (!user.active) {
         return {
           response: { id: user.id, email: user.email },
           message: 'User is already deactivated',
           status: HttpStatus.OK,
         };
       }
-      if (user.is_cgiar) {
-        return this.deactivateCgiarUser(user, currentUser);
-      } else {
-        return this.deactivateExternalUser(user, currentUser);
-      }
+      return this.deactivateUserCompletely(user, currentUser);
     }
+  }
+
+  private async deactivateUserCompletely(
+    user: User,
+    currentUser: User,
+  ): Promise<returnErrorDto | returnFormatUser> {
+    await this._roleByUserRepository.update(
+      { user: user.id },
+      { active: false, last_updated_by: currentUser.id },
+    );
+
+    user.active = false;
+    user.last_updated_by = currentUser.id;
+    await this._userRepository.save(user);
+
+    return {
+      response: { id: user.id, email: user.email },
+      message: 'User deactivated successfully',
+      status: HttpStatus.OK,
+    };
   }
 
   private async findUserWithRelations(userEmail: string): Promise<User> {
@@ -1027,7 +1018,7 @@ export class UserService {
   ): Promise<returnErrorDto | returnFormatUser> {
     const guestRole = ROLE_IDS.GUEST; //2 is the ID for the Guest role
 
-    // Update the user's roles to deactivate all active roles in entities 
+    // Update the user's roles to deactivate all active roles in entities
     await this._roleByUserRepository.update(
       { user: user.id },
       { active: false, last_updated_by: currentUser.id },
@@ -1085,11 +1076,11 @@ export class UserService {
 
       logger.log(`Checking if user exists: ${email}`);
       const user = await this._userRepository.findOne({
-        where: { email, active: true },
+        where: { email },
         relations: ['obj_role_by_user'],
       });
 
-      if (user) {
+      if (user && user.active === true) {
         logger.log(`User found in database: ${email}`);
         await this._userRepository.update(
           {
@@ -1101,6 +1092,9 @@ export class UserService {
           },
         );
         return user;
+      } else if (user && user.active === false) {
+        logger.log(`User found but inactive: ${email}`);
+        throw new Error('User is inactive. Please contact support.');
       }
 
       logger.log(`Creating new user from authentication provider: ${email}`);
@@ -1139,7 +1133,6 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
-    console.log('Admin user', token);
 
     try {
       const user = await this._userRepository.findOneByOrFail({
@@ -1156,16 +1149,23 @@ export class UserService {
           active: true,
           role: Not(In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST])),
         },
-      }); 
+      });
 
       // Bring incoming role assignments ids
-      const incomingIds = new Set(dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean));
+      const incomingIds = new Set(
+        dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean),
+      );
+
+      await this._userRepository.update(user.id, {
+        last_updated_by: token.id,
+        first_name: dto?.first_name,
+        last_name: dto?.last_name,
+      });
 
       const rolesToRemove = existingRoles.filter((existing) => {
         return !incomingIds.has(existing.id);
       });
 
-      console.log('Roles to remove:', rolesToRemove);
       for (const role of rolesToRemove) {
         role.active = false;
         role.last_updated_by = token.id;
@@ -1173,7 +1173,6 @@ export class UserService {
       }
 
       // Asignar nuevos roles
-      console.log('Assigning new roles:', incomingIds);
       await this.saveUserToDB(dto, token);
 
       return {
@@ -1182,12 +1181,21 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-        console.error('Error updating user roles:', error);
-
-        throw new InternalServerErrorException(
-          'An error occurred while updating user roles',
-        );
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
       }
+
+      this._logger.error(
+        `An unexpected error occurred while updating user role: ${error}`,
+      );
+      throw new InternalServerErrorException(
+        `An unexpected error occurred while updating user role: ${error.message}`,
+      );
+    }
   }
 
   async findRoleByEntity(email: string): Promise<any> {

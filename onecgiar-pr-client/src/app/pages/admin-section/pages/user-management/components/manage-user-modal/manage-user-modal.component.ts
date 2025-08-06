@@ -49,7 +49,6 @@ export class ManageUserModalComponent {
   @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
 
   // Signals for modal state
-  creatingUser = signal<boolean>(false);
   showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
   addUserForm = signal<AddUserForm>({
     is_cgiar: true,
@@ -57,6 +56,7 @@ export class ManageUserModalComponent {
     role_assignments: [],
     activate: true
   });
+  isLoading = signal<boolean>(false);
 
   entities = computed(() => {
     const list: any[] = [];
@@ -118,14 +118,24 @@ export class ManageUserModalComponent {
   }
 
   addRoleAssignment(): void {
-    const newAssignment = {
-      entity_id: null,
-      role_id: null
-    };
-    this.addUserForm.update(form => ({
-      ...form,
-      role_assignments: [...form.role_assignments, newAssignment]
-    }));
+    if (!this.addUserForm().is_cgiar) {
+      const memberRole = this.getRolesService.roles().find(role => role.role_description === 'Member');
+      if (memberRole) {
+        this.addUserForm.update(form => ({
+          ...form,
+          role_assignments: [...form.role_assignments, { entity_id: null, role_id: memberRole.role_id }]
+        }));
+      }
+    } else {
+      const newAssignment = {
+        entity_id: null,
+        role_id: null
+      };
+      this.addUserForm.update(form => ({
+        ...form,
+        role_assignments: [...form.role_assignments, newAssignment]
+      }));
+    }
   }
 
   removeRoleAssignment(index: number) {
@@ -145,7 +155,8 @@ export class ManageUserModalComponent {
       last_name: '',
       email: '',
       // Set permissions based on CGIAR status
-      role_platform: 2 // Always marked as guest (2)
+      role_platform: 2, // Always marked as guest (2)
+      role_assignments: []
     }));
   }
 
@@ -178,6 +189,14 @@ export class ManageUserModalComponent {
     }));
   }
 
+  removeUser(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      displayName: '',
+      email: ''
+    }));
+  }
+
   onPermissionsChange(role_platform: number): void {
     this.addUserForm.update(form => ({
       ...form,
@@ -192,8 +211,10 @@ export class ManageUserModalComponent {
   };
 
   onUpdateUserRoles(): void {
+    this.isLoading.set(true);
+
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
-    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
+    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform, first_name, last_name }).subscribe({
       next: res => {
         this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
       },
@@ -204,6 +225,8 @@ export class ManageUserModalComponent {
   }
 
   onSaveUserActivator(): void {
+    this.isLoading.set(true);
+
     this.addUserForm.update(form => ({
       ...form,
       activate: true
@@ -221,7 +244,7 @@ export class ManageUserModalComponent {
   }
 
   onCreateUser(): void {
-    this.creatingUser.set(true);
+    this.isLoading.set(true);
 
     // Remove displayName from form data before sending to backend
     const formData = { ...this.addUserForm() };
@@ -246,6 +269,7 @@ export class ManageUserModalComponent {
     this.visible = false;
     this.visibleChange.emit(false);
     this.managedUser.emit();
+    this.isLoading.set(false);
 
     this.api.alertsFe.show({
       id,
@@ -256,6 +280,8 @@ export class ManageUserModalComponent {
   }
 
   private handleError(error: any, errorId: string, retryCallback: () => void): void {
+    this.isLoading.set(false);
+
     if (error.status === 409) {
       this.api.alertsFe.show(
         {
@@ -300,7 +326,7 @@ export class ManageUserModalComponent {
       status: 'success'
     });
 
-    this.creatingUser.set(false);
+    this.isLoading.set(false);
     this.resetAddUserForm(); // Reset form and clear user search
     this.managedUser.emit(); // Notify parent to refresh users list
   }
@@ -329,7 +355,7 @@ export class ManageUserModalComponent {
       });
     }
 
-    this.creatingUser.set(false);
+    this.isLoading.set(false);
   }
 
   onCancelAddUser(): void {

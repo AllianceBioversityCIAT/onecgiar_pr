@@ -1,4 +1,5 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { DynamicPanelServiceService } from './dynamic-panel-service.service';
 
 @Component({
   selector: 'app-dynamic-panel-menu',
@@ -8,9 +9,6 @@ import { Component, OnInit, Input } from '@angular/core';
 export class DynamicPanelMenuComponent {
   @Input() options: any;
   @Input() panelName: string;
-  showCompletePanel = true;
-  constructor() {}
-  togglePanelView() {
-    this.showCompletePanel = !this.showCompletePanel;
-  }
+
+  constructor(public dynamicPanelService: DynamicPanelServiceService) {}
 }
