@@ -109,7 +109,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           });
           this.users.set(res.response);
           this.loading.set(false);
-          this.userTable.reset();
+          this.userTable?.reset();
         },
         error: error => {
           this.loading.set(false);
