@@ -101,6 +101,7 @@
   <!-- Users table -->
   <div class="table-container">
     <p-table
+      #userTable
       [value]="this.users()"
       [loading]="this.loading()"
       [paginator]="true"
