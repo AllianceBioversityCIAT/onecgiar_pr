@@ -212,7 +212,7 @@ export class ManageUserModalComponent {
 
   onUpdateUserRoles(): void {
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
-    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform }).subscribe({
+    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform, first_name, last_name }).subscribe({
       next: res => {
         this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
       },
