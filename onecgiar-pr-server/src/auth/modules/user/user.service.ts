@@ -37,6 +37,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
+  private readonly _logger: Logger = new Logger(UserService.name);
   private readonly cgiarRegex: RegExp = /@cgiar\.org/i;
 
   constructor(
@@ -231,7 +232,6 @@ export class UserService {
         error?.message?.includes('exists');
 
       if (!isUserExistsError) {
-        console.error(error);
         throw {
           response: { error },
           message: 'Error while creating user',
@@ -1130,7 +1130,6 @@ export class UserService {
     token: TokenDto,
   ): Promise<returnFormatUser> {
     const cleanEmail = dto.email?.trim().toLowerCase();
-    console.log('Admin user', token);
 
     try {
       const user = await this._userRepository.findOneByOrFail({
@@ -1154,11 +1153,16 @@ export class UserService {
         dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean),
       );
 
+      await this._userRepository.update(user.id, {
+        last_updated_by: token.id,
+        first_name: dto?.first_name,
+        last_name: dto?.last_name,
+      });
+
       const rolesToRemove = existingRoles.filter((existing) => {
         return !incomingIds.has(existing.id);
       });
 
-      console.log('Roles to remove:', rolesToRemove);
       for (const role of rolesToRemove) {
         role.active = false;
         role.last_updated_by = token.id;
@@ -1166,7 +1170,6 @@ export class UserService {
       }
 
       // Asignar nuevos roles
-      console.log('Assigning new roles:', incomingIds);
       await this.saveUserToDB(dto, token);
 
       return {
@@ -1175,10 +1178,11 @@ export class UserService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      console.error('Error updating user roles:', error);
-
+      this._logger.error(
+        `An error occurred while updating user role: ${error}`,
+      );
       throw new InternalServerErrorException(
-        'An error occurred while updating user roles',
+        `An error occurred while updating user role: ${error}`,
       );
     }
   }
