@@ -202,8 +202,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   // Status filter options
   statusOptions: StatusOption[] = [
     { label: 'Active', value: 'Active' },
-    { label: 'Inactive', value: 'Inactive' },
-    { label: 'Read Only', value: 'Read Only' }
+    { label: 'Inactive', value: 'Inactive' }
   ];
 
   isCGIAROptions: CgiarOption[] = [
