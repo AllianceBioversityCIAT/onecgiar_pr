@@ -21,7 +21,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   columnOrder = [
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Phase', attr: 'phase_name' },
+    { title: 'Phase - Portfolio', attr: 'phase_name' },
     { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter', center: true },
     { title: 'Status', attr: 'full_status_name_html', center: true },
