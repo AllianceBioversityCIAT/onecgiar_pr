@@ -1,4 +1,9 @@
-<div class="blank_space" *ngIf="showIfRouteIsInList()" [ngClass]="{ floating: this.isFloating, floatingFix: this.isFloatingFix }" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()">
+<div
+  class="blank_space"
+  *ngIf="showIfRouteIsInList()"
+  [ngClass]="{ floating: this.isFloating, floatingFix: this.isFloatingFix }"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()">
   <div class="footer">
     <div class="content">
       <div class="logo">
@@ -6,11 +11,11 @@
       </div>
       <div class="texts">
         <div class="buttons">
-          <div class="f-button" (click)="this.footerSE.displayContactUs = true">Contact Us</div>
+          <div class="f-button pr-body-2" (click)="this.footerSE.displayContactUs = true">Contact Us</div>
           <div class="point"></div>
-          <a target="_blank" [href]="this.globalLinksSE.links.url_terms_and_conditions" class="f-button">Terms and Conditions</a>
+          <a target="_blank" [href]="this.globalLinksSE.links.url_terms_and_conditions" class="f-button pr-body-2">Terms and Conditions</a>
           <div class="point"></div>
-          <a target="_blank" [href]="this.license" class="f-button">License</a>
+          <a target="_blank" [href]="this.license" class="f-button pr-body-2">License</a>
         </div>
         <div class="rights">© 2023 CGIAR System Organization. All rights reserved.</div>
       </div>

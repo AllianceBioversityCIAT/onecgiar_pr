@@ -4,6 +4,10 @@
   gap: 10px;
   padding: 10px 100px;
 
+  @media screen and (max-width: 1200px) {
+    padding: 10px 60px;
+  }
+
   &.sticky {
     position: sticky;
     top: 0;
@@ -14,7 +18,7 @@
 
   .section_active {
     background-color: var(--pr-color-white);
-    font-weight: 700;
+    font-weight: 600 !important;
     color: var(--pr-color-primary-950);
   }
 

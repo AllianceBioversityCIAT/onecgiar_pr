@@ -1,3 +1,5 @@
+@use '../styles/fonts' as fonts;
+
 .filters {
   display: flex;
   gap: 10px;
@@ -6,8 +8,8 @@
 
   .filter {
     .filter_title {
-      color: var(--pr-color-secondary-100);
-      font-size: 0.9em;
+      @include fonts.pr-typography('body-2');
+      color: var(--pr-color-accents-4);
       margin-bottom: 5px;
     }
 
@@ -25,7 +27,7 @@
         background-color: var(--pr-color-neutral-1000);
         padding: 4px 10px;
         border-radius: 10px;
-        font-size: 0.9em;
+        @include fonts.pr-typography('body-2');
         cursor: pointer;
         white-space: nowrap;
       }
@@ -66,7 +68,7 @@
     padding: 4px 10px;
     color: var(--pr-color-white);
     width: max-content;
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-2');
     border-end-end-radius: 10px;
   }
 }

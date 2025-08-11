@@ -23,14 +23,8 @@
 
     .title {
       color: var(--pr-color-white);
-      font-weight: 200;
-      font-size: 15px;
       display: flex;
       align-items: center;
-
-      .first-text {
-        font-weight: 300;
-      }
 
       .second-text {
         margin-top: -4px;
@@ -71,7 +65,6 @@
       justify-content: center;
       gap: 10px;
       padding: 5px 10px;
-      font-size: 13px;
 
       .admin_tag {
         background-color: var(--pr-color-primary-300);
@@ -95,8 +88,6 @@
 
       .title {
         text-align: center;
-        font-size: 13px;
-        font-weight: 500;
         margin-bottom: 2px;
       }
 
@@ -108,8 +99,6 @@
         padding-bottom: 5px;
 
         .item {
-          font-weight: 200;
-          font-size: 12px;
           display: flex;
           border-radius: 3px;
           overflow: auto;
@@ -147,12 +136,6 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.2rem 1.5rem 0 1.5rem;
-
-    .overlay_panel_title {
-      font-size: 16px;
-      font-weight: 700;
-      margin: 0;
-    }
   }
 
   .no_notifications {

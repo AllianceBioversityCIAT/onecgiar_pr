@@ -4,14 +4,6 @@
   overflow: hidden;
   transition: all 0.3s ease-in-out;
 
-  font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-
   header {
     display: flex;
     gap: 10px;
@@ -339,7 +331,6 @@
     > td {
       padding: 8px 16px;
       border-bottom: 1px solid var(--pr-color-primary-50);
-      font-size: 14px;
       color: var(--pr-color-secondary-400);
       vertical-align: middle;
 

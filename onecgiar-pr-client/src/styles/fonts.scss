@@ -101,12 +101,12 @@ $pr-typography: (
 @mixin pr-typography($type) {
   $style: map.get($pr-typography, $type);
   @if $style {
-    font-family: 'Poppins', sans-serif;
-    font-weight: map.get($style, weight);
-    font-size: map.get($style, size);
-    line-height: map.get($style, line);
-    letter-spacing: map.get($style, letter);
-    text-transform: map.get($style, case);
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: map.get($style, weight) !important;
+    font-size: map.get($style, size) !important;
+    line-height: map.get($style, line) !important;
+    letter-spacing: map.get($style, letter) !important;
+    text-transform: map.get($style, case) !important;
   } @else {
     @warn "Unknown typography type: #{$type}";
   }
