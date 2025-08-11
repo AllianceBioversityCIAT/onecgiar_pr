@@ -1160,6 +1160,8 @@ export class ResultsApiService {
     email: string;
     role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
     role_platform: number;
+    first_name: string;
+    last_name: string;
   }) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/update/roles`, body);
   }

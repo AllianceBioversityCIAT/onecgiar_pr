@@ -1,7 +1,8 @@
 .local_container {
-  width: calc(100% - 40px) !important;
   padding: 30px 30px;
   margin: 20px 20px 50px 20px !important;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
 
   font-family:
     'Inter',
@@ -34,7 +35,6 @@
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: help;
@@ -147,6 +147,27 @@
   }
 }
 
+.app-role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #fff7d6; // Amarillo claro
+  color: #b59f3b; // Amarillo oscuro
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  min-height: 20px;
+  white-space: nowrap;
+
+  span {
+    line-height: 1;
+  }
+}
+
 // Controls section
 .controls-section {
   margin-bottom: 32px;
@@ -155,20 +176,27 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
+    gap: 15px;
+    flex-wrap: nowrap;
 
     .filters-group {
-      display: flex;
-      align-items: flex-start;
-      gap: 24px;
-      flex-wrap: nowrap; // Important: filters don't wrap
+      display: grid;
+      grid-template-columns: 1fr 100px;
+      gap: 15px;
+      width: 100%;
+
+      .filters-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+      }
 
       .search-container {
         display: flex;
         flex-direction: column;
         gap: 8px;
         flex: 1;
-        min-width: 200px;
+        width: 100%;
 
         .search-label {
           font-size: 14px;
@@ -193,7 +221,6 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 180px;
 
         .status-label,
         .cgiar-label,
@@ -211,7 +238,6 @@
       }
 
       .clear-filter {
-        min-width: 150px;
         margin-top: -6px;
       }
     }
@@ -231,7 +257,7 @@
   box-shadow:
     0 1px 3px 0 rgba(var(--pr-color-black-rgb), 0.1),
     0 1px 2px 0 rgba(var(--pr-color-black-rgb), 0.06);
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 
   .counter {
@@ -257,8 +283,21 @@
   }
 }
 
-// Custom table styles
-::ng-deep .user-table {
+::ng-deep {
+  // .user-table {
+  .p-paginator {
+    display: flex !important;
+    justify-content: center !important;
+
+    .p-dropdown .p-dropdown-panel {
+      z-index: 1000 !important;
+    }
+  }
+
+  .p-datatable-footer {
+    text-align: center;
+  }
+
   .p-datatable-header {
     background: var(--pr-color-primary-25);
     border-bottom: 1px solid var(--pr-color-accents-2);
@@ -319,13 +358,39 @@
     color: var(--pr-color-secondary-200);
     font-style: italic;
   }
+  // }
+
+  .p-multiselect .p-multiselect-trigger {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary);
+    width: 43px;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+    color: white;
+  }
+
+  .p-multiselect .p-multiselect-label.p-placeholder {
+    color: rgb(194, 194, 194);
+    font-size: 12px;
+  }
+
+  .p-multiselect .p-multiselect-label {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+  }
+
+  .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
+    font-size: 14px;
+  }
 
   .p-datatable-thead > tr > th:last-child,
   .p-datatable-tbody > tr > td:last-child {
     text-align: center !important;
   }
 }
-
 // User status styles
 .status-active {
   color: var(--pr-color-green-600);
@@ -360,37 +425,6 @@
   letter-spacing: 0.05em;
 }
 
-// Center pagination globally for this component
-::ng-deep {
-  .user-table .p-paginator {
-    display: flex !important;
-    justify-content: center !important;
-
-    .p-dropdown .p-dropdown-panel {
-      z-index: 1000 !important;
-    }
-  }
-
-  .user-table .p-datatable-footer {
-    text-align: center;
-  }
-}
-
-// Single clean responsive rule
-@media (max-width: 1300px) {
-  .controls-section {
-    .controls-row {
-      flex-direction: column;
-      gap: 0px; // No gap between groups when vertical
-
-      .actions-group {
-        align-self: flex-start; // Align to left
-        margin-top: 0px; // Remove top margin
-      }
-    }
-  }
-}
-
 // Mobile adjustments
 @media (max-width: 768px) {
   .local_container {
@@ -406,12 +440,6 @@
 
         .search-container .p-input-icon-left {
           width: 100%;
-        }
-
-        .status-filter,
-        .cgiar-filter,
-        .clear-filter {
-          min-width: auto;
         }
       }
 

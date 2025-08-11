@@ -44,7 +44,11 @@
       @if (addUserForm().is_cgiar && addUserForm().email) {
         <div class="form-field">
           <div class="field-label">Selected user:</div>
-          <div class="selected-user-display">{{ addUserForm().displayName }}</div>
+          <div class="selected-user-display">
+            {{ addUserForm().displayName }}
+
+            <i class="pi pi-times remove-user-btn" (click)="removeUser()"></i>
+          </div>
         </div>
       }
 
@@ -55,7 +59,6 @@
             <div class="form-field half-width">
               <label class="field-label" for="user-first-name"> Name:<span class="required">*</span> </label>
               <input
-                [disabled]="editingMode()"
                 type="text"
                 pInputText
                 placeholder="Enter name"
@@ -67,7 +70,6 @@
             <div class="form-field half-width">
               <label class="field-label" for="user-last-name"> Last name:<span class="required">*</span> </label>
               <input
-                [disabled]="editingMode()"
                 type="text"
                 pInputText
                 placeholder="Enter last name"
@@ -122,6 +124,7 @@
             <div style="width: 45%">
               <app-pr-select
                 [options]="getRolesService.roles()"
+                [ngClass]="{ globalDisabled: !addUserForm().is_cgiar }"
                 optionLabel="role_description"
                 optionValue="role_id"
                 placeholder="Select role"
@@ -175,15 +178,21 @@
 
   <ng-template pTemplate="footer">
     <div class="modal-footer">
-      <button type="button" class="cancel-btn" (click)="onCancelAddUser()">Cancel</button>
+      <button type="button" class="cancel-btn" (click)="onCancelAddUser()" [disabled]="isLoading()" [ngClass]="{ globalDisabled: isLoading() }">
+        Cancel
+      </button>
       <button
         type="button"
         class="save-btn"
         [disabled]="
-          userActivatorMode() ? !isFormValid() || creatingUser() || this.addUserForm().role_assignments.length <= 0 : !isFormValid() || creatingUser()
+          userActivatorMode() ? !isFormValid() || this.addUserForm().role_assignments.length <= 0 || isLoading() : !isFormValid() || isLoading()
         "
+        [ngClass]="{ globalDisabled: isLoading() }"
         (click)="manageUser()">
         {{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}
+        @if (isLoading()) {
+          <i class="pi pi-spin pi-spinner"></i>
+        }
       </button>
     </div>
   </ng-template>

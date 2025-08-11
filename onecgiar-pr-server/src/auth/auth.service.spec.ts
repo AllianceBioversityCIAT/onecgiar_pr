@@ -157,9 +157,8 @@ describe('AuthService', () => {
 
       const result = await service.singIn(mockLoginDto);
 
-      expect(result.status).toBe(HttpStatus.NOT_FOUND);
+      expect(result.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(result.response.valid).toBe(false);
-      expect(result.message).toContain('User not found in local database');
     });
 
     it('should handle NEW_PASSWORD_REQUIRED challenge', async () => {

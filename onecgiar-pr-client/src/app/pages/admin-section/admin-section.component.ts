@@ -10,7 +10,6 @@ import { DataControlService } from '../../shared/services/data-control.service';
 export class AdminSectionComponent implements OnInit {
   sections = [
     { name: 'Completeness status', icon: 'check_circle', path: '/admin-module/completeness-status' },
-    { name: 'User roles', icon: 'people', path: '/admin-module/user-report' },
     { name: 'Phase management', icon: 'move_up', path: '/admin-module/phase-management' },
     { name: 'Knowledge Products', icon: 'auto_stories', path: '/admin-module/knowledge-products' },
     { name: 'Tickets Dashboard', icon: 'query_stats', path: '/admin-module/tickets-dashboard' },

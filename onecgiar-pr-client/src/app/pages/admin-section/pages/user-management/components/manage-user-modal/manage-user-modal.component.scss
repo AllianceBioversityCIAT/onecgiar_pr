@@ -250,6 +250,19 @@
     min-height: 44px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+  }
+
+  .remove-user-btn {
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 10px;
+    color: #374151;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #dc2626;
+    }
   }
 
   .created-by {
