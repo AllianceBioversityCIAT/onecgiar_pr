@@ -31,7 +31,7 @@
   }
 
   .description {
-    color: var(--pr-color-secondary-200);
+    color: var(--pr-color-accents-5);
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
@@ -284,7 +284,6 @@
 }
 
 ::ng-deep {
-  // .user-table {
   .p-paginator {
     display: flex !important;
     justify-content: center !important;
@@ -358,12 +357,11 @@
     color: var(--pr-color-secondary-200);
     font-style: italic;
   }
-  // }
 
-  .p-multiselect .p-multiselect-trigger {
+  .p-multiselect-dropdown {
     position: absolute;
     right: 0;
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300) !important;
     width: 43px;
     height: 100%;
     z-index: 1;
@@ -373,13 +371,8 @@
   }
 
   .p-multiselect .p-multiselect-label.p-placeholder {
-    color: rgb(194, 194, 194);
-    font-size: 12px;
-  }
-
-  .p-multiselect .p-multiselect-label {
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
+    color: var(--pr-color-accents-3);
+    height: 38px;
   }
 
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
@@ -391,7 +384,7 @@
     text-align: center !important;
   }
 }
-// User status styles
+
 .status-active {
   color: var(--pr-color-green-600);
   font-weight: 500;
