@@ -7,24 +7,26 @@
     <div [ngSwitch]="(readOnly || this.rolesSE.readOnly) && (!isStatic)"
         [ngClass]="{'mandatory': this.required,'readOnly':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
         class="pr-input position-relative" [style]="InlineStyles">
-        <div class="text-secondary-400" *ngSwitchCase="true" [innerHtml]="this.type == 'link'? aTag(value):(value == '0' ? 0 : ((value|yesOrNotByBoolean)) ||this.noDataText ||
+        <div class="text-secondary-400 pr-body-2" *ngSwitchCase="true" [innerHtml]="this.type == 'link'? aTag(value):(value == '0' ? 0 : ((value|yesOrNotByBoolean)) ||this.noDataText ||
         (this.required ? this.notProvidedText : 'Not applicable'))">
         </div>
         <div class="p-fluid input_container" *ngSwitchCase="false">
             <div class="input-validation">{{value}}</div>
             <input *ngIf="this.type != 'currency' && this.type != 'number'" [disabled]="this.disabled" pInputText
                 [type]="this.type" [placeholder]="this.placeholder" [(ngModel)]="value" [attr.prValid]="true"
-                [ngClass]="{'pr-valid': true, 'invalid' : wordCount > maxWords && !autogenerate, 'warning' : wordCount > maxWords && autogenerate}"
+                [ngClass]="{'pr-valid': true, 'pr-body-2': true, 'invalid' : wordCount > maxWords && !autogenerate, 'warning' : wordCount > maxWords && autogenerate}"
                 [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%'}" />
 
             <p-inputNumber class="" *ngIf="this.type == 'number'" [(ngModel)]="value" [disabled]="this.disabled"
                 [mode]="this.numberMode" [minFractionDigits]="this.numberMode && 2"
                 [maxFractionDigits]="this.numberMode && this.maxDecimals" [min]="0"
+                [ngClass]="{'pr-body-2': true}"
                 [style]="{'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%'}"
                 [placeholder]="this.placeholder">
             </p-inputNumber>
 
             <p-inputNumber class="" *ngIf="this.type == 'currency'" [(ngModel)]="value" mode="currency" currency="USD"
+                [ngClass]="{'pr-body-2': true}"
                 locale="en-US" [disabled]="this.disabled" [placeholder]="this.placeholder" [min]="0" [style]="{width: '100%'}">
             </p-inputNumber>
             <div class="hints_container">

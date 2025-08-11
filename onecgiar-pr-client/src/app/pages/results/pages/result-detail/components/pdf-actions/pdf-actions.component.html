@@ -1,15 +1,15 @@
 <div class="pdf_actions_container" [ngClass]="{ pdf_actions_container_horizontal: horizontal }">
-  <div class="header" [ngClass]="{ header_horizontal: horizontal }" [ngStyle]="{ padding: horizontal && '0 10px' }">PDF</div>
+  <div class="header pr-body-2" [ngClass]="{ header_horizontal: horizontal }" [ngStyle]="{ padding: horizontal && '0 10px' }">PDF</div>
   <div class="content" [ngStyle]="{ 'background-color': horizontal && 'var(--pr-color-white)' }">
     <div class="actions" [ngStyle]="{ padding: horizontal && '10px' }">
       <a class="action" pTooltip="Click to view the pdf" tooltipPosition="bottom" [href]="link" target="_blank">
         <app-pdf-icon hexadecimalColor="var(--pr-color-blue-500)"></app-pdf-icon>
-        <div class="name" style="margin-top: 5px">View</div>
+        <div class="name pr-body-2" style="margin-top: 5px">View</div>
       </a>
       <div class="line"></div>
       <div class="action" pTooltip="Copy to the clipboard" tooltipPosition="bottom" [cdkCopyToClipboard]="link" (click)="copyLink()">
         <i class="material-icons-round"> content_copy </i>
-        <div class="name">Copy link</div>
+        <div class="name pr-body-2">Copy link</div>
       </div>
     </div>
   </div>

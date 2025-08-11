@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 40px 50px 40px;
   max-width: 70vw !important;
@@ -22,7 +24,7 @@
   align-items: center;
 
   .modal_title {
-    font-size: 1.3em;
+    @include fonts.pr-typography('h3');
     font-weight: 600;
     color: var(--pr-color-white);
     margin: 0;
@@ -45,7 +47,6 @@
 .chip_disabled {
   background-color: var(--pr-color-accents-1);
   color: var(--pr-color-accents-3);
-  font-size: 0.8em;
   padding: 0.5rem 1rem;
   border-radius: 5px;
   cursor: pointer;

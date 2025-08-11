@@ -1,39 +1,53 @@
 <div id="change-phase">
   <div class="content-change-phase">
-
     <header [style]="{ 'text-align': 'center' }">
-      <h2 [style]="{ 'margin-bottom': '0px'}">Confirmation</h2>
+      <h2 class="pr-h2" [style]="{ 'margin-bottom': '0px' }">Confirmation</h2>
     </header>
 
     <div class="phase-info-result">
-      <p class="phase-info-result-desc">Before continuing, please review the metadata PDF to confirm the current
-        status information. Make sure to
-        save a copy of this information, as any changes to the result type are irreversible and will alter this
-        data.
+      <p class="phase-info-result-desc pr-body-2">
+        Before continuing, please review the metadata PDF to confirm the current status information. Make sure to save a copy of this information, as
+        any changes to the result type are irreversible and will alter this data.
       </p>
-      <div class="link_button update" (click)="downloadPDF()" [ngClass]="{'globalDisabled': this.isDownloading}">
-        <app-pdf-icon hexadecimalColor="var(--pr-color-white)" *ngIf="!this.isDownloading "></app-pdf-icon>
-        <i class="material-icons-round" [ngClass]="{'rotating': true}" *ngIf="this.isDownloading">loop</i>
+      <div class="link_button update pr-body-2" (click)="downloadPDF()" [ngClass]="{ globalDisabled: this.isDownloading }">
+        <app-pdf-icon hexadecimalColor="var(--pr-color-white)" *ngIf="!this.isDownloading"></app-pdf-icon>
+        <i class="material-icons-round" [ngClass]="{ rotating: true }" *ngIf="this.isDownloading">loop</i>
         Download PDF
       </div>
     </div>
 
     <div class="info-phase-change">
-      <div class="phase-data pa-l">
-        <i><b>{{this.body?.result_type_name}}</b></i>
+      <div class="phase-data pa-l pr-body-2">
+        <i
+          ><b>{{ this.body?.result_type_name }}</b></i
+        >
       </div>
       <div class="icon-change">
         <i class="material-icons-round rotate-right">move_up</i>
       </div>
-      <div class="phase-data pa-r">
-        <i><b>{{selectedResultType?.name}}</b></i>
+      <div class="phase-data pa-r pr-body-2">
+        <i
+          ><b>{{ selectedResultType?.name }}</b></i
+        >
       </div>
     </div>
 
-    <app-pr-select label="What is the reason for this change?" placeholder="Select reason" [required]="true" 
-    [options]="this.selectOptions" [(ngModel)]="this.changeType.justification" optionLabel="value" optionValue="value"></app-pr-select>
+    <app-pr-select
+      label="What is the reason for this change?"
+      placeholder="Select reason"
+      [required]="true"
+      [options]="this.selectOptions"
+      [(ngModel)]="this.changeType.justification"
+      optionLabel="value"
+      optionValue="value"></app-pr-select>
 
-    <app-pr-input label="Enter other reason" placeholder="Enter other reason" type="text" [required]="true"
-      [(ngModel)]="this.changeType.otherJustification" [isStatic]="true" *ngIf="this.changeType.justification === 'Other'"></app-pr-input>
+    <app-pr-input
+      label="Enter other reason"
+      placeholder="Enter other reason"
+      type="text"
+      [required]="true"
+      [(ngModel)]="this.changeType.otherJustification"
+      [isStatic]="true"
+      *ngIf="this.changeType.justification === 'Other'"></app-pr-input>
   </div>
 </div>

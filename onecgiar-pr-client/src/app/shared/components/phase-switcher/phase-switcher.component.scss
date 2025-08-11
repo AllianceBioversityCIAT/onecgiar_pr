@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .title_component {
   color: var(--pr-color-accents-4);
 }
@@ -12,12 +14,13 @@
     background-color: var(--pr-color-neutral-1000);
     padding: 6px;
     border-radius: 5px;
+    @include fonts.pr-typography('body-3');
     font-weight: 600;
-    font-size: 0.9rem;
 
     .tag {
       display: flex;
-      font-size: 0.9rem;
+      @include fonts.pr-typography('body-3');
+      font-weight: 600;
       align-items: center;
       padding: 4px 10px;
       border-radius: 3px;
@@ -26,7 +29,7 @@
       color: var(--pr-color-primary-300);
 
       .text {
-        font-size: 0.8rem;
+        @include fonts.pr-typography('body-3');
         font-weight: 500;
       }
 
@@ -80,7 +83,7 @@
       &.selected {
         background-color: var(--pr-color-primary-300);
         color: var(--pr-color-white);
-        border-color: var(--pr-color-primary-400);
+        border-color: var(--pr-color-primary-300);
       }
     }
   }

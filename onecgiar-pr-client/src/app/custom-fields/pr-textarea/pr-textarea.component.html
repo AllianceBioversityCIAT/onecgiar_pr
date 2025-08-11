@@ -3,7 +3,7 @@
   [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
   class="pr-field"
   [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
-  <div class="text-secondary-400" *ngSwitchCase="true" [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
+  <div class="text-secondary-400 pr-body-2" *ngSwitchCase="true" [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
   <div class="p-fluid input_container" *ngSwitchCase="false">
     <textarea
       [rows]="rows"
@@ -13,7 +13,7 @@
       [style]="{ width: '100%' }"
       [(ngModel)]="value"
       [placeholder]="this.placeholder"
-      [ngClass]="{ invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
+      [ngClass]="{ 'pr-body-2': true, invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
 
     <div class="hints_container">
       <div class="hint">{{ this.hint }}</div>
