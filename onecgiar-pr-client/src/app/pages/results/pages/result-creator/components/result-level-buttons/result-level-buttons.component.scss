@@ -26,7 +26,6 @@
       align-items: center;
       justify-content: center;
       padding: 10px;
-      font-size: 1.3em;
     }
 
     .description {
@@ -42,6 +41,14 @@
 
   .segmet_title {
     margin-bottom: 5px;
+  }
+
+  @media screen and (max-width: 1200px) {
+    padding: 0px 100px;
+  }
+
+  @media screen and (max-width: 992px) {
+    padding: 0px 0px;
   }
 }
 

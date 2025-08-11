@@ -34,7 +34,7 @@
                     </p-checkbox>
                     <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
                         srcset="">
-                    <div class="label" [innerHtml]="option[this.optionLabel]"></div>
+                    <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
                     <div class="event" (click)="toggleSelectOption(option)"></div>
                 </div>
             </cdk-virtual-scroll-viewport>

@@ -1,3 +1,5 @@
+@use '../../../styles/fonts' as fonts;
+
 .pr_button.small {
   padding: 6px 12px;
 }
@@ -37,7 +39,7 @@
   }
 
   .text {
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-2');
   }
 
   i {
