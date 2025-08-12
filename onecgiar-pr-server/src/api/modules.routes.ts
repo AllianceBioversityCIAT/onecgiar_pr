@@ -15,6 +15,7 @@ import { GlobalParameterModule } from './global-parameter/global-parameter.modul
 import { NotificationModule } from './notification/notification.module';
 import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
 import { AdUsersModule } from './ad_users/ad_users.module';
+import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -71,5 +72,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'ad-users',
     module: AdUsersModule,
+  },
+  {
+    path: 'initiatives-entity',
+    module: InitiativeEntityMapModule,
   },
 ];

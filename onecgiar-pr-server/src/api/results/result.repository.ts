@@ -515,16 +515,19 @@ WHERE
     u.first_name as create_first_name,
     u.last_name as create_last_name,
     r.version_id,
-    v.phase_name,
-    v.phase_year,
+    CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
     v.status as phase_status,
-    r.in_qa as inQA
+    r.in_qa as inQA,
+    ci.portfolio_id,
+    cp.name as portfolio_name,
+    cp.acronym as acronym
 FROM
     \`result\` r
     INNER JOIN result_type rt ON rt.id = r.result_type_id
     inner join result_level rl on rl.id = r.result_level_id 
     INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
     INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+    LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
     left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
     							and rbu.\`user\`  = ?
     left join \`role\` r2 on r2.id  = rbu.\`role\` 

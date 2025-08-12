@@ -22,4 +22,14 @@ export class ClarisaInitiativesController {
   findAll() {
     return this.clarisaInitiativesService.findAll();
   }
+
+  @Get('p22')
+  getInitiatives() {
+    return this.clarisaInitiativesService.getInitiatives();
+  }
+
+  @Get('p25')
+  getEntities() {
+    return this.clarisaInitiativesService.getEntities();
+  }
 }

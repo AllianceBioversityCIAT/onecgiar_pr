@@ -46,4 +46,34 @@ export class ClarisaInitiativesService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async getInitiatives() {
+    try {
+      const initiatives = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 2 },
+      });
+      return {
+        response: initiatives,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getEntities() {
+    try {
+      const entities = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 3 },
+      });
+      return {
+        response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }
