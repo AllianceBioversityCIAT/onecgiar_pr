@@ -32,10 +32,8 @@ describe('WhatsNewService', () => {
 
       service.getWhatsNewPages();
 
-      setTimeout(() => {
-        expect(service.notionData()).toEqual(mockData);
-        expect(service.notionDataLoading()).toBe(false);
-      }, 0);
+      expect(service.notionData()).toEqual(mockData);
+      expect(service.notionDataLoading()).toBe(false);
     });
 
     it('should handle error correctly', () => {
@@ -44,9 +42,77 @@ describe('WhatsNewService', () => {
 
       service.getWhatsNewPages();
 
-      setTimeout(() => {
-        expect(service.notionDataLoading()).toBe(false);
-      }, 0);
+      expect(service.notionDataLoading()).toBe(false);
+    });
+
+    it('should sort results by ["Released date"]?.date?.start descending', () => {
+      const mockData = {
+        results: [
+          {
+            id: '1',
+            properties: {
+              'Released date': { date: { start: '2023-01-01' } }
+            }
+          },
+          {
+            id: '2',
+            properties: {
+              'Released date': { date: { start: '2024-01-01' } }
+            }
+          },
+          {
+            id: '3',
+            properties: {
+              'Released date': { date: { start: '2022-01-01' } }
+            }
+          }
+        ]
+      };
+      resultsApiServiceMock.getNotionData.mockReturnValue(of(mockData));
+
+      service.getWhatsNewPages();
+
+      const sorted = service.notionData().results;
+      expect(sorted[0].id).toBe('2');
+      expect(sorted[1].id).toBe('1');
+      expect(sorted[2].id).toBe('3');
+    });
+
+    it('should treat missing Released date as 0 in sorting', () => {
+      const mockData = {
+        results: [
+          {
+            id: '1',
+            properties: {
+              'Released date': { date: { start: '2023-01-01' } }
+            }
+          },
+          {
+            id: '2',
+            properties: {
+              'Released date': { date: null }
+            }
+          },
+          {
+            id: '3',
+            properties: {}
+          },
+          {
+            id: '4',
+            properties: {
+              'Released date': { date: { start: '2024-01-01' } }
+            }
+          }
+        ]
+      };
+      resultsApiServiceMock.getNotionData.mockReturnValue(of(mockData));
+
+      service.getWhatsNewPages();
+
+      const sorted = service.notionData().results;
+      expect(sorted[0].id).toBe('4');
+      expect(sorted[1].id).toBe('1');
+      expect([sorted[2].id, sorted[3].id]).toEqual(expect.arrayContaining(['2', '3']));
     });
   });
 
