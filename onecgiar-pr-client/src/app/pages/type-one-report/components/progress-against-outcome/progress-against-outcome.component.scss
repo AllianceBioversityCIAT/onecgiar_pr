@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 h1,
 p,
 ul {
@@ -19,14 +21,14 @@ ul {
 }
 
 .progress_left_title {
-  font-size: 14px;
+  @include fonts.pr-typography('h4');
   font-weight: 600;
   margin: 0;
   margin-bottom: 10px;
 }
 
 .progress_left_desc {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
   margin: 0;
 }
@@ -48,7 +50,7 @@ ul {
 }
 
 .progress_right_item_title {
-  font-size: 13px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
 }
 
@@ -87,7 +89,7 @@ ul {
 
 .progress_right_item_linked_results_item {
   color: var(--pr-color-blue-500);
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
   cursor: pointer;
 
@@ -104,7 +106,7 @@ ul {
 }
 
 .progress_right_empty_item_title {
-  font-size: 13px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
   color: var(--pr-color-primary-300);
 }
@@ -124,7 +126,7 @@ ul {
 }
 
 .indicator_info_item_value {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
   color: var(--pr-color-accents-4);
 }
@@ -165,7 +167,7 @@ ul {
 }
 
 .work_package_title {
-  font-size: 14px;
+  @include fonts.pr-typography('h4');
   font-weight: 600;
   color: var(--pr-color-primary-300);
 }
