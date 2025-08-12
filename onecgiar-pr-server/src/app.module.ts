@@ -47,6 +47,7 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 import { AuthMicroserviceService } from './shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
 import { AdUsersModule } from './api/ad_users/ad_users.module';
+import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { AdUsersModule } from './api/ad_users/ad_users.module';
     ResultQaedModule,
     AuthMicroserviceModule,
     AdUsersModule,
+    InitiativeEntityMapModule,
   ],
   controllers: [AppController],
   providers: [

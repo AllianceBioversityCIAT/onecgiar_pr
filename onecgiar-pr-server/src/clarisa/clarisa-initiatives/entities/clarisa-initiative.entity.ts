@@ -5,6 +5,7 @@ import { UserNotificationSetting } from '../../../api/user-notification-settings
 import { ResultsByInititiative } from '../../../api/results/results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ClarisaInitiativeStage } from '../../clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
 import { ClarisaPortfolios } from '../../clarisa-portfolios/entities/clarisa-portfolios.entity';
+import { InitiativeEntityMap } from '../../../api/initiative_entity_map/entities/initiative_entity_map.entity';
 
 @Entity('clarisa_initiatives')
 export class ClarisaInitiative {
@@ -93,4 +94,10 @@ export class ClarisaInitiative {
   })
   @JoinColumn({ name: 'portfolio_id' })
   obj_portfolio?: ClarisaPortfolios;
+
+  @OneToMany(() => InitiativeEntityMap, (iem) => iem.initiative_obj)
+  initiative_map_array: InitiativeEntityMap[];
+
+  @OneToMany(() => InitiativeEntityMap, (iem) => iem.entity_obj)
+  entity_map_array: InitiativeEntityMap[];
 }
