@@ -32,4 +32,9 @@ export class ClarisaInitiativesController {
   getEntities() {
     return this.clarisaInitiativesService.getEntities();
   }
+
+  @Get('entities')
+  getInitiativesEntities() {
+    return this.clarisaInitiativesService.getInitiativesEntitiesGrouped();
+  }
 }

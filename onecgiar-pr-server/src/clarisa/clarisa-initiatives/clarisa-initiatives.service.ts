@@ -76,4 +76,22 @@ export class ClarisaInitiativesService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async getInitiativesEntitiesGrouped() {
+    try {
+      const p22 = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 2, active: true },
+      });
+      const p25 = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 3, active: true },
+      });
+      return {
+        response: { p22, p25 },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }
