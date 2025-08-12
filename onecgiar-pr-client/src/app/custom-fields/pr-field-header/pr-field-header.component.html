@@ -1,11 +1,7 @@
 <div
-  class="pr_label pr-h4"
+  class="pr_label"
   [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
   *ngIf="this.label"
   [innerHTML]="this.label + (this.useColon ? ':' : '')"
   [style]="labelDescInlineStyles"></div>
-<div
-  class="pr_description readOnly pr-body-2"
-  *ngIf="this.description"
-  [innerHTML]="this.descriptionLabel + this.description"
-  [style]="descInlineStyles"></div>
+<div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

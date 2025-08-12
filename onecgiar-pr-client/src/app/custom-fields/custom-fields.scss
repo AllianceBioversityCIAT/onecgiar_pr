@@ -1,5 +1,7 @@
+@use '../../styles/fonts.scss' as fonts;
+
 .pr_description {
-  font-size: 1em;
+  @include fonts.pr-typography('body-2');
   color: var(--pr-color-accents-4);
   margin-bottom: 5px;
 }
@@ -9,6 +11,7 @@
   margin-bottom: 7px;
   color: var(--pr-color-black);
   text-align: left;
+  @include fonts.pr-typography('h4');
 }
 
 .pr_description.readOnly {

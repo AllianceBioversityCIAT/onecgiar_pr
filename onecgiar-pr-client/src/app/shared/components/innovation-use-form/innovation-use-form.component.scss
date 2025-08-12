@@ -46,3 +46,7 @@
   display: grid !important;
   grid-template-columns: 1fr 1fr 1fr;
 }
+
+::ng-deep .p-inputtext {
+  width: 1%;
+}

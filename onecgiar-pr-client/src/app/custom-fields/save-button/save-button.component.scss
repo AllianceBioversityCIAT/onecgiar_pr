@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .fixed_button {
   position: fixed;
   right: 0;
@@ -52,12 +54,13 @@
     align-items: center;
     gap: 5px;
     padding: 15px 10px;
-    font-weight: 600;
     color: var(--pr-color-primary-300);
-    font-size: 1.1em;
+    @include fonts.pr-typography('body-2');
+    font-weight: 600;
 
     .text {
-      font-size: 0.9em;
+      @include fonts.pr-typography('body-2');
+      font-weight: 600;
     }
 
     i {
@@ -88,7 +91,7 @@
       }
 
       .text {
-        font-size: 0.9em;
+        @include fonts.pr-typography('body-2');
         overflow: hidden;
         display: none;
       }

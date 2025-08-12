@@ -4,6 +4,7 @@
 html,
 body {
   font-family: 'Poppins', sans-serif;
+  font-size: 12px;
 }
 
 .segment_title_margin {
@@ -17,21 +18,6 @@ body {
   cursor: pointer;
 }
 
-@media only screen and (max-width: 1400px) {
-  html {
-    font-size: 12px;
-  }
-}
-
-@media only screen and (min-width: 1400px) {
-  html {
-    font-size: 13px;
-  }
-}
-
-// Improved and DRY typography system for PR app
-
-// Centralized typography map for scalable, maintainable font styles
 $pr-typography: (
   'h1': (
     weight: 900,
