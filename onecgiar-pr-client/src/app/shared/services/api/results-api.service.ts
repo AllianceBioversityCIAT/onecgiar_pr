@@ -444,6 +444,14 @@ export class ResultsApiService {
     );
   }
 
+  GET_AllInitiativesEntities() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/entities`).pipe(
+      map(resp => {
+        return resp;
+      })
+    );
+  }
+
   GET_clarisaInnovationType() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
       map(resp => {
