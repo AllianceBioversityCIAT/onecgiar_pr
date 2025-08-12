@@ -81,12 +81,30 @@ export class ClarisaInitiativesService {
     try {
       const p22 = await this._clarisaInitiativesRepository.find({
         where: { portfolio_id: 2, active: true },
+        order: { id: 'ASC' },
       });
       const p25 = await this._clarisaInitiativesRepository.find({
         where: { portfolio_id: 3, active: true },
+        order: { id: 'ASC' },
       });
+
+      const result = [
+        { name: 'P22', isLabel: true },
+        ...p22.map((item) => ({
+          initiative_id: item.id,
+          full_name: item.name,
+          ...item,
+        })),
+        { name: 'P25', isLabel: true },
+        ...p25.map((item) => ({
+          initiative_id: item.id,
+          full_name: item.name,
+          ...item,
+        })),
+      ];
+
       return {
-        response: { p22, p25 },
+        response: result,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

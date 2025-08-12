@@ -58,13 +58,7 @@ export class ManageUserModalComponent {
   });
   isLoading = signal<boolean>(false);
 
-  entities = computed(() => {
-    const list: any[] = [];
-    this.initiativesService.allInitiatives().forEach(entity => {
-      list.push({ ...entity, disabledd: this.addUserForm().role_assignments.some(assignment => assignment.entity_id === entity.id) });
-    });
-    return list;
-  });
+  entities = computed(() => this.initiativesService.allInitiatives());
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
