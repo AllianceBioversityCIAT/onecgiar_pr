@@ -25,7 +25,7 @@ export class TorProgressWpsComponent implements OnInit, OnDestroy {
   }
 
   exportProgressWpsExcel() {
-    if (!this.typeOneReportSE.initiativeSelected || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData) {
+    if (!this.typeOneReportSE.initiativeSelected || this.outcomeIService.loadingWPs() || !this.outcomeIService?.wpsData?.length) {
       return;
     }
 

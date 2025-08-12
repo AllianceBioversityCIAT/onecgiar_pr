@@ -44,7 +44,7 @@ export class EoioHomeComponent implements OnDestroy, OnInit {
   }
 
   exportProgressEoioExcel() {
-    if (!this.outcomeIService.initiativeIdFilter || this.outcomeIService.loading() || !this.outcomeIService.eoisData) {
+    if (!this.outcomeIService.initiativeIdFilter || this.outcomeIService.loading() || !this.outcomeIService?.eoisData?.length) {
       return;
     }
 

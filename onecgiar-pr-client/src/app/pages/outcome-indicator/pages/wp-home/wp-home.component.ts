@@ -44,7 +44,7 @@ export class WpHomeComponent implements OnDestroy, OnInit {
   }
 
   exportProgressWpExcel() {
-    if (!this.outcomeIService.initiativeIdFilter || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData) {
+    if (!this.outcomeIService.initiativeIdFilter || this.outcomeIService.loadingWPs() || !this.outcomeIService?.wpsData?.length) {
       return;
     }
 

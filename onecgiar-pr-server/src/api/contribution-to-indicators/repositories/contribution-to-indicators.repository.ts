@@ -21,6 +21,123 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     super(ContributionToIndicator, dataSource.createEntityManager());
   }
 
+  async findAllOutcomes() {
+    const relationName = 'outcome';
+    const dataQuery = `
+      select json_object(
+        "initiative_official_code", ci.official_code,
+        "workpackage_code", wp.wp_official_code,
+        "workpackage_name", wp.name,
+        "workpackage_short_name", wp.acronym,
+        "toc_results", json_arrayagg(${this._getTocResultSubquery(relationName)})
+      ) as workpackage
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_NAME}.clarisa_initiative_stages cis on cis.initiative_id = ci.id and cis.active
+      left join ${env.DB_TOC}.work_packages wp on wp.initvStgId = cis.id
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 2
+	      and ${relationName}.id_toc_initiative = ci.toc_id and ${relationName}.work_packages_id = wp.id
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
+      group by ci.official_code, wp.id
+      order by ci.official_code, wp.id
+    `;
+
+    const result = await this.dataSource
+      .query(dataQuery)
+      .then((data: ContributionToWpOutcomeDto[]) =>
+        data.map((item) => item.workpackage),
+      )
+      .catch((err) => {
+        throw this._handlersError.returnErrorRepository({
+          error: err,
+          className: ContributionToIndicatorsRepository.name,
+          debug: true,
+        });
+      });
+
+    for (const wp of result) {
+      for (const tocResult of wp.toc_results ?? []) {
+        for (const indicator of tocResult.indicators ?? []) {
+          const results = await this.dataSource
+            .query(this._flattenedResultsQuery(), [
+              indicator.indicator_uuid,
+              indicator.indicator_uuid,
+            ])
+            .then((data) => data[0].results)
+            .then((data) =>
+              this._contributionToIndicatorResultsRepository.removeInactives(
+                data ?? [],
+              ),
+            )
+            .catch((err) => {
+              throw this._handlersError.returnErrorRepository({
+                error: err,
+                className: ContributionToIndicatorsRepository.name,
+                debug: true,
+              });
+            });
+
+          indicator.indicator_supporting_results = results;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  async findAllEoIs() {
+    const relationName = 'eoi';
+    const dataQuery = `
+      select ${this._getTocResultSubquery(relationName)} as eois
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 3
+        and ${relationName}.id_toc_initiative = ci.toc_id
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
+      order by ci.official_code
+    `;
+
+    const result = await this.dataSource
+      .query(dataQuery)
+      .then((data: ContributionToEoiOutcomeDto[]) =>
+        data.flatMap((item) => item.eois),
+      )
+      .catch((err) => {
+        throw this._handlersError.returnErrorRepository({
+          error: err,
+          className: ContributionToIndicatorsRepository.name,
+          debug: true,
+        });
+      });
+
+    for (const eoi of result) {
+      for (const indicator of eoi.indicators ?? []) {
+        const results = await this.dataSource
+          .query(this._flattenedResultsQuery(), [
+            indicator.indicator_uuid,
+            indicator.indicator_uuid,
+          ])
+          .then((data) => data[0].results)
+          .then((data) =>
+            this._contributionToIndicatorResultsRepository.removeInactives(
+              data ?? [],
+            ),
+          )
+          .catch((err) => {
+            throw this._handlersError.returnErrorRepository({
+              error: err,
+              className: ContributionToIndicatorsRepository.name,
+              debug: true,
+            });
+          });
+
+        indicator.indicator_supporting_results = results;
+      }
+    }
+
+    return result;
+  }
+
   async findAllOutcomesByInitiativeCode(initiativeCode: string) {
     const relationName = 'outcome';
     const dataQuery = `
@@ -140,6 +257,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
 
   private _getTocResultSubquery(outerRelationName: string): string {
     return `json_object(
+          "initiative_official_code", ci.official_code,
           "toc_result_id", ${outerRelationName}.id,
           "toc_result_uuid", ${outerRelationName}.toc_result_id,
           "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[[:space:]]+|[[:space:]]+$', ''),

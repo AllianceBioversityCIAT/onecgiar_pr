@@ -27,7 +27,7 @@
 
     <app-pr-button
       [text]="this.requesting ? 'Downloading excel file' : 'Download excel file'"
-      [ngClass]="{ globalDisabled: this.requesting || this.outcomeIService.loadingWPs() || !this.outcomeIService.wpsData }"
+      [ngClass]="{ globalDisabled: this.requesting || this.outcomeIService.loadingWPs() || !this.outcomeIService?.wpsData?.length }"
       [icon]="this.requesting ? 'loop' : 'excel_white'"
       [rotating]="this.requesting"
       (click)="exportProgressWpsExcel()"></app-pr-button>
