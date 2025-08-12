@@ -16,18 +16,9 @@
     position: relative;
     gap: 3px;
 
-    .pending {
-      padding-right: 5px !important;
-
-      .text_inactive {
-        text-decoration: line-through;
-      }
-    }
-
     .pr_chip_selected {
       background-color: var(--pr-color-primary-50);
       color: var(--pr-color-secondary-400);
-      font-size: 0.95em;
       padding: 6px 13px;
       border-radius: 10px;
       display: grid;

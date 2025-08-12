@@ -38,3 +38,12 @@ label {
   grid-template-columns: 1fr 1fr;
   margin-bottom: 30px;
 }
+
+.col-0 {
+  margin-left: 50px;
+  border-right: 1px solid rgba(var(--pr-color-primary-rgb), 0.6);
+}
+
+.col-1 {
+  margin-left: 40px;
+}
