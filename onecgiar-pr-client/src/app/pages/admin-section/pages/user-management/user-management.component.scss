@@ -1,7 +1,8 @@
 .local_container {
-  width: calc(100% - 40px) !important;
   padding: 30px 30px;
   margin: 20px 20px 50px 20px !important;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
 
   font-family:
     'Inter',
@@ -34,7 +35,6 @@
     font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: help;
@@ -147,6 +147,27 @@
   }
 }
 
+.app-role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #fff7d6; // Amarillo claro
+  color: #b59f3b; // Amarillo oscuro
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  min-height: 20px;
+  white-space: nowrap;
+
+  span {
+    line-height: 1;
+  }
+}
+
 // Controls section
 .controls-section {
   margin-bottom: 32px;
@@ -155,20 +176,27 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
+    gap: 15px;
+    flex-wrap: nowrap;
 
     .filters-group {
-      display: flex;
-      align-items: flex-start;
-      gap: 24px;
-      flex-wrap: nowrap; // Important: filters don't wrap
+      display: grid;
+      grid-template-columns: 1fr 100px;
+      gap: 15px;
+      width: 100%;
+
+      .filters-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+      }
 
       .search-container {
         display: flex;
         flex-direction: column;
         gap: 8px;
         flex: 1;
-        min-width: 200px;
+        width: 100%;
 
         .search-label {
           font-size: 14px;
@@ -193,7 +221,6 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 180px;
 
         .status-label,
         .cgiar-label,
@@ -211,7 +238,6 @@
       }
 
       .clear-filter {
-        min-width: 150px;
         margin-top: -6px;
       }
     }
@@ -231,7 +257,7 @@
   box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 
   .counter {
@@ -258,69 +284,101 @@
 }
 
 // Custom table styles
-::ng-deep .user-table {
-  .p-datatable-header {
-    background: #f8fafc;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .p-datatable-thead > tr > th {
-    background: #374151 !important;
-    color: white !important;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 8px 16px;
-    border: none;
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+::ng-deep {
+  .user-table {
+    .p-datatable-header {
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
     }
 
-    .p-sortable-column-icon {
+    .p-datatable-thead > tr > th {
+      background: #374151 !important;
       color: white !important;
-    }
-
-    &:nth-child(3),
-    &:nth-child(4),
-    &:nth-child(5) {
-      .header-content {
-        justify-content: center;
-      }
-    }
-  }
-
-  .p-datatable-tbody > tr {
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background-color: #f9fafb !important;
-    }
-
-    > td {
-      padding: 8px 16px;
-      border-bottom: 1px solid #f3f4f6;
+      font-weight: 600;
       font-size: 14px;
-      color: #374151;
-      vertical-align: middle;
+      padding: 8px 16px;
+      border: none;
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .p-sortable-column-icon {
+        color: white !important;
+      }
 
       &:nth-child(3),
       &:nth-child(4),
       &:nth-child(5) {
-        text-align: center;
+        .header-content {
+          justify-content: center;
+        }
       }
+    }
+
+    .p-datatable-tbody > tr {
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #f9fafb !important;
+      }
+
+      > td {
+        padding: 8px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+        color: #374151;
+        vertical-align: middle;
+
+        &:nth-child(3),
+        &:nth-child(4),
+        &:nth-child(5) {
+          text-align: center;
+        }
+      }
+    }
+
+    .p-datatable-emptymessage > td {
+      text-align: center;
+      padding: 24px 16px;
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .p-datatable-thead > tr > th:last-child,
+    .p-datatable-tbody > tr > td:last-child {
+      text-align: center !important;
     }
   }
 
-  .p-datatable-emptymessage > td {
-    text-align: center;
-    padding: 24px 16px;
-    color: #6b7280;
-    font-style: italic;
+  .p-multiselect .p-multiselect-trigger {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary);
+    width: 43px;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+    color: white;
+  }
+
+  .p-multiselect .p-multiselect-label.p-placeholder {
+    color: rgb(194, 194, 194);
+    font-size: 12px;
+  }
+
+  .p-multiselect .p-multiselect-label {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+  }
+
+  .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
+    font-size: 14px;
   }
 }
-
 // User status styles
 .status-active {
   color: #059669;
@@ -371,21 +429,6 @@
   }
 }
 
-// Single clean responsive rule
-@media (max-width: 1300px) {
-  .controls-section {
-    .controls-row {
-      flex-direction: column;
-      gap: 0px; // No gap between groups when vertical
-
-      .actions-group {
-        align-self: flex-start; // Align to left
-        margin-top: 0px; // Remove top margin
-      }
-    }
-  }
-}
-
 // Mobile adjustments
 @media (max-width: 768px) {
   .local_container {
@@ -401,12 +444,6 @@
 
         .search-container .p-input-icon-left {
           width: 100%;
-        }
-
-        .status-filter,
-        .cgiar-filter,
-        .clear-filter {
-          min-width: auto;
         }
       }
 
@@ -469,13 +506,5 @@
   // Reduced opacity for inactive users - only affects toggle button (second button)
   &.inactive-user .action-btn-toggle .material-icons-round {
     opacity: 0.4;
-  }
-}
-
-// Make Actions column centered
-::ng-deep .user-table {
-  .p-datatable-thead > tr > th:last-child,
-  .p-datatable-tbody > tr > td:last-child {
-    text-align: center !important;
   }
 }

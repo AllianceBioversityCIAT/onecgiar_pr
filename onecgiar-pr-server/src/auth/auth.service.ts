@@ -105,6 +105,18 @@ export class AuthService {
           this._logger.log(
             `User found locally: ${userLogin.email}. Sending metadata to auth microservice.`,
           );
+        } else if (existingUser.active === false) {
+          this._logger.log(
+            `User found locally but inactive: ${userLogin.email}. Cannot proceed.`,
+          );
+          return {
+            message:
+              'User found but inactive. Please contact the support team.',
+            status: HttpStatus.FORBIDDEN,
+            response: {
+              valid: false,
+            },
+          };
         } else {
           this._logger.log(
             `User not found locally: ${userLogin.email}. Cannot proceed without local user record.`,

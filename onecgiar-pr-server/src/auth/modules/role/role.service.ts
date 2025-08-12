@@ -24,7 +24,8 @@ export class RoleService {
     return this._roleRepository
       .createQueryBuilder('role')
       .select(['role.id', 'role.description'])
-      .where('role.id NOT IN (:...excludedIds)', { excludedIds: [1, 2] })
+      .where('role.active = :active', { active: true })
+      .andWhere('role.role_level_id = :levelId', { levelId: 2 })
       .getRawMany();
   }
 
