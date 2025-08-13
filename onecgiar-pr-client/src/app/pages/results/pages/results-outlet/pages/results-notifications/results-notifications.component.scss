@@ -1,11 +1,13 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .notifications_title {
-  font-size: 24px;
+  @include fonts.pr-typography('h1');
   font-weight: 700;
   margin-bottom: 10px;
 }
 
 .notifications_description {
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
   color: var(--pr-color-secondary-400);
   font-weight: 400;
   margin-bottom: 10px;
@@ -40,6 +42,7 @@
       gap: 5px;
       transition: all ease-in-out 0.2s;
       border-radius: 5px;
+      @include fonts.pr-typography('body-2');
 
       &:hover {
         background-color: rgba(var(--pr-color-black-rgb), 0.05) !important;
@@ -55,7 +58,7 @@
 }
 
 .request_description {
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
   color: var(--pr-color-secondary-400);
   font-weight: 400;
   margin-top: 20px;

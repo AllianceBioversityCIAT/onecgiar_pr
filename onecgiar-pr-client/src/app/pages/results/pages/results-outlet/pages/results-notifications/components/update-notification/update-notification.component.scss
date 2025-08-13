@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
@@ -25,8 +27,8 @@ p {
       color: var(--pr-color-primary-300);
 
       .update_notification_header_item_text {
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
-        font-size: 12px;
       }
     }
 
@@ -37,7 +39,7 @@ p {
       gap: 8px;
 
       .update_notification_header_announcement_text {
-        font-size: 14px;
+        @include fonts.pr-typography('body-1');
         font-weight: 700;
         color: var(--pr-color-primary-300);
       }
@@ -60,7 +62,7 @@ p {
 
     .update_notification_content_body {
       .update_notification_content_body_text {
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
       }
     }
@@ -85,6 +87,6 @@ p {
     align-items: center;
     width: 100%;
     color: var(--pr-color-accents-5);
-    font-size: 12px;
+    @include fonts.pr-typography('body-2');
   }
 }

@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
@@ -26,8 +28,8 @@ p {
       color: var(--pr-color-primary-300);
 
       .notification_header_item_text {
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
-        font-size: 12px;
       }
     }
   }
@@ -48,7 +50,7 @@ p {
 
       .notification_content_actions_status {
         text-align: center;
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         padding: 5px 20px;
         border-left: 1px solid var(--pr-color-primary-300);
         border-right: 1px solid var(--pr-color-primary-300);
@@ -74,7 +76,7 @@ p {
 
     .notification_content_body {
       .notification_content_body_text {
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
       }
     }
@@ -87,47 +89,6 @@ p {
     width: 100%;
     color: var(--pr-color-accents-5);
     margin-top: 5px;
-    font-size: 12px;
+    @include fonts.pr-typography('body-2');
   }
-
-  .title {
-    font-size: 1.2em;
-  }
-
-  .sub_title {
-    margin-bottom: 10px;
-  }
-
-  .direction_icon {
-    position: absolute;
-    left: 0;
-    top: 0;
-    rotate: 45deg;
-    margin-left: 5px;
-    margin-top: 5px;
-  }
-
-  .text_icon {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .pending {
-    color: var(--pr-color-accents-5);
-  }
-
-  .accepted {
-    color: var(--pr-color-green-500);
-  }
-
-  .rejected {
-    color: var(--pr-color-red-300);
-  }
-}
-
-.result_submitted_text {
-  color: var(--pr-color-red-100);
-  font-weight: 700px;
-  font-size: 1em !important;
 }

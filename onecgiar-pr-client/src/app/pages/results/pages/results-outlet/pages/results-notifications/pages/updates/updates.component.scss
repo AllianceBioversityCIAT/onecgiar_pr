@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 h1,
 p {
   margin: 0;
@@ -31,7 +33,7 @@ p {
     gap: 10px;
 
     .updates_container_header_title {
-      font-size: 18px;
+      @include fonts.pr-typography('h2');
       font-weight: 600;
     }
 
@@ -47,7 +49,7 @@ p {
       justify-content: center;
       align-items: center;
       height: 100px;
-      font-size: 16px;
+      @include fonts.pr-typography('body-1');
       font-weight: 600;
       background-color: var(--pr-color-primary-25);
       border-bottom: 1px solid var(--pr-color-accents-4);

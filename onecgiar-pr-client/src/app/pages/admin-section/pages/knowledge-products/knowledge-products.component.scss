@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .local_container {
   margin-top: 30px;
   margin-bottom: 50px;
@@ -12,15 +14,14 @@
     gap: 1rem;
 
     .kp_header--title {
-      font-size: 1.5rem;
+      @include fonts.pr-typography('h2');
       font-weight: 600;
       margin: 0;
     }
   }
 
   .kp--desc {
-    font-size: 14px;
-    font-weight: 400;
+    @include fonts.pr-typography('body-1');
     margin: 0;
   }
 
@@ -31,13 +32,12 @@
     align-items: flex-start;
     gap: 1.5rem;
     margin-top: 20px;
-    border: 1px solid var(--pr-color-accents-1);
+    border: 1px solid var(--pr-color-accents-2);
     border-radius: 1rem;
     padding: 20px;
 
     .kp_content--title {
-      font-size: 1.25rem;
-      font-weight: 600;
+      @include fonts.pr-typography('h3');
       margin: 0;
     }
 
@@ -50,14 +50,12 @@
       padding: 0 10px;
 
       .kp_content_item--title {
-        font-size: 14px;
-        font-weight: 500;
+        @include fonts.pr-typography('h4');
         margin: 0;
       }
 
       .kp_content_item--desc {
-        font-size: 12px;
-        font-weight: 400;
+        @include fonts.pr-typography('body-2');
         margin: 0;
         color: var(--pr-color-accents-4);
       }

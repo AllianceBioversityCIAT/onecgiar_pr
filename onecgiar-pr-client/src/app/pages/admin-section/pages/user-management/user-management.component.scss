@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .local_container {
   padding: 30px 30px;
   margin: 20px 20px 50px 20px !important;
@@ -15,7 +17,7 @@
     }
 
     h1 {
-      font-size: 24px;
+      @include fonts.pr-typography('h1');
       font-weight: 600;
       color: var(--pr-color-secondary-400);
       margin: 0;
@@ -23,8 +25,8 @@
   }
 
   .description {
+    @include fonts.pr-typography('body-1');
     color: var(--pr-color-accents-5);
-    font-size: 16px;
     margin-bottom: 32px;
     line-height: 1.5;
     overflow: hidden;
@@ -49,9 +51,9 @@
     align-items: center;
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    @include fonts.pr-typography('body-2');
     font-weight: 600;
-    background-color: var(--pr-color-primary-25); // Fixed background color
+    background-color: var(--pr-color-primary-50); // Fixed background color
     color: var(--pr-color-primary-300); // Fixed text color
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -69,7 +71,7 @@
     background: none;
     border: none;
     color: var(--pr-color-primary-300); // Match entity text color
-    font-size: 11px;
+    @include fonts.pr-typography('body-2');
     font-weight: 500;
     cursor: pointer;
     padding: 2px 6px;
@@ -90,7 +92,7 @@
   }
 
   .no-entities {
-    font-size: 12px;
+    @include fonts.pr-typography('body-2');
     color: var(--pr-color-secondary-200);
     font-style: italic;
   }
@@ -101,7 +103,7 @@
   padding: 8px;
 
   .overlay-title {
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     font-weight: 600;
     color: var(--pr-color-secondary-400);
     margin-bottom: 12px;
@@ -121,7 +123,7 @@
       align-items: center;
       padding: 4px 10px;
       border-radius: 12px;
-      font-size: 11px;
+      @include fonts.pr-typography('body-2');
       font-weight: 600;
       background-color: var(--pr-color-primary-25);
       color: var(--pr-color-primary-300);
@@ -144,7 +146,7 @@
   align-items: center;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 11px;
+  @include fonts.pr-typography('body-2');
   font-weight: 600;
   background-color: #fff7d6; // Amarillo claro
   color: #b59f3b; // Amarillo oscuro
@@ -191,7 +193,7 @@
         width: 100%;
 
         .search-label {
-          font-size: 14px;
+          @include fonts.pr-typography('body-1');
           font-weight: 500;
           margin-bottom: 3px;
           color: var(--pr-color-secondary-400);
@@ -218,7 +220,7 @@
         .cgiar-label,
         .entity-label,
         .clear-spacer {
-          font-size: 14px;
+          @include fonts.pr-typography('body-1');
           font-weight: 500;
           color: var(--pr-color-secondary-400);
           height: 20px;
@@ -253,7 +255,7 @@
   position: relative;
 
   .counter {
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     position: absolute;
     bottom: 0;
     left: 0;
@@ -298,7 +300,7 @@
     background: var(--pr-color-secondary-400) !important;
     color: var(--pr-color-white) !important;
     font-weight: 600;
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     padding: 8px 16px;
     border: none;
 
@@ -353,21 +355,22 @@
     position: absolute;
     right: 0;
     background-color: var(--pr-color-primary-300) !important;
-    width: 43px;
-    height: 100%;
+    width: 43px !important;
     z-index: 1;
     pointer-events: none;
     border-radius: 3px;
-    color: white;
+    height: 38px;
+    color: white !important;
   }
 
-  .p-multiselect .p-multiselect-label.p-placeholder {
+  .p-multiselect .p-multiselect-label {
     color: var(--pr-color-accents-3);
+    align-items: center;
     height: 38px;
   }
 
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
   }
 
   .p-datatable-thead > tr > th:last-child,
@@ -382,7 +385,7 @@
   padding: 4px 8px;
   background-color: var(--pr-color-green-50);
   border-radius: 6px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -393,7 +396,7 @@
   padding: 4px 8px;
   background-color: var(--pr-color-red-50);
   border-radius: 6px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -404,7 +407,7 @@
   padding: 4px 8px;
   background-color: var(--pr-color-accents-1);
   border-radius: 6px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -442,7 +445,7 @@
 .empty-message {
   text-align: center;
   color: var(--pr-color-secondary-200);
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
   padding: 24px;
 }
 

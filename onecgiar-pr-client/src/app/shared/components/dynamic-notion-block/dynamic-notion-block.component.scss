@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 h1,
 h2,
 h3,
@@ -11,7 +13,7 @@ p {
 }
 
 .whats-new-page-details_default_text {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
@@ -30,39 +32,39 @@ p {
 }
 
 .whats-new-page-details_callout_icon {
-  font-size: 20px;
+  @include fonts.pr-typography('h3');
 }
 
 .whats-new-page-details_callout_text {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
 // Heading 1
 
 .whats-new-page-details_heading_1 {
-  font-size: 28px;
+  @include fonts.pr-typography('h1');
   font-weight: 600;
 }
 
 // Heading 2
 
 .whats-new-page-details_heading_2 {
-  font-size: 24px;
+  @include fonts.pr-typography('h2');
   font-weight: 600;
 }
 
 // Heading 3
 
 .whats-new-page-details_heading_3 {
-  font-size: 20px;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
 }
 
 // Paragraph
 
 .whats-new-page-details_paragraph {
-  font-size: 15px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
@@ -84,7 +86,7 @@ p {
 }
 
 .whats-new-page-details_table td {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
 }
 
 // To do
@@ -104,7 +106,7 @@ p {
 // Quote
 
 .whats-new-page-details_quote {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
   padding-left: 15px;
   border-left: 3px solid var(--pr-color-black);
@@ -132,7 +134,7 @@ p {
 // Caption
 
 .whats-new-page-details_image_caption {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
   color: var(--pr-color-accents-4);
 }
@@ -159,7 +161,7 @@ p {
   user-select: none;
 
   i {
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     color: var(--pr-color-accents-5);
     transition: transform 0.2s ease;
   }
@@ -223,7 +225,7 @@ p {
       transition: transform 0.3s ease;
 
       i {
-        font-size: 24px;
+        font-size: 20px;
         color: var(--pr-color-accents-7);
       }
     }
