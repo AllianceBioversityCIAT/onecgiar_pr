@@ -1,5 +1,9 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 /* Add User Modal Styles */
 ::ng-deep .add-user-modal {
+  overflow: hidden;
+
   .p-dialog-header {
     background-color: var(--pr-color-secondary-400);
     color: var(--pr-color-white);
@@ -7,7 +11,7 @@
     border-radius: 8px 8px 0 0;
 
     .p-dialog-title {
-      font-size: 18px;
+      @include fonts.pr-typography('h3');
       font-weight: 600;
       margin: 0;
     }
@@ -57,6 +61,7 @@
   .header-item {
     width: 45%;
     text-align: center;
+    @include fonts.pr-typography('body-2');
     font-weight: 600;
     padding: 4px 0;
 
@@ -135,10 +140,10 @@
 
     .field-label {
       display: block;
-      font-weight: 500;
       color: var(--pr-color-secondary-400);
       margin-bottom: 8px;
-      font-size: 14px;
+      @include fonts.pr-typography('body-2');
+      font-weight: 500;
 
       .required {
         color: var(--pr-color-red-300);
@@ -169,12 +174,12 @@
       display: flex;
       align-items: center;
       cursor: pointer;
-      padding: 8px 20px;
+      padding: 5px 15px;
       border: 2px solid var(--pr-color-neutral-1000);
       background-color: var(--pr-color-white);
       color: var(--pr-color-secondary-400);
       border-radius: 6px;
-      font-size: 14px;
+      @include fonts.pr-typography('body-2');
       font-weight: 500;
       transition: all 0.2s ease;
       position: relative;
@@ -216,7 +221,7 @@
     padding: 10px 12px;
     border: 1px solid var(--pr-color-neutral-1000);
     border-radius: 6px;
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     transition: border-color 0.2s ease;
 
     &:focus {
@@ -236,7 +241,7 @@
     border: 1px solid var(--pr-color-neutral-1000);
     border-radius: 6px;
     color: var(--pr-color-secondary-400);
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
   }
 
   .selected-user-display {
@@ -245,7 +250,7 @@
     border: 2px solid var(--pr-color-neutral-1000);
     border-radius: 8px;
     color: var(--pr-color-accents-7);
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     font-weight: 500;
     min-height: 44px;
     display: flex;
@@ -271,7 +276,7 @@
     border: 1px solid var(--pr-color-accents-2);
     border-radius: 6px;
     color: var(--pr-color-secondary-200);
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
   }
 }
 
@@ -285,13 +290,13 @@
   width: 100%;
 
   .cancel-btn {
-    padding: 10px 20px;
+    padding: 8px 15px;
     border: 1px solid var(--pr-color-neutral-1000);
     background-color: var(--pr-color-white);
     color: var(--pr-color-secondary-400);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     font-weight: 500;
     transition: all 0.2s ease;
 
@@ -302,13 +307,13 @@
   }
 
   .save-btn {
-    padding: 10px 20px;
+    padding: 8px 15px;
     border: 1px solid var(--pr-color-primary-300);
     background-color: var(--pr-color-primary-300);
     color: var(--pr-color-white);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     font-weight: 500;
     transition: all 0.2s ease;
 

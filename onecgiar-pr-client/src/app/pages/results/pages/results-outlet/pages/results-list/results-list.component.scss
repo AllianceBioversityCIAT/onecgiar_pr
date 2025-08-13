@@ -1,3 +1,5 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .subResults {
   display: flex;
   flex-direction: column;
@@ -133,6 +135,7 @@ td {
 .noDataText {
   text-align: center;
   padding: 50px 0px;
+  @include fonts.pr-typography('h4');
   color: var(--pr-color-primary-300);
 }
 
@@ -140,7 +143,7 @@ td {
   background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   border-radius: 3px;
   color: var(--pr-color-white);
   height: 17px;

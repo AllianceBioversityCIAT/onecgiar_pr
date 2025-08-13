@@ -11,7 +11,7 @@
 .pr_button.big {
   padding: 10px 15px;
   gap: 20px;
-  font-size: 1.1em;
+  @include fonts.pr-typography('body-2');
 
   i {
     font-size: 1.7em;

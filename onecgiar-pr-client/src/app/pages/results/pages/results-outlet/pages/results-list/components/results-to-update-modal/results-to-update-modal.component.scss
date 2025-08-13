@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;
@@ -8,7 +10,7 @@
 .modal_title {
   background-color: var(--pr-color-secondary-400);
   width: 100%;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
   color: var(--pr-color-white);
   padding: 10px 20px;
@@ -16,11 +18,11 @@
 }
 
 .description {
-  font-weight: 700;
   text-align: center;
   color: var(--pr-color-secondary-400);
   padding: 20px 20vw;
-  font-size: 1.2rem;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
 }
 
 .buttons {
@@ -31,34 +33,6 @@
   margin-top: -50px;
   padding-right: 50px;
   padding-bottom: 10px;
-}
-
-.information {
-  text-align: center;
-  padding: 10px 50px;
-  font-size: 1.3em;
-
-  strong {
-    color: var(--pr-color-primary-300);
-  }
-}
-
-//modal
-
-.subResults {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.action_buttons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.table {
-  padding-bottom: 100px;
 }
 
 td {
@@ -165,7 +139,7 @@ td {
 .noDataText {
   text-align: center;
   padding: 50px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
   color: var(--pr-color-primary-300);
 }
@@ -174,7 +148,7 @@ td {
   background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   border-radius: 3px;
   color: var(--pr-color-white);
   height: 17px;

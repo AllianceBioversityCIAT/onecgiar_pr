@@ -35,7 +35,7 @@ input::placeholder,
 .select_placeholder {
   color: var(--pr-color-accents-3);
   font-weight: 400;
-  font-size: 1rem;
+  @include fonts.pr-typography('body-2');
 }
 
 .input_container {
@@ -49,7 +49,7 @@ input::placeholder,
 
     .hint {
       color: var(--pr-color-secondary-100);
-      font-size: 0.9em;
+      @include fonts.pr-typography('body-3');
     }
   }
 }
@@ -57,7 +57,7 @@ input::placeholder,
 .pr_chip_selected {
   background-color: var(--pr-color-primary-50);
   color: var(--pr-color-black) !important;
-  font-size: 0.95em;
+  @include fonts.pr-typography('body-2');
   padding: 1px 10px;
   border-radius: 10px;
   display: grid;
@@ -87,7 +87,7 @@ input::placeholder,
     align-items: center;
     position: relative;
     background-color: var(--pr-color-white);
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     font-family: 'Poppins', sans-serif !important;
     width: 100%;
     cursor: pointer;
@@ -241,7 +241,7 @@ input::placeholder,
 }
 
 .select_item_description {
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   font-style: italic;
   color: var(--pr-color-accents-5);
 }

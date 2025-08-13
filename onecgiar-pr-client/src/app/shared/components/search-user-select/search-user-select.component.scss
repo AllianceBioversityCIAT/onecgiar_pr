@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .select-container {
   position: relative;
   width: 100%;
@@ -8,7 +10,7 @@
   margin-bottom: 8px;
   font-weight: 500;
   color: var(--pr-color-accents-7);
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
 }
 
 .required {
@@ -26,11 +28,11 @@
 .user-display-name {
   font-weight: 500;
   color: var(--pr-color-accents-7);
-  font-size: 14px;
+  @include fonts.pr-typography('body-2');
 }
 
 .user-email {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   color: var(--pr-color-accents-5);
 }
 
@@ -41,7 +43,7 @@
   padding: 16px;
   text-align: center;
   color: var(--pr-color-accents-5);
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
 
   div {
     display: flex;

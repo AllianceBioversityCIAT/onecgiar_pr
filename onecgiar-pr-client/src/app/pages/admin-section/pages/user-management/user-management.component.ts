@@ -6,7 +6,6 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -19,6 +18,7 @@ import { ManageUserModalComponent } from './components/manage-user-modal/manage-
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { Popover } from 'primeng/popover';
 
 interface UserColumn {
   label: string;
@@ -47,7 +47,7 @@ interface CgiarOption {
     TooltipModule,
     InputTextModule,
     DialogModule,
-    OverlayPanelModule,
+    Popover,
     CustomFieldsModule,
     IconFieldModule,
     InputIconModule,

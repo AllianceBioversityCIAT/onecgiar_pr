@@ -51,7 +51,7 @@
         transition: all ease 0.3s;
 
         &:hover {
-          background-color: var(--pr-color-primary-400);
+          background-color: rgba(var(--pr-color-primary-rgb), 0.8);
         }
       }
     }

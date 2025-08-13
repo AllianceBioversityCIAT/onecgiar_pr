@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .chips_container {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -15,7 +17,7 @@
     justify-content: space-between;
     background-color: var(--pr-color-primary-50);
     color: var(--pr-color-secondary-400);
-    font-size: 0.95em;
+    @include fonts.pr-typography('body-2');
     padding: 6px 13px;
     border-radius: 10px;
     gap: 10px;
