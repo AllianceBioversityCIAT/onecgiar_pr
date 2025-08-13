@@ -60,6 +60,11 @@ export class ContributionToIndicatorsController {
     return this.contributionToIndicatorsService.findOneCoIResultByTocId(tocId);
   }
 
+  @Get('get/full-report')
+  getAllEoIsWps() {
+    return this.contributionToIndicatorsService.getAllFromInitiatives();
+  }
+
   @Patch()
   update(
     @Body() updateContributionToIndicatorDto: ContributionToIndicatorsDto,
