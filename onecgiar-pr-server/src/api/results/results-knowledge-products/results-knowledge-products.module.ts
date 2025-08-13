@@ -51,6 +51,7 @@ import { ResultsInvestmentDiscontinuedOptionsModule } from '../results-investmen
 import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recover-data.module';
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
+    InitiativeEntityMapRepository
   ],
   exports: [
     ResultsKnowledgeProductsRepository,

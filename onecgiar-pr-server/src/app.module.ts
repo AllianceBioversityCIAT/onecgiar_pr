@@ -48,6 +48,7 @@ import { AuthMicroserviceService } from './shared/microservices/auth-microservic
 import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
 import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
+import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 
 @Module({
   imports: [
@@ -116,15 +117,12 @@ import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiativ
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes(
-      {
-        path: 'api/',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'type-one-report',
-        method: RequestMethod.ALL,
-      },
-    );
+    consumer
+      .apply(JwtMiddleware, apiVersionMiddleware)
+      .forRoutes({ path: 'api/*', method: RequestMethod.ALL });
+
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes({ path: 'type-one-report', method: RequestMethod.ALL });
   }
 }

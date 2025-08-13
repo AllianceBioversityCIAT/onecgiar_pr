@@ -489,59 +489,62 @@ WHERE
     excludeType = [10, 11],
     initiativeCode?: string,
   ) {
+    console.log("🚀 ~ ResultRepository ~ AllResultsByRoleUserAndInitiative ~ userid:", userid)
     const queryData = `
     SELECT
-    r.id,
-    r.result_code,
-    r.title,
-    r.reported_year_id AS reported_year,
-    rt.name AS result_type,
-    rl.name AS result_level_name,
-    rt.id AS result_type_id,
-    r.created_date,
-    ci.official_code AS submitter,
-    ci.id AS submitter_id,
-    r.status,
-    r.status_id,
-    rs.status_name AS status_name,
-    r2.id as role_id,
-    r2.description as role_name,
-    if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
-    r.result_level_id,
-    r.no_applicable_partner,
-    if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
-    r.legacy_id,
-    r.created_by,
-    u.first_name as create_first_name,
-    u.last_name as create_last_name,
-    r.version_id,
-    CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
-    v.status as phase_status,
-    r.in_qa as inQA,
-    ci.portfolio_id,
-    cp.name as portfolio_name,
-    cp.acronym as acronym
-FROM
-    \`result\` r
-    INNER JOIN result_type rt ON rt.id = r.result_type_id
-    inner join result_level rl on rl.id = r.result_level_id 
-    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
-    LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
-    left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
-    							and rbu.\`user\`  = ?
-    left join \`role\` r2 on r2.id  = rbu.\`role\` 
-    left join \`year\` y ON y.active > 0
-    left join users u on u.id = r.created_by
-    inner join \`version\` v on v.id = r.version_id
-    INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
-WHERE
-    r.is_active > 0
-    AND rbi.is_active > 0
-    AND rbi.initiative_role_id = 1
-    AND ci.active > 0
-    AND rt.id not in (${excludeType.toString()})
-    ${initiativeCode ? 'AND ci.official_code = ?' : ''};
+        r.id,
+        r.result_code,
+        r.title,
+        r.reported_year_id AS reported_year,
+        rt.name AS result_type,
+        rl.name AS result_level_name,
+        rt.id AS result_type_id,
+        r.created_date,
+        ci.official_code AS submitter,
+        ci.id AS submitter_id,
+        r.status,
+        r.status_id,
+        rs.status_name AS status_name,
+        r2.id as role_id,
+        r2.description as role_name,
+        if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
+        v.phase_year,
+        r.result_level_id,
+        r.no_applicable_partner,
+        if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+        r.legacy_id,
+        r.created_by,
+        u.first_name as create_first_name,
+        u.last_name as create_last_name,
+        r.version_id,
+        CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
+        v.status as phase_status,
+        r.in_qa as inQA,
+        ci.portfolio_id,
+        cp.name as portfolio_name,
+        cp.acronym as acronym
+    FROM
+        \`result\` r
+        INNER JOIN result_type rt ON rt.id = r.result_type_id
+        inner join result_level rl on rl.id = r.result_level_id 
+        INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+        INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+        LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
+        left join role_by_user rbu on rbu.initiative_id = rbi.inititiative_id 
+                      and rbu.\`user\` = ?
+                      and rbu.active = 1
+        left join \`role\` r2 on r2.id  = rbu.\`role\` 
+        left join \`year\` y ON y.active > 0
+        left join users u on u.id = r.created_by
+        inner join \`version\` v on v.id = r.version_id
+        INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+    WHERE
+        r.is_active > 0
+        AND rbi.is_active > 0
+        AND rbi.initiative_role_id = 1
+        AND ci.active > 0
+        AND rt.id not in (${excludeType.toString()})
+        ${initiativeCode ? 'AND ci.official_code = ?' : ''};
     `;
 
     try {
