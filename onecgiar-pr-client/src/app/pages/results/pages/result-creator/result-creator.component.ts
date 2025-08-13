@@ -40,7 +40,12 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     message: ''
   };
 
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    private router: Router,
+    private phasesService: PhasesService
+  ) {}
 
   ngOnInit(): void {
     this.resultLevelSE.resultBody = new ResultBody();
@@ -241,7 +246,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       return;
     }
 
-    const regex = /^https:\/\/(?:cgspace\.cgiar\.org\/items\/[0-9a-f-]{36}|hdl\.handle\.net\/10568\/\d+|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
+    const regex =
+      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/10568\/\d+|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
 
     const isValid = regex.test(this.resultLevelSE.resultBody.handler);
 
