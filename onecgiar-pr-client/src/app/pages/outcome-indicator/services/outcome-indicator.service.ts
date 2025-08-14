@@ -15,6 +15,7 @@ export class OutcomeIndicatorService {
   expandedRows = {};
   allInitiatives = signal([]);
   phaseList = signal([]);
+  requestingFullReport = signal(false);
 
   searchText = signal<string>('');
 
