@@ -10,8 +10,8 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# RUN npm ci
-RUN npm i
+RUN npm ci
+#RUN npm i
 
 COPY . .
 
@@ -30,8 +30,8 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# RUN npm ci
-RUN npm i
+RUN npm ci
+#RUN npm i
 
 COPY . .
 
