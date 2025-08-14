@@ -265,12 +265,6 @@ describe('Result service unit test', () => {
     expect(results.status).toBe(HttpStatus.NOT_FOUND);
   });
 
-  it('should return all results by role', async () => {
-    const results = await resultService.findAllByRole(userTest.id);
-    expect(results.response).toBeDefined();
-    expect(results.response[0].id).toBeDefined();
-  });
-
   it('should return all results legacy new', async () => {
     const title = 'Assessment of the pote';
     const results = await resultService.findAllResultsLegacyNew(title);

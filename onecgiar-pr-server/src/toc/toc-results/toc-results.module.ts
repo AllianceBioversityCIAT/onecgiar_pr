@@ -130,7 +130,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultAnswerRepository,
-    ClarisaInitiativesRepository
+    ClarisaInitiativesRepository,
   ],
   imports: [
     SharePointModule,

@@ -12,7 +12,6 @@ import {
   Req,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiParam,
@@ -79,9 +78,7 @@ export class VersioningController {
     @Body() body: ChangePhaseDto,
   ) {
     const apiVersion = req['apiVersion'];
-    console.log("🚀 ~ VersioningController ~ phaseChangeProcess ~ apiVersion:", apiVersion)
     const entity_id = body?.entityId;
-    console.log("🚀 ~ VersioningController ~ phaseChangeProcess ~ entity_id:", entity_id)
     if (apiVersion !== 'v2') {
       return this.versioningService.versionProcess(+result_id, user);
     } else {

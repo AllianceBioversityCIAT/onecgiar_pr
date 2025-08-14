@@ -489,7 +489,6 @@ WHERE
     excludeType = [10, 11],
     initiativeCode?: string,
   ) {
-    console.log("🚀 ~ ResultRepository ~ AllResultsByRoleUserAndInitiative ~ userid:", userid)
     const queryData = `
     SELECT
         r.id,

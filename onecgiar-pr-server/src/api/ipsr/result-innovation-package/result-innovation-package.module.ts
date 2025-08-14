@@ -80,7 +80,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ReturnResponse,
     ResultCountrySubnationalRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
-    InitiativeEntityMapRepository
+    InitiativeEntityMapRepository,
   ],
   imports: [VersionsModule, forwardRef(() => VersioningModule), AdUsersModule],
   exports: [ResultInnovationPackageRepository],

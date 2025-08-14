@@ -79,8 +79,6 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
 import { ResultFoldersModule } from './result-folders/result-folders.module';
 import { AdUsersModule } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
-import { InitiativeEntityMapModule } from '../initiative_entity_map/initiative_entity_map.module';
-import { DeleteRecoverDataModule } from '../delete-recover-data/delete-recover-data.module';
 
 @Module({
   controllers: [ResultsController],

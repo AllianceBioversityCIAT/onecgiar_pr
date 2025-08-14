@@ -109,7 +109,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
-    InitiativeEntityMapRepository
+    InitiativeEntityMapRepository,
   ],
   exports: [
     ResultsKnowledgeProductsRepository,

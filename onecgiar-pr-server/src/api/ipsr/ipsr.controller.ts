@@ -29,9 +29,7 @@ export class IpsrController {
   }
 
   @Get('all-innovation-packages')
-  allInnovationPackages(
-    @UserToken() user: TokenDto
-  ) {
+  allInnovationPackages(@UserToken() user: TokenDto) {
     return this.ipsrService.allInnovationPackages(user);
   }
 

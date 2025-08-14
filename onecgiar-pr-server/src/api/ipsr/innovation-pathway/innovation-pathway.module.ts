@@ -120,7 +120,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     TocResultsRepository,
     IpsrService,
     ResultsInvestmentDiscontinuedOptionRepository,
-    InitiativeEntityMapRepository
+    InitiativeEntityMapRepository,
   ],
 })
 export class InnovationPathwayModule {}
