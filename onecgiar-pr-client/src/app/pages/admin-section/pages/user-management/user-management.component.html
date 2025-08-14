@@ -207,6 +207,11 @@
       <span class="name">Users |</span>
       <span class="total">{{ this.users().length }} total</span>
     </div>
+
+    <!-- export button -->
+    <div class="export-button">
+      <app-pr-button text="Download .xlsx" icon="file_download" [verticalMargin]="0" (click)="this.exportExcel(this.users())"></app-pr-button>
+    </div>
   </div>
 
   <!-- Manage User Modal Component -->

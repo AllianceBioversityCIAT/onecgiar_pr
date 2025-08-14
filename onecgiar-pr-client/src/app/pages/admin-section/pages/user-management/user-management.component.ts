@@ -19,6 +19,7 @@ import { InitiativesService } from '../../../../shared/services/global/initiativ
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { Popover } from 'primeng/popover';
+import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 interface UserColumn {
   label: string;
@@ -62,6 +63,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
   dynamicPanelService = inject(DynamicPanelServiceService);
+  exportTablesSE = inject(ExportTablesService);
 
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
@@ -330,5 +332,39 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     if (this.hasMoreEntities(entities)) {
       overlay.toggle(event);
     }
+  }
+
+  exportExcel(usersList) {
+    const usersListMapped = [];
+
+    usersList.map(result => {
+      const { firstName, lastName, emailAddress, appRole, userStatus, userCreationDate, entities, isActive, isCGIAR } = result;
+      usersListMapped.push({
+        firstName: firstName ?? 'Not applicable',
+        lastName: lastName ?? 'Not applicable',
+        emailAddress: emailAddress ?? 'Not applicable',
+        appRole: appRole ?? 'Not defined',
+        userStatus: userStatus ?? 'Not applicable',
+        userCreationDate: userCreationDate
+          ? new Date(userCreationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Not applicable',
+        entities: entities?.join(', ') ?? 'Not applicable',
+        isCGIAR: isCGIAR ? 'Yes' : 'No',
+        isActive: isActive ? 'Active' : 'Inactive'
+      });
+    });
+
+    const wscols = [
+      { header: 'First name', key: 'firstName', width: 16 },
+      { header: 'Last name', key: 'lastName', width: 16 },
+      { header: 'Email', key: 'emailAddress', width: 38 },
+      { header: 'Is CGIAR', key: 'isCGIAR', width: 16 },
+      { header: 'Application role', key: 'appRole', width: 18 },
+      { header: 'User creation date', key: 'userCreationDate', width: 20 },
+      { header: 'Entities', key: 'entities', width: 50 },
+      { header: 'Status', key: 'isActive', width: 18 }
+    ];
+
+    this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
   }
 }
