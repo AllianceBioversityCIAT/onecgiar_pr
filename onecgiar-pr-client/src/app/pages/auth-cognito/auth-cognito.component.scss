@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .auth-container {
   display: flex;
   flex-direction: column;
@@ -19,12 +21,12 @@
 }
 
 .auth-title {
-  font-size: 1.5rem;
+  @include fonts.pr-typography('h1');
   font-weight: 600;
 }
 
 .auth-subtitle {
-  font-size: 1rem;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 

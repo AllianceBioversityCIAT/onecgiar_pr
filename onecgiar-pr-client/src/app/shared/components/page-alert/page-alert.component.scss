@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .page_alert {
   background-color: var(--pr-color-white);
   width: 100%;
@@ -36,7 +38,7 @@
       .title {
         color: var(--pr-color-white);
         font-weight: 200;
-        font-size: 15px;
+        @include fonts.pr-typography('h3');
         display: flex;
         align-items: center;
 
@@ -66,12 +68,12 @@
       }
 
       .title {
-        font-size: 3.2rem;
+        font-size: 39px;
         font-weight: 700;
       }
 
       .text {
-        font-size: 1.3rem;
+        @include fonts.pr-typography('h4');
         font-weight: 600;
         padding: 0px 30vw;
         text-align: center;
@@ -91,4 +93,12 @@
     position: relative;
     z-index: 2;
   }
+}
+
+.warning-icon {
+  color: var(--pr-color-yellow-300);
+}
+
+.error-icon {
+  color: var(--pr-color-red-300);
 }

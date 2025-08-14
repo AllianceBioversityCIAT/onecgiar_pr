@@ -1,3 +1,5 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .local_container {
   padding: 0px 35px;
 
@@ -7,7 +9,7 @@
     border-radius: 5px;
     padding: 5px 10px;
     font-style: italic;
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-3');
 
     display: flex;
     gap: 5px;

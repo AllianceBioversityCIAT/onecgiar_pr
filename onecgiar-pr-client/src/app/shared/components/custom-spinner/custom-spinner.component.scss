@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .custom-spinner {
   top: 0;
   left: 0;
@@ -28,7 +30,7 @@
 
     .text {
       color: var(--pr-color-white);
-      font-size: 1.2em;
+      @include fonts.pr-typography('h4');
     }
   }
 }

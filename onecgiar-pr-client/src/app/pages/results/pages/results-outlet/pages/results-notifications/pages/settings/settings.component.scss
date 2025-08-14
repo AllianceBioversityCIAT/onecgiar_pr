@@ -1,9 +1,11 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .settings-title {
-  font-size: 18px;
+  @include fonts.pr-typography('h2');
   font-weight: 500;
   margin: 0;
   margin-top: 20px;
-  color: var(--primary-color);
+  color: var(--pr-color-primary-300);
 }
 
 .settings-container {
@@ -18,7 +20,7 @@
     gap: 5px;
 
     .settings-content-title {
-      font-size: 18px;
+      @include fonts.pr-typography('h3');
       font-weight: 500;
       margin: 0;
     }
@@ -29,7 +31,7 @@
       gap: 0.5rem;
 
       .settings-content-description-title {
-        font-size: 14px;
+        @include fonts.pr-typography('h4');
         font-weight: 400;
         margin: 0;
       }
@@ -51,7 +53,8 @@
   .chip_item {
     background-color: var(--pr-color-neutral-1000);
     padding: 8px 20px;
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-2');
+    font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
   }
@@ -64,7 +67,7 @@
 }
 
 .chip_selected {
-  background-color: var(--primary-color) !important;
+  background-color: var(--pr-color-primary-300) !important;
   color: var(--pr-color-white) !important;
 }
 

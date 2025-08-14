@@ -79,6 +79,7 @@
     icon="pi pi-file-plus"
     label="Add result"
     (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"
+    class="add_result_button"
     [ngClass]="{
       globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
     }"></p-button>

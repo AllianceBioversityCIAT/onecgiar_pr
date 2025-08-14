@@ -32,7 +32,6 @@
     .tab {
       border-bottom: 3px solid transparent;
       padding: 8px 25px;
-      font-weight: 600;
       background-color: var(--pr-color-white) !important;
       color: var(--pr-color-secondary-400);
       text-decoration: none;
@@ -41,8 +40,8 @@
       justify-content: center;
       gap: 5px;
       transition: all ease-in-out 0.2s;
-      border-radius: 5px;
       @include fonts.pr-typography('body-2');
+      font-weight: 600;
 
       &:hover {
         background-color: rgba(var(--pr-color-black-rgb), 0.05) !important;

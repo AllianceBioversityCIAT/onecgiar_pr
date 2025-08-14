@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
@@ -21,14 +23,22 @@ p {
   }
 
   .indicator_header_title {
-    font-size: 16px;
+    @include fonts.pr-typography('body-1');
     font-weight: 600;
     margin: 0;
   }
 }
 
+::ng-deep {
+  .p-button:not(:disabled):hover {
+    background-color: rgba(var(--pr-color-primary-rgb), 0.8) !important;
+    color: var(--pr-color-white) !important;
+    border: none;
+  }
+}
+
 .indicator_title {
-  font-size: 20px;
+  @include fonts.pr-typography('h2');
   font-weight: 600;
   margin: 0;
   text-align: center;
@@ -64,12 +74,12 @@ p {
       justify-content: flex-start;
       align-items: center;
       gap: 1rem;
-      font-size: 16px;
+      @include fonts.pr-typography('body-1');
       font-weight: 500;
     }
 
     .indicator_info_item_value {
-      font-size: 14px;
+      @include fonts.pr-typography('body-1');
       font-weight: 400;
       color: var(--pr-color-accents-4);
     }
@@ -92,8 +102,8 @@ p {
   background-color: var(--pr-color-primary-300);
   border-top-right-radius: 10px;
   border-bottom-left-radius: 10px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
-  font-size: 12px;
 }
 
 ::ng-deep .p-button {

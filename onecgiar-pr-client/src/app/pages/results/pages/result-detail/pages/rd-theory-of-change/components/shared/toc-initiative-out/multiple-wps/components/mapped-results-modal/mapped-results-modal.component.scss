@@ -1,3 +1,5 @@
+@use '../../../../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 40px 50px 40px;
   max-width: 80vw !important;
@@ -17,7 +19,7 @@
   align-items: center;
 
   .modal_title {
-    font-size: 1.3em;
+    @include fonts.pr-typography('h3');
     font-weight: 600;
     color: var(--pr-color-white);
     margin: 0;
@@ -46,7 +48,7 @@
   .target_info_item {
     margin: 0;
     color: var(--pr-color-black);
-    font-size: 13px;
+    @include fonts.pr-typography('body-2');
     font-weight: 400;
 
     strong {
@@ -56,7 +58,7 @@
 }
 
 .target_info_content_title {
-  font-size: 16px;
+  @include fonts.pr-typography('h4');
   color: var(--pr-color-black);
   font-weight: 600;
   margin-top: 20px;
@@ -79,7 +81,7 @@
 }
 
 .overall_progress_result {
-  font-size: 16px;
+  @include fonts.pr-typography('h4');
   font-weight: 400;
   color: var(--pr-color-black);
   margin-top: 20px;

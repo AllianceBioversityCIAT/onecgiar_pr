@@ -15,10 +15,10 @@
   <div class="text">{{ this.text }}</div>
 
   <i
-    [class]="iconsStylesClass"
+    [class]="iconsStylesClass === 'pi' ? 'pi pi-' + this.icon : iconsStylesClass"
     [ngClass]="{ rotating: this.rotating, 'rotate-right': this.rotateRight }"
     *ngIf="this.icon && !this.use_png_icon; else pngicon">
-    {{ this.icon }}
+    {{ this.iconsStylesClass === 'pi' ? null : this.icon }}
   </i>
 
   <ng-template #pngicon>

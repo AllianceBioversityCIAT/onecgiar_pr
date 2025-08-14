@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .local_container {
   padding: 0px 150px;
 
@@ -37,13 +39,17 @@
   border-radius: 5px !important;
 
   .title {
+    @include fonts.pr-typography('body-1');
     font-weight: 700;
     margin-bottom: 10px;
-    font-size: 1.1em;
+  }
+
+  .description {
+    @include fonts.pr-typography('body-2');
   }
 }
 
 .showHoverData {
   box-shadow: 0px 0px 5px 2px rgba(var(--pr-color-black-rgb), 0.103) !important;
-  background-color: var(--pr-color-primary-25);
+  background-color: var(--pr-color-primary-50);
 }

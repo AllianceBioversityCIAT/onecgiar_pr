@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .section_container {
   margin-top: 50px;
   padding: 50px;
@@ -7,11 +9,11 @@
     justify-content: space-between;
 
     .hello {
-      font-size: 2em;
+      @include fonts.pr-typography('h1');
     }
 
     .year {
-      font-size: 2em;
+      @include fonts.pr-typography('h1');
       font-weight: 700;
       color: var(--pr-color-primary-300);
     }
@@ -26,8 +28,8 @@
 
   .result_information {
     .title {
+      @include fonts.pr-typography('h1');
       font-weight: 500;
-      font-size: 2em;
       text-align: center;
       margin-top: 50px;
       margin-bottom: 40px;

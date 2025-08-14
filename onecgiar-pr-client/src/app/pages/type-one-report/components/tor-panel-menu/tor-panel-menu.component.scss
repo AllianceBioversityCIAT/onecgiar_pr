@@ -77,27 +77,6 @@
       }
     }
   }
-
-  .submit_button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    scale: 1.2;
-    margin-bottom: 20px;
-    padding: 15px;
-
-    .button_access_information {
-      font-size: 0.8em;
-      text-align: center;
-      color: var(--pr-color-primary-300);
-      background-color: rgba(var(--pr-color-primary-rgb), 0.09);
-      box-shadow: 0px 0px 5px 1px var(--pr-color-primary-50);
-      padding: 10px;
-      border-radius: 3px;
-      margin-top: 10px;
-    }
-  }
 }
 
 .local_container {

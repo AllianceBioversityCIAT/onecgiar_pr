@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .fields_list {
   display: flex;
   flex-direction: column;
@@ -26,7 +28,7 @@
         align-items: center;
         justify-content: center;
         padding: 20px;
-        font-size: 1.2em;
+        @include fonts.pr-typography('h4');
         font-weight: 500;
       }
 

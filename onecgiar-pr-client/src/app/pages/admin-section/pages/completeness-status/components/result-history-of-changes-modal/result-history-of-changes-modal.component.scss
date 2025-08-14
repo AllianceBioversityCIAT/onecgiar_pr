@@ -1,3 +1,5 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;
@@ -8,7 +10,7 @@
 .modal_title {
   background-color: var(--pr-color-secondary-400);
   width: 100%;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 600;
   color: var(--pr-color-white);
   padding: 10px 20px;
@@ -28,7 +30,7 @@
 .information {
   text-align: center;
   padding: 10px 50px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('body-1');
 
   strong {
     color: var(--pr-color-primary-300);
@@ -38,5 +40,5 @@
 .not_provided_text {
   color: var(--pr-color-neutral-1000);
   font-style: italic;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
 }

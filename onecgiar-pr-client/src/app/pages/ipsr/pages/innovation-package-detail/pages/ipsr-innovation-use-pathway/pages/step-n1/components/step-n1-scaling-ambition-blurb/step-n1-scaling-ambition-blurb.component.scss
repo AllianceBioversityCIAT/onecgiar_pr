@@ -1,3 +1,5 @@
+@use '../../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .first_text {
   text-align: center;
   padding: 0px 100px;
@@ -12,14 +14,14 @@
 
   .title {
     text-align: center;
+    @include fonts.pr-typography('h2');
     font-weight: 700;
-    font-size: 1.5em;
     margin-bottom: 20px;
   }
 
   .text {
     text-align: justify;
-    font-size: 1em;
+    @include fonts.pr-typography('body-2');
   }
 
   .flex_right {

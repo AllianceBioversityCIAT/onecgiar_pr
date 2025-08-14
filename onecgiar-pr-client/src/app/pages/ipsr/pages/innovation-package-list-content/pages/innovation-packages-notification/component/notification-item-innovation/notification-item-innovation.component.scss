@@ -1,14 +1,17 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .noti_container {
   position: relative;
   padding: 20px 30px;
   background-color: var(--pr-color-primary-50);
 
   .title {
-    font-size: 1.2em;
+    @include fonts.pr-typography('body-1');
   }
 
   .sub_title {
     margin-bottom: 10px;
+    @include fonts.pr-typography('body-2');
   }
 
   .direction_icon {
@@ -46,6 +49,6 @@
 
 .result_submitted_text {
   color: var(--pr-color-red-200);
-  font-weight: 700px;
-  font-size: 1em !important;
+  @include fonts.pr-typography('body-1');
+  font-weight: 700;
 }

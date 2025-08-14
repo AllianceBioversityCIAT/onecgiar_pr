@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .radioButtonList {
   display: flex;
   flex-wrap: wrap;
@@ -11,7 +13,7 @@
     &__subLabel {
       margin: 0;
       margin-left: 25px;
-      font-size: 12px;
+      @include fonts.pr-typography('body-2');
       color: var(--text-color-secondary);
     }
   }

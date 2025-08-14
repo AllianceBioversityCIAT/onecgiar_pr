@@ -1,3 +1,5 @@
+@use '../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .linkItem {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -11,7 +13,7 @@
     color: var(--pr-color-primary-300);
     width: 30px;
     height: 30px;
-    font-size: 1.2rem;
+    @include fonts.pr-typography('h4');
     font-weight: 600;
     display: flex;
     align-items: center;

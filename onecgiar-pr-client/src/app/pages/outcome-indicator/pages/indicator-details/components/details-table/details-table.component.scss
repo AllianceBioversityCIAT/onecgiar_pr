@@ -1,7 +1,9 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .noDataText {
   text-align: center;
   padding: 20px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
   color: var(--pr-color-primary-300);
 }
@@ -29,7 +31,7 @@
 .total {
   font-weight: 500;
   color: var(--pr-color-accents-4);
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   margin-top: 1rem;
 }
 

@@ -1,10 +1,12 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .word_counter {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 5px;
   color: var(--pr-color-secondary-100);
-  font-size: 0.9em;
+  @include fonts.pr-typography('body-3');
 
   .limitBreaker {
     font-weight: 700;

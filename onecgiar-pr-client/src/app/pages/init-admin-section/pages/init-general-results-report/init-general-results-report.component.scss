@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .local_container {
   padding: 20px;
   max-height: calc(100vh - 127px);
@@ -91,7 +93,7 @@
   position: relative;
 
   .counter {
-    font-size: 1.1em;
+    @include fonts.pr-typography('body-1');
     position: absolute;
     bottom: 0;
     left: 0;
@@ -122,7 +124,7 @@
 .not_provided_text {
   color: var(--pr-color-neutral-1000);
   font-style: italic;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
 }
 
 .Pending {
@@ -159,7 +161,7 @@
   .title {
     color: var(--pr-color-primary-300);
     font-weight: 500;
-    font-size: 1.2em;
+    @include fonts.pr-typography('body-1');
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;

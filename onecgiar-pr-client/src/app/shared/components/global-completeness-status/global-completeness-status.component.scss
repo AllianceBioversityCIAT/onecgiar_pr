@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .table_container {
   padding: 10px;
   overflow: hidden;
@@ -9,7 +11,7 @@
   }
 
   .counter {
-    font-size: 1.1em;
+    @include fonts.pr-typography('body-2');
     margin-bottom: 35px;
     margin-left: 20px;
     font-weight: 500;
@@ -51,7 +53,7 @@
 .not_provided_text {
   color: var(--pr-color-accents-3);
   font-style: italic;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
 }
 
 .Pending {

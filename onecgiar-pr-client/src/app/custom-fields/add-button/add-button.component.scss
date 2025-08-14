@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .add_button_container {
   display: flex;
   justify-content: center;
@@ -33,7 +35,7 @@
       padding-right: 10px;
       color: var(--pr-color-white);
       padding-left: 10px;
-      font-size: 1em;
+      @include fonts.pr-typography('body-2');
     }
 
     .icon_container {

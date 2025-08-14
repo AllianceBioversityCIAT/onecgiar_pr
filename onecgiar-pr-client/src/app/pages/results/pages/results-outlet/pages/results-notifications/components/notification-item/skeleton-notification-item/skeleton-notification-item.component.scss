@@ -25,38 +25,16 @@
       justify-content: center;
       align-items: flex-end;
 
-      .notification_content_actions_status {
-        text-align: center;
-        font-size: 13px;
-        padding: 5px 20px;
-        border-left: 1px solid var(--pr-color-primary-300);
-        border-right: 1px solid var(--pr-color-primary-300);
-        border-radius: 10px;
-      }
-
       .notification_content_actions_buttons {
         display: flex;
         justify-content: center;
         align-items: center;
         gap: 10px;
       }
-
-      .notification_content_actions_sent {
-        color: var(--pr-color-accents-5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        font-weight: 500;
-      }
     }
 
     .notification_content_body {
       width: 100%;
-      .notification_content_body_text {
-        font-size: 13px;
-        font-weight: 500;
-      }
     }
   }
 }

@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .ipsr_annual_updating-container {
   padding: 40px 0 20px 0;
 
@@ -14,7 +16,7 @@
       margin-bottom: 20px;
 
       strong {
-        font-size: 2rem;
+        @include fonts.pr-typography('h1');
         font-weight: 600;
       }
 

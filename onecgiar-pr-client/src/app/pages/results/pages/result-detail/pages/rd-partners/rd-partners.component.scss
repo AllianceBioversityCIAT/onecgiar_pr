@@ -46,6 +46,6 @@ i {
 }
 
 .column_title {
+  @include fonts.pr-typography('h4');
   font-weight: 500;
-  font-size: 1.3em;
 }

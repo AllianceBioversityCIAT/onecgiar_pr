@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Table, TableModule, TableService } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';

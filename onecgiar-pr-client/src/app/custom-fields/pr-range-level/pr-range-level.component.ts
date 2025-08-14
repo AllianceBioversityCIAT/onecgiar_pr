@@ -24,29 +24,16 @@ export class PrRangeLevelComponent {
   @Input() itemDescription: string = null;
   @Output() selectOptionEvent = new EventEmitter<any>();
 
-  private hoverTimeout: any;
-
   hoverData = {
     show: false,
     object: {},
     index: null,
     handleMouseEnter: (data: any, index: any) => {
-      if (this.hoverTimeout) {
-        clearTimeout(this.hoverTimeout);
-      }
-
-      this.hoverTimeout = setTimeout(() => {
-        this.hoverData.object = data;
-        this.hoverData.index = index;
-        this.hoverData.show = true;
-      }, 200);
+      this.hoverData.object = data;
+      this.hoverData.index = index;
+      this.hoverData.show = true;
     },
     handleMouseLeave: () => {
-      if (this.hoverTimeout) {
-        clearTimeout(this.hoverTimeout);
-        this.hoverTimeout = null;
-      }
-
       this.hoverData.object = {};
       this.hoverData.index = null;
       this.hoverData.show = false;

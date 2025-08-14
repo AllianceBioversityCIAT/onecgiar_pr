@@ -1,17 +1,4 @@
-.field_container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .inputTitle {
-    font-size: 1.2em;
-    font-weight: 500;
-  }
-
-  .p-fluid {
-    width: 100%;
-  }
-}
+@use '../../../styles/fonts.scss' as fonts;
 
 .flags {
   padding-left: 25px;
@@ -33,7 +20,7 @@
   color: var(--pr-color-primary-300);
   text-align: center;
   padding-top: 80px;
-  font-size: 1.2em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
 }
 

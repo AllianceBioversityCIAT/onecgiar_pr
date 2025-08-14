@@ -1,3 +1,5 @@
+@use '../../../../../../styles/fonts.scss' as fonts;
+
 .p {
   margin: 0;
 }
@@ -12,12 +14,12 @@
   border-radius: 20px;
   width: fit-content;
   margin-bottom: 8px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
 }
 
 .date {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
   color: var(--pr-color-accents-4);
   text-align: right;
