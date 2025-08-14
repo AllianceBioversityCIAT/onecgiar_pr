@@ -6,12 +6,13 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 @Component({
   selector: 'app-outcome-indicator-home',
   templateUrl: './outcome-indicator-home.component.html',
   styleUrl: './outcome-indicator-home.component.scss',
   standalone: true,
-  imports: [NgClass, RouterLink, ToastModule]
+  imports: [NgClass, RouterLink, ToastModule, CustomFieldsModule]
 })
 export class OutcomeIndicatorHomeComponent {
   constructor(
@@ -21,7 +22,27 @@ export class OutcomeIndicatorHomeComponent {
     public messageService: MessageService
   ) {}
 
-  exportIndicatorsToExcel() {
+  exportFullReport() {
+    this.outcomeIService.requestingFullReport.set(true);
+
+    this.api.resultsSE.GET_fullReport().subscribe({
+      next: ({ response }) => {
+        this.exportIndicatorsToExcel(response.eois, response.wps, `Full_report_OIM_`, true);
+        this.outcomeIService.requestingFullReport.set(false);
+      },
+      error: error => {
+        this.outcomeIService.requestingFullReport.set(false);
+        console.error(error);
+      }
+    });
+  }
+
+  exportIndicatorsToExcel(
+    eoisData: any,
+    wpsData: any,
+    fileName: string = `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
+    showInitiativeCode: boolean = false
+  ) {
     if (
       !this.outcomeIService.initiativeIdFilter ||
       !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
@@ -32,6 +53,7 @@ export class OutcomeIndicatorHomeComponent {
     }
 
     const wscolsEOIs = [
+      ...(showInitiativeCode ? [{ header: 'Initiative', key: 'initiative_official_code', width: 22 }] : []),
       { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },
       { header: 'Indicator Type', key: 'indicator_type', width: 50 },
@@ -44,6 +66,7 @@ export class OutcomeIndicatorHomeComponent {
     ];
 
     const wscolsWPs = [
+      ...(showInitiativeCode ? [{ header: 'Initiative', key: 'initiative_official_code', width: 22 }] : []),
       { header: 'Workpackage name', key: 'workpackage_name', width: 50 },
       { header: 'Outcome', key: 'toc_result_title', width: 50 },
       { header: 'Indicator', key: 'indicator_name', width: 50 },
@@ -57,20 +80,21 @@ export class OutcomeIndicatorHomeComponent {
     ];
 
     this.exportTablesSE.exportOutcomesIndicatorsToExcel({
-      fileName: `${this.outcomeIService.initiativeIdFilter}_Contribution_Outcome_Indicators_`,
+      fileName: fileName,
       EOIsConfig: {
-        data: this.outcomeIService.eoisData,
+        data: eoisData,
         wscols: wscolsEOIs,
-        cellToCenter: [4, 5, 6, 7],
+        cellToCenter: [1, 4, 5, 6, 7],
         worksheetName: 'EoI outcomes'
       },
       WPsConfig: {
-        data: this.outcomeIService.wpsData,
+        data: wpsData,
         wscols: wscolsWPs,
-        cellToCenter: [5, 6, 7, 8],
+        cellToCenter: [1, 5, 6, 7, 8],
         worksheetName: 'WP outcomes'
       },
-      isT1R: false
+      isT1R: false,
+      showInitiativeCode
     });
 
     this.messageService.add({

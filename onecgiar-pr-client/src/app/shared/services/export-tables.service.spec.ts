@@ -135,6 +135,218 @@ describe('ExportTablesService', () => {
     });
   });
 
+  describe('exportOutcomesIndicatorsToExcel', () => {
+    it('should export outcomes indicators with showInitiativeCode=true', async () => {
+      const eoisData = [
+        {
+          initiative_official_code: 'INIT-001',
+          toc_result_title: 'Result 1',
+          indicators: [
+            {
+              indicator_name: 'Indicator 1',
+              indicator_type: 'Type 1',
+              expected_target: 10,
+              actual_target_achieved: 12,
+              indicator_achieved_narrative: 'Narrative 1',
+              indicator_supporting_results: 'Support 1'
+            }
+          ]
+        }
+      ];
+
+      const wpsData = [
+        {
+          initiative_official_code: 'INIT-001',
+          workpackage_name: 'WP1',
+          toc_results: [
+            {
+              toc_result_title: 'Result 1',
+              indicators: [
+                {
+                  indicator_name: 'Indicator 1',
+                  indicator_type: 'Type 1',
+                  expected_target: 10,
+                  actual_target_achieved: 12,
+                  indicator_achieved_narrative: 'Narrative 1',
+                  indicator_supporting_results: 'Support 1'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+      const addEOISRowMock = jest.spyOn(service as any, 'addEOISRow').mockImplementation();
+      const addWPSRowMock = jest.spyOn(service as any, 'addWPSRow').mockImplementation();
+      const formatWorksheetMock = jest.spyOn(service as any, 'formatWorksheet').mockImplementation();
+
+      await service.exportOutcomesIndicatorsToExcel({
+        fileName: 'test_file',
+        EOIsConfig: {
+          data: eoisData,
+          wscols: [],
+          cellToCenter: [1, 4, 5, 6, 7],
+          worksheetName: 'EoI outcomes'
+        },
+        WPsConfig: {
+          data: wpsData,
+          wscols: [],
+          cellToCenter: [1, 5, 6, 7, 8],
+          worksheetName: 'WP outcomes'
+        },
+        isT1R: false,
+        showInitiativeCode: true
+      });
+
+      expect(addEOISRowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: eoisData[0],
+          isT1R: false,
+          showInitiativeCode: true
+        })
+      );
+
+      expect(addWPSRowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: wpsData[0],
+          isT1R: false,
+          showInitiativeCode: true
+        })
+      );
+
+      expect(formatWorksheetMock).toHaveBeenCalledWith(expect.anything(), [1, 4, 5, 6, 7]);
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+
+      saveAsExcelFileMock.mockRestore();
+      addEOISRowMock.mockRestore();
+      addWPSRowMock.mockRestore();
+      formatWorksheetMock.mockRestore();
+    });
+
+    it('should export outcomes indicators with showInitiativeCode=false', async () => {
+      const eoisData = [
+        {
+          initiative_official_code: 'INIT-001',
+          toc_result_title: 'Result 1',
+          indicators: [
+            {
+              indicator_name: 'Indicator 1',
+              indicator_type: 'Type 1',
+              expected_target: 10,
+              actual_target_achieved: 12,
+              indicator_achieved_narrative: 'Narrative 1',
+              indicator_supporting_results: 'Support 1'
+            }
+          ]
+        }
+      ];
+
+      const wpsData = [
+        {
+          initiative_official_code: 'INIT-001',
+          workpackage_name: 'WP1',
+          toc_results: [
+            {
+              toc_result_title: 'Result 1',
+              indicators: [
+                {
+                  indicator_name: 'Indicator 1',
+                  indicator_type: 'Type 1',
+                  expected_target: 10,
+                  actual_target_achieved: 12,
+                  indicator_achieved_narrative: 'Narrative 1',
+                  indicator_supporting_results: 'Support 1'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+      const addEOISRowMock = jest.spyOn(service as any, 'addEOISRow').mockImplementation();
+      const addWPSRowMock = jest.spyOn(service as any, 'addWPSRow').mockImplementation();
+      const formatWorksheetMock = jest.spyOn(service as any, 'formatWorksheet').mockImplementation();
+
+      await service.exportOutcomesIndicatorsToExcel({
+        fileName: 'test_file',
+        EOIsConfig: {
+          data: eoisData,
+          wscols: [],
+          cellToCenter: [1, 4, 5, 6, 7],
+          worksheetName: 'EoI outcomes'
+        },
+        WPsConfig: {
+          data: wpsData,
+          wscols: [],
+          cellToCenter: [1, 5, 6, 7, 8],
+          worksheetName: 'WP outcomes'
+        },
+        isT1R: false,
+        showInitiativeCode: false
+      });
+
+      expect(addEOISRowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: eoisData[0],
+          isT1R: false,
+          showInitiativeCode: false
+        })
+      );
+
+      expect(addWPSRowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: wpsData[0],
+          isT1R: false,
+          showInitiativeCode: false
+        })
+      );
+
+      expect(formatWorksheetMock).toHaveBeenCalledWith(expect.anything(), [1, 4, 5, 6, 7]);
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+
+      saveAsExcelFileMock.mockRestore();
+      addEOISRowMock.mockRestore();
+      addWPSRowMock.mockRestore();
+      formatWorksheetMock.mockRestore();
+    });
+
+    it('should handle empty data arrays', async () => {
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+      const addEOISRowMock = jest.spyOn(service as any, 'addEOISRow').mockImplementation();
+      const addWPSRowMock = jest.spyOn(service as any, 'addWPSRow').mockImplementation();
+      const formatWorksheetMock = jest.spyOn(service as any, 'formatWorksheet').mockImplementation();
+
+      await service.exportOutcomesIndicatorsToExcel({
+        fileName: 'test_file',
+        EOIsConfig: {
+          data: [],
+          wscols: [],
+          cellToCenter: [1, 4, 5, 6, 7],
+          worksheetName: 'EoI outcomes'
+        },
+        WPsConfig: {
+          data: [],
+          wscols: [],
+          cellToCenter: [1, 5, 6, 7, 8],
+          worksheetName: 'WP outcomes'
+        },
+        isT1R: false,
+        showInitiativeCode: true
+      });
+
+      expect(addEOISRowMock).not.toHaveBeenCalled();
+      expect(addWPSRowMock).not.toHaveBeenCalled();
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+
+      saveAsExcelFileMock.mockRestore();
+      addEOISRowMock.mockRestore();
+      addWPSRowMock.mockRestore();
+      formatWorksheetMock.mockRestore();
+    });
+  });
+
   describe('saveAsExcelFile', () => {
     it('should save the file with a specific format when isIPSR is true', () => {
       const buffer = new ArrayBuffer(8);

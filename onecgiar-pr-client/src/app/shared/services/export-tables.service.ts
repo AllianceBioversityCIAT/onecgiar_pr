@@ -217,12 +217,14 @@ export class ExportTablesService {
     EOIsConfig,
     WPsConfig,
     isT1R = false,
+    showInitiativeCode = false,
     callback
   }: {
     fileName: string;
     EOIsConfig?: EOIsConfig;
     WPsConfig?: WPsConfig;
     isT1R?: boolean;
+    showInitiativeCode?: boolean;
     callback?;
   }) {
     try {
@@ -238,7 +240,8 @@ export class ExportTablesService {
               worksheet: eoisWorksheet,
               data,
               isT1R,
-              index
+              index,
+              showInitiativeCode
             })
           );
           this.formatWorksheet(eoisWorksheet, EOIsConfig.cellToCenter);
@@ -252,7 +255,8 @@ export class ExportTablesService {
             this.addWPSRow({
               worksheet: wpsWorksheet,
               data,
-              isT1R
+              isT1R,
+              showInitiativeCode
             })
           );
           this.formatWorksheet(wpsWorksheet, WPsConfig.cellToCenter);
@@ -270,8 +274,24 @@ export class ExportTablesService {
     }
   }
 
-  private addEOISRow({ worksheet, data, isT1R, index }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean; index: number }) {
-    if (data.indicators.length > 0) {
+  private addEOISRow({
+    worksheet,
+    data,
+    isT1R,
+    index,
+    showInitiativeCode
+  }: {
+    worksheet: ExcelJS.Worksheet;
+    data: any;
+    isT1R: boolean;
+    index: number;
+    showInitiativeCode: boolean;
+  }) {
+    if (!data?.toc_result_id) {
+      return;
+    }
+
+    if (data?.indicators?.length > 0) {
       data.indicators.forEach(indicator => {
         let indicatorType = 'Not defined';
         if (indicator.indicator_name) {
@@ -287,6 +307,7 @@ export class ExportTablesService {
 
         const rowData = {
           ...(isT1R ? { index: `EOIO ${index + 1}` } : {}),
+          ...(showInitiativeCode ? { initiative_official_code: data.initiative_official_code ?? 'Not defined' } : {}),
           toc_result_title: data.toc_result_title ?? 'Not defined',
           indicator_name: indicator.indicator_description ?? 'Not defined',
           indicator_type: indicatorType,
@@ -303,6 +324,7 @@ export class ExportTablesService {
     } else {
       worksheet.addRow({
         ...(isT1R ? { index: `EOIO 1` } : {}),
+        ...(showInitiativeCode ? { initiative_official_code: data.initiative_official_code ?? 'Not defined' } : {}),
         toc_result_title: data.toc_result_title ?? 'Not defined',
         indicator_name: 'Not defined',
         indicator_type: 'Not defined',
@@ -316,9 +338,23 @@ export class ExportTablesService {
     }
   }
 
-  private addWPSRow({ worksheet, data, isT1R }: { worksheet: ExcelJS.Worksheet; data: any; isT1R: boolean }) {
+  private addWPSRow({
+    worksheet,
+    data,
+    isT1R,
+    showInitiativeCode
+  }: {
+    worksheet: ExcelJS.Worksheet;
+    data: any;
+    isT1R: boolean;
+    showInitiativeCode: boolean;
+  }) {
+    if (!data.workpackage_name) {
+      return;
+    }
+
     data.toc_results.forEach((result, index) => {
-      if (result.indicators.length > 0) {
+      if (result?.indicators?.length > 0) {
         result.indicators.forEach(indicator => {
           let indicatorType = 'Not defined';
           if (indicator.indicator_name) {
@@ -332,6 +368,7 @@ export class ExportTablesService {
                 .join('\n');
 
           const rowData = {
+            ...(showInitiativeCode ? { initiative_official_code: data.initiative_official_code ?? 'Not defined' } : {}),
             workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
             ...(isT1R ? { index: `OUTCOME ${index + 1}` } : {}),
             toc_result_title: result.toc_result_title ?? 'Not defined',
@@ -350,6 +387,7 @@ export class ExportTablesService {
       } else {
         worksheet.addRow({
           ...(isT1R ? { index: `OUTCOME 1` } : {}),
+          ...(showInitiativeCode ? { initiative_official_code: data.initiative_official_code ?? 'Not defined' } : {}),
           workpackage_name: `${data.workpackage_short_name}: ${data.workpackage_name}`,
           toc_result_title: result.toc_result_title ?? 'Not defined',
           indicator_name: 'Not defined',

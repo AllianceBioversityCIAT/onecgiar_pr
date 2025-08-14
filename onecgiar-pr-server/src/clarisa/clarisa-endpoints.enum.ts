@@ -561,6 +561,7 @@ export class ClarisaEndpoints<Entity, Dto> {
         startDate: item.start_date,
         endDate: item.end_date,
         isActive: item.is_active,
+        acronym: item.acronym,
       };
     });
   }

@@ -16,6 +16,7 @@ describe('ClarisaPortfoliosController', () => {
           startDate: 2020,
           endDate: 2022,
           isActive: true,
+          acronym: 'P1',
         },
         {
           id: 2,
@@ -23,6 +24,7 @@ describe('ClarisaPortfoliosController', () => {
           startDate: 2023,
           endDate: 2025,
           isActive: false,
+          acronym: 'P2',
         },
       ] as ClarisaPortfolios[]),
     };
@@ -57,11 +59,13 @@ describe('ClarisaPortfoliosController', () => {
         startDate: 2020,
         endDate: 2022,
         isActive: true,
+        acronym: 'P1',
       },
       {
         id: 2,
         name: 'Portfolio 2',
         startDate: 2023,
+        acronym: 'P2',
         endDate: 2025,
         isActive: false,
       },

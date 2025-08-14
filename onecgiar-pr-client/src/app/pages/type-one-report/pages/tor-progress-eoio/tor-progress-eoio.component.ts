@@ -24,7 +24,7 @@ export class TorProgressEoioComponent implements OnInit, OnDestroy {
   }
 
   exportProgressEoioExcel() {
-    if (!this.typeOneReportSE.initiativeSelected || this.outcomeIService.loading() || !this.outcomeIService.eoisData) {
+    if (!this.typeOneReportSE.initiativeSelected || this.outcomeIService.loading() || !this.outcomeIService?.eoisData?.length) {
       return;
     }
 

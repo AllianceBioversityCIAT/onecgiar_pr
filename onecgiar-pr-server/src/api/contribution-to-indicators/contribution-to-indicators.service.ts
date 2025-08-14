@@ -23,6 +23,28 @@ export class ContributionToIndicatorsService {
     private readonly _handlersError: HandlersError,
   ) {}
 
+  async getAllFromInitiatives() {
+    try {
+      const eois = await this._contributionToIndicatorsRepository.findAllEoIs();
+      const wps =
+        await this._contributionToIndicatorsRepository.findAllOutcomes();
+
+      const data = {
+        eois,
+        wps,
+      };
+
+      return {
+        response: data,
+        message:
+          'The Contributor to Indicators list has been fetched successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   async findAllToCResultsByInitiativeCode(
     initiativeCode: string,
     isOutcome: boolean,

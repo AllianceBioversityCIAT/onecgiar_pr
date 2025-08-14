@@ -25,3 +25,12 @@
 
   <router-outlet></router-outlet>
 </div>
+
+@if (this.outcomeIService.requestingFullReport()) {
+  <div class="spinner">
+    <div class="info">
+      <img src="assets/icons/spinner.png" class="rotating-right" alt="" srcset="" />
+      <div class="text">Downloading full report...</div>
+    </div>
+  </div>
+}

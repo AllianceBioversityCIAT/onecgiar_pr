@@ -7,6 +7,9 @@ import { ContributionToWpOutcomeDto } from '../dto/contribution-to-wp-outcome.dt
 import { ContributionToEoiOutcomeDto } from '../dto/contribution-to-eoi-outcome.dto';
 import { ContributionToIndicatorResultsRepository } from './contribution-to-indicator-result.repository';
 
+const PHASE_YEAR = Number(process.env.PHASE_YEAR ?? 2024);
+const APP_MODULE_ID = 1;
+
 @Injectable()
 export class ContributionToIndicatorsRepository extends Repository<ContributionToIndicator> {
   private readonly _logger: Logger = new Logger(
@@ -21,10 +24,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     super(ContributionToIndicator, dataSource.createEntityManager());
   }
 
-  async findAllOutcomesByInitiativeCode(initiativeCode: string) {
+  async findAllOutcomes() {
     const relationName = 'outcome';
     const dataQuery = `
       select json_object(
+        "initiative_official_code", ci.official_code,
         "workpackage_code", wp.wp_official_code,
         "workpackage_name", wp.name,
         "workpackage_short_name", wp.acronym,
@@ -37,13 +41,12 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
 	      and ${relationName}.id_toc_initiative = ci.toc_id and ${relationName}.work_packages_id = wp.id
       right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
-      where ci.official_code = ?
-      group by wp.id
-      order by wp.id
+      group by ci.official_code, wp.id
+      order by ci.official_code, wp.id
     `;
 
     const result = await this.dataSource
-      .query(dataQuery, [initiativeCode])
+      .query(dataQuery)
       .then((data: ContributionToWpOutcomeDto[]) =>
         data.map((item) => item.workpackage),
       )
@@ -85,7 +88,7 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     return result;
   }
 
-  async findAllEoisByInitiativeCode(initiativeCode: string) {
+  async findAllEoIs() {
     const relationName = 'eoi';
     const dataQuery = `
       select ${this._getTocResultSubquery(relationName)} as eois
@@ -94,11 +97,11 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
         and ${relationName}.id_toc_initiative = ci.toc_id
       right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
         and v.phase_year = 2024 and v.app_module_id = 1 and v.is_active = 1 and v.status = 1
-      where ci.official_code = ?
+      order by ci.official_code
     `;
 
     const result = await this.dataSource
-      .query(dataQuery, [initiativeCode])
+      .query(dataQuery)
       .then((data: ContributionToEoiOutcomeDto[]) =>
         data.flatMap((item) => item.eois),
       )
@@ -138,8 +141,106 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
     return result;
   }
 
+  async findAllOutcomesByInitiativeCode(initiativeCode: string) {
+    const relationName = 'outcome';
+    const dataQuery = `
+      select json_object(
+        "workpackage_code", wp.wp_official_code,
+        "workpackage_name", wp.name,
+        "workpackage_short_name", wp.acronym,
+        "toc_results", json_arrayagg(${this._getTocResultSubquery(relationName)})
+      ) as workpackage
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_NAME}.clarisa_initiative_stages cis on cis.initiative_id = ci.id and cis.active
+      left join ${env.DB_TOC}.work_packages wp on wp.initvStgId = cis.id
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 2
+        and ${relationName}.id_toc_initiative = ci.toc_id and ${relationName}.work_packages_id = wp.id
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = ${PHASE_YEAR} and v.app_module_id = ${APP_MODULE_ID} and v.is_active = 1 and v.status = 1
+      where ci.official_code = ?
+      group by wp.id
+      order by wp.id
+    `;
+
+    const rows = await this._query<ContributionToWpOutcomeDto[]>(dataQuery, [
+      initiativeCode,
+    ]);
+    const result = rows.map((item) => item.workpackage);
+
+    await Promise.all(
+      (result ?? []).map(async (wp) => {
+        await this._enrichIndicators(wp.toc_results ?? []);
+      }),
+    );
+
+    return result;
+  }
+
+  async findAllEoisByInitiativeCode(initiativeCode: string) {
+    const relationName = 'eoi';
+    const dataQuery = `
+      select ${this._getTocResultSubquery(relationName)} as eois
+      from ${env.DB_NAME}.clarisa_initiatives ci
+      left join ${env.DB_TOC}.toc_results ${relationName} on ${relationName}.is_active and ${relationName}.result_type = 3
+        and ${relationName}.id_toc_initiative = ci.toc_id
+      right join ${env.DB_NAME}.\`version\` v on ${relationName}.phase = v.toc_pahse_id 
+        and v.phase_year = ${PHASE_YEAR} and v.app_module_id = ${APP_MODULE_ID} and v.is_active = 1 and v.status = 1
+      where ci.official_code = ?
+    `;
+
+    const rows = await this._query<ContributionToEoiOutcomeDto[]>(dataQuery, [
+      initiativeCode,
+    ]);
+    const result = rows.flatMap((item) => item.eois);
+
+    await this._enrichIndicators(result ?? []);
+
+    return result;
+  }
+
+  private async _query<T = any>(sql: string, params: any[] = []): Promise<T> {
+    try {
+      return await this.dataSource.query(sql, params);
+    } catch (err) {
+      throw this._handlersError.returnErrorRepository({
+        error: err,
+        className: ContributionToIndicatorsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  private async _supportingResults(indicatorUuid: string) {
+    const rows = await this._query<any[]>(this._flattenedResultsQuery(), [
+      indicatorUuid,
+      indicatorUuid,
+    ]);
+
+    const raw = rows?.[0]?.results ?? [];
+    return this._contributionToIndicatorResultsRepository.removeInactives(
+      raw ?? [],
+    );
+  }
+
+  private async _enrichIndicators(
+    tocResults: Array<{ indicators?: any[] }>,
+  ): Promise<void> {
+    await Promise.all(
+      tocResults.map(async (toc) => {
+        const indicators = toc.indicators ?? [];
+        await Promise.all(
+          indicators.map(async (indicator) => {
+            indicator.indicator_supporting_results =
+              await this._supportingResults(indicator.indicator_uuid);
+          }),
+        );
+      }),
+    );
+  }
+
   private _getTocResultSubquery(outerRelationName: string): string {
     return `json_object(
+          "initiative_official_code", ci.official_code,
           "toc_result_id", ${outerRelationName}.id,
           "toc_result_uuid", ${outerRelationName}.toc_result_id,
           "toc_result_title", REGEXP_REPLACE(${outerRelationName}.result_title, '^[[:space:]]+|[[:space:]]+$', ''),
@@ -157,21 +258,21 @@ export class ContributionToIndicatorsRepository extends Repository<ContributionT
               "indicator_target_date", trit.target_date,
               "indicator_achieved_value", cti.achieved_in_2024,
               "indicator_submission_status", if(cti.id is null, 0, (
-               	CASE
-               		when indicator_s.result_status_id = 1 then 0
-               		when indicator_s.result_status_id = 3 then 1
-               		else null
-               	END
+                  CASE
+                    when indicator_s.result_status_id = 1 then 0
+                    when indicator_s.result_status_id = 3 then 1
+                    else null
+                  END
               )),
               "indicator_achieved_narrative", cti.narrative_achieved_in_2024
             ))
             from ${env.DB_TOC}.toc_results_indicators oi
             left join ${env.DB_TOC}.toc_result_indicator_target trit 
-              on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = 2024
+              on oi.related_node_id = trit.toc_result_indicator_id and left(trit.target_date,4) = ${PHASE_YEAR}
             left join ${env.DB_NAME}.contribution_to_indicators cti on cti.is_active
               and convert(cti.toc_result_id using utf8mb4) = convert(oi.related_node_id using utf8mb4)
             left join ${env.DB_NAME}.contribution_to_indicator_submissions ctis on ctis.contribution_to_indicator_id = cti.id
-            	and ctis.is_active
+              and ctis.is_active
             left join ${env.DB_NAME}.result_status indicator_s on ctis.status_id = indicator_s.result_status_id
             where oi.toc_results_id = ${outerRelationName}.id and oi.is_active
             group by ${outerRelationName}.id

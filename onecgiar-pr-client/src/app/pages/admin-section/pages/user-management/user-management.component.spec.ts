@@ -24,7 +24,11 @@ const mockApiService = {
   },
   resultsSE: {
     GET_AllInitiatives: () => of({ response: [] }),
-    GET_roles: () => of({ response: [] })
+    GET_roles: () => of({ response: [] }),
+    GET_platformGlobalVariablesByCategoryId: () => of({ response: [] })
+  },
+  exportTablesSE: {
+    exportExcel: jest.fn()
   }
 };
 

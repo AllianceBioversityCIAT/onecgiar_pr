@@ -26,6 +26,12 @@ export class WhatsNewService {
     this.notionDataLoading.set(true);
     this.resultsApiService.getNotionData().subscribe({
       next: res => {
+        res.results.sort((a, b) => {
+          const aDate = a?.properties?.['Released date']?.date?.start ? new Date(a.properties['Released date'].date.start).getTime() : 0;
+          const bDate = b?.properties?.['Released date']?.date?.start ? new Date(b.properties['Released date'].date.start).getTime() : 0;
+          return bDate - aDate;
+        });
+
         this.notionData.set(res);
         this.notionDataLoading.set(false);
       },
