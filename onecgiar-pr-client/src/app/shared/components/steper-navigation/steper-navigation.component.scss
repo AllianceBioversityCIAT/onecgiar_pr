@@ -1,78 +1,61 @@
 .local_container {
-    padding: 0px 150px;
+  padding: 0px 150px;
 
-    .line {
-        background-color: #D9D9D9;
-        height: 6px;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 50px;
-        margin-bottom: 50px;
+  .line {
+    background-color: var(--pr-color-neutral-1000);
+    height: 6px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 50px;
+    margin-bottom: 50px;
 
-        // .line_value {
-        //     position: absolute;
-        //     background-color: red;
-        //     width: 50%;
-        //     height: 12px;
-        // }
+    .circle {
+      background-color: var(--pr-color-neutral-1000);
+      border-radius: 100px;
+      min-width: 40px;
+      min-height: 40px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all ease-in-out 0.3s;
+      position: relative;
+      z-index: 1;
 
-        .circle {
-            background-color: #D9D9D9;
-            border-radius: 100px;
-            min-width: 40px;
-            min-height: 40px;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all ease-in-out .3s;
-            position: relative;
-            z-index: 1;
+      .green_check_absolute {
+        position: absolute;
+        top: -17px;
+        right: -17px;
+      }
 
-            .green_check_absolute {
-                position: absolute;
-                top: -17px;
-                right: -17px;
-            }
-
-            .name {
-                position: absolute;
-                top: 45px;
-                left: 0;
-                white-space: nowrap;
-                font-weight: bold;
-            }
-            .subName{
-                position: absolute;
-                top: 65px;
-                white-space: nowrap;
-            }
-        }
+      .name {
+        position: absolute;
+        top: 45px;
+        left: 0;
+        white-space: nowrap;
+        font-weight: bold;
+      }
+      .subName {
+        position: absolute;
+        top: 65px;
+        white-space: nowrap;
+      }
     }
+  }
 
-    .active {
-        background-color: var(--pr-color-primary) !important;
-        color: white;
+  .active {
+    background-color: var(--pr-color-primary-300) !important;
+    color: var(--pr-color-white);
 
-        // &::after {
-        //     content: '';
-        //     background-color: red;
-        //     height: 12px;
-        //     width: 100%;
-        //     position: absolute;
-        //     transform: translateX(-50%);
-        //     z-index: 0;
-        // }
-        .name {
-            color: var(--pr-color-primary) !important;
-        }
-        .subName{
-            color: var(--pr-color-primary) !important;
-        }
+    .name {
+      color: var(--pr-color-primary-300) !important;
     }
-
+    .subName {
+      color: var(--pr-color-primary-300) !important;
+    }
+  }
 }

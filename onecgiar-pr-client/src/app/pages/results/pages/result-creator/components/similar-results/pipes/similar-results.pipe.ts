@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'similarResults'
+    name: 'similarResults',
+    standalone: false
 })
 export class SimilarResultsPipe implements PipeTransform {
   transform(list: any[], word: string): any {

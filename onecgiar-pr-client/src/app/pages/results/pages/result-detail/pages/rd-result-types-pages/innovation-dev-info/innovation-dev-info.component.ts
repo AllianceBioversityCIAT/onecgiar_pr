@@ -7,9 +7,10 @@ import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-ut
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
 
 @Component({
-  selector: 'app-innovation-dev-info',
-  templateUrl: './innovation-dev-info.component.html',
-  styleUrls: ['./innovation-dev-info.component.scss']
+    selector: 'app-innovation-dev-info',
+    templateUrl: './innovation-dev-info.component.html',
+    styleUrls: ['./innovation-dev-info.component.scss'],
+    standalone: false
 })
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();

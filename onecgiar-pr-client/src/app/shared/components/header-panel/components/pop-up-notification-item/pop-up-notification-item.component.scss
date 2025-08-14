@@ -1,3 +1,5 @@
+@use '../../../../../../styles/fonts.scss' as fonts;
+
 .p {
   margin: 0;
 }
@@ -6,20 +8,20 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #5569dd;
+  color: var(--pr-color-primary-300);
   padding: 0px 8px;
-  border: 1px solid #5569dd;
+  border: 1px solid var(--pr-color-primary-300);
   border-radius: 20px;
   width: fit-content;
   margin-bottom: 8px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
 }
 
 .date {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
-  color: #808080;
+  color: var(--pr-color-accents-4);
   text-align: right;
   margin-top: 6px;
 }
@@ -28,12 +30,12 @@
   display: block;
   unicode-bidi: isolate;
   padding: 15px 1.5rem 10px 1.5rem;
-  background-color: #eef0fc;
-  border-bottom: 1px solid #5569dd;
-  color: #000;
+  background-color: var(--pr-color-primary-25);
+  border-bottom: 1px solid var(--pr-color-primary-300);
+  color: var(--pr-color-black);
 
   &:hover {
-    background-color: #f5f6fd;
+    background-color: var(--pr-color-primary-50);
     cursor: pointer;
   }
 }

@@ -5,9 +5,10 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-toc-action-area-outcome-section',
-  templateUrl: './toc-action-area-outcome-section.component.html',
-  styleUrls: ['./toc-action-area-outcome-section.component.scss']
+    selector: 'app-toc-action-area-outcome-section',
+    templateUrl: './toc-action-area-outcome-section.component.html',
+    styleUrls: ['./toc-action-area-outcome-section.component.scss'],
+    standalone: false
 })
 export class TocActionAreaOutcomeSectionComponent {
   @Input() result_toc_result = new ResultToResultInterfaceToc();

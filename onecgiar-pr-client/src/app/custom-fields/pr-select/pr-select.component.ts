@@ -4,16 +4,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-pr-select',
-  templateUrl: './pr-select.component.html',
-  styleUrls: ['./pr-select.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrSelectComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-select',
+    templateUrl: './pr-select.component.html',
+    styleUrls: ['./pr-select.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrSelectComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;

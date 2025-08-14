@@ -4,7 +4,7 @@
         description="If you are viewing this section, it is because you have been designated as an admin. This section is not visible to users with other roles.">
     </app-alert-status>
 
-    <h2>Basic info on the innovation package elements</h2>
+    <h2 class="pr-h2">Basic info on the innovation package elements</h2>
     <div class="complementary_innovations" *ngFor="let bodyItem of this.informartion; let i=index">
         <app-collapsible-container [collapse]="bodyItem.open" *ngIf="allInformation == true">
             <div header><strong>{{i+1}}. </strong> {{bodyItem.title}} </div>

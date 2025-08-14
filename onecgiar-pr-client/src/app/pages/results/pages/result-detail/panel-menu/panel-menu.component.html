@@ -2,19 +2,21 @@
   <div>
     <div class="back_button">
       <a routerLink="/result/results-list" class="open_link_in_new_page">
-        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false">
-        </app-pr-button>
+        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
       </a>
     </div>
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
-        <a *ngFor="let navOption of navigationOptions | panelMenu : this.resultLevelSE.currentResultTypeId : green_checks_string; let i = index"
+        <a
+          *ngFor="let navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; let i = index"
           [hidden]="hideKP(navOption)"
           [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
-          [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }" routerLinkActive="section_active">{{
-          i + 1 }}. {{ navOption.prName }} <img *ngIf="navOption.underConstruction === true" class="under_construction"
-            src="assets/work-in-progress.png" alt="" srcset="" />
+          [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
+          routerLinkActive="section_active"
+          class="pr-body-2"
+          >{{ i + 1 }}. {{ navOption.prName }}
+          <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
           <div class="check">
             <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
           </div>
@@ -27,27 +29,36 @@
     <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
   <div>
-    <div class="submit_button"
-      *ngIf="validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 || (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) || this.api.rolesSE.isAdmin">
+    <div
+      class="submit_button"
+      *ngIf="
+        validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 ||
+        (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
+        this.api.rolesSE.isAdmin
+      ">
       <app-pr-button
-        [ngClass]="{ globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)  }"
-        (click)="this.submissionModalSE.showModal = true" text="Submit"
+        [ngClass]="{
+          globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
+        }"
+        (click)="this.submissionModalSE.showModal = true"
+        text="Submit"
         *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
 
-      <app-pr-button text="Unsubmit" *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
-        [ngClass]="{ globalDisabled:this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa}"
+      <app-pr-button
+        text="Unsubmit"
+        *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
+        [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
         (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
 
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
+      <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
         This button will become available once all sections are completed.
       </div>
 
-      <div class="button_access_information" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
+      <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
         Quality Assessed results cannot be un-submited.
       </div>
 
-      <div class="button_access_information"
-        *ngIf="this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa">
+      <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa">
         This result is part of a QA process and cannot be un-submitted for editing.
       </div>
     </div>

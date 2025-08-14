@@ -4,9 +4,10 @@ import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmen
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
-  selector: 'app-megatrends',
-  templateUrl: './megatrends.component.html',
-  styleUrls: ['./megatrends.component.scss']
+    selector: 'app-megatrends',
+    templateUrl: './megatrends.component.html',
+    styleUrls: ['./megatrends.component.scss'],
+    standalone: false
 })
 export class MegatrendsComponent {
   @Input() body = new InnovationDevInfoBody();

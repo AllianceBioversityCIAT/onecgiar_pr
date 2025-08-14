@@ -2,7 +2,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { DataControlService } from '../../../../../../../../../../../../../shared/services/data-control.service';
 
 @Pipe({
-  name: 'filterOutcomeLevelByBoolean'
+    name: 'filterOutcomeLevelByBoolean',
+    standalone: false
 })
 export class FilterOutcomeLevelByBooleanPipe implements PipeTransform {
   constructor(private dataControlSE: DataControlService) {}

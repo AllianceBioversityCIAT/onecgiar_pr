@@ -1,11 +1,13 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
 
 .notification {
   padding: 0 30px 15px 30px;
-  background-color: #f2f2f2;
-  border: 1px solid #808080;
+  background-color: var(--pr-color-accents-1);
+  border: 1px solid var(--pr-color-accents-4);
   border-radius: 10px;
 
   .notification_header {
@@ -19,15 +21,15 @@ p {
       justify-content: center;
       align-items: center;
       padding: 2px 15px;
-      border: 1px solid #5569dd;
+      border: 1px solid var(--pr-color-primary-300);
       border-radius: 0 0 10px 10px;
       border-top: none;
-      background: #cfd5f6;
-      color: #5569dd;
+      background: var(--pr-color-primary-100);
+      color: var(--pr-color-primary-300);
 
       .notification_header_item_text {
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
-        font-size: 12px;
       }
     }
   }
@@ -48,10 +50,10 @@ p {
 
       .notification_content_actions_status {
         text-align: center;
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         padding: 5px 20px;
-        border-left: 1px solid var(--pr-color-primary);
-        border-right: 1px solid var(--pr-color-primary);
+        border-left: 1px solid var(--pr-color-primary-300);
+        border-right: 1px solid var(--pr-color-primary-300);
         border-radius: 10px;
       }
 
@@ -63,7 +65,7 @@ p {
       }
 
       .notification_content_actions_sent {
-        color: #666;
+        color: var(--pr-color-accents-5);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -74,7 +76,7 @@ p {
 
     .notification_content_body {
       .notification_content_body_text {
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
       }
     }
@@ -85,49 +87,8 @@ p {
     justify-content: flex-end;
     align-items: center;
     width: 100%;
-    color: #76716a;
+    color: var(--pr-color-accents-5);
     margin-top: 5px;
-    font-size: 12px;
+    @include fonts.pr-typography('body-2');
   }
-
-  .title {
-    font-size: 1.2em;
-  }
-
-  .sub_title {
-    margin-bottom: 10px;
-  }
-
-  .direction_icon {
-    position: absolute;
-    left: 0;
-    top: 0;
-    rotate: 45deg;
-    margin-left: 5px;
-    margin-top: 5px;
-  }
-
-  .text_icon {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .pending {
-    color: gray;
-  }
-
-  .accepted {
-    color: green;
-  }
-
-  .rejected {
-    color: rgb(219, 50, 28);
-  }
-}
-
-.result_submitted_text {
-  color: rgb(238, 71, 71);
-  font-weight: 700px;
-  font-size: 1em !important;
 }

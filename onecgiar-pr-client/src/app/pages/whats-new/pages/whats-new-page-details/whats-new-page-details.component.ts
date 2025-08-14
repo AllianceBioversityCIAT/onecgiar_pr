@@ -9,12 +9,11 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { WhatsNewPageDetailsLoadingComponent } from './components/whats-new-page-details-loading/whats-new-page-details-loading.component';
 
 @Component({
-  selector: 'app-whats-new-page-details',
-  standalone: true,
-  imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule, SkeletonModule, WhatsNewPageDetailsLoadingComponent],
-  templateUrl: './whats-new-page-details.component.html',
-  styleUrls: ['./whats-new-page-details.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-whats-new-page-details',
+    imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule, SkeletonModule, WhatsNewPageDetailsLoadingComponent],
+    templateUrl: './whats-new-page-details.component.html',
+    styleUrls: ['./whats-new-page-details.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WhatsNewPageDetailsComponent implements OnInit, OnDestroy {
   notionPageId = signal<string>('');

@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-sdg-targets',
-  templateUrl: './sdg-targets.component.html',
-  styleUrls: ['./sdg-targets.component.scss']
+    selector: 'app-sdg-targets',
+    templateUrl: './sdg-targets.component.html',
+    styleUrls: ['./sdg-targets.component.scss'],
+    standalone: false
 })
 export class SdgTargetsComponent implements OnInit {
   currentsdgID = null;

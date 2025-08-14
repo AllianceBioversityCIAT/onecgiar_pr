@@ -10,9 +10,10 @@ import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-moda
 import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-panel-menu',
-  templateUrl: './panel-menu.component.html',
-  styleUrls: ['./panel-menu.component.scss']
+    selector: 'app-panel-menu',
+    templateUrl: './panel-menu.component.html',
+    styleUrls: ['./panel-menu.component.scss'],
+    standalone: false
 })
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();

@@ -3,9 +3,10 @@ import { IPSRMaterialsStep4, IpsrStep4Body } from '../../model/Ipsr-step-4-body.
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-step-n4-reference-material-links',
-  templateUrl: './step-n4-reference-material-links.component.html',
-  styleUrls: ['./step-n4-reference-material-links.component.scss']
+    selector: 'app-step-n4-reference-material-links',
+    templateUrl: './step-n4-reference-material-links.component.html',
+    styleUrls: ['./step-n4-reference-material-links.component.scss'],
+    standalone: false
 })
 export class StepN4ReferenceMaterialLinksComponent {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();

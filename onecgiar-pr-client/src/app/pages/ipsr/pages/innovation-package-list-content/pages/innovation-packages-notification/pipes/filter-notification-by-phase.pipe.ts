@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterNotificationByPhase'
+    name: 'filterNotificationByPhase',
+    standalone: false
 })
 export class FilterNotificationByPhasePipe implements PipeTransform {
   transform(list, phaseId: string) {

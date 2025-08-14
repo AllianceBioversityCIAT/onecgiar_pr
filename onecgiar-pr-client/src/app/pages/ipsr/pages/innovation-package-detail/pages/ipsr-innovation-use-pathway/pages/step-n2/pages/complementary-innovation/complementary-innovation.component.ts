@@ -26,9 +26,10 @@ export class ComplementaryInnovation {
 }
 
 @Component({
-  selector: 'app-complementary-innovation',
-  templateUrl: './complementary-innovation.component.html',
-  styleUrls: ['./complementary-innovation.component.scss']
+    selector: 'app-complementary-innovation',
+    templateUrl: './complementary-innovation.component.html',
+    styleUrls: ['./complementary-innovation.component.scss'],
+    standalone: false
 })
 export class ComplementaryInnovationComponent implements OnInit {
   body: any;

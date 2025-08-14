@@ -2,7 +2,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ResultsListFilterService } from '../services/results-list-filter.service';
 
 @Pipe({
-  name: 'resultsListFilter'
+    name: 'resultsListFilter',
+    standalone: false
 })
 export class ResultsListFilterPipe implements PipeTransform {
   list: any[];

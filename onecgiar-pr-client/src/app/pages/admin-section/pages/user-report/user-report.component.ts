@@ -3,9 +3,10 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
-  selector: 'app-user-report',
-  templateUrl: './user-report.component.html',
-  styleUrls: ['./user-report.component.scss']
+    selector: 'app-user-report',
+    templateUrl: './user-report.component.html',
+    styleUrls: ['./user-report.component.scss'],
+    standalone: false
 })
 export class UserReportComponent implements OnInit {
   textToFind = '';

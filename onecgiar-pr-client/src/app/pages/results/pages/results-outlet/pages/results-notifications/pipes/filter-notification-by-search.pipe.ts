@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'appFilterNotificationBySearch'
+    name: 'appFilterNotificationBySearch',
+    standalone: false
 })
 export class FilterNotificationBySearchPipe implements PipeTransform {
   transform(list, searchFilter: string, isUpdateTab: boolean = false): any[] {

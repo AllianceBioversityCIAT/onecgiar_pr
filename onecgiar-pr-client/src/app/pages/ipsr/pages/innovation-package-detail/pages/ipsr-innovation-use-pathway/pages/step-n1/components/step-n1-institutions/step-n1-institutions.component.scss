@@ -1,110 +1,103 @@
 .chips_container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 70vh !important;
+  min-height: 200px;
+  position: relative;
+
+  .pr_chip_selected {
+    padding: 10px;
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-    max-height: 70vh !important;
-    min-height: 200px;
-    position: relative;
 
-    .pr_chip_selected {
-        padding: 10px;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-
-        .name {}
-
-        .type {}
-
-        .remove_button {
-            position: absolute;
-            right: 0;
-            top: 0;
-            margin-top: 5px;
-            margin-right: 5px;
-        }
-
-        .deliveries {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            align-items: center;
-
-
-            .delivery {
-                padding: 7px 14px;
-                background-color: white;
-                color: var(--pr-color-primary);
-                cursor: pointer;
-                border-radius: 15px;
-                font-weight: 500;
-            }
-
-            .delivery.active {
-                background-color: var(--pr-color-primary) !important;
-                color: white !important;
-            }
-        }
+    .remove_button {
+      position: absolute;
+      right: 0;
+      top: 0;
+      margin-top: 5px;
+      margin-right: 5px;
     }
+
+    .deliveries {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      align-items: center;
+
+      .delivery {
+        padding: 7px 14px;
+        background-color: var(--pr-color-white);
+        color: var(--pr-color-primary-300);
+        cursor: pointer;
+        border-radius: 15px;
+        font-weight: 500;
+      }
+
+      .delivery.active {
+        background-color: var(--pr-color-primary-300) !important;
+        color: var(--pr-color-white) !important;
+      }
+    }
+  }
 }
 
 .partners_selected_header {
-    padding-top: 15px;
-    padding-bottom: 2px;
+  padding-top: 15px;
+  padding-bottom: 2px;
 }
 
 .readOnly_deliveries {
-    .delivery {
-        padding: 4px 8px !important;
-        border-radius: 3px !important;
-    }
+  .delivery {
+    padding: 4px 8px !important;
+    border-radius: 3px !important;
+  }
 }
 
 .info_button {
-
-    // position: relative;
-    i {
-        color: var(--pr-color-primary);
-    }
+  i {
+    color: var(--pr-color-primary-300);
+  }
 }
 
 .content {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.205);
-    transform: translateY(-50%);
-    top: 50%;
-    left: 0;
+  position: absolute;
+  background-color: rgba(var(--pr-color-black-rgb), 0.205);
+  transform: translateY(-50%);
+  top: 50%;
+  left: 0;
 
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 
-    padding: 20px;
+  padding: 20px;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .texts {
+    padding: 10px;
+    padding-right: 50px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    height: max-content;
+    gap: 5px;
+    z-index: 3;
+    background-color: var(--pr-color-white);
+    position: relative;
+    border-radius: 5px;
+    box-shadow: 0px 0px 5px 5px rgba(var(--pr-color-black-rgb), 0.055);
 
-    .texts {
-        padding: 10px;
-        padding-right: 50px;
-        display: flex;
-        flex-direction: column;
-        height: max-content;
-        gap: 5px;
-        z-index: 3;
-        background-color: white;
-        position: relative;
-        border-radius: 5px;
-        box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.055);
-
-        .close_content {
-            position: absolute;
-            top: 0;
-            right: 0;
-            margin: 10px;
-            color: var(--pr-color-primary);
-            cursor: pointer;
-        }
+    .close_content {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      color: var(--pr-color-primary-300);
+      cursor: pointer;
     }
+  }
 }

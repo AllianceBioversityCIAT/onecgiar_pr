@@ -96,7 +96,7 @@
                                 [description]="item.indicator_question && 'Please specify how your result contributes to this target.'"
                                 (selectOptionEvent)="item.contributing = item.indicator_question === true ? 1 : 0"
                                 [showDescriptionLabel]="false"
-                                descInlineStyles="margin-bottom: 6px; border-radius: 5px; padding: 0px; background-color: #FFF; box-shadow: none;">
+                                descInlineStyles="margin-bottom: 6px; border-radius: 5px; padding: 0px; background-color: var(--pr-color-white); box-shadow: none;">
                             </app-pr-yes-or-not>
 
                             <app-pr-button icon="featured_play_list" [verticalMargin]="20"

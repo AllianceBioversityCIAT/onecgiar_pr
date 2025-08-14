@@ -4,9 +4,10 @@ import { ApiService } from '../../services/api/api.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-change-phase-modal',
-  templateUrl: './change-phase-modal.component.html',
-  styleUrls: ['./change-phase-modal.component.scss']
+    selector: 'app-change-phase-modal',
+    templateUrl: './change-phase-modal.component.html',
+    styleUrls: ['./change-phase-modal.component.scss'],
+    standalone: false
 })
 export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;

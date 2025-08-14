@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-impact-area-targets',
-  templateUrl: './impact-area-targets.component.html',
-  styleUrls: ['./impact-area-targets.component.scss']
+    selector: 'app-impact-area-targets',
+    templateUrl: './impact-area-targets.component.html',
+    styleUrls: ['./impact-area-targets.component.scss'],
+    standalone: false
 })
 export class ImpactAreaTargetsComponent implements OnInit {
   @Input() body = [];

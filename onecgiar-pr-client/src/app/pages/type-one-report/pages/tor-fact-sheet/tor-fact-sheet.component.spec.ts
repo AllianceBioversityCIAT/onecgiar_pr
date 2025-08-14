@@ -140,15 +140,17 @@ describe('TorFactSheetComponent', () => {
       expect(component.data[5].value).toBe('01-01-2022');
       expect(component.data[6].value).toBe('01-01-2023');
       expect(component.data[8].value).toContain(
-        '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>'
+        '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Climate marker Adaptation score</strong>'
       );
       expect(component.data[9].value).toContain(
-        '<div class="no-data-text-format">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>'
+        '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Climate marker Mitigation score</strong>'
       );
       expect(component.data[10].value).toContain(
-        '<div class="no-data-text-format">This Initiative does not have OECD DAC Gender equity marker score</strong'
+        '<div class="pr-body-2 italic text-accent-5">This Initiative does not have OECD DAC Gender equity marker score</strong'
       );
-      expect(component.data[11].value).toContain('<div class="no-data-text-format">This Initiative does not have Links to webpage</strong>');
+      expect(component.data[11].value).toContain(
+        '<div class="pr-body-2 italic text-accent-5">This Initiative does not have Links to webpage</strong>'
+      );
       expect(component.loadingData).toBeFalsy();
     });
   });
@@ -207,7 +209,7 @@ describe('TorFactSheetComponent', () => {
       component.concatGeo(data);
 
       const expectedResult =
-        '<strong>Regions:</strong><br><div class="no-data-text-format">This Initiative does not have regions targeted in the proposal</div><br><strong>Countries:</strong><br><div class="no-data-text-format">This Initiative does not have countries targeted in the proposal</div>';
+        '<strong>Regions:</strong><br><div class="pr-body-2 italic text-accent-5">This Initiative does not have regions targeted in the proposal</div><br><strong>Countries:</strong><br><div class="pr-body-2 italic text-accent-5">This Initiative does not have countries targeted in the proposal</div>';
 
       expect(component.data[7].value).toEqual(expectedResult);
     });
@@ -248,7 +250,7 @@ describe('TorFactSheetComponent', () => {
 
       component.concatEoiOutcome(data);
 
-      const expectedResult = '<div class="no-data-text-format">This Initiative does not have a Measurable three-year outcome</div>';
+      const expectedResult = '<div class="pr-body-2 italic text-accent-5">This Initiative does not have a Measurable three-year outcome</div>';
 
       expect(component.data[8].value).toEqual(expectedResult);
     });

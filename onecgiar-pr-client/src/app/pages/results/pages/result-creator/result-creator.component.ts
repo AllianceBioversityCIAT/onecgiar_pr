@@ -7,9 +7,10 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
-  selector: 'app-result-creator',
-  templateUrl: './result-creator.component.html',
-  styleUrls: ['./result-creator.component.scss']
+    selector: 'app-result-creator',
+    templateUrl: './result-creator.component.html',
+    styleUrls: ['./result-creator.component.scss'],
+    standalone: false
 })
 export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;

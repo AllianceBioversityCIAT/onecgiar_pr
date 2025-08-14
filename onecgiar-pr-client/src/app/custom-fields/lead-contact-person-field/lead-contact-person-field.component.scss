@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .lead-contact-container {
   position: relative;
 }
@@ -10,7 +12,7 @@
 .clear-contact-btn {
   position: absolute;
   right: 10px;
-  bottom: -4px;
+  bottom: -9px;
   transform: translateY(-50%);
   background: none;
   border: none;
@@ -22,32 +24,30 @@
   justify-content: center;
   transition: background-color 0.2s ease;
   z-index: 10;
-
-  &:hover {
-    background-color: #f0f0f0;
-  }
+  height: 30px;
+  width: 30px;
 
   .clear-icon {
-    font-size: 14px;
-    color: #666;
+    @include fonts.pr-typography('body-2');
+    color: var(--pr-color-accents-5);
     font-weight: bold;
   }
 }
 
 .contact-error-message {
-  background-color: #fee;
-  border: 1px solid #f5c6cb;
+  background-color: var(--pr-color-red-50);
+  border: 1px solid var(--pr-color-red-100);
   border-radius: 4px;
-  color: #721c24;
+  color: var(--pr-color-red-700);
   padding: 0.75rem;
   margin-top: 0.5rem;
-  font-size: 14px;
+  @include fonts.pr-typography('body-2');
   display: flex;
   align-items: center;
   gap: 0.5rem;
 
   .warning-icon {
-    font-size: 16px;
+    @include fonts.pr-typography('h3');
     margin-right: 8px;
   }
 }
@@ -55,28 +55,29 @@
 ::ng-deep .invalid-contact {
   .form-control,
   input {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    border-color: var(--pr-color-red-200) !important;
+    box-shadow: 0 0 0 0.2rem rgba(var(--pr-color-red-rgb), 0.25) !important;
   }
 }
 
 .selected-contact-info {
   margin-top: 8px;
   padding: 12px;
-  background-color: #e8f4fd;
-  border: 1px solid #bee5eb;
+  background-color: var(--pr-color-blue-50);
+  border: 1px solid var(--pr-color-blue-200);
   border-radius: 4px;
 
   .selected-contact-details {
     .selected-user-name {
+      @include fonts.pr-typography('body-2');
       font-weight: 600;
-      color: #0c5460;
+      color: var(--pr-color-blue-950);
       margin-bottom: 4px;
     }
 
     .selected-user-info {
-      font-size: 0.9em;
-      color: #0c5460;
+      @include fonts.pr-typography('body-2');
+      color: var(--pr-color-blue-950);
     }
   }
 }
@@ -93,23 +94,23 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ccc;
+  background: var(--pr-color-white);
+  border: 1px solid var(--pr-color-neutral-1000);
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(var(--pr-color-black-rgb), 0.1);
   z-index: 1001;
 }
 
 .search-result-item {
   padding: 0.75rem;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--pr-color-accents-1);
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: #f8f9fa;
+    background-color: var(--pr-color-accents-1);
   }
 
   &:last-child {
@@ -118,36 +119,36 @@
 
   .user-name {
     font-weight: 500;
-    color: #333;
+    color: var(--pr-color-accents-7);
     margin-bottom: 4px;
   }
 
   .user-details {
-    font-size: 12px;
-    color: #666;
+    @include fonts.pr-typography('body-2');
+    color: var(--pr-color-accents-5);
     margin-top: 2px;
   }
 }
 
 .search-loading {
-  background: white;
-  border: 1px solid #ccc;
+  background: var(--pr-color-white);
+  border: 1px solid var(--pr-color-neutral-1000);
   border-radius: 4px;
   padding: 0.75rem;
   text-align: center;
-  color: #666;
-  font-size: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--pr-color-accents-5);
+  @include fonts.pr-typography('body-2');
+  box-shadow: 0 2px 8px rgba(var(--pr-color-black-rgb), 0.1);
   font-style: italic;
 }
 
 .no-results {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
+  background: var(--pr-color-yellow-50);
+  border: 1px solid var(--pr-color-yellow-100);
   border-radius: 4px;
   padding: 0.75rem;
   text-align: center;
-  color: #856404;
-  font-size: 14px;
+  color: var(--pr-color-yellow-700);
+  @include fonts.pr-typography('body-2');
   font-style: italic;
 }

@@ -1,11 +1,12 @@
 table,
 th,
 td {
-  border: 1px solid black;
+  border: 1px solid var(--pr-color-black);
 }
 
 table {
   border-collapse: collapse;
+  width: 100%;
 }
 
 th {
@@ -14,16 +15,12 @@ th {
 
 td {
   padding: 5px;
-  background-color: white;
+  background-color: var(--pr-color-white);
 }
 
 .table_title {
-  background-color: #5569dd !important;
-  color: white;
-}
-
-table {
-  width: 100%;
+  background-color: var(--pr-color-primary-300) !important;
+  color: var(--pr-color-white);
 }
 
 .loader_info {
@@ -37,15 +34,15 @@ table {
     font-size: 14.5px !important;
 
     .table_title {
-      color: black;
-      background-color: white !important;
+      color: var(--pr-color-black);
+      background-color: var(--pr-color-white) !important;
     }
   }
 }
 
 .copy_to_clipboard_button {
-  background-color: rgb(255, 255, 255);
-  color: rgb(80, 80, 80);
+  background-color: var(--pr-color-white);
+  color: var(--pr-color-accents-5);
   margin: 5px;
   border-radius: 3px;
   display: flex;

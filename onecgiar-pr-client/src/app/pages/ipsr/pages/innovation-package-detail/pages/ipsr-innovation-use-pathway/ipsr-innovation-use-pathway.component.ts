@@ -2,9 +2,10 @@ import { Component } from '@angular/core';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-ipsr-innovation-use-pathway',
-  templateUrl: './ipsr-innovation-use-pathway.component.html',
-  styleUrls: ['./ipsr-innovation-use-pathway.component.scss']
+    selector: 'app-ipsr-innovation-use-pathway',
+    templateUrl: './ipsr-innovation-use-pathway.component.html',
+    styleUrls: ['./ipsr-innovation-use-pathway.component.scss'],
+    standalone: false
 })
 export class IpsrInnovationUsePathwayComponent {
   menuOptions = [

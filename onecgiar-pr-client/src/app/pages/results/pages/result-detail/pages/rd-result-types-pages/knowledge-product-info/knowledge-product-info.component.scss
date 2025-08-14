@@ -1,43 +1,43 @@
 .altmetric_details_url {
-    .altmetric_image {
-        width: 80px;
-    }
+  .altmetric_image {
+    width: 80px;
+  }
 }
 
 .circle-progress-group {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 
-    .item {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
 }
 
 .custom_chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 
-    .author {
-        border-radius: 100px;
-        background-color: #E8EBFF;
-        padding: 5px 15px;
-    }
+  .author {
+    border-radius: 100px;
+    background-color: var(--pr-color-primary-50);
+    padding: 5px 15px;
+  }
 }
 
-.texts{
-    .indicators{
-        display: flex;
-        align-items: center;
-        .check{
-            color: var(--pr-color-success);
-            margin-right: 5px;
-        }
-        .incomplete{
-            color: var(--pr-color-danger);
-            margin-right: 5px;
-        }
+.texts {
+  .indicators {
+    display: flex;
+    align-items: center;
+    .check {
+      color: var(--pr-color-green-500);
+      margin-right: 5px;
     }
+    .incomplete {
+      color: var(--pr-color-red-300);
+      margin-right: 5px;
+    }
+  }
 }

@@ -5,9 +5,10 @@ import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 
 @Component({
-  selector: 'app-multiple-wps-content',
-  templateUrl: './multiple-wps-content.component.html',
-  styleUrls: ['./multiple-wps-content.component.scss']
+    selector: 'app-multiple-wps-content',
+    templateUrl: './multiple-wps-content.component.html',
+    styleUrls: ['./multiple-wps-content.component.scss'],
+    standalone: false
 })
 export class MultipleWPsContentComponent implements OnChanges {
   @Input() editable: boolean;

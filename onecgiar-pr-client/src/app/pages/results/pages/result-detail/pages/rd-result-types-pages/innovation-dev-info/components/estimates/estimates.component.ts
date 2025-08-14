@@ -3,9 +3,10 @@ import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-estimates',
-  templateUrl: './estimates.component.html',
-  styleUrls: ['./estimates.component.scss']
+    selector: 'app-estimates',
+    templateUrl: './estimates.component.html',
+    styleUrls: ['./estimates.component.scss'],
+    standalone: false
 })
 export class EstimatesComponent {
   @Input() body = new InnovationDevInfoBody();

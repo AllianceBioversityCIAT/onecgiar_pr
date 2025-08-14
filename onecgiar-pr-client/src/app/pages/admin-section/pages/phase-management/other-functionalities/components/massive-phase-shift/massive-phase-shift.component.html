@@ -37,11 +37,11 @@
                 </span>
             </div>
             <div class="buttons">
-                <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Cancel"
+                <app-pr-button padding="medium" [style]="{ margin: '1rem 2rem' }" text="Cancel"
                     colorType="secondary" (click)="this.api.dataControlSE.showMassivePhaseShiftModal = false">
                 </app-pr-button>
                 <app-pr-button [ngClass]="{ globalDisabled: this.requesting }" [rotating]="this.requesting"
-                    padding="medium" [style]="{ margin: '1rem 2rem', 'font-size': '1.5rem' }" text="Confirm"
+                    padding="medium" [style]="{ margin: '1rem 2rem' }" text="Confirm"
                     (click)="accept()" [icon]="this.requesting ? 'loop' : ''"> </app-pr-button>
             </div>
         </div>

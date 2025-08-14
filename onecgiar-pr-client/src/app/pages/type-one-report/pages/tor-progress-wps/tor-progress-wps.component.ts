@@ -5,9 +5,10 @@ import { MessageService } from 'primeng/api';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
-  selector: 'app-tor-progress-wps',
-  templateUrl: './tor-progress-wps.component.html',
-  styleUrls: ['./tor-progress-wps.component.scss']
+    selector: 'app-tor-progress-wps',
+    templateUrl: './tor-progress-wps.component.html',
+    styleUrls: ['./tor-progress-wps.component.scss'],
+    standalone: false
 })
 export class TorProgressWpsComponent implements OnInit, OnDestroy {
   requesting: boolean = false;

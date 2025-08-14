@@ -1,26 +1,38 @@
 <div class="dropdown-50p partnersindex">
-    <app-pr-multi-select [options]="this.centersSE.centersList" label="Contributing Centers"
-        (selectOptionEvent)="validatePrimarySelection()" selectedLabel="Center(s) selected" optionLabel="full_name"
-        optionValue="code" [(ngModel)]="this.contributorsBody.contributing_center" placeholder="Select center(s)
+  <app-pr-multi-select
+    [options]="this.centersSE.centersList"
+    label="Contributing Centers"
+    (selectOptionEvent)="validatePrimarySelection()"
+    selectedLabel="Center(s) selected"
+    optionLabel="full_name"
+    optionValue="code"
+    [(ngModel)]="this.contributorsBody.contributing_center"
+    placeholder="Select center(s)
 ">
-    </app-pr-multi-select>
+  </app-pr-multi-select>
 </div>
 
-<div class="medal_info">
-    Please select the primary Center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
+<div class="medal_info pr-body-2">
+  Please select the primary Center by clicking the medal icon <i class="material-icons-round">workspace_premium</i>
 </div>
 <div class="medal_selector selected_container">
-    <div class="centers chips_container">
-        <div class="center pr_chip_selected"
-            *ngFor="let center of this.contributorsBody.contributing_center; let i=index">
-            <i class="material-icons-round medal" [ngClass]="{'primary': center.primary}"
-                (click)="this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status?null:addPrimary(center)">workspace_premium</i>
-            <!--TODO add primary text  -->
-            <div class="name" [innerHtml]="center?.name+(center.primary?primaryText:'')"></div><i
-                *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-                class="material-icons-round" (click)="deletContributingCenter(i)">cancel</i>
-        </div>
+  <div class="centers chips_container">
+    <div class="center pr_chip_selected pr-body-2" *ngFor="let center of this.contributorsBody.contributing_center; let i = index">
+      <i
+        class="material-icons-round medal"
+        [ngClass]="{ primary: center.primary }"
+        (click)="this.api.rolesSE.readOnly && this.api.dataControlSE?.currentResult?.status ? null : addPrimary(center)"
+        >workspace_premium</i
+      >
+      <div class="name" [innerHtml]="center?.name + (center.primary ? primaryText : '')"></div>
+      <i
+        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+        class="material-icons-round"
+        (click)="deletContributingCenter(i)"
+        >cancel</i
+      >
     </div>
+  </div>
 </div>
 
-<br><br><br><br><br><br><br>
+<br /><br /><br /><br /><br /><br /><br />

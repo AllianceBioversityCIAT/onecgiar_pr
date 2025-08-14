@@ -1,12 +1,14 @@
+@use './fonts.scss' as fonts;
+
 .step_title {
   display: flex;
   gap: 5px;
-  color: var(--pr-color-primary);
-  font-size: 1.1em;
+  color: var(--pr-color-primary-300);
+  @include fonts.pr-typography('body-1');
 }
 
 .ipsr_chip_container {
-  background-color: var(--pr-color-primary-2);
+  background-color: var(--pr-color-primary-50);
   width: 100%;
   padding: 4px 20px;
   border-radius: 4px;
@@ -14,71 +16,71 @@
   align-items: center;
   gap: 20px;
 
-    i,
-    a {
-        color: var(--pr-color-primary);
-        font-size: 1.2em;
-        cursor: pointer;
-    }
+  i,
+  a {
+    color: var(--pr-color-primary-300);
+    font-size: 1.2em;
+    cursor: pointer;
+  }
 }
 
 .steps_status {
   text-align: center;
   font-weight: 500;
-  font-size: 1.3em;
-  color: gray;
+  @include fonts.pr-typography('h3');
+  color: var(--pr-color-accents-5);
 }
 
 .step_divider {
-  border-top: 3px solid var(--pr-color-primary);
+  border-top: 3px solid var(--pr-color-primary-300);
   opacity: 0.2;
   margin-top: 25px;
   margin-bottom: 40px;
 }
 
 .fragment_section_divider {
-  border-top: 2px solid gray;
+  border-top: 2px solid var(--pr-color-accents-5);
   opacity: 0.2;
   margin: 25px 150px 40px 150px;
 }
 
 .ipsr-sub-title {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 1.2em;
-    font-weight: 500;
-    background: rgb(85, 105, 221);
-    background: linear-gradient(87deg, rgba(85, 106, 221, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
-    width: 50vw;
-    color: var(--pr-color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  @include fonts.pr-typography('body-1');
+  font-weight: 500;
+  background: var(--pr-color-primary-300);
+  background: linear-gradient(87deg, rgba(var(--pr-color-primary-rgb), 0.116) 4%, rgba(var(--pr-color-white-rgb), 0) 100%);
+  width: 50vw;
+  color: var(--pr-color-secondary-400);
 
   &::before {
     content: '';
     width: 8px;
     height: 35px;
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
   }
 }
 
 .step_sub_section {
-    border-left: 4px dashed #556add11;
-    border-bottom: 4px dashed #556add11;
-    padding-left: 15px;
-    margin-bottom: 70px;
-    padding-bottom: 70px;
+  border-left: 4px dashed rgba(var(--pr-color-primary-rgb), 0.067);
+  border-bottom: 4px dashed rgba(var(--pr-color-primary-rgb), 0.067);
+  padding-left: 15px;
+  margin-bottom: 70px;
+  padding-bottom: 70px;
 }
 
 .ipsr-sub-title-2 {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 1.2em;
+  @include fonts.pr-typography('body-1');
   font-weight: 500;
-  background: rgb(0, 0, 0);
-  background: linear-gradient(87deg, rgba(24, 25, 27, 0.116) 4%, rgba(255, 255, 255, 0) 100%);
+  background: var(--pr-color-black);
+  background: linear-gradient(87deg, rgba(var(--pr-color-secondary-rgb), 0.116) 4%, rgba(var(--pr-color-white-rgb), 0) 100%);
   width: max-content;
-  color: var(--pr-color-secondary);
+  color: var(--pr-color-secondary-400);
   margin-left: 30px;
   position: relative;
   padding-left: 8px;
@@ -89,47 +91,47 @@
     content: '';
     width: 17px;
     height: 17px;
-    background-color: #2a2e45be;
+    background-color: rgba(var(--pr-color-secondary-rgb), 0.745);
     transform: translateY(-50%);
     top: 50%;
   }
 }
 
 .toggle_change_step {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
 .unit_of_time_container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
 
   .unitW {
     width: 150px !important;
   }
 
-    &>div:first-child {
-        width: max-content;
-        margin-top: -20px;
-        margin-bottom: -7px;
-    }
+  & > div:first-child {
+    width: max-content;
+    margin-top: -20px;
+    margin-bottom: -7px;
+  }
 
-    &>div:nth-child(2) {
-        width: 100px;
-        margin-top: 5px;
-    }
+  & > div:nth-child(2) {
+    width: 100px;
+    margin-top: 5px;
+  }
 
-    &>div:nth-child(3) {
-        width: 300px;
-    }
+  & > div:nth-child(3) {
+    width: 300px;
+  }
 }
 
 .gray_card {
-  background-color: #f3f3f3;
+  background-color: var(--pr-color-accents-2);
   border-radius: 10px;
-  box-shadow: 0px 7px 7px 3px rgb(0 0 0 / 16%);
+  box-shadow: 0px 7px 7px 3px rgba(var(--pr-color-black-rgb), 0.16);
   transition: all ease-in-out 0.3s;
 }
 
@@ -138,8 +140,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50px;
-  background-color: var(--pr-color-danger);
-  color: white;
+  background-color: var(--pr-color-red-300);
+  color: var(--pr-color-white);
   width: 35px;
   height: 35px;
   cursor: pointer;
@@ -154,8 +156,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50px;
-  background-color: var(--pr-color-primary);
-  color: white;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   width: 35px;
   height: 35px;
   cursor: pointer;

@@ -8,12 +8,11 @@ import { InputTextModule } from 'primeng/inputtext';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, FormsModule, PasswordModule, InputTextModule],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-login',
+    imports: [CommonModule, FormsModule, PasswordModule, InputTextModule],
+    templateUrl: './login.component.html',
+    styleUrls: ['./login.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent implements OnInit, OnDestroy {
   cognito = inject(CognitoService);

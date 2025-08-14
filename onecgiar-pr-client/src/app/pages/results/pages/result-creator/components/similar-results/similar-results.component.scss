@@ -26,9 +26,9 @@
       .typeAndPhasesItem {
         display: flex;
         align-items: center;
-        border: 1px solid #eaeaea;
+        border: 1px solid var(--pr-color-accents-2);
         border-radius: 5px;
-        background-color: #fafafa;
+        background-color: var(--pr-color-accents-1);
         padding: 5px 10px;
         margin: 0;
         margin-top: 5px;
@@ -42,16 +42,16 @@
     position: relative;
     font-weight: 500;
     gap: 20px;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
     justify-content: space-between;
     align-items: center;
-    border: 1px solid #eaeaea;
+    border: 1px solid var(--pr-color-accents-2);
     border-radius: 5px;
     padding: 1rem;
 
     .line {
       content: '';
-      background-color: rgb(0, 162, 255);
+      background-color: var(--pr-color-blue-500);
       width: 7px;
       height: 100%;
       position: absolute;
@@ -68,13 +68,12 @@
     }
 
     .title {
-      font-size: 13px;
       font-weight: 400;
-      color: var(--pr-color-primary);
+      color: var(--pr-color-primary-300);
       margin: 0;
       transition: all 0.2s ease-in-out;
       &:hover {
-        color: var(--pr-color-secondary);
+        color: var(--pr-color-secondary-400);
       }
     }
   }

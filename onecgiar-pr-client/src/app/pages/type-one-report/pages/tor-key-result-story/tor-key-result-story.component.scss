@@ -2,14 +2,14 @@
   top: 0;
   left: 0;
   position: absolute;
-  border: 1px solid rgb(17, 0, 255);
+  border: 1px solid var(--pr-color-blue-700);
 
   th {
-    border: 1px solid rgb(4, 0, 255);
+    border: 1px solid var(--pr-color-blue-700);
   }
 
   td {
-    border: 1px solid black;
+    border: 1px solid var(--pr-color-black);
   }
 }
 

@@ -1,22 +1,21 @@
 .bulk_selector {
-    margin: 6px 10px;
-    padding: 1px 10px;
-    color: var(--pr-color-primary);
-    width: max-content;
-    transition: all ease-in-out .3s;
-    border-radius: 4px;
-    // font-size: .9em;
+  margin: 6px 10px;
+  padding: 1px 10px;
+  color: var(--pr-color-primary-300);
+  width: max-content;
+  transition: all ease-in-out 0.3s;
+  border-radius: 4px;
 
-    &:hover {
-        color: white;
-        background-color: var(--pr-color-primary);
-    }
+  &:hover {
+    color: var(--pr-color-white);
+    background-color: var(--pr-color-primary-300);
+  }
 }
 
 .util_container {
-    margin: 6px 10px;
+  margin: 6px 10px;
 }
 
 .is_active_false {
-    display: none !important;
+  display: none !important;
 }

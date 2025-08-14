@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { IpsrStep3Body } from '../../model/Ipsr-step-3-body.model';
 
 @Component({
-  selector: 'app-step-n3-complementary-innovations',
-  templateUrl: './step-n3-complementary-innovations.component.html',
-  styleUrls: ['./step-n3-complementary-innovations.component.scss']
+    selector: 'app-step-n3-complementary-innovations',
+    templateUrl: './step-n3-complementary-innovations.component.html',
+    styleUrls: ['./step-n3-complementary-innovations.component.scss'],
+    standalone: false
 })
 export class StepN3ComplementaryInnovationsComponent implements OnInit {
   @Input() rangesOptions: any[] = [];

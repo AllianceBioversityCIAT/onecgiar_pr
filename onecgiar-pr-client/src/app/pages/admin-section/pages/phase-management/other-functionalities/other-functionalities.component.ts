@@ -2,9 +2,10 @@ import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-other-functionalities',
-  templateUrl: './other-functionalities.component.html',
-  styleUrls: ['./other-functionalities.component.scss']
+    selector: 'app-other-functionalities',
+    templateUrl: './other-functionalities.component.html',
+    styleUrls: ['./other-functionalities.component.scss'],
+    standalone: false
 })
 export class OtherFunctionalitiesComponent {
   @Input() replicateIPSR: boolean = false;

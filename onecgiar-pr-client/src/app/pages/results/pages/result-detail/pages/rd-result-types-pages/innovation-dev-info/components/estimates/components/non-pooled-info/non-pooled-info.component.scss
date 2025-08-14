@@ -1,9 +1,11 @@
+@use '../../../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_title {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 250px;
-  font-size: 1.5em;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px;
   border-bottom-right-radius: 10px;
 }
@@ -29,8 +31,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 5px;
-  background-color: var(--pr-color-primary);
-  color: white;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   width: 25px;
   height: 26px;
   cursor: pointer;

@@ -1,7 +1,8 @@
 import { Directive, Input, ElementRef, Renderer2, DoCheck, OnInit } from '@angular/core';
 
 @Directive({
-  selector: '[appFeedbackValidation]'
+    selector: '[appFeedbackValidation]',
+    standalone: false
 })
 export class FeedbackValidationDirective implements OnInit, DoCheck {
   @Input() labelText: string = '';

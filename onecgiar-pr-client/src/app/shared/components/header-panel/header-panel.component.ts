@@ -7,9 +7,10 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 import { Router } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 @Component({
-  selector: 'app-header-panel',
-  templateUrl: './header-panel.component.html',
-  styleUrls: ['./header-panel.component.scss']
+    selector: 'app-header-panel',
+    templateUrl: './header-panel.component.html',
+    styleUrls: ['./header-panel.component.scss'],
+    standalone: false
 })
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;

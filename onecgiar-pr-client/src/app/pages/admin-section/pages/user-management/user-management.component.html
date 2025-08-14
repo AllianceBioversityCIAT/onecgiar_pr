@@ -2,7 +2,7 @@
   class="local_container section_container"
   [style]="{ width: this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 305px)' : 'calc(100vw - 118px)' }">
   <header>
-    <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
+    <i class="material-icons-round" style="font-size: 28px">manage_accounts</i>
     <h1>User Management</h1>
   </header>
   <div
@@ -21,8 +21,8 @@
           <!-- User search -->
           <div class="search-container">
             <label class="search-label" for="search-user-input">Search by user:</label>
-            <div class="p-input-icon-left">
-              <i class="pi pi-search"></i>
+            <p-iconfield style="width: 100%">
+              <p-inputicon styleClass="pi pi-search" />
               <input
                 type="text"
                 pInputText
@@ -30,8 +30,9 @@
                 [value]="searchText()"
                 (input)="onSearchInputChange($event)"
                 class="search-field"
+                style="height: 38px; width: 100%"
                 id="search-user-input" />
-            </div>
+            </p-iconfield>
           </div>
 
           <!-- Status filter -->
@@ -115,7 +116,7 @@
         transition: 'max-width 0.3s ease-in-out'
       }">
       <ng-template pTemplate="header">
-        <tr>
+        <tr style="height: 54px">
           @for (column of columns; track column.key) {
             <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
               <div class="header-content">
@@ -145,7 +146,7 @@
                     View more
                   </button>
 
-                  <p-overlayPanel #entityOverlay [style]="{ width: '300px' }">
+                  <p-popover #entityOverlay [style]="{ maxWidth: '300px' }">
                     <div class="overlay-entities-container">
                       <div class="overlay-title">All Entities</div>
                       <div class="overlay-entities-grid">
@@ -156,7 +157,7 @@
                         }
                       </div>
                     </div>
-                  </p-overlayPanel>
+                  </p-popover>
                 }
               } @else if (user.appRole) {
                 <div class="app-role-chip">

@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterIndicators'
+    name: 'filterIndicators',
+    standalone: false
 })
 export class FilterIndicatorsPipe implements PipeTransform {
   transform(list: any[], impact_area_id: number): any {

@@ -5,9 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 
 @Component({
-  selector: 'app-ipsr-non-pooled-projects',
-  templateUrl: './ipsr-non-pooled-projects.component.html',
-  styleUrls: ['./ipsr-non-pooled-projects.component.scss']
+    selector: 'app-ipsr-non-pooled-projects',
+    templateUrl: './ipsr-non-pooled-projects.component.html',
+    styleUrls: ['./ipsr-non-pooled-projects.component.scss'],
+    standalone: false
 })
 export class IpsrNonPooledProjectsComponent {
   @Input() contributorsBody = new ContributorsBody();

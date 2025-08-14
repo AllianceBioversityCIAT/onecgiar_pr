@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 
 @Component({
-  selector: 'app-confirmation-kp',
-  templateUrl: './confirmation-kp.component.html',
-  styleUrls: ['./confirmation-kp.component.scss']
+    selector: 'app-confirmation-kp',
+    templateUrl: './confirmation-kp.component.html',
+    styleUrls: ['./confirmation-kp.component.scss'],
+    standalone: false
 })
 export class ConfirmationKPComponent {
   @Input() body: any;

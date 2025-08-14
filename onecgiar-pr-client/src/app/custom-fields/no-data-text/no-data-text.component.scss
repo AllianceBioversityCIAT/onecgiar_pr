@@ -1,6 +1,6 @@
 .no_data_text {
   text-align: center;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   padding: 20px 100px;
-  background: linear-gradient(180deg, #ebebeb 0%, rgba(255, 255, 255, 1) 100%);
+  background: linear-gradient(180deg, var(--pr-color-accents-2) 0%, var(--pr-color-white) 100%);
 }

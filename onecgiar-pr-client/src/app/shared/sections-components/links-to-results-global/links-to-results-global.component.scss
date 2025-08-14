@@ -11,14 +11,14 @@
 td {
   a {
     display: flex;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
   }
 }
 
 .title {
   a {
     &:nth-child(2) {
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -32,7 +32,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -46,7 +46,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -60,7 +60,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -74,7 +74,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -88,7 +88,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -102,7 +102,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -116,18 +116,17 @@ td {
 }
 
 .new_tag {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
-  font-size: 0.8em;
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
   height: 17px;
 }
 
 .link_button {
-  color: white;
-  background-color: var(--pr-color-primary);
+  color: var(--pr-color-white);
+  background-color: var(--pr-color-primary-300);
   padding: 3px 10px;
   width: 100px;
   border-radius: 3px;
@@ -142,8 +141,8 @@ td {
   gap: 10px;
 
   .result_linked {
-    background-color: var(--pr-color-primary-2);
-    color: var(--pr-color-secondary);
+    background-color: var(--pr-color-primary-50);
+    color: var(--pr-color-secondary-400);
     padding: 8px 10px;
     border-radius: 5px;
     display: flex;
@@ -157,7 +156,7 @@ td {
 
       .linked_title {
         a {
-          color: var(--pr-color-primary) !important;
+          color: var(--pr-color-primary-300) !important;
           text-decoration: none;
         }
       }
@@ -174,7 +173,7 @@ td {
   display: flex;
 
   .view {
-    background-color: var(--pr-color-secondary) !important;
+    background-color: var(--pr-color-secondary-400) !important;
     width: min-content !important;
   }
 }

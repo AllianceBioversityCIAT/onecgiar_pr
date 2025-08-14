@@ -2,7 +2,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 
 @Pipe({
-  name: 'filterResultNotLinked'
+    name: 'filterResultNotLinked',
+    standalone: false
 })
 export class FilterResultNotLinkedPipe implements PipeTransform {
   constructor(private readonly api: ApiService) {}

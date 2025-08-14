@@ -4,9 +4,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 
 @Component({
-  selector: 'app-ipsr-contributors-centers',
-  templateUrl: './ipsr-contributors-centers.component.html',
-  styleUrls: ['./ipsr-contributors-centers.component.scss']
+    selector: 'app-ipsr-contributors-centers',
+    templateUrl: './ipsr-contributors-centers.component.html',
+    styleUrls: ['./ipsr-contributors-centers.component.scss'],
+    standalone: false
 })
 export class IpsrContributorsCentersComponent {
   @Input() contributorsBody = new ContributorsBody();

@@ -4,9 +4,10 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../multiple-wps/components/mapped-results-modal/mapped-results-modal-service.service';
 @Component({
-  selector: 'app-target-indicator',
-  templateUrl: './target-indicator.component.html',
-  styleUrls: ['./target-indicator.component.scss']
+    selector: 'app-target-indicator',
+    templateUrl: './target-indicator.component.html',
+    styleUrls: ['./target-indicator.component.scss'],
+    standalone: false
 })
 export class TargetIndicatorComponent {
   @Input() initiative: any;

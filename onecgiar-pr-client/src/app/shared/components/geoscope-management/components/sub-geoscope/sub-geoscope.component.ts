@@ -3,9 +3,10 @@ import { ResultsApiService } from '../../../../services/api/results-api.service'
 import { SubNationalInterface } from '../../interfaces/subnational.interface';
 
 @Component({
-  selector: 'app-sub-geoscope',
-  templateUrl: './sub-geoscope.component.html',
-  styleUrls: ['./sub-geoscope.component.scss']
+    selector: 'app-sub-geoscope',
+    templateUrl: './sub-geoscope.component.html',
+    styleUrls: ['./sub-geoscope.component.scss'],
+    standalone: false
 })
 export class SubGeoscopeComponent implements OnInit {
   @Input() countryList: any[] = [];

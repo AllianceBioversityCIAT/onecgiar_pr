@@ -10,14 +10,14 @@
     display: flex;
     .lateral-bar {
       width: 20px;
-      background-color: var(--pr-color-primary) !important;
+      background-color: var(--pr-color-primary-300) !important;
     }
     .content-change-phase {
       padding-top: 2rem;
       min-height: 50px;
       width: 700px;
       .phase-info-result {
-        background-color: #f3f3f3;
+        background-color: var(--pr-color-accents-1);
         margin: 3rem 5% 3rem 5%;
         border-radius: 25px;
         padding: 2rem;
@@ -40,7 +40,7 @@
           align-items: center;
         }
         .phase-data {
-          color: var(--pr-color-primary) !important;
+          color: var(--pr-color-primary-300) !important;
           width: 35%;
         }
         .pa-l {

@@ -3,9 +3,10 @@ import { ApiService } from '../../services/api/api.service';
 import { Actor, IpsrStep1Body, Measure, Organization } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 
 @Component({
-  selector: 'app-innovation-use-form',
-  templateUrl: './innovation-use-form.component.html',
-  styleUrls: ['./innovation-use-form.component.scss']
+    selector: 'app-innovation-use-form',
+    templateUrl: './innovation-use-form.component.html',
+    styleUrls: ['./innovation-use-form.component.scss'],
+    standalone: false
 })
 export class InnovationUseFormComponent {
   actorsTypeList = [];

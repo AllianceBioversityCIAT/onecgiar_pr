@@ -8,9 +8,10 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 
 @Component({
-  selector: 'app-ipsr-general-information',
-  templateUrl: './ipsr-general-information.component.html',
-  styleUrls: ['./ipsr-general-information.component.scss']
+    selector: 'app-ipsr-general-information',
+    templateUrl: './ipsr-general-information.component.html',
+    styleUrls: ['./ipsr-general-information.component.scss'],
+    standalone: false
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();

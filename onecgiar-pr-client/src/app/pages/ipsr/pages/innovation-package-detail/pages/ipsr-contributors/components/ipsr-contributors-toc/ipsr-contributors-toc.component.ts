@@ -4,9 +4,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-ipsr-contributors-toc',
-  templateUrl: './ipsr-contributors-toc.component.html',
-  styleUrls: ['./ipsr-contributors-toc.component.scss']
+    selector: 'app-ipsr-contributors-toc',
+    templateUrl: './ipsr-contributors-toc.component.html',
+    styleUrls: ['./ipsr-contributors-toc.component.scss'],
+    standalone: false
 })
 export class IpsrContributorsTocComponent implements OnInit {
   @Input() contributorsBody = new ContributorsBody();

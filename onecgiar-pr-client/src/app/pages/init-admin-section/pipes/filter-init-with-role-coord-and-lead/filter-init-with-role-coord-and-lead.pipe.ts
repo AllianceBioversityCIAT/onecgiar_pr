@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterInitWithRoleCoordAndLead'
+    name: 'filterInitWithRoleCoordAndLead',
+    standalone: false
 })
 export class FilterInitWithRoleCoordAndLeadPipe implements PipeTransform {
   transform(list) {

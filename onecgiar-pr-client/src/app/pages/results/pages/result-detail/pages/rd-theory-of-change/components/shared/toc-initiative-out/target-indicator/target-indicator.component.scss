@@ -1,3 +1,5 @@
+@use '../../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .target {
   width: 100%;
   height: auto;
@@ -7,7 +9,7 @@
 }
 
 .header-target {
-  background-color: #e8ebff;
+  background-color: var(--pr-color-primary-50);
   width: 100%;
   height: auto;
   border-radius: 10px 10px 0 0;
@@ -22,7 +24,7 @@
 }
 
 input:disabled {
-  background: #d9d9d9;
+  background: var(--pr-color-neutral-1000);
 }
 
 .indicator_info {
@@ -59,7 +61,7 @@ input:disabled {
 .square {
   width: 7px;
   height: 7px;
-  background-color: #2a2e45;
+  background-color: var(--pr-color-secondary-400);
 }
 
 .targets_container {
@@ -75,19 +77,19 @@ input:disabled {
     margin-bottom: 10px;
 
     .target_title {
-      font-size: 12px;
+      @include fonts.pr-typography('body-2');
       font-weight: 700;
     }
   }
 }
 
 .target_content {
-  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0px 0px 2px rgba(var(--pr-color-black-rgb), 0.4);
   border-radius: 5px;
 
   .target_header {
     display: flex;
-    background-color: #e8ebff;
+    background-color: var(--pr-color-primary-50);
     width: 100%;
     height: auto;
     padding: 15px 10px;
@@ -125,7 +127,7 @@ input:disabled {
 }
 
 .tiny_line {
-  background-color: #d9d9d9;
+  background-color: var(--pr-color-neutral-1000);
   width: 100%;
   height: 2px;
   margin-top: 20px;
@@ -134,7 +136,7 @@ input:disabled {
 }
 
 .line {
-  background-color: #d9d9d9;
+  background-color: var(--pr-color-neutral-1000);
   width: 100%;
   height: 5px;
   margin-top: 20px;
@@ -143,7 +145,7 @@ input:disabled {
 }
 
 .bigger-line {
-  background-color: #d9d9d9;
+  background-color: var(--pr-color-neutral-1000);
   width: 100%;
   height: 10px;
   border-radius: 0 0 10px 10px;

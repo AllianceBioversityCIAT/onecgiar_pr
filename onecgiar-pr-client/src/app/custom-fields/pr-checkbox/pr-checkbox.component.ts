@@ -4,16 +4,17 @@ import { GreenChecksService } from '../../shared/services/global/green-checks.se
 import { RolesService } from '../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-pr-checkbox',
-  templateUrl: './pr-checkbox.component.html',
-  styleUrls: ['./pr-checkbox.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrCheckboxComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-checkbox',
+    templateUrl: './pr-checkbox.component.html',
+    styleUrls: ['./pr-checkbox.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrCheckboxComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrCheckboxComponent {
   constructor(public greenChecksSE: GreenChecksService, public rolesSE: RolesService) {}

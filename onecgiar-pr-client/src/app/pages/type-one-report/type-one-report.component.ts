@@ -7,9 +7,10 @@ import { TypePneReportRouting } from '../../shared/routing/routing-data';
 import { GlobalVariablesService } from '../../shared/services/global-variables.service';
 
 @Component({
-  selector: 'app-type-one-report',
-  templateUrl: './type-one-report.component.html',
-  styleUrls: ['./type-one-report.component.scss']
+    selector: 'app-type-one-report',
+    templateUrl: './type-one-report.component.html',
+    styleUrls: ['./type-one-report.component.scss'],
+    standalone: false
 })
 export class TypeOneReportComponent implements OnInit {
   sections: any = [];

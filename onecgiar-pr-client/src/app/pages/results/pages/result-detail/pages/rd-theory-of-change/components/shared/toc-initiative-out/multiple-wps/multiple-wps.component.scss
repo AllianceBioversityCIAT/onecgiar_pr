@@ -14,11 +14,11 @@
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    background-color: var(--pr-color-medium-2);
+    background-color: var(--pr-color-accents-2);
 
     .active {
-      background-color: var(--pr-color-primary) !important;
-      color: white !important;
+      background-color: var(--pr-color-primary-300) !important;
+      color: var(--pr-color-white) !important;
       font-weight: 600;
     }
 
@@ -28,8 +28,8 @@
     }
 
     .tab {
-      background-color: var(--pr-color-medium-2);
-      color: var(--pr-color-medium);
+      background-color: var(--pr-color-accents-2);
+      color: var(--pr-color-accents-4);
       text-decoration: none;
       padding: 10px 8px;
       display: grid;
@@ -64,7 +64,7 @@
 
       .tab-add-button-item {
         padding: 0.5rem;
-        background-color: #fff;
+        background-color: var(--pr-color-white);
         border-radius: 5px;
       }
     }
@@ -78,13 +78,9 @@
 }
 
 .valid {
-  color: #34b734;
+  color: var(--pr-color-green-500);
 }
 
 .invalid {
-  color: #c0c0c0;
-}
-
-.p-tooltip-text {
-  font-size: 5px;
+  color: var(--pr-color-accents-3);
 }

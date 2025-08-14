@@ -7,7 +7,7 @@ import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea
 import { PrWordCounterComponent } from '../../../../../../custom-fields/pr-word-counter/pr-word-counter.component';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
@@ -43,7 +43,7 @@ describe('UnsubmitModalComponent', () => {
         HttpClientTestingModule,
         DialogModule,
         TooltipModule,
-        InputTextareaModule,
+        TextareaModule,
         FormsModule
       ],
       providers: [

@@ -3,8 +3,9 @@ import { IpsrListFilterService } from '../../../services/ipsr-list-filter.servic
 import { IpsrListService } from '../../../services/ipsr-list.service';
 
 @Pipe({
-  name: 'innovationPackageListFilter',
-  pure: false
+    name: 'innovationPackageListFilter',
+    pure: false,
+    standalone: false
 })
 export class InnovationPackageListFilterPipe implements PipeTransform {
   constructor(public ipsrListService: IpsrListService, public ipsrListFilterSE: IpsrListFilterService) {}

@@ -16,7 +16,7 @@
                 {{item.obj_result_initiative.obj_initiative.name}}</td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 
@@ -55,7 +55,7 @@
             </td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 
@@ -99,7 +99,7 @@
             </td>
             <td>
                 <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="'item.is_determined' ? 'Not applicable':'Not provided'" [required]="false">
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
                 </app-pr-input>
             </td>
 

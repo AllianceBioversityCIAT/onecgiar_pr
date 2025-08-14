@@ -3,9 +3,10 @@ import { ResultsNotificationsService } from '../../results-notifications.service
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-requests',
-  templateUrl: './requests.component.html',
-  styleUrls: ['./requests.component.scss']
+    selector: 'app-requests',
+    templateUrl: './requests.component.html',
+    styleUrls: ['./requests.component.scss'],
+    standalone: false
 })
 export class RequestsComponent {
   constructor(public resultsNotificationsSE: ResultsNotificationsService, public router: Router) {}

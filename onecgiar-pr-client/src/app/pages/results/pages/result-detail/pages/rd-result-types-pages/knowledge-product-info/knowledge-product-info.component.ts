@@ -9,9 +9,10 @@ import { RolesService } from '../../../../../../../shared/services/global/roles.
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-  selector: 'app-knowledge-product-info',
-  templateUrl: './knowledge-product-info.component.html',
-  styleUrls: ['./knowledge-product-info.component.scss']
+    selector: 'app-knowledge-product-info',
+    templateUrl: './knowledge-product-info.component.html',
+    styleUrls: ['./knowledge-product-info.component.scss'],
+    standalone: false
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();

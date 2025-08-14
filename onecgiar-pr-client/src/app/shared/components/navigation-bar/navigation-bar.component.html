@@ -4,6 +4,7 @@
       [hidden]="navOption.prHide || validateAdminModuleAndRole(navOption)"
       [routerLink]="navOption.path"
       routerLinkActive="section_active transition-all"
+      class="pr-body-2"
       [ngClass]="{ 'padding-right-40': navOption?.underConstruction }">
       {{ navOption.prName }}
 

@@ -25,7 +25,7 @@
         appYmzListStructureItem
         (deleteEvent)="removeActor(actorItem, i)"
         *ngFor="let actorItem of body?.innovatonUse?.actors; let i = index"
-        [ngClass]="{ hideElement: actorItem.is_active == false || (!this.actorItem?.result_actors_id && this.api.rolesSE.readOnly) }">
+        [ngClass]="{ hideElement: actorItem.is_active == false || (!actorItem?.result_actors_id && this.api.rolesSE.readOnly) }">
         <div>
           <div *ngIf="saving">
             <div style="margin-top: 20px; margin-bottom: 7px">
@@ -43,21 +43,21 @@
             optionLabel="name"
             optionValue="actor_type_id"
             [(ngModel)]="actorItem.actor_type_id"
-            (ngModelChange)="this.actorItem.other_actor_type = null"
+            (ngModelChange)="actorItem.other_actor_type = null"
             placeholder="Select type of actor"
             [disableOptions]="removeOther(body?.innovatonUse?.actors)"
-            [required]="!!this.actorItem?.result_actors_id"
+            [required]="!!actorItem?.result_actors_id"
             [(ngModel)]="actorItem.actor_type_id">
           </app-pr-select>
           <div style="margin-top: 13px"></div>
           <div *ngIf="actorItem.actor_type_id == 5">
-            <div appFeedbackValidation labelText="Specify the other actor type" [isComplete]="!!this.actorItem.other_actor_type"></div>
+            <div appFeedbackValidation labelText="Specify the other actor type" [isComplete]="!!actorItem.other_actor_type"></div>
             <app-pr-input
               description="Specify the other actor type in the text box below"
               placeholder="Specify other.."
               type="text"
               [required]="true"
-              [(ngModel)]="this.actorItem.other_actor_type">
+              [(ngModel)]="actorItem.other_actor_type">
             </app-pr-input>
           </div>
         </div>
@@ -65,14 +65,14 @@
         <div appFeedbackValidation labelText="Gender disaggregation" [isComplete]="checkGenderAlert(actorItem)"></div>
 
         <div style="margin: 25px 0">
-          <div *ngIf="!this.actorItem.sex_and_age_disaggregation">
+          <div *ngIf="!actorItem.sex_and_age_disaggregation">
             <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
 
             <div style="display: flex; align-items: center; gap: 30px">
-              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(this.actorItem)" [(ngModel)]="this.actorItem.has_women_youth">
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women_youth">
               </app-pr-checkbox>
 
-              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(this.actorItem)" [(ngModel)]="this.actorItem.has_women">
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women">
               </app-pr-checkbox>
             </div>
 
@@ -81,13 +81,13 @@
             <div style="display: flex; align-items: center; gap: 30px">
               <app-pr-checkbox
                 label="Youth"
-                (selectOptionEvent)="cleanActor(this.actorItem)"
-                [(ngModel)]="this.actorItem.has_men_youth"></app-pr-checkbox>
+                (selectOptionEvent)="cleanActor(actorItem)"
+                [(ngModel)]="actorItem.has_men_youth"></app-pr-checkbox>
 
               <app-pr-checkbox
                 label="Non-youth"
-                (selectOptionEvent)="cleanActor(this.actorItem)"
-                [(ngModel)]="this.actorItem.has_men"></app-pr-checkbox>
+                (selectOptionEvent)="cleanActor(actorItem)"
+                [(ngModel)]="actorItem.has_men"></app-pr-checkbox>
             </div>
           </div>
 
@@ -95,8 +95,8 @@
 
           <app-pr-checkbox
             label="Sex and age disaggregation does not apply"
-            (selectOptionEvent)="cleanActor(this.actorItem)"
-            [(ngModel)]="this.actorItem.sex_and_age_disaggregation"></app-pr-checkbox>
+            (selectOptionEvent)="cleanActor(actorItem)"
+            [(ngModel)]="actorItem.sex_and_age_disaggregation"></app-pr-checkbox>
         </div>
 
         <app-pr-textarea
@@ -105,7 +105,7 @@
           [maxWords]="50"
           label="What demand / problem does it address for the user (50 words)"
           style="grid-column: span 2 / span 2"
-          [(ngModel)]="this.actorItem.addressing_demands">
+          [(ngModel)]="actorItem.addressing_demands">
         </app-pr-textarea>
       </div>
     </div>
@@ -125,7 +125,7 @@
         class="fields"
         appYmzListStructureItem
         (deleteEvent)="removeOrganization(organizationItem, i)"
-        [ngClass]="{ hideElement: organizationItem.is_active == false || (!this.organizationItem?.id && this.api.rolesSE.readOnly) }"
+        [ngClass]="{ hideElement: organizationItem.is_active == false || (!organizationItem?.id && this.api.rolesSE.readOnly) }"
         *ngFor="let organizationItem of this.body.innovatonUse.organization; let i = index">
         <div *ngIf="saving">
           <div style="margin-top: 20px; margin-bottom: 7px">
@@ -146,7 +146,7 @@
             [(ngModel)]="organizationItem.institution_types_id"
             placeholder="Select type of organization"
             (selectOptionEvent)="reloadSelect(organizationItem)"
-            (ngModelChange)="this.organizationItem.other_institution = null"
+            (ngModelChange)="organizationItem.other_institution = null"
             [disableOptions]="removeOtherInOrg(disableOrganizations)">
           </app-pr-select>
           <div style="margin-top: 13px"></div>
@@ -157,7 +157,7 @@
             label="Other organization"
             type="text"
             [required]="!!organizationItem?.id"
-            [(ngModel)]="this.organizationItem.other_institution">
+            [(ngModel)]="organizationItem.other_institution">
           </app-pr-input>
         </div>
         <div *ngIf="saving">
@@ -191,7 +191,7 @@
           [maxWords]="50"
           label="What demand / problem does it address for the user (50 words)"
           style="grid-column: span 2 / span 2"
-          [(ngModel)]="this.organizationItem.addressing_demands">
+          [(ngModel)]="organizationItem.addressing_demands">
         </app-pr-textarea>
       </div>
     </div>
@@ -210,14 +210,14 @@
         appYmzListStructureItem
         (deleteEvent)="measuresItem.is_active = false"
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
-        [ngClass]="{ hideElement: measuresItem.is_active == false || (!this.measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly) }">
+        [ngClass]="{ hideElement: measuresItem.is_active == false || (!measuresItem?.result_ip_measure_id && this.api.rolesSE.readOnly) }">
         <div class="right_content">
           <app-pr-input
             placeholder="e.g. # of projects"
             label="Unit of measure"
             type="text"
             [required]="!!measuresItem?.result_ip_measure_id"
-            [(ngModel)]="this.measuresItem.unit_of_measure">
+            [(ngModel)]="measuresItem.unit_of_measure">
           </app-pr-input>
         </div>
         <app-pr-textarea
@@ -226,7 +226,7 @@
           [maxWords]="50"
           label="What problem / need does this innovation address (50 words)?"
           style="grid-column: span 2 / span 2"
-          [(ngModel)]="this.measuresItem.addressing_demands">
+          [(ngModel)]="measuresItem.addressing_demands">
         </app-pr-textarea>
       </div>
     </div>

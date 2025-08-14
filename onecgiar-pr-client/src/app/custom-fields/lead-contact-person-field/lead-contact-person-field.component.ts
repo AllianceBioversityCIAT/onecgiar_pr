@@ -8,7 +8,8 @@ import { UserSearchService } from '../../pages/results/pages/result-detail/pages
   selector: 'app-lead-contact-person-field',
   templateUrl: './lead-contact-person-field.component.html',
   styleUrl: './lead-contact-person-field.component.scss',
-  changeDetection: ChangeDetectionStrategy.Default
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: false
 })
 export class LeadContactPersonFieldComponent implements OnChanges {
   @Input() body: any;
