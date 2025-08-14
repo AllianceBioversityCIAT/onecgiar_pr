@@ -10,10 +10,11 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci
+
 #RUN npm i
 
 COPY . .
+RUN npm ci
 
 # Build in dev mode as per team requirement
 RUN npm run build:dev
@@ -30,10 +31,11 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm ci
+
 #RUN npm i
 
 COPY . .
+RUN npm ci
 
 # Run tests (adjust the script if needed)
 CMD ["npm", "run", "test:coverage"]
