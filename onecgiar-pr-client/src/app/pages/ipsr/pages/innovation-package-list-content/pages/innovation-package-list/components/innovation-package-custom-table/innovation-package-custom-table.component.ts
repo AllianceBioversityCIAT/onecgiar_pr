@@ -24,7 +24,11 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
-  constructor(public api: ApiService, public retrieveModalSE: RetrieveModalService, public ipsrListService: IpsrListService) {}
+  constructor(
+    public api: ApiService,
+    public retrieveModalSE: RetrieveModalService,
+    public ipsrListService: IpsrListService
+  ) {}
 
   items: MenuItem[] = [
     {
@@ -32,6 +36,13 @@ export class InnovationPackageCustomTableComponent {
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
+      }
+    },
+    {
+      label: 'Update result',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
       }
     }
   ];
@@ -87,6 +98,7 @@ export class InnovationPackageCustomTableComponent {
       }
     );
   }
+
   onPressAction(result) {
     const onlyNumbers = result?.official_code.replace(/\D+/g, '');
     this.currentInnovationPackageToAction.id = result?.id;
@@ -96,8 +108,41 @@ export class InnovationPackageCustomTableComponent {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    this.itemsWithDelete[1].visible =
-      this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase?.phaseYear &&
-      this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase?.phaseYear;
+    const canUpdate = this.shouldShowUpdate(result);
+    this.items[1].visible = canUpdate;
+    this.itemsWithDelete[1].visible = canUpdate;
+  }
+
+  private shouldShowUpdate(result): boolean {
+    const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    const hasInitiatives = initiativeMap.length > 0;
+    const isPastPhase = this.isPastReportingPhase(result);
+
+    if (this.api.rolesSE.isAdmin) {
+      return hasInitiatives && isPastPhase;
+    }
+
+    return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
+  }
+
+  private isPastReportingPhase(result): boolean {
+    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
+  }
+
+  private isUserIncludedInAnyInitiative(result): boolean {
+    const mapIds = this.getInitiativeIdsFromMap(result);
+    const userInitiativeIds = this.getUserInitiativeIds(result);
+    return mapIds.some(entityId => userInitiativeIds.includes(entityId));
+  }
+
+  private getInitiativeIdsFromMap(result): Array<string | number> {
+    const mapArray = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    return mapArray.map((item: any) => item?.entityId).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  private getUserInitiativeIds(result): Array<string | number> {
+    const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
+    return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
   }
 }

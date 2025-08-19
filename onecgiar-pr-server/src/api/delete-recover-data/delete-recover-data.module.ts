@@ -93,6 +93,8 @@ import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_pro
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { MQAPService } from '../m-qap/m-qap.service';
+import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -185,6 +187,8 @@ import { MQAPService } from '../m-qap/m-qap.service';
     ResultCountrySubnationalRepository,
     ResultsTocResultIndicatorsService,
     MQAPService,
+    InitiativeEntityMapRepository,
+    RoleByUserRepository,
   ],
   imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
   exports: [

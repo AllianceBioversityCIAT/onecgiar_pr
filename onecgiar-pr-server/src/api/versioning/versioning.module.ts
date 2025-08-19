@@ -68,6 +68,7 @@ import { ResultsTocResultIndicatorsService } from '../results/results-toc-result
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { MQAPService } from '../m-qap/m-qap.service';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Module({
   controllers: [VersioningController],
@@ -134,6 +135,7 @@ import { MQAPService } from '../m-qap/m-qap.service';
     ResultsTocResultIndicatorsService,
     ResultAnswerRepository,
     MQAPService,
+    ClarisaInitiativesRepository,
   ],
   exports: [
     EvidencesService,

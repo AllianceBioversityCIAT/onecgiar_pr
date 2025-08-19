@@ -1007,6 +1007,12 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, null);
   }
 
+  PATCH_versioningProcessV2(id, entityId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}?version=v2`, {
+      entityId
+    });
+  }
+
   PATCH_updatePhase(id, phase) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${id}`, phase);
   }

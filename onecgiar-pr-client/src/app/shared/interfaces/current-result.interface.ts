@@ -1,5 +1,5 @@
 export interface CurrentResult {
-  id?: string;
+  id?: string | number;
   result_code?: string;
   description?: string;
   is_active?: number;
@@ -36,6 +36,7 @@ export interface CurrentResult {
   is_phase_open?: number;
   phase_name?: string;
   phase_year?: number;
+  reported_year?: number;
   is_discontinued?: any;
   is_replicated?: number;
   inQA?: number;
@@ -45,6 +46,8 @@ export interface CurrentResult {
   crp?: any;
   role_id?: any;
   appliesforTOCMWfilter?: boolean;
+  initiative_entity_map?: any;
+  initiative_entity_user?: any;
   // ?: string | number;
   // ?: string | number;
   // ?: string | number;

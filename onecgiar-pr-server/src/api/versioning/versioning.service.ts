@@ -63,6 +63,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Injectable()
 export class VersioningService {
@@ -118,6 +119,7 @@ export class VersioningService {
     private readonly _resultsIpInstitutionTypeRepository: ResultsIpInstitutionTypeRepository,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly dataSource: DataSource,
+    private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
 
   /**
@@ -202,7 +204,12 @@ export class VersioningService {
     }
   }
 
-  async $_phaseChangeReporting(result: Result, phase: Version, user: TokenDto) {
+  async $_phaseChangeReporting(
+    result: Result,
+    phase: Version,
+    user: TokenDto,
+    entity_id?: number,
+  ) {
     this._logger.log(
       `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
     );
@@ -234,9 +241,22 @@ export class VersioningService {
         new_result_id: dataResult.id,
         phase: phase.id,
         user: user,
+        entity_id: entity_id,
       };
       await this._resultByInitiativesRepository.replicate(manager, config);
-      await this._shareResultRequestRepository.replicate(manager, config);
+
+      if (!entity_id) {
+        await this._shareResultRequestRepository.replicate(manager, config);
+        await this._resultInstitutionsBudgetRepository.replicate(
+          manager,
+          config,
+        );
+        await this._resultInitiativeBudgetRepository.replicate(manager, config);
+        await this._resultNonPooledProjectBudgetRepository.replicate(
+          manager,
+          config,
+        );
+      }
 
       switch (parseInt(`${result.result_type_id}`)) {
         case 1:
@@ -302,12 +322,6 @@ export class VersioningService {
         config,
       );
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
-      await this._resultInstitutionsBudgetRepository.replicate(manager, config);
-      await this._resultInitiativeBudgetRepository.replicate(manager, config);
-      await this._resultNonPooledProjectBudgetRepository.replicate(
-        manager,
-        config,
-      );
       await this._resultCountryRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);
@@ -327,7 +341,12 @@ export class VersioningService {
     return data;
   }
 
-  async $_phaseChangeIPSR(result: Result, phase: Version, user: TokenDto) {
+  async $_phaseChangeIPSR(
+    result: Result,
+    phase: Version,
+    user: TokenDto,
+    entity_id?: number,
+  ) {
     this._logger.log(
       `IPSR: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
     );
@@ -362,6 +381,7 @@ export class VersioningService {
         user: user,
         new_ipsr_id: null,
         old_ipsr_id: null,
+        entity_id: entity_id,
       };
 
       // RESULT
@@ -381,12 +401,17 @@ export class VersioningService {
       await this._linkedResultRepository.replicate(manager, config);
       await this._evidencesRepository.replicate(manager, config);
       await this._resultActorRepository.replicate(manager, config);
-      await this._resultInitiativeBudgetRepository.replicate(manager, config);
-      await this._resultNonPooledProjectBudgetRepository.replicate(
-        manager,
-        config,
-      );
-      await this._resultInstitutionsBudgetRepository.replicate(manager, config);
+      if (!config?.entity_id) {
+        await this._resultInitiativeBudgetRepository.replicate(manager, config);
+        await this._resultNonPooledProjectBudgetRepository.replicate(
+          manager,
+          config,
+        );
+        await this._resultInstitutionsBudgetRepository.replicate(
+          manager,
+          config,
+        );
+      }
 
       // IPSR
       await this._resultInnovationPackageRepository.replicate(manager, config);
@@ -437,12 +462,20 @@ export class VersioningService {
     phase: Version,
     user: TokenDto,
     module_id: number,
+    entity_id?: number,
   ) {
     switch (module_id) {
       case 1:
-        return await this.$_phaseChangeReporting(result, phase, user);
+        return await this.$_phaseChangeReporting(
+          result,
+          phase,
+          user,
+          entity_id,
+        );
+        break;
       case 2:
-        return await this.$_phaseChangeIPSR(result, phase, user);
+        return await this.$_phaseChangeIPSR(result, phase, user, entity_id);
+        break;
       default:
         break;
     }
@@ -503,6 +536,123 @@ export class VersioningService {
         phase,
         user,
         module_id,
+      );
+      if (res?.error) {
+        throw ReturnResponseUtil.format({
+          message: `Error in the version process of the result ${legacy_result.id}. Contact with support `,
+          response: res.error,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      return ReturnResponseUtil.format({
+        message: `The result ${legacy_result.result_code} is in the ${phase.phase_name} phase with id ${res.id}`,
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } else {
+      throw ReturnResponseUtil.format({
+        message: `The result ${legacy_result.result_code} is already in the ${phase.phase_name} phase`,
+        response: result_id,
+        statusCode: HttpStatus.CONFLICT,
+      });
+    }
+  }
+
+  async versionProcessV2(result_id: number, entity_id: number, user: TokenDto) {
+    const entity = await this._clarisaInitiativesRepository.findOne({
+      where: { id: entity_id, active: true },
+    });
+
+    if (!entity || entity.portfolio_id !== 3) {
+      throw ReturnResponseUtil.format({
+        message: `Replication is only allowed for entities with portfolio_id = 3`,
+        response: entity_id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    const legacy_result: Result = await this._resultRepository.findOne({
+      where: {
+        id: result_id,
+        is_active: true,
+      },
+      relations: {
+        obj_result_by_initiatives: true,
+      },
+    });
+
+    if (!legacy_result) {
+      throw ReturnResponseUtil.format({
+        message: `Result ID: ${result_id} not found`,
+        response: result_id,
+        statusCode: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const mainInitiative = legacy_result.obj_result_by_initiatives?.find(
+      (rbi) => +rbi.initiative_role_id === 1,
+    );
+
+    if (!mainInitiative) {
+      throw ReturnResponseUtil.format({
+        message: `No main initiative (role 1) found for this result`,
+        response: result_id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    const initiativeEntityMap = await this.dataSource
+      .getRepository('initiative_entity_map')
+      .findOne({
+        where: {
+          initiativeId: mainInitiative.initiative_id,
+          entityId: entity_id,
+        },
+      });
+
+    if (!initiativeEntityMap) {
+      throw ReturnResponseUtil.format({
+        message: `The entity ${entity_id} is not related to initiative ${mainInitiative.initiative_id}`,
+        response: { entity_id, initiative_id: mainInitiative.initiative_id },
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (legacy_result.result_type_id == 6) {
+      throw ReturnResponseUtil.format({
+        message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
+        response: result_id,
+        statusCode: HttpStatus.CONFLICT,
+      });
+    }
+
+    const module_id = this.$_validationModule(legacy_result.result_type_id);
+
+    const phase = await this._versionRepository.findOne({
+      where: {
+        app_module_id: module_id,
+        is_active: true,
+        status: true,
+      },
+    });
+
+    if (!phase) {
+      throw ReturnResponseUtil.format({
+        message: `No active phases`,
+        response: null,
+        statusCode: HttpStatus.CONFLICT,
+      });
+    }
+
+    let res: any = null;
+    if (await this.$_genericValidation(legacy_result.result_code, phase.id)) {
+      res = await this.$_versionManagement(
+        legacy_result,
+        phase,
+        user,
+        module_id,
+        entity_id,
       );
       if (res?.error) {
         throw ReturnResponseUtil.format({

@@ -39,6 +39,9 @@ describe('InnovationPackageCustomTableComponent', () => {
         show: jest.fn().mockImplementationOnce((config, callback) => {
           callback();
         })
+      },
+      rolesSE: {
+        isAdmin: false
       }
     };
 
@@ -101,7 +104,9 @@ describe('InnovationPackageCustomTableComponent', () => {
     const result = {
       id: '1',
       title: 'Test Innovation Package',
-      official_code: '12345'
+      official_code: '12345',
+      initiative_entity_map: [{ entityId: 1 }],
+      initiative_entity_user: [{ initiative_id: 1 }]
     };
 
     component.onPressAction(result);
