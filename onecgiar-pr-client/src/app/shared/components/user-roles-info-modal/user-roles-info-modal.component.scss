@@ -8,3 +8,17 @@
   border-radius: 5px;
   cursor: pointer;
 }
+
+.info_text {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 5px;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid transparent;
+  color: var(--pr-color-secondary-400);
+
+  &:hover {
+    border-bottom: 1px solid var(--pr-color-secondary-400);
+  }
+}
