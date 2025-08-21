@@ -10,6 +10,7 @@ import { SearchUser } from '../../../../../../shared/interfaces/search-user.inte
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
 interface AddUserForm {
   activate: boolean;
@@ -28,7 +29,15 @@ interface AddUserForm {
 @Component({
   selector: 'app-manage-user-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, CustomFieldsModule, SearchUserSelectComponent, ProgressSpinnerModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DialogModule,
+    CustomFieldsModule,
+    SearchUserSelectComponent,
+    ProgressSpinnerModule,
+    UserRolesInfoModalComponent
+  ],
   templateUrl: './manage-user-modal.component.html',
   styleUrl: './manage-user-modal.component.scss'
 })

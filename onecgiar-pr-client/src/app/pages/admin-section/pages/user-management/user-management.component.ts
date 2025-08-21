@@ -20,6 +20,7 @@ import { DynamicPanelServiceService } from '../../../../shared/components/dynami
 import { MultiSelectModule } from 'primeng/multiselect';
 import { Popover } from 'primeng/popover';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
+import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
 interface UserColumn {
   label: string;
@@ -53,7 +54,8 @@ interface CgiarOption {
     IconFieldModule,
     InputIconModule,
     ManageUserModalComponent,
-    MultiSelectModule
+    MultiSelectModule,
+    UserRolesInfoModalComponent
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
