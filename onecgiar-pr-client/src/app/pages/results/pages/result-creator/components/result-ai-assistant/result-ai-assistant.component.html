@@ -1,0 +1,248 @@
+<p-dialog
+  class="support_information"
+  header="Title"
+  [visible]="this.createResultManagementService.showModal()"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px', width: '80vw' }">
+  <div class="modal_header">
+    <h1 class="modal_title">AI Assistant</h1>
+    <i class="material-icons-round close_icon" (click)="this.createResultManagementService.closeModal()">close</i>
+  </div>
+
+  <div class="modal_container">
+    @if (
+      !this.createResultManagementService.analyzingDocument() &&
+      !this.createResultManagementService.documentAnalyzed() &&
+      !this.createResultManagementService.noResults()
+    ) {
+      <app-pr-select
+        class="segment_title_margin"
+        [group]="true"
+        groupName="name"
+        [options]="this.initiatives()"
+        label="Select Science Program / Accelerator"
+        [isStatic]="true"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select Science Program / Accelerator"
+        [(ngModel)]="createResultManagementService.selectedInitiative">
+      </app-pr-select>
+
+      <app-ai-upload-file></app-ai-upload-file>
+    }
+
+    @if (this.createResultManagementService.analyzingDocument() && !this.createResultManagementService.documentAnalyzed()) {
+      <div class="loading_container">
+        <p class="loading_title">Analyzing file...</p>
+
+        <div class="gif_container">
+          <img src="../../../../../../../assets/gifs/robot.gif" alt="Robot animado" class="gif_item" />
+        </div>
+
+        @if (steps()[activeIndex()]) {
+          @if (steps()[activeIndex()]) {
+            <div class="loading_step">
+              <div class="loading_step_icon">
+                <i class="pi pi-spin pi-spinner"></i>
+              </div>
+
+              <div class="loading_step_content">
+                <span class="loading_step_label">
+                  {{ steps()[activeIndex()].label }}
+                </span>
+
+                <div class="loading_step_progress">
+                  <div class="loading_step_progress_bar" [style.width.%]="steps()[activeIndex()].progress"></div>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <!-- @if (this.createResultManagementService.documentAnalyzed()) {
+      <section class="analyze-result-container">
+        <div class="flex w-full justify-between items-center">
+          <div class="-mt-4 pb-6 flex flex-col">
+            <h1 class="text-[16px] font-[700] text-[#173F6F]">
+              THE AI IDENTIFIED
+              <span class="analyze-result-title-number">{{ createResultManagementService.items().length }}</span>
+              RESULTS
+            </h1>
+            <p class="text-[14px] font-[400] text-[#4C5158]">Select the ones you want to create.</p>
+          </div>
+          <div class="flex items-center gap-2 mb-4 relative">
+            @if (feedbackSent) {
+              <div class="flex items-center gap-2 relative">
+                <span class="text-[12px] font-[400] text-[#8D9299]">Feedback sent successfully.</span>
+                <i
+                  class="pi"
+                  [ngClass]="{
+                    'pi-thumbs-up-fill': lastFeedbackType === 'good',
+                    'pi-thumbs-down-fill': lastFeedbackType === 'bad'
+                  }"
+                  style="
+                    font-size: 16px;
+                    color: #035ba9;
+                    text-shadow:
+                      2px 2px 0 #fff,
+                      -2px 2px 0 #fff,
+                      2px -2px 0 #fff,
+                      -2px -2px 0 #fff,
+                      0 2px 0 #fff,
+                      2px 0 0 #fff,
+                      0 -2px 0 #fff,
+                      -2px 0 0 #fff;
+                  "></i>
+              </div>
+            } @else {
+              <span class="text-[12px] font-[400] px-2 text-[#8D9299]">Was this response helpful?</span>
+              <button
+                dropdown-button
+                class="text-[#035BA9] !text-[16px] rounded-[6px] p-2 pi pi-thumbs-up {{ feedbackType() === 'good' ? 'bg-[#D9E1EB]' : '' }}"
+                aria-label="Like"
+                (click)="toggleFeedback('good')"
+                #feedbackBtn></button>
+              <button
+                dropdown-button
+                class="text-[#035BA9] !text-[16px] rounded-[6px] p-2 pi pi-thumbs-down {{ feedbackType() === 'bad' ? 'bg-[#D9E1EB]' : '' }}"
+                aria-label="Dislike"
+                (click)="toggleFeedback('bad')"
+                #feedbackBtn></button>
+              @if (showFeedbackPanel()) {
+                <div
+                  #dropdownRef
+                  class="absolute right-0 top-full mt-2 z-[9999] bg-white shadow-lg rounded-[4px] w-[400px] p-5"
+                  (click)="$event.stopPropagation()"
+                  (keydown.enter)="$event.stopPropagation()">
+                  <div dropdown-content>
+                    <h2
+                      class="text-[14px] font-[space_grotesk] mb-6"
+                      [ngClass]="{
+                        'text-[#CF0808]': feedbackType() === 'bad',
+                        'text-[#509C55]': feedbackType() === 'good'
+                      }">
+                      {{ feedbackType() === 'good' ? 'What Is Working Well?' : 'What Is Not Working Well?' }}
+                    </h2>
+                    @if (feedbackType() === 'bad') {
+                      <div class="mb-5">
+                        <span class="block text-[12px] text-[#153C71] font-[500] font-[space_grotesk] mb-1">Type of issue</span>
+                        <div class="flex flex-wrap gap-2">
+                          <button
+                            class="bg-[#F4F7F9] border-1 px-2 py-1 !rounded-[10px] text-[#1689CA] text-[13px] font-[400] {{
+                              selectedType.includes(type.id.toString()) ? ' font-[500] border-[#1689CA]' : 'border-[#E8EBED]'
+                            }}"
+                            *ngFor="let type of badTypes"
+                            (click)="selectType(type.id.toString())">
+                            {{ type.name }}
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    <div class="mb-4">
+                      <span class="block text-[12px] text-[#153C71] font-[500] font-[space_grotesk] mb-1"
+                        >Feedback details
+                        @if (isRequired()) {
+                          <span class="text-red-500">*</span>
+                        }
+                      </span>
+                      <app-textarea
+                        [styleClass]="'!text-[12px]'"
+                        [isRequired]="isRequired()"
+                        [rows]="3"
+                        [size]="'!text-[12.5px]'"
+                        [signal]="this.body"
+                        [optionValue]="'feedbackText'"></app-textarea>
+                    </div>
+                    <div class="flex gap-2">
+                      <p-button
+                        label="Cancel"
+                        styleClass="!rounded-[12px] !text-[12px] !px-4"
+                        [outlined]="true"
+                        (onClick)="closeFeedbackPanel()"></p-button>
+                      <p-button
+                        label="Confirm"
+                        styleClass="!rounded-[12px] !text-[12px] !px-4"
+                        (onClick)="submitFeedback()"
+                        [disabled]="(feedbackType() === 'bad' && (!selectedType || !body().feedbackText)) || loading()"></p-button>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        @if (createResultManagementService.items().length === 0) {
+          <div class="w-full analyze-result-content flex !justify-center">
+            <div class="flex flex-col items-center justify-center bg-white py-12 px-10 w-full h-full">
+              <h1 class="text-[20px] font-[700] text-[#173F6F] flex gap-4 py-4">ALL RESULTS DISCARDED</h1>
+              <p class="text-[#4C5158] text-[16px]">You've discarded all the generated results. What would you like to do next?</p>
+
+              <div class="text-[16px] font-[500] text-[#173F6F] flex items-center justify-center gap-4 pt-6">
+                <p-button
+                  label="Return to Create Result"
+                  styleClass="!rounded-[12px] !text-[12px]"
+                  [outlined]="true"
+                  (onClick)="goBackToCreateResult()"></p-button>
+                <p-button label="Upload a new file" styleClass="!rounded-[12px] !text-[12px]" (onClick)="goBackToUploadNewFile()"></p-button>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="w-full analyze-result-content flex">
+            @for (item of createResultManagementService.items() | slice: first() : first() + rows(); track $index) {
+              <app-result-ai-item
+                [item]="item"
+                [isFirstItem]="$index === 0"
+                [isLastItem]="$index === rows() - 1 || $index === createResultManagementService.items().length - 1 - first()"
+                style="width: 100%">
+              </app-result-ai-item>
+            }
+          </div>
+        }
+        @if (createResultManagementService.items().length > 0) {
+          <div
+            class="flex justify-end w-full bg-white border-left border-right border-bottom border-[#E8EBED] border-b-[1px] border-l-[1px] border-r-[1px] rounded-b-[4px]">
+            <p-paginator
+              (onPageChange)="onPageChange($event)"
+              [first]="first()"
+              [rows]="rows()"
+              [totalRecords]="createResultManagementService.items().length"
+              [showCurrentPageReport]="true"
+              [showJumpToPageDropdown]="false"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords}" />
+          </div>
+        }
+      </section>
+    } -->
+
+    @if (this.createResultManagementService.noResults()) {
+      <app-ai-not-data-found></app-ai-not-data-found>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    @if (
+      !this.createResultManagementService.analyzingDocument() &&
+      !this.createResultManagementService.documentAnalyzed() &&
+      !this.createResultManagementService.noResults()
+    ) {
+      <app-pr-button [text]="'Cancel'" (click)="createResultManagementService.closeModal()" colorType="secondary"></app-pr-button>
+
+      <app-pr-button
+        text="Analyze file"
+        icon="arrow_forward"
+        [disabled]="!createResultManagementService.selectedFile()"
+        [ngClass]="{ globalDisabled: !createResultManagementService.selectedFile() }"
+        (click)="handleAnalyzeFile()"></app-pr-button>
+    }
+
+    @if (this.createResultManagementService.documentAnalyzed()) {}
+  </ng-template>
+</p-dialog>

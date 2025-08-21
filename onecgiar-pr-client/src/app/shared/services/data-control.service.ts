@@ -32,7 +32,7 @@ export class DataControlService {
   showMassivePhaseShiftModal = false;
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
-  reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null };
+  reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null };
   previousReportingPhase = { phaseName: null, phaseYear: null, phaseId: null };
   IPSRCurrentPhase = { phaseName: null, phaseYear: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
@@ -47,6 +47,7 @@ export class DataControlService {
       this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
       this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
       this.reportingCurrentPhase.phaseId = response[0]?.id;
+      this.reportingCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
 
       if (response[0]?.obj_previous_phase) {
         this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;

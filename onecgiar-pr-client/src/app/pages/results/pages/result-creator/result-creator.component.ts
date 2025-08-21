@@ -5,12 +5,13 @@ import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { CreateResultManagementService } from './services/create-result-management.service';
 
 @Component({
-    selector: 'app-result-creator',
-    templateUrl: './result-creator.component.html',
-    styleUrls: ['./result-creator.component.scss'],
-    standalone: false
+  selector: 'app-result-creator',
+  templateUrl: './result-creator.component.html',
+  styleUrls: ['./result-creator.component.scss'],
+  standalone: false
 })
 export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;
@@ -43,11 +44,13 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
+    public createResultManagementService: CreateResultManagementService,
     private router: Router,
     private phasesService: PhasesService
   ) {}
 
   ngOnInit(): void {
+    this.api.dataControlSE.getCurrentPhases();
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
