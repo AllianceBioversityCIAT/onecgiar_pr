@@ -32,6 +32,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import { reportingTheme } from './theme/reportingTheme';
+import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -64,6 +65,7 @@ function initializeClarityService(clarityService: ClarityService) {
     ToastModule,
     TooltipModule,
     PopUpNotificationItemComponent,
+    UserRolesInfoModalComponent,
     SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [

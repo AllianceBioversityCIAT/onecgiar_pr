@@ -7,10 +7,10 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 import { Router } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 @Component({
-    selector: 'app-header-panel',
-    templateUrl: './header-panel.component.html',
-    styleUrls: ['./header-panel.component.scss'],
-    standalone: false
+  selector: 'app-header-panel',
+  templateUrl: './header-panel.component.html',
+  styleUrls: ['./header-panel.component.scss'],
+  standalone: false
 })
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
@@ -33,17 +33,6 @@ export class HeaderPanelComponent implements OnInit {
 
   notificationBadgeLength() {
     return `${this.resultsNotificationsSE.updatesPopUpData.length}`;
-  }
-
-  openInfoLink() {
-    const w = window.innerWidth - window.innerWidth / 3;
-    const h = window.innerHeight - window.innerHeight / 4;
-
-    const top = window.screenY + (window.outerHeight - h) / 2.5;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const url = this.globalLinksSE.links.url_platform_information;
-
-    window.open(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
   }
 
   goToNotifications() {
