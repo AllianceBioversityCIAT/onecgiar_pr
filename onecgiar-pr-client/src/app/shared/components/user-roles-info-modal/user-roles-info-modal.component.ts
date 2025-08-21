@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, Input } from '@angular/core';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-user-roles-info-modal',
-  imports: [TooltipModule],
+  imports: [TooltipModule, CustomFieldsModule],
   standalone: true,
   templateUrl: './user-roles-info-modal.component.html',
   styleUrl: './user-roles-info-modal.component.scss',
@@ -14,6 +15,7 @@ export class UserRolesInfoModalComponent {
   globalLinksSE = inject(GlobalLinksService);
 
   @Input() showTooltip = true;
+  @Input() type: 'icon' | 'text' = 'icon';
 
   openInfoLink() {
     const w = window.innerWidth - window.innerWidth / 3;
