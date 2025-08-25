@@ -33,15 +33,13 @@
     </div>
 
     <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round" *ngIf="unreadNotifications.length === 0">notifications</i>
-      <i
-        class="material-icons-round animate_bell"
-        pBadge
-        [value]="notificationBadgeLength()"
-        severity="danger"
-        *ngIf="unreadNotifications.length > 0">
-        notifications
-      </i>
+      @if (unreadNotifications.length === 0) {
+        <i class="material-icons-round">notifications</i>
+      } @else {
+        <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
+          <i class="material-icons-round animate_bell"> notifications </i>
+        </p-overlayBadge>
+      }
     </div>
 
     <app-user-roles-info-modal></app-user-roles-info-modal>

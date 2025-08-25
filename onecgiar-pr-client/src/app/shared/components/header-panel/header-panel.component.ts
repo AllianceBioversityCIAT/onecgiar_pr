@@ -32,7 +32,7 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   notificationBadgeLength() {
-    return `${this.resultsNotificationsSE.updatesPopUpData.length}`;
+    return `${this.resultsNotificationsSE?.updatesPopUpData?.length}`;
   }
 
   goToNotifications() {
