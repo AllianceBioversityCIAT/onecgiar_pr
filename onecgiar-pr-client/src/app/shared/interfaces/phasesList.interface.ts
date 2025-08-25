@@ -22,4 +22,7 @@ export interface Phases {
   obj_previous_phase: Phases;
   can_be_deleted: boolean;
   selected: boolean;
+  obj_portfolio?: {
+    acronym?: string;
+  };
 }

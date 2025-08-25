@@ -12,7 +12,7 @@ export class InitiativesService {
   }
 
   GET_AllWithoutResults() {
-    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+    this.api.resultsSE.GET_AllInitiativesEntities().subscribe(({ response }) => {
       this.allInitiativesList = response;
       this.allInitiatives.set(response);
     });

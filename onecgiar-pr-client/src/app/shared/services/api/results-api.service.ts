@@ -444,6 +444,14 @@ export class ResultsApiService {
     );
   }
 
+  GET_AllInitiativesEntities() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/entities`).pipe(
+      map(resp => {
+        return resp;
+      })
+    );
+  }
+
   GET_clarisaInnovationType() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-type/get/all`).pipe(
       map(resp => {
@@ -997,6 +1005,12 @@ export class ResultsApiService {
 
   PATCH_versioningProcess(id) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, null);
+  }
+
+  PATCH_versioningProcessV2(id, entityId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}?version=v2`, {
+      entityId
+    });
   }
 
   PATCH_updatePhase(id, phase) {

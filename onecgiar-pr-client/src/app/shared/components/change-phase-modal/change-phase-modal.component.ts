@@ -12,8 +12,13 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
+  selectedInitiative: any;
 
-  constructor(public api: ApiService, private router: Router, public ipsrDataControlSE: IpsrDataControlService) {}
+  constructor(
+    public api: ApiService,
+    private router: Router,
+    public ipsrDataControlSE: IpsrDataControlService
+  ) {}
 
   ngOnInit(): void {
     this.api.dataControlSE.getCurrentPhases();
@@ -22,22 +27,31 @@ export class ChangePhaseModalComponent implements OnInit {
 
   accept() {
     this.requesting = true;
-    this.api.resultsSE.PATCH_versioningProcess(this.api.dataControlSE.currentResult.id).subscribe({
+    this.api.resultsSE.PATCH_versioningProcessV2(this.api.dataControlSE.currentResult.id, this.selectedInitiative).subscribe({
       next: ({ response }) => {
-        this.api.alertsFe.show({ id: 'noti', title: `Successful replication`, description: `Result ${this.api.dataControlSE.currentResult.result_code} successfully replicated in phase ${this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}.`, status: 'success' });
+        this.api.alertsFe.show({
+          id: 'noti',
+          title: `Successful replication`,
+          description: `Result ${this.api.dataControlSE.currentResult.result_code} successfully replicated in phase ${this.ipsrDataControlSE.inIpsr ? this.api.dataControlSE.IPSRCurrentPhase.phaseName : this.api.dataControlSE.reportingCurrentPhase.phaseName}.`,
+          status: 'success'
+        });
         this.requesting = false;
         this.api.updateResultsList();
         this.api.dataControlSE.chagePhaseModal = false;
         this.api.dataControlSE.updateResultModal = false;
         this.ipsrDataControlSE.ipsrUpdateResultModal = false;
 
-        const navigateToLink = this.ipsrDataControlSE.inIpsr ? `/ipsr/detail/${response?.result_code}/general-information` : `/result/result-detail/${response?.result_code}/general-information`;
+        const navigateToLink = this.ipsrDataControlSE.inIpsr
+          ? `/ipsr/detail/${response?.result_code}/general-information`
+          : `/result/result-detail/${response?.result_code}/general-information`;
 
         this.router.navigate([navigateToLink], { queryParams: { phase: response?.version_id } });
       },
       error: error => {
         console.error(error);
-        error.status == 409 ? this.api.alertsFe.show({ id: 'noti', title: `Information`, description: `${error.error.message}`, status: 'information' }) : this.api.alertsFe.show({ id: 'noti', title: `Error`, description: `${error.error.message}`, status: 'error' });
+        error.status == 409
+          ? this.api.alertsFe.show({ id: 'noti', title: `Information`, description: `${error.error.message}`, status: 'information' })
+          : this.api.alertsFe.show({ id: 'noti', title: `Error`, description: `${error.error.message}`, status: 'error' });
         this.requesting = false;
       }
     });
