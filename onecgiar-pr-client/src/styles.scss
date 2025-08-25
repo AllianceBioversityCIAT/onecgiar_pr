@@ -199,6 +199,10 @@ a {
   overflow-y: auto !important;
 }
 
+.support_information .p-dialog {
+  border: none !important;
+}
+
 .toc_button {
   background-color: var(--pr-color-primary-300);
   color: var(--pr-color-white);
