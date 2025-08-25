@@ -141,7 +141,7 @@ export class ClarisaEndpoints<Entity, Dto> {
    * Represents the endpoint configuration for fetching all initiatives.
    */
   public static readonly INITIATIVES = new ClarisaEndpoints(
-    'initiatives',
+    'cgiar-entities/by-portfolio?portfolioId=2,3&version=2',
     'GET',
     ClarisaInitiative,
   );
@@ -561,6 +561,7 @@ export class ClarisaEndpoints<Entity, Dto> {
         startDate: item.start_date,
         endDate: item.end_date,
         isActive: item.is_active,
+        acronym: item.acronym,
       };
     });
   }

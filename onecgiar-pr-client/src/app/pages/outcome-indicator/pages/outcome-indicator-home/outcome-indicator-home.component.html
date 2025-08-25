@@ -1,7 +1,18 @@
 <div class="outcomes">
-  <div class="outcomes_title">
-    <i class="material-icons-outlined" style="font-size: 30px">assessment</i>
-    <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
+  <div class="outcomes_header">
+    <div class="outcomes_title">
+      <i class="material-icons-outlined" style="font-size: 30px">assessment</i>
+      <h1 class="outcomes_title_text">Outcome Indicator Module</h1>
+    </div>
+
+    @if (this.api.rolesSE.isAdmin) {
+      <app-pr-button
+        [text]="this.outcomeIService.requestingFullReport() ? 'Downloading full report' : 'Download full report'"
+        [ngClass]="{ globalDisabled: this.outcomeIService.requestingFullReport() }"
+        icon="excel_white"
+        [rotating]="this.outcomeIService.requestingFullReport()"
+        (click)="exportFullReport()"></app-pr-button>
+    }
   </div>
 
   <p class="outcomes_desc">Welcome to the Outcome indicators reporting module.</p>
@@ -26,7 +37,7 @@
     <div
       class="outcomes_actions_item"
       routerLink="/outcome-indicator-module/eoi-outcome-home"
-      [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
+      [ngClass]="{ globalDisabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
       (click)="this.api.dataControlSE.detailSectionTitle('End of Initiative Outcome Indicators List')">
       <i class="pi pi-sign-in" style="font-size: 3rem"></i>
@@ -36,7 +47,7 @@
     <div
       class="outcomes_actions_item"
       routerLink="/outcome-indicator-module/work-package-outcome-home"
-      [ngClass]="{ disabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
+      [ngClass]="{ globalDisabled: !this.outcomeIService.initiativeIdFilter || !this.api.dataControlSE.reportingCurrentPhase.phaseName }"
       [queryParams]="{ init: this.outcomeIService.initiativeIdFilter }"
       (click)="this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list')">
       <i class="pi pi-box" style="font-size: 3rem"></i>
@@ -46,13 +57,15 @@
     <div
       class="outcomes_actions_item"
       [ngClass]="{
-        disabled:
+        globalDisabled:
           !this.outcomeIService.initiativeIdFilter ||
           !this.api.dataControlSE.reportingCurrentPhase.phaseName ||
           this.outcomeIService.loading() ||
-          this.outcomeIService.loadingWPs()
+          this.outcomeIService.loadingWPs() ||
+          !this.outcomeIService?.eoisData?.length ||
+          !this.outcomeIService?.wpsData?.length
       }"
-      (click)="exportIndicatorsToExcel()">
+      (click)="exportIndicatorsToExcel(this.outcomeIService.eoisData, this.outcomeIService.wpsData)">
       <i class="pi pi-file-export" style="font-size: 3rem"></i>
       <p class="outcomes_actions_item--text">Export progress reported by indicator </p>
     </div>

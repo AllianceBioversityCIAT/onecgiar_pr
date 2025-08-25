@@ -17,6 +17,7 @@ describe('ClarisaPortfoliosService', () => {
           startDate: 2022,
           endDate: 2024,
           isActive: true,
+          acronym: 'P2',
         },
         {
           id: 3,
@@ -24,6 +25,7 @@ describe('ClarisaPortfoliosService', () => {
           startDate: 2025,
           endDate: 2027,
           isActive: false,
+          acronym: 'P3',
         },
       ] as ClarisaPortfolios[]),
     };
@@ -58,6 +60,7 @@ describe('ClarisaPortfoliosService', () => {
         startDate: 2022,
         endDate: 2024,
         isActive: true,
+        acronym: 'P2',
       },
       {
         id: 3,
@@ -65,6 +68,7 @@ describe('ClarisaPortfoliosService', () => {
         startDate: 2025,
         endDate: 2027,
         isActive: false,
+        acronym: 'P3',
       },
     ]);
   });

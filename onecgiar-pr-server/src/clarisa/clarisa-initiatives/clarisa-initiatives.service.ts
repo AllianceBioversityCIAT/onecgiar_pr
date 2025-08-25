@@ -46,4 +46,70 @@ export class ClarisaInitiativesService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async getInitiatives() {
+    try {
+      const initiatives = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 2 },
+      });
+      return {
+        response: initiatives,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getEntities() {
+    try {
+      const entities = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 3 },
+      });
+      return {
+        response: entities,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async getInitiativesEntitiesGrouped() {
+    try {
+      const p22 = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 2, active: true },
+        order: { id: 'ASC' },
+      });
+      const p25 = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id: 3, active: true },
+        order: { id: 'ASC' },
+      });
+
+      const result = [
+        { name: 'P22', isLabel: true },
+        ...p22.map((item) => ({
+          initiative_id: item.id,
+          full_name: item.name,
+          ...item,
+        })),
+        { name: 'P25', isLabel: true },
+        ...p25.map((item) => ({
+          initiative_id: item.id,
+          full_name: item.name,
+          ...item,
+        })),
+      ];
+
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }

@@ -40,6 +40,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { AdUsersModule } from '../../ad_users';
+import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -79,6 +80,7 @@ import { AdUsersModule } from '../../ad_users';
     ReturnResponse,
     ResultCountrySubnationalRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
+    InitiativeEntityMapRepository,
   ],
   imports: [VersionsModule, forwardRef(() => VersioningModule), AdUsersModule],
   exports: [ResultInnovationPackageRepository],

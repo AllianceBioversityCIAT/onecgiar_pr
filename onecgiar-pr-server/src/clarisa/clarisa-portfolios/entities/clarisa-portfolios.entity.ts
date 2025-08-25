@@ -23,6 +23,9 @@ export class ClarisaPortfolios {
   @Column({ name: 'is_active', nullable: true, type: 'tinyint' })
   isActive!: boolean;
 
+  @Column({ name: 'acronym', nullable: true, type: 'text' })
+  acronym!: string;
+
   @OneToMany(() => Version, (version) => version.obj_portfolio)
   obj_version: Version[];
 

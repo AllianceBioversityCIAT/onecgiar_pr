@@ -66,6 +66,7 @@ import { NonPooledProjectBudgetRepository } from '../../api/results/result_budge
 import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
 import { MQAPModule } from '../../api/m-qap/m-qap.module';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -129,6 +130,7 @@ import { MQAPModule } from '../../api/m-qap/m-qap.module';
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
     ResultAnswerRepository,
+    ClarisaInitiativesRepository,
   ],
   imports: [
     SharePointModule,

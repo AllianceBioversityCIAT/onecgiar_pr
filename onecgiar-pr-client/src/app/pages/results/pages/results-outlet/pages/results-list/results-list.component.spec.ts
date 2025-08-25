@@ -222,7 +222,7 @@ describe('ResultsListComponent', () => {
 
   describe('onPressAction()', () => {
     it('should set retrieve modal title and update current result on onPressAction', () => {
-      const result = { id: 1, title: 'Test Result' };
+      const result = { id: '1', title: 'Test Result' };
       component.onPressAction(result);
 
       expect(mockRetrieveModalService.title).toBe(result.title);
@@ -231,7 +231,13 @@ describe('ResultsListComponent', () => {
     });
 
     it('should set itemsWithDelete[1].visible to true if current result phase year is less than reporting current phase year', () => {
-      const result = { id: 1, title: 'Test Result', phase_year: 2022 };
+      const result = {
+        id: '1',
+        title: 'Test Result',
+        phase_year: 2022,
+        initiative_entity_map: [{ entityId: '1' }],
+        initiative_entity_user: [{ initiative_id: '1' }]
+      };
       mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
 
       component.onPressAction(result);
@@ -240,7 +246,13 @@ describe('ResultsListComponent', () => {
     });
 
     it('should set itemsWithDelete[1].visible to false if current result phase year is equal to reporting current phase year', () => {
-      const result = { id: 1, title: 'Test Result', phase_year: 2023 };
+      const result = {
+        id: '1',
+        title: 'Test Result',
+        phase_year: 2023,
+        initiative_entity_map: [{ entityId: '1' }],
+        initiative_entity_user: [{ initiative_id: '1' }]
+      };
       mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
 
       component.onPressAction(result);
@@ -249,7 +261,13 @@ describe('ResultsListComponent', () => {
     });
 
     it('should set itemsWithDelete[1].visible to false if current result phase year is greater than reporting current phase year', () => {
-      const result = { id: 1, title: 'Test Result', phase_year: 2024 };
+      const result = {
+        id: '1',
+        title: 'Test Result',
+        phase_year: 2024,
+        initiative_entity_map: [{ entityId: '1' }],
+        initiative_entity_user: [{ initiative_id: '1' }]
+      };
       mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2023 };
 
       component.onPressAction(result);

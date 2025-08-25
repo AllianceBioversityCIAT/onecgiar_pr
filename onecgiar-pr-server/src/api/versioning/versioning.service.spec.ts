@@ -74,6 +74,7 @@ import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-instituti
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -149,6 +150,7 @@ describe('VersioningService', () => {
         ResultsByIpInnovationUseMeasureRepository,
         ResultsIpInstitutionTypeRepository,
         MQAPService,
+        ClarisaInitiativesRepository,
         {
           provide: GlobalParameterCacheService,
           useValue: {
