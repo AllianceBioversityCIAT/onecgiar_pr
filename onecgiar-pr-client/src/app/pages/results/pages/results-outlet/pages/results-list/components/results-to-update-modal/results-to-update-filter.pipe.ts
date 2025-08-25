@@ -2,8 +2,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Pipe({
-    name: 'resultsToUpdateFilter',
-    standalone: false
+  name: 'resultsToUpdateFilter',
+  standalone: false
 })
 export class ResultsToUpdateFilterPipe implements PipeTransform {
   constructor(private api: ApiService) {
@@ -15,6 +15,7 @@ export class ResultsToUpdateFilterPipe implements PipeTransform {
       (item: any) =>
         item.result_type_id != 6 &&
         item.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
+        this.api.shouldShowUpdate(item) &&
         !item?.phase_status &&
         (this.api.rolesSE.isAdmin ? true : Boolean(item?.role_id))
     );
