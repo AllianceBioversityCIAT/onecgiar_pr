@@ -1,0 +1,29 @@
+<div class="loading_container">
+  <p class="loading_title">Analyzing file...</p>
+
+  <div class="gif_container">
+    <img src="../../../../../../../assets/gifs/robot.gif" alt="Robot animado" class="gif_item" />
+  </div>
+
+  @if (aiLoadingStateService.steps()[aiLoadingStateService.activeIndex()]) {
+    @if (aiLoadingStateService.steps()[aiLoadingStateService.activeIndex()]) {
+      <div class="loading_step">
+        <div class="loading_step_icon">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+
+        <div class="loading_step_content">
+          <span class="loading_step_label">
+            {{ aiLoadingStateService.steps()[aiLoadingStateService.activeIndex()].label }}
+          </span>
+
+          <div class="loading_step_progress">
+            <div
+              class="loading_step_progress_bar"
+              [style.width.%]="aiLoadingStateService.steps()[aiLoadingStateService.activeIndex()].progress"></div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

@@ -113,6 +113,10 @@ export class AiUploadFileComponent {
   }
 
   async isValidPageCount(file: File): Promise<boolean | 'password'> {
+    if (typeof file.arrayBuffer !== 'function') {
+      console.error('File object does not have arrayBuffer method.');
+      return false;
+    }
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
