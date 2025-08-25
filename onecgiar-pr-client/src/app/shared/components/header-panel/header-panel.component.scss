@@ -212,6 +212,12 @@
   cursor: pointer;
 }
 
+::ng-deep {
+  .p-overlaybadge {
+    height: 24px !important;
+  }
+}
+
 .animate_bell {
   -webkit-animation: ring 4s 0.7s ease-in-out 2;
   -webkit-transform-origin: 50% 4px;

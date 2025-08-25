@@ -19,6 +19,7 @@ import { ChangePhaseModalModule } from './shared/components/change-phase-modal/c
 import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
+import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
@@ -60,6 +61,7 @@ function initializeClarityService(clarityService: ClarityService) {
     FooterModule,
     DialogModule,
     BadgeModule,
+    OverlayBadgeModule,
     SatPopoverModule,
     FormatTimeAgoModule,
     ToastModule,
