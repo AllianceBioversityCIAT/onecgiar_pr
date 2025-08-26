@@ -3642,4 +3642,18 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_AllInitiativesEntities', () => {
+    it('should call GET_AllInitiativesEntities and return expected data', done => {
+      service.GET_AllInitiativesEntities().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/entities`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
 });

@@ -1,1 +1,3 @@
-export class ChangePhaseDto {}
+export class ChangePhaseDto {
+  entityId?: number;
+}

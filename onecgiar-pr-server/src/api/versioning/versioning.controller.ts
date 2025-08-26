@@ -9,14 +9,15 @@ import {
   Query,
   UseInterceptors,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { VersioningService } from './versioning.service';
 import { CreateVersioningDto } from './dto/create-versioning.dto';
@@ -34,8 +35,8 @@ import {
 } from '../../shared/constants/role-type.enum';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { UpdateQaResults } from './dto/update-qa.dto';
+import { ChangePhaseDto } from './dto/change-phase.dto';
 
-@ApiBearerAuth()
 @ApiTags('Versioning')
 @UseInterceptors(ResponseInterceptor)
 @Controller()
@@ -44,12 +45,49 @@ export class VersioningController {
 
   @Patch('phase-change/process/result/:resultId')
   @ApiOperation({ summary: 'Process phase change for a result' })
-  @ApiParam({ name: 'resultId', type: Number })
-  phaseChangeProcess(
+  @ApiParam({ name: 'resultId', type: Number, required: true })
+  @ApiQuery({
+    name: 'version',
+    type: String,
+    required: false,
+    description: 'API version (e.g. v2)',
+  })
+  @ApiHeader({
+    name: 'auth',
+    description: 'JWT token for authentication',
+    required: true,
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @ApiBody({
+    type: ChangePhaseDto,
+    required: false,
+    description: 'Optional entityId for version 2',
+    examples: {
+      default: {
+        summary: 'Example body for version 2',
+        value: {
+          entityId: 123,
+        },
+      },
+    },
+  })
+  async phaseChangeProcess(
     @Param('resultId') result_id: string,
     @UserToken() user: TokenDto,
+    @Req() req: Request,
+    @Body() body: ChangePhaseDto,
   ) {
-    return this.versioningService.versionProcess(+result_id, user);
+    const apiVersion = req['apiVersion'];
+    const entity_id = body?.entityId;
+    if (apiVersion !== 'v2') {
+      return this.versioningService.versionProcess(+result_id, user);
+    } else {
+      return this.versioningService.versionProcessV2(
+        +result_id,
+        entity_id,
+        user,
+      );
+    }
   }
 
   @Post()

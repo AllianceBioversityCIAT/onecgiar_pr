@@ -4,14 +4,11 @@ import { DataSource, DeepPartial } from 'typeorm';
 import { ClarisaApiConnection } from './clarisa.connection';
 import { ClarisaEndpoints } from './clarisa-endpoints.enum';
 import { ClarisaInitiativesRepository } from './clarisa-initiatives/ClarisaInitiatives.repository';
-import { ClarisaInitiativeDto } from './dtos/clarisa-initiative.dto';
+import { CgiarEntityInitiativeDto } from './dtos/clarisa-initiative.dto';
 import { ClarisaInitiative } from './clarisa-initiatives/entities/clarisa-initiative.entity';
-import { OstTocIdDto } from './clarisa-initiatives/dto/ost-toc-id.dto';
 import { ClarisaInstitutionsRepository } from './clarisa-institutions/ClariasaInstitutions.repository';
 import { TocResultsRepository } from '../toc/toc-results/toc-results.repository';
 import { ClarisaInitiativeStageRepository } from './clarisa-initiative-stage/repositories/clarisa-initiative-stage.repository';
-import { ClarisaInitiativeStageDto } from './clarisa-initiative-stage/dto/clarisa-initiative-stage.dto';
-import { ClarisaInitiativeStage } from './clarisa-initiative-stage/entities/clarisa-initiative-stage.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -66,22 +63,25 @@ export class ClarisaTaskService {
       transformedData = data as unknown as Entity[];
     }
 
-    return await this.dataSource
-      .getRepository(controlList.entity)
-      .save(transformedData)
-      .then((data) => {
-        this._logger.log(
-          `[${index}] Data successfully saved for ${controlList.entity.name}!`,
-        );
-        return data;
-      })
-      .catch((err) => {
+    const repo = this.dataSource.getRepository(controlList.entity);
+    const results: Entity[] = [];
+
+    for (const item of transformedData) {
+      try {
+        const saved = await repo.save(item);
+        results.push(saved);
+      } catch (err) {
         this._logger.error(
-          `[${index}] Error in data save for ${controlList.entity.name}!`,
+          `[${index}] Error saving item with id/code: ${item['id'] || item['code']}`,
         );
         this._logger.error(err);
-        return null;
-      });
+      }
+    }
+
+    this._logger.log(
+      `[${index}] Data successfully saved for ${controlList.entity.name}!`,
+    );
+    return results;
   }
 
   public async clarisaBootstrapImportantData() {
@@ -133,6 +133,9 @@ export class ClarisaTaskService {
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.ACTION_AREAS, index);
+      },
+      async (index: number) => {
+        return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITY_TYPES, index);
@@ -206,9 +209,6 @@ export class ClarisaTaskService {
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.SUBNATIONAL_SCOPES, index);
       },
-      async (index: number) => {
-        return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
-      },
     ];
 
     const results: PromiseSettledResult<unknown>[] = [];
@@ -239,8 +239,8 @@ export class ClarisaTaskService {
       `>>>[${index}] Fetching data from CLARISA API for ${initiativesEndpoint.entity.name}`,
     );
 
-    const data: ClarisaInitiativeDto[] = await this.clarisaConnection
-      .get<ClarisaInitiativeDto[]>(initiativesEndpoint.path)
+    const data: CgiarEntityInitiativeDto[] = await this.clarisaConnection
+      .get<CgiarEntityInitiativeDto[]>(initiativesEndpoint.path)
       .catch((err) => {
         this._logger.error(
           `[${index}] Error fetching data from CLARISA API for ${initiativesEndpoint.entity.name} path: ${initiativesEndpoint.path}`,
@@ -249,57 +249,63 @@ export class ClarisaTaskService {
         return [];
       });
 
-    const tocIds = await this._clarisaInitiativesRepository.getTocIdFromOst();
-
     const mappedInitiatives: DeepPartial<ClarisaInitiative>[] =
-      this.initiativeMapper(data, tocIds);
-    const initiativeStages: DeepPartial<ClarisaInitiativeStage>[] =
-      mappedInitiatives.flatMap((init) => init.initiative_stage_array);
+      this.cgiarEntityInitiativeMapper(data);
 
-    await this._clarisaInitiativeStageRepository.save(initiativeStages);
+    for (const initiative of mappedInitiatives) {
+      try {
+        const found = await this._clarisaInitiativesRepository.findOne({
+          where: { official_code: initiative.official_code },
+        });
 
-    return await this.dataSource
-      .getRepository(initiativesEndpoint.entity)
-      .save(mappedInitiatives)
-      .then((data) => {
-        this._logger.log(
-          `[${index}] Data saved for ${initiativesEndpoint.entity.name}`,
+        if (found) {
+          const updated = {
+            ...found,
+            ...initiative,
+            toc_id: found.toc_id ?? initiative.toc_id,
+            action_area_id: found.action_area_id ?? initiative.action_area_id,
+          };
+          await this._clarisaInitiativesRepository.save(updated);
+        } else {
+          const maxObj = await this._clarisaInitiativesRepository
+            .createQueryBuilder('c')
+            .select('MAX(c.id)', 'max')
+            .getRawOne();
+          const newId = (maxObj.max || 0) + 1;
+          await this._clarisaInitiativesRepository.save({
+            ...initiative,
+            id: newId,
+          });
+        }
+      } catch (error) {
+        this._logger.error(
+          `[${index}] Error processing initiative: ${initiative.official_code}`,
+          error,
         );
-        return data;
-      });
+      }
+    }
+
+    this._logger.log(
+      `[${index}] Data saved for ${ClarisaEndpoints.INITIATIVES.entity.name}`,
+    );
+    return data;
   }
 
-  private initiativeMapper(
-    data: ClarisaInitiativeDto[],
-    tocIds: OstTocIdDto[],
+  private cgiarEntityInitiativeMapper(
+    data: CgiarEntityInitiativeDto[],
   ): DeepPartial<ClarisaInitiative>[] {
     return data.map((item) => {
-      const tocData = tocIds.filter((toc) => toc.initiativeId == item.id);
-
-      return {
-        id: item.id,
-        official_code: item.official_code,
+      const mapped: any = {
+        official_code: item.code,
         name: item.name,
-        short_name: item.short_name,
-        action_area_id: item.action_area_id,
-        active: item.active,
-        toc_id: tocData?.[0]?.toc_id || null,
-        cgiar_entity_type_id: item.type_id,
-        initiative_stage_array: this.initiativeStageMapper(item.stages),
+        short_name: item.short_name ?? item.name,
+        action_area_id: null,
+        active: true,
+        toc_id: null,
+        cgiar_entity_type_id: item.entity_type?.code ?? null,
+        portfolio_id: item.portfolio?.code ?? null,
       };
-    });
-  }
-
-  private initiativeStageMapper(
-    data: ClarisaInitiativeStageDto[],
-  ): DeepPartial<ClarisaInitiativeStage>[] {
-    return data.map((item) => {
-      return {
-        active: item.active,
-        id: item.initvStgId,
-        initiative_id: item.id,
-        stage_id: item.stageId,
-      };
+      return mapped;
     });
   }
 

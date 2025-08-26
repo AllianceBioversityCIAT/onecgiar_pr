@@ -10,6 +10,8 @@ import {
 import { IpsrService } from './ipsr.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
+import { UserToken } from '../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -27,8 +29,8 @@ export class IpsrController {
   }
 
   @Get('all-innovation-packages')
-  allInnovationPackages() {
-    return this.ipsrService.allInnovationPackages();
+  allInnovationPackages(@UserToken() user: TokenDto) {
+    return this.ipsrService.allInnovationPackages(user);
   }
 
   @Get('innovation-package-detail/:resultId')
