@@ -116,15 +116,6 @@ describe('UserController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should create a basic user', () => {
-      const result = controller.create(mockCreateUserDto);
-
-      expect(result).toEqual(mockCreateUserDto);
-      expect(userService.create).toHaveBeenCalledWith(mockCreateUserDto);
-    });
-  });
-
   describe('creteFull', () => {
     it('should create a user with role', async () => {
       const result = await controller.createFull(
@@ -190,6 +181,47 @@ describe('UserController', () => {
 
       expect(result).toEqual(mockUserResponse);
       expect(userService.lastPopUpViewed).toHaveBeenCalledWith(userId);
+    });
+  });
+
+  describe('validateToken', () => {
+    it('should return valid user info if token is valid', async () => {
+      const mockToken: TokenDto = {
+        id: 1,
+        email: 'user@example.com',
+        first_name: 'John',
+        last_name: 'Doe',
+      };
+      const expectedResponse = {
+        status: 200,
+        message: 'Token is valid',
+        response: {
+          id: 1,
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+          is_valid: true,
+        },
+      };
+      userService.validateToken = jest.fn().mockResolvedValue(expectedResponse);
+
+      const result = await controller.validateToken(mockToken);
+      expect(result).toEqual(expectedResponse);
+      expect(userService.validateToken).toHaveBeenCalledWith(mockToken);
+    });
+
+    it('should return 401 if token is missing or invalid', async () => {
+      const invalidToken = {} as TokenDto;
+      const expectedResponse = {
+        status: 401,
+        message: 'Invalid or missing token',
+        response: null,
+      };
+      userService.validateToken = jest.fn().mockResolvedValue(expectedResponse);
+
+      const result = await controller.validateToken(invalidToken);
+      expect(result).toEqual(expectedResponse);
+      expect(userService.validateToken).toHaveBeenCalledWith(invalidToken);
     });
   });
 });
