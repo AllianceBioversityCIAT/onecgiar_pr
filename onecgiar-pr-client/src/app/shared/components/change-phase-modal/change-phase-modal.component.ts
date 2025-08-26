@@ -4,15 +4,15 @@ import { ApiService } from '../../services/api/api.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
-    selector: 'app-change-phase-modal',
-    templateUrl: './change-phase-modal.component.html',
-    styleUrls: ['./change-phase-modal.component.scss'],
-    standalone: false
+  selector: 'app-change-phase-modal',
+  templateUrl: './change-phase-modal.component.html',
+  styleUrls: ['./change-phase-modal.component.scss'],
+  standalone: false
 })
 export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
-  selectedInitiative: any;
+  selectedInitiative: any = null;
 
   constructor(
     public api: ApiService,
@@ -27,6 +27,7 @@ export class ChangePhaseModalComponent implements OnInit {
 
   accept() {
     this.requesting = true;
+
     this.api.resultsSE.PATCH_versioningProcessV2(this.api.dataControlSE.currentResult.id, this.selectedInitiative).subscribe({
       next: ({ response }) => {
         this.api.alertsFe.show({
