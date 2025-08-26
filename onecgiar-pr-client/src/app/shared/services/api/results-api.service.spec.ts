@@ -3295,6 +3295,23 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('PATCH_versioningProcessV2', () => {
+    it('should call PATCH_versioningProcessV2 and return expected data', done => {
+      const id = 1;
+      const entityId = 1;
+      service.PATCH_versioningProcessV2(id, entityId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ entityId });
+
+      req.flush(mockResponse);
+    });
+  });
+
   describe('PATCH_updatePhase', () => {
     it('should call PATCH_updatePhase and return expected data', done => {
       const id = 1;
