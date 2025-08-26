@@ -1,0 +1,325 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+p {
+  margin: 0;
+}
+
+.result-item {
+  padding: 25px;
+  background-color: var(--pr-color-white);
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 200px;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  width: 100%;
+  min-width: 100%;
+  border-top: 1px solid var(--pr-color-primary-50);
+}
+
+.result-item.first-item {
+  border-top: none;
+}
+
+.result-item.last-item {
+  border-bottom: 1px solid var(--pr-color-primary-50);
+}
+
+.result-item-expand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background-color: var(--pr-color-accents-1);
+  border-radius: 50%;
+  height: 25px;
+  width: 25px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--pr-color-accents-2);
+  }
+}
+
+.result-item-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.result-item-main-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.result-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.result-item-category {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  color: var(--pr-color-accents-6);
+}
+
+.result-item-title-flex {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.result-item-title {
+  @include fonts.pr-typography('h3');
+  font-weight: 600;
+  color: var(--pr-color-primary-600);
+  margin: 0;
+  padding: 0;
+  word-break: break-word;
+  width: 100%;
+  display: inline-block;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.result-item-title-container,
+.edit-title-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.result-item-description {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-7);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.result-item-keywords {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.result-item-keywords-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  @include fonts.pr-typography('body-2');
+}
+
+.result-item-keywords-title {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  color: var(--pr-color-accents-6);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.result-item-keywords-arrow {
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  color: var(--pr-color-accents-6);
+  flex-shrink: 0;
+}
+
+.result-item-details-value-training-type {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--pr-color-primary-300);
+}
+
+.keyword {
+  @include fonts.pr-typography('body-3');
+  font-weight: 500;
+  color: var(--pr-color-accents-7);
+  padding: 5px 10px;
+  border-radius: 10px;
+  background-color: var(--pr-color-accents-2);
+  text-transform: capitalize;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.result-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.result-item-details {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1rem;
+  margin: 5px 0;
+}
+
+.result-item-details-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: row;
+  gap: 5px;
+}
+
+.result-item-details-value {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--pr-color-primary-300);
+}
+
+.result-item-title-input {
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  color: var(--pr-color-primary-600);
+  border: 1px solid var(--pr-color-primary-600);
+  border-radius: 4px;
+  padding: 0px 8px;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  background: white;
+  outline: none;
+  text-transform: uppercase;
+  resize: none;
+  overflow: hidden;
+  transition: height 0.2s;
+  word-break: break-word;
+  white-space: pre-wrap;
+  box-shadow: 0 2px 8px rgba(var(--pr-color-black-rgb), 0.1);
+}
+
+.input-width-measurer {
+  text-transform: uppercase;
+  padding: 0px 8px;
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  position: absolute;
+  visibility: hidden;
+  height: 0;
+  width: auto;
+  white-space: pre-wrap;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.edit-pencil {
+  font-size: 14px;
+  color: var(--primary-blue-600);
+  cursor: pointer;
+  margin-left: 16px;
+  vertical-align: baseline;
+  display: inline;
+  position: static;
+  top: auto;
+}
+
+.save-icon {
+  color: var(--pr-color-green-400) !important;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.save-icon:hover {
+  color: var(--pr-color-green-600) !important;
+}
+
+.cancel-icon {
+  color: var(--pr-color-red-300) !important;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.cancel-icon:hover {
+  color: var(--pr-color-red-600) !important;
+}
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: auto;
+  background-color: var(--pr-color-accents-7);
+  color: var(--pr-color-white);
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 8px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  @include fonts.pr-typography('body-2');
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.save-tooltip {
+  background-color: var(--pr-color-green-600);
+}
+
+.cancel-tooltip {
+  background-color: var(--pr-color-red-600);
+}
+
+.result-item-expanded-content {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  margin-left: 50px;
+}
+
+.result-item-details-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}

@@ -431,8 +431,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}capdevs-delivery-methods/get/all`);
   }
 
-  GET_AllInitiatives() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
+  GET_AllInitiatives(portfolioId?: 'p22' | 'p25') {
+    let url = `${environment.apiBaseUrl}clarisa/initiatives`;
+    if (portfolioId) url += `/${portfolioId}`;
+
+    return this.http.get<any>(url).pipe(
       map(resp => {
         //(resp);
         resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));

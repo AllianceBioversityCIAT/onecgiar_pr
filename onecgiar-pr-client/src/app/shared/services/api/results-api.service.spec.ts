@@ -1461,6 +1461,39 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
+
+    it('should call GET_AllInitiatives with portfolioId and map response correctly', done => {
+      mockResponse = {
+        response: [
+          {
+            id: 2,
+            official_code: 'DEF',
+            short_name: 'Init2',
+            name: 'Initiative 2'
+          }
+        ]
+      };
+      service.GET_AllInitiatives('p22').subscribe(response => {
+        expect(response).toEqual({
+          response: [
+            {
+              id: 2,
+              initiative_id: 2,
+              full_name: 'DEF - <strong>Init2</strong> - Initiative 2',
+              official_code: 'DEF',
+              short_name: 'Init2',
+              name: 'Initiative 2'
+            }
+          ]
+        });
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/p22`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_clarisaInnovationType', () => {
