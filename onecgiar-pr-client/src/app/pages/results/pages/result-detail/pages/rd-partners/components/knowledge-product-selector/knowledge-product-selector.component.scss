@@ -6,7 +6,7 @@
   gap: 5px;
 
   .header_title {
-    @include fonts.pr-typography('h3');
+    @include fonts.pr-typography('h4');
     font-weight: 500;
     margin: 0;
   }
