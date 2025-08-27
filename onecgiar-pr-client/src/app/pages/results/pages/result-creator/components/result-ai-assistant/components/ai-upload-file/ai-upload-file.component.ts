@@ -27,8 +27,6 @@ export class AiUploadFileComponent {
 
   isDragging = signal<boolean>(false);
   acceptedFormats: string[] = ['.pdf', '.docx', '.txt'];
-  maxSizeMB = 10;
-  pageLimit = 100;
 
   // File related methods
   onDragOver(event: DragEvent) {
@@ -88,7 +86,7 @@ export class AiUploadFileComponent {
         this.customizedAlertsFeSE.show({
           id: 'page-limit-exceeded',
           title: 'PAGE LIMIT EXCEEDED',
-          description: `The PDF exceeds the ${this.pageLimit} page limit. Please select a shorter document.`,
+          description: `The PDF exceeds the ${this.createResultManagementService.pageLimit} page limit. Please select a shorter document.`,
           status: 'error',
           closeIn: 500
         });
@@ -105,7 +103,7 @@ export class AiUploadFileComponent {
   }
 
   isValidFileSize(file: File): boolean {
-    return file.size <= this.maxSizeMB * 1024 * 1024;
+    return file.size <= this.createResultManagementService.maxSizeMB * 1024 * 1024;
   }
 
   fileSelected(file: File) {
@@ -120,7 +118,7 @@ export class AiUploadFileComponent {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-      return pdf.numPages <= this.pageLimit;
+      return pdf.numPages <= this.createResultManagementService.pageLimit;
     } catch (err: unknown) {
       const pdfError = err as PdfError;
       if (pdfError && (pdfError.message?.includes('Password') || pdfError.name === 'PasswordException')) {
@@ -135,7 +133,7 @@ export class AiUploadFileComponent {
     this.customizedAlertsFeSE.show({
       id: 'file-size-exceeded',
       title: 'FILE SIZE EXCEEDED',
-      description: `The uploaded document exceeds the ${this.maxSizeMB} MB limit. Please select a smaller file.`,
+      description: `The uploaded document exceeds the ${this.createResultManagementService.maxSizeMB} MB limit. Please select a smaller file.`,
       status: 'error',
       closeIn: 500
     });

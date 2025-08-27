@@ -77,7 +77,6 @@ p {
   padding-bottom: 24px;
 }
 
-// No results container
 .no-results-container {
   width: 100%;
   flex-direction: column;
@@ -90,7 +89,6 @@ p {
 }
 
 .no-results-title {
-  // pr-h2 font-weight-600 text-primary-300
   @include fonts.pr-typography('h2');
   font-weight: 600;
   color: var(--pr-color-primary-300);
@@ -99,7 +97,6 @@ p {
 }
 
 .no-results-description {
-  // pr-body-2 font-weight-500 text-secondary-400
   @include fonts.pr-typography('body-2');
   font-weight: 500;
   color: var(--pr-color-secondary-400);
@@ -108,9 +105,15 @@ p {
 }
 
 .no-results-buttons {
-  // text-[16px] font-[500] text-[#173F6F] flex items-center justify-center gap-4 pt-6
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+}
+
+.paginator_container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding-top: 10px;
 }

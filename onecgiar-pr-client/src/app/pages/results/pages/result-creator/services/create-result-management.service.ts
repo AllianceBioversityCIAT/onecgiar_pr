@@ -5,7 +5,7 @@ import { AIAssistantResult } from '../../../../../shared/interfaces/AIAssistantR
   providedIn: 'root'
 })
 export class CreateResultManagementService {
-  showModal = signal<boolean>(true);
+  showModal = signal<boolean>(false);
   expandedItem = signal<AIAssistantResult | null>(null);
   items = signal<AIAssistantResult[]>([]);
 
@@ -13,8 +13,12 @@ export class CreateResultManagementService {
   selectedFile = signal<File | null>(null);
 
   analyzingDocument = signal<boolean>(false);
-  documentAnalyzed = signal<boolean>(true);
+  documentAnalyzed = signal<boolean>(false);
   noResults = signal<boolean>(false);
+
+  // File constants
+  maxSizeMB = 10;
+  pageLimit = 100;
 
   closeModal() {
     this.expandedItem.set(null);

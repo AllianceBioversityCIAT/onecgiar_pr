@@ -77,7 +77,7 @@
             </div>
           </div>
         } @else {
-          <div class="w-full analyze-result-content flex">
+          <div class="w-full analyze-result-content" style="flex-direction: column">
             @for (item of createResultManagementService.items(); track $index) {
               <app-result-ai-item
                 [item]="item"
@@ -89,8 +89,7 @@
           </div>
         }
         @if (createResultManagementService.items().length > 0) {
-          <div
-            class="flex justify-end w-full bg-white border-left border-right border-bottom border-[#E8EBED] border-b-[1px] border-l-[1px] border-r-[1px] rounded-b-[4px]">
+          <div class="paginator_container">
             <p-paginator
               (onPageChange)="onPageChange($event)"
               [first]="first()"

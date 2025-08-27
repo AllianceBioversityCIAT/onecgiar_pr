@@ -130,6 +130,7 @@ p {
   justify-content: flex-start;
   gap: 10px;
   @include fonts.pr-typography('body-2');
+  flex-wrap: wrap;
 }
 
 .result-item-keywords-title {
