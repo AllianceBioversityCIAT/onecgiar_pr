@@ -97,7 +97,7 @@ describe('AiUploadFileComponent', () => {
     });
 
     it('isValidFileSize should enforce max size', () => {
-      component.maxSizeMB = 1; // 1MB
+      component.createResultManagementService.maxSizeMB = 1; // 1MB
       const underLimit = new File([new Uint8Array(1024 * 1024 - 1)], 'small.txt');
       const overLimit = new File([new Uint8Array(1024 * 1024 + 1)], 'big.txt');
       expect(component.isValidFileSize(underLimit)).toBe(true);
@@ -114,7 +114,7 @@ describe('AiUploadFileComponent', () => {
     });
 
     it('should show size exceeded alert when file is too large', async () => {
-      component.maxSizeMB = 1;
+      component.createResultManagementService.maxSizeMB = 1;
       const file = new File([new Uint8Array(1024 * 1024 * 2)], 'big.pdf');
       await component.handleFile(file);
       expect(alertsServiceMock.show).toHaveBeenCalledWith(expect.objectContaining({ id: 'file-size-exceeded', status: 'error' }));

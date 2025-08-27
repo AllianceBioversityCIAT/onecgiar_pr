@@ -79,4 +79,16 @@ export class AiLoadingStateService {
   getRandomInterval(): number {
     return Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
   }
+
+  stopLoadingProgress(): void {
+    this.steps.update(steps =>
+      steps.map(step => ({
+        ...step,
+        completed: false,
+        inProgress: false,
+        progress: 0
+      }))
+    );
+    this.activeIndex.set(0);
+  }
 }

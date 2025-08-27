@@ -1186,4 +1186,12 @@ export class ResultsApiService {
   }) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/update/roles`, body);
   }
+
+  POST_uploadFile(formData: FormData, headers: HttpHeaders) {
+    return this.http.post<any>(`${environment.fileManagerUrl}api/file-management/prms/upload-file`, formData, { headers });
+  }
+
+  POST_fileMining(formData: FormData, headers: HttpHeaders) {
+    return this.http.post<any>(`${environment.textMiningUrl}prms/text-mining`, formData, { headers });
+  }
 }
