@@ -18,6 +18,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { MessageModule } from 'primeng/message';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
+import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [
@@ -40,7 +41,8 @@ import { MegatrendsComponent } from './components/megatrends/megatrends.componen
     DialogModule,
     FeedbackValidationDirectiveModule,
     SkeletonModule,
-    MessageModule
+    MessageModule,
+    TermPipe
   ]
 })
 export class InnovationDevInfoModule {}

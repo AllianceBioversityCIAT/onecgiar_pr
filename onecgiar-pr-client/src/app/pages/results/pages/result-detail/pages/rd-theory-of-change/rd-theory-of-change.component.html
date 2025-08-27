@@ -3,10 +3,17 @@
 <div class="detail_container">
   <app-alert-status
     *ngIf="!!this.dataControlSE?.currentResult?.is_replicated"
-    description="Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other initiatives have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.">
+    [description]="
+      'Dear user, note that data from the previous year data has been replicated, however the information related to collaboration with other ' +
+      ('term.entity.plural' | term) +
+      ' have not been replicated. Please add collaborating intiatives in section 2 and be aware that they will receive a notification to confirm the collaboration and map this result against their ToC.'
+    ">
   </app-alert-status>
 
-  <app-alert-status description="Initiatives and non-pooled projects that you collaborated with to generate this result/contributed to this result.">
+  <app-alert-status
+    [description]="
+      ('term.entity.plural' | term) + ' and non-pooled projects that you collaborated with to generate this result/contributed to this result.'
+    ">
   </app-alert-status>
 
   <div *ngIf="getConsumed">
@@ -16,8 +23,8 @@
       label="Submitter"
       optionLabel="full_name"
       optionValue="id"
-      placeholder="Select Initiative"
-      description="Select an initiative or platform"
+      [placeholder]="'Select ' + ('term.entity.orPlatforms' | term)"
+      [description]="'Select ' + ('term.entity.orPlatforms' | term)"
       [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
       [fieldDisabled]="
         !!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)
@@ -27,16 +34,20 @@
     <div
       class="no-primary-list"
       *ngIf="this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id">
-      Since this result has not been shared and accepted by other Initiatives, it is not possible to change the submitter.
+      Since this result has not been shared and accepted by other {{ 'term.entity.plural' | term }}, it is not possible to change the submitter.
     </div>
   </div>
 
   <app-alert-status
-    description="<strong>Contribution to a reported result:</strong> Include those partners [OR Initiatives/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support."></app-alert-status>
+    [description]="
+      '<strong>Contribution to a reported result:</strong> Include those partners [OR ' +
+      ('term.entity.plural' | term) +
+      '/non-pooled projects/Impact Platforms] that made a significant contribution to the achievement of the result. This could take many forms and the threshold for inclusion is that the result would not have been achieved or reported in its current form without their support.'
+    "></app-alert-status>
 
   <app-pr-multi-select
     [options]="this.contributingInitiativesList"
-    label="Contributing Initiatives or platforms"
+    label="Contributing {{ 'term.entity.orPlatformsPlural' | term }}"
     [disableOptions]="disabledOptions"
     optionLabel="full_name"
     optionValue="id"
@@ -45,11 +56,11 @@
     selectedOptionLabel="full_name"
     [(ngModel)]="contributingInitiativeNew"
     [confirmDeletion]="true"
-    placeholder="Select initiative(s) or platform(s)">
+    [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term)">
   </app-pr-multi-select>
 
   <div class="selected_container custom_scroll">
-    <app-pr-field-header description="Initiative(s) selected:"> </app-pr-field-header>
+    <app-pr-field-header [description]="('term.entity.singularWith()' | term) + ' selected:'"> </app-pr-field-header>
 
     <div class="chips_container">
       <div

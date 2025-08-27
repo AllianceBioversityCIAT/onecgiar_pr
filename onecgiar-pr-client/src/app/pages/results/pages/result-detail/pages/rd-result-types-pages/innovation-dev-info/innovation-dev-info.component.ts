@@ -5,12 +5,13 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
+import { TerminologyService } from '../../../../../../../internationalization/terminology.service';
 
 @Component({
-    selector: 'app-innovation-dev-info',
-    templateUrl: './innovation-dev-info.component.html',
-    styleUrls: ['./innovation-dev-info.component.scss'],
-    standalone: false
+  selector: 'app-innovation-dev-info',
+  templateUrl: './innovation-dev-info.component.html',
+  styleUrls: ['./innovation-dev-info.component.scss'],
+  standalone: false
 })
 export class InnovationDevInfoComponent implements OnInit {
   innovationDevInfoBody = new InnovationDevInfoBody();
@@ -22,7 +23,8 @@ export class InnovationDevInfoComponent implements OnInit {
   constructor(
     private api: ApiService,
     public innovationControlListSE: InnovationControlListService,
-    private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService
+    private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
+    private terminologyService: TerminologyService
   ) {}
 
   ngOnInit(): void {
@@ -131,7 +133,7 @@ export class InnovationDevInfoComponent implements OnInit {
     <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
     <li>You do not need to specify the number of new or improved lines/varieties – this can be specified under Innovation Typology.</li>
     <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging)</li>
-    <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>
+    <li>Avoid the use of CGIAR Center, ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE.currentResult?.portfolio)} or organization names in the short title</li>
     </ul>`;
   }
 
