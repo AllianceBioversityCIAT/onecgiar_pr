@@ -1,12 +1,18 @@
 import { Component, Input } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
-import { Actor, IpsrStep1Body, Measure, Organization } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import {
+  Actor,
+  IpsrStep1Body,
+  Measure,
+  Organization
+} from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import { TerminologyService } from '../../../internationalization/terminology.service';
 
 @Component({
-    selector: 'app-innovation-use-form',
-    templateUrl: './innovation-use-form.component.html',
-    styleUrls: ['./innovation-use-form.component.scss'],
-    standalone: false
+  selector: 'app-innovation-use-form',
+  templateUrl: './innovation-use-form.component.html',
+  styleUrls: ['./innovation-use-form.component.scss'],
+  standalone: false
 })
 export class InnovationUseFormComponent {
   actorsTypeList = [];
@@ -14,7 +20,10 @@ export class InnovationUseFormComponent {
   @Input() body = new IpsrStep1Body();
   @Input() saving: boolean = false;
 
-  constructor(public api: ApiService) {
+  constructor(
+    public api: ApiService,
+    private terminologyService: TerminologyService
+  ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
@@ -158,7 +167,7 @@ export class InnovationUseFormComponent {
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
     </li>
     <li>
-    Individuals, organizations or networks operating within or beyond the system the Initiative or intervention aims to influence and whose actions can advance or impede the Initiative’s aims.
+    Individuals, organizations or networks operating within or beyond the system the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)} or intervention aims to influence and whose actions can advance or impede the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)}’s aims.
     </li>
     <li>
     The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
