@@ -34,12 +34,53 @@ import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 
-const fieldComponents = [PrInputComponent, PrSelectComponent, PrRadioButtonComponent, DetailSectionTitleComponent, PrMultiSelectComponent, PrFieldHeaderComponent, PrYesOrNotComponent, CustomValidationTooltipComponent, PrTextareaComponent, PrCheckboxComponent, SaveButtonComponent, PrButtonComponent, AlertStatusComponent, EditOrDeleteItemButtonComponent, NoDataTextComponent, AddButtonComponent, PrRangeLevelComponent, SyncButtonComponent];
+const fieldComponents = [
+  PrInputComponent,
+  PrSelectComponent,
+  PrRadioButtonComponent,
+  DetailSectionTitleComponent,
+  PrMultiSelectComponent,
+  PrFieldHeaderComponent,
+  PrYesOrNotComponent,
+  CustomValidationTooltipComponent,
+  PrTextareaComponent,
+  PrCheckboxComponent,
+  SaveButtonComponent,
+  PrButtonComponent,
+  AlertStatusComponent,
+  EditOrDeleteItemButtonComponent,
+  NoDataTextComponent,
+  AddButtonComponent,
+  PrRangeLevelComponent,
+  SyncButtonComponent,
+  LeadContactPersonFieldComponent
+];
 
 @NgModule({
-  declarations: [...fieldComponents, PrFieldValidationsComponent, PrWordCounterComponent, ListFilterByTextAndAttrPipe, UnderConstructionPointComponent, LabelNamePipe, YesOrNotByBooleanPipe],
+  declarations: [
+    ...fieldComponents,
+    PrFieldValidationsComponent,
+    PrWordCounterComponent,
+    ListFilterByTextAndAttrPipe,
+    UnderConstructionPointComponent,
+    LabelNamePipe,
+    YesOrNotByBooleanPipe
+  ],
   exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, InputTextModule, DropdownModule, RadioButtonModule, MultiSelectModule, InputTextareaModule, CheckboxModule, ScrollingModule, InputNumberModule, TooltipModule]
+  imports: [
+    CommonModule,
+    FormsModule,
+    InputTextModule,
+    DropdownModule,
+    RadioButtonModule,
+    MultiSelectModule,
+    InputTextareaModule,
+    CheckboxModule,
+    ScrollingModule,
+    InputNumberModule,
+    TooltipModule
+  ]
 })
 export class CustomFieldsModule {}

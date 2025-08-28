@@ -8,19 +8,39 @@
     placeholder="Select a user"
     optionLabel="formattedName"
     [filter]="true"
-    filterPlaceholder="Search users... (min 3 characters)"
     [loading]="isLoading()"
-    (onFilter)="onFilter($event)"
     (onShow)="onDropdownShow()"
     (onHide)="onDropdownHide()"
     (onChange)="onUserChange($event.value)"
     [style]="{ width: '100%' }">
+    <!-- Custom Filter Template -->
+    <ng-template pTemplate="filter" let-options="options">
+      <div class="custom-filter-container" (click)="$event.stopPropagation()">
+        <div class="p-inputgroup">
+          <span class="p-inputgroup-addon">
+            <i class="pi pi-search"></i>
+          </span>
+          <input
+            type="text"
+            pInputText
+            placeholder="Search users... (min 3 characters)"
+            [(ngModel)]="filterValue"
+            (keyup)="customFilterFunction($event, options)" />
+        </div>
+        @if (filterValue) {
+          <button pButton icon="pi pi-times" (click)="resetFilter(options)" severity="secondary" [text]="true" size="small"></button>
+        }
+      </div>
+    </ng-template>
+
+    <!-- Item Template -->
     <ng-template let-option pTemplate="item">
       <div class="user-option">
         <div class="user-display-name">{{ option.sn }}, {{ option.givenName }} ({{ option.mail }})</div>
       </div>
     </ng-template>
 
+    <!-- Empty Template -->
     <ng-template pTemplate="empty">
       <div class="empty-message">
         @if (isLoading()) {

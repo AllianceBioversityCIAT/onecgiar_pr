@@ -1,32 +1,27 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
+import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-
-import { SearchUserSelectComponent } from '../../../../shared/components/search-user-select/search-user-select.component';
-import { SearchUser } from '../../../../shared/interfaces/search-user.interface';
+import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
+import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
+import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 interface UserColumn {
   label: string;
   key: string;
   width?: string;
-}
-
-interface User {
-  username: string;
-  email: string;
-  isCGIAR: string;
-  userCreationDate: string;
-  status: string;
 }
 
 interface StatusOption {
@@ -37,15 +32,6 @@ interface StatusOption {
 interface CgiarOption {
   label: string;
   value: string;
-}
-
-interface AddUserForm {
-  is_cgiar: boolean;
-  displayName?: string; // Only for visual display
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  role_platform: number | null;
 }
 
 @Component({
@@ -59,8 +45,10 @@ interface AddUserForm {
     TooltipModule,
     InputTextModule,
     DialogModule,
+    OverlayPanelModule,
     CustomFieldsModule,
-    SearchUserSelectComponent
+    ManageUserModalComponent,
+    MultiSelectModule
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -68,11 +56,17 @@ interface AddUserForm {
 export default class UserManagementComponent implements OnInit, OnDestroy {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
+  initiativesService = inject(InitiativesService);
+  dynamicPanelService = inject(DynamicPanelServiceService);
+  exportTablesSE = inject(ExportTablesService);
 
   // ViewChild references for clearing selects
   @ViewChild('statusSelect') statusSelect!: PrSelectComponent;
   @ViewChild('cgiarSelect') cgiarSelect!: PrSelectComponent;
-  @ViewChild('userSearchSelect') userSearchSelect!: SearchUserSelectComponent;
+  @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
+  @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
+  @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
+  @ViewChild('userTable') userTable!: Table;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -80,8 +74,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   searchQuery = signal<string>(''); // For API calls and filtering
   selectedStatus = signal<string>('');
   selectedCgiar = signal<string>('');
+  selectedEntities = signal<number[]>([]);
   loading = signal<boolean>(false);
-  creatingUser = signal<boolean>(false);
+  isActivatingUser = signal<boolean>(false);
+  isEditingUser = signal<boolean>(false);
+  loadingUserRole = signal<boolean>(false);
+
+  // Modal variables
+  showAddUserModal: boolean = false;
 
   // Timeout for search debounce
   private searchTimeout: any;
@@ -99,16 +99,24 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   getUsers() {
     this.loading.set(true);
-    this.resultsApiService.GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any).subscribe({
-      next: res => {
-        this.users.set(res.response);
-        this.loading.set(false);
-      },
-      error: error => {
-        this.loading.set(false);
-        this.users.set([]);
-      }
-    });
+    this.resultsApiService
+      .GET_searchUser(this.searchQuery(), this.selectedCgiar() as any, this.selectedStatus() as any, this.selectedEntities())
+      .subscribe({
+        next: res => {
+          this.users.set(res.response);
+          res.response.map(user => {
+            user.userStatusClass = user.userStatus?.toLowerCase()?.replace(' ', '-');
+            user.isActive = user.userStatus === 'Active';
+            user.isCGIAR = user.cgIAR === 'Yes';
+          });
+          this.users.set(res.response);
+          this.loading.set(false);
+        },
+        error: error => {
+          this.loading.set(false);
+          this.users.set([]);
+        }
+      });
   }
 
   // Method to handle search input changes with timeout
@@ -124,6 +132,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.searchTimeout = setTimeout(() => {
       this.searchQuery.set(value); // Update search query after timeout
       this.getUsers(); // Execute API call
+      this.userTable?.reset();
     }, 1000);
   }
 
@@ -137,12 +146,14 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   onStatusChange(value: string) {
     this.selectedStatus.set(value);
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to handle CGIAR filter changes
   onCgiarChange(value: string) {
     this.selectedCgiar.set(value);
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Method to clear all filters
@@ -157,6 +168,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.searchQuery.set('');
     this.selectedStatus.set('');
     this.selectedCgiar.set('');
+    this.selectedEntities.set([]);
 
     // Clear the visual state of select components using writeValue
     if (this.statusSelect) {
@@ -171,14 +183,21 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       this.cgiarSelect.fullValue = {};
     }
 
+    if (this.entitiesSelect) {
+      this.entitiesSelect.writeValue([]);
+      this.entitiesSelect._value = [];
+    }
+
     // Reload data without filters
     this.getUsers();
+    this.userTable?.reset();
   }
 
   // Column configuration
   columns: UserColumn[] = [
     { label: 'User name', key: 'firstName', width: '200px' },
     { label: 'Email', key: 'emailAddress', width: '300px' },
+    { label: 'Entities', key: 'entities', width: '120px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' },
@@ -196,219 +215,151 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     { label: 'No', value: 'No' }
   ];
 
-  // Modal variables
-  showAddUserModal: boolean = false;
-  showUserSearchComponent = signal<boolean>(true); // Control visibility of SearchUserSelectComponent
-  addUserForm = signal<AddUserForm>({
-    is_cgiar: true,
-    role_platform: 2 // Marked as guest by default (2)
-  });
-
-  // Admin permissions options for radio button - computed based on CGIAR status
-  adminPermissionsOptions = computed(() => {
-    if (!this.addUserForm().is_cgiar) {
-      // CGIAR users only have guest permissions
-      return [
-        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
-      ];
-    } else {
-      // Non-CGIAR users can choose between admin and guest
-      return [
-        { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
-        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
-      ];
-    }
-  });
-
-  // CGIAR users for autocomplete
-  cgiarUsers: any[] = [
-    { name: 'Svetlana Saakova', email: 's.saakove@cgiar.org', displayName: 'Svetlana Saakova (s.saakove@cgiar.org)' },
-    { name: 'Sara Lawson', email: 's.lawson@cgiar.org', displayName: 'Sara Lawson (s.lawson@cgiar.org)' },
-    { name: 'John Smith', email: 'j.smith@cgiar.org', displayName: 'John Smith (j.smith@cgiar.org)' },
-    { name: 'Maria Garcia', email: 'm.garcia@cgiar.org', displayName: 'Maria Garcia (m.garcia@cgiar.org)' },
-    { name: 'David Johnson', email: 'd.johnson@cgiar.org', displayName: 'David Johnson (d.johnson@cgiar.org)' },
-    { name: 'Ana Rodriguez', email: 'a.rodriguez@cgiar.org', displayName: 'Ana Rodriguez (a.rodriguez@cgiar.org)' },
-    { name: 'Michael Brown', email: 'm.brown@cgiar.org', displayName: 'Michael Brown (m.brown@cgiar.org)' },
-    { name: 'Elena Petrov', email: 'e.petrov@cgiar.org', displayName: 'Elena Petrov (e.petrov@cgiar.org)' }
-  ];
-
   // Action methods
   onAddUser(): void {
-    this.resetAddUserForm();
+    this.isActivatingUser.set(false);
     this.showAddUserModal = true;
   }
 
-  onExportData(): void {}
-
-  onShowInfo(): void {}
-
-  // Method to get status CSS class
-  getStatusClass(status: string): string {
-    return status === 'Active' ? 'status-active' : 'status-inactive';
+  // User actions methods
+  async onEditUser(user: AddUser): Promise<void> {
+    this.isEditingUser.set(true);
+    this.showAddUserModal = true;
+    await this.fillUserFormToEdit(user);
+    this.getUserRoleByEntity(user.emailAddress);
   }
 
-  // Modal methods
-  resetAddUserForm(): void {
-    this.addUserForm.set({
-      is_cgiar: true,
-      role_platform: 2 // Marked as guest by default (2)
-    });
-    this.clearUserSearch();
-  }
-
-  // Method to clear user search field by hiding and showing the component
-  private clearUserSearch(): void {
-    // Hide the component to force a complete reset
-    this.showUserSearchComponent.set(false);
-
-    // Show it again after 500ms delay
-    setTimeout(() => {
-      this.showUserSearchComponent.set(true);
-    }, 500);
-  }
-
-  onModalCgiarChange(isCgiar: boolean): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      is_cgiar: isCgiar,
-      // Reset form fields when changing CGIAR status
-      displayName: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      // Set permissions based on CGIAR status
-      role_platform: 2 // Always marked as guest (2)
-    }));
-  }
-
-  onUserSelect(event: SearchUser): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      displayName: `${event.sn}, ${event.givenName} (${event.mail})`,
-      email: event.mail
-    }));
-  }
-
-  onNameChange(first_name: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      first_name
-    }));
-  }
-
-  onLastNameChange(last_name: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      last_name
-    }));
-  }
-
-  onEmailChange(email: string): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      email
-    }));
-  }
-
-  onPermissionsChange(role_platform: number): void {
-    this.addUserForm.update(form => ({
-      ...form,
-      role_platform
-    }));
-  }
-
-  onSaveUser(): void {
-    this.creatingUser.set(true);
-
-    // Remove displayName from form data before sending to backend
-    const formData = { ...this.addUserForm() };
-    delete formData.displayName;
-
-    this.resultsApiService.POST_createUser(formData).subscribe({
+  getUserRoleByEntity(email: string) {
+    this.loadingUserRole.set(true);
+    this.resultsApiService.GET_findRoleByEntity(email).subscribe({
       next: res => {
-        this.showAddUserModal = false;
-
-        const successMessage = res?.message || 'The user has been successfully created';
-        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
-
-        this.api.alertsFe.show({
-          id: 'createUserSuccess',
-          title: 'User created successfully',
-          description: `${userName} - ${successMessage}`,
-          status: 'success'
-        });
-
-        this.creatingUser.set(false);
-        this.resetAddUserForm(); // Reset form and clear user search
-        this.getUsers();
+        this.manageUserModal.addUserForm.update(form => ({
+          ...form,
+          role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
+          role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
+        }));
+        this.loadingUserRole.set(false);
       },
       error: error => {
-        // Determinar el mensaje de error
-        let errorMessage = 'Error while creating user';
-
-        if (error?.error?.message) {
-          const message = error.error.message;
-          if (message.includes('already exists')) {
-            errorMessage = 'The user already exists in the system';
-          } else if (message.includes('CGIAR email')) {
-            errorMessage = 'Non-CGIAR user cannot have a CGIAR email address';
-          } else {
-            errorMessage = message;
-          }
-        }
-
-        this.api.alertsFe.show({
-          id: 'createUserError',
-          title: 'Warning!',
-          description: errorMessage,
-          status: 'warning'
-        });
-        this.creatingUser.set(false);
+        this.loadingUserRole.set(false);
       }
     });
   }
 
-  onCancelAddUser(): void {
-    this.showAddUserModal = false;
-    this.resetAddUserForm();
+  fillUserFormToEdit(user: AddUser) {
+    return new Promise(resolve => {
+      const { firstName, lastName, emailAddress, isCGIAR } = user;
+      setTimeout(() => {
+        this.manageUserModal.addUserForm.set({
+          is_cgiar: isCGIAR,
+          displayName: `${firstName} ${lastName} (${emailAddress})`,
+          first_name: firstName,
+          last_name: lastName,
+          email: emailAddress,
+          role_platform: 2, // Marked as guest by default (2)
+          role_assignments: [],
+          activate: true
+        });
+        resolve(true);
+      }, 500);
+    });
   }
 
-  onModalHide(): void {
-    // This method is called when the modal is closed via X button, ESC key, or clicking outside
-    this.resetAddUserForm();
-  }
-
-  // User actions methods
-  onEditUser(user: any): void {
-    // TODO: Implement edit user functionality
-  }
-
-  onToggleUserStatus(user: any): void {
-    // TODO: Implement toggle user status functionality
-  }
-
-  get currentUserName(): string {
-    return this.api.authSE?.localStorageUser?.user_name || 'Unknown User';
-  }
-
-  get currentUserEmail(): string {
-    return this.api.authSE?.localStorageUser?.email || '';
-  }
-
-  isFormValid = computed(() => {
-    const form = this.addUserForm();
-
-    // Validate that a permission option has been selected
-    if (form.role_platform === null || form.role_platform === undefined) {
-      return false;
+  onToggleUserStatus(user: AddUser) {
+    if (!user.isActive) {
+      this.manageUserModal.resetAddUserForm();
+      this.showAddUserModal = true;
+      this.isActivatingUser.set(true);
+      this.isEditingUser.set(true);
+      this.fillUserFormToEdit(user);
+      return {};
     }
 
-    // CGIAR users: Solo necesitamos el email
-    if (form.is_cgiar) {
-      return !!form.email;
-    }
+    // confitm alert
+    this.getUserRoleByEntity(user.emailAddress);
+    this.api.alertsFe.show(
+      {
+        id: 'deactivateUserConfirm',
+        title: 'Deactivate user',
+        description: user.isCGIAR
+          ? "Deactivating a CGIAR user will remove all assigned roles and entities. The user will retain only the 'Guest' role. Are you sure you want to proceed with this action?"
+          : 'Deactivating a external user will remove all assigned roles and entities. The user will not be able to enter the platform again until a new entity and role is assigned. Are you sure you want to proceed with this action?',
+        status: 'warning',
+        confirmText: 'Deactivate'
+      },
+      () => {
+        this.isActivatingUser.set(false);
+        this.isEditingUser.set(false);
+        this.resultsApiService.PATCH_updateUserStatus({ email: user.emailAddress, activate: false, entityRoles: [] }).subscribe({
+          next: res => {
+            this.getUsers();
+            this.api.alertsFe.show({
+              id: 'deactivateUserSuccess',
+              title: res.message,
+              description: `${user.emailAddress} - ${user.firstName} ${user.lastName}`,
+              status: 'success'
+            });
+          },
+          error: error => {}
+        });
+      }
+    );
 
-    // Non-CGIAR users: Necesitamos todos los campos del formulario
-    return !!(form.first_name && form.last_name && form.email);
-  });
+    return {};
+  }
+
+  // Entity display methods
+  getDisplayEntities(entities: string[]): string[] {
+    if (!entities || entities.length === 0) return [];
+    return entities.slice(0, 2); // Always show only first 2
+  }
+
+  hasMoreEntities(entities: string[]): boolean {
+    return entities && entities.length > 2;
+  }
+
+  getRemainingEntities(entities: string[]): string[] {
+    if (!entities || entities.length <= 2) return [];
+    return entities.slice(2); // Return entities from index 2 onwards
+  }
+
+  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
+    if (this.hasMoreEntities(entities)) {
+      overlay.toggle(event);
+    }
+  }
+
+  exportExcel(usersList) {
+    const usersListMapped = [];
+
+    usersList.map(result => {
+      const { firstName, lastName, emailAddress, appRole, userStatus, userCreationDate, entities, isActive, isCGIAR } = result;
+      usersListMapped.push({
+        firstName: firstName ?? 'Not applicable',
+        lastName: lastName ?? 'Not applicable',
+        emailAddress: emailAddress ?? 'Not applicable',
+        appRole: appRole ?? 'Not defined',
+        userStatus: userStatus ?? 'Not applicable',
+        userCreationDate: userCreationDate
+          ? new Date(userCreationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Not applicable',
+        entities: entities?.join(', ') ?? 'Not applicable',
+        isCGIAR: isCGIAR ? 'Yes' : 'No',
+        isActive: isActive ? 'Active' : 'Inactive'
+      });
+    });
+
+    const wscols = [
+      { header: 'First name', key: 'firstName', width: 16 },
+      { header: 'Last name', key: 'lastName', width: 16 },
+      { header: 'Email', key: 'emailAddress', width: 38 },
+      { header: 'Is CGIAR', key: 'isCGIAR', width: 16 },
+      { header: 'Application role', key: 'appRole', width: 18 },
+      { header: 'User creation date', key: 'userCreationDate', width: 20 },
+      { header: 'Entities', key: 'entities', width: 50 },
+      { header: 'Status', key: 'isActive', width: 18 }
+    ];
+
+    this.exportTablesSE.exportExcel(usersListMapped, 'user_report', wscols);
+  }
 }

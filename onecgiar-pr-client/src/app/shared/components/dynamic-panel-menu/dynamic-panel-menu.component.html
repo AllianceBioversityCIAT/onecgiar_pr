@@ -1,25 +1,28 @@
-<div class="dynamic_panel_menu" [ngClass]="{'hidePanel': !this.showCompletePanel}">
-    <div class="section_title">
-        {{this.panelName}}
+<div class="dynamic_panel_menu" [ngClass]="{ hidePanel: !this.dynamicPanelService.showCompletePanel() }">
+  <div class="section_title">
+    {{ this.panelName }}
+  </div>
+  <div class="util_container">
+    <ng-content select="[util]"></ng-content>
+  </div>
+  <div class="options">
+    <div
+      class="option"
+      *ngFor="let option of options"
+      [routerLink]="option.path"
+      routerLinkActive="active"
+      [pTooltip]="!this.dynamicPanelService.showCompletePanel() ? option?.name : ''"
+      tooltipPosition="right">
+      <i class="material-icons-round">
+        {{ option?.icon }}
+      </i>
+      <span class="text">{{ option?.name }}</span>
+      <img *ngIf="option?.underConstruction" src="assets/work-in-progress.png" alt="" srcset="" />
     </div>
-    <div class="util_container">
-        <ng-content select="[util]"></ng-content>
+  </div>
+  <div class="togglePanelView">
+    <div class="icon_container" (click)="this.dynamicPanelService.togglePanelView()">
+      <i class="material-icons-round"> chevron_left </i>
     </div>
-    <div class="options">
-        <div class="option" *ngFor="let option of options" [routerLink]="option.path" routerLinkActive="active"
-            [pTooltip]="!this.showCompletePanel ? option?.name:''" tooltipPosition="right">
-            <i class="material-icons-round">
-                {{option?.icon}}
-            </i>
-            <span class="text">{{option?.name}}</span>
-            <img *ngIf="option?.underConstruction" src="assets/work-in-progress.png" alt="" srcset="">
-        </div>
-    </div>
-    <div class="togglePanelView">
-        <div class="icon_container" (click)="togglePanelView()">
-            <i class="material-icons-round">
-                chevron_left
-            </i>
-        </div>
-    </div>
+  </div>
 </div>

@@ -421,7 +421,8 @@ describe('ResultsApiService', () => {
           employeeID: '12345',
           employeeNumber: 'EMP001',
           employeeType: 'Full-time',
-          description: 'Senior researcher in agricultural sciences'
+          description: 'Senior researcher in agricultural sciences',
+          formattedName: 'Doe, John (john.doe@cgiar.org)'
         }
       };
       const spyShowSaveSpinner = jest.spyOn(mockSaveButtonService, 'showSaveSpinner');
@@ -3604,6 +3605,20 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/validate/code`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ code });
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_AllInitiativesEntities', () => {
+    it('should call GET_AllInitiativesEntities and return expected data', done => {
+      service.GET_AllInitiativesEntities().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/entities`);
+      expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
     });

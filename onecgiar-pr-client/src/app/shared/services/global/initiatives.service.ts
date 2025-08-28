@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ApiService } from '../api/api.service';
 
 @Injectable({
@@ -6,13 +6,15 @@ import { ApiService } from '../api/api.service';
 })
 export class InitiativesService {
   allInitiativesList = [];
+  allInitiatives = signal<any[]>([]);
   constructor(private api: ApiService) {
     this.GET_AllWithoutResults();
   }
 
   GET_AllWithoutResults() {
-    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
+    this.api.resultsSE.GET_AllInitiativesEntities().subscribe(({ response }) => {
       this.allInitiativesList = response;
+      this.allInitiatives.set(response);
     });
   }
 }

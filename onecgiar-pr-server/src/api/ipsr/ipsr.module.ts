@@ -24,10 +24,20 @@ import { ResultsInnovationPackagesValidationModuleModule } from './results-innov
 import { AssessedDuringExpertWorkshopModule } from './assessed-during-expert-workshop/assessed-during-expert-workshop.module';
 import { ReturnResponse } from '../../shared/handlers/error.utils';
 import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
+import { AdUsersModule } from '../ad_users';
+import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Module({
   controllers: [IpsrController],
-  providers: [IpsrService, IpsrRepository, HandlersError, ReturnResponse],
+  providers: [
+    IpsrService,
+    IpsrRepository,
+    HandlersError,
+    ReturnResponse,
+    InitiativeEntityMapRepository,
+    RoleByUserRepository,
+  ],
   imports: [
     RouterModule.register(IpsrRoutes),
     ResultInnovationPackageModule,
@@ -48,6 +58,7 @@ import { ResultsInvestmentDiscontinuedOptionsModule } from '../results/results-i
     ResultsInnovationPackagesValidationModuleModule,
     AssessedDuringExpertWorkshopModule,
     forwardRef(() => ResultsInvestmentDiscontinuedOptionsModule),
+    AdUsersModule,
   ],
   exports: [IpsrRepository, IpsrService],
 })

@@ -26,18 +26,17 @@ export class ResultByInitiativesRepository
         rbi.is_active,
         null as last_updated_date,
         ${config.new_result_id} as result_id,
-        rbi.inititiative_id,
+        ${config?.entity_id ?? 'rbi.inititiative_id'},
         rbi.initiative_role_id,
         ${config.user.id} as created_by,
         null as last_updated_by,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date
-        from results_by_inititiative rbi where rbi.result_id = ${
-          config.old_result_id
-        } and rbi.is_active > 0
-      `,
-      insertQuery: `insert into results_by_inititiative (
+        ${predeterminedDateValidation(config?.predetermined_date)} as created_date
+      from results_by_inititiative rbi
+      where rbi.result_id = ${config.old_result_id}
+        and rbi.is_active > 0
+    `,
+      insertQuery: `
+      insert into results_by_inititiative (
         is_active,
         last_updated_date,
         result_id,
@@ -46,24 +45,25 @@ export class ResultByInitiativesRepository
         created_by,
         last_updated_by,
         created_date
-        )
-        select 
+      )
+      select 
         rbi.is_active,
         null as last_updated_date,
         ${config.new_result_id} as result_id,
-        rbi.inititiative_id,
+        ${config?.entity_id ?? 'rbi.inititiative_id'},
         rbi.initiative_role_id,
         ${config.user.id} as created_by,
         null as last_updated_by,
-        ${predeterminedDateValidation(
-          config?.predetermined_date,
-        )} as created_date
-        from results_by_inititiative rbi where rbi.result_id = ${
-          config.old_result_id
-        }  and rbi.is_active > 0 and rbi.initiative_role_id = 1`,
+        ${predeterminedDateValidation(config?.predetermined_date)} as created_date
+      from results_by_inititiative rbi
+      where rbi.result_id = ${config.old_result_id}
+        and rbi.is_active > 0
+        and rbi.initiative_role_id = 1
+    `,
       returnQuery: `select * from results_by_inititiative rbi where rbi.result_id = ${config.new_result_id} `,
     };
   }
+
   private readonly _logger: Logger = new Logger(
     ResultByInitiativesRepository.name,
   );

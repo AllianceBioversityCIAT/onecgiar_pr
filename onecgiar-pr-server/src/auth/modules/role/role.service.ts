@@ -3,10 +3,14 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class RoleService {
-  constructor(private readonly _roleRepository: Repository<Role>) {}
+  constructor(
+    @InjectRepository(Role)
+    private readonly _roleRepository: Repository<Role>,
+  ) {}
 
   create(createRoleDto: CreateRoleDto) {
     try {
@@ -16,8 +20,13 @@ export class RoleService {
     }
   }
 
-  findAll() {
-    return `This action returns all role`;
+  async findAll(): Promise<{ id: number; descripcion: string }[]> {
+    return this._roleRepository
+      .createQueryBuilder('role')
+      .select(['role.id', 'role.description'])
+      .where('role.active = :active', { active: true })
+      .andWhere('role.role_level_id = :levelId', { levelId: 2 })
+      .getRawMany();
   }
 
   findOne(id: number) {

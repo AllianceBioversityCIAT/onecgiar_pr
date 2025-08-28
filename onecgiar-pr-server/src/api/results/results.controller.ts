@@ -16,7 +16,7 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 @Controller()
 @ApiTags('results')
@@ -63,6 +63,8 @@ export class ResultsController {
   }
 
   @Get('get/all/roles/:userId')
+  @ApiParam({ name: 'userId', type: Number, required: true })
+  @ApiQuery({ name: 'initiative', type: String, required: false })
   findAllResultRoles(
     @Param('userId') userId: number,
     @Query('initiative') init?: string,

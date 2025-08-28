@@ -24,7 +24,9 @@ export class RdEvidencesComponent implements OnInit {
     <li>All links provided should be publicly accessible. All CGIAR publications should be shared using a CGSpace link.</li>
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be also uploaded to the PRMS repository.</li>
-    <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>`;
+    <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>
+    <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following a <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/ETb3eWyBPm9FumJV75XyUDABeVD57nTvz9zz1kNzL_Ob9w?e=kvLk2t" target="_blank">link</a>.</li>
+    `;
 
     if (this.api.dataControlSE?.currentResult?.result_type_id === 7)
       mainText +=

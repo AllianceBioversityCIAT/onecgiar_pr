@@ -14,6 +14,7 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -438,6 +439,14 @@ export class ResultsApiService {
         resp?.response.map(
           initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`)
         );
+        return resp;
+      })
+    );
+  }
+
+  GET_AllInitiativesEntities() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/entities`).pipe(
+      map(resp => {
         return resp;
       })
     );
@@ -998,6 +1007,12 @@ export class ResultsApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, null);
   }
 
+  PATCH_versioningProcessV2(id, entityId) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}?version=v2`, {
+      entityId
+    });
+  }
+
   PATCH_updatePhase(id, phase) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${id}`, phase);
   }
@@ -1065,6 +1080,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
   }
 
+  GET_fullReport() {
+    return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/get/full-report`);
+  }
+
   GET_contributionsToIndicatorsEOIS(initiativeCode: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}contribution-to-indicators/eois/${initiativeCode}`);
   }
@@ -1116,12 +1135,23 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
   }
 
-  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | '') {
+  PATCH_updateUserStatus(body: UpdateUserStatus) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
+
+  GET_searchUser(search?: string, cgIAR?: 'Yes' | 'No' | '', status?: 'Active' | 'Inactive' | 'Read Only' | '', entityIds?: number[]) {
     const queryParams: string[] = [];
 
     if (search) queryParams.push(`user=${search}`);
     if (cgIAR) queryParams.push(`cgIAR=${cgIAR}`);
     if (status) queryParams.push(`status=${status}`);
+    // Convert array of objects to array of ids if needed
+
+    if (entityIds.length) {
+      const entityIdArray =
+        Array.isArray(entityIds) && entityIds.length && typeof entityIds[0] === 'object' ? entityIds.map((item: any) => item.id) : entityIds;
+      queryParams.push(`entityIds=${entityIdArray.map(id => id.toString()).join(',')}`);
+    }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<any>(`${environment.apiBaseUrl}auth/user/search${queryString}`);
@@ -1129,5 +1159,28 @@ export class ResultsApiService {
 
   POST_createUser(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}auth/user/create`, body);
+  }
+
+  GET_portfolioList() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
+
+  GET_roles() {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/role`);
+  }
+  PATCH_changeUserStatus(body: any) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/change/status`, body);
+  }
+  GET_findRoleByEntity(email: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/user/find/role_by_entity?email=${email}`);
+  }
+  PATCH_updateUserRoles(body: {
+    email: string;
+    role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    role_platform: number;
+    first_name: string;
+    last_name: string;
+  }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/update/roles`, body);
   }
 }

@@ -80,6 +80,12 @@ describe('IpsrGeneralInformationComponent', () => {
       },
       dataControlSE: {
         detailSectionTitle: jest.fn()
+      },
+      rolesSE: {
+        readOnly: false,
+        access: {
+          canDdit: true
+        }
       }
     };
 
@@ -90,7 +96,11 @@ describe('IpsrGeneralInformationComponent', () => {
     mockScoreService = {};
 
     mockUserSearchService = {
-      searchUsers: jest.fn(() => of(mockUserSearchResponse))
+      searchUsers: jest.fn(() => of(mockUserSearchResponse)),
+      selectedUser: null,
+      searchQuery: '',
+      hasValidContact: false,
+      showContactError: false
     };
 
     await TestBed.configureTestingModule({
@@ -134,14 +144,6 @@ describe('IpsrGeneralInformationComponent', () => {
       ...mockGETInnovationByResultIdResponse,
       discontinued_options: []
     } as any;
-
-    component.searchResults = [];
-    component.showResults = false;
-    component.isSearching = false;
-    component.searchQuery = '';
-    component.selectedUser = null;
-    component.hasValidContact = true;
-    component.showContactError = false;
   });
 
   describe('ngOnInit()', () => {
@@ -162,51 +164,6 @@ describe('IpsrGeneralInformationComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(component.ipsrGeneralInformationBody).toEqual(mockGETInnovationByResultIdResponse);
-    });
-
-    it('should restore contact from lead_contact_person_data when available', () => {
-      const mockResponseWithContactData = {
-        ...mockGETInnovationByResultIdResponse,
-        lead_contact_person: 'John Doe',
-        lead_contact_person_data: mockUserSearchResponse.response[0]
-      };
-
-      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(of({ response: mockResponseWithContactData }));
-
-      component.getSectionInformation();
-
-      expect(component.selectedUser).toBe(mockUserSearchResponse.response[0]);
-      expect(component.searchQuery).toBe('John Doe');
-    });
-
-    it('should restore contact from lead_contact_person when no metadata available', () => {
-      const mockResponseWithContact = {
-        ...mockGETInnovationByResultIdResponse,
-        lead_contact_person: 'Jane Smith',
-        lead_contact_person_data: null
-      };
-
-      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(of({ response: mockResponseWithContact }));
-
-      component.getSectionInformation();
-
-      expect(component.selectedUser).toBeNull();
-      expect(component.searchQuery).toBe('Jane Smith');
-    });
-
-    it('should initialize empty contact when no data available', () => {
-      const mockResponseNoContact = {
-        ...mockGETInnovationByResultIdResponse,
-        lead_contact_person: null,
-        lead_contact_person_data: null
-      };
-
-      mockApiService.resultsSE.GETInnovationByResultId.mockReturnValue(of({ response: mockResponseNoContact }));
-
-      component.getSectionInformation();
-
-      expect(component.selectedUser).toBeNull();
-      expect(component.searchQuery).toBe('');
     });
   });
 
@@ -241,233 +198,25 @@ describe('IpsrGeneralInformationComponent', () => {
     });
   });
 
-  describe('User Search Functionality', () => {
-    describe('filterValidUsers', () => {
-      const mockUsersWithFilters = [
-        {
-          ...mockUserSearchResponse.response[0],
-          displayName: 'John Doe',
-          mail: 'john.doe@cgiar.org'
-        },
-        {
-          ...mockUserSearchResponse.response[0],
-          displayName: 'Test User',
-          mail: 'test.user@cgiar.org'
-        },
-        {
-          ...mockUserSearchResponse.response[0],
-          displayName: 'No Email User',
-          mail: ''
-        },
-        {
-          ...mockUserSearchResponse.response[0],
-          displayName: 'Jane Smith',
-          mail: 'jane.smith@cgiar.org'
-        }
-      ];
-
-      it('should filter out users without email', () => {
-        const result = component['filterValidUsers'](mockUsersWithFilters);
-
-        expect(result).not.toContain(expect.objectContaining({ displayName: 'No Email User' }));
-      });
-
-      it('should filter out users with "test" in email', () => {
-        const result = component['filterValidUsers'](mockUsersWithFilters);
-
-        expect(result).not.toContain(expect.objectContaining({ displayName: 'Test User' }));
-      });
-
-      it('should keep valid users with proper email', () => {
-        const result = component['filterValidUsers'](mockUsersWithFilters);
-
-        expect(result).toContainEqual(expect.objectContaining({ displayName: 'John Doe' }));
-        expect(result).toContainEqual(expect.objectContaining({ displayName: 'Jane Smith' }));
-      });
-
-      it('should return only valid users', () => {
-        const result = component['filterValidUsers'](mockUsersWithFilters);
-
-        expect(result.length).toBe(2);
-        expect(result.every(user => user.mail && !user.mail.toLowerCase().includes('test'))).toBe(true);
-      });
-
-      it('should handle empty array', () => {
-        const result = component['filterValidUsers']([]);
-
-        expect(result).toEqual([]);
-      });
-    });
-
-    describe('onSearchInput', () => {
-      it('should clear contact data when field is emptied', () => {
-        component.selectedUser = mockUserSearchResponse.response[0];
-        component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
-        component.ipsrGeneralInformationBody.lead_contact_person_data = mockUserSearchResponse.response[0];
-
-        const mockEvent = { target: { value: '' } };
-        component.onSearchInput(mockEvent);
-
-        expect(component.searchQuery).toBe('');
-        expect(component.selectedUser).toBeNull();
-        expect(component.ipsrGeneralInformationBody.lead_contact_person).toBeNull();
-        expect(component.ipsrGeneralInformationBody.lead_contact_person_data).toBeNull();
-        expect(component.hasValidContact).toBe(true);
-        expect(component.showContactError).toBe(false);
-        expect(component.searchResults).toEqual([]);
-        expect(component.showResults).toBe(false);
-        expect(component.isSearching).toBe(false);
-      });
-
-      it('should mark contact as invalid when typing without selecting user', () => {
-        const mockEvent = { target: { value: 'john' } };
-        component.onSearchInput(mockEvent);
-
-        expect(component.searchQuery).toBe('john');
-        expect(component.hasValidContact).toBe(false);
-        expect(component.showContactError).toBe(false);
-      });
-
-      it('should reset error state when starting to type', () => {
-        component.hasValidContact = false;
-        component.showContactError = true;
-
-        const mockEvent = { target: { value: 'jane' } };
-        component.onSearchInput(mockEvent);
-
-        expect(component.showContactError).toBe(false);
-      });
-
-      it('should handle string input', () => {
-        component.onSearchInput('john');
-
-        expect(component.searchQuery).toBe('john');
-        expect(component.hasValidContact).toBe(false);
-      });
-
-      it('should handle object input events', () => {
-        const mockEvent = { target: { value: 'john doe' } };
-        component.onSearchInput(mockEvent);
-
-        expect(component.searchQuery).toBe('john doe');
-      });
-    });
-
-    describe('selectUser', () => {
-      it('should mark contact as valid when user is selected', () => {
-        component.hasValidContact = false;
-        component.showContactError = true;
-
-        const mockUser = mockUserSearchResponse.response[0];
-        component.selectUser(mockUser);
-
-        expect(component.hasValidContact).toBe(true);
-        expect(component.showContactError).toBe(false);
-        expect(component.selectedUser).toBe(mockUser);
-        expect(component.searchQuery).toBe(mockUser.displayName);
-        expect(component.ipsrGeneralInformationBody.lead_contact_person).toBe(mockUser.displayName);
-        expect(component.ipsrGeneralInformationBody.lead_contact_person_data).toBe(mockUser);
-        expect(component.searchResults).toEqual([]);
-        expect(component.showResults).toBe(false);
-      });
-    });
-
-    describe('onContactBlur', () => {
-      it('should mark contact as invalid when there is text but no user selected', () => {
-        component.searchQuery = 'john doe';
-        component.selectedUser = null;
-
-        component.onContactBlur();
-
-        expect(component.hasValidContact).toBe(false);
-        expect(component.showContactError).toBe(true);
-      });
-
-      it('should not mark contact as invalid when field is empty', () => {
-        component.searchQuery = '';
-        component.selectedUser = null;
-
-        component.onContactBlur();
-
-        expect(component.hasValidContact).toBe(true);
-        expect(component.showContactError).toBe(false);
-      });
-
-      it('should not mark contact as invalid when user is selected', () => {
-        component.searchQuery = 'John Doe';
-        component.selectedUser = mockUserSearchResponse.response[0];
-
-        component.onContactBlur();
-
-        expect(component.hasValidContact).toBe(true);
-        expect(component.showContactError).toBe(false);
-      });
-    });
-
-    describe('searchSubject subscription - validation scenarios', () => {
-      beforeEach(() => {
-        jest.useFakeTimers();
-      });
-
-      afterEach(() => {
-        jest.useRealTimers();
-      });
-
-      it('should mark contact as invalid when no search results found', () => {
-        const emptyResponse = { message: 'No users found', response: [], status: 200 };
-        mockUserSearchService.searchUsers.mockReturnValue(of(emptyResponse));
-
-        component.searchQuery = 'nonexistent';
-        component['searchSubject'].next('nonexistent');
-        jest.advanceTimersByTime(300);
-
-        expect(component.searchResults).toEqual([]);
-        expect(component.hasValidContact).toBe(false);
-      });
-
-      it('should mark contact as invalid when search fails', () => {
-        const errorMessage = 'Network error';
-        mockUserSearchService.searchUsers.mockReturnValue(throwError(errorMessage));
-
-        component.searchQuery = 'john';
-        component['searchSubject'].next('john');
-        jest.advanceTimersByTime(300);
-
-        expect(component.searchResults).toEqual([]);
-        expect(component.hasValidContact).toBe(false);
-      });
-
-      it('should not mark contact as invalid when search returns results', () => {
-        component.hasValidContact = false;
-        component.searchQuery = 'john';
-        component['searchSubject'].next('john');
-        jest.advanceTimersByTime(300);
-
-        expect(component.searchResults).toEqual(mockUserSearchResponse.response);
-        expect(component.hasValidContact).toBe(false);
-      });
-    });
-  });
-
   describe('onSaveSection()', () => {
     it('should prevent save when contact is invalid', () => {
-      component.searchQuery = 'invalid user';
-      component.selectedUser = null;
-      component.hasValidContact = false;
+      mockUserSearchService.searchQuery = 'invalid user';
+      mockUserSearchService.selectedUser = null;
+      mockUserSearchService.hasValidContact = false;
 
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
 
       component.onSaveSection();
 
-      expect(component.hasValidContact).toBe(false);
-      expect(component.showContactError).toBe(true);
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(mockUserSearchService.showContactError).toBe(true);
       expect(spyPATCHIpsrGeneralInfo).not.toHaveBeenCalled();
     });
 
     it('should allow save when contact is valid (user selected)', () => {
-      component.searchQuery = 'John Doe';
-      component.selectedUser = mockUserSearchResponse.response[0];
-      component.hasValidContact = true;
+      mockUserSearchService.searchQuery = 'John Doe';
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      mockUserSearchService.hasValidContact = true;
 
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
@@ -479,9 +228,9 @@ describe('IpsrGeneralInformationComponent', () => {
     });
 
     it('should allow save when contact field is empty', () => {
-      component.searchQuery = '';
-      component.selectedUser = null;
-      component.hasValidContact = true;
+      mockUserSearchService.searchQuery = '';
+      mockUserSearchService.selectedUser = null;
+      mockUserSearchService.hasValidContact = true;
 
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
       const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
@@ -537,28 +286,6 @@ describe('IpsrGeneralInformationComponent', () => {
         const genderInformationString = component.genderInformation();
         expect(genderInformationString).toContain('<strong>Gender equality tag guidance</strong>');
       });
-    });
-
-    describe('leadContactPersonTextInfo()', () => {
-      it('should return descriptive text for lead contact person field', () => {
-        const result = component.leadContactPersonTextInfo();
-
-        expect(result).toContain('For more precise results, we recommend searching by email or username.');
-        expect(result).toContain('<strong>Examples:</strong>');
-        expect(result).toContain('j.smith@cgiar.org; jsmith; JSmith');
-      });
-    });
-  });
-
-  describe('Component initialization', () => {
-    it('should initialize validation properties correctly', () => {
-      expect(component.hasValidContact).toBe(true);
-      expect(component.showContactError).toBe(false);
-      expect(component.searchQuery).toBe('');
-      expect(component.selectedUser).toBeNull();
-      expect(component.searchResults).toEqual([]);
-      expect(component.showResults).toBe(false);
-      expect(component.isSearching).toBe(false);
     });
   });
 });
