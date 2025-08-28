@@ -12,7 +12,8 @@ import { RolesService } from '../../shared/services/global/roles.service';
       useExisting: forwardRef(() => PrRangeLevelComponent),
       multi: true
     }
-  ]
+  ],
+  standalone: false
 })
 export class PrRangeLevelComponent {
   @Input() size: number = 9;
@@ -22,6 +23,7 @@ export class PrRangeLevelComponent {
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
   @Output() selectOptionEvent = new EventEmitter<any>();
+
   hoverData = {
     show: false,
     object: {},

@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterByAttrWithValue'
+    name: 'filterByAttrWithValue',
+    standalone: false
 })
 export class FilterByAttrWithValuePipe implements PipeTransform {
   transform(list, attr, value) {

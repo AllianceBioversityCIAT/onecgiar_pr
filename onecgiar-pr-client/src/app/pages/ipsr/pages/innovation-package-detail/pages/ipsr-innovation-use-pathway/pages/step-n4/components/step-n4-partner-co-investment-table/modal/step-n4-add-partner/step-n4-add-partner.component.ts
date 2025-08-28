@@ -5,9 +5,10 @@ import { InstitutionsService } from '../../../../../../../../../../../../shared/
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n4-add-partner',
-  templateUrl: './step-n4-add-partner.component.html',
-  styleUrls: ['./step-n4-add-partner.component.scss']
+    selector: 'app-step-n4-add-partner',
+    templateUrl: './step-n4-add-partner.component.html',
+    styleUrls: ['./step-n4-add-partner.component.scss'],
+    standalone: false
 })
 export class StepN4AddPartnerComponent {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();

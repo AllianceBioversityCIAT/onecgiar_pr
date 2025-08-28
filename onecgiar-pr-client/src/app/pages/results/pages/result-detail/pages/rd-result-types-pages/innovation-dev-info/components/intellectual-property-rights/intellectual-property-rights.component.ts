@@ -4,9 +4,10 @@ import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmen
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
-  selector: 'app-intellectual-property-rights',
-  templateUrl: './intellectual-property-rights.component.html',
-  styleUrls: ['./intellectual-property-rights.component.scss']
+    selector: 'app-intellectual-property-rights',
+    templateUrl: './intellectual-property-rights.component.html',
+    styleUrls: ['./intellectual-property-rights.component.scss'],
+    standalone: false
 })
 export class IntellectualPropertyRightsComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();

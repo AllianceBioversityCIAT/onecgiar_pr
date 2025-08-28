@@ -4,9 +4,10 @@ import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n1-geoscope',
-  templateUrl: './step-n1-geoscope.component.html',
-  styleUrls: ['./step-n1-geoscope.component.scss']
+    selector: 'app-step-n1-geoscope',
+    templateUrl: './step-n1-geoscope.component.html',
+    styleUrls: ['./step-n1-geoscope.component.scss'],
+    standalone: false
 })
 export class StepN1GeoscopeComponent {
   @Input() body = new IpsrStep1Body();

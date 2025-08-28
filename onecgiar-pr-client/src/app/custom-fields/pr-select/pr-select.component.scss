@@ -1,17 +1,4 @@
-.field_container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  .inputTitle {
-    font-size: 1.2em;
-    font-weight: 500;
-  }
-
-  .p-fluid {
-    width: 100%;
-  }
-}
+@use '../../../styles/fonts.scss' as fonts;
 
 .flags {
   padding-left: 25px;
@@ -30,32 +17,32 @@
 }
 
 .no-options-text {
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   text-align: center;
   padding-top: 80px;
-  font-size: 1.2em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
 }
 
 .selected {
-  color: var(--pr-color-primary) !important;
+  color: var(--pr-color-primary-300) !important;
 }
 
 .labelGroup {
   font-weight: 600;
   cursor: none;
   pointer-events: none;
-  border-top: 1px solid #adadad;
-  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  border-top: 1px solid var(--pr-color-accents-3);
+  box-shadow: 0px 0px 14px 0px var(--pr-color-neutral-1000);
   box-sizing: border-box;
 }
 
 .select-disable {
-  background-color: rgb(245, 245, 245) !important;
+  background-color: var(--pr-color-accents-1) !important;
   cursor: not-allowed;
 
   .text {
-    color: gray;
+    color: var(--pr-color-accents-5);
   }
 
   .options {
@@ -70,12 +57,12 @@
 
 .pr-field .read-only {
   padding: 8px 10px;
-  box-shadow: 0px 0px 14px 0px #dcdcdc;
+  box-shadow: 0px 0px 14px 0px var(--pr-color-neutral-1000);
   border-radius: 5px;
 }
 
 .field_disabled {
-  border: 1px dashed rgb(216, 216, 216);
+  border: 1px dashed var(--pr-color-neutral-1000);
   padding: 20px;
 }
 

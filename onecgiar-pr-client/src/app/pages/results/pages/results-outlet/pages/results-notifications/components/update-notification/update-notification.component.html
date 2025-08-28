@@ -1,32 +1,36 @@
-@let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name; @let initOfficialCode =
-notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code; @let resultUrl = '/result/result-detail/' +
-notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
+@let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
+@let initOfficialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
+@let resultUrl =
+  '/result/result-detail/' + notification?.obj_result?.result_code + '/general-information?phase=' + notification?.obj_result?.obj_version?.id;
 
 <div
   [ngSwitch]="notification?.obj_notification_level?.notifications_level_id"
   class="update_notification"
-  [ngStyle]="{ 'background-color': !notification?.read ? '#eef0fc' : '', border: !notification?.read ? '1px solid #bac1e5' : '' }">
+  [ngStyle]="{
+    'background-color': !notification?.read ? 'var(--pr-color-primary-25)' : '',
+    border: !notification?.read ? '1px solid var(--pr-color-primary-100)' : ''
+  }">
   <div class="update_notification_header">
     @if (notification?.notification_level === 2) {
-    <div class="update_notification_header_item">
-      <p class="update_notification_header_item_text">
-        {{ initOfficialCode }}
-      </p>
-    </div>
+      <div class="update_notification_header_item">
+        <p class="update_notification_header_item_text">
+          {{ initOfficialCode }}
+        </p>
+      </div>
     } @else {
-    <div class="update_notification_header_announcement">
-      <i class="material-icons-round" style="font-size: 20px; color: #5569dd"> new_releases </i>
-      <p class="update_notification_header_announcement_text">Announcement</p>
-    </div>
+      <div class="update_notification_header_announcement">
+        <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-primary-300)"> new_releases </i>
+        <p class="update_notification_header_announcement_text">Announcement</p>
+      </div>
     }
   </div>
 
-  @if ( notification?.notification_level === 2 ) {
-  <div class="update_notification_read" (click)="this.resultsNotificationSE.readUpdatesNotifications(notification)">
-    <i class="material-icons-outlined" style="font-size: 18px; color: #fff">
-      {{ notification?.read ? 'mail' : 'drafts' }}
-    </i>
-  </div>
+  @if (notification?.notification_level === 2) {
+    <div class="update_notification_read" (click)="this.resultsNotificationSE.readUpdatesNotifications(notification)">
+      <i class="material-icons-outlined" style="font-size: 18px; color: var(--pr-color-white)">
+        {{ notification?.read ? 'mail' : 'drafts' }}
+      </i>
+    </div>
   }
 
   <div *ngSwitchCase="1" class="update_notification_content">
@@ -43,14 +47,18 @@ notification?.obj_result?.result_code + '/general-information?phase=' + notifica
     <div class="update_notification_content_body">
       <p class="update_notification_content_body_text">
         @if (notification?.notification_type === 1 || notification?.notification_type === 2) {
-        <b> {{ emitterName }} has {{ notification?.notification_type === 1 ? 'submitted' : 'unsubmitted' }} the result </b>
-        } @else { The result }
+          <b> {{ emitterName }} has {{ notification?.notification_type === 1 ? 'submitted' : 'unsubmitted' }} the result </b>
+        } @else {
+          The result
+        }
 
-        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+        <a [href]="resultUrl" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
-        @if (notification?.notification_type === 3) { <b> was successfully Quality Assessed. </b> }
+        @if (notification?.notification_type === 3) {
+          <b> was successfully Quality Assessed. </b>
+        }
       </p>
     </div>
 

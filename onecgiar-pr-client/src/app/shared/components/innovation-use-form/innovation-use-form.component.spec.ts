@@ -8,6 +8,8 @@ import {
   Organization,
   Measure
 } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+import { TermPipe } from '../../../internationalization/term.pipe';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('InnovationUseFormComponent', () => {
   let component: InnovationUseFormComponent;
@@ -27,7 +29,8 @@ describe('InnovationUseFormComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [InnovationUseFormComponent],
-      providers: [{ provide: ApiService, useValue: apiServiceMock }]
+      providers: [{ provide: ApiService, useValue: apiServiceMock }],
+      imports: [TermPipe, HttpClientTestingModule]
     }).compileComponents();
   });
 

@@ -1,37 +1,48 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.changeResultTypeModal"
-  [draggable]="false" [modal]="true" [showHeader]="false" [dismissableMask]="false" [closeOnEscape]="false"
-  [style]="{padding: '0px'}" (onHide)="onCloseModal()">
-
+<p-dialog
+  class="support_information"
+  header="Title"
+  [(visible)]="this.api.dataControlSE.changeResultTypeModal"
+  [draggable]="false"
+  [modal]="true"
+  [showHeader]="false"
+  [dismissableMask]="false"
+  [closeOnEscape]="false"
+  [style]="{ padding: '0px' }"
+  (onHide)="onCloseModal()">
   <div class="modal_header">
     <h1 class="modal_title">Change result type</h1>
-    <i class="material-icons-round modal_close_icon" (click)="onCloseModal()"
-      *ngIf="!this.isChagingType && !this.validating">close</i>
+    <i class="material-icons-round modal_close_icon" (click)="onCloseModal()" *ngIf="!this.isChagingType && !this.validating">close</i>
   </div>
 
   <div class="modal_container">
     <div *ngIf="this.changeType.showFilters">
-
-      <app-pr-input [attr.attribute-you-are-targeting]="'expression'" placeholder="Enter text"
-        label="Current result type" type="text" [required]="false" [readOnly]="true"
-        [(ngModel)]="this.body.result_type_name" InlineStyles="box-shadow: none;">
+      <app-pr-input
+        [attr.attribute-you-are-targeting]="'expression'"
+        placeholder="Enter text"
+        label="Current result type"
+        type="text"
+        [required]="false"
+        [readOnly]="true"
+        [(ngModel)]="this.body.result_type_name"
+        InlineStyles="box-shadow: none;">
       </app-pr-input>
 
-      <app-pr-field-header label="Select the type of result you want to change to"
-        [required]="true"></app-pr-field-header>
+      <app-pr-field-header label="Select the type of result you want to change to" [required]="true"></app-pr-field-header>
 
       <div class="result_level_container">
         <div class="result_level_title">Result level</div>
         <div class="filters">
           <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter">
             <ng-container *ngIf="!IOutcome.includes(filter.id)">
-              <div class="filter_title">{{filter.name}}</div>
+              <div class="filter_title">{{ filter.name }}</div>
               <div class="chips">
-                <div class="chip"
-                  [ngClass]="{'chip_selected': !disableOptionValidation(option) && option.selected, 'chip_disabled' : disableOptionValidation(option)}"
-                  [style.background]="!disableOptionValidation(option) && option.selected ? 'var(--pr-color-result-level-'+filter?.id+')' : ''"
-                  (click)="this.resultsListFilterSE.onSelectChip(option);onSelectOneChip(option)"
+                <div
+                  class="chip"
+                  [ngClass]="{ chip_selected: !disableOptionValidation(option) && option.selected, chip_disabled: disableOptionValidation(option) }"
+                  [style.background]="!disableOptionValidation(option) && option.selected ? 'var(--pr-color-result-level-' + filter?.id + ')' : ''"
+                  (click)="this.resultsListFilterSE.onSelectChip(option); onSelectOneChip(option)"
                   *ngFor="let option of filter?.options">
-                  {{option.name}}
+                  {{ option.name }}
                 </div>
               </div>
             </ng-container>
@@ -40,23 +51,30 @@
       </div>
 
       <div *ngIf="selectedResultType && selectedResultType?.id === 6">
-
         <app-alert-status [description]="alertStatusDescKnowledgeProduct"></app-alert-status>
 
-        <div [ngClass]="{'mqap_sync_title': selectedResultType?.id === 6}">
-          <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text"
-            [(ngModel)]="cgSpaceHandle">
-          </app-pr-input>
-          <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="selectedResultType?.id === 6"
-            [ngClass]="{'globalDisabled': validating}">
-            <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
+        <div [ngClass]="{ mqap_sync_title: selectedResultType?.id === 6 }">
+          <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text" [(ngModel)]="cgSpaceHandle"> </app-pr-input>
+          <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="selectedResultType?.id === 6" [ngClass]="{ globalDisabled: validating }">
+            <app-pr-button
+              padding="medium"
+              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
+              icon="sync"
               [rotating]="validating"></app-pr-button>
           </div>
         </div>
 
-        <app-pr-input [disabled]="selectedResultType?.id === 6" [readOnly]="selectedResultType?.id === 6"
-          [isStatic]="true" placeholder="CGSpace link" label="Title" type="text" [description]="CGSpaceDesc()"
-          [showDescription]="false" [required]="false" description="Title retrieved from CGSpace"
+        <app-pr-input
+          [disabled]="selectedResultType?.id === 6"
+          [readOnly]="selectedResultType?.id === 6"
+          [isStatic]="true"
+          placeholder="CGSpace link"
+          label="Title"
+          type="text"
+          [description]="CGSpaceDesc()"
+          [showDescription]="false"
+          [required]="false"
+          description="Title retrieved from CGSpace"
           [(ngModel)]="this.cgSpaceTitle">
         </app-pr-input>
       </div>
@@ -67,14 +85,23 @@
     </div>
 
     <div *ngIf="selectedResultType" class="change_result_buttons">
-      <app-pr-button padding="medium" text="Cancel" colorType="secondary" [verticalMargin]="0"
-        (clickEvent)="onCancelModal()" [ngClass]="{'globalDisabled': this.isChagingType || this.validating}">
+      <app-pr-button
+        padding="medium"
+        text="Cancel"
+        colorType="secondary"
+        [verticalMargin]="0"
+        (clickEvent)="onCancelModal()"
+        [ngClass]="{ globalDisabled: this.isChagingType || this.validating }">
       </app-pr-button>
 
-      <app-pr-button padding="medium" [text]="modalConfirmOrContinueText()" [verticalMargin]="0"
-        (clickEvent)="changeResultType()" [rotating]="this.isChagingType"
+      <app-pr-button
+        padding="medium"
+        [text]="modalConfirmOrContinueText()"
+        [verticalMargin]="0"
+        (clickEvent)="changeResultType()"
+        [rotating]="this.isChagingType"
         [icon]="this.isChagingType ? 'loop' : this.changeType.step === 1 ? 'save' : ''"
-        [ngClass]="{'globalDisabled': isContinueButtonDisabled()}"></app-pr-button>
+        [ngClass]="{ globalDisabled: isContinueButtonDisabled() }"></app-pr-button>
     </div>
   </div>
 </p-dialog>

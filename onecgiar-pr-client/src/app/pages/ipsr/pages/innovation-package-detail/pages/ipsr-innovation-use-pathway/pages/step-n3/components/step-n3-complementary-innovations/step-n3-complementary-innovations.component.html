@@ -1,60 +1,88 @@
-<div class="complementary_innovations" *ngFor="let bodyItem of this.body.result_ip_result_complementary; let i=index">
-    <app-collapsible-container [collapse]="bodyItem.open" (toggleCollapseEvent)="toggleCollapseItem($event, bodyItem)">
-        <div header>
-            <div class="header">
-                <div> <strong>{{i+1}}. </strong> {{bodyItem.obj_result.title}}</div><i
-                    class="material-icons-round green_check"
-                    [ngClass]="{'isValid': this.allFieldsRequired(bodyItem)}">check_circle</i>
-            </div>
+<div class="complementary_innovations" *ngFor="let bodyItem of this.body.result_ip_result_complementary; let i = index">
+  <app-collapsible-container [collapse]="bodyItem.open" (toggleCollapseEvent)="toggleCollapseItem($event, bodyItem)">
+    <div header>
+      <div class="header">
+        <div>
+          <strong>{{ i + 1 }}. </strong> {{ bodyItem.obj_result.title }}
         </div>
-        <div content>
-            <div class="complementary_innovation">
-                <app-pr-field-header [useColon]="false"
-                    [label]="'<strong>Complementary innovation/ enabler/ solution:</strong> '+bodyItem?.obj_result?.title"
-                    [required]="false"></app-pr-field-header>
+        <i class="material-icons-round green_check" [ngClass]="{ isValid: this.allFieldsRequired(bodyItem) }">check_circle</i>
+      </div>
+    </div>
+    <div content>
+      <div class="complementary_innovation">
+        <app-pr-field-header
+          [useColon]="false"
+          [label]="'<strong>Complementary innovation/ enabler/ solution:</strong> ' + bodyItem?.obj_result?.title"
+          [required]="false"></app-pr-field-header>
 
-                <app-pr-field-header label="Innovation Readiness level evidence-based"
-                    [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+        <app-pr-field-header
+          label="Innovation Readiness level evidence-based"
+          [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
 
-                <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.rangesOptions"
-                    optionLabel="name" optionValue="id"
-                    [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
-                <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [required]="rangeLevel1Required" [(ngModel)]="bodyItem.readinees_evidence_link">
-                </app-pr-input>
+        <app-pr-range-level
+          itemTitle="name"
+          itemDescription="definition"
+          [options]="this.rangesOptions"
+          optionLabel="name"
+          optionValue="id"
+          [(ngModel)]="bodyItem.readiness_level_evidence_based"></app-pr-range-level>
+        <app-pr-input
+          label="Evidence link"
+          placeholder="Link goes here..."
+          type="link"
+          [required]="rangeLevel1Required"
+          [(ngModel)]="bodyItem.readinees_evidence_link">
+        </app-pr-input>
 
-                <p-checkbox name="check" [binary]="true" [(ngModel)]="bodyItem.showDetailsOfReadiness" label="I want to provide evidence details."
-                (ngModelChange)="bodyItem.readiness_details_of_evidence = null"></p-checkbox>
+        <app-pr-checkbox
+          name="check"
+          [(ngModel)]="bodyItem.showDetailsOfReadiness"
+          label="I want to provide evidence details."
+          (ngModelChange)="bodyItem.readiness_details_of_evidence = null"></app-pr-checkbox>
 
-                <app-pr-textarea 
-                    *ngIf="bodyItem.showDetailsOfReadiness"
-                    placeholder="Enter text"
-                    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-                    type="text" [required]="false"
-                    [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
+        <app-pr-textarea
+          *ngIf="bodyItem.showDetailsOfReadiness"
+          placeholder="Enter text"
+          label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+          type="text"
+          [required]="false"
+          [(ngModel)]="bodyItem.readiness_details_of_evidence"></app-pr-textarea>
 
-                <div class="fragment_section_divider"></div>
+        <div class="fragment_section_divider"></div>
 
-                <app-pr-field-header label="Innovation use level evidence-based"
-                    [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+        <app-pr-field-header label="Innovation use level evidence-based" [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
 
-                <app-pr-range-level itemTitle="name" itemDescription="definition" [options]="this.innovationUseList"
-                    *ngIf="this.rangesOptions?.length" optionLabel="name" optionValue="id"
-                    [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
+        <app-pr-range-level
+          itemTitle="name"
+          itemDescription="definition"
+          [options]="this.innovationUseList"
+          *ngIf="this.rangesOptions?.length"
+          optionLabel="name"
+          optionValue="id"
+          [(ngModel)]="bodyItem.use_level_evidence_based"></app-pr-range-level>
 
-                <app-pr-input label="Evidence link" placeholder="Link goes here..." type="link"
-                    [required]="rangeLevel2Required" [(ngModel)]="bodyItem.use_evidence_link">
-                </app-pr-input>
+        <app-pr-input
+          label="Evidence link"
+          placeholder="Link goes here..."
+          type="link"
+          [required]="rangeLevel2Required"
+          [(ngModel)]="bodyItem.use_evidence_link">
+        </app-pr-input>
 
-                <p-checkbox name="check" [binary]="true" [(ngModel)]="bodyItem.showDetailsOfUseLevel" label="I want to provide evidence details."
-                (ngModelChange)="bodyItem.use_details_of_evidence = null"></p-checkbox>
+        <app-pr-checkbox
+          name="check"
+          [(ngModel)]="bodyItem.showDetailsOfUseLevel"
+          label="I want to provide evidence details."
+          (ngModelChange)="bodyItem.use_details_of_evidence = null"></app-pr-checkbox>
 
-                <app-pr-textarea 
-                    *ngIf="bodyItem.showDetailsOfUseLevel"
-                    placeholder="Enter text"
-                    label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
-                    type="text" [required]="false" [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
-            </div>
-        </div>
-    </app-collapsible-container>
+        <app-pr-textarea
+          *ngIf="bodyItem.showDetailsOfUseLevel"
+          placeholder="Enter text"
+          label="Please provide details of where evidence can be found within the source link (e.g. page number, slide number, table number)"
+          type="text"
+          [required]="false"
+          [(ngModel)]="bodyItem.use_details_of_evidence"></app-pr-textarea>
+      </div>
+    </div>
+  </app-collapsible-container>
 </div>

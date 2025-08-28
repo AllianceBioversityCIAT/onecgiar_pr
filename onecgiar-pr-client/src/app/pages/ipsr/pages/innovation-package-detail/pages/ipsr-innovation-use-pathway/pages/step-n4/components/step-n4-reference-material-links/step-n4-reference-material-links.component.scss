@@ -1,23 +1,25 @@
+@use '../../../../../../../../../../../styles/fonts.scss' as fonts;
+
 .fields {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 
-    .field {
-        display: grid;
-        grid-template-columns: 50px 1fr 50px;
+  .field {
+    display: grid;
+    grid-template-columns: 50px 1fr 50px;
 
-        .number {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 500;
-            font-size: 1.2em;
-        }
-        .delete{
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      @include fonts.pr-typography('body-1');
     }
+    .delete {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 }

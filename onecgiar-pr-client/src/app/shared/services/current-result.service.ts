@@ -26,6 +26,9 @@ export class CurrentResultService {
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
+        const { result_type_id } = this.dataControlSE.currentResult || {};
+        this.dataControlSE.currentResult.appliesforTOCMWfilter = result_type_id === 1 || result_type_id === 2 || result_type_id === 4;
+
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:

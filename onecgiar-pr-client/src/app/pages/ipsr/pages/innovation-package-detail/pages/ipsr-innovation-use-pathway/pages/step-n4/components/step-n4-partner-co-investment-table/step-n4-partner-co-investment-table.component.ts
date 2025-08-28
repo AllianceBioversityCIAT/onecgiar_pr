@@ -3,9 +3,10 @@ import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
 
 @Component({
-  selector: 'app-step-n4-partner-co-investment-table',
-  templateUrl: './step-n4-partner-co-investment-table.component.html',
-  styleUrls: ['./step-n4-partner-co-investment-table.component.scss']
+    selector: 'app-step-n4-partner-co-investment-table',
+    templateUrl: './step-n4-partner-co-investment-table.component.html',
+    styleUrls: ['./step-n4-partner-co-investment-table.component.scss'],
+    standalone: false
 })
 export class StepN4PartnerCoInvestmentTableComponent {
   @Input() body = new IpsrStep4Body();

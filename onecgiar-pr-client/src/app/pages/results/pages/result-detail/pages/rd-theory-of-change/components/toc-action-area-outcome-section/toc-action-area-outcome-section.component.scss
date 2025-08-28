@@ -1,13 +1,13 @@
 .action_area_item {
-    border: 1px dotted rgb(179, 179, 179);
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 10px;
-    align-items: center;
-    border-radius: 5px;
-    padding: 10px;
+  border: 1px dotted var(--pr-color-accents-3);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  border-radius: 5px;
+  padding: 10px;
 
-    img {
-        width: 50px;
-    }
+  img {
+    width: 50px;
+  }
 }

@@ -3,9 +3,10 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-ipsr',
-  templateUrl: './ipsr.component.html',
-  styleUrls: ['./ipsr.component.scss']
+    selector: 'app-ipsr',
+    templateUrl: './ipsr.component.html',
+    styleUrls: ['./ipsr.component.scss'],
+    standalone: false
 })
 export class IpsrComponent {
   constructor(public api: ApiService, private ipsrDataControlSE: IpsrDataControlService) {

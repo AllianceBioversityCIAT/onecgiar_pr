@@ -1,10 +1,12 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .custom-spinner {
   top: 0;
   left: 0;
   position: absolute;
   height: 100%;
   width: 100%;
-  background-color: #2a2e4556;
+  background-color: rgba(var(--pr-color-secondary-rgb), 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,20 +17,20 @@
     align-items: center;
     flex-direction: column;
     gap: 10px;
-    background-color: rgba(0, 0, 0, 0.24);
+    background-color: rgba(var(--pr-color-black-rgb), 0.24);
     height: min-content;
     padding: 30px;
     border-radius: 10px;
 
     .icon {
-      color: white;
+      color: var(--pr-color-white);
       font-size: 4em;
       transform: scaleX(-1);
     }
 
     .text {
-      color: white;
-      font-size: 1.2em;
+      color: var(--pr-color-white);
+      @include fonts.pr-typography('h4');
     }
   }
 }

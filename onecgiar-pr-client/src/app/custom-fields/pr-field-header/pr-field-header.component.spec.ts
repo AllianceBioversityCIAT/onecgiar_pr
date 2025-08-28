@@ -36,7 +36,7 @@ describe('PrFieldHeaderComponent', () => {
   it('should return description label when showDescriptionLabel is true and rolesSE.readOnly is false', () => {
     component.showDescriptionLabel = true;
     component.rolesSE.readOnly = false;
-    expect(component.descriptionLabel).toBe('<strong class="description_header">Description:</strong>');
+    expect(component.descriptionLabel).toBe('<strong class="mr-5 font-weight-600 text-black">Description:</strong>');
   });
 
   it('should return empty string for description label when showDescriptionLabel is false', () => {

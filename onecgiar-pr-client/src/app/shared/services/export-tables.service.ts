@@ -396,13 +396,8 @@ export class ExportTablesService {
           actual_target_achieved: 'Not provided',
           achieved_status: 'No',
           reporting_status: 'Editing',
-
-          ...(isT1R
-            ? {}
-            : {
-                indicator_achieved_narrative: 'Not provided',
-                indicator_supporting_results: 'Not provided'
-              })
+          indicator_achieved_narrative: 'Not provided',
+          indicator_supporting_results: 'Not provided'
         });
       }
     });

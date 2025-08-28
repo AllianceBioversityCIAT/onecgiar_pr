@@ -58,13 +58,11 @@
         </td>
         <td [style.width.px]="120">
           <div class="text" *ngIf="!phase.isNew"> {{phase?.start_date | date: 'YYYY-MM-dd'}}</div>
-          <p-calendar [touchUI]="false" placeholder="Start date" *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts"
-            dateFormat="yy-mm-dd"></p-calendar>
+            <p-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.start_date_ts" dateFormat="yy-mm-dd" placeholder="Start date" />
         </td>
         <td [style.width.px]="120">
           <div class="text" *ngIf="!phase.isNew">{{phase?.end_date| date: 'YYYY-MM-dd' }}</div>
-          <p-calendar [touchUI]="false" placeholder="End date" *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts"
-            dateFormat="yy-mm-dd"></p-calendar>
+            <p-datepicker *ngIf="phase.isNew" [(ngModel)]="phase.end_date_ts" dateFormat="yy-mm-dd" placeholder="End date" />
         </td>
         <td [style.width.px]="90">
           <div class="text" *ngIf="!phase.editing" style="display: flex; justify-content: center;">
@@ -122,7 +120,12 @@
 <div class="center_flex_100">
   <div class="add_new_phase_button" [ngClass]="{'disabled': getFeedback()}">
     <div class="feedback" *ngIf="getFeedback()">{{getFeedback()}}</div>
-    <div class="button" (click)="getFeedback()?'':addNewPhase()">Add new phase</div>
+    <app-pr-button text="Add new phase" 
+    (click)="getFeedback()?'':addNewPhase()" 
+    padding="medium" 
+    [ngClass]="{'disabled': getFeedback()}"
+    [disabled]="getFeedback() ? true : false"
+    [verticalMargin]="5"></app-pr-button>
   </div>
 </div>
 

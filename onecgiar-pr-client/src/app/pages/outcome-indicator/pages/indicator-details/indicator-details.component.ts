@@ -15,23 +15,22 @@ import { DetailsTableComponent } from './components/details-table/details-table.
 import { IndicatorResultsModalComponent } from './components/indicator-results-modal/indicator-results-modal.component';
 
 @Component({
-  selector: 'app-indicator-details',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    CustomFieldsModule,
-    InputNumberModule,
-    TableModule,
-    ButtonModule,
-    ToastModule,
-    DetailsTableComponent,
-    IndicatorResultsModalComponent
-  ],
-  providers: [MessageService],
-  templateUrl: './indicator-details.component.html',
-  styleUrls: ['./indicator-details.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-indicator-details',
+    imports: [
+        CommonModule,
+        FormsModule,
+        CustomFieldsModule,
+        InputNumberModule,
+        TableModule,
+        ButtonModule,
+        ToastModule,
+        DetailsTableComponent,
+        IndicatorResultsModalComponent
+    ],
+    providers: [MessageService],
+    templateUrl: './indicator-details.component.html',
+    styleUrls: ['./indicator-details.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IndicatorDetailsComponent implements OnInit, OnDestroy {
   indicatorInfoItems = [

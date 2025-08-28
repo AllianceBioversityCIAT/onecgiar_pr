@@ -1,9 +1,10 @@
 import { Component, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-tor-panel-menu',
-  templateUrl: './tor-panel-menu.component.html',
-  styleUrls: ['./tor-panel-menu.component.scss']
+    selector: 'app-tor-panel-menu',
+    templateUrl: './tor-panel-menu.component.html',
+    styleUrls: ['./tor-panel-menu.component.scss'],
+    standalone: false
 })
 export class TorPanelMenuComponent {
   @Input() options: any;

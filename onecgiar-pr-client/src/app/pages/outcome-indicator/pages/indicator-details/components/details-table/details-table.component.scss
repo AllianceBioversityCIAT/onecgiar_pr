@@ -1,9 +1,11 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .noDataText {
   text-align: center;
   padding: 20px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .text-center {
@@ -19,17 +21,17 @@
 
 .not-saved {
   font-weight: 500;
-  color: #fff;
+  color: var(--pr-color-white);
   padding: 0.2rem 0.5rem;
   border-radius: 5px;
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   white-space: nowrap;
 }
 
 .total {
   font-weight: 500;
-  color: #808080;
-  font-size: 12px;
+  color: var(--pr-color-accents-4);
+  @include fonts.pr-typography('body-2');
   margin-top: 1rem;
 }
 

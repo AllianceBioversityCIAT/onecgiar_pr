@@ -3,9 +3,10 @@ import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n1-consensus-and-consultation',
-  templateUrl: './step-n1-consensus-and-consultation.component.html',
-  styleUrls: ['./step-n1-consensus-and-consultation.component.scss']
+    selector: 'app-step-n1-consensus-and-consultation',
+    templateUrl: './step-n1-consensus-and-consultation.component.html',
+    styleUrls: ['./step-n1-consensus-and-consultation.component.scss'],
+    standalone: false
 })
 export class StepN1ConsensusAndConsultationComponent {
   @Input() body = new IpsrStep1Body();

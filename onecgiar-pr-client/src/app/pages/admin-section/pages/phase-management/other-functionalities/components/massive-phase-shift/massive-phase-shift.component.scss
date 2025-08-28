@@ -1,67 +1,66 @@
 .modal_container {
-    padding: 20px 50px 80px 50px;
-    width: 100vw !important;
-    max-width: 60vw !important;
-    min-height: 700px !important;
+  padding: 20px 50px 80px 50px;
+  width: 100vw !important;
+  max-width: 60vw !important;
+  min-height: 700px !important;
 }
 
 ::ng-deep .support_information {
-    #change-phase {
-        display: flex;
+  #change-phase {
+    display: flex;
 
-        .lateral-bar {
-            width: 20px;
-            background-color: var(--pr-color-primary) !important;
-        }
-
-        .content-change-phase {
-            padding-top: 2rem;
-            min-height: 50px;
-            width: 700px;
-
-
-            .info-phase-change {
-                position: relative;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-bottom: 1.25rem;
-
-                .icon-change {
-                    width: 30%;
-                    position: relative;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-
-                .phase-data {
-                    color: var(--pr-color-primary) !important;
-                    width: 35%;
-                }
-
-                .pa-l {
-                    position: relative;
-                    display: flex;
-                    justify-content: flex-end;
-                }
-
-                .pa-r {
-                    position: relative;
-
-                    display: flex;
-                    justify-content: flex-start;
-                }
-            }
-        }
+    .lateral-bar {
+      width: 20px;
+      background-color: var(--pr-color-primary-300) !important;
     }
+
+    .content-change-phase {
+      padding-top: 2rem;
+      min-height: 50px;
+      width: 700px;
+
+      .info-phase-change {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1.25rem;
+
+        .icon-change {
+          width: 30%;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .phase-data {
+          color: var(--pr-color-primary-300) !important;
+          width: 35%;
+        }
+
+        .pa-l {
+          position: relative;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .pa-r {
+          position: relative;
+
+          display: flex;
+          justify-content: flex-start;
+        }
+      }
+    }
+  }
 }
 
 .buttons {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    margin-top: 0px;
-    padding-bottom: 10px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0px;
+  padding-bottom: 10px;
 }

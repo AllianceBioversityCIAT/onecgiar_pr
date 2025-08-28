@@ -1,14 +1,17 @@
+@use '../../styles/fonts.scss' as fonts;
+
 .pr_description {
-  font-size: 1em;
-  color: var(--pr-color-medium);
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-4);
   margin-bottom: 5px;
 }
 
 .pr_label {
   margin-top: 20px;
   margin-bottom: 7px;
-  color: black;
+  color: var(--pr-color-black);
   text-align: left;
+  @include fonts.pr-typography('h4');
 }
 
 .pr_description.readOnly {
@@ -19,8 +22,8 @@
 }
 
 .support_information .p-dialog .p-dialog-content {
-  background: #ffffff;
-  color: #3f3f46;
+  background: var(--pr-color-white);
+  color: var(--pr-color-secondary-400);
   padding: 0px !important;
   border-radius: 5px;
   overflow: hidden;
@@ -30,9 +33,9 @@ input::placeholder,
 .p-dropdown .p-dropdown-label.p-placeholder,
 .p-inputtextarea::placeholder,
 .select_placeholder {
-  color: rgb(194, 194, 194);
+  color: var(--pr-color-accents-3);
   font-weight: 400;
-  font-size: 1rem;
+  @include fonts.pr-typography('body-2');
 }
 
 .input_container {
@@ -45,16 +48,16 @@ input::placeholder,
     padding-top: 5px;
 
     .hint {
-      color: var(--pr-color-medium);
-      font-size: 0.9em;
+      color: var(--pr-color-secondary-100);
+      @include fonts.pr-typography('body-3');
     }
   }
 }
 
 .pr_chip_selected {
-  background-color: var(--pr-color-primary-2);
-  color: var(--pr-color-secondary);
-  font-size: 0.95em;
+  background-color: var(--pr-color-primary-50);
+  color: var(--pr-color-black) !important;
+  @include fonts.pr-typography('body-2');
   padding: 1px 10px;
   border-radius: 10px;
   display: grid;
@@ -65,30 +68,29 @@ input::placeholder,
     align-self: center;
     cursor: pointer;
     font-size: 1.4em;
-    color: rgb(252, 95, 95);
+    color: var(--pr-color-red-200);
   }
 }
 
 .pr_chip_selected.pending {
-  background-color: #ffe7ca !important;
+  background-color: var(--pr-color-orange-100) !important;
 }
 
 .custom_select {
   .field {
     display: flex;
     justify-content: space-between;
-    border: 1px solid #d4d4d8;
+    border: 1px solid var(--pr-color-neutral-1000);
     padding: 8px 10px;
     padding-right: 15px;
     border-radius: 5px;
     align-items: center;
     position: relative;
-    background-color: white;
-    font-size: 14px;
+    background-color: var(--pr-color-white);
+    @include fonts.pr-typography('body-1');
     font-family: 'Poppins', sans-serif !important;
     width: 100%;
     cursor: pointer;
-    // z-index: 2;
 
     .text {
       padding-right: 15px;
@@ -118,11 +120,10 @@ input::placeholder,
     .options {
       transform: scale(0);
       opacity: 0;
-      // pointer-events: none;
       position: absolute;
-      background-color: white;
+      background-color: var(--pr-color-white);
       max-height: 300px;
-      box-shadow: 0px 0px 5px rgb(204, 204, 204);
+      box-shadow: 0px 0px 5px var(--pr-color-neutral-1000);
       width: 100%;
       left: 0;
       bottom: -255px;
@@ -149,13 +150,13 @@ input::placeholder,
           align-items: center;
           justify-content: center;
           height: 180px;
-          color: var(--pr-color-primary);
+          color: var(--pr-color-primary-300);
         }
 
         .option {
           cursor: pointer;
           height: 30px;
-          color: rgb(107, 107, 107);
+          color: var(--pr-color-accents-5);
           text-align: left;
           padding: 0px 10px;
           display: flex;
@@ -177,7 +178,7 @@ input::placeholder,
     }
 
     i {
-      color: #71717a;
+      color: var(--pr-color-secondary-300);
       height: min-content;
     }
   }
@@ -193,10 +194,20 @@ input::placeholder,
       gap: 5px;
     }
   }
+
+  .icon_container {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary-300);
+    width: 43px;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+  }
 }
 
 .disabled {
-  // pointer-events: none;
   p-checkbox {
     opacity: 0.7;
   }
@@ -210,10 +221,6 @@ input::placeholder,
   position: relative;
 
   img {
-    // position: absolute;
-    // left: 0;
-    // top: 50%;
-    // transform: translateY(-50%);
     width: 20px;
   }
 }
@@ -223,31 +230,18 @@ input::placeholder,
 }
 
 .icon_container_active {
-  background-color: gray !important;
+  background-color: var(--pr-color-accents-5) !important;
 }
 
 .icon_dropdown {
   position: relative;
   z-index: 2;
   pointer-events: none;
-  color: white !important;
-}
-
-.custom_select {
-  .icon_container {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary);
-    width: 43px;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
-  }
+  color: var(--pr-color-white) !important;
 }
 
 .select_item_description {
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   font-style: italic;
-  color: gray;
+  color: var(--pr-color-accents-5);
 }

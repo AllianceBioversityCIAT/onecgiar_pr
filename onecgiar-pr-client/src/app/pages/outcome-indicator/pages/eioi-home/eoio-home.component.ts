@@ -14,23 +14,22 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
 import { MessageService } from 'primeng/api';
 
 @Component({
-  selector: 'app-eioi-home',
-  standalone: true,
-  imports: [
-    CommonModule,
-    TableModule,
-    ButtonModule,
-    CustomSpinnerModule,
-    RouterLink,
-    FilterIndicatorBySearchPipe,
-    FormsModule,
-    TooltipModule,
-    CustomFieldsModule
-  ],
-  providers: [MessageService],
-  templateUrl: './eoio-home.component.html',
-  styleUrl: './eoio-home.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-eioi-home',
+    imports: [
+        CommonModule,
+        TableModule,
+        ButtonModule,
+        CustomSpinnerModule,
+        RouterLink,
+        FilterIndicatorBySearchPipe,
+        FormsModule,
+        TooltipModule,
+        CustomFieldsModule
+    ],
+    providers: [MessageService],
+    templateUrl: './eoio-home.component.html',
+    styleUrl: './eoio-home.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EoioHomeComponent implements OnDestroy, OnInit {
   requesting = signal(false);

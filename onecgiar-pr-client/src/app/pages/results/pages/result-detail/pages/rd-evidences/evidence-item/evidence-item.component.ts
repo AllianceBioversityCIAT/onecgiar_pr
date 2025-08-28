@@ -5,20 +5,18 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { animate, state, style, transition, trigger } from '@angular/animations';
 
 @Component({
-  selector: 'app-evidence-item',
-  templateUrl: './evidence-item.component.html',
-  styleUrls: ['./evidence-item.component.scss'],
-  animations: [
-    trigger('fadeInOut', [
-      state(
-        'void',
-        style({
-          opacity: 0
-        })
-      ),
-      transition('void <=> *', [animate('250ms ease-in-out')])
-    ])
-  ]
+    selector: 'app-evidence-item',
+    templateUrl: './evidence-item.component.html',
+    styleUrls: ['./evidence-item.component.scss'],
+    animations: [
+        trigger('fadeInOut', [
+            state('void', style({
+                opacity: 0
+            })),
+            transition('void <=> *', [animate('250ms ease-in-out')])
+        ])
+    ],
+    standalone: false
 })
 export class EvidenceItemComponent {
   @Input() evidence: EvidencesCreateInterface;

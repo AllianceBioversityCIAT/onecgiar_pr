@@ -4,9 +4,10 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 
 @Component({
-  selector: 'app-step-n1-eoi-outcomes',
-  templateUrl: './step-n1-eoi-outcomes.component.html',
-  styleUrls: ['./step-n1-eoi-outcomes.component.scss']
+    selector: 'app-step-n1-eoi-outcomes',
+    templateUrl: './step-n1-eoi-outcomes.component.html',
+    styleUrls: ['./step-n1-eoi-outcomes.component.scss'],
+    standalone: false
 })
 export class StepN1EoiOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();

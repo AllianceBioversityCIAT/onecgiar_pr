@@ -742,12 +742,11 @@ describe('ResultsApiService', () => {
   describe('PATCH_geographicSection', () => {
     it('should call PATCH_geographicSection and return expected data', done => {
       const mockBody = {
-        scope_id: 1,
+        geo_scope_id: 1,
         has_countries: false,
         has_regions: false,
         regions: [],
-        countries: [],
-        geo_scope_id: 2
+        countries: []
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_geographicSection(mockBody).subscribe(response => {
@@ -1458,6 +1457,39 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_AllInitiatives with portfolioId and map response correctly', done => {
+      mockResponse = {
+        response: [
+          {
+            id: 2,
+            official_code: 'DEF',
+            short_name: 'Init2',
+            name: 'Initiative 2'
+          }
+        ]
+      };
+      service.GET_AllInitiatives('p22').subscribe(response => {
+        expect(response).toEqual({
+          response: [
+            {
+              id: 2,
+              initiative_id: 2,
+              full_name: 'DEF - <strong>Init2</strong> - Initiative 2',
+              official_code: 'DEF',
+              short_name: 'Init2',
+              name: 'Initiative 2'
+            }
+          ]
+        });
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/p22`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -3290,6 +3322,23 @@ describe('ResultsApiService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toBeNull;
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_versioningProcessV2', () => {
+    it('should call PATCH_versioningProcessV2 and return expected data', done => {
+      const id = 1;
+      const entityId = 1;
+      service.PATCH_versioningProcessV2(id, entityId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ entityId });
 
       req.flush(mockResponse);
     });

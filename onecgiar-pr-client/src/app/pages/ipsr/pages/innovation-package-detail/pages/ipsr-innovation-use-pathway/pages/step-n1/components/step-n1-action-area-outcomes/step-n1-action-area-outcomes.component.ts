@@ -4,9 +4,10 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n1-action-area-outcomes',
-  templateUrl: './step-n1-action-area-outcomes.component.html',
-  styleUrls: ['./step-n1-action-area-outcomes.component.scss']
+    selector: 'app-step-n1-action-area-outcomes',
+    templateUrl: './step-n1-action-area-outcomes.component.html',
+    styleUrls: ['./step-n1-action-area-outcomes.component.scss'],
+    standalone: false
 })
 export class StepN1ActionAreaOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();

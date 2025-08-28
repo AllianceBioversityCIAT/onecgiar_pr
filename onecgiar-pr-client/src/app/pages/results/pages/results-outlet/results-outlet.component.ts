@@ -3,9 +3,10 @@ import { ResultsNotificationsService } from './pages/results-notifications/resul
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-results-outlet',
-  templateUrl: './results-outlet.component.html',
-  styleUrls: ['./results-outlet.component.scss']
+    selector: 'app-results-outlet',
+    templateUrl: './results-outlet.component.html',
+    styleUrls: ['./results-outlet.component.scss'],
+    standalone: false
 })
 export class ResultsOutletComponent {
   animateBell = true;

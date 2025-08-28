@@ -3,9 +3,10 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n3-assessed-expert-workshop',
-  templateUrl: './step-n3-assessed-expert-workshop.component.html',
-  styleUrls: ['./step-n3-assessed-expert-workshop.component.scss']
+    selector: 'app-step-n3-assessed-expert-workshop',
+    templateUrl: './step-n3-assessed-expert-workshop.component.html',
+    styleUrls: ['./step-n3-assessed-expert-workshop.component.scss'],
+    standalone: false
 })
 export class StepN3AssessedExpertWorkshopComponent implements OnInit {
   @Input() body: any;

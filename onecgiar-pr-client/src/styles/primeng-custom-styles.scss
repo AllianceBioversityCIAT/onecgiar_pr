@@ -1,8 +1,8 @@
 .p-datatable-thead {
   tr {
     th {
-      background-color: var(--pr-color-secondary) !important;
-      color: white !important;
+      background-color: var(--pr-color-secondary-400) !important;
+      color: var(--pr-color-white) !important;
     }
   }
 }
@@ -21,7 +21,12 @@
 }
 
 .p-radiobutton .p-radiobutton-box:not(.p-disabled):not(.p-highlight) {
-  border-color: #d4d4d8 !important;
+  border-color: var(--pr-color-neutral-1000) !important;
+}
+
+.p-radiobutton-icon {
+  width: 6px !important;
+  height: 6px !important;
 }
 
 .p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box.p-focus {
@@ -29,7 +34,7 @@
 }
 
 .p-checkbox .p-checkbox-box:not(.p-disabled):not(.p-highlight) {
-  border-color: #d4d4d8 !important;
+  border-color: var(--pr-color-neutral-1000) !important;
 }
 
 .support_information .p-dialog .p-dialog-content {

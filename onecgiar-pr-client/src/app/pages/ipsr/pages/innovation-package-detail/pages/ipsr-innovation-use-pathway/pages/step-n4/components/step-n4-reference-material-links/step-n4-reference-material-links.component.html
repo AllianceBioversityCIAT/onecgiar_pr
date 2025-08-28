@@ -10,7 +10,7 @@
     <app-pr-input [required]="true" placeholder="Link" [(ngModel)]="item.link"></app-pr-input>
 
     <div class="delete" (click)="deleteItem(i)" *ngIf="!this.rolesSE.readOnly">
-      <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: red; cursor: pointer">delete</i>
+      <i class="clickEvent material-icons-round ymz-lsi-delete-icon" style="color: var(--pr-color-red-300); cursor: pointer">delete</i>
     </div>
   </div>
 </div>

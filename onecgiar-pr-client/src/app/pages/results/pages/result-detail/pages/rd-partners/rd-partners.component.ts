@@ -8,9 +8,10 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
 @Component({
-  selector: 'app-rd-partners',
-  templateUrl: './rd-partners.component.html',
-  styleUrls: ['./rd-partners.component.scss']
+    selector: 'app-rd-partners',
+    templateUrl: './rd-partners.component.html',
+    styleUrls: ['./rd-partners.component.scss'],
+    standalone: false
 })
 export class RdPartnersComponent implements OnInit {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;

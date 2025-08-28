@@ -37,6 +37,7 @@ export class GeneralInterceptorService implements HttpInterceptor {
             if (!notValidateList.some(url => req.url.includes(url))) {
               if (!validateGreenCheckRoute && inResultsModule) {
                 this.greenChecksSE.updateGreenChecks();
+                this.greenChecksSE.getGreenChecks();
               }
               if (inIPSRModule) {
                 this.ipsrCompletenessStatusSE.updateGreenChecks();

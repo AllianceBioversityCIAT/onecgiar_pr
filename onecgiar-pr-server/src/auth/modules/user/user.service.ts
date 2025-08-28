@@ -58,10 +58,11 @@ export class UserService {
     private readonly dataSource: DataSource,
   ) {}
 
-  create(createUserDto: CreateUserDto) {
-    return createUserDto;
-  }
-
+  /**
+   * Create a new user with complete information
+   * @param createUserDto User information
+   * @param token User token
+   */
   async createFull(
     createUserDto: CreateUserDto,
     token: TokenDto,
@@ -101,6 +102,10 @@ export class UserService {
     }
   }
 
+  /**
+   * Validate user input for creating a new user
+   * @param createUserDto User information
+   */
   private async validateUserInput(createUserDto: CreateUserDto): Promise<void> {
     const isCgiarEmail = this.cgiarRegex.test(createUserDto.email);
     if (!createUserDto.is_cgiar && isCgiarEmail) {
@@ -112,6 +117,10 @@ export class UserService {
     }
   }
 
+  /**
+   * Handle CGIAR user creation
+   * @param createUserDto User information
+   */
   private async handleCgiarUser(
     createUserDto: CreateUserDto,
   ): Promise<boolean> {
@@ -1235,5 +1244,32 @@ export class UserService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * Validates the JWT token and checks if the user exists in the database.
+   * @param user The user information extracted from the token.
+   * @returns An object containing the validation result.
+   */
+  async validateToken(user: TokenDto) {
+    if (!user || !user.id || !user.email) {
+      return {
+        status: 401,
+        message: 'Invalid or missing token',
+        response: null,
+      };
+    }
+
+    return {
+      status: 200,
+      message: 'Token is valid',
+      response: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        is_valid: true,
+      },
+    };
   }
 }

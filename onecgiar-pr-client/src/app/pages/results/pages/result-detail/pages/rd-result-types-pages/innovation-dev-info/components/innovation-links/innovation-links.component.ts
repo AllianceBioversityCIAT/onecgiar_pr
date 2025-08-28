@@ -4,9 +4,10 @@ import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentLinks } from '../../model/InnovationDevelopmentLinks.model';
 
 @Component({
-  selector: 'app-innovation-links',
-  templateUrl: './innovation-links.component.html',
-  styleUrls: ['./innovation-links.component.scss']
+    selector: 'app-innovation-links',
+    templateUrl: './innovation-links.component.html',
+    styleUrls: ['./innovation-links.component.scss'],
+    standalone: false
 })
 export class InnovationLinksComponent {
   @Input() body = new InnovationDevInfoBody();

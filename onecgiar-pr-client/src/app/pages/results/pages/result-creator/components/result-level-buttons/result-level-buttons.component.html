@@ -1,4 +1,4 @@
-<div class="segment_title segment_title_margin">What do you want to report?</div>
+<div class="pr-h4 segment_title_margin">What do you want to report?</div>
 
 <app-alert-status
   description="Impact/Action Area Outcome level reporting has been temporarily disabled. Please contact your Science Group
@@ -7,18 +7,15 @@
   <div class="segmet_title">Impact/Action Area level</div>
   <div class="all_results_level_Container">
     <a
-      [pTooltip]="alertList[i]"
-      tooltipStyleClass="tooltip-w-500"
-      tooltipPosition="top"
       class="resultLevel shadow-1"
-      style="background-color: #fafafa"
-      [ngClass]="{ selected: resultLevel?.selected, local_disable: true }"
+      [ngClass]="{ selected: resultLevel?.selected }"
       [hidden]="i >= 2"
-      *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index">
-      <div class="name" [style.background]="'#666'">
+      *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index"
+      (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
+      <div class="name" [style.background]="'var(--pr-color-result-level-' + resultLevel?.id + ')'">
         {{ resultLevel.name }}
       </div>
-      <div class="description" style="color: #888">{{ resultLevel.description }}</div>
+      <div class="description">{{ resultLevel.description }}</div>
     </a>
   </div>
 </div>
@@ -32,7 +29,7 @@
       [hidden]="i < 2"
       *ngFor="let resultLevel of this.resultLevelSE.resultLevelList; let i = index"
       (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
-      <div class="name" [style.background]="'var(--pr-color-result-level-' + resultLevel?.id + ')'">
+      <div class="name pr-h3" [style.background]="'var(--pr-color-result-level-' + resultLevel?.id + ')'">
         {{ this.currentResultType === 'OneCGIAR Platform' ? 'Platform' : 'Initiative' }} {{ resultLevel.name }}
       </div>
       <div class="description">{{ resultLevel.description }}</div>
@@ -41,9 +38,3 @@
 </div>
 
 <br />
-
-<ng-template #tooltipContent>
-  <div class="flex align-items-center">
-    <span> <b>PrimeNG</b> rocks! </span>
-  </div>
-</ng-template>

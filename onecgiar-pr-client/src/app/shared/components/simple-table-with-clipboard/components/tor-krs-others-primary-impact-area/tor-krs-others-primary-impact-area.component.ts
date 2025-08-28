@@ -2,9 +2,10 @@ import { Component, Input } from '@angular/core';
 import { TypeOneReportService } from '../../../../../pages/type-one-report/type-one-report.service';
 
 @Component({
-  selector: 'app-tor-krs-others-primary-impact-area',
-  templateUrl: './tor-krs-others-primary-impact-area.component.html',
-  styleUrls: ['./tor-krs-others-primary-impact-area.component.scss']
+    selector: 'app-tor-krs-others-primary-impact-area',
+    templateUrl: './tor-krs-others-primary-impact-area.component.html',
+    styleUrls: ['./tor-krs-others-primary-impact-area.component.scss'],
+    standalone: false
 })
 export class TorKrsOthersPrimaryImpactAreaComponent {
   constructor(public typeOneReportSE: TypeOneReportService) {}

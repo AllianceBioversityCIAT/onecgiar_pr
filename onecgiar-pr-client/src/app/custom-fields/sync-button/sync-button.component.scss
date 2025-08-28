@@ -1,21 +1,21 @@
 .fixed_button {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    margin-right: 250px;
-    margin-bottom: 50px;
-    z-index: 100;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  margin-right: 250px;
+  margin-bottom: 50px;
+  z-index: 100;
 
-    &:hover {
-        .fields-feedback-list {
-            opacity: 1 !important;
-            transform: translateY(-100%) scale(1) !important;
-            background-color: #7385eee8;
-            color: white;
+  &:hover {
+    .fields-feedback-list {
+      opacity: 1 !important;
+      transform: translateY(-100%) scale(1) !important;
+      background-color: rgba(var(--pr-color-primary-rgb), 0.91);
+      color: var(--pr-color-white);
 
-            .status {
-                background-color: rgb(255, 74, 74) !important;
-            }
-        }
+      .status {
+        background-color: var(--pr-color-red-200) !important;
+      }
     }
+  }
 }

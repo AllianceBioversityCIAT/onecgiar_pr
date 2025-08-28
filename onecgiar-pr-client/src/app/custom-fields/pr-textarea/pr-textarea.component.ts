@@ -13,7 +13,8 @@ import { DataControlService } from '../../shared/services/data-control.service';
       useExisting: forwardRef(() => PrTextareaComponent),
       multi: true
     }
-  ]
+  ],
+  standalone: false
 })
 export class PrTextareaComponent implements ControlValueAccessor {
   @Input() placeholder: string;
@@ -30,8 +31,12 @@ export class PrTextareaComponent implements ControlValueAccessor {
   private _value: string;
   private beforeValue: string;
   public wordCount: number = 0;
-  public notProvidedText = "<div class='not_provided_color'>Not provided</div>";
-  constructor(private wordCounterSE: WordCounterService, public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  public notProvidedText = "<div class='text-red-100 italic'>Not provided</div>";
+  constructor(
+    private readonly wordCounterSE: WordCounterService,
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
     if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);

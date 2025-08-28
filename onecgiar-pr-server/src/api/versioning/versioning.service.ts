@@ -40,6 +40,7 @@ import {
 import { DataSource, In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
@@ -96,6 +97,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultTypeRepository: ResultTypeRepository,
     private readonly _resultNonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
@@ -145,7 +147,7 @@ export class VersioningService {
   }
 
   async setQaStatus(data: UpdateQaResults) {
-    if (!data?.results_id || !data?.results_id?.length) {
+    if (!data?.results_id?.length) {
       throw ReturnResponseUtil.format({
         message: `The results_id field is required`,
         response: null,
@@ -329,8 +331,6 @@ export class VersioningService {
 
       return dataResult;
     });
-
-    //await this._resultsImpactAreaIndicatorRepository.replicable(config);
 
     this._logger.log(
       `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
@@ -746,7 +746,11 @@ export class VersioningService {
       await this._versionRepository.$_getAllInovationDevToReplicate(phase);
 
     for (const r of results) {
-      if (this.$_genericValidation(r.result_code, phase.id)) {
+      const validation: boolean = await this.$_genericValidation(
+        r.result_code,
+        phase.id,
+      );
+      if (validation) {
         await this.$_phaseChangeReporting(r, phase, user);
       }
     }

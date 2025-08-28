@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterByText'
+    name: 'filterByText',
+    standalone: false
 })
 export class FilterByTextPipe implements PipeTransform {
   transform(list, word: string) {

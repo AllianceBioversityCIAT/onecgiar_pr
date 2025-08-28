@@ -3,9 +3,10 @@ import { Title } from '@angular/platform-browser';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-detail-section-title',
-  templateUrl: './detail-section-title.component.html',
-  styleUrls: ['./detail-section-title.component.scss']
+    selector: 'app-detail-section-title',
+    templateUrl: './detail-section-title.component.html',
+    styleUrls: ['./detail-section-title.component.scss'],
+    standalone: false
 })
 export class DetailSectionTitleComponent implements OnInit {
   @Input() resultId: string;

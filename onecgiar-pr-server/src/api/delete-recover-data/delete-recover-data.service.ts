@@ -295,7 +295,6 @@ export class DeleteRecoverDataService {
           const elasticOperations = [
             new ElasticOperationDto('DELETE', toUpdateFromElastic.response[0]),
           ];
-
           const elasticJson =
             this._elasticService.getBulkElasticOperationResults(
               process.env.ELASTIC_DOCUMENT_NAME,
@@ -476,6 +475,14 @@ export class DeleteRecoverDataService {
     }
   }
 
+  /**
+   * @param result
+   * @param new_result_level
+   * @param new_result_type
+   * @param user
+   * @returns
+   * @description This method is used to manage the data of a result that has changed its type
+   */
   async manageChangedResultTypeData(
     result: Result,
     new_result_level: ResultLevelEnum,

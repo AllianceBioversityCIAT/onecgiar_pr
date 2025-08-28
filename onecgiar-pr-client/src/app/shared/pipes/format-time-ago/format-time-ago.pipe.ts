@@ -3,7 +3,8 @@ import { formatDistanceToNowStrict, parseISO, subHours, format } from 'date-fns'
 import { enUS } from 'date-fns/locale';
 
 @Pipe({
-  name: 'appFormatTimeAgo'
+    name: 'appFormatTimeAgo',
+    standalone: false
 })
 export class FormatTimeAgoPipe implements PipeTransform {
   transform(value: string | number | Date, serverTimezone: number = 0): string {

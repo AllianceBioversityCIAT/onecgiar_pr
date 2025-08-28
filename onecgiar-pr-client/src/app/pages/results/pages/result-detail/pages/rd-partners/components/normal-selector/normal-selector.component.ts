@@ -7,9 +7,10 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-normal-selector',
-  templateUrl: './normal-selector.component.html',
-  styleUrls: ['./normal-selector.component.scss']
+    selector: 'app-normal-selector',
+    templateUrl: './normal-selector.component.html',
+    styleUrls: ['./normal-selector.component.scss'],
+    standalone: false
 })
 export class NormalSelectorComponent {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;

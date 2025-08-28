@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-sdg-targets',
-  templateUrl: './sdg-targets.component.html',
-  styleUrls: ['./sdg-targets.component.scss']
+    selector: 'app-sdg-targets',
+    templateUrl: './sdg-targets.component.html',
+    styleUrls: ['./sdg-targets.component.scss'],
+    standalone: false
 })
 export class SdgTargetsComponent implements OnInit {
   currentsdgID = null;
@@ -31,6 +32,8 @@ export class SdgTargetsComponent implements OnInit {
           sdg.short_name = sdg.sdg.short_name;
           sdg.sdgList.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
         });
+        this.sdgTargetLis[0].selected = true;
+        this.currentsdgID = this.sdgTargetLis[0].sdgId;
       },
       error: err => {
         console.error(err);

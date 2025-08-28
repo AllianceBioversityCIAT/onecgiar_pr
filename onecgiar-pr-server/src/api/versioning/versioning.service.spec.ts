@@ -71,6 +71,8 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pat
 import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
 import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
+import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
@@ -149,6 +151,8 @@ describe('VersioningService', () => {
         ResultsIpActorRepository,
         ResultsByIpInnovationUseMeasureRepository,
         ResultsIpInstitutionTypeRepository,
+        ResultTypeRepository,
+        ResultsTocResultIndicatorsService,
         MQAPService,
         ClarisaInitiativesRepository,
         {

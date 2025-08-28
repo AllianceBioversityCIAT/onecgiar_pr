@@ -10,7 +10,7 @@ import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
@@ -46,7 +46,7 @@ describe('SubmissionModalComponent', () => {
         DialogModule,
         TooltipModule,
         FormsModule,
-        InputTextareaModule
+        TextareaModule
       ],
       providers: [
         {

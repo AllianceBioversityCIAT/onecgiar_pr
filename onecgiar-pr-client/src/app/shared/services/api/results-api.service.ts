@@ -431,8 +431,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}capdevs-delivery-methods/get/all`);
   }
 
-  GET_AllInitiatives() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives`).pipe(
+  GET_AllInitiatives(portfolioId?: 'p22' | 'p25') {
+    let url = `${environment.apiBaseUrl}clarisa/initiatives`;
+    if (portfolioId) url += `/${portfolioId}`;
+
+    return this.http.get<any>(url).pipe(
       map(resp => {
         //(resp);
         resp?.response.map(initiative => (initiative.initiative_id = initiative?.id));
@@ -1008,7 +1011,7 @@ export class ResultsApiService {
   }
 
   PATCH_versioningProcessV2(id, entityId) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}?version=v2`, {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, {
       entityId
     });
   }
@@ -1182,5 +1185,13 @@ export class ResultsApiService {
     last_name: string;
   }) {
     return this.http.patch<any>(`${environment.apiBaseUrl}auth/user/update/roles`, body);
+  }
+
+  POST_uploadFile(formData: FormData, headers: HttpHeaders) {
+    return this.http.post<any>(`${environment.fileManagerUrl}api/file-management/prms/upload-file`, formData, { headers });
+  }
+
+  POST_fileMining(formData: FormData, headers: HttpHeaders) {
+    return this.http.post<any>(`${environment.textMiningUrl}prms/text-mining`, formData, { headers });
   }
 }

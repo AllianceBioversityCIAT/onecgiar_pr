@@ -6,9 +6,10 @@ import { ManageInnovationsListService } from '../../services/manage-innovations-
 import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 
 @Component({
-  selector: 'app-innovation-package-creator',
-  templateUrl: './innovation-package-creator.component.html',
-  styleUrls: ['./innovation-package-creator.component.scss']
+    selector: 'app-innovation-package-creator',
+    templateUrl: './innovation-package-creator.component.html',
+    styleUrls: ['./innovation-package-creator.component.scss'],
+    standalone: false
 })
 export class InnovationPackageCreatorComponent implements DoCheck {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();

@@ -6,9 +6,10 @@ import { ApiService } from '../../services/api/api.service';
 declare let gtag: (property: string, value: any, configs: any) => {};
 
 @Component({
-  selector: 'app-external-tools',
-  templateUrl: './external-tools.component.html',
-  styleUrls: ['./external-tools.component.scss']
+    selector: 'app-external-tools',
+    templateUrl: './external-tools.component.html',
+    styleUrls: ['./external-tools.component.scss'],
+    standalone: false
 })
 export class ExternalToolsComponent implements OnInit {
   constructor(

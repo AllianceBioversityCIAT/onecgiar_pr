@@ -1,0 +1,10 @@
+@if (type == 'icon') {
+  <div (click)="openInfoLink()" [pTooltip]="showTooltip ? 'User roles info' : ''" tooltipPosition="bottom" [showDelay]="200">
+    <i class="material-icons-round info_icon">info</i>
+  </div>
+} @else {
+  <div class="info_text" (click)="openInfoLink()">
+    <p class="pr-body-2 m-0 text-secondary-400 font-weight-500">View user roles info</p>
+    <i class="material-icons-round" style="font-size: 14px">arrow_outward</i>
+  </div>
+}

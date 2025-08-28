@@ -97,8 +97,9 @@
 
       @if (addUserForm().email) {
         <br />
-        <div class="form-field" style="margin-bottom: 0px">
-          <div class="field-label">Please select the user role(s):</div>
+        <div class="form-field user-roles-container">
+          <div class="field-label" style="margin-bottom: 0px">Please select the user role(s):</div>
+          <app-user-roles-info-modal type="text"></app-user-roles-info-modal>
         </div>
 
         <div class="assignments-headers">

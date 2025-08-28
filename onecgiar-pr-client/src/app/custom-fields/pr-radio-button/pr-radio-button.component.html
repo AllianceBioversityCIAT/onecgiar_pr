@@ -11,7 +11,7 @@
                 <p-radioButton (click)="onSelect()" [id]="'radio_' + i" name="groupname" [value]="option[optionValue]" [(ngModel)]="value"
                     [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
                 </p-radioButton>
-                <label [for]="'radio_' + i" class="name">{{option[this.optionLabel]}}</label>
+                <label [for]="'radio_' + i" class="name pr-body-2">{{option[this.optionLabel]}}</label>
             </div>
 
             <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">

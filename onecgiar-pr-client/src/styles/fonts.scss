@@ -1,79 +1,149 @@
+@use 'sass:map';
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-html, body {
-    font-family: "Poppins", sans-serif;
-}
-
-.segment_title {
-    font-size: 1.1em;
-    font-weight: 500;
+html,
+body {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
 }
 
 .segment_title_margin {
-    margin-top: 30px;
-    margin-bottom: 10px;
+  margin-top: 30px;
+  margin-bottom: 10px;
 }
 
 .open_route {
-    font-weight: 600;
-    color: var(--pr-color-primary);
-    cursor: pointer;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
 }
 
-.confidenceLevel{
-    font-weight: 600;
-    color: #1991ff;
+$pr-typography: (
+  'h1': (
+    weight: 700,
+    size: 20px,
+    line: normal,
+    letter: 0,
+    case: none
+  ),
+  'h2': (
+    weight: 700,
+    size: 18px,
+    line: normal,
+    letter: 0,
+    case: none
+  ),
+  'h3': (
+    weight: 600,
+    size: 16px,
+    line: normal,
+    letter: 0,
+    case: none
+  ),
+  'h4': (
+    weight: 500,
+    size: 14px,
+    line: normal,
+    letter: 0,
+    case: none
+  ),
+  'body-1': (
+    weight: 400,
+    size: 14px,
+    line: 21px,
+    letter: 0,
+    case: none
+  ),
+  'body-2': (
+    weight: 400,
+    size: 12px,
+    line: 18px,
+    letter: 0,
+    case: none
+  ),
+  'body-3': (
+    weight: 400,
+    size: 10px,
+    line: 15px,
+    letter: 0,
+    case: none
+  ),
+  'body-4': (
+    weight: 400,
+    size: 8px,
+    line: 12px,
+    letter: 0,
+    case: none
+  ),
+  'body-5': (
+    weight: 400,
+    size: 6px,
+    line: 9px,
+    letter: 0,
+    case: none
+  )
+);
+
+@mixin pr-typography($type) {
+  $style: map.get($pr-typography, $type);
+  @if $style {
+    font-family: 'Poppins', sans-serif;
+    font-weight: map.get($style, weight);
+    font-size: map.get($style, size);
+    line-height: map.get($style, line);
+    letter-spacing: map.get($style, letter);
+    text-transform: map.get($style, case);
+  } @else {
+    @warn "Unknown typography type: #{$type}";
+  }
 }
 
-.description_header {
-    font-weight: 600;
-    color: black !important;
-    margin-right: 5px !important;
+@each $type, $style in $pr-typography {
+  .pr-#{$type} {
+    @include pr-typography($type);
+  }
 }
 
-.read-only {
-    color: var(--pr-color-secondary);
+@each $fontStyle in (italic, normal) {
+  .#{$fontStyle} {
+    font-style: $fontStyle;
+  }
 }
 
-.not_provided_color {
-    color: #ec9a9a !important;
-    font-weight: 400;
-    font-style: italic;
+@each $cursor in (pointer, default, help, wait, move, not-allowed, none) {
+  .cursor-#{$cursor} {
+    cursor: $cursor;
+  }
 }
 
-.init-mapped {
-    color: white;
-    font-style: italic;
-    font-size: .8em;
-    background-color: var(--pr-color-primary);
-    padding: 0px 7px;
-    border-radius: 3px;
-}
+// Colors
 
-.no-data-text-format {
-    font-style: italic;
-    color: gray;
-}
+$pr-color-types: ('primary', 'secondary', 'neutral', 'red', 'yellow', 'green', 'blue', 'orange');
 
-.tor-fact-desc {
-    font-style: italic;
-    color: var(--pr-color-info);
-}
+$pr-color-steps: (25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950);
 
-@media only screen and (max-width: 1400px) {
-    html {
-        font-size: 12px;
+@each $color in $pr-color-types {
+  @each $i in $pr-color-steps {
+    .text-#{$color}-#{$i} {
+      color: var(--pr-color-#{$color}-#{$i});
     }
+  }
 }
 
-@media only screen and (min-width: 1400px) {
-    html {
-        font-size: 13px;
-    }
+@for $i from 1 through 8 {
+  .text-accent-#{$i} {
+    color: var(--pr-color-accents-#{$i});
+  }
 }
 
-.tor_sub_title {
-    font-weight: 600;
-    font-size: 1.2em;
-    margin: 5px 0px 10px 0px;
+@each $color in ('black', 'white') {
+  .text-#{$color} {
+    color: var(--pr-color-#{$color});
+  }
+}
+
+@each $i in (100, 200, 300, 400, 500, 600, 700, 800, 900, 950) {
+  .font-weight-#{$i} {
+    font-weight: $i;
+  }
 }

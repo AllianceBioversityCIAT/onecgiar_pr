@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-impact-area-targets',
-  templateUrl: './impact-area-targets.component.html',
-  styleUrls: ['./impact-area-targets.component.scss']
+    selector: 'app-impact-area-targets',
+    templateUrl: './impact-area-targets.component.html',
+    styleUrls: ['./impact-area-targets.component.scss'],
+    standalone: false
 })
 export class ImpactAreaTargetsComponent implements OnInit {
   @Input() body = [];
@@ -18,10 +19,13 @@ export class ImpactAreaTargetsComponent implements OnInit {
     { id: 4, imageRoute: '4', selected: false, color: '#377431', name: 'Climate Adaptation and Mitigation' },
     { id: 5, imageRoute: '5', selected: false, color: '#8ebf3e', name: 'Environmental Health and Biodiversity' }
   ];
+
   constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.GET_AllClarisaImpactAreaIndicators();
+    this.impactAreasData[0].selected = true;
+    this.currentImpactAreaID = this.impactAreasData[0].id;
   }
 
   GET_AllClarisaImpactAreaIndicators() {

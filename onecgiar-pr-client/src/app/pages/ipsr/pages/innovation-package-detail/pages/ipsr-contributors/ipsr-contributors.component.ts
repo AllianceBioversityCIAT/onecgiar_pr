@@ -5,9 +5,10 @@ import { ContributorsBody } from './model/contributorsBody';
 import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-ipsr-contributors',
-  templateUrl: './ipsr-contributors.component.html',
-  styleUrls: ['./ipsr-contributors.component.scss']
+    selector: 'app-ipsr-contributors',
+    templateUrl: './ipsr-contributors.component.html',
+    styleUrls: ['./ipsr-contributors.component.scss'],
+    standalone: false
 })
 export class IpsrContributorsComponent implements OnInit {
   contributorsBody = new ContributorsBody();

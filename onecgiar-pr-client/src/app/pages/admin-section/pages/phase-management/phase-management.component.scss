@@ -7,23 +7,22 @@
 
   .tabs {
     display: flex;
-    border-bottom: 3px solid #556add36;
+    border-bottom: 3px solid rgba(var(--pr-color-primary-rgb), 0.212);
     width: max-content;
 
     .active {
-      background-color: var(--pr-color-primary) !important;
-      color: white !important;
+      background-color: var(--pr-color-primary-300) !important;
+      color: var(--pr-color-white) !important;
 
       &:hover {
-        background-color: #556addea !important;
-
+        background-color: rgba(var(--pr-color-primary-rgb), 0.918) !important;
       }
     }
 
     .tab {
       font-weight: 600;
-      background-color: var(--pr-color-medium-2);
-      color: var(--pr-color-primary);
+      background-color: var(--pr-color-accents-1);
+      color: var(--pr-color-primary-300);
       text-decoration: none;
       padding: 8px 100px;
       display: flex;
@@ -33,8 +32,7 @@
       transition: all ease-in-out 0.2s;
 
       &:hover {
-        background-color: #1b1b1b15;
-
+        background-color: rgba(var(--pr-color-black-rgb), 0.05);
       }
     }
   }
@@ -46,6 +44,6 @@
 }
 
 .pass_steps {
-  background: #5569dd !important;
-  border-color: #5569dd !important;
+  background: var(--pr-color-primary-300) !important;
+  border-color: var(--pr-color-primary-300) !important;
 }

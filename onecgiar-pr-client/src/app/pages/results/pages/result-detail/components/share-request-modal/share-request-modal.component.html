@@ -29,7 +29,7 @@
       label="Select initiative"
       [isStatic]="true"
       optionLabel="full_name"
-      disableOptionsText="<strong class='init-mapped'>Mapped</strong>"
+      disableOptionsText="<strong class='text-white italic pr-body-2 init-mapped font-weight-600'>Mapped</strong>"
       optionValue="initiative_id"
       placeholder="Select initiative"
       [disableOptions]="[{ initiative_id: this.api?.dataControlSE?.currentResult?.submitter_id }]"

@@ -10,7 +10,8 @@ import { ApiService } from '../../services/api/api.service';
 @Component({
   selector: 'app-phase-management-table',
   templateUrl: './phase-management-table.component.html',
-  styleUrls: ['./phase-management-table.component.scss']
+  styleUrls: ['./phase-management-table.component.scss'],
+  standalone: false
 })
 export class PhaseManagementTableComponent implements OnInit {
   @Input() moduleType: ModuleTypeEnum;

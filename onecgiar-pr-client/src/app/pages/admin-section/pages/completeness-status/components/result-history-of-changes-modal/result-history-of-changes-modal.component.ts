@@ -4,9 +4,10 @@ import { ResultHistoryOfChangesModalService } from './result-history-of-changes-
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 
 @Component({
-  selector: 'app-result-history-of-changes-modal',
-  templateUrl: './result-history-of-changes-modal.component.html',
-  styleUrls: ['./result-history-of-changes-modal.component.scss']
+    selector: 'app-result-history-of-changes-modal',
+    templateUrl: './result-history-of-changes-modal.component.html',
+    styleUrls: ['./result-history-of-changes-modal.component.scss'],
+    standalone: false
 })
 export class ResultHistoryOfChangesModalComponent {
   columnOrder = [

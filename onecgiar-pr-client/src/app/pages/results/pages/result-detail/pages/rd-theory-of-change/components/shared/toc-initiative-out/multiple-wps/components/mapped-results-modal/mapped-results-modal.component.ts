@@ -2,9 +2,10 @@ import { Component, Input } from '@angular/core';
 import { MappedResultsModalServiceService } from './mapped-results-modal-service.service';
 
 @Component({
-  selector: 'app-mapped-results-modal',
-  templateUrl: './mapped-results-modal.component.html',
-  styleUrls: ['./mapped-results-modal.component.scss']
+    selector: 'app-mapped-results-modal',
+    templateUrl: './mapped-results-modal.component.html',
+    styleUrls: ['./mapped-results-modal.component.scss'],
+    standalone: false
 })
 export class MappedResultsModalComponent {
   @Input() activeTab?: any = {};

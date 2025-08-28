@@ -76,6 +76,7 @@ export class ResultsTocResultsController {
     );
   }
 
+  @ApiOperation({ summary: 'Get Version Dashboard' })
   @Get('get/version/:resultId/initiative/:initiativeId/resultToc')
   findVersionDashBoard(
     @Param('resultId') resultId: number,

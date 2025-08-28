@@ -3,7 +3,7 @@
 <div class="header_panel" id="sdsdsdsd" *ngIf="!this.dataControlSE.show_qa_full_screen">
   <div class="logo" routerLink="/">
     <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
-    <div class="title">
+    <div class="title pr-h4">
       <div class="second-text">{{ this.internationalizationData.global.platformName }}</div>
     </div>
   </div>
@@ -16,16 +16,16 @@
       </a>
     </div>
 
-    <div class="user_tag">
+    <div class="user_tag pr-body-2">
       <i class="material-icons-round icon">account_circle</i>
       <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
       <div class="admin_tag" *ngIf="this.api?.rolesSE?.isAdmin">Admin</div>
     </div>
 
     <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
-      <div class="title">My Initiatives:</div>
+      <div class="title pr-body-2">My Initiatives:</div>
       <div class="items custom_scroll">
-        <div class="item" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
+        <div class="item pr-body-2" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
           <div class="init">{{ item?.official_code }}</div>
           <div class="role">{{ item?.role }}</div>
         </div>
@@ -33,20 +33,16 @@
     </div>
 
     <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      <i class="material-icons-round" *ngIf="unreadNotifications.length === 0">notifications</i>
-      <i
-        class="material-icons-round animate_bell"
-        pBadge
-        [value]="notificationBadgeLength()"
-        severity="danger"
-        *ngIf="unreadNotifications.length > 0">
-        notifications
-      </i>
+      @if (unreadNotifications.length === 0) {
+        <i class="material-icons-round">notifications</i>
+      } @else {
+        <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
+          <i class="material-icons-round animate_bell"> notifications </i>
+        </p-overlayBadge>
+      }
     </div>
 
-    <div (click)="openInfoLink()">
-      <i class="material-icons-round info_icon">info</i>
-    </div>
+    <app-user-roles-info-modal></app-user-roles-info-modal>
 
     <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
       <i class="material-icons-round info_icon">rocket_launch</i>
@@ -68,7 +64,7 @@
   (closed)="handleClosePopUp()">
   <div class="overlay_panel">
     <div class="overlay_panel_header">
-      <h1 class="overlay_panel_title">Notifications</h1>
+      <h1 class="m-0 pr-h3">Notifications</h1>
     </div>
 
     <div class="overlay_panel_separator" [ngStyle]="{ 'margin-bottom': unreadNotifications.length > 0 && '0' }"></div>

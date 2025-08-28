@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
@@ -13,22 +15,30 @@ p {
   margin: 2rem 0;
   gap: 1rem;
   width: fit-content;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
 
   &:hover {
-    color: #3a4792;
+    color: var(--pr-color-primary-400);
   }
 
   .indicator_header_title {
-    font-size: 16px;
+    @include fonts.pr-typography('body-1');
     font-weight: 600;
     margin: 0;
   }
 }
 
+::ng-deep {
+  .p-button:not(:disabled):hover {
+    background-color: rgba(var(--pr-color-primary-rgb), 0.8) !important;
+    color: var(--pr-color-white) !important;
+    border: none;
+  }
+}
+
 .indicator_title {
-  font-size: 20px;
+  @include fonts.pr-typography('h2');
   font-weight: 600;
   margin: 0;
   text-align: center;
@@ -55,8 +65,8 @@ p {
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.2rem;
-    background-color: #f3f5ff;
-    border: 1px solid #a4afee;
+    background-color: var(--pr-color-primary-25);
+    border: 1px solid var(--pr-color-primary-100);
     border-radius: 5px;
 
     .indicator_info_item_header {
@@ -64,14 +74,14 @@ p {
       justify-content: flex-start;
       align-items: center;
       gap: 1rem;
-      font-size: 16px;
+      @include fonts.pr-typography('body-1');
       font-weight: 500;
     }
 
     .indicator_info_item_value {
-      font-size: 14px;
+      @include fonts.pr-typography('body-1');
       font-weight: 400;
-      color: #808080;
+      color: var(--pr-color-accents-4);
     }
   }
 }
@@ -88,17 +98,17 @@ p {
   right: 0;
   z-index: 1000;
   padding: 8px 1.2rem;
-  color: #fff;
-  background-color: #5569dd;
+  color: var(--pr-color-white);
+  background-color: var(--pr-color-primary-300);
   border-top-right-radius: 10px;
   border-bottom-left-radius: 10px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
-  font-size: 12px;
 }
 
 ::ng-deep .p-button {
-  background-color: var(--pr-color-primary);
-  color: #fff;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   border: none;
   box-shadow: none;
 }
@@ -115,7 +125,7 @@ p {
   margin-right: 7.5vw;
   margin-bottom: 50px;
   z-index: 100;
-  background-color: #fff;
+  background-color: var(--pr-color-white);
   border-radius: 5px;
   padding: 0.5rem;
 }

@@ -10,7 +10,8 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
 @Component({
   selector: 'app-rd-theory-of-change',
   templateUrl: './rd-theory-of-change.component.html',
-  styleUrls: ['./rd-theory-of-change.component.scss']
+  styleUrls: ['./rd-theory-of-change.component.scss'],
+  standalone: false
 })
 export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();

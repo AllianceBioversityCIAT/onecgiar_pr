@@ -1,7 +1,7 @@
 .embedded {
   width: 100%;
   height: calc(100vh - 300px);
-  box-shadow: 0px 0px 11px 5px #0000001a;
+  box-shadow: 0px 0px 11px 5px rgba(var(--pr-color-black-rgb), 0.102);
   border-radius: 8px;
 }
 
@@ -18,9 +18,9 @@
   right: 0;
   display: flex;
   align-items: center;
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   z-index: 4;
-  color: white;
+  color: var(--pr-color-white);
   width: max-content;
   gap: 10px;
   padding: 5px 10px;

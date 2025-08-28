@@ -1,4 +1,4 @@
-import { APP_INITIALIZER, NgModule } from '@angular/core';
+import { NgModule, inject, provideAppInitializer } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -19,6 +19,7 @@ import { ChangePhaseModalModule } from './shared/components/change-phase-modal/c
 import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
+import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
@@ -29,6 +30,10 @@ import { WebsocketService } from './sockets/websocket.service';
 import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { providePrimeNG } from 'primeng/config';
+import { reportingTheme } from './theme/reportingTheme';
+import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -56,11 +61,13 @@ function initializeClarityService(clarityService: ClarityService) {
     FooterModule,
     DialogModule,
     BadgeModule,
+    OverlayBadgeModule,
     SatPopoverModule,
     FormatTimeAgoModule,
     ToastModule,
     TooltipModule,
     PopUpNotificationItemComponent,
+    UserRolesInfoModalComponent,
     SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [
@@ -68,12 +75,19 @@ function initializeClarityService(clarityService: ClarityService) {
     provideHttpClient(withInterceptorsFromDi()),
     MessageService,
     ClarityService,
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initializeClarityService,
-      deps: [ClarityService],
-      multi: true
-    },
+    provideAnimationsAsync(),
+    provideAppInitializer(() => {
+      const initializerFn = initializeClarityService(inject(ClarityService));
+      return initializerFn();
+    }),
+    providePrimeNG({
+      theme: {
+        preset: reportingTheme,
+        options: {
+          darkModeSelector: 'light'
+        }
+      }
+    }),
     WebsocketService
   ]
 })

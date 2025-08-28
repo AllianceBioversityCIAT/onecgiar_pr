@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../..//environments/environment';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { PusherBlocked } from './variables/pusher-blocked-routes';
 import { ApiService } from './api/api.service';
 
 declare const Pusher: any;
@@ -15,7 +13,7 @@ export class PusherService {
   channel: any;
   presenceChannel: any;
 
-  constructor(private http: HttpClient, private router: Router, private api: ApiService) {}
+  constructor(private router: Router, private api: ApiService) {}
 
   beforeRoute = null;
   isTOC = false;
@@ -24,6 +22,7 @@ export class PusherService {
   continueEditing = false;
   firstUser = false;
   secondUser = null;
+
   validaeFirstUserToEdit() {
     if (!this.presenceChannel?.members) return false;
     const { members, myID } = this.presenceChannel?.members || {};
@@ -32,7 +31,7 @@ export class PusherService {
 
     const membersList: any = [];
 
-    Object.keys(members).map(item => {
+    Object.keys(members).forEach(item => {
       const date = new Date(members[item]?.today);
 
       membersList.push({

@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'listFilterByTextAndAttr'
+    name: 'listFilterByTextAndAttr',
+    standalone: false
 })
 export class ListFilterByTextAndAttrPipe implements PipeTransform {
   transform(list: any[], attr: string, word: string): any {

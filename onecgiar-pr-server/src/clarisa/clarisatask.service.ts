@@ -184,6 +184,12 @@ export class ClarisaTaskService {
       },
       async (index: number) => {
         return this.syncControlList(
+          ClarisaEndpoints.INNOVATION_USE_LEVELS,
+          index,
+        );
+      },
+      async (index: number) => {
+        return this.syncControlList(
           ClarisaEndpoints.ACTION_AREA_OUTCOMES,
           index,
         );

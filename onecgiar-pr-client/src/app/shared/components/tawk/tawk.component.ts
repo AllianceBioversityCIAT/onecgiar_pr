@@ -4,9 +4,10 @@ import { ApiService } from '../../services/api/api.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
-  selector: 'app-tawk',
-  templateUrl: './tawk.component.html',
-  styleUrls: ['./tawk.component.scss']
+    selector: 'app-tawk',
+    templateUrl: './tawk.component.html',
+    styleUrls: ['./tawk.component.scss'],
+    standalone: false
 })
 export class TawkComponent implements OnInit {
   @Input() id: string;

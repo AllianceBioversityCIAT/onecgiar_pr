@@ -6,9 +6,10 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-retrieve-modal',
-  templateUrl: './retrieve-modal.component.html',
-  styleUrls: ['./retrieve-modal.component.scss']
+    selector: 'app-retrieve-modal',
+    templateUrl: './retrieve-modal.component.html',
+    styleUrls: ['./retrieve-modal.component.scss'],
+    standalone: false
 })
 export class RetrieveModalComponent implements OnInit {
   showForm = true;
