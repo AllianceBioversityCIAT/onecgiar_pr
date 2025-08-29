@@ -158,4 +158,6 @@
 </p-menu>
 
 <app-results-to-update-modal></app-results-to-update-modal>
-<app-change-phase-modal></app-change-phase-modal>
+@if (this.api.dataControlSE.chagePhaseModal) {
+  <app-change-phase-modal></app-change-phase-modal>
+}

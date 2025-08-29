@@ -47,6 +47,8 @@ import { ResultQaedModule } from './api/result-qaed/result-qaed.module';
 import { AuthMicroserviceService } from './shared/microservices/auth-microservice/auth-microservice.service';
 import { AuthMicroserviceModule } from './shared/microservices/auth-microservice/auth-microservice.module';
 import { AdUsersModule } from './api/ad_users/ad_users.module';
+import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
+import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 
 @Module({
   imports: [
@@ -94,6 +96,7 @@ import { AdUsersModule } from './api/ad_users/ad_users.module';
     ResultQaedModule,
     AuthMicroserviceModule,
     AdUsersModule,
+    InitiativeEntityMapModule,
   ],
   controllers: [AppController],
   providers: [
@@ -114,15 +117,13 @@ import { AdUsersModule } from './api/ad_users/ad_users.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtMiddleware).forRoutes(
-      {
-        path: 'api/',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'type-one-report',
-        method: RequestMethod.ALL,
-      },
-    );
+    consumer
+      .apply(JwtMiddleware, apiVersionMiddleware)
+      .exclude({ path: 'api/platform-report/(.*)', method: RequestMethod.ALL })
+      .forRoutes({ path: 'api/*', method: RequestMethod.ALL });
+
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes({ path: 'type-one-report', method: RequestMethod.ALL });
   }
 }

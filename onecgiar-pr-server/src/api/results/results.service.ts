@@ -66,6 +66,9 @@ import { ResultsCenterRepository } from './results-centers/results-centers.repos
 import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
+import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { In } from 'typeorm';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 @Injectable()
 export class ResultsService {
@@ -110,6 +113,8 @@ export class ResultsService {
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
+    private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
+    private readonly _roleByUserRepository?: RoleByUserRepository,
   ) {}
 
   async createOwnerResult(
@@ -940,12 +945,44 @@ export class ResultsService {
 
   async findAllByRole(userId: number, initiativeCode?: string) {
     try {
-      const result: any[] =
+      let result: any[] =
         await this._customResultRepository.AllResultsByRoleUserAndInitiative(
           userId,
           undefined,
           initiativeCode,
         );
+
+      const entity_init_map = await this._initiativeEntityMapRepository.find({
+        where: { initiativeId: In(result.map((item) => item.submitter_id)) },
+        relations: ['entity_obj'],
+      });
+
+      const userInitiatives = await this._roleByUserRepository.find({
+        where: { user: userId, active: true },
+        relations: ['obj_initiative'],
+      });
+
+      const initiativesPortfolio3 = userInitiatives.filter(
+        (rbu) => rbu.obj_initiative?.portfolio_id === 3,
+      );
+
+      result = result.map((item) => {
+        const entityMaps = entity_init_map.filter(
+          (map) => map.initiativeId === item.submitter_id,
+        );
+        return {
+          ...item,
+          initiative_entity_map: entityMaps.length
+            ? entityMaps.map((entityMap) => ({
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
+            : [],
+          initiative_entity_user: initiativesPortfolio3,
+        };
+      });
 
       if (!result.length) {
         throw {

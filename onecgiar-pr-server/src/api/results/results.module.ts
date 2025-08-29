@@ -78,6 +78,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investm
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
 import { AdUsersModule } from '../ad_users';
+import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -153,6 +154,7 @@ import { AdUsersModule } from '../ad_users';
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
     ResultInitiativeBudgetRepository,
+    InitiativeEntityMapRepository,
   ],
   exports: [ResultRepository, JwtMiddleware],
 })

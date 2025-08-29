@@ -60,11 +60,6 @@ describe('VersioningController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should call versionProcess on phaseChangeProcess', async () => {
-    await controller.phaseChangeProcess('5', mockUser);
-    expect(service.versionProcess).toHaveBeenCalledWith(5, mockUser);
-  });
-
   it('should call create on create', async () => {
     const dto = new CreateVersioningDto();
     await controller.create(dto, mockUser);

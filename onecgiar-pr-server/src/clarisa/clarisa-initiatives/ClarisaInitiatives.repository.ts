@@ -91,15 +91,21 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
     const queryData = `
     select
       	DISTINCT 
-      ci.id,
+        ci.id,
       	ci.official_code,
       	ci.name,
       	ci.short_name,
       	ci.active,
       	ci.action_area_id,
-      	ci.toc_id
+      	ci.toc_id,
+        cp.name as portfolio_name,
+        cp.start_date as portfolio_start_date,
+        cp.end_date as portfolio_end_date,
+        cp.is_active as portfolio_is_active
       from
       	clarisa_initiatives ci
+      left join
+        clarisa_portfolios cp on ci.portfolio_id = cp.id
       where
       	ci.id not in (
       	SELECT

@@ -14,3 +14,22 @@ export class ClarisaInitiativeDto {
   action_area_description: string;
   stages?: ClarisaInitiativeStageDto[];
 }
+
+export interface CgiarEntityInitiativeDto {
+  id: number;
+  code: string;
+  name: string;
+  acronym: string | null;
+  short_name: string;
+  start_date: string;
+  end_date: string;
+  level: number;
+  entity_type: {
+    code: number;
+    name: string;
+  };
+  portfolio?: {
+    code: number;
+    name: string;
+  };
+}

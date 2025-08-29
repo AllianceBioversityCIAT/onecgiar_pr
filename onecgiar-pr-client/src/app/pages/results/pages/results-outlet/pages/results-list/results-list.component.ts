@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
@@ -22,7 +23,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   columnOrder = [
     { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Phase', attr: 'phase_name' },
+    { title: 'Phase - Portfolio', attr: 'phase_name' },
     { title: 'Indicator category', attr: 'result_type' },
     { title: 'Submitter', attr: 'submitter', center: true },
     { title: 'Status', attr: 'full_status_name_html', center: true },
@@ -35,6 +36,13 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       icon: 'pi pi-fw pi-sitemap',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
+      }
+    },
+    {
+      label: 'Update result',
+      icon: 'pi pi-fw pi-clone',
+      command: () => {
+        this.api.dataControlSE.chagePhaseModal = true;
       }
     }
   ];
@@ -101,14 +109,51 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.dataControlSE.myInitiativesList.forEach(item => (item.selected = false));
   }
 
-  onPressAction(result) {
-    this.retrieveModalSE.title = result?.title;
+  onPressAction(result: CurrentResult): void {
+    this.retrieveModalSE.title = result?.title ?? '';
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
+    const canUpdate = this.shouldShowUpdate(result);
+    this.items[1].visible = this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25' ? false : canUpdate;
     this.itemsWithDelete[1].visible =
-      this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
-      this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
+      this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25'
+        ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
+          this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear
+        : canUpdate;
+  }
+
+  private shouldShowUpdate(result: CurrentResult): boolean {
+    const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    const hasInitiatives = initiativeMap.length > 0;
+    const isPastPhase = this.isPastReportingPhase(result);
+
+    if (this.api.rolesSE.isAdmin) {
+      return hasInitiatives && isPastPhase;
+    }
+
+    return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
+  }
+
+  private isPastReportingPhase(result: CurrentResult): boolean {
+    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
+  }
+
+  private isUserIncludedInAnyInitiative(result: CurrentResult): boolean {
+    const mapIds = this.getInitiativeIdsFromMap(result);
+    const userInitiativeIds = this.getUserInitiativeIds(result);
+    return mapIds.some(entityId => userInitiativeIds.includes(entityId));
+  }
+
+  private getInitiativeIdsFromMap(result: CurrentResult): Array<string | number> {
+    const mapArray = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    return mapArray.map((item: any) => item?.entityId).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  private getUserInitiativeIds(result: CurrentResult): Array<string | number> {
+    const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
+    return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
   }
 
   onDownLoadTableAsExcel() {
