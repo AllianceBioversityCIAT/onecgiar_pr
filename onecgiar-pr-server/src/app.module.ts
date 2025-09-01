@@ -119,6 +119,7 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(JwtMiddleware, apiVersionMiddleware)
+      .exclude({ path: 'api/platform-report/(.*)', method: RequestMethod.ALL })
       .forRoutes({ path: 'api/*', method: RequestMethod.ALL });
 
     consumer
