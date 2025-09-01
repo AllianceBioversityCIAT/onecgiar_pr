@@ -1,0 +1,58 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+p {
+  margin: 0;
+}
+
+.upload-area {
+  border: 2px dashed var(--pr-color-primary-200);
+  background-color: var(--pr-color-accents-1);
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 205px;
+  position: relative;
+  place-content: center;
+  justify-items: center;
+  margin-top: 16px;
+}
+
+.upload-area-content-container {
+  border: 1px solid var(--pr-color-neutral-1000);
+  border-radius: 15px;
+  padding: 16px;
+}
+
+.upload-area-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.upload-area.dragging {
+  background-color: var(--pr-color-accents-2);
+}
+
+.upload-icon {
+  font-size: 40px;
+  color: var(--pr-color-primary-200);
+  margin-bottom: 10px;
+}
+
+.upload-text {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 19.2px;
+  color: var(--pr-color-primary-500);
+  margin-bottom: 5px;
+}
+
+.file-size-limit {
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-accents-4);
+  margin-top: 8px;
+}

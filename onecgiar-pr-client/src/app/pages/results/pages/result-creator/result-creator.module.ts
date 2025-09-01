@@ -12,6 +12,7 @@ import { MenuModule } from 'primeng/menu';
 import { RetrieveModalModule } from '../result-detail/components/retrieve-modal/retrieve-modal.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
 import { TooltipModule } from 'primeng/tooltip';
+import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
@@ -23,7 +24,8 @@ import { TooltipModule } from 'primeng/tooltip';
     FormsModule,
     MenuModule,
     RetrieveModalModule,
-    AlertGlobalInfoModule
+    AlertGlobalInfoModule,
+    ResultAiAssistantComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

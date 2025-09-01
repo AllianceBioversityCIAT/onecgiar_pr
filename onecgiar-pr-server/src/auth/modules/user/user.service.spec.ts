@@ -3,7 +3,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { UserRepository } from './repositories/user.repository';
@@ -67,21 +66,6 @@ describe('UserService', () => {
       obj_cgiar_entity_type: { code: 'type1', name: 'Entity Type 1' },
     },
   ];
-
-  const mockCreateUserDto: CreateUserDto = {
-    first_name: 'Test',
-    last_name: 'User',
-    email: 'test@example.com',
-    is_cgiar: false,
-    created_by: 1,
-    last_updated_by: 1,
-    role_assignments: [
-      {
-        entity_id: 1,
-        role_id: 2,
-      },
-    ],
-  };
 
   const mockTokenDto: TokenDto = {
     id: 1,
@@ -238,14 +222,6 @@ describe('UserService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-
-  describe('create', () => {
-    it('should return the user DTO as is', () => {
-      const result = service.create(mockCreateUserDto);
-
-      expect(result).toEqual(mockCreateUserDto);
-    });
   });
 
   describe('createFull', () => {
@@ -730,6 +706,38 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockErrorResponse);
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('validateToken', () => {
+    it('should return 200 and user info if token is valid', async () => {
+      const validUser: TokenDto = {
+        id: 1,
+        email: 'user@example.com',
+        first_name: 'John',
+        last_name: 'Doe',
+      };
+      const result = await service.validateToken(validUser);
+      expect(result).toEqual({
+        status: 200,
+        message: 'Token is valid',
+        response: {
+          id: 1,
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+          is_valid: true,
+        },
+      });
+    });
+
+    it('should return 401 if token is missing or invalid', async () => {
+      const result = await service.validateToken({} as TokenDto);
+      expect(result).toEqual({
+        status: 401,
+        message: 'Invalid or missing token',
+        response: null,
+      });
     });
   });
 });
