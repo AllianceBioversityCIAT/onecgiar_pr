@@ -1,16 +1,16 @@
 .custom_chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 
-    .geoscope {
-        border-radius: 100px;
-        background-color: #E8EBFF;
-        padding: 5px 15px;
-    }
+  .geoscope {
+    border-radius: 100px;
+    background-color: var(--pr-color-primary-50);
+    padding: 5px 15px;
+  }
 }
 
 .geographic_focus_description {
-    margin-top: 20px;
-    margin-bottom: -20px;
+  margin-top: 20px;
+  margin-bottom: -20px;
 }

@@ -6,9 +6,10 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-step-n4-bilateral-investment-table',
-  templateUrl: './step-n4-bilateral-investment-table.component.html',
-  styleUrls: ['./step-n4-bilateral-investment-table.component.scss']
+    selector: 'app-step-n4-bilateral-investment-table',
+    templateUrl: './step-n4-bilateral-investment-table.component.html',
+    styleUrls: ['./step-n4-bilateral-investment-table.component.scss'],
+    standalone: false
 })
 export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();

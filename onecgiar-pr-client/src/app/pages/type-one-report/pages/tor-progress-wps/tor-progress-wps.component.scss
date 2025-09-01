@@ -13,7 +13,7 @@ ul {
   }
 
   .box_container {
-    background-color: #f8f8f8;
+    background-color: var(--pr-color-accents-1);
     padding: 20px 0;
 
     .desc {
@@ -23,7 +23,7 @@ ul {
       justify-content: center;
       flex-direction: column;
       gap: 10px;
-      background-color: #f3f3f3;
+      background-color: var(--pr-color-accents-2);
       border-radius: 10px;
     }
   }

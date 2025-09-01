@@ -14,9 +14,10 @@ interface CoreInnovationSelected {
   selected: boolean;
 }
 @Component({
-  selector: 'app-results-innovation-output-list',
-  templateUrl: './results-innovation-output-list.component.html',
-  styleUrls: ['./results-innovation-output-list.component.scss']
+    selector: 'app-results-innovation-output-list',
+    templateUrl: './results-innovation-output-list.component.html',
+    styleUrls: ['./results-innovation-output-list.component.scss'],
+    standalone: false
 })
 export class ResultsInnovationOutputListComponent implements OnInit, OnDestroy {
   coreInnovationSelected: CoreInnovationSelected;

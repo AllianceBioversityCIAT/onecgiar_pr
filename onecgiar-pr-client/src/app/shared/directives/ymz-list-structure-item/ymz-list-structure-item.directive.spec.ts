@@ -6,6 +6,7 @@ import { By } from '@angular/platform-browser';
 import { HttpClientModule } from '@angular/common/http';
 
 @Component({
+  standalone: false,
   template: '<div class="clickEvent" appYmzListStructureItem (deleteEvent)="onDelete()"></div>'
 })
 class TestComponent {
@@ -44,7 +45,9 @@ describe('YmzListStructureItemDirective', () => {
   });
 
   afterEach(() => {
-    fixture.destroy();
+    if (fixture && typeof fixture.destroy === 'function') {
+      fixture.destroy();
+    }
   });
 
   it('should add class to host element', () => {

@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 h1,
 h2,
 h3,
@@ -11,7 +13,7 @@ p {
 }
 
 .whats-new-page-details_default_text {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
@@ -19,7 +21,7 @@ p {
 
 .whats-new-page-details_callout_container {
   display: flex;
-  background-color: #f1f0ed;
+  background-color: var(--pr-color-accents-2);
   padding: 10px 20px;
   border-radius: 5px;
 }
@@ -30,39 +32,39 @@ p {
 }
 
 .whats-new-page-details_callout_icon {
-  font-size: 20px;
+  @include fonts.pr-typography('h3');
 }
 
 .whats-new-page-details_callout_text {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
 // Heading 1
 
 .whats-new-page-details_heading_1 {
-  font-size: 28px;
+  @include fonts.pr-typography('h1');
   font-weight: 600;
 }
 
 // Heading 2
 
 .whats-new-page-details_heading_2 {
-  font-size: 24px;
+  @include fonts.pr-typography('h2');
   font-weight: 600;
 }
 
 // Heading 3
 
 .whats-new-page-details_heading_3 {
-  font-size: 20px;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
 }
 
 // Paragraph
 
 .whats-new-page-details_paragraph {
-  font-size: 15px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
 }
 
@@ -73,18 +75,18 @@ p {
 .whats-new-page-details_table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #ddd;
+  border: 1px solid var(--pr-color-neutral-1000);
 }
 
 .whats-new-page-details_table th,
 .whats-new-page-details_table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--pr-color-neutral-1000);
   padding: 8px;
   text-align: left;
 }
 
 .whats-new-page-details_table td {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
 }
 
 // To do
@@ -104,10 +106,10 @@ p {
 // Quote
 
 .whats-new-page-details_quote {
-  font-size: 16px;
+  @include fonts.pr-typography('body-1');
   font-weight: 400;
   padding-left: 15px;
-  border-left: 3px solid #000;
+  border-left: 3px solid var(--pr-color-black);
   min-height: 30px;
   display: flex;
   align-items: center;
@@ -116,14 +118,14 @@ p {
 // Divider
 
 .whats-new-page-details_divider {
-  border: 1px solid #dfdfde;
+  border: 1px solid var(--pr-color-neutral-1000);
   margin: 10px 0;
 }
 
 // Code
 
 .whats-new-page-details_code {
-  background: #f1f0ed;
+  background: var(--pr-color-accents-2);
   padding: 30px 20px;
   border-radius: 5px;
   overflow-x: auto;
@@ -132,9 +134,9 @@ p {
 // Caption
 
 .whats-new-page-details_image_caption {
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 400;
-  color: #7d7c78;
+  color: var(--pr-color-accents-4);
 }
 
 // Children container
@@ -159,14 +161,14 @@ p {
   user-select: none;
 
   i {
-    font-size: 14px;
-    color: #666;
+    @include fonts.pr-typography('body-1');
+    color: var(--pr-color-accents-5);
     transition: transform 0.2s ease;
   }
 
   &:hover {
     i {
-      color: #333;
+      color: var(--pr-color-accents-7);
     }
   }
 }
@@ -181,13 +183,13 @@ p {
 
 .whats-new-page-details_child-page {
   cursor: pointer;
-  background-color: #f1f0ed;
+  background-color: var(--pr-color-accents-2);
   padding: 5px 15px;
   width: fit-content;
   border-radius: 5px;
 
   &:hover {
-    background-color: #e0dfdc;
+    background-color: var(--pr-color-neutral-1000);
   }
 }
 
@@ -197,13 +199,13 @@ p {
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #f5f5f5;
+  background-color: var(--pr-color-accents-1);
   position: relative;
 
   .video-player-placeholder {
     width: 100%;
     padding-top: 45%;
-    background-color: #e0e0e0;
+    background-color: var(--pr-color-neutral-1000);
     position: relative;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -215,7 +217,7 @@ p {
       transform: translate(-50%, -50%);
       width: 60px;
       height: 60px;
-      background-color: rgba(255, 255, 255, 0.9);
+      background-color: rgba(var(--pr-color-white-rgb), 0.9);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -223,8 +225,8 @@ p {
       transition: transform 0.3s ease;
 
       i {
-        font-size: 24px;
-        color: #333;
+        font-size: 20px;
+        color: var(--pr-color-accents-7);
       }
     }
   }

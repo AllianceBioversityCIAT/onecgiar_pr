@@ -1,10 +1,12 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .word_counter {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 5px;
-  color: var(--pr-color-medium);
-  font-size: 0.9em;
+  color: var(--pr-color-secondary-100);
+  @include fonts.pr-typography('body-3');
 
   .limitBreaker {
     font-weight: 700;
@@ -16,9 +18,9 @@
 }
 
 .invalid {
-  color: red !important;
+  color: var(--pr-color-red-300) !important;
 }
 
 .warning {
-  color: #000 !important;
+  color: var(--pr-color-black) !important;
 }

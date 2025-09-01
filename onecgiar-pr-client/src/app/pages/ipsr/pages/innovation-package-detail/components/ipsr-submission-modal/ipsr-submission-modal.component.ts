@@ -4,9 +4,10 @@ import { IpsrDataControlService } from '../../../../services/ipsr-data-control.s
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-ipsr-submission-modal',
-  templateUrl: './ipsr-submission-modal.component.html',
-  styleUrls: ['./ipsr-submission-modal.component.scss']
+    selector: 'app-ipsr-submission-modal',
+    templateUrl: './ipsr-submission-modal.component.html',
+    styleUrls: ['./ipsr-submission-modal.component.scss'],
+    standalone: false
 })
 export class IpsrSubmissionModalComponent {
   requesting = false;

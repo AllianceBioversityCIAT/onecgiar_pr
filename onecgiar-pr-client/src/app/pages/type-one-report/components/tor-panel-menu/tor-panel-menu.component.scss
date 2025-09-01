@@ -6,7 +6,7 @@
   padding: 10px 15px;
   height: 100%;
   box-sizing: border-box;
-  background-color: white;
+  background-color: var(--pr-color-white);
   justify-content: space-between;
 
   .back_button {
@@ -17,7 +17,7 @@
 
   .segment {
     .name {
-      color: var(--pr-color-medium);
+      color: var(--pr-color-secondary-100);
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -29,14 +29,14 @@
       gap: 10px;
 
       .section_active {
-        background-color: var(--pr-color-primary-2);
-        color: var(--pr-color-tertiary);
+        background-color: var(--pr-color-primary-50);
+        color: var(--pr-color-primary-950);
         font-weight: 600;
       }
 
       a {
         text-decoration: none;
-        color: var(--pr-color-secondary);
+        color: var(--pr-color-secondary-400);
         font-weight: 500;
         padding: 5px 10px;
         border-radius: 10px;
@@ -56,11 +56,11 @@
           padding: 0px 15px;
 
           .valid {
-            color: #34b734;
+            color: var(--pr-color-green-500);
           }
 
           .invalid {
-            color: #c0c0c0;
+            color: var(--pr-color-accents-3);
           }
         }
 
@@ -72,30 +72,9 @@
         }
 
         &:hover {
-          background-color: #f3f3f3;
+          background-color: var(--pr-color-accents-1);
         }
       }
-    }
-  }
-
-  .submit_button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    scale: 1.2;
-    margin-bottom: 20px;
-    padding: 15px;
-
-    .button_access_information {
-      font-size: 0.8em;
-      text-align: center;
-      color: var(--pr-color-primary);
-      background-color: #556add17;
-      box-shadow: 0px 0px 5px 1px #e0e4f7;
-      padding: 10px;
-      border-radius: 3px;
-      margin-top: 10px;
     }
   }
 }

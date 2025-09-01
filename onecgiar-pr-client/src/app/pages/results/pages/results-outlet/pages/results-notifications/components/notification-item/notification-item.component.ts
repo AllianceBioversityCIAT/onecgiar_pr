@@ -4,9 +4,10 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
-  selector: 'app-notification-item',
-  templateUrl: './notification-item.component.html',
-  styleUrls: ['./notification-item.component.scss']
+    selector: 'app-notification-item',
+    templateUrl: './notification-item.component.html',
+    styleUrls: ['./notification-item.component.scss'],
+    standalone: false
 })
 export class NotificationItemComponent {
   @Input() notification: any;

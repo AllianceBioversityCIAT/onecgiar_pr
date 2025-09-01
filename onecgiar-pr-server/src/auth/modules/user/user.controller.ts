@@ -15,7 +15,10 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
-import { DecodedUser } from '../../../shared/decorators/user-token.decorator';
+import {
+  DecodedUser,
+  UserToken,
+} from '../../../shared/decorators/user-token.decorator';
 import {
   ApiTags,
   ApiHeader,
@@ -40,42 +43,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @UseInterceptors(ResponseInterceptor)
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create basic user',
-    description: 'Creates a new user with basic information',
-  })
-  @ApiBody({
-    type: CreateUserDto,
-    description: 'User information to create',
-    examples: {
-      example1: {
-        summary: 'Basic user example',
-        value: {
-          first_name: 'John',
-          last_name: 'Doe',
-          email: 'john.doe@example.com',
-          is_cgiar: true,
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'User successfully created',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - validation error or missing fields',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Conflict - user with this email already exists',
-  })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
 
   @Post('create')
   @ApiOperation({
@@ -501,5 +468,42 @@ export class UserController {
     @Body() updateDto: UpdateUserDto,
   ) {
     return this.userService.updateUserRoles(updateDto, token);
+  }
+
+  @ApiOperation({
+    summary: 'Validate JWT token',
+    description:
+      'Validates the JWT token sent in the request header and returns basic user info if valid.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token is valid. Returns user info.',
+    schema: {
+      example: {
+        status: 200,
+        message: 'Token is valid',
+        response: {
+          id: 1,
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or missing token',
+    schema: {
+      example: {
+        status: 401,
+        message: 'Invalid or missing token',
+        response: null,
+      },
+    },
+  })
+  @Post('validate-token')
+  async validateToken(@UserToken() user: TokenDto) {
+    return this.userService.validateToken(user);
   }
 }

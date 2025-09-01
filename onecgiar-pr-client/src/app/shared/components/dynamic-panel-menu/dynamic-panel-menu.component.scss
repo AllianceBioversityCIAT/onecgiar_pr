@@ -1,5 +1,7 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .dynamic_panel_menu {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 250px;
   height: calc(100vh - 54px);
   position: sticky;
@@ -14,50 +16,48 @@
     cursor: pointer;
 
     .icon_container {
-      background-color: white;
+      background-color: var(--pr-color-white);
       width: 60px;
       height: 25px;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all ease-in-out .5s;
+      transition: all ease-in-out 0.5s;
 
       i {
-        transition: all .3s ease-in-out;
-        color: var(--pr-color-secondary);
+        transition: all 0.3s ease-in-out;
+        color: var(--pr-color-secondary-400);
       }
     }
-
   }
 
   .section_title {
-    font-size: 1.2em;
+    @include fonts.pr-typography('h4');
     font-weight: 500;
-    color: white;
+    color: var(--pr-color-white);
     display: flex;
     align-items: center;
     justify-content: center;
     height: 85px;
-    background-color: rgba(0, 0, 0, 0.315);
+    background-color: rgba(var(--pr-color-black-rgb), 0.315);
     margin-bottom: 15px;
     overflow: hidden;
     white-space: nowrap;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
     opacity: 1;
-
   }
 
   .options {
     .active {
-      background-color: rgba(0, 0, 0, 0.315);
+      background-color: rgba(var(--pr-color-black-rgb), 0.315);
       position: relative;
 
       &::after {
         content: '';
         width: 5px;
         height: 100%;
-        background-color: white;
+        background-color: var(--pr-color-white);
         position: absolute;
         left: 0;
         top: 0;
@@ -65,7 +65,7 @@
     }
 
     .option {
-      color: white;
+      color: var(--pr-color-white);
       display: flex;
       align-items: center;
       gap: 15px;
@@ -75,14 +75,13 @@
       overflow-x: hidden;
 
       .text {
+        @include fonts.pr-typography('body-2');
         opacity: 1;
-        transition: all .4s ease-in-out;
-
+        transition: all 0.4s ease-in-out;
       }
     }
   }
 }
-
 
 .hidePanel {
   width: 63px !important;
@@ -94,7 +93,6 @@
 
   .option {
     .text {
-
       opacity: 0 !important;
     }
   }

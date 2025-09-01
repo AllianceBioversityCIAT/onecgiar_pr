@@ -1,15 +1,17 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .impact_area_title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-    img {
-        width: 50px;
-    }
+  img {
+    width: 50px;
+  }
 
-    .title {
-        font-size: 1.5em;
-        font-weight: 500;
-        color: var(--pr-color-secondary);
-    }
+  .title {
+    @include fonts.pr-typography('h3');
+    font-weight: 500;
+    color: var(--pr-color-secondary-400);
+  }
 }

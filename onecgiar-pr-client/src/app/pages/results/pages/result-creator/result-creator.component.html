@@ -1,8 +1,13 @@
 <div class="local_container">
-  <a routerLink="/results/results-list">
-    <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false" optionLabel="name"
+  <div routerLink="/results/results-list" style="max-width: fit-content">
+    <app-pr-button
+      text="Back to results"
+      icon="arrow_back"
+      [reverse]="true"
+      [showBackground]="false"
+      optionLabel="name"
       optionValue="code"></app-pr-button>
-  </a>
+  </div>
 
   <!-- Don't delete - Global banner -->
   <!-- <div style="width: 100%;">
@@ -11,53 +16,106 @@
   </div> -->
 
   <div class="local_container section_container">
-    <div class="greeting"
-      [innerHTML]="naratives.greeting(this.api.authSE.localStorageUser?.user_name , this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList), this.api.rolesSE.isAdmin)">
-    </div>
+    <div
+      class="pr-body-2"
+      [innerHTML]="
+        naratives.greeting(
+          this.api.authSE.localStorageUser?.user_name,
+          this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList),
+          this.api.rolesSE.isAdmin
+        )
+      "></div>
     <div class="report_container">
+      <!-- Ai button -->
+      <div style="display: flex; justify-content: flex-end; width: fit-content">
+        <app-pr-button
+          text="Use AI assistant for reporting"
+          icon="auto_awesome"
+          [reverse]="true"
+          (click)="this.createResultManagementService.showModal.set(true)"></app-pr-button>
+      </div>
 
-      <app-pr-select class="segment_title_margin" [group]="true"
-      groupName="name" [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin" label="Report for" [isStatic]="true" optionLabel="full_name"
-        optionValue="initiative_id" placeholder="Select Initiative"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
+      <app-pr-select
+        class="segment_title_margin"
+        [group]="true"
+        groupName="name"
+        [options]="this.api.dataControlSE.myInitiativesList"
+        *ngIf="!this.api.rolesSE.isAdmin"
+        label="Report for"
+        [isStatic]="true"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select Initiative"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
+        (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
-      <app-pr-select class="segment_title_margin" [group]="true"
-      groupName="name" [options]="this.allInitiatives" label="Report for" [isStatic]="true"
-        *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-        placeholder="Select" [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"  (ngModelChange)="onSelectInit()">
+      <app-pr-select
+        class="segment_title_margin"
+        [group]="true"
+        groupName="name"
+        [options]="this.allInitiatives"
+        label="Report for"
+        [isStatic]="true"
+        *ngIf="this.api.rolesSE.isAdmin"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
+        (ngModelChange)="onSelectInit()">
       </app-pr-select>
-
 
       <app-result-level-buttons [currentResultType]="this.currentResultType"></app-result-level-buttons>
 
-      <app-pr-radio-button label="Indicator category" *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
-        [options]="this.resultLevelSE.currentResultTypeList" [isStatic]="true" optionLabel="name" optionValue='id'
-        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id" (ngModelChange)="clean()">
+      <app-pr-radio-button
+        label="Indicator category"
+        *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+        [options]="this.resultLevelSE.currentResultTypeList"
+        [isStatic]="true"
+        optionLabel="name"
+        optionValue="id"
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id"
+        (ngModelChange)="clean()">
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription">
-        </app-alert-status>
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription"> </app-alert-status>
 
-        <div [ngClass]="{'mqap_sync_title': isKnowledgeProduct}">
-          <app-pr-input *ngIf="isKnowledgeProduct" [isStatic]="true" placeholder="Handle..." label="CGSpace link"
-            type="text" [(ngModel)]="this.resultLevelSE.resultBody.handler">
+        <div [ngClass]="{ mqap_sync_title: isKnowledgeProduct }">
+          <app-pr-input
+            *ngIf="isKnowledgeProduct"
+            [isStatic]="true"
+            placeholder="Handle..."
+            label="CGSpace link"
+            type="text"
+            [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
-          <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct"
-          [ngClass]="{'globalDisabled': validating}">
-          <app-pr-button padding="medium" [text]="validating?'Fetching metadata from CGSpace' : 'Sync'" icon="sync"
+          <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct" [ngClass]="{ globalDisabled: validating }">
+            <app-pr-button
+              padding="medium"
+              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
+              icon="sync"
               [rotating]="validating"></app-pr-button>
           </div>
         </div>
 
         <div *ngIf="isKnowledgeProduct && mqapUrlError.status" class="error__link" [innerHTML]="mqapUrlError.message"></div>
 
-        <app-pr-input [disabled]="isKnowledgeProduct" [readOnly]="isKnowledgeProduct" [isStatic]="true"
-          *ngIf="this.resultLevelSE.resultBody.result_type_id" [placeholder]="resultTypeNamePlaceholder+ ''"
-          label="Title" type="text" [maxWords]="30" [required]="resultLevelSE.resultBody.result_type_id != 6"
-          [description]="isKnowledgeProduct ? 'Title retrieved from CGSpace' :'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'"
+        <app-pr-input
+          [disabled]="isKnowledgeProduct"
+          [readOnly]="isKnowledgeProduct"
+          [isStatic]="true"
+          *ngIf="this.resultLevelSE.resultBody.result_type_id"
+          [placeholder]="resultTypeNamePlaceholder + ''"
+          label="Title"
+          type="text"
+          [maxWords]="30"
+          [required]="resultLevelSE.resultBody.result_type_id != 6"
+          [description]="
+            isKnowledgeProduct
+              ? 'Title retrieved from CGSpace'
+              : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
+          "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"
           (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
         </app-pr-input>
@@ -69,9 +127,11 @@
       </div>
     </div>
 
-    <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue">
-    </app-save-button>
-
+    <app-save-button [editable]="true" (clickSave)="onSaveSection()" text="Save and continue"> </app-save-button>
   </div>
 </div>
 <app-retrieve-modal></app-retrieve-modal>
+
+@if (this.createResultManagementService.showModal()) {
+  <app-result-ai-assistant></app-result-ai-assistant>
+}

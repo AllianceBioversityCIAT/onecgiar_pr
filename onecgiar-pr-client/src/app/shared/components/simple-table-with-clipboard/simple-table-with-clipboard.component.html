@@ -1,48 +1,48 @@
-<div class="box" [ngClass]="{'flatFormat': flatFormat}">
-    <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard"
-        tooltipPosition="left">
-        Copy <i class="material-icons-round">
-            content_paste
-        </i>
-    </div>
-    <table #tableOne class="distribution-{{this.distribution}} simple-table-wc">
-        <tr class="table_title">
-            <th [attr.colspan]="header?.length">{{tableTitle || 'Untitled'}}</th>
-        </tr>
-        <tr *ngIf="loadingData">
-            <th [attr.colspan]="header?.length">
-                <div class="loader_info">
-                    Loading data
-                    <p-progressBar mode="indeterminate"></p-progressBar>
-                </div>
-            </th>
-        </tr>
-        <tr *ngIf="distribution == 'normal'">
-            <th *ngFor="let headerItem of header">
-                <div [innerHTML]="headerItem?.name"></div>
-            </th>
-        </tr>
-        <tr *ngFor="let dataItem of data; let i=index">
-            <td *ngFor="let headerItem of header; let j=index">
-                <div *ngIf="!(headerItem.attr=='value' && i == 6 && validateObj(dataItem[headerItem.attr]))"
-                    [innerHTML]="headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency : 'USD' : 'symbol' : '1.0-0' ) : dataItem[headerItem.attr]">
-                </div>
-                <div *ngIf="headerItem.attr=='value' && loadingData && !dataItem[headerItem.attr]">
-                    <p-skeleton width="100%" height="10px"></p-skeleton>
-                    <div style="margin-top: 6px;">
-                        <p-skeleton width="50%" height="10px"></p-skeleton>
-                    </div>
-                </div>
+<div class="box" [ngClass]="{ flatFormat: flatFormat }">
+  <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard" tooltipPosition="left">
+    Copy <i class="material-icons-round"> content_paste </i>
+  </div>
+  <table #tableOne class="distribution-{{ this.distribution }} simple-table-wc">
+    <tr class="table_title">
+      <th [attr.colspan]="header?.length" id="table_title">{{ tableTitle || 'Untitled' }}</th>
+    </tr>
+    <tr *ngIf="loadingData">
+      <th [attr.colspan]="header?.length" id="loading_data">
+        <div class="loader_info">
+          Loading data
+          <p-progressBar mode="indeterminate"></p-progressBar>
+        </div>
+      </th>
+    </tr>
+    <tr *ngIf="distribution == 'normal'">
+      <th *ngFor="let headerItem of header" [id]="headerItem?.name">
+        <div [innerHTML]="headerItem?.name"></div>
+      </th>
+    </tr>
+    <tr *ngFor="let dataItem of data; let i = index">
+      <td *ngFor="let headerItem of header; let j = index">
+        <div
+          *ngIf="!(headerItem.attr == 'value' && i == 6 && validateObj(dataItem[headerItem.attr]))"
+          [innerHTML]="
+            headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency: 'USD' : 'symbol' : '1.0-0') : dataItem[headerItem.attr]
+          "></div>
+        <div *ngIf="headerItem.attr == 'value' && loadingData && !dataItem[headerItem.attr]">
+          <p-skeleton width="100%" height="10px"></p-skeleton>
+          <div style="margin-top: 6px">
+            <p-skeleton width="50%" height="10px"></p-skeleton>
+          </div>
+        </div>
 
-                <app-tor-krs-primary-impact-area-selector [selectOptions]="dataItem[headerItem.attr]"
-                    [result_code]="data[0].id" [flatFormat]="flatFormat"
-                    *ngIf="headerItem.attr=='value' && i == 6 && data[0].id && validateObj(dataItem[headerItem.attr])"></app-tor-krs-primary-impact-area-selector>
-                <!-- 
-                <app-tor-krs-others-primary-impact-area [result_code]="data[0].id"
-                    *ngIf="headerItem.attr=='value' && i == 7 && data[0].id"></app-tor-krs-others-primary-impact-area> -->
-            </td>
-        </tr>
-    </table>
+        <app-tor-krs-primary-impact-area-selector
+          [selectOptions]="dataItem[headerItem.attr]"
+          [result_code]="data[0].id"
+          [flatFormat]="flatFormat"
+          *ngIf="
+            headerItem.attr == 'value' && i == 6 && data[0].id && validateObj(dataItem[headerItem.attr])
+          "></app-tor-krs-primary-impact-area-selector>
+      </td>
+    </tr>
+  </table>
 </div>
 
 <p-toast key="myKey1"></p-toast>

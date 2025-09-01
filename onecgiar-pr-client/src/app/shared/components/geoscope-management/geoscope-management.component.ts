@@ -8,9 +8,10 @@ import { ApiService } from '../../services/api/api.service';
 import { ResultLevelService } from '../../../pages/results/pages/result-creator/services/result-level.service';
 
 @Component({
-  selector: 'app-geoscope-management',
-  templateUrl: './geoscope-management.component.html',
-  styleUrls: ['./geoscope-management.component.scss']
+    selector: 'app-geoscope-management',
+    templateUrl: './geoscope-management.component.html',
+    styleUrls: ['./geoscope-management.component.scss'],
+    standalone: false
 })
 export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [] };

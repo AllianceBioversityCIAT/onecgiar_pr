@@ -1,50 +1,52 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
-    padding: 20px 50px 80px 50px;
-    width: 100vw !important;
-    max-width: 60vw !important;
-    min-height: 700px !important;
+  padding: 20px 50px 80px 50px;
+  width: 100vw !important;
+  max-width: 60vw !important;
+  min-height: 700px !important;
 
-    .information_title {
-        text-align: center;
-        font-size: 1.5em;
-        font-size: 500;
-        margin-bottom: 20px;
+  .information_title {
+    text-align: center;
+    @include fonts.pr-typography('h3');
+    font-weight: 500;
+    margin-bottom: 20px;
+  }
 
+  .description {
+    @include fonts.pr-typography('body-2');
+
+    strong {
+      color: var(--pr-color-primary-300);
     }
-
-    .description {
-        strong {
-            color: var(--pr-color-primary);
-
-        }
-    }
+  }
 }
 
 .modal_title {
-    background-color: var(--pr-color-secondary);
-    width: 100%;
-    font-size: 1.3em;
-    font-weight: 600;
-    color: white;
-    padding: 10px 20px;
-    border-bottom-right-radius: 10px;
+  background-color: var(--pr-color-secondary-400);
+  width: 100%;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  color: var(--pr-color-white);
+  padding: 10px 20px;
+  border-bottom-right-radius: 10px;
 }
 
 .buttons {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    width: 100%;
-    margin-top: 0px;
-    padding-right: 50px;
-    padding-bottom: 10px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  margin-top: 0px;
+  padding-right: 50px;
+  padding-bottom: 10px;
 }
 
 .information {
-    strong {
-        color: var(--pr-color-primary);
-    }
+  strong {
+    color: var(--pr-color-primary-300);
+  }
 }

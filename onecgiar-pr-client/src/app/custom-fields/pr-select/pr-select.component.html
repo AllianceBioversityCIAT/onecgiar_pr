@@ -12,7 +12,7 @@
     class="pr-field"
     [ngClass]="{ mandatory: this.required, complete: (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel) }">
     <div
-      class="read-only"
+      class="text-secondary-400"
       *ngSwitchCase="true"
       [innerHtml]="
         (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel)
@@ -28,7 +28,7 @@
         [ngClass]="{ globalDisabled: fieldDisabled }"
         (focus)="onDropdownOpen()">
         <div
-          class="text"
+          class="text pr-body-2"
           [ngClass]="{
             select_placeholder: !(this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel),
             truncate: this.truncateSelectionText
@@ -45,16 +45,16 @@
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options" style="min-width: 200px" [style]="optionsInlineStyles">
           <div class="search_input_container">
-            <div class="p-input-icon-left p-fluid">
-              <i class="pi pi-search"></i>
-              <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
-            </div>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search" />
+              <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+            </p-iconfield>
           </div>
 
           <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
             <div
               *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText"
-              class="option"
+              class="option pr-body-2"
               [style]="extraInformation ? 'height: 50px;' : ''"
               [ngClass]="{
                 disabled: (option?.disabled || option?.disabledd) === true,

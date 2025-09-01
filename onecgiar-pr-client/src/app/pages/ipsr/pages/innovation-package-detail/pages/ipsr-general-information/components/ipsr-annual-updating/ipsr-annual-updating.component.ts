@@ -2,9 +2,10 @@ import { Component, Input, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-ipsr-annual-updating',
-  templateUrl: './ipsr-annual-updating.component.html',
-  styleUrls: ['./ipsr-annual-updating.component.scss']
+    selector: 'app-ipsr-annual-updating',
+    templateUrl: './ipsr-annual-updating.component.html',
+    styleUrls: ['./ipsr-annual-updating.component.scss'],
+    standalone: false
 })
 export class IpsrAnnualUpdatingComponent implements OnInit {
   @Input() ipsrGeneralInfoBody: any;

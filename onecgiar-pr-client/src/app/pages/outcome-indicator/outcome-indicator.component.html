@@ -10,10 +10,10 @@
       optionLabel="full_name"
       optionValue="official_code"
       placeholder="Select Initiative"
-      labelDescInlineStyles="color: #5569dd"
+      labelDescInlineStyles="color: var(--pr-color-primary-300)"
       [(ngModel)]="this.outcomeIService.initiativeIdFilter"
       inlineStylesContainer="display: flex; flex-direction: row; gap: 10px; align-items: center; width: 100%; margin-top: 20px;"
-      labelDescInlineStyles="color: #5569dd; margin: 0;"
+      labelDescInlineStyles="color: var(--pr-color-primary-300); margin: 0;"
       [ngClass]="{
         globalDisabled: outcomeIService.loadingWPs() || outcomeIService.loading()
       }"

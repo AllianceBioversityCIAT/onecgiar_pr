@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 
 @Component({
-  selector: 'app-result-level-buttons',
-  templateUrl: './result-level-buttons.component.html',
-  styleUrls: ['./result-level-buttons.component.scss']
+    selector: 'app-result-level-buttons',
+    templateUrl: './result-level-buttons.component.html',
+    styleUrls: ['./result-level-buttons.component.scss'],
+    standalone: false
 })
 export class ResultLevelButtonsComponent {
   alertList = [

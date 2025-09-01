@@ -144,6 +144,12 @@
           </td>
         </tr>
       </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr style="height: 200px">
+          <td colspan="9" class="modal_noDataText">There are no results for the selected filters.</td>
+        </tr>
+      </ng-template>
     </p-table>
 
     @if ((this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length) {
@@ -153,10 +159,6 @@
           (this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length
         }}/{{ this.indicatorDetailsService.indicatorResults()?.length }}
       </div>
-    }
-
-    @if (!(this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length) {
-      <div class="modal_noDataText">There are no results for the selected filters.</div>
     }
   </div>
 </p-dialog>

@@ -1,3 +1,5 @@
+@use '../styles/fonts' as fonts;
+
 .filters {
   display: flex;
   gap: 10px;
@@ -6,8 +8,8 @@
 
   .filter {
     .filter_title {
-      color: var(--pr-color-medium);
-      font-size: 0.9em;
+      @include fonts.pr-typography('body-2');
+      color: var(--pr-color-accents-4);
       margin-bottom: 5px;
     }
 
@@ -22,10 +24,10 @@
       }
 
       .chip {
-        background-color: rgb(221, 221, 221);
+        background-color: var(--pr-color-neutral-1000);
         padding: 4px 10px;
         border-radius: 10px;
-        font-size: 0.9em;
+        @include fonts.pr-typography('body-2');
         cursor: pointer;
         white-space: nowrap;
       }
@@ -37,23 +39,23 @@
     width: 50%;
 
     .chip_selected {
-      background-color: var(--pr-color-secondary) !important;
+      background-color: var(--pr-color-secondary-400) !important;
     }
   }
 
   .chip_selected {
-    color: white !important;
+    color: var(--pr-color-white) !important;
   }
 
   .phase_name .chip_selected {
-    background-color: var(--pr-color-secondary) !important;
+    background-color: var(--pr-color-secondary-400) !important;
   }
 }
 
 .result_level_container {
   padding-bottom: 15px;
   margin: 15px 0px;
-  background-color: rgb(245, 245, 245);
+  background-color: var(--pr-color-accents-1);
   overflow: hidden;
   border-radius: 10px;
 
@@ -62,11 +64,11 @@
   }
 
   .result_level_title {
-    background-color: var(--pr-color-secondary);
+    background-color: var(--pr-color-secondary-400);
     padding: 4px 10px;
-    color: white;
+    color: var(--pr-color-white);
     width: max-content;
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-2');
     border-end-end-radius: 10px;
   }
 }

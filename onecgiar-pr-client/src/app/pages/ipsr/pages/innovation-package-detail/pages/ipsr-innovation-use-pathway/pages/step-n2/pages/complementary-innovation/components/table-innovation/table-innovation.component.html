@@ -34,7 +34,7 @@
       <ng-template pTemplate="body" let-result>
         <tr>
           @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actionsSelect" style="min-height: 45px; height: 100%">
+            <td class="actionsSelect" style="min-height: 72px; height: 100%">
               <div class="link_button" (click)="!result.selected ? selectInnovation(result) : cancelInnovationEvent(result)">
                 <i class="material-icons-round" style="font-size: 20px">
                   {{ !result.selected ? 'check_circle' : 'remove_circle_outline' }}
@@ -44,7 +44,7 @@
           }
 
           @for (column of columnOrder; track $index) {
-            <td [class]="column.attr" style="min-height: 45px; height: 100%">
+            <td [class]="column.attr" style="min-height: 72px; height: 100%">
               <a [class]="column.class">
                 {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd') }}
               </a>
@@ -56,7 +56,7 @@
           }
 
           @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
-            <td class="actions" style="min-height: 45px; height: 100%">
+            <td class="actions" style="min-height: 72px; height: 100%">
               <div class="link_button" (click)="openNewWindow(result)">
                 <i class="material-icons-round" style="font-size: 20px">visibility</i>
               </div>

@@ -15,7 +15,7 @@ import { PrMultiSelectComponent } from './pr-multi-select/pr-multi-select.compon
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PrYesOrNotComponent } from './pr-yes-or-not/pr-yes-or-not.component';
 import { PrTextareaComponent } from './pr-textarea/pr-textarea.component';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { PrCheckboxComponent } from './pr-checkbox/pr-checkbox.component';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -34,6 +34,8 @@ import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 
 const fieldComponents = [
@@ -61,6 +63,7 @@ const fieldComponents = [
 @NgModule({
   declarations: [
     ...fieldComponents,
+    CustomValidationTooltipComponent,
     PrFieldValidationsComponent,
     PrWordCounterComponent,
     ListFilterByTextAndAttrPipe,
@@ -76,11 +79,13 @@ const fieldComponents = [
     DropdownModule,
     RadioButtonModule,
     MultiSelectModule,
-    InputTextareaModule,
+    TextareaModule,
     CheckboxModule,
     ScrollingModule,
     InputNumberModule,
-    TooltipModule
+    TooltipModule,
+    IconFieldModule,
+    InputIconModule
   ]
 })
 export class CustomFieldsModule {}

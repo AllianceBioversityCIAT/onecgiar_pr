@@ -6,9 +6,10 @@ import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
 
 @Component({
-  selector: 'app-links-to-results-global',
-  templateUrl: './links-to-results-global.component.html',
-  styleUrls: ['./links-to-results-global.component.scss']
+    selector: 'app-links-to-results-global',
+    templateUrl: './links-to-results-global.component.html',
+    styleUrls: ['./links-to-results-global.component.scss'],
+    standalone: false
 })
 export class LinksToResultsGlobalComponent implements OnInit {
   @Input() isIpsr: boolean = false;

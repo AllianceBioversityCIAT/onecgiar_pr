@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 
 @Component({
-  selector: 'app-innovation-use-info',
-  templateUrl: './innovation-use-info.component.html',
-  styleUrls: ['./innovation-use-info.component.scss']
+    selector: 'app-innovation-use-info',
+    templateUrl: './innovation-use-info.component.html',
+    styleUrls: ['./innovation-use-info.component.scss'],
+    standalone: false
 })
 export class InnovationUseInfoComponent implements OnInit {
   innovationUseInfoBody = new IpsrStep1Body();

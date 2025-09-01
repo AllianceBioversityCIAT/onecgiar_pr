@@ -4,9 +4,10 @@ import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmen
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
-  selector: 'app-gesi-innovation-assessment',
-  templateUrl: './gesi-innovation-assessment.component.html',
-  styleUrls: ['./gesi-innovation-assessment.component.scss']
+    selector: 'app-gesi-innovation-assessment',
+    templateUrl: './gesi-innovation-assessment.component.html',
+    styleUrls: ['./gesi-innovation-assessment.component.scss'],
+    standalone: false
 })
 export class GesiInnovationAssessmentComponent {
   @Input() body = new InnovationDevInfoBody();

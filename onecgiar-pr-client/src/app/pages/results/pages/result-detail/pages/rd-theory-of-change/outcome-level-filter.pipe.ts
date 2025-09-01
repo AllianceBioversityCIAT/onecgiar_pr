@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'outcomeLevelFilter'
+    name: 'outcomeLevelFilter',
+    standalone: false
 })
 export class OutcomeLevelFilterPipe implements PipeTransform {
   transform(list: any[], toc_level_id: number): any {

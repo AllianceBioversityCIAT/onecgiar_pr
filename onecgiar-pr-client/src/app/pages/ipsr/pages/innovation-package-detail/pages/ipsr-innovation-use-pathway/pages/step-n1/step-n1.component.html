@@ -47,7 +47,7 @@
       *ngFor="let expertItem of this.ipsrStep1Body.result_ip_expert_workshop_organized; let i = index"
       appYmzListStructureItem
       (deleteEvent)="deleteExpert(i)"
-      [ngClass]="{ hideElement: !this.expertItem?.result_ip_expert_workshop_organized_id && this.api.rolesSE.readOnly }">
+      [ngClass]="{ hideElement: !expertItem?.result_ip_expert_workshop_organized_id && this.api.rolesSE.readOnly }">
       <div class="infoPersons">
         <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
         <app-pr-input label="Last Name" [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>

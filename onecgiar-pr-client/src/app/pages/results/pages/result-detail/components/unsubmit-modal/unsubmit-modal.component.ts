@@ -5,9 +5,10 @@ import { UnsubmitModalService } from './unsubmit-modal.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 
 @Component({
-  selector: 'app-unsubmit-modal',
-  templateUrl: './unsubmit-modal.component.html',
-  styleUrls: ['./unsubmit-modal.component.scss']
+    selector: 'app-unsubmit-modal',
+    templateUrl: './unsubmit-modal.component.html',
+    styleUrls: ['./unsubmit-modal.component.scss'],
+    standalone: false
 })
 export class UnsubmitModalComponent {
   comment = 'Unsubmitting result to tackle QA feedback';

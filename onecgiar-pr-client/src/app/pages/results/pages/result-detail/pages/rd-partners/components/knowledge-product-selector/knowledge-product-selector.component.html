@@ -26,18 +26,24 @@
     </div>
 
     <div class="partner_item_content">
-      <div class="partner_item_content-line" [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : '#d9d9d9' }"></div>
+      <div
+        class="partner_item_content-line"
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-neutral-1000)' }"></div>
 
-      <div class="partner_item_content_predicted" [ngStyle]="{ 'background-color': partner.is_predicted ? '#2196f3' : '#5569dd' }">
+      <div
+        class="partner_item_content_predicted"
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-primary-300)' }">
         <p class="partner_item_content-predicted-text">
           {{ partner.is_predicted ? 'Predicted by M-QAP AI' : 'Manual match' }}
         </p>
-        <i class="material-icons-round" style="color: white; font-size: 14px">{{ partner.is_predicted ? 'auto_awesome' : 'ads_click' }}</i>
+        <i class="material-icons-round" style="color: var(--pr-color-white); font-size: 14px">{{
+          partner.is_predicted ? 'auto_awesome' : 'ads_click'
+        }}</i>
       </div>
 
       <div style="width: 100%">
         <app-pr-select
-          descInlineStyles="background-color: #fefeff; box-shadow:none; padding: 0; margin-bottom: 8px;"
+          descInlineStyles="background-color: var(--pr-color-white); box-shadow:none; padding: 0; margin-bottom: 8px;"
           labelDescInlineStyles="margin-top: 0;"
           [options]="this.institutionsSE.institutionsWithoutCentersList"
           [required]="true"
@@ -77,7 +83,7 @@
       <div class="chips_container partners_selected">
         <div appFeedbackValidation labelText="Partner role" [isComplete]="partner?.delivery.length > 0"></div>
         <div class="pr_chip_selected" style="background-color: white !important; padding: 0 !important">
-          <div class="type">Partner role: <span style="color: #f00">*</span></div>
+          <div class="type">Partner role: <span style="color: var(--pr-color-red-300)">*</span></div>
 
           <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
             @for (delivery of deliveryOptions; track $index) {

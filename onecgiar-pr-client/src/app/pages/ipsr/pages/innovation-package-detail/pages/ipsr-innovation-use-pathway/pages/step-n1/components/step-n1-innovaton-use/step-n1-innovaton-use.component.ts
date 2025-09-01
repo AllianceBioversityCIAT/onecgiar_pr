@@ -4,9 +4,10 @@ import { Actor, IpsrStep1Body, Measure, Organization } from '../../model/Ipsr-st
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n1-innovaton-use',
-  templateUrl: './step-n1-innovaton-use.component.html',
-  styleUrls: ['./step-n1-innovaton-use.component.scss']
+    selector: 'app-step-n1-innovaton-use',
+    templateUrl: './step-n1-innovaton-use.component.html',
+    styleUrls: ['./step-n1-innovaton-use.component.scss'],
+    standalone: false
 })
 export class StepN1InnovatonUseComponent implements OnInit {
   actorsTypeList = [];

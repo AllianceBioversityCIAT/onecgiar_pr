@@ -2,7 +2,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Pipe({
-  name: 'ipsrToUpdateFilter'
+    name: 'ipsrToUpdateFilter',
+    standalone: false
 })
 export class IpsrToUpdateFilterPipe implements PipeTransform {
   constructor(private api: ApiService) {

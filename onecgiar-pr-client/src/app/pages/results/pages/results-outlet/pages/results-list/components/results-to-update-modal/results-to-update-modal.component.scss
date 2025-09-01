@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;
@@ -6,21 +8,21 @@
 }
 
 .modal_title {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 100%;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px 20px;
   border-bottom-right-radius: 10px;
 }
 
 .description {
-  font-weight: 700;
   text-align: center;
-  color: var(--pr-color-secondary);
+  color: var(--pr-color-secondary-400);
   padding: 20px 20vw;
-  font-size: 1.2rem;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
 }
 
 .buttons {
@@ -33,45 +35,17 @@
   padding-bottom: 10px;
 }
 
-.information {
-  text-align: center;
-  padding: 10px 50px;
-  font-size: 1.3em;
-
-  strong {
-    color: var(--pr-color-primary);
-  }
-}
-
-//modal
-
-.subResults {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.action_buttons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.table {
-  padding-bottom: 100px;
-}
-
 td {
   a {
     display: flex;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
   }
 }
 
 .title {
   a {
     &:nth-child(2) {
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -85,7 +59,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -99,7 +73,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -113,7 +87,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -127,7 +101,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -141,7 +115,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -155,7 +129,7 @@ td {
     align-items: center;
     &:nth-child(2) {
       height: 45px;
-      border-top: 1px solid #eaeaea;
+      border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
     }
@@ -165,18 +139,18 @@ td {
 .noDataText {
   text-align: center;
   padding: 50px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .new_tag {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
   height: 17px;
 }
 
@@ -187,7 +161,7 @@ td {
 }
 
 .link_button {
-  color: white;
+  color: var(--pr-color-white);
   padding: 3px 10px;
   border-radius: 3px;
   cursor: pointer;
@@ -196,12 +170,12 @@ td {
   width: max-content;
 
   &.view {
-    background-color: var(--pr-color-secondary);
+    background-color: var(--pr-color-secondary-400);
     outline: none;
-    color: white;
+    color: var(--pr-color-white);
   }
 
   &.update {
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
   }
 }

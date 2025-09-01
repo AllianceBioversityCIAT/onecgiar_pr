@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { environment } from '../../../../../../environments/environment';
 
 @Component({
-  selector: 'app-google-analytics',
-  templateUrl: './google-analytics.component.html',
-  styleUrls: ['./google-analytics.component.scss']
+    selector: 'app-google-analytics',
+    templateUrl: './google-analytics.component.html',
+    styleUrls: ['./google-analytics.component.scss'],
+    standalone: false
 })
 export class GoogleAnalyticsComponent implements OnInit {
   constructor() {}

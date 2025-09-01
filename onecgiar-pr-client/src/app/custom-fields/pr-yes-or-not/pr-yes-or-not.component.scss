@@ -1,37 +1,34 @@
 .field_container {
+  gap: 10px;
 
+  .title {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .choices {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
     gap: 10px;
 
-    .title {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
+    .yes {
+      background-color: var(--pr-color-green-500) !important;
     }
 
-
-
-    .choices {
-        display: flex;
-        align-items: center;
-        margin-top: 20px;
-        gap: 10px;
-
-        .yes {
-            background-color: var(--pr-color-success) !important;
-        }
-
-        .no {
-            background-color: var(--pr-color-danger) !important;
-        }
-
-        .choice {
-            background-color: var(--pr-color-medium);
-            padding: 1px 10px;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            transition: all ease-in-out .3s;
-            font-weight: 500;
-        }
+    .no {
+      background-color: var(--pr-color-red-300) !important;
     }
+
+    .choice {
+      background-color: var(--pr-color-accents-4);
+      padding: 1px 10px;
+      border-radius: 5px;
+      color: var(--pr-color-white);
+      cursor: pointer;
+      transition: all ease-in-out 0.3s;
+      font-weight: 500;
+    }
+  }
 }

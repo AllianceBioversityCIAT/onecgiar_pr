@@ -845,7 +845,16 @@ WHERE
     r.in_qa as inQA,
     ci.cgiar_entity_type_id,
     JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type,
-    r.is_lead_by_partner
+    r.is_lead_by_partner,
+    v.portfolio_id,
+    (
+      SELECT
+        cp.acronym
+      FROM
+        clarisa_portfolios cp
+      WHERE
+        cp.id = v.portfolio_id
+    ) AS portfolio
 FROM
     \`result\` r
     inner join result_level rl on rl.id = r.result_level_id 

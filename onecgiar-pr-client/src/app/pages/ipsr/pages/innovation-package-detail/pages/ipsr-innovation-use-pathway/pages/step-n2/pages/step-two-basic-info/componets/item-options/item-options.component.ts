@@ -1,9 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
-  selector: 'app-item-options',
-  templateUrl: './item-options.component.html',
-  styleUrls: ['./item-options.component.scss']
+    selector: 'app-item-options',
+    templateUrl: './item-options.component.html',
+    styleUrls: ['./item-options.component.scss'],
+    standalone: false
 })
 export class ItemOptionsComponent implements OnInit {
   @Input() optionsInnovations: any;

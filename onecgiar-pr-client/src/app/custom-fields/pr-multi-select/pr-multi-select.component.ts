@@ -5,16 +5,17 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-pr-multi-select',
-  templateUrl: './pr-multi-select.component.html',
-  styleUrls: ['./pr-multi-select.component.scss'],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrMultiSelectComponent),
-      multi: true
-    }
-  ]
+    selector: 'app-pr-multi-select',
+    templateUrl: './pr-multi-select.component.html',
+    styleUrls: ['./pr-multi-select.component.scss'],
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => PrMultiSelectComponent),
+            multi: true
+        }
+    ],
+    standalone: false
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;

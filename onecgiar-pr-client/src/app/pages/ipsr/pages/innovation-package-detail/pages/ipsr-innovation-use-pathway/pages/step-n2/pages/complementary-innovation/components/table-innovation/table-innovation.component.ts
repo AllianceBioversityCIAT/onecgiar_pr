@@ -20,9 +20,10 @@ interface ComplementaryInnovation {
   selected: boolean;
 }
 @Component({
-  selector: 'app-table-innovation',
-  templateUrl: './table-innovation.component.html',
-  styleUrls: ['./table-innovation.component.scss']
+    selector: 'app-table-innovation',
+    templateUrl: './table-innovation.component.html',
+    styleUrls: ['./table-innovation.component.scss'],
+    standalone: false
 })
 export class TableInnovationComponent {
   @Input() dataTable: any[] = [];

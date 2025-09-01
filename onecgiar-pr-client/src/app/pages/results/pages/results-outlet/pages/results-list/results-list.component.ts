@@ -12,9 +12,10 @@ import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 
 @Component({
-  selector: 'app-results-list',
-  templateUrl: './results-list.component.html',
-  styleUrls: ['./results-list.component.scss', './results-list.responsive.scss']
+    selector: 'app-results-list',
+    templateUrl: './results-list.component.html',
+    styleUrls: ['./results-list.component.scss', './results-list.responsive.scss'],
+    standalone: false
 })
 export class ResultsListComponent implements OnInit, OnDestroy {
   gettingReport = false;

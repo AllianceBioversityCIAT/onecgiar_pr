@@ -5,9 +5,10 @@ import { InstitutionsService } from '../../../../../../../../../../../../shared/
 import { CentersService } from '../../../../../../../../../../../../shared/services/global/centers.service';
 
 @Component({
-  selector: 'app-step-n4-add-bilateral',
-  templateUrl: './step-n4-add-bilateral.component.html',
-  styleUrls: ['./step-n4-add-bilateral.component.scss']
+    selector: 'app-step-n4-add-bilateral',
+    templateUrl: './step-n4-add-bilateral.component.html',
+    styleUrls: ['./step-n4-add-bilateral.component.scss'],
+    standalone: false
 })
 export class StepN4AddBilateralComponent implements DoCheck {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();

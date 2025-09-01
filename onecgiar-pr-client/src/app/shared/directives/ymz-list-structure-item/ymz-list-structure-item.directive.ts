@@ -2,7 +2,8 @@ import { Directive, Output, EventEmitter, ElementRef, HostListener, OnInit } fro
 import { RolesService } from '../../services/global/roles.service';
 
 @Directive({
-  selector: '[appYmzListStructureItem]'
+    selector: '[appYmzListStructureItem]',
+    standalone: false
 })
 export class YmzListStructureItemDirective implements OnInit {
   @Output() deleteEvent = new EventEmitter();

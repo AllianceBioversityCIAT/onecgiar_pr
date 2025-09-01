@@ -6,7 +6,8 @@ import { TypeOneReportService } from '../../type-one-report.service';
 @Component({
   selector: 'app-tor-key-result-story',
   templateUrl: './tor-key-result-story.component.html',
-  styleUrls: ['./tor-key-result-story.component.scss']
+  styleUrls: ['./tor-key-result-story.component.scss'],
+  standalone: false
 })
 export class TorKeyResultStoryComponent implements OnInit {
   constructor(
@@ -69,16 +70,18 @@ export class TorKeyResultStoryComponent implements OnInit {
       return;
     }
 
-    data[0].value = table.result_title || '<div class="no-data-text-format">There is no result title data</div>';
+    data[0].value = table.result_title || '<div class="pr-body-2 italic text-accent-5">There is no result title data</div>';
     data[0].id = table.result_code;
-    data[1].value = table.contributing_initiative || '<div class="no-data-text-format">There are no contributing Initiatives data</div>';
-    data[2].value = table.contributing_center || '<div class="no-data-text-format">There are no contributing centers data</div>';
+    data[1].value = table.contributing_initiative || '<div class="pr-body-2 italic text-accent-5">There are no contributing Initiatives data</div>';
+    data[2].value = table.contributing_center || '<div class="pr-body-2 italic text-accent-5">There are no contributing centers data</div>';
     data[3].value =
-      table.contribution_external_partner || '<div class="no-data-text-format">There are no contributing external partner(s) data</div>';
+      table.contribution_external_partner || '<div class="pr-body-2 italic text-accent-5">There are no contributing external partner(s) data</div>';
     const countriesText = table.countries ? `<strong>Countries:</strong><br> ${table.countries} <br>` : '';
     const regionsText = table.regions ? `<br><strong>Regions:</strong><br>${table.regions}<br> ` : '';
     data[4].value =
-      table.countries || table.regions ? countriesText + regionsText : '<div class="no-data-text-format">There is no Geographic location data</div>';
+      table.countries || table.regions
+        ? countriesText + regionsText
+        : '<div class="pr-body-2 italic text-accent-5">There is no Geographic location data</div>';
 
     this.tablesList.push({ data, header });
   }

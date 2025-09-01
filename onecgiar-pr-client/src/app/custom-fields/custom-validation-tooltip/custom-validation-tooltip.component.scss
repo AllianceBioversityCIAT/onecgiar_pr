@@ -1,39 +1,35 @@
 .custom_validation_tooltip {
+  position: relative;
+  background-color: var(--pr-color-white);
+  z-index: 10;
+  margin-top: 8px;
+  box-shadow: -2px -6px 10px 5px rgba(var(--pr-color-black-rgb), 0.12);
+  width: max-content;
+
+  .triangle {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 12px solid var(--pr-color-white);
+    position: absolute;
+    top: -12px;
+    left: 10px;
+  }
+
+  .content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 10px;
+    gap: 10px;
     position: relative;
-    background-color: white;
-    z-index: 10;
-    margin-top: 8px;
-    box-shadow: -2px -6px 10px 5px rgb(0 0 0 / 12%);
-    width: max-content;
+    z-index: 2;
 
-
-
-    .triangle {
-        width: 0;
-        height: 0;
-        border-left: 10px solid transparent;
-        border-right: 10px solid transparent;
-        border-bottom: 12px solid white;
-        position: absolute;
-        top: -12px;
-        left: 10px;
-
+    .icon {
+      i {
+        color: var(--pr-color-orange-400);
+      }
     }
-
-    .content {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 2px 10px;
-        gap: 10px;
-        position: relative;
-        z-index: 2;
-
-        .icon {
-            i {
-                color: rgb(255, 157, 10);
-            }
-        }
-    }
-
+  }
 }

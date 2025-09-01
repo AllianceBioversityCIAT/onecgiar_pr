@@ -4,9 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-phase-switcher',
-  templateUrl: './phase-switcher.component.html',
-  styleUrls: ['./phase-switcher.component.scss']
+    selector: 'app-phase-switcher',
+    templateUrl: './phase-switcher.component.html',
+    styleUrls: ['./phase-switcher.component.scss'],
+    standalone: false
 })
 export class PhaseSwitcherComponent implements OnInit {
   route = '';

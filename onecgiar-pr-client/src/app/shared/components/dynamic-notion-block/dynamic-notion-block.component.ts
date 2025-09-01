@@ -6,12 +6,11 @@ import { WhatsNewService } from '../../../pages/whats-new/services/whats-new.ser
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-dynamic-notion-block',
-  standalone: true,
-  imports: [FormsModule, CheckboxModule, RouterModule, CommonModule],
-  templateUrl: './dynamic-notion-block.component.html',
-  styleUrl: './dynamic-notion-block.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-dynamic-notion-block',
+    imports: [FormsModule, CheckboxModule, RouterModule, CommonModule],
+    templateUrl: './dynamic-notion-block.component.html',
+    styleUrl: './dynamic-notion-block.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DynamicNotionBlockComponent {
   @Input() block: any;

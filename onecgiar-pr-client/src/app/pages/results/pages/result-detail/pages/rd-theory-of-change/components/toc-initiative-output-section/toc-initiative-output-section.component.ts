@@ -6,9 +6,10 @@ import { DataControlService } from '../../../../../../../../shared/services/data
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-toc-initiative-output-section',
-  templateUrl: './toc-initiative-output-section.component.html',
-  styleUrls: ['./toc-initiative-output-section.component.scss']
+    selector: 'app-toc-initiative-output-section',
+    templateUrl: './toc-initiative-output-section.component.html',
+    styleUrls: ['./toc-initiative-output-section.component.scss'],
+    standalone: false
 })
 export class TocInitiativeOutputSectionComponent {
   @Input() result_toc_result = new ResultToResultInterfaceToc();

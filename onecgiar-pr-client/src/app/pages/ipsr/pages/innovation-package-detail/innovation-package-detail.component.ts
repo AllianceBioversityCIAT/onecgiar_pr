@@ -9,10 +9,11 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { MessageService } from 'primeng/api';
 
 @Component({
-  selector: 'app-innovation-package-detail',
-  templateUrl: './innovation-package-detail.component.html',
-  styleUrls: ['./innovation-package-detail.component.scss'],
-  providers: [MessageService]
+    selector: 'app-innovation-package-detail',
+    templateUrl: './innovation-package-detail.component.html',
+    styleUrls: ['./innovation-package-detail.component.scss'],
+    providers: [MessageService],
+    standalone: false
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   constructor(

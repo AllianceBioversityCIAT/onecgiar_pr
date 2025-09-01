@@ -19,7 +19,7 @@
 
     @if (this.ipsrGeneralInfoBody.is_discontinued == false) {
       <div class="message">
-        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: #2563eb"></i>
+        <i class="pi pi-info-circle" style="font-size: 14px; margin-top: 2px; color: var(--pr-color-blue-600)"></i>
         <div class="message--text" [innerHTML]="alertTextIPSR"></div>
       </div>
     }
@@ -34,7 +34,7 @@
           type="text"
           [required]="false"
           [isStatic]="true"
-          [(ngModel)]="this.discontinuedOption.description">
+          [(ngModel)]="discontinuedOption.description">
         </app-pr-input>
       </div>
     </div>

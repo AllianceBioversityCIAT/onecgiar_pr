@@ -7,9 +7,10 @@ import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-  selector: 'app-rd-geographic-location',
-  templateUrl: './rd-geographic-location.component.html',
-  styleUrls: ['./rd-geographic-location.component.scss']
+    selector: 'app-rd-geographic-location',
+    templateUrl: './rd-geographic-location.component.html',
+    styleUrls: ['./rd-geographic-location.component.scss'],
+    standalone: false
 })
 export class RdGeographicLocationComponent implements OnInit {
   geographicLocationBody = new GeographicLocationBody();

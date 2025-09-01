@@ -5,9 +5,10 @@ import { CustomizedAlertsFeService } from '../../../../shared/services/customize
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 
 @Component({
-  selector: 'app-init-general-results-report',
-  templateUrl: './init-general-results-report.component.html',
-  styleUrls: ['./init-general-results-report.component.scss']
+    selector: 'app-init-general-results-report',
+    templateUrl: './init-general-results-report.component.html',
+    styleUrls: ['./init-general-results-report.component.scss'],
+    standalone: false
 })
 export class InitGeneralResultsReportComponent implements OnInit {
   textToFind = '';

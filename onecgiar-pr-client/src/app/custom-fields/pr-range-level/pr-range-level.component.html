@@ -1,20 +1,25 @@
 <div class="local_container">
-    <div class="line">
-        <div class="circle" [ngClass]="{'active': (options ? item[optionValue] : item) == this.value}" #circle
-            *ngFor="let item of (options ? options :sizeArray); let i=index"
-            (click)="onSelectLevel(options ? item[optionValue] : item,circle)"
-            (mouseenter)="itemTitle || itemDescription?this.hoverData.handleMouseEnter(item,i):null"
-            (mouseleave)="itemTitle || itemDescription?this.hoverData.handleMouseLeave():null">
-            {{options
-            ? i : item}}</div>
+  <div class="line">
+    <div
+      class="circle"
+      [ngClass]="{ active: (options ? item[optionValue] : item) == this.value }"
+      #circle
+      *ngFor="let item of options ? options : sizeArray; let i = index"
+      (click)="onSelectLevel(options ? item[optionValue] : item, circle)"
+      (mouseenter)="itemTitle || itemDescription ? this.hoverData.handleMouseEnter(item, i) : null"
+      (mouseleave)="itemTitle || itemDescription ? this.hoverData.handleMouseLeave() : null">
+      {{ options ? i : item }}
     </div>
+  </div>
 </div>
 
-<div *ngIf="(this.getRangeIndexByValue(this.value)>=0 && (itemTitle || itemDescription)) || this.hoverData.show"
-    class="gray_card" [ngClass]="{'showHoverData': this.hoverData.show}">
-    <div class="title">{{this.hoverData.show? this.hoverData.index :
-        this.getRangeIndexByValue(this.value)}} -
-        {{this.hoverData.object[itemTitle] || this.options[this.getRangeIndexByValue(this.value)][itemTitle]}}</div>
-    <div class="description">{{this.hoverData?.object[itemDescription]
-        ||this.options[this.getRangeIndexByValue(this.value)][itemDescription]}}</div>
+<div
+  *ngIf="(this.getRangeIndexByValue(this.value) >= 0 && (itemTitle || itemDescription)) || this.hoverData.show"
+  class="gray_card"
+  [ngClass]="{ showHoverData: this.hoverData.show }">
+  <div class="title">
+    {{ this.hoverData.show ? this.hoverData.index : this.getRangeIndexByValue(this.value) }} -
+    {{ this.hoverData.object[itemTitle] || this.options[this.getRangeIndexByValue(this.value)][itemTitle] }}
+  </div>
+  <div class="description">{{ this.hoverData?.object[itemDescription] || this.options[this.getRangeIndexByValue(this.value)][itemDescription] }}</div>
 </div>

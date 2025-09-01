@@ -1,30 +1,30 @@
 .test-environment-label {
-    background-color: white;
-    color: rgb(255, 88, 88);
-    position: fixed;
-    top: 0;
-    font-weight: 700;
-    padding: 2px 10px;
-    border-radius: 3px;
-    margin: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 1000;
-    width: max-content;
-    cursor: pointer;
+  background-color: var(--pr-color-white);
+  color: var(--pr-color-red-200);
+  position: fixed;
+  top: 0;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 3px;
+  margin: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  width: max-content;
+  cursor: pointer;
 
-    i {
-        font-size: 20px;
-    }
+  i {
+    font-size: 20px;
+  }
 }
 
 .left {
-    left: 0;
-    transition: all .3s ease-in-out;
+  left: 0;
+  transition: all 0.3s ease-in-out;
 }
 
 .rigth {
-    left: calc(100vw - 210px);
-    transition: all .3s ease-in-out;
+  left: calc(100vw - 210px);
+  transition: all 0.3s ease-in-out;
 }

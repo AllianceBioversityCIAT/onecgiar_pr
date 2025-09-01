@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;
@@ -5,20 +7,20 @@
   min-height: 50vh;
 
   .ipsr_modal_description {
-    font-weight: 700;
+    @include fonts.pr-typography('body-1');
+    font-weight: 600;
     text-align: center;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
     padding: 20px 20vw;
-    font-size: 1.2rem;
   }
 }
 
 .ipsr_modal_title {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 100%;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px 20px;
   border-bottom-right-radius: 10px;
   display: flex;
@@ -33,18 +35,18 @@
 .ipsr_modal_noDataText {
   text-align: center;
   padding: 50px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .new_tag {
-  background-color: var(--pr-color-primary);
+  background-color: var(--pr-color-primary-300);
   margin-right: 10px;
   padding: 2px 3px;
-  font-size: 0.8em;
+  @include fonts.pr-typography('body-3');
   border-radius: 3px;
-  color: white;
+  color: var(--pr-color-white);
   height: 17px;
 }
 
@@ -55,7 +57,7 @@
 }
 
 .ipsr_link_button {
-  color: white;
+  color: var(--pr-color-white);
   padding: 3px 10px;
   border-radius: 3px;
   cursor: pointer;
@@ -64,12 +66,12 @@
   width: max-content;
 
   &.view {
-    background-color: var(--pr-color-secondary);
+    background-color: var(--pr-color-secondary-400);
     outline: none;
-    color: white;
+    color: var(--pr-color-white);
   }
 
   &.update {
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
   }
 }

@@ -5,9 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-step-n3',
-  templateUrl: './step-n3.component.html',
-  styleUrls: ['./step-n3.component.scss']
+    selector: 'app-step-n3',
+    templateUrl: './step-n3.component.html',
+    styleUrls: ['./step-n3.component.scss'],
+    standalone: false
 })
 export class StepN3Component implements OnInit {
   rangesOptions = [];

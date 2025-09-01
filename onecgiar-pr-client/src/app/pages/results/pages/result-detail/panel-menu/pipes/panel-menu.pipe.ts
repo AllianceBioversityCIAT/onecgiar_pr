@@ -3,7 +3,8 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Pipe({
-  name: 'panelMenu'
+    name: 'panelMenu',
+    standalone: false
 })
 export class PanelMenuPipe implements PipeTransform {
   constructor(private dataControlSE: DataControlService) {}

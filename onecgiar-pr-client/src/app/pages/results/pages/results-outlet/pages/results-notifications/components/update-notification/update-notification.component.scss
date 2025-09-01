@@ -1,11 +1,13 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 p {
   margin: 0;
 }
 
 .update_notification {
   padding: 12px 30px;
-  background-color: #f2f2f2;
-  border: 1px solid #808080;
+  background-color: var(--pr-color-accents-1);
+  border: 1px solid var(--pr-color-accents-4);
   border-radius: 10px;
   position: relative;
 
@@ -20,13 +22,13 @@ p {
       justify-content: center;
       align-items: center;
       padding: 1px 8px;
-      border: 1px solid #5569dd;
+      border: 1px solid var(--pr-color-primary-300);
       border-radius: 10px;
-      color: #5569dd;
+      color: var(--pr-color-primary-300);
 
       .update_notification_header_item_text {
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
-        font-size: 12px;
       }
     }
 
@@ -37,9 +39,9 @@ p {
       gap: 8px;
 
       .update_notification_header_announcement_text {
-        font-size: 14px;
+        @include fonts.pr-typography('body-1');
         font-weight: 700;
-        color: #5569dd;
+        color: var(--pr-color-primary-300);
       }
     }
   }
@@ -60,7 +62,7 @@ p {
 
     .update_notification_content_body {
       .update_notification_content_body_text {
-        font-size: 13px;
+        @include fonts.pr-typography('body-2');
         font-weight: 500;
       }
     }
@@ -70,7 +72,7 @@ p {
     position: absolute;
     top: -1px;
     right: 30px;
-    background-color: #5569dd;
+    background-color: var(--pr-color-primary-300);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -84,7 +86,7 @@ p {
     justify-content: flex-end;
     align-items: center;
     width: 100%;
-    color: #76716a;
-    font-size: 12px;
+    color: var(--pr-color-accents-5);
+    @include fonts.pr-typography('body-2');
   }
 }

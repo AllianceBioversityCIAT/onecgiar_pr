@@ -5,9 +5,10 @@ import { ExportTablesService } from '../../services/export-tables.service';
 import { PhasesService } from '../../services/global/phases.service';
 
 @Component({
-  selector: 'app-global-completeness-status',
-  templateUrl: './global-completeness-status.component.html',
-  styleUrls: ['./global-completeness-status.component.scss']
+    selector: 'app-global-completeness-status',
+    templateUrl: './global-completeness-status.component.html',
+    styleUrls: ['./global-completeness-status.component.scss'],
+    standalone: false
 })
 export class GlobalCompletenessStatusComponent implements OnInit {
   @Input() initMode: boolean = false;

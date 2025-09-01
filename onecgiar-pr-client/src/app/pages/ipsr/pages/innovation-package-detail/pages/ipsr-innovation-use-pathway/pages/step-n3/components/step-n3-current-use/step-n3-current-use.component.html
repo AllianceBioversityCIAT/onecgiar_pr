@@ -9,19 +9,19 @@
     <div class="fields" appYmzListStructureItem
         (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
         *ngFor="let actorItem of this.body.innovatonUse.actors; let i=index"
-        [ngClass]="{'hideElement': actorItem.is_active == false|| (!this.actorItem?.result_ip_actors_id && this.api.rolesSE.readOnly)}">
+        [ngClass]="{'hideElement': actorItem.is_active == false|| (!actorItem?.result_ip_actors_id && this.api.rolesSE.readOnly)}">
         <div>
             <app-pr-select [options]="this.actorsTypeList" label="Actor type" optionLabel="name"
                 optionValue="actor_type_id" [(ngModel)]="actorItem.actor_type_id"
                 [disableOptions]="this.body.innovatonUse.actors" [indexReference]="i"
-                (ngModelChange)="this.actorItem.other_actor_type = null" placeholder="Select actor type"
+                (ngModelChange)="actorItem.other_actor_type = null" placeholder="Select actor type"
                 [disableOptions]="removeOther(this.body.innovatonUse.actors)"
-                [required]="!!this.actorItem?.result_ip_actors_id">
+                [required]="!!actorItem?.result_ip_actors_id">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
             <app-pr-input *ngIf="actorItem.actor_type_id == 5"
                 description="Specify the other actor type in the text box below" placeholder="Specify other.."
-                type="text" [required]="false" [(ngModel)]="this.actorItem.other_actor_type">
+                type="text" [required]="false" [(ngModel)]="actorItem.other_actor_type">
             </app-pr-input>
         </div>
 
@@ -31,56 +31,56 @@
             </div>
             <br>
             <app-pr-checkbox label="Sex and age disaggregation does not apply"
-                (selectOptionEvent)="cleanActor(this.actorItem)"
-                [(ngModel)]="this.actorItem.sex_and_age_disaggregation">
+                (selectOptionEvent)="cleanActor(actorItem)"
+                [(ngModel)]="actorItem.sex_and_age_disaggregation">
             </app-pr-checkbox>
-            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationwomen']">
+            <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
+                <div class="explanation_message" *ngIf="actorItem['showWomenExplanationwomen']">
                     Remember that the value of Youth cannot be greater than total of Women
                 </div>
                 <app-pr-input placeholder="Enter text" label="Women" type="number"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.women"
+                    [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.women"
                     (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
                 <app-pr-input placeholder="Enter text" label="Youth" type="number"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.women_youth"
+                    [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.women_youth"
                     (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
                 <app-pr-input placeholder="Enter text" label="Non-youth" type="number" [required]="false"
-                    [readOnly]="true" [(ngModel)]="this.actorItem.women_non_youth">
+                    [readOnly]="true" [(ngModel)]="actorItem.women_non_youth">
                 </app-pr-input>
             </div>
-            <div class="right_content" *ngIf="!this.actorItem.sex_and_age_disaggregation">
-                <div class="explanation_message" *ngIf="this.actorItem['showWomenExplanationmen']">
+            <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
+                <div class="explanation_message" *ngIf="actorItem['showWomenExplanationmen']">
                     Remember that the value of Youth cannot be greater than total of Men
                 </div>
                 <app-pr-input placeholder="Enter text" label="Men" type="number"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.men"
+                    [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.men"
                     (ngModelChange)="validateYouth(i,false,actorItem)">
                 </app-pr-input>
                 <app-pr-input placeholder="Enter text" label="Youth" type="number"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.men_youth"
+                    [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.men_youth"
                     (ngModelChange)="validateYouth(i,false,actorItem)">
                 </app-pr-input>
                 <app-pr-input noDataText="Save to calculate" placeholder="Enter text" label="Non-youth" type="number"
-                    [required]="false" [readOnly]="true" [(ngModel)]="this.actorItem.men_non_youth">
+                    [required]="false" [readOnly]="true" [(ngModel)]="actorItem.men_non_youth">
                 </app-pr-input>
             </div>
-            <div class="right_content one_field" *ngIf="!this.actorItem.sex_and_age_disaggregation">
+            <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
                 <app-pr-input placeholder="Enter text" label="Total" type="number" [required]="false" noDataText="0"
-                    [readOnly]="true" [(ngModel)]="this.actorItem.how_many"
-                    (ngModelChange)="validateYouth(i,true,this.actorItem)">
+                    [readOnly]="true" [(ngModel)]="actorItem.how_many"
+                    (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
             </div>
-            <div class="right_content" *ngIf="this.actorItem.sex_and_age_disaggregation">
+            <div class="right_content" *ngIf="actorItem.sex_and_age_disaggregation">
                 <app-pr-input placeholder="Enter text" label="How many" type="number"
-                    [required]="!!this.actorItem?.result_ip_actors_id" [(ngModel)]="this.actorItem.how_many"
+                    [required]="!!actorItem?.result_ip_actors_id" [(ngModel)]="actorItem.how_many"
                     (ngModelChange)="validateYouth(i,true,actorItem)">
                 </app-pr-input>
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [required]="true" [(ngModel)]="this.actorItem.evidence_link">
+                    [required]="true" [(ngModel)]="actorItem.evidence_link">
                 </app-pr-input>
             </div>
         </div>
@@ -97,21 +97,21 @@
 </div>
 <div class="fields_list" *ngIf="this.body.innovatonUse.organization?.length">
     <div class="fields" appYmzListStructureItem (deleteEvent)="removeOrganization(organizationItem)"
-        [ngClass]="{'hideElement': organizationItem.is_active == false|| (!this.organizationItem?.id && this.api.rolesSE.readOnly)}"
+        [ngClass]="{'hideElement': organizationItem.is_active == false|| (!organizationItem?.id && this.api.rolesSE.readOnly)}"
         *ngFor="let organizationItem of this.body.innovatonUse.organization">
         <div>
             <app-pr-select [required]="!!organizationItem?.id" [options]="this.institutionsTypeTreeList"
                 label="Organization" optionLabel="name" optionValue="code"
                 [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
                 (selectOptionEvent)="reloadSelect(organizationItem)"
-                (ngModelChange)="this.organizationItem.other_institution = null"
+                (ngModelChange)="organizationItem.other_institution = null"
                 [disableOptions]="removeOtherInOrg(disableOrganizations)">
             </app-pr-select>
             <div style="margin-top: 13px;"></div>
             <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
                 description="Specify the other organization type in the text box below" placeholder="Specify other.."
                 label="Other organization" type="text" [required]="!!organizationItem?.id"
-                [(ngModel)]="this.organizationItem.other_institution">
+                [(ngModel)]="organizationItem.other_institution">
             </app-pr-input>
         </div>
         <div>
@@ -125,16 +125,16 @@
             </div>
             <div class="right_content">
                 <app-pr-input placeholder="Enter text" label="How many" type="number"
-                    [required]="!!organizationItem?.id" [(ngModel)]="this.organizationItem.how_many">
+                    [required]="!!organizationItem?.id" [(ngModel)]="organizationItem.how_many">
                 </app-pr-input>
 
                 <app-pr-input *ngIf="organizationItem.institution_types_id == 50" label="# of graduate students"
                     placeholder="Write the number..." type="number" [required]="false"
-                    [(ngModel)]="this.organizationItem.graduate_students">
+                    [(ngModel)]="organizationItem.graduate_students">
                 </app-pr-input>
 
                 <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                    [(ngModel)]="this.organizationItem.evidence_link" [required]="true">
+                    [(ngModel)]="organizationItem.evidence_link" [required]="true">
                 </app-pr-input>
             </div>
         </div>
@@ -152,19 +152,19 @@
         [required]="false"></app-pr-field-header>
     <div class="fields" appYmzListStructureItem (deleteEvent)="measuresItem.is_active = false"
         *ngFor="let measuresItem of this.body.innovatonUse.measures"
-        [ngClass]="{'hideElement': measuresItem.is_active == false|| (!this.measuresItem?.result_ip_result_measures_id && this.api.rolesSE.readOnly)}">
+        [ngClass]="{'hideElement': measuresItem.is_active == false|| (!measuresItem?.result_ip_result_measures_id && this.api.rolesSE.readOnly)}">
         <div class="right_content">
             <app-pr-input placeholder="Enter text" label="Unit of measure" type="text"
                 [required]="!!measuresItem?.result_ip_result_measures_id"
-                [(ngModel)]="this.measuresItem.unit_of_measure">
+                [(ngModel)]="measuresItem.unit_of_measure">
             </app-pr-input>
             <app-pr-input placeholder="Enter text" label="Quantity" type="number"
-                [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="this.measuresItem.quantity">
+                [required]="!!measuresItem?.result_ip_result_measures_id" [(ngModel)]="measuresItem.quantity">
             </app-pr-input>
         </div>
         <div class="right_content">
             <app-pr-input placeholder="Enter text" label="Evidence link" type="link"
-                [required]="true" [(ngModel)]="this.measuresItem.evidence_link">
+                [required]="true" [(ngModel)]="measuresItem.evidence_link">
             </app-pr-input>
         </div>
 

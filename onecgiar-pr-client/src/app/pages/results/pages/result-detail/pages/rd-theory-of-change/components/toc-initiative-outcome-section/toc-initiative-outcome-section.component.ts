@@ -4,9 +4,10 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { RdTheoryOfChangesServicesService } from '../../rd-theory-of-changes-services.service';
 
 @Component({
-  selector: 'app-toc-initiative-outcome-section',
-  templateUrl: './toc-initiative-outcome-section.component.html',
-  styleUrls: ['./toc-initiative-outcome-section.component.scss']
+    selector: 'app-toc-initiative-outcome-section',
+    templateUrl: './toc-initiative-outcome-section.component.html',
+    styleUrls: ['./toc-initiative-outcome-section.component.scss'],
+    standalone: false
 })
 export class TocInitiativeOutcomeSectionComponent {
   @Input() result_toc_result = new ResultToResultInterfaceToc();
