@@ -122,7 +122,7 @@ describe('ResultAiAssistantComponent', () => {
       const formData = component['createUploadFormData']();
 
       expect(formData.get('file')).toEqual(mockFile);
-      expect(formData.get('bucketName')).toBe('microservice-mining');
+      expect(formData.get('bucketName')).toBe('ai-services-ibd');
       expect(formData.get('fileName')).toBe('test.pdf');
       expect(formData.get('weightLimit')).toBe('5242880'); // 5MB in bytes
       expect(formData.get('pageLimit')).toBe('10');
@@ -165,8 +165,8 @@ describe('ResultAiAssistantComponent', () => {
       const formData = component['createMiningFormData']('test-file.pdf');
 
       expect(formData.get('token')).toBe('test-token');
-      expect(formData.get('key')).toBe('test-file.pdf');
-      expect(formData.get('bucketName')).toBe('microservice-mining');
+      expect(formData.get('key')).toBe('prms/text-mining/files/test-file.pdf');
+      expect(formData.get('bucketName')).toBe('ai-services-ibd');
     });
 
     it('should create correct mining headers', () => {

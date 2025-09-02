@@ -117,7 +117,8 @@ export class ResultAiAssistantComponent implements OnInit {
     const formData = new FormData();
 
     formData.append('file', selectedFile, selectedFile.name);
-    formData.append('bucketName', 'microservice-mining');
+    formData.append('bucketName', 'ai-services-ibd');
+    formData.append('key', `prms/text-mining/files/`);
     formData.append('fileName', selectedFile.name);
     formData.append('weightLimit', this.calculateWeightLimitBytes().toString());
     formData.append('pageLimit', this.createResultManagementService.pageLimit.toString());
@@ -163,8 +164,8 @@ export class ResultAiAssistantComponent implements OnInit {
   private createMiningFormData(filename: string): FormData {
     const formData = new FormData();
     formData.append('token', this.api.authSE?.localStorageToken);
-    formData.append('key', filename);
-    formData.append('bucketName', 'microservice-mining');
+    formData.append('bucketName', 'ai-services-ibd');
+    formData.append('key', `prms/text-mining/files/${filename}`);
     formData.append('environmentUrl', environment.apiBaseUrl);
     return formData;
   }
