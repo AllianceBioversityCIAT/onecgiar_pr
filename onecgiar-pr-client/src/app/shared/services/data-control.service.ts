@@ -5,6 +5,8 @@ import { Title } from '@angular/platform-browser';
 import { CurrentResult } from '../interfaces/current-result.interface';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../enum/api.enum';
 import { ResultsApiService } from './api/results-api.service';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +15,8 @@ export class DataControlService {
   showPartnersRequest: boolean = false;
   showRetrieveRequest: boolean = false;
   myInitiativesList = [];
+  myInitiativesListReportingByPortfolio = [];
+  myInitiativesListIPSRByPortfolio = [];
   myInitiativesLoaded = false;
   resultsList: ResultItem[];
   currentResult: CurrentResult = {};
@@ -42,23 +46,25 @@ export class DataControlService {
     public resultsSE: ResultsApiService
   ) {}
 
-  getCurrentPhases() {
-    this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
-      this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
-      this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
-      this.reportingCurrentPhase.phaseId = response[0]?.id;
-      this.reportingCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
+  getCurrentPhases(): Observable<any> {
+    return this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.REPORTING).pipe(
+      tap(({ response }) => {
+        this.reportingCurrentPhase.phaseYear = response[0]?.phase_year;
+        this.reportingCurrentPhase.phaseName = response[0]?.phase_name;
+        this.reportingCurrentPhase.phaseId = response[0]?.id;
+        this.reportingCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
 
-      if (response[0]?.obj_previous_phase) {
-        this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
-        this.previousReportingPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
-        this.previousReportingPhase.phaseId = response[0]?.obj_previous_phase.id;
-      } else {
-        this.previousReportingPhase.phaseYear = null;
-        this.previousReportingPhase.phaseName = null;
-        this.previousReportingPhase.phaseId = null;
-      }
-    });
+        if (response[0]?.obj_previous_phase) {
+          this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
+          this.previousReportingPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
+          this.previousReportingPhase.phaseId = response[0]?.obj_previous_phase.id;
+        } else {
+          this.previousReportingPhase.phaseYear = null;
+          this.previousReportingPhase.phaseName = null;
+          this.previousReportingPhase.phaseId = null;
+        }
+      })
+    );
   }
 
   getCurrentIPSRPhase() {
@@ -81,28 +87,12 @@ export class DataControlService {
     return Object.entries(body).every((item: any) => item[1]);
   }
 
-  myInitiativesListText(initiatives) {
-    let result = '';
-    initiatives?.map((item, index) => {
-      result += item.name + (index + 1 < initiatives?.length ? ', ' : '');
-    });
-    return result;
-  }
-
-  listenTextTenSeconds(text) {
-    let seconds = 0;
-    return new Promise((resolve, reject) => {
-      const timer = setInterval(() => {
-        seconds++;
-        if (text) {
-          resolve(text);
-        }
-        if (seconds == 10) {
-          clearInterval(timer);
-          reject(new Error('Timeout after 10 seconds'));
-        }
-      }, 1000);
-    });
+  myInitiativesListText(initiatives: Array<{ official_code: string }> = []): string {
+    if (!Array.isArray(initiatives) || initiatives.length === 0) return '';
+    return initiatives
+      .filter(item => !!item?.official_code)
+      .map(item => item.official_code)
+      .join(', ');
   }
 
   findClassTenSeconds(className) {
