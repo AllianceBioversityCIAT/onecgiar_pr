@@ -90,4 +90,16 @@ export class AuthService {
       })
     );
   }
+
+  GET_initiativesByUserByPortfolio() {
+    return this.http.get<any>(`${this.apiBaseUrl}user/get/initiative/current-portfolio/${this.localStorageUser?.id}`).pipe(
+      map(resp => {
+        resp.response.ipsr.map(init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`));
+        resp.response.reporting.map(
+          init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
+        );
+        return resp;
+      })
+    );
+  }
 }

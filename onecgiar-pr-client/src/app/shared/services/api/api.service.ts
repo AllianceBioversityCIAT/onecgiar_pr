@@ -44,16 +44,15 @@ export class ApiService {
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
-    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
-      resp => {
-        const [GET_allRolesByUser, GET_initiativesByUser] = resp;
-        //? Update role list
-        // this.rolesSE.roles = GET_allRolesByUser.response;
-        //?
+    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser(), this.authSE.GET_initiativesByUserByPortfolio()]).subscribe({
+      next: resp => {
+        const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
+        this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting;
+        this.dataControlSE.myInitiativesListIPSRByPortfolio = GET_initiativesByUserByPortfolio?.response?.ipsr;
         this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
-        this.dataControlSE.myInitiativesList.map(myInit => {
+        this.dataControlSE.myInitiativesList.forEach(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
@@ -62,12 +61,13 @@ export class ApiService {
         this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         callback();
       },
-      err => {
+      error: err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesLoaded = true;
+        console.error(err);
       }
-    );
+    });
   }
 
   GETInnovationPackageDetail() {
@@ -125,26 +125,23 @@ export class ApiService {
 
       // pass attributes to tawk.to on widget load
       window['Tawk_API'].onLoad = () => {
-        ({
-          name: this.authSE.localStorageUser.user_name,
-          email: this.authSE.localStorageUser.email
-        });
         window['Tawk_API'].setAttributes(
           {
             name: this.authSE.localStorageUser.user_name,
             email: this.authSE.localStorageUser.email
           },
-          err => {}
+          err => {
+            console.error(err);
+          }
         );
       };
 
       window['Tawk_API'].onChatEnded = function () {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
-        //('ENDING CHAT');
       };
     } catch (error) {
-      //(error);
+      console.error(error);
     }
   }
   setTitle(title) {

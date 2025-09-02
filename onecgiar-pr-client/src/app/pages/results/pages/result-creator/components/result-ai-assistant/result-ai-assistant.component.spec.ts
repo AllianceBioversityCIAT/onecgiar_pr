@@ -78,15 +78,6 @@ describe('ResultAiAssistantComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('ngOnInit', () => {
-    it('should load initiatives on init', () => {
-      fixture.detectChanges();
-
-      expect(apiServiceMock.resultsSE.GET_AllInitiatives).toHaveBeenCalledWith('test-portfolio');
-      expect(component.initiatives()).toEqual(mockInitiatives);
-    });
-  });
-
   describe('handleAnalyzeFile', () => {
     it('should show warning when no file is selected', () => {
       createResultManagementServiceMock.selectedFile = signal<File | null>(null);

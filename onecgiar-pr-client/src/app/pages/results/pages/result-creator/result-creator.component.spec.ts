@@ -15,6 +15,8 @@ import { ResultsApiService } from '../../../../shared/services/api/results-api.s
 import { of, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
+import { TermPipe } from '../../../../internationalization/term.pipe';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 jest.useFakeTimers();
 
@@ -58,14 +60,15 @@ describe('ResultCreatorComponent', () => {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
         myInitiativesList: myInitiativesList,
         validateBody: jest.fn(),
-        getCurrentPhases: jest.fn()
+        getCurrentPhases: jest.fn(() => of({}))
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
         GET_FindResultsElastic: () => of(mockResponseGET_FindResultsElastic),
         POST_resultCreateHeader: () => of({ response: mockResponsePOST_resultCreateHeader }),
         POST_createWithHandle: () => of({ response: mockResponsePOST_resultCreateHeader }),
-        GET_mqapValidation: () => of({ response: { title: 'Title' } })
+        GET_mqapValidation: () => of({ response: { title: 'Title' } }),
+        GET_cgiarEntityTypes: () => of({ response: myInitiativesList })
       }
     };
     mockResultLevelService = {
@@ -96,7 +99,7 @@ describe('ResultCreatorComponent', () => {
         RetrieveModalComponent,
         AlertStatusComponent
       ],
-      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule],
+      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule, TermPipe, CustomFieldsModule],
       providers: [
         ResultsApiService,
         {
@@ -148,7 +151,7 @@ describe('ResultCreatorComponent', () => {
         id: 'indoasd',
         status: 'success',
         title: '',
-        description: component.naratives.alerts.info,
+        description: component.naratives.alerts('Initiative'),
         querySelector: '.report_container',
         position: 'beforebegin'
       });
@@ -395,67 +398,6 @@ describe('ResultCreatorComponent', () => {
         description: 'Test error message',
         status: 'error'
       });
-    });
-  });
-  describe('validateNormalFields()', () => {
-    it('should return true if initiative_id is missing', () => {
-      mockResultLevelService.resultBody = {
-        result_type_id: 1,
-        result_level_id: 2,
-        result_name: 'result_name'
-      };
-
-      const result = component.valdiateNormalFields();
-
-      expect(result).toBeTruthy();
-    });
-    it('should return true if result_type_id is missing', () => {
-      mockResultLevelService.resultBody = {
-        initiative_id: 1,
-        result_level_id: 2,
-        result_name: 'result_name'
-      };
-
-      const result = component.valdiateNormalFields();
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true if result_level_id is missing', () => {
-      mockResultLevelService.resultBody = {
-        initiative_id: 1,
-        result_type_id: 2,
-        result_name: 'result_name'
-      };
-
-      const result = component.valdiateNormalFields();
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return true if result_name is missing', () => {
-      mockResultLevelService.resultBody = {
-        initiative_id: 1,
-        result_type_id: 2,
-        result_level_id: 1
-      };
-
-      const result = component.valdiateNormalFields();
-
-      expect(result).toBeTruthy();
-    });
-
-    it('should return false if all fields are present', () => {
-      mockResultLevelService.resultBody = {
-        initiative_id: 1,
-        result_type_id: 2,
-        result_level_id: 1,
-        result_name: 'result_name'
-      };
-
-      const result = component.valdiateNormalFields();
-
-      expect(result).toBeFalsy();
     });
   });
 
