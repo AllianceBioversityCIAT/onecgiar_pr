@@ -535,39 +535,35 @@ export class IpsrRepository
             DISTINCT r.id,
             r.result_code,
             r.title,
-            rbi.inititiative_id AS initiative_id,
-            rs.status_name AS status,
-            r.reported_year_id,
-            (
-                SELECT
-                    ci.official_code
-                FROM
-                    clarisa_initiatives ci
-                WHERE
-                    ci.id = rbi.inititiative_id
-            ) AS official_code,
+            r.reported_year_id AS reported_year,
             rt.name AS result_type,
+            rl.name AS result_level_name,
+            rt.id AS result_type_id,
+            r.created_date,
+            ci.official_code AS submitter,
+            ci.id AS submitter_id,
+            rbi.inititiative_id AS initiative_id,
+            r.status,
+            r.status_id,
+            rs.status_name AS status_name,
+            NULL as role_id,
+            NULL as role_name,
+            if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
+            v.phase_year,
             r.result_level_id,
-            (
-                SELECT
-                    CONCAT(
-                        u.first_name,
-                        ' ',
-                        u.last_name
-                    )
-                FROM
-                    users u
-                WHERE
-                    u.id = r.created_by
-            ) AS created_by,
+            r.no_applicable_partner,
+            if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+            r.legacy_id,
+            r.created_by,
             u.first_name as create_first_name,
             u.last_name as create_last_name,
-            r.created_date,
-            rt.id as result_type_id,
-            v.phase_name,
-            v.phase_year,
+            r.version_id,
+            CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
             v.status as phase_status,
-            r.version_id
+            r.in_qa as inQA,
+            ci.portfolio_id,
+            cp.name as portfolio_name,
+            cp.acronym as acronym
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
@@ -576,6 +572,10 @@ export class IpsrRepository
             INNER JOIN result_status rs ON rs.result_status_id = r.status_id
             LEFT JOIN users u on u.id = r.created_by
             INNER JOIN version v ON v.id = r.version_id
+            INNER JOIN result_level rl on rl.id = r.result_level_id
+            INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+            LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
+            LEFT JOIN \`year\` y ON y.active > 0
         WHERE
             r.is_active = 1
             AND r.id = ibr.result_innovation_package_id
