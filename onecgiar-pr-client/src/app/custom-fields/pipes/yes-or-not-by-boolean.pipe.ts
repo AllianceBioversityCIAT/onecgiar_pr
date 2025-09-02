@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'yesOrNotByBoolean'
+    name: 'yesOrNotByBoolean',
+    standalone: false
 })
 export class YesOrNotByBooleanPipe implements PipeTransform {
   transform(value: unknown): unknown {

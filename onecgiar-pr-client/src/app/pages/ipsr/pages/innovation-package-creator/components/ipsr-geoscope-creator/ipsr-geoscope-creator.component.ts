@@ -2,9 +2,10 @@ import { Component, OnInit, Input } from '@angular/core';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 
 @Component({
-  selector: 'app-ipsr-geoscope-creator',
-  templateUrl: './ipsr-geoscope-creator.component.html',
-  styleUrls: ['./ipsr-geoscope-creator.component.scss']
+    selector: 'app-ipsr-geoscope-creator',
+    templateUrl: './ipsr-geoscope-creator.component.html',
+    styleUrls: ['./ipsr-geoscope-creator.component.scss'],
+    standalone: false
 })
 export class IpsrGeoscopeCreatorComponent {
   @Input() body: any;

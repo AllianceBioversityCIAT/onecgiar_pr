@@ -4,9 +4,10 @@ import { RetrieveModalService } from '../../../../../../../results/pages/result-
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-update-ipsr-result-modal',
-  templateUrl: './update-ipsr-result-modal.component.html',
-  styleUrls: ['./update-ipsr-result-modal.component.scss']
+    selector: 'app-update-ipsr-result-modal',
+    templateUrl: './update-ipsr-result-modal.component.html',
+    styleUrls: ['./update-ipsr-result-modal.component.scss'],
+    standalone: false
 })
 export class UpdateIpsrResultModalComponent {
   text_to_search = '';

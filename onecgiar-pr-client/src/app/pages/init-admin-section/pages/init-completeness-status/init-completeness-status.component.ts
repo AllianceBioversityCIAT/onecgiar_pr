@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-init-completeness-status',
-  templateUrl: './init-completeness-status.component.html',
-  styleUrls: ['./init-completeness-status.component.scss']
+    selector: 'app-init-completeness-status',
+    templateUrl: './init-completeness-status.component.html',
+    styleUrls: ['./init-completeness-status.component.scss'],
+    standalone: false
 })
 export class InitCompletenessStatusComponent {}

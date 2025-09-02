@@ -23,9 +23,10 @@ interface Tab {
 }
 
 @Component({
-  selector: 'app-multiple-wps',
-  templateUrl: './multiple-wps.component.html',
-  styleUrls: ['./multiple-wps.component.scss']
+    selector: 'app-multiple-wps',
+    templateUrl: './multiple-wps.component.html',
+    styleUrls: ['./multiple-wps.component.scss'],
+    standalone: false
 })
 export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() editable: boolean;

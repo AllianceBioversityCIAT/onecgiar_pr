@@ -3,9 +3,10 @@ import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
 
 @Component({
-  selector: 'app-step-n4-initiative-investment-table',
-  templateUrl: './step-n4-initiative-investment-table.component.html',
-  styleUrls: ['./step-n4-initiative-investment-table.component.scss']
+    selector: 'app-step-n4-initiative-investment-table',
+    templateUrl: './step-n4-initiative-investment-table.component.html',
+    styleUrls: ['./step-n4-initiative-investment-table.component.scss'],
+    standalone: false
 })
 export class StepN4InitiativeInvestmentTableComponent {
   @Input() body = new IpsrStep4Body();

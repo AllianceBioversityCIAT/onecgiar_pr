@@ -4,7 +4,8 @@ import { internationalizationData } from '../../data/internationalization-data';
 @Component({
   selector: 'app-page-alert',
   templateUrl: './page-alert.component.html',
-  styleUrls: ['./page-alert.component.scss']
+  styleUrls: ['./page-alert.component.scss'],
+  standalone: false
 })
 export class PageAlertComponent {
   internationalizationData = internationalizationData;

@@ -1,26 +1,4 @@
-.partners_selected_header {
-  padding-top: 15px;
-  padding-bottom: 2px;
-}
-
-.date {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.readOnly_deliveries {
-  .delivery {
-    padding: 4px 8px !important;
-    border-radius: 3px !important;
-  }
-}
-
-.medal_info {
-  display: flex;
-  align-items: center;
-  color: rgb(167, 167, 167);
-  gap: 10px;
-}
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
 
 .chips_container {
   display: flex !important;
@@ -37,29 +15,20 @@
   .pr_chip_selected {
     display: flex !important;
     justify-content: space-between;
-    background-color: var(--pr-color-primary-2);
-    color: var(--pr-color-secondary);
-    font-size: 0.95em;
+    background-color: var(--pr-color-primary-50);
+    color: var(--pr-color-secondary-400);
+    @include fonts.pr-typography('body-2');
     padding: 6px 13px;
     border-radius: 10px;
     gap: 10px;
     align-items: center;
-
-    .medal {
-      transition: all ease-in-out 0.4s;
-      color: rgb(167, 167, 167);
-    }
-
-    .primary {
-      color: var(--pr-color-primary);
-    }
 
     i {
       justify-self: center;
       align-self: center;
       cursor: pointer;
       font-size: 1.5em;
-      color: rgb(68, 68, 68);
+      color: var(--pr-color-accents-6);
     }
   }
 }

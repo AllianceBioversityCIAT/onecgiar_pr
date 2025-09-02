@@ -1,3 +1,5 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .login-container {
   display: flex;
   min-height: 100vh;
@@ -39,9 +41,9 @@
 }
 
 .login-title {
-  font-size: 16px;
+  @include fonts.pr-typography('h3');
   font-weight: 700;
-  color: #2a2e45;
+  color: var(--pr-color-secondary-400);
   width: 100%;
   text-align: center;
   margin: 0;
@@ -49,8 +51,8 @@
 }
 
 .login-description {
-  font-size: 12px;
-  color: #6a73a4;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-4);
   width: 100%;
   text-align: start;
   margin: 0;
@@ -69,8 +71,8 @@
 }
 
 h2 {
-  color: #2a2e45;
-  font-size: 18px;
+  color: var(--pr-color-secondary-400);
+  @include fonts.pr-typography('h2');
   font-weight: 500;
 }
 
@@ -79,14 +81,14 @@ h2 {
 }
 
 .corp-id-btn {
-  background-color: #5569dd;
-  color: white;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   border: none;
   border-radius: 8px;
   padding: 10px;
   max-width: 330px;
   width: 100%;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   cursor: pointer;
   transition: background-color 0.3s ease;
   display: flex;
@@ -98,23 +100,23 @@ h2 {
 }
 
 .corp-id-btn:hover {
-  background-color: #4657b3;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.8);
 }
 
 .corp-id-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.5);
   cursor: not-allowed;
 }
 
 .show-login-form-btn {
-  background-color: #5569dd;
-  color: white;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   border: none;
   border-radius: 8px;
   padding: 10px;
   max-width: 330px;
   width: 100%;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   cursor: pointer;
   transition: background-color 0.3s ease;
   display: flex;
@@ -126,11 +128,11 @@ h2 {
 }
 
 .show-login-form-btn:hover {
-  background-color: #4657b3;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.8);
 }
 
 .show-login-form-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.5);
   cursor: not-allowed;
 }
 
@@ -140,7 +142,7 @@ h2 {
   text-align: center;
   margin: 20px 0;
   width: 100%;
-  color: #9ca2c3 !important;
+  color: var(--pr-color-accents-4) !important;
 
   @media (max-height: 780px) {
     margin: 10px 0;
@@ -151,18 +153,18 @@ h2 {
 .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 2px solid #9ca2c3;
+  border-bottom: 2px solid var(--pr-color-secondary-100);
 }
 
 .divider span {
   padding: 0 10px;
-  color: #9ca2c3;
+  color: var(--pr-color-secondary-100);
 }
 
 .external-users-text {
   font-weight: 400;
-  font-size: 12px;
-  color: #6a73a4;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-4);
   width: 100%;
   text-align: start;
   margin: 0;
@@ -176,49 +178,40 @@ h2 {
 
 label {
   display: block;
-  color: #6a73a4;
+  color: var(--pr-color-accents-4);
   margin-bottom: 5px;
   font-weight: 400;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
 }
 
 input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--pr-color-neutral-1000);
   border-radius: 10px;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   box-sizing: border-box;
-}
-
-.forgot-password {
-  display: block;
-  text-align: left;
-  color: #0a4c81;
-  text-decoration: none;
-  margin: 10px 0 20px;
-  font-size: 14px;
 }
 
 .signin-btn {
   font-family: 'Poppins', sans-serif;
-  background-color: #5569dd;
-  color: white;
+  background-color: var(--pr-color-primary-300);
+  color: var(--pr-color-white);
   border: none;
   border-radius: 10px;
   width: 100%;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   cursor: pointer;
   height: 40px;
   transition: background-color 0.3s ease;
 }
 
 .signin-btn:hover {
-  background-color: #4657b3;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.8);
 }
 
 .signin-btn:disabled {
-  background-color: #556add85;
+  background-color: rgba(var(--pr-color-primary-rgb), 0.5);
   cursor: not-allowed;
 }
 
@@ -238,14 +231,14 @@ input {
 }
 
 .need-help-text {
-  font-size: 10px;
-  color: #6a73a4;
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-accents-4);
   margin: 0;
 }
 
 .global-link {
-  font-size: 10px;
-  color: #1689ca;
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-blue-600);
   margin: 0;
   text-decoration: underline;
   transition: color 0.3s ease;
@@ -253,56 +246,15 @@ input {
 }
 
 .global-link:hover {
-  color: #0a4c81;
+  color: var(--pr-color-blue-900);
 }
 
 .terms-and-conditions-text {
-  font-size: 10px;
-  color: #6a73a4;
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-accents-4);
   margin: 0;
   text-align: start;
   width: 100%;
-}
-
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  svg {
-    margin-right: 8px;
-    width: 20px;
-    height: 20px;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-.signup-link {
-  text-align: center;
-  font-size: 14px;
-  color: #555;
-}
-
-.signup-link a {
-  color: #0a4c81;
-  text-decoration: none;
-}
-
-.password-requirements {
-  margin: 15px 0;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #427730;
 }
 
 .requirements-list {
@@ -314,7 +266,7 @@ input {
     display: flex;
     align-items: center;
     margin-bottom: 8px;
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     transition: color 0.3s ease;
 
     &:last-child {
@@ -331,18 +283,18 @@ input {
     }
 
     &.valid {
-      color: #28a745;
+      color: var(--pr-color-green-500);
 
       i {
-        color: #28a745;
+        color: var(--pr-color-green-500);
       }
     }
 
     &.invalid {
-      color: #dc3545;
+      color: var(--pr-color-red-400);
 
       i {
-        color: #dc3545;
+        color: var(--pr-color-red-400);
       }
     }
   }
@@ -353,7 +305,7 @@ input {
 .password-match {
   display: flex;
   align-items: center;
-  font-size: 14px;
+  @include fonts.pr-typography('body-1');
   margin-bottom: 15px;
   padding: 8px 12px;
   border-radius: 4px;
@@ -366,13 +318,13 @@ input {
 }
 
 .password-match-error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border-color: #dc3545;
+  color: var(--pr-color-red-400);
+  background-color: var(--pr-color-red-50);
+  border-color: var(--pr-color-red-400);
 }
 
 .password-match-success {
-  color: #28a745;
-  background-color: #d4edda;
-  border-color: #28a745;
+  color: var(--pr-color-green-500);
+  background-color: var(--pr-color-green-50);
+  border-color: var(--pr-color-green-500);
 }

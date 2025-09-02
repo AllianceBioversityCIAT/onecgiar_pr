@@ -6,9 +6,10 @@ import { MessageService } from 'primeng/api';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
-  selector: 'app-knowledge-products',
-  templateUrl: './knowledge-products.component.html',
-  styleUrls: ['./knowledge-products.component.scss']
+    selector: 'app-knowledge-products',
+    templateUrl: './knowledge-products.component.html',
+    styleUrls: ['./knowledge-products.component.scss'],
+    standalone: false
 })
 export class KnowledgeProductsComponent implements OnInit {
   confidence_level: number;

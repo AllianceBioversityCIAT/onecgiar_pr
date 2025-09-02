@@ -6,10 +6,8 @@
   padding: 10px 25px;
   height: 100%;
   box-sizing: border-box;
-  background-color: white;
-  display: flex;
+  background-color: var(--pr-color-white);
   justify-content: space-between;
-  flex-direction: column;
   overflow-y: auto;
 
   .back_button {
@@ -20,7 +18,7 @@
 
   .segment {
     .name {
-      color: var(--pr-color-medium);
+      color: var(--pr-color-secondary-100);
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -32,14 +30,14 @@
       gap: 10px;
 
       .section_active {
-        background-color: var(--pr-color-primary-2);
-        color: var(--pr-color-tertiary);
+        background-color: var(--pr-color-primary-50);
+        color: var(--pr-color-primary-950);
         font-weight: 600;
       }
 
       a {
         text-decoration: none;
-        color: var(--pr-color-secondary);
+        color: var(--pr-color-secondary-400);
         font-weight: 500;
         padding: 5px 10px 5px 20px;
         border-radius: 10px;
@@ -52,7 +50,6 @@
           width: 25px;
           right: 0;
           top: 0;
-          // background-color: red;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -60,11 +57,11 @@
           padding: 0px 15px;
 
           .valid {
-            color: #34b734;
+            color: var(--pr-color-green-100);
           }
 
           .invalid {
-            color: #c0c0c0;
+            color: var(--pr-color-accents-3);
           }
         }
 
@@ -76,7 +73,7 @@
         }
 
         &:hover {
-          background-color: #f3f3f3;
+          background-color: var(--pr-color-accents-1);
         }
       }
     }
@@ -92,11 +89,10 @@
     padding: 15px;
 
     .button_access_information {
-      font-size: 0.8em;
       text-align: center;
-      color: var(--pr-color-primary);
-      background-color: #556add17;
-      box-shadow: 0px 0px 5px 1px #e0e4f7;
+      color: var(--pr-color-primary-300);
+      background-color: rgba(var(--pr-color-primary-rgb), 0.09);
+      box-shadow: 0px 0px 5px 1px var(--pr-color-primary-50);
       padding: 10px;
       border-radius: 3px;
       margin-top: 10px;

@@ -5,9 +5,10 @@ import { SubmissionModalService } from './submission-modal.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 
 @Component({
-  selector: 'app-submission-modal',
-  templateUrl: './submission-modal.component.html',
-  styleUrls: ['./submission-modal.component.scss']
+    selector: 'app-submission-modal',
+    templateUrl: './submission-modal.component.html',
+    styleUrls: ['./submission-modal.component.scss'],
+    standalone: false
 })
 export class SubmissionModalComponent {
   comment = null;

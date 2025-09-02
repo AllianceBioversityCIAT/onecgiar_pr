@@ -1,13 +1,15 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .circle {
-  background-color: #b9b9b9;
+  background-color: var(--pr-color-accents-3);
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px solid #000;
+  border: 1px solid var(--pr-color-black);
 }
 
 .circle-success {
-  background-color: #4caf50;
+  background-color: var(--pr-color-green-500);
 }
 
 #resultListTable th {
@@ -33,27 +35,25 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
   font-size: 22px;
 }
 
 .wp_header_title {
-  font-size: 18px;
-  font-weight: 600;
+  @include fonts.pr-typography('h2');
   margin: 0;
 }
 
 .noDataText {
   text-align: center;
   padding: 50px 0px;
-  font-size: 1.3em;
-  font-weight: 500;
-  color: var(--pr-color-primary);
+  @include fonts.pr-typography('h4');
+  color: var(--pr-color-primary-300);
 }
 
 .indicator_link {
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
   cursor: pointer;
   font-weight: 600;
 }

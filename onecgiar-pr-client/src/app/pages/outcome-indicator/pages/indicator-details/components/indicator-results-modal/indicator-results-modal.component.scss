@@ -1,3 +1,5 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;
@@ -6,11 +8,11 @@
 }
 
 .modal_title {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 100%;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h3');
   font-weight: 600;
-  color: white;
+  color: var(--pr-color-white);
   padding: 10px 20px;
   display: flex;
   justify-content: space-between;
@@ -18,9 +20,9 @@
 }
 
 .description {
-  font-weight: 700;
-  color: var(--pr-color-secondary);
-  font-size: 1.2rem;
+  color: var(--pr-color-secondary-400);
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
   margin-top: 10px;
   text-align: center;
   padding: 10px 0 0px 0;
@@ -32,7 +34,7 @@
 
 .modal_close_icon {
   cursor: pointer;
-  color: #fff;
+  color: var(--pr-color-white);
 }
 
 .modal_total {
@@ -42,9 +44,9 @@
 .modal_noDataText {
   text-align: center;
   padding: 50px 0px;
-  font-size: 1.3em;
+  @include fonts.pr-typography('h4');
   font-weight: 500;
-  color: var(--pr-color-primary);
+  color: var(--pr-color-primary-300);
 }
 
 .created_date {

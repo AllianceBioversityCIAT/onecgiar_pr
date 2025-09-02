@@ -3,9 +3,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
-  selector: 'app-results-to-update-modal',
-  templateUrl: './results-to-update-modal.component.html',
-  styleUrls: ['./results-to-update-modal.component.scss']
+    selector: 'app-results-to-update-modal',
+    templateUrl: './results-to-update-modal.component.html',
+    styleUrls: ['./results-to-update-modal.component.scss'],
+    standalone: false
 })
 export class ResultsToUpdateModalComponent {
   text_to_search = null;

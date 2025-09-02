@@ -11,6 +11,7 @@ import { FeedbackValidationDirective } from '../../../../../../shared/directives
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 jest.useFakeTimers();
 
@@ -120,7 +121,7 @@ describe('RdTheoryOfChangeComponent', () => {
         DetailSectionTitleComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, TermPipe],
       providers: [
         {
           provide: ApiService,
@@ -282,7 +283,7 @@ describe('RdTheoryOfChangeComponent', () => {
     it('should reload the page when initiative_id is different from changePrimaryInit', () => {
       const reloadMock = jest.fn();
       delete window.location;
-      window.location = { ...window.location, reload: reloadMock };
+      window.location = { ...window.location, reload: reloadMock } as any;
 
       component.theoryOfChangeBody.result_toc_result.initiative_id = 1;
       component.theoryOfChangeBody.changePrimaryInit = 2;

@@ -5,11 +5,10 @@ import { ResultsNotificationsService } from '../../results-notifications.service
 import type { TNotificationResult } from './model/update-notification.model';
 
 @Component({
-  selector: 'app-update-notification',
-  standalone: true,
-  imports: [CommonModule, FormatTimeAgoModule],
-  templateUrl: './update-notification.component.html',
-  styleUrl: './update-notification.component.scss'
+    selector: 'app-update-notification',
+    imports: [CommonModule, FormatTimeAgoModule],
+    templateUrl: './update-notification.component.html',
+    styleUrl: './update-notification.component.scss'
 })
 export class UpdateNotificationComponent {
   @Input() notification: TNotificationResult;

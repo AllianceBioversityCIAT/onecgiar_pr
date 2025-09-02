@@ -1,43 +1,45 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .local_container {
   padding: 30px 30px;
   margin: 20px 20px 50px 20px !important;
   overflow: hidden;
   transition: all 0.3s ease-in-out;
 
-  font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-
-  header {
+  .header-container {
     display: flex;
+    justify-content: space-between;
     gap: 10px;
     align-items: center;
     margin-bottom: 20px;
 
-    i {
-      font-size: 24px;
-    }
+    .header-title {
+      display: flex;
+      gap: 10px;
+      align-items: center;
 
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      color: #1f2937;
-      margin: 0;
+      i {
+        font-size: 24px;
+      }
+
+      h1 {
+        @include fonts.pr-typography('h1');
+        font-weight: 600;
+        color: var(--pr-color-secondary-400);
+        margin: 0;
+      }
     }
   }
 
   .description {
-    color: #6b7280;
-    font-size: 16px;
+    @include fonts.pr-typography('body-1');
+    color: var(--pr-color-accents-5);
     margin-bottom: 32px;
     line-height: 1.5;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: help;
+    max-width: fit-content;
   }
 }
 
@@ -57,14 +59,14 @@
     align-items: center;
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    @include fonts.pr-typography('body-2');
     font-weight: 600;
-    background-color: #c6cdf4; // Fixed background color
-    color: #5569dd; // Fixed text color
+    background-color: var(--pr-color-primary-50); // Fixed background color
+    color: var(--pr-color-primary-300); // Fixed text color
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 2px rgba(var(--pr-color-black), 0.1);
     min-height: 20px;
     white-space: nowrap; // Prevent text wrapping
 
@@ -76,8 +78,8 @@
   .view-more-btn {
     background: none;
     border: none;
-    color: #5569dd; // Match entity text color
-    font-size: 11px;
+    color: var(--pr-color-primary-300); // Match entity text color
+    @include fonts.pr-typography('body-2');
     font-weight: 500;
     cursor: pointer;
     padding: 2px 6px;
@@ -88,7 +90,7 @@
     flex-shrink: 0; // Don't shrink the button
 
     &:hover {
-      background-color: #c6cdf4; // Match entity background on hover
+      background-color: var(--pr-color-primary-25); // Match entity background on hover
       text-decoration: none;
     }
 
@@ -98,8 +100,8 @@
   }
 
   .no-entities {
-    font-size: 12px;
-    color: #9ca3af;
+    @include fonts.pr-typography('body-2');
+    color: var(--pr-color-secondary-200);
     font-style: italic;
   }
 }
@@ -109,11 +111,11 @@
   padding: 8px;
 
   .overlay-title {
-    font-size: 14px;
+    @include fonts.pr-typography('body-1');
     font-weight: 600;
-    color: #374151;
+    color: var(--pr-color-secondary-400);
     margin-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--pr-color-accents-2);
     padding-bottom: 8px;
   }
 
@@ -129,14 +131,14 @@
       align-items: center;
       padding: 4px 10px;
       border-radius: 12px;
-      font-size: 11px;
+      @include fonts.pr-typography('body-2');
       font-weight: 600;
-      background-color: #c6cdf4;
-      color: #5569dd;
+      background-color: var(--pr-color-primary-25);
+      color: var(--pr-color-primary-300);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border: none;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 2px rgba(var(--pr-color-black), 0.1);
       min-height: 20px;
       white-space: nowrap;
 
@@ -152,7 +154,7 @@
   align-items: center;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 11px;
+  @include fonts.pr-typography('body-2');
   font-weight: 600;
   background-color: #fff7d6; // Amarillo claro
   color: #b59f3b; // Amarillo oscuro
@@ -170,7 +172,7 @@
 
 // Controls section
 .controls-section {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 
   .controls-row {
     display: flex;
@@ -199,10 +201,10 @@
         width: 100%;
 
         .search-label {
-          font-size: 14px;
+          @include fonts.pr-typography('body-1');
           font-weight: 500;
           margin-bottom: 3px;
-          color: #374151;
+          color: var(--pr-color-secondary-400);
         }
 
         .p-input-icon-left {
@@ -226,9 +228,9 @@
         .cgiar-label,
         .entity-label,
         .clear-spacer {
-          font-size: 14px;
+          @include fonts.pr-typography('body-1');
           font-weight: 500;
-          color: #374151;
+          color: var(--pr-color-secondary-400);
           height: 20px;
         }
       }
@@ -252,26 +254,26 @@
 
 // Table container
 .table-container {
-  background: white;
+  background: var(--pr-color-white);
   border-radius: 12px;
   box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    0 1px 3px 0 rgba(var(--pr-color-black-rgb), 0.1),
+    0 1px 2px 0 rgba(var(--pr-color-black-rgb), 0.06);
   overflow: hidden;
   position: relative;
 
   .counter {
-    font-size: 14px;
+    @include fonts.pr-typography('body-2');
     position: absolute;
     bottom: 0;
     left: 0;
     z-index: 3;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     margin-left: 20px;
     display: flex;
     align-items: center;
     gap: 5px;
-    color: #6b7280;
+    color: var(--pr-color-secondary-200);
 
     .name {
       font-weight: 600;
@@ -281,150 +283,16 @@
       font-weight: 500;
     }
   }
-
-  .export-button {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    z-index: 3;
-    margin-bottom: 20px;
-    margin-right: 20px;
-  }
+}
+.export-button {
+  margin-bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 
-// Custom table styles
 ::ng-deep {
-  .user-table {
-    .p-datatable-header {
-      background: #f8fafc;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .p-datatable-thead > tr > th {
-      background: #374151 !important;
-      color: white !important;
-      font-weight: 600;
-      font-size: 14px;
-      padding: 8px 16px;
-      border: none;
-
-      .header-content {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .p-sortable-column-icon {
-        color: white !important;
-      }
-
-      &:nth-child(3),
-      &:nth-child(4),
-      &:nth-child(5) {
-        .header-content {
-          justify-content: center;
-        }
-      }
-    }
-
-    .p-datatable-tbody > tr {
-      transition: background-color 0.2s ease;
-
-      &:hover {
-        background-color: #f9fafb !important;
-      }
-
-      > td {
-        padding: 8px 16px;
-        border-bottom: 1px solid #f3f4f6;
-        font-size: 14px;
-        color: #374151;
-        vertical-align: middle;
-
-        &:nth-child(3),
-        &:nth-child(4),
-        &:nth-child(5) {
-          text-align: center;
-        }
-      }
-    }
-
-    .p-datatable-emptymessage > td {
-      text-align: center;
-      padding: 24px 16px;
-      color: #6b7280;
-      font-style: italic;
-    }
-
-    .p-datatable-thead > tr > th:last-child,
-    .p-datatable-tbody > tr > td:last-child {
-      text-align: center !important;
-    }
-  }
-
-  .p-multiselect .p-multiselect-trigger {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary);
-    width: 43px;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
-    color: white;
-  }
-
-  .p-multiselect .p-multiselect-label.p-placeholder {
-    color: rgb(194, 194, 194);
-    font-size: 12px;
-  }
-
-  .p-multiselect .p-multiselect-label {
-    font-family: 'Poppins', sans-serif;
-    font-size: 14px;
-  }
-
-  .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
-    font-size: 14px;
-  }
-}
-// User status styles
-.status-active {
-  color: #059669;
-  font-weight: 500;
-  padding: 4px 8px;
-  background-color: #d1fae5;
-  border-radius: 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.status-inactive {
-  color: #dc2626;
-  font-weight: 500;
-  padding: 4px 8px;
-  background-color: #fee2e2;
-  border-radius: 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.status-read-only {
-  color: #6b7280;
-  font-weight: 500;
-  padding: 4px 8px;
-  background-color: #f3f4f6;
-  border-radius: 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-// Center pagination globally for this component
-::ng-deep {
-  .user-table .p-paginator {
+  .p-paginator {
     display: flex !important;
     justify-content: center !important;
 
@@ -433,9 +301,129 @@
     }
   }
 
-  .user-table .p-datatable-footer {
+  .p-datatable-footer {
     text-align: center;
   }
+
+  .p-datatable-header {
+    background: var(--pr-color-primary-25);
+    border-bottom: 1px solid var(--pr-color-accents-2);
+  }
+
+  .p-datatable-thead > tr > th {
+    background: var(--pr-color-secondary-400) !important;
+    color: var(--pr-color-white) !important;
+    font-weight: 600;
+    @include fonts.pr-typography('body-1');
+    padding: 8px 16px;
+    border: none;
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .p-sortable-column-icon {
+      color: var(--pr-color-white) !important;
+    }
+
+    &:nth-child(3),
+    &:nth-child(4),
+    &:nth-child(5) {
+      .header-content {
+        justify-content: center;
+      }
+    }
+  }
+
+  .p-datatable-tbody > tr {
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: var(--pr-color-primary-25) !important;
+    }
+
+    > td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--pr-color-primary-50);
+      color: var(--pr-color-secondary-400);
+      vertical-align: middle;
+
+      &:nth-child(3),
+      &:nth-child(4),
+      &:nth-child(5) {
+        text-align: center;
+      }
+    }
+  }
+
+  .p-datatable-emptymessage > td {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--pr-color-secondary-200);
+    font-style: italic;
+  }
+
+  .p-multiselect-dropdown {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary-300) !important;
+    width: 43px !important;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+    height: 38px;
+    color: white !important;
+  }
+
+  .p-multiselect .p-multiselect-label {
+    color: var(--pr-color-accents-3);
+    align-items: center;
+    height: 38px;
+  }
+
+  .p-multiselect-panel .p-multiselect-items .p-multiselect-item {
+    @include fonts.pr-typography('body-1');
+  }
+
+  .p-datatable-thead > tr > th:last-child,
+  .p-datatable-tbody > tr > td:last-child {
+    text-align: center !important;
+  }
+}
+
+.status-active {
+  color: var(--pr-color-green-600);
+  font-weight: 500;
+  padding: 4px 8px;
+  background-color: var(--pr-color-green-50);
+  border-radius: 6px;
+  @include fonts.pr-typography('body-2');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-inactive {
+  color: var(--pr-color-red-400);
+  font-weight: 500;
+  padding: 4px 8px;
+  background-color: var(--pr-color-red-50);
+  border-radius: 6px;
+  @include fonts.pr-typography('body-2');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-read-only {
+  color: var(--pr-color-secondary-200);
+  font-weight: 500;
+  padding: 4px 8px;
+  background-color: var(--pr-color-accents-1);
+  border-radius: 6px;
+  @include fonts.pr-typography('body-2');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 // Mobile adjustments
@@ -470,8 +458,8 @@
 // Empty state message
 .empty-message {
   text-align: center;
-  color: #6b7280;
-  font-size: 14px;
+  color: var(--pr-color-secondary-200);
+  @include fonts.pr-typography('body-1');
   padding: 24px;
 }
 
@@ -495,7 +483,7 @@
 
     .material-icons-round {
       font-size: 20px;
-      color: var(--pr-color-primary);
+      color: var(--pr-color-primary-300);
       transition: all 0.2s ease;
     }
 

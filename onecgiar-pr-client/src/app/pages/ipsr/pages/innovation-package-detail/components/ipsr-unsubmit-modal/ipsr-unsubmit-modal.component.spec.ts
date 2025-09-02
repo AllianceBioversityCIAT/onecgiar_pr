@@ -14,6 +14,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { TextareaModule } from 'primeng/textarea';
 
 describe('IpsrUnsubmitModalComponent', () => {
   let component: IpsrUnsubmitModalComponent;
@@ -52,14 +53,14 @@ describe('IpsrUnsubmitModalComponent', () => {
         PrWordCounterComponent,
         PrFieldHeaderComponent,
         PrFieldValidationsComponent,
-        InputTextarea
       ],
       imports: [
         HttpClientTestingModule,
         TooltipModule,
         FormsModule,
         DialogModule,
-        BrowserAnimationsModule
+        BrowserAnimationsModule,
+        TextareaModule
       ],
       providers: [
         {

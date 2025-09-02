@@ -6,9 +6,10 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/a
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-  selector: 'app-results-notifications',
-  templateUrl: './results-notifications.component.html',
-  styleUrls: ['./results-notifications.component.scss']
+    selector: 'app-results-notifications',
+    templateUrl: './results-notifications.component.html',
+    styleUrls: ['./results-notifications.component.scss'],
+    standalone: false
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   allInitiatives = [];

@@ -5,9 +5,10 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';
 
 @Component({
-  selector: 'app-cap-dev-info',
-  templateUrl: './cap-dev-info.component.html',
-  styleUrls: ['./cap-dev-info.component.scss']
+    selector: 'app-cap-dev-info',
+    templateUrl: './cap-dev-info.component.html',
+    styleUrls: ['./cap-dev-info.component.scss'],
+    standalone: false
 })
 export class CapDevInfoComponent implements OnInit {
   capDevInfoRoutingBody = new CapDevInfoRoutingBody();

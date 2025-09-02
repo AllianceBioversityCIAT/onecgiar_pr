@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'filterNotificationByInitiative'
+    name: 'filterNotificationByInitiative',
+    standalone: false
 })
 export class FilterNotificationByInitiativePipe implements PipeTransform {
   transform(list, initiativeId: string) {

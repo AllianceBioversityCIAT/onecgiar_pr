@@ -6,9 +6,10 @@ import { IpsrListFilterService } from './services/ipsr-list-filter.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 
 @Component({
-  selector: 'app-innovation-package-list',
-  templateUrl: './innovation-package-list.component.html',
-  styleUrls: ['./innovation-package-list.component.scss']
+    selector: 'app-innovation-package-list',
+    templateUrl: './innovation-package-list.component.html',
+    styleUrls: ['./innovation-package-list.component.scss'],
+    standalone: false
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
   totalResults: number = 0;

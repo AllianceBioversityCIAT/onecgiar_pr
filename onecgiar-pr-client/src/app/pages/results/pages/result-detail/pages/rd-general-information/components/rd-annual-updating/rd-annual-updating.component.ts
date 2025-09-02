@@ -3,9 +3,10 @@ import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-rd-annual-updating',
-  templateUrl: './rd-annual-updating.component.html',
-  styleUrls: ['./rd-annual-updating.component.scss']
+    selector: 'app-rd-annual-updating',
+    templateUrl: './rd-annual-updating.component.html',
+    styleUrls: ['./rd-annual-updating.component.scss'],
+    standalone: false
 })
 export class RdAnnualUpdatingComponent implements OnInit {
   @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();

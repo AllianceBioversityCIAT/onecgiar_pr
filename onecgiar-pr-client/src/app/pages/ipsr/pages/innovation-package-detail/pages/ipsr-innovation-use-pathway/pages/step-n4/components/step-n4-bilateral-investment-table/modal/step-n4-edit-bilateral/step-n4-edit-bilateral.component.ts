@@ -5,9 +5,10 @@ import { CentersService } from '../../../../../../../../../../../../shared/servi
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n4-edit-bilateral',
-  templateUrl: './step-n4-edit-bilateral.component.html',
-  styleUrls: ['./step-n4-edit-bilateral.component.scss']
+    selector: 'app-step-n4-edit-bilateral',
+    templateUrl: './step-n4-edit-bilateral.component.html',
+    styleUrls: ['./step-n4-edit-bilateral.component.scss'],
+    standalone: false
 })
 export class StepN4EditBilateralComponent implements OnInit, DoCheck {
   @Input() body: any = {};

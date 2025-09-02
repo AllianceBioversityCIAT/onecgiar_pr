@@ -4,9 +4,10 @@ import { IpsrDataControlService } from '../../../../services/ipsr-data-control.s
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-ipsr-unsubmit-modal',
-  templateUrl: './ipsr-unsubmit-modal.component.html',
-  styleUrls: ['./ipsr-unsubmit-modal.component.scss']
+    selector: 'app-ipsr-unsubmit-modal',
+    templateUrl: './ipsr-unsubmit-modal.component.html',
+    styleUrls: ['./ipsr-unsubmit-modal.component.scss'],
+    standalone: false
 })
 export class IpsrUnsubmitModalComponent {
   constructor(private api: ApiService, public ipsrDataControlSE: IpsrDataControlService) {}

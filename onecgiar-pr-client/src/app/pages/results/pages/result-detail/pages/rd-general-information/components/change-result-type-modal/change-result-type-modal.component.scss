@@ -1,3 +1,5 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .modal_container {
   padding: 20px 40px 50px 40px;
   max-width: 70vw !important;
@@ -14,7 +16,7 @@
 }
 
 .modal_header {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   width: 100%;
   padding: 10px 20px;
   display: flex;
@@ -22,15 +24,15 @@
   align-items: center;
 
   .modal_title {
-    font-size: 1.3em;
+    @include fonts.pr-typography('h3');
     font-weight: 600;
-    color: white;
+    color: var(--pr-color-white);
     margin: 0;
   }
 
   .modal_close_icon {
     cursor: pointer;
-    color: #fff;
+    color: var(--pr-color-white);
   }
 }
 
@@ -43,9 +45,8 @@
 }
 
 .chip_disabled {
-  background-color: #f3f3f3;
-  color: #bfbfbf;
-  font-size: 0.8em;
+  background-color: var(--pr-color-accents-1);
+  color: var(--pr-color-accents-3);
   padding: 0.5rem 1rem;
   border-radius: 5px;
   cursor: pointer;

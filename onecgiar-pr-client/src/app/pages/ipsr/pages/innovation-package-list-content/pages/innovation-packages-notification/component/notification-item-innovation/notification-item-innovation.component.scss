@@ -1,51 +1,54 @@
+@use '../../../../../../../../../styles/fonts.scss' as fonts;
+
 .noti_container {
-    position: relative;
-    padding: 20px 30px;
-    background-color: var(--pr-color-primary-2);
+  position: relative;
+  padding: 20px 30px;
+  background-color: var(--pr-color-primary-50);
 
-    .title {
-        font-size: 1.2em;
-    }
+  .title {
+    @include fonts.pr-typography('body-1');
+  }
 
-    .sub_title {
-        margin-bottom: 10px;
-    }
+  .sub_title {
+    margin-bottom: 10px;
+    @include fonts.pr-typography('body-2');
+  }
 
-    .direction_icon {
-        position: absolute;
-        left: 0;
-        top: 0;
-        rotate: 45deg;
-        margin-left: 5px;
-        margin-top: 5px;
-    }
+  .direction_icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    rotate: 45deg;
+    margin-left: 5px;
+    margin-top: 5px;
+  }
 
-    .text_icon {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
+  .text_icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    .buttons {
-        display: flex;
-        gap: 10px;
-    }
+  .buttons {
+    display: flex;
+    gap: 10px;
+  }
 
-    .pending {
-        color: gray;
-    }
+  .pending {
+    color: var(--pr-color-accents-5);
+  }
 
-    .accepted {
-        color: green;
-    }
+  .accepted {
+    color: var(--pr-color-green-500);
+  }
 
-    .rejected {
-        color: rgb(219, 50, 28);
-    }
+  .rejected {
+    color: var(--pr-color-red-300);
+  }
 }
 
 .result_submitted_text {
-    color: rgb(238, 71, 71);
-    font-weight: 700px;
-    font-size: 1em !important;
+  color: var(--pr-color-red-200);
+  @include fonts.pr-typography('body-1');
+  font-weight: 700;
 }

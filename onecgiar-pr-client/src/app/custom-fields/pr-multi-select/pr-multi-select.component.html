@@ -10,10 +10,10 @@
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options">
             <div class="search_input_container">
-                <div class="p-input-icon-left p-fluid">
-                    <i class="pi pi-search"></i>
-                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" />
-                </div>
+                <p-iconfield>
+                    <p-inputicon styleClass="pi pi-search" />
+                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+                </p-iconfield>
             </div>
 
             <div class="util_container">
@@ -34,7 +34,7 @@
                     </p-checkbox>
                     <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
                         srcset="">
-                    <div class="label" [innerHtml]="option[this.optionLabel]"></div>
+                    <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
                     <div class="event" (click)="toggleSelectOption(option)"></div>
                 </div>
             </cdk-virtual-scroll-viewport>

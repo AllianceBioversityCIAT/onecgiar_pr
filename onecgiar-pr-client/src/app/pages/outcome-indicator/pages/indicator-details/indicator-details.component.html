@@ -7,7 +7,7 @@
 
 <h1 class="indicator_title">
   Indicator:
-  <span style="color: var(--pr-color-primary)">
+  <span style="color: var(--pr-color-primary-300)">
     {{ this.indicatorDetailsService.indicatorData()?.indicator_name }}
   </span>
 </h1>
@@ -79,6 +79,7 @@
     icon="pi pi-file-plus"
     label="Add result"
     (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"
+    class="add_result_button"
     [ngClass]="{
       globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
     }"></p-button>

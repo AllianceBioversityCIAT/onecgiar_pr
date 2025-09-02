@@ -53,21 +53,6 @@ describe('HeaderPanelComponent', () => {
     expect(component.notificationBadgeLength()).toBe('2');
   });
 
-  it('should open the information link in a new window with correct parameters', () => {
-    const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
-    const url = component.globalLinksSE.links.url_platform_information;
-    const w = window.innerWidth - window.innerWidth / 3;
-    const h = window.innerHeight - window.innerHeight / 4;
-    const top = window.screenY + (window.outerHeight - h) / 2.5;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-
-    component.openInfoLink();
-
-    expect(windowOpenSpy).toHaveBeenCalledWith(url, 'Information center', `left=${left},top=${top},width=${w},height=${h}`);
-
-    windowOpenSpy.mockRestore();
-  });
-
   it('should navigate to results-notifications/requests', () => {
     const routerNavigateSpy = jest.spyOn(component.router, 'navigate').mockImplementation(() => null);
 

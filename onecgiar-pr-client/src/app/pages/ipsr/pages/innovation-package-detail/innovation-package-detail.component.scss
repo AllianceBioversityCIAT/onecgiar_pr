@@ -1,11 +1,13 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 .innovation_packages_title {
   width: 90%;
   margin: 1rem auto 2rem auto;
 
   .title {
     padding: 1rem;
-    background-color: white;
-    box-shadow: 0px 0px 5px 5px #00000007;
+    background-color: var(--pr-color-white);
+    box-shadow: 0px 0px 5px 5px rgba(var(--pr-color-black-rgb), 0.027);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -13,7 +15,7 @@
     width: 100%;
     gap: 10px;
     font-weight: 600;
-    color: var(--pr-color-secondary);
+    color: var(--pr-color-secondary-400);
   }
 }
 
@@ -30,7 +32,7 @@
   margin-bottom: 50px;
 
   .ipsr-detail-line {
-    background-color: var(--pr-color-primary);
+    background-color: var(--pr-color-primary-300);
     width: 100%;
     height: 2px;
   }
@@ -58,11 +60,11 @@
     margin-right: 20px;
     display: flex;
     gap: 10px;
-    font-size: 0.9em;
+    @include fonts.pr-typography('body-3');
 
     .item {
-      background-color: var(--pr-color-primary);
-      color: white;
+      background-color: var(--pr-color-primary-300);
+      color: var(--pr-color-white);
       padding: 5px 10px;
       border-radius: 0px 0px 10px 10px;
     }

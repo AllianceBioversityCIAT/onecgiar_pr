@@ -4,9 +4,10 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 
 @Component({
-  selector: 'app-tor-key-results',
-  templateUrl: './tor-key-results.component.html',
-  styleUrls: ['./tor-key-results.component.scss']
+    selector: 'app-tor-key-results',
+    templateUrl: './tor-key-results.component.html',
+    styleUrls: ['./tor-key-results.component.scss'],
+    standalone: false
 })
 export class TorKeyResultsComponent implements OnDestroy {
   requesting = false;

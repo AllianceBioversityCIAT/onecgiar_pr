@@ -1,10 +1,15 @@
 <div
   class="local_container section_container"
   [style]="{ width: this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 305px)' : 'calc(100vw - 118px)' }">
-  <header>
-    <i class="material-icons-round" style="font-size: 30px">manage_accounts</i>
-    <h1>User Management</h1>
+  <header class="header-container">
+    <div class="header-title">
+      <i class="material-icons-round" style="font-size: 28px">manage_accounts</i>
+      <h1>User Management</h1>
+    </div>
+
+    <app-user-roles-info-modal type="text"></app-user-roles-info-modal>
   </header>
+
   <div
     class="description"
     pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
@@ -21,8 +26,8 @@
           <!-- User search -->
           <div class="search-container">
             <label class="search-label" for="search-user-input">Search by user:</label>
-            <div class="p-input-icon-left">
-              <i class="pi pi-search"></i>
+            <p-iconfield style="width: 100%">
+              <p-inputicon styleClass="pi pi-search" />
               <input
                 type="text"
                 pInputText
@@ -30,8 +35,9 @@
                 [value]="searchText()"
                 (input)="onSearchInputChange($event)"
                 class="search-field"
+                style="height: 38px; width: 100%"
                 id="search-user-input" />
-            </div>
+            </p-iconfield>
           </div>
 
           <!-- Status filter -->
@@ -98,6 +104,11 @@
     </div>
   </div>
 
+  <!-- export button -->
+  <div class="export-button">
+    <app-pr-button text="Download .xlsx" icon="file_download" [verticalMargin]="0" (click)="this.exportExcel(this.users())"></app-pr-button>
+  </div>
+
   <!-- Users table -->
   <div class="table-container">
     <p-table
@@ -115,7 +126,7 @@
         transition: 'max-width 0.3s ease-in-out'
       }">
       <ng-template pTemplate="header">
-        <tr>
+        <tr style="height: 54px">
           @for (column of columns; track column.key) {
             <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
               <div class="header-content">
@@ -145,7 +156,7 @@
                     View more
                   </button>
 
-                  <p-overlayPanel #entityOverlay [style]="{ width: '300px' }">
+                  <p-popover #entityOverlay [style]="{ maxWidth: '300px' }">
                     <div class="overlay-entities-container">
                       <div class="overlay-title">All Entities</div>
                       <div class="overlay-entities-grid">
@@ -156,7 +167,7 @@
                         }
                       </div>
                     </div>
-                  </p-overlayPanel>
+                  </p-popover>
                 }
               } @else if (user.appRole) {
                 <div class="app-role-chip">
@@ -205,11 +216,6 @@
     <div class="counter">
       <span class="name">Users |</span>
       <span class="total">{{ this.users().length }} total</span>
-    </div>
-
-    <!-- export button -->
-    <div class="export-button">
-      <app-pr-button text="Download .xlsx" icon="file_download" [verticalMargin]="0" (click)="this.exportExcel(this.users())"></app-pr-button>
     </div>
   </div>
 

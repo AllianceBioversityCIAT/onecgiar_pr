@@ -12,7 +12,7 @@ input[type='number'] {
 
 .pr-input.readOnly {
   padding: 8px 10px;
-  box-shadow: 0px 0px 10px -1px #dcdcdc;
+  box-shadow: 0px 0px 10px -1px var(--pr-color-neutral-1000);
   border-radius: 5px;
 }
 
@@ -21,11 +21,11 @@ input[type='number'] {
 }
 
 .invalid {
-  border-color: red !important;
-  box-shadow: 0 0 0 1px red !important;
+  border-color: var(--pr-color-red-300) !important;
+  box-shadow: 0 0 0 1px var(--pr-color-red-300) !important;
 }
 
 .warning {
-  border-color: #ffce31 !important;
-  box-shadow: 0px 0px 0px 1px #ffce31 !important;
+  border-color: var(--pr-color-yellow-100) !important;
+  box-shadow: 0px 0px 0px 1px var(--pr-color-yellow-100) !important;
 }

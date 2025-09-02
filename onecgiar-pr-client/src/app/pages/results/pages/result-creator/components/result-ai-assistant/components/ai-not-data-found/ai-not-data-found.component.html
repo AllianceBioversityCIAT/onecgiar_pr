@@ -1,0 +1,18 @@
+<div class="not_result_container">
+  <p class="not_result_title">No results identified</p>
+
+  <div class="not_result_img_container">
+    <img src="../../../../../../../assets/not-data-2.svg" alt="upload-ai" class="not_result_img" />
+  </div>
+
+  <div class="not_result_content">
+    <h1 class="not_result_content_title">NO RESULTS IDENTIFIED</h1>
+    <p class="not_result_content_desc">The AI didn't identify any results. What would you like to do next?</p>
+  </div>
+</div>
+
+<div class="modal_footer" style="justify-content: center; margin-top: 20px">
+  <app-pr-button text="Return to Create Result" (click)="this.createResultManagementService.closeModal()" colorType="secondary"></app-pr-button>
+
+  <app-pr-button text="Upload a new file" (click)="this.createResultManagementService.goBackToUploadNewFile()"></app-pr-button>
+</div>

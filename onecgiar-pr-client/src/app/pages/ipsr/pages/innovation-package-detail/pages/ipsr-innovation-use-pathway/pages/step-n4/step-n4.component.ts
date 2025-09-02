@@ -5,9 +5,10 @@ import { IpsrDataControlService } from '../../../../../../services/ipsr-data-con
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n4',
-  templateUrl: './step-n4.component.html',
-  styleUrls: ['./step-n4.component.scss']
+    selector: 'app-step-n4',
+    templateUrl: './step-n4.component.html',
+    styleUrls: ['./step-n4.component.scss'],
+    standalone: false
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();

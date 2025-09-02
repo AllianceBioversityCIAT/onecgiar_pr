@@ -2,8 +2,8 @@
   [ngSwitch]="notification?.request_status_id"
   class="notification"
   [ngStyle]="{
-    'background-color': notification?.request_status_id === 1 ? '#eef0fc' : '',
-    border: notification?.request_status_id === 1 ? '1px solid #bac1e5' : ''
+    'background-color': notification?.request_status_id === 1 ? 'var(--pr-color-primary-25)' : '',
+    border: notification?.request_status_id === 1 ? '1px solid var(--pr-color-primary-100)' : ''
   }">
   <div class="notification_header">
     <div class="notification_header_item">
@@ -38,7 +38,11 @@
 
         to result
 
-        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+        <a
+          [href]="resultUrl(notification)"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
@@ -94,7 +98,11 @@
 
         to result
 
-        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+        <a
+          [href]="resultUrl(notification)"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
@@ -106,8 +114,9 @@
 
     <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
       <p class="notification_content_actions_status">
-        <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #008000"> Accepted</span> by
-        {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
+        <b style="color: var(--pr-color-primary-300)"> Status: </b>
+        <span style="font-weight: 500; color: var(--pr-color-green-500)"> Accepted</span> by {{ notification?.obj_approved_by?.first_name }}
+        {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
       </p>
 
       <div class="notification_date" style="min-width: 150px">Requested {{ notification.requested_date | appFormatTimeAgo }}</div>
@@ -131,7 +140,11 @@
 
         to result
 
-        <a [href]="resultUrl(notification)" target="_blank" rel="noopener noreferrer" style="text-decoration: underline; color: #000">
+        <a
+          [href]="resultUrl(notification)"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="text-decoration: underline; color: var(--pr-color-black)">
           {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
         </a>
 
@@ -143,7 +156,7 @@
 
     <div class="notification_content_actions" style="min-width: 280px; max-width: 280px">
       <p class="notification_content_actions_status">
-        <b style="color: var(--pr-color-primary)"> Status: </b> <span style="font-weight: 500; color: #db321c">Rejected</span> by
+        <b style="color: var(--pr-color-primary-300)"> Status: </b> <span style="font-weight: 500; color: var(--pr-color-red-300)">Rejected</span> by
         {{ notification?.obj_approved_by?.first_name }} {{ notification?.obj_approved_by?.last_name }} on {{ notification?.aprovaed_date | date }}
       </p>
 

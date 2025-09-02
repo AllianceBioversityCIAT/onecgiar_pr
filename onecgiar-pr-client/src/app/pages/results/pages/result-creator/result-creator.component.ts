@@ -5,11 +5,13 @@ import { ResultLevelService } from './services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { CreateResultManagementService } from './services/create-result-management.service';
 
 @Component({
   selector: 'app-result-creator',
   templateUrl: './result-creator.component.html',
-  styleUrls: ['./result-creator.component.scss']
+  styleUrls: ['./result-creator.component.scss'],
+  standalone: false
 })
 export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;
@@ -39,9 +41,16 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     message: ''
   };
 
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private router: Router, private phasesService: PhasesService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    public createResultManagementService: CreateResultManagementService,
+    private router: Router,
+    private phasesService: PhasesService
+  ) {}
 
   ngOnInit(): void {
+    this.api.dataControlSE.getCurrentPhases();
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
@@ -240,7 +249,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       return;
     }
 
-    const regex = /^https:\/\/(?:cgspace\.cgiar\.org\/items\/[0-9a-f-]{36}|hdl\.handle\.net\/10568\/\d+|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
+    const regex =
+      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/10568\/\d+|cgspace\.cgiar\.org\/handle\/10568\/\d+)$/;
 
     const isValid = regex.test(this.resultLevelSE.resultBody.handler);
 

@@ -12,7 +12,8 @@ import { MessageService } from 'primeng/api';
   selector: 'app-result-detail',
   templateUrl: './result-detail.component.html',
   styleUrls: ['./result-detail.component.scss'],
-  providers: [MessageService]
+  providers: [MessageService],
+  standalone: false
 })
 export class ResultDetailComponent implements OnInit, DoCheck {
   constructor(
@@ -43,7 +44,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
     await this.GET_resultIdToCode();
-    await this.currentResultSE.GET_resultById();
+
+    this.currentResultSE.GET_resultById();
     this.greenChecksSE.updateGreenChecks();
     this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();

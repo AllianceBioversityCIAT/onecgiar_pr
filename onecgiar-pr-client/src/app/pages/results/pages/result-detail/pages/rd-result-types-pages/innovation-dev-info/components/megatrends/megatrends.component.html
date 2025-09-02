@@ -3,9 +3,11 @@
   [description]="options?.megatrends?.question_description"
   [useColon]="false"></app-pr-field-header>
 
-<div *ngFor="let checkbox of this.options?.megatrends?.options" class="checkboxList">
-  <app-pr-checkbox
-    [label]="this.checkbox.question_text"
-    [(ngModel)]="this.checkbox.answer_boolean"
-    (ngModelChange)="(this.checkbox.answer_text)"></app-pr-checkbox>
-</div>
+@for (checkbox of this.options?.megatrends?.options; track $index; let i = $index) {
+  <div class="checkboxList">
+    <app-pr-checkbox
+      [label]="checkbox.question_text"
+      [(ngModel)]="checkbox.answer_boolean"
+      (ngModelChange)="(checkbox.answer_text)"></app-pr-checkbox>
+  </div>
+}

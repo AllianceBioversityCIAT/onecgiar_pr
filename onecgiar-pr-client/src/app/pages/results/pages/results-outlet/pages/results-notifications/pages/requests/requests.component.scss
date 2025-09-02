@@ -19,12 +19,17 @@ p {
     font-weight: 500;
     padding: 5px 15px;
     border-radius: 10px;
-    background-color: #d9d9d9;
-    color: #2a2e45;
+    background-color: var(--pr-color-neutral-1000);
+    color: var(--pr-color-secondary-400);
+    transition: all ease-in-out 0.2s;
+
+    &:hover {
+      background-color: rgba(var(--pr-color-black-rgb), 0.2) !important;
+    }
   }
 }
 
 .active {
-  background-color: #2a2e45 !important;
-  color: #fff !important;
+  background-color: var(--pr-color-secondary-400) !important;
+  color: var(--pr-color-white) !important;
 }

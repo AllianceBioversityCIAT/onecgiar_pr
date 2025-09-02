@@ -4,9 +4,10 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
-  selector: 'app-ipsr-contributors-non-cgiar-partners',
-  templateUrl: './ipsr-contributors-non-cgiar-partners.component.html',
-  styleUrls: ['./ipsr-contributors-non-cgiar-partners.component.scss']
+    selector: 'app-ipsr-contributors-non-cgiar-partners',
+    templateUrl: './ipsr-contributors-non-cgiar-partners.component.html',
+    styleUrls: ['./ipsr-contributors-non-cgiar-partners.component.scss'],
+    standalone: false
 })
 export class IpsrContributorsNonCgiarPartnersComponent {
   @Input() contributorsBody = new ContributorsBody();

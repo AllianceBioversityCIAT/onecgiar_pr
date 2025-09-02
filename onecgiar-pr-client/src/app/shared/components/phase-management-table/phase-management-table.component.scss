@@ -1,5 +1,7 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .setting_title {
-  font-size: 18px;
+  @include fonts.pr-typography('h2');
   font-weight: 500;
   margin-bottom: 20px;
 }
@@ -16,25 +18,25 @@
               padding: 10px;
 
               .text {
-                font-size: 14px;
+                @include fonts.pr-typography('body-2');
               }
 
               .tag_container {
                 padding: 4px 12px;
                 border-radius: 4px;
-                font-size: 12px;
+                @include fonts.pr-typography('body-2');
                 font-weight: 500;
                 text-align: center;
                 width: fit-content;
 
                 &.open {
-                background-color: #C6CDF4;
-                color: #5569DD;
+                  background-color: var(--pr-color-primary-50);
+                  color: var(--pr-color-primary-300);
                 }
-                
+
                 &.closed {
-                background-color: #F7F7F8;
-                color: #1A1C2A;
+                  background-color: var(--pr-color-accents-1);
+                  color: var(--pr-color-accents-8);
                 }
               }
 
@@ -49,7 +51,7 @@
                   transition: all 0.3s;
 
                   &:hover {
-                    background-color: #f0f0f0;
+                    background-color: var(--pr-color-accents-1);
                   }
 
                   &.disabled {
@@ -62,19 +64,19 @@
                   }
 
                   &.edit i {
-                  color: #5569DD;
+                    color: var(--pr-color-primary-300);
                   }
-                  
+
                   &.delete i {
-                  color: #D00416;
+                    color: var(--pr-color-red-300);
                   }
 
                   &.save i {
-                    color: #38DF7B;
+                    color: var(--pr-color-green-500);
                   }
 
                   &.cancel i {
-                    color: #8c8c8c;
+                    color: var(--pr-color-accents-5);
                   }
                 }
               }
@@ -106,11 +108,11 @@
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      background-color: #ff4d4f;
-      color: white;
+      background-color: var(--pr-color-red-200);
+      color: var(--pr-color-white);
       padding: 8px 16px;
       border-radius: 4px;
-      font-size: 12px;
+      @include fonts.pr-typography('body-2');
       white-space: nowrap;
       margin-bottom: 8px;
 
@@ -121,22 +123,22 @@
         left: 50%;
         transform: translateX(-50%);
         border: 6px solid transparent;
-        border-top-color: #ff4d4f;
+        border-top-color: var(--pr-color-red-200);
       }
     }
 
     .button {
-      background-color: #1890ff;
-      color: white;
+      background-color: var(--pr-color-primary-300);
+      color: var(--pr-color-white);
       padding: 8px 24px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
+      @include fonts.pr-typography('body-2');
       font-weight: 500;
       transition: all 0.3s;
 
       &:hover {
-        background-color: #40a9ff;
+        background-color: var(--pr-color-primary-400);
       }
     }
   }

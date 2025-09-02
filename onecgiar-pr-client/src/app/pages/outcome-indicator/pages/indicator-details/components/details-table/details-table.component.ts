@@ -5,12 +5,11 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 
 @Component({
-  selector: 'app-details-table',
-  standalone: true,
-  imports: [CommonModule, TableModule, CustomFieldsModule],
-  templateUrl: './details-table.component.html',
-  styleUrl: './details-table.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+    selector: 'app-details-table',
+    imports: [CommonModule, TableModule, CustomFieldsModule],
+    templateUrl: './details-table.component.html',
+    styleUrl: './details-table.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DetailsTableComponent {
   indicatorDetailsService = inject(IndicatorDetailsService);

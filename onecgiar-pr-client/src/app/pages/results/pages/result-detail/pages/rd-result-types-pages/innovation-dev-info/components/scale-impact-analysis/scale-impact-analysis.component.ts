@@ -4,9 +4,10 @@ import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmen
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
-  selector: 'app-scale-impact-analysis',
-  templateUrl: './scale-impact-analysis.component.html',
-  styleUrls: ['./scale-impact-analysis.component.scss']
+    selector: 'app-scale-impact-analysis',
+    templateUrl: './scale-impact-analysis.component.html',
+    styleUrls: ['./scale-impact-analysis.component.scss'],
+    standalone: false
 })
 export class ScaleImpactAnalysisComponent {
   @Input() body = new InnovationDevInfoBody();

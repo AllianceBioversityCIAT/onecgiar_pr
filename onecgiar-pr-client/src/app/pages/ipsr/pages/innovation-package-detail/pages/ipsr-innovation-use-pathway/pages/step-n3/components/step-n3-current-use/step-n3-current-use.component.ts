@@ -3,9 +3,10 @@ import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from '../../model/I
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-step-n3-current-use',
-  templateUrl: './step-n3-current-use.component.html',
-  styleUrls: ['./step-n3-current-use.component.scss']
+    selector: 'app-step-n3-current-use',
+    templateUrl: './step-n3-current-use.component.html',
+    styleUrls: ['./step-n3-current-use.component.scss'],
+    standalone: false
 })
 export class StepN3CurrentUseComponent implements OnInit {
   @Input() body = new IpsrStep3Body();

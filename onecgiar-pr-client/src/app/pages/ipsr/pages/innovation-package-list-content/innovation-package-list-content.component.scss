@@ -1,38 +1,37 @@
 .local_container {
-    margin-top: 30px;
-    padding-bottom: 10px;
-    margin-bottom: 50px;
-    overflow: hidden;
+  margin-top: 30px;
+  padding-bottom: 10px;
+  margin-bottom: 50px;
+  overflow: hidden;
 
-    .tabs {
-        display: flex;
+  .tabs {
+    display: flex;
 
-        .active {
-            background-color: var(--pr-color-primary) !important;
-            color: white !important;
-            font-weight: 600;
-        }
-
-        .tab {
-            background-color: var(--pr-color-medium-2);
-            color: var(--pr-color-medium);
-            text-decoration: none;
-            padding: 5px 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color .3s ease-in-out;
-        }
+    .active {
+      background-color: var(--pr-color-primary-300) !important;
+      color: var(--pr-color-white) !important;
+      font-weight: 600;
     }
 
-    .outlet {
-        margin-top: 20px;
-        padding: 0px 10px;
+    .tab {
+      background-color: var(--pr-color-accents-2);
+      color: var(--pr-color-accents-4);
+      text-decoration: none;
+      padding: 5px 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease-in-out;
     }
+  }
 
+  .outlet {
+    margin-top: 20px;
+    padding: 0px 10px;
+  }
 }
 
-.pass_steps{
-    background: #5569DD !important;
-    border-color: #5569DD !important;
+.pass_steps {
+  background: var(--pr-color-primary-300) !important;
+  border-color: var(--pr-color-primary-300) !important;
 }

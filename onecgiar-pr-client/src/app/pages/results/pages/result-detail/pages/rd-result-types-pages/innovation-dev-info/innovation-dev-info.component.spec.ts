@@ -30,6 +30,7 @@ import { AddButtonComponent } from '../../../../../../../custom-fields/add-butto
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
+import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -244,6 +245,11 @@ describe('InnovationDevInfoComponent', () => {
       },
       rolesSE: {
         readOnly: false
+      },
+      dataControlSE: {
+        currentResult: {
+          portfolio: 'P25'
+        }
       }
     };
 
@@ -281,7 +287,7 @@ describe('InnovationDevInfoComponent', () => {
         AddButtonComponent,
         MegatrendsComponent
       ],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
+      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,
@@ -499,6 +505,7 @@ describe('InnovationDevInfoComponent', () => {
 
   describe('shortTitleDescription()', () => {
     it('should generate the correct short title description', () => {
+      mockApiService.dataControlSE.currentResult.portfolio = 'P22';
       const expectedText = `<ul>
       <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
       <li>Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling).</li>
@@ -521,6 +528,7 @@ describe('InnovationDevInfoComponent', () => {
 
   describe('readiness_of_this_innovation_description()', () => {
     it('should generate the correct short title description', () => {
+      mockApiService.dataControlSE.currentResult.portfolio = 'P22';
       const expectedText = `<ul>
       <li>In case the innovation readiness level differs across countries or regions, we advise to assign the highest current innovation readiness level that can be supported by the evidence provided.</li>
       <li>Be realistic in assessing the readiness level of the innovation and keep in mind that the claimed readiness level needs to be supported by evidence documentation.</li>

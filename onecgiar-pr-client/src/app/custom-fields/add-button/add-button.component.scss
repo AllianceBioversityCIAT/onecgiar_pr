@@ -1,65 +1,61 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .add_button_container {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 10px;
+  margin-top: 10px;
 
+  .add_button_content {
+    transition: all ease 0.3s;
+    background-color: rgba(var(--pr-color-primary-rgb), 0.925);
+    border-radius: 20px 5px 20px 5px;
     display: flex;
-    justify-content: center;
-    padding-bottom: 10px;
-    margin-top: 10px;
+    justify-content: space-between;
+    overflow: hidden;
+    box-shadow: 0px 0px 5px rgba(var(--pr-color-black-rgb), 0.39);
+    cursor: pointer;
 
-    .add_button_content {
-        transition: all ease .3s;
-        background-color: #5e89f8ec;
-        // padding: 10px;
-        border-radius: 20px 5px 20px 5px;
-        display: flex;
-        justify-content: space-between;
-        overflow: hidden;
-        box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.39);
-        cursor: pointer;
+    &:hover {
+      background-color: var(--pr-color-primary-300);
+      transition: all ease 0.3s;
 
-        &:hover {
-
-            background-color: var(--pr-color-primary);
-            transition: all ease .3s;
-
-            .name {
-                padding-right: 20px;
-                transition: all ease .3s;
-                color: white;
-
-            }
-
-        }
-
-        .name {
-            transition: all ease .3s;
-            margin-left: 10px;
-            display: flex;
-            align-items: center;
-            padding-right: 10px;
-            color: white;
-            padding-left: 10px;
-            font-size: 1em;
-        }
-
-        .icon_container {
-            background-color: white;
-            width: 35px;
-            height: 35px;
-            border-radius: 20px 5px 20px 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            .icon {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-
-                i {
-                    color: #5e89f8ec;
-                }
-            }
-        }
+      .name {
+        padding-right: 20px;
+        transition: all ease 0.3s;
+        color: var(--pr-color-white);
+      }
     }
 
+    .name {
+      transition: all ease 0.3s;
+      margin-left: 10px;
+      display: flex;
+      align-items: center;
+      padding-right: 10px;
+      color: var(--pr-color-white);
+      padding-left: 10px;
+      @include fonts.pr-typography('body-2');
+    }
+
+    .icon_container {
+      background-color: var(--pr-color-white);
+      width: 35px;
+      height: 35px;
+      border-radius: 20px 5px 20px 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .icon {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        i {
+          color: rgba(var(--pr-color-primary-rgb), 0.925);
+        }
+      }
+    }
+  }
 }

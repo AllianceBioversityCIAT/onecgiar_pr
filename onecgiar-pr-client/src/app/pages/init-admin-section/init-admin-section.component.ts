@@ -3,9 +3,10 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 'app-init-admin-section',
-  templateUrl: './init-admin-section.component.html',
-  styleUrls: ['./init-admin-section.component.scss']
+    selector: 'app-init-admin-section',
+    templateUrl: './init-admin-section.component.html',
+    styleUrls: ['./init-admin-section.component.scss'],
+    standalone: false
 })
 export class InitAdminSectionComponent implements OnInit {
   sections = [

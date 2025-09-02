@@ -4,9 +4,10 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
-  selector: 'app-settings',
-  templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.scss']
+    selector: 'app-settings',
+    templateUrl: './settings.component.html',
+    styleUrls: ['./settings.component.scss'],
+    standalone: false
 })
 export class SettingsComponent implements OnInit {
   description = `Information to keep in mind: <ul><li>Please check if you really want to disable any option</li><li>It is possible to enable/disable the options as you wish</li></ul>`;

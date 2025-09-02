@@ -1,52 +1,55 @@
+@use '../../../styles/fonts.scss' as fonts;
+
 .local_container {
-    padding: 0px 150px;
+  padding: 0px 150px;
 
-    .line {
-        background-color: #D9D9D9;
-        height: 12px;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 50px;
-        margin-bottom: 50px;
+  .line {
+    background-color: var(--pr-color-neutral-1000);
+    height: 12px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 50px;
+    margin-bottom: 50px;
 
-        .circle {
-            background-color: #D9D9D9;
-            border-radius: 100px;
-            min-width: 40px;
-            min-height: 40px;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all ease-in-out .3s;
-        }
+    .circle {
+      background-color: var(--pr-color-neutral-1000);
+      border-radius: 100px;
+      min-width: 40px;
+      min-height: 40px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all ease-in-out 0.3s;
     }
+  }
 
-    .active {
-        background-color: var(--pr-color-primary) !important;
-        color: white;
-    }
-
+  .active {
+    background-color: var(--pr-color-primary-300) !important;
+    color: var(--pr-color-white);
+  }
 }
 
 .gray_card {
-    padding: 10px 20px;
-    border-radius: 5px !important;
+  padding: 10px 20px;
+  border-radius: 5px !important;
 
-    .title {
-        font-weight: 700;
-        margin-bottom: 10px;
-        font-size: 1.1em;
-    }
+  .title {
+    @include fonts.pr-typography('body-1');
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
 
-    .description {}
+  .description {
+    @include fonts.pr-typography('body-2');
+  }
 }
 
 .showHoverData {
-    box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.103) !important;
-    background-color: #e8f1fa;
+  box-shadow: 0px 0px 5px 2px rgba(var(--pr-color-black-rgb), 0.103) !important;
+  background-color: var(--pr-color-primary-50);
 }

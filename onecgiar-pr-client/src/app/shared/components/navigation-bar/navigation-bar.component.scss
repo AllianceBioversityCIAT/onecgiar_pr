@@ -1,8 +1,12 @@
 .navigation_bar {
-  background-color: var(--pr-color-secondary);
+  background-color: var(--pr-color-secondary-400);
   display: flex;
   gap: 10px;
   padding: 10px 100px;
+
+  @media screen and (max-width: 1200px) {
+    padding: 10px 60px;
+  }
 
   &.sticky {
     position: sticky;
@@ -13,14 +17,14 @@
   }
 
   .section_active {
-    background-color: white;
-    font-weight: 700;
-    color: var(--pr-color-tertiary);
+    background-color: var(--pr-color-white);
+    font-weight: 600 !important;
+    color: var(--pr-color-primary-950);
   }
 
   a {
     text-decoration: none;
-    color: white;
+    color: var(--pr-color-white);
     padding: 8px 15px;
     border-radius: 7px;
     font-weight: 300;

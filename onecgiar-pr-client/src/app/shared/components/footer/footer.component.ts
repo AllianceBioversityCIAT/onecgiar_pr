@@ -5,9 +5,10 @@ import { FooterService } from './footer.service';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 
 @Component({
-  selector: 'app-footer',
-  templateUrl: './footer.component.html',
-  styleUrls: ['./footer.component.scss']
+    selector: 'app-footer',
+    templateUrl: './footer.component.html',
+    styleUrls: ['./footer.component.scss'],
+    standalone: false
 })
 export class FooterComponent {
   routes = [{ path: '/result/results-outlet/results-list' }, { path: '/result/result-detail/', floating: true }, { path: '/type-one-report', floating: true }, { path: '/ipsr/list/innovation-list' }, { path: '/ipsr/detail' }, { path: '/quality-assurance' }, { path: '/init-admin-module', floating: true }, { path: '/login', floatingFix: true }];

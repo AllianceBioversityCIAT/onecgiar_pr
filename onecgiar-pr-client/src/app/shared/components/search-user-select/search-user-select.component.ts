@@ -1,15 +1,17 @@
 import { Component, inject, signal, Output, EventEmitter } from '@angular/core';
 import { UserSearchService } from '../../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
-import { DropdownModule } from 'primeng/dropdown';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { SearchUser } from '../../interfaces/search-user.interface';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-search-user-select',
   standalone: true,
-  imports: [DropdownModule, ButtonModule, InputTextModule, FormsModule],
+  imports: [ButtonModule, InputTextModule, FormsModule, IconFieldModule, InputIconModule, SelectModule],
   templateUrl: './search-user-select.component.html',
   styleUrl: './search-user-select.component.scss'
 })
