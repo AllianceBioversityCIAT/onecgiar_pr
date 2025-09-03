@@ -1,10 +1,10 @@
 <div class="segment">
     <app-pr-field-header
-        label="Estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period"
+        [label]="'Estimation of total USD-value of pooled investment by CGIAR ' + ('term.entity.plural' | term)+ ' during the reporting period'"
         [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
     <table [style]="!body.initiative_expected_investment.length ? 'margin-bottom: 5px;' : null" aria-label="Table showing estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period">
         <tr>
-            <th>Initiative</th>
+            <th>{{'term.entity.singular' | term}}</th>
             <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
             <th></th>
         </tr>

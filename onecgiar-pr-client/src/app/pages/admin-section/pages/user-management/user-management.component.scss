@@ -172,7 +172,7 @@
 
 // Controls section
 .controls-section {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 
   .controls-row {
     display: flex;
@@ -268,7 +268,7 @@
     bottom: 0;
     left: 0;
     z-index: 3;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     margin-left: 20px;
     display: flex;
     align-items: center;
@@ -283,15 +283,12 @@
       font-weight: 500;
     }
   }
-
-  .export-button {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    z-index: 3;
-    margin-bottom: 20px;
-    margin-right: 20px;
-  }
+}
+.export-button {
+  margin-bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 
 ::ng-deep {

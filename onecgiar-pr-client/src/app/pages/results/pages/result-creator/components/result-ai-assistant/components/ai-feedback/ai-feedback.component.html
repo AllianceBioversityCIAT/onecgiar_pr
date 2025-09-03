@@ -1,0 +1,83 @@
+<div>
+  @if (feedbackSent()) {
+    <span class="pr-body-2 font-weight-500 text-accent-3">Feedback sent successfully.</span>
+
+    <i
+      class="pi"
+      [ngClass]="{
+        'pi-thumbs-up-fill': lastFeedbackType() === 'good',
+        'pi-thumbs-down-fill': lastFeedbackType() === 'bad'
+      }"
+      style="font-size: 16px; color: var(--pr-color-primary-300); margin-left: 5px"></i>
+  } @else {
+    <div class="feedback-container">
+      <span class="pr-body-2 font-weight-500 text-accent-3">Was this response helpful?</span>
+
+      <p-button (click)="this.toggleFeedback($event, 'good')" icon="pi pi-thumbs-up" [text]="true" />
+      <p-button (click)="this.toggleFeedback($event, 'bad')" icon="pi pi-thumbs-down" [text]="true" />
+    </div>
+
+    <p-popover #feedbackPanel [style]="{ width: '400px' }">
+      <div dropdown-content>
+        <h2
+          class="pr-h2 font-weight-600 m-0 mb-8"
+          [ngClass]="{
+            'text-red-300': feedbackType() === 'bad',
+            'text-green-500': feedbackType() === 'good'
+          }">
+          {{ feedbackType() === 'good' ? 'What Is Working Well?' : 'What Is Not Working Well?' }}
+        </h2>
+
+        @if (feedbackType() === 'bad') {
+          <div>
+            <p class="pr-body-2 font-weight-500" style="margin-bottom: 5px">Type of issue</p>
+
+            <div class="bad-type-buttons">
+              @for (type of badTypes(); track type.id) {
+                <button
+                  class="bad-type-button-item"
+                  [ngClass]="{
+                    selected: this.selectedType().includes(type.id.toString())
+                  }"
+                  (click)="this.selectType(type.id.toString())">
+                  {{ type.name }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="mb-4">
+          <p class="pr-body-2 font-weight-500" style="margin-bottom: 5px">
+            Feedback details
+            @if (this.isRequired()) {
+              <span class="text-red-500">*</span>
+            }
+          </p>
+          <app-pr-textarea
+            [rows]="3"
+            [(ngModel)]="this.body().feedbackText"
+            [placeholder]="'Type your feedback here...'"
+            [isStatic]="true"
+            [required]="isRequired()"></app-pr-textarea>
+        </div>
+
+        <div class="analyze-result-footer">
+          <app-pr-button
+            [verticalMargin]="0"
+            [text]="'Cancel'"
+            (click)="closeFeedbackPanel()"
+            colorType="secondary"
+            [disabled]="loadingFeedback()"></app-pr-button>
+          <app-pr-button
+            [verticalMargin]="0"
+            [text]="'Confirm'"
+            (click)="submitFeedback()"
+            [rotating]="loadingFeedback()"
+            [icon]="loadingFeedback() ? 'loop' : ''"
+            [disabled]="(feedbackType() === 'bad' && (!selectedType().length || !body().feedbackText)) || loadingFeedback()"></app-pr-button>
+        </div>
+      </div>
+    </p-popover>
+  }
+</div>

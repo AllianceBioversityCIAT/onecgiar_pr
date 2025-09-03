@@ -1,7 +1,7 @@
 #################### BUILD STAGE ####################
 FROM node:20-alpine AS build
 
-# Set timezone to CET (Europe/Berlin)
+# Set timezone to Europe/Berlin (CET)
 ENV TZ=Europe/Berlin
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/$TZ /etc/localtime && \
@@ -10,10 +10,11 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# RUN npm ci
-RUN npm i
+
+#RUN npm i
 
 COPY . .
+RUN npm i
 
 # Build in dev mode as per team requirement
 RUN npm run build:dev
@@ -21,7 +22,7 @@ RUN npm run build:dev
 #################### TESTING STAGE ####################
 FROM node:20-alpine AS test
 
-# Set timezone to CET (Europe/Berlin)
+# Set timezone to Europe/Berlin (CET)
 ENV TZ=Europe/Berlin
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/$TZ /etc/localtime && \
@@ -30,10 +31,11 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# RUN npm ci
-RUN npm i
+
+#RUN npm i
 
 COPY . .
+RUN npm i
 
 # Run tests (adjust the script if needed)
 CMD ["npm", "run", "test:coverage"]
@@ -48,7 +50,7 @@ RUN rm -rf /usr/share/nginx/html/*
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built Angular app from build stage
-COPY --from=build /usr/src/app/dist/onecgiar-pr-client /usr/share/nginx/html
+COPY --from=build /usr/src/app/dist/onecgiar-pr-client/browser /usr/share/nginx/html
 
 # Permissions
 RUN chmod -R 755 /usr/share/nginx/html

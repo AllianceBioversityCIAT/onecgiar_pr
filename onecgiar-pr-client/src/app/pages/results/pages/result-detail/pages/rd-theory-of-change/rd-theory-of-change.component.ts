@@ -8,10 +8,10 @@ import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-service
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-rd-theory-of-change',
-    templateUrl: './rd-theory-of-change.component.html',
-    styleUrls: ['./rd-theory-of-change.component.scss'],
-    standalone: false
+  selector: 'app-rd-theory-of-change',
+  templateUrl: './rd-theory-of-change.component.html',
+  styleUrls: ['./rd-theory-of-change.component.scss'],
+  standalone: false
 })
 export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();

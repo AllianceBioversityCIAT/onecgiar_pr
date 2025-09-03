@@ -57,7 +57,8 @@ describe('ResultCreatorComponent', () => {
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
         myInitiativesList: myInitiativesList,
-        validateBody: jest.fn()
+        validateBody: jest.fn(),
+        getCurrentPhases: jest.fn()
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
