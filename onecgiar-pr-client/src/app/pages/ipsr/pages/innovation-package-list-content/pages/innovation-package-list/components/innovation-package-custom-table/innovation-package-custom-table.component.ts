@@ -5,10 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { IpsrListService } from '../../services/ipsr-list.service';
 
 @Component({
-    selector: 'app-innovation-package-custom-table',
-    templateUrl: './innovation-package-custom-table.component.html',
-    styleUrls: ['./innovation-package-custom-table.component.scss'],
-    standalone: false
+  selector: 'app-innovation-package-custom-table',
+  templateUrl: './innovation-package-custom-table.component.html',
+  styleUrls: ['./innovation-package-custom-table.component.scss'],
+  standalone: false
 })
 export class InnovationPackageCustomTableComponent {
   @Input() tableData: any;
@@ -20,7 +20,7 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Submitter', attr: 'official_code' },
     { title: 'Status', attr: 'status' },
     { title: 'Phase year', attr: 'phase_year' },
-    { title: 'Phase name', attr: 'phase_name' },
+    { title: 'Phase Portfolio', attr: 'phase_name' },
     { title: 'Created by', attr: 'created_by' }
   ];
 
