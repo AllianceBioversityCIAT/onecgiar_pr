@@ -6,23 +6,45 @@ describe('ResultsController', () => {
   let controller: ResultsController;
   const mockService = {
     createOwnerResult: jest.fn().mockResolvedValue({ status: 201 }),
-    findResultById: jest.fn().mockResolvedValue({ status: 200, response: { id: 1 } }),
+    findResultById: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: { id: 1 } }),
     findAll: jest.fn().mockResolvedValue('OK'),
-    findAllSimplified: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    findForElasticSearch: jest.fn().mockResolvedValue({ status: 200, response: [] }),
+    findAllSimplified: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
+    findForElasticSearch: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
     findAllByRole: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    findAllResultsLegacyNew: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    getAllInstitutions: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    getAllInstitutionsType: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    getChildlessInstitutionTypes: jest.fn().mockResolvedValue({ status: 200, response: [] }),
+    findAllResultsLegacyNew: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
+    getAllInstitutions: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
+    getAllInstitutionsType: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
+    getChildlessInstitutionTypes: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
     mapResultLegacy: jest.fn().mockResolvedValue({ status: 200 }),
-    createResultGeneralInformation: jest.fn().mockResolvedValue({ status: 200 }),
-    getGeneralInformation: jest.fn().mockResolvedValue({ status: 200, response: {} }),
+    createResultGeneralInformation: jest
+      .fn()
+      .mockResolvedValue({ status: 200 }),
+    getGeneralInformation: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: {} }),
     deleteResult: jest.fn().mockResolvedValue({ status: 200 }),
     saveGeoScope: jest.fn().mockResolvedValue({ status: 200 }),
     getGeoScope: jest.fn().mockResolvedValue({ status: 200, response: {} }),
-    transformResultCode: jest.fn().mockResolvedValue({ statusCode: 200, response: {} }),
-    getResultDataForBasicReport: jest.fn().mockResolvedValue({ status: 200, response: [] }),
+    transformResultCode: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: {} }),
+    getResultDataForBasicReport: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
     versioningResultsById: jest.fn().mockResolvedValue(undefined),
     getCenters: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
   } as unknown as jest.Mocked<ResultsService>;
@@ -131,7 +153,10 @@ describe('ResultsController', () => {
   it('createGeneralInformation delegates with dto and user', async () => {
     const dto = { result_id: 2 } as any;
     await controller.createGeneralInformation(dto, user);
-    expect(mockService.createResultGeneralInformation).toHaveBeenCalledWith(dto, user);
+    expect(mockService.createResultGeneralInformation).toHaveBeenCalledWith(
+      dto,
+      user,
+    );
   });
 
   it('getGeneralInformationByResult delegates', async () => {
@@ -147,7 +172,10 @@ describe('ResultsController', () => {
   it('saveGeographic sets result_id and delegates', async () => {
     const dto = { countries: [] } as any;
     await controller.saveGeographic(dto, 11, user);
-    expect(mockService.saveGeoScope).toHaveBeenCalledWith({ ...dto, result_id: 11 }, user);
+    expect(mockService.saveGeoScope).toHaveBeenCalledWith(
+      { ...dto, result_id: 11 },
+      user,
+    );
   });
 
   it('getGeographic delegates', async () => {
@@ -164,7 +192,10 @@ describe('ResultsController', () => {
     const d1 = new Date('2020-01-01');
     const d2 = new Date('2020-12-31');
     await controller.getResultDataForBasicReport(d1, d2);
-    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(d1, d2);
+    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(
+      d1,
+      d2,
+    );
   });
 
   it('createVersion calls service and returns ok', async () => {

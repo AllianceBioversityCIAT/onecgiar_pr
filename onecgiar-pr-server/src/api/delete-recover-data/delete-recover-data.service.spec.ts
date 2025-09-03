@@ -568,20 +568,16 @@ describe('DeleteRecoverDataService', () => {
     const user = { id: 1 } as any;
 
     it('returns OK when delete and migrate succeed', async () => {
-      jest
-        .spyOn(service, 'deleteDataByNewResultType')
-        .mockResolvedValue({
-          statusCode: HttpStatus.OK,
-          response: 9,
-          message: 'd',
-        } as any);
-      jest
-        .spyOn(service, 'migrateDataByNewResultType')
-        .mockResolvedValue({
-          statusCode: HttpStatus.OK,
-          response: 9,
-          message: 'm',
-        } as any);
+      jest.spyOn(service, 'deleteDataByNewResultType').mockResolvedValue({
+        statusCode: HttpStatus.OK,
+        response: 9,
+        message: 'd',
+      } as any);
+      jest.spyOn(service, 'migrateDataByNewResultType').mockResolvedValue({
+        statusCode: HttpStatus.OK,
+        response: 9,
+        message: 'm',
+      } as any);
       const res = await service.manageChangedResultTypeData(
         resultBase,
         ResultLevelEnum.INITIATIVE_OUTCOME,
@@ -593,13 +589,11 @@ describe('DeleteRecoverDataService', () => {
     });
 
     it('returns error-like response when delete fails', async () => {
-      jest
-        .spyOn(service, 'deleteDataByNewResultType')
-        .mockResolvedValue({
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          response: 9,
-          message: 'bad',
-        } as any);
+      jest.spyOn(service, 'deleteDataByNewResultType').mockResolvedValue({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        response: 9,
+        message: 'bad',
+      } as any);
       const res = await service.manageChangedResultTypeData(
         resultBase,
         ResultLevelEnum.INITIATIVE_OUTCOME,

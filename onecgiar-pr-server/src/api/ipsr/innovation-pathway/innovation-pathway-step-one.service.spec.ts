@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 
 import { InnovationPathwayStepOneService } from './innovation-pathway-step-one.service';
-import { HandlersError, ReturnResponse } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
@@ -45,32 +48,93 @@ describe('InnovationPathwayStepOneService', () => {
   });
 
   const mockResultRepository = repo() as any as jest.Mocked<ResultRepository>;
-  const mockRegionRepository = repo() as any as jest.Mocked<ResultRegionRepository>;
-  const mockCountryRepository = repo() as any as jest.Mocked<ResultCountryRepository>;
-  const mockInnovationPackagingExpertRepository = repo() as any as jest.Mocked<InnovationPackagingExpertRepository>;
-  const mockExpertisesRepository = repo() as any as jest.Mocked<ExpertisesRepository>;
-  const mockVersionsService = { $_findActivePhase: jest.fn() } as any as jest.Mocked<VersionsService>;
-  const mockResultInnovationPackageRepository = { findOne: jest.fn(), update: jest.fn() } as any as jest.Mocked<ResultInnovationPackageRepository>;
-  const mockIpsrRepository = { findOneBy: jest.fn(), getInnovationCoreStepOne: jest.fn(), findOne: jest.fn() } as any as jest.Mocked<IpsrRepository>;
-  const mockRbiRepository = repo() as any as jest.Mocked<ResultByIntitutionsRepository>;
-  const mockDeliveriesTypeRepository = { getDeliveryByResultByInstitution: jest.fn() } as any as jest.Mocked<ResultByInstitutionsByDeliveriesTypeRepository>;
-  const mockEoiRepo = { getEoiOutcomes: jest.fn(), findOne: jest.fn(), save: jest.fn(), update: jest.fn(), find: jest.fn() } as any as jest.Mocked<ResultIpEoiOutcomeRepository>;
-  const mockAaRepo = { find: jest.fn(), update: jest.fn(), retrieveAaOutcomes: jest.fn() } as any as jest.Mocked<ResultIpAAOutcomeRepository>;
+  const mockRegionRepository =
+    repo() as any as jest.Mocked<ResultRegionRepository>;
+  const mockCountryRepository =
+    repo() as any as jest.Mocked<ResultCountryRepository>;
+  const mockInnovationPackagingExpertRepository =
+    repo() as any as jest.Mocked<InnovationPackagingExpertRepository>;
+  const mockExpertisesRepository =
+    repo() as any as jest.Mocked<ExpertisesRepository>;
+  const mockVersionsService = {
+    $_findActivePhase: jest.fn(),
+  } as any as jest.Mocked<VersionsService>;
+  const mockResultInnovationPackageRepository = {
+    findOne: jest.fn(),
+    update: jest.fn(),
+  } as any as jest.Mocked<ResultInnovationPackageRepository>;
+  const mockIpsrRepository = {
+    findOneBy: jest.fn(),
+    getInnovationCoreStepOne: jest.fn(),
+    findOne: jest.fn(),
+  } as any as jest.Mocked<IpsrRepository>;
+  const mockRbiRepository =
+    repo() as any as jest.Mocked<ResultByIntitutionsRepository>;
+  const mockDeliveriesTypeRepository = {
+    getDeliveryByResultByInstitution: jest.fn(),
+  } as any as jest.Mocked<ResultByInstitutionsByDeliveriesTypeRepository>;
+  const mockEoiRepo = {
+    getEoiOutcomes: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+  } as any as jest.Mocked<ResultIpEoiOutcomeRepository>;
+  const mockAaRepo = {
+    find: jest.fn(),
+    update: jest.fn(),
+    retrieveAaOutcomes: jest.fn(),
+  } as any as jest.Mocked<ResultIpAAOutcomeRepository>;
   const mockSdgRepo = repo() as any as jest.Mocked<ResultIpSdgTargetRepository>;
-  const mockActorRepo = { find: jest.fn(), findOne: jest.fn(), update: jest.fn(), save: jest.fn() } as any as jest.Mocked<ResultActorRepository>;
-  const mockInstTypeRepo = { find: jest.fn(), update: jest.fn(), save: jest.fn(), getNewResultByInstitutionTypeExists: jest.fn(), getNewResultByIdExists: jest.fn() } as any as jest.Mocked<ResultByIntitutionsTypeRepository>;
-  const mockMeasureRepo = { find: jest.fn(), findOne: jest.fn(), update: jest.fn(), save: jest.fn() } as any as jest.Mocked<ResultIpMeasureRepository>;
-  const mockImpactAreaRepo = repo() as any as jest.Mocked<ResultIpImpactAreaRepository>;
-  const mockClarisaTypeRepo = repo() as any as jest.Mocked<ClarisaInstitutionsTypeRepository>;
-  const mockRbiInitRepo = { findOne: jest.fn() } as any as jest.Mocked<ResultByInitiativesRepository>;
-  const mockClarisaInstRepo = repo() as any as jest.Mocked<ClarisaInstitutionsRepository>;
-  const mockResultIpExpertisesRepository = repo() as any as jest.Mocked<ResultIpExpertisesRepository>;
-  const mockVersioningService = { $_findActivePhase: jest.fn() } as any as jest.Mocked<VersioningService>;
-  const mockSubnationalRepo = { find: jest.fn() } as any as jest.Mocked<ResultCountrySubnationalRepository>;
-  const mockResultInnovationPackageService = { saveSubNational: jest.fn() } as any as jest.Mocked<ResultInnovationPackageService>;
-  const mockStepThreeService = { saveinnovationWorkshop: jest.fn(), saveWorkshop: jest.fn() } as any as jest.Mocked<InnovationPathwayStepThreeService>;
-  const mockWorkshopRepo = { find: jest.fn() } as any as jest.Mocked<ResultIpExpertWorkshopOrganizedRepostory>;
-  const mockEvidenceRepo = { findOne: jest.fn() } as any as jest.Mocked<EvidencesRepository>;
+  const mockActorRepo = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    save: jest.fn(),
+  } as any as jest.Mocked<ResultActorRepository>;
+  const mockInstTypeRepo = {
+    find: jest.fn(),
+    update: jest.fn(),
+    save: jest.fn(),
+    getNewResultByInstitutionTypeExists: jest.fn(),
+    getNewResultByIdExists: jest.fn(),
+  } as any as jest.Mocked<ResultByIntitutionsTypeRepository>;
+  const mockMeasureRepo = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    save: jest.fn(),
+  } as any as jest.Mocked<ResultIpMeasureRepository>;
+  const mockImpactAreaRepo =
+    repo() as any as jest.Mocked<ResultIpImpactAreaRepository>;
+  const mockClarisaTypeRepo =
+    repo() as any as jest.Mocked<ClarisaInstitutionsTypeRepository>;
+  const mockRbiInitRepo = {
+    findOne: jest.fn(),
+  } as any as jest.Mocked<ResultByInitiativesRepository>;
+  const mockClarisaInstRepo =
+    repo() as any as jest.Mocked<ClarisaInstitutionsRepository>;
+  const mockResultIpExpertisesRepository =
+    repo() as any as jest.Mocked<ResultIpExpertisesRepository>;
+  const mockVersioningService = {
+    $_findActivePhase: jest.fn(),
+  } as any as jest.Mocked<VersioningService>;
+  const mockSubnationalRepo = {
+    find: jest.fn(),
+  } as any as jest.Mocked<ResultCountrySubnationalRepository>;
+  const mockResultInnovationPackageService = {
+    saveSubNational: jest.fn(),
+  } as any as jest.Mocked<ResultInnovationPackageService>;
+  const mockStepThreeService = {
+    saveinnovationWorkshop: jest.fn(),
+    saveWorkshop: jest.fn(),
+  } as any as jest.Mocked<InnovationPathwayStepThreeService>;
+  const mockWorkshopRepo = {
+    find: jest.fn(),
+  } as any as jest.Mocked<ResultIpExpertWorkshopOrganizedRepostory>;
+  const mockEvidenceRepo = {
+    findOne: jest.fn(),
+  } as any as jest.Mocked<EvidencesRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -81,29 +145,62 @@ describe('InnovationPathwayStepOneService', () => {
         { provide: ResultRepository, useValue: mockResultRepository },
         { provide: ResultRegionRepository, useValue: mockRegionRepository },
         { provide: ResultCountryRepository, useValue: mockCountryRepository },
-        { provide: InnovationPackagingExpertRepository, useValue: mockInnovationPackagingExpertRepository },
+        {
+          provide: InnovationPackagingExpertRepository,
+          useValue: mockInnovationPackagingExpertRepository,
+        },
         { provide: ExpertisesRepository, useValue: mockExpertisesRepository },
         { provide: VersionsService, useValue: mockVersionsService },
-        { provide: ResultInnovationPackageRepository, useValue: mockResultInnovationPackageRepository },
+        {
+          provide: ResultInnovationPackageRepository,
+          useValue: mockResultInnovationPackageRepository,
+        },
         { provide: IpsrRepository, useValue: mockIpsrRepository },
         { provide: ResultByIntitutionsRepository, useValue: mockRbiRepository },
-        { provide: ResultByInstitutionsByDeliveriesTypeRepository, useValue: mockDeliveriesTypeRepository },
+        {
+          provide: ResultByInstitutionsByDeliveriesTypeRepository,
+          useValue: mockDeliveriesTypeRepository,
+        },
         { provide: ResultIpEoiOutcomeRepository, useValue: mockEoiRepo },
         { provide: ResultIpAAOutcomeRepository, useValue: mockAaRepo },
         { provide: ResultIpSdgTargetRepository, useValue: mockSdgRepo },
         { provide: ResultActorRepository, useValue: mockActorRepo },
-        { provide: ResultByIntitutionsTypeRepository, useValue: mockInstTypeRepo },
+        {
+          provide: ResultByIntitutionsTypeRepository,
+          useValue: mockInstTypeRepo,
+        },
         { provide: ResultIpMeasureRepository, useValue: mockMeasureRepo },
         { provide: ResultIpImpactAreaRepository, useValue: mockImpactAreaRepo },
-        { provide: ClarisaInstitutionsTypeRepository, useValue: mockClarisaTypeRepo },
+        {
+          provide: ClarisaInstitutionsTypeRepository,
+          useValue: mockClarisaTypeRepo,
+        },
         { provide: ResultByInitiativesRepository, useValue: mockRbiInitRepo },
-        { provide: ClarisaInstitutionsRepository, useValue: mockClarisaInstRepo },
-        { provide: ResultIpExpertisesRepository, useValue: mockResultIpExpertisesRepository },
+        {
+          provide: ClarisaInstitutionsRepository,
+          useValue: mockClarisaInstRepo,
+        },
+        {
+          provide: ResultIpExpertisesRepository,
+          useValue: mockResultIpExpertisesRepository,
+        },
         { provide: VersioningService, useValue: mockVersioningService },
-        { provide: ResultCountrySubnationalRepository, useValue: mockSubnationalRepo },
-        { provide: ResultInnovationPackageService, useValue: mockResultInnovationPackageService },
-        { provide: InnovationPathwayStepThreeService, useValue: mockStepThreeService },
-        { provide: ResultIpExpertWorkshopOrganizedRepostory, useValue: mockWorkshopRepo },
+        {
+          provide: ResultCountrySubnationalRepository,
+          useValue: mockSubnationalRepo,
+        },
+        {
+          provide: ResultInnovationPackageService,
+          useValue: mockResultInnovationPackageService,
+        },
+        {
+          provide: InnovationPathwayStepThreeService,
+          useValue: mockStepThreeService,
+        },
+        {
+          provide: ResultIpExpertWorkshopOrganizedRepostory,
+          useValue: mockWorkshopRepo,
+        },
         { provide: EvidencesRepository, useValue: mockEvidenceRepo },
       ],
     }).compile();
@@ -124,10 +221,18 @@ describe('InnovationPathwayStepOneService', () => {
     it('arrayToStringGeoScopeAnd returns expected per scope', () => {
       const regions = [{ name: 'R1' }, { name: 'R2' }] as any;
       const countries = [{ name: 'C1' }, { name: 'C2' }] as any;
-      expect((service as any).arrayToStringGeoScopeAnd(1, [], [])).toBeUndefined();
-      expect((service as any).arrayToStringGeoScopeAnd(2, regions, [])).toContain('R1');
-      expect((service as any).arrayToStringGeoScopeAnd(3, [], countries)).toContain('C1');
-      expect((service as any).arrayToStringGeoScopeAnd(5, [], [])).toBe(' <Data not provided>');
+      expect(
+        (service as any).arrayToStringGeoScopeAnd(1, [], []),
+      ).toBeUndefined();
+      expect(
+        (service as any).arrayToStringGeoScopeAnd(2, regions, []),
+      ).toContain('R1');
+      expect(
+        (service as any).arrayToStringGeoScopeAnd(3, [], countries),
+      ).toContain('C1');
+      expect((service as any).arrayToStringGeoScopeAnd(5, [], [])).toBe(
+        ' <Data not provided>',
+      );
     });
 
     it('arrayOrganizationToString formats institutions', () => {
@@ -168,7 +273,9 @@ describe('InnovationPathwayStepOneService', () => {
         },
       ] as any;
       const res = (service as any).arrayToStringActorsAnd([...actors]);
-      expect(res).toContain('10 women (4 youth / 6 non-youth) & 12 men (5 youth / 7 non-youth) Farmers');
+      expect(res).toContain(
+        '10 women (4 youth / 6 non-youth) & 12 men (5 youth / 7 non-youth) Farmers',
+      );
       expect(res).toContain('and 7 Other');
     });
 
@@ -183,8 +290,13 @@ describe('InnovationPathwayStepOneService', () => {
     const result = { id: 100, title: 'Core.' } as any;
 
     beforeEach(() => {
-      (mockIpsrRepository.findOneBy as jest.Mock).mockResolvedValue({ result_id: 200 });
-      (mockResultRepository.findOne as jest.Mock).mockResolvedValue({ id: 200, title: 'Core.' });
+      (mockIpsrRepository.findOneBy as jest.Mock).mockResolvedValue({
+        result_id: 200,
+      });
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 200,
+        title: 'Core.',
+      });
       (mockRegionRepository.update as jest.Mock).mockResolvedValue(undefined);
       (mockCountryRepository.find as jest.Mock).mockResolvedValue([]);
       (mockResultRepository.update as jest.Mock).mockResolvedValue(undefined);
@@ -192,20 +304,36 @@ describe('InnovationPathwayStepOneService', () => {
     });
 
     it('handles region scope (2) and updates title', async () => {
-      const dto = { geo_scope_id: 2, regions: [{ id: 1, name: 'Africa' }], countries: [] } as any;
+      const dto = {
+        geo_scope_id: 2,
+        regions: [{ id: 1, name: 'Africa' }],
+        countries: [],
+      } as any;
       const res = await service.saveGeoScope(result, dto, user);
       expect(res.status).toBe(HttpStatus.OK);
-      expect(mockResultRepository.update).toHaveBeenCalledWith(100, expect.objectContaining({ geographic_scope_id: 2 }));
+      expect(mockResultRepository.update).toHaveBeenCalledWith(
+        100,
+        expect.objectContaining({ geographic_scope_id: 2 }),
+      );
       // Ensure regions saved
       expect(mockRegionRepository.save).toHaveBeenCalled();
     });
 
     it('handles country scopes (3) and saves countries', async () => {
-      (mockCountryRepository.save as jest.Mock).mockResolvedValue({ result_country_id: 1 });
-      const dto = { geo_scope_id: 3, regions: [], countries: [{ id: 5, name: 'Colombia' }] } as any;
+      (mockCountryRepository.save as jest.Mock).mockResolvedValue({
+        result_country_id: 1,
+      });
+      const dto = {
+        geo_scope_id: 3,
+        regions: [],
+        countries: [{ id: 5, name: 'Colombia' }],
+      } as any;
       const res = await service.saveGeoScope(result, dto, user);
       expect(res.status).toBe(HttpStatus.OK);
-      expect(mockCountryRepository.save).toHaveBeenCalledWith({ result_id: 100, country_id: 5 });
+      expect(mockCountryRepository.save).toHaveBeenCalledWith({
+        result_id: 100,
+        country_id: 5,
+      });
     });
   });
 
@@ -220,16 +348,37 @@ describe('InnovationPathwayStepOneService', () => {
     });
 
     it('disables old AA outcomes and retrieves new ones', async () => {
-      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({ id: 2, is_active: true });
-      (mockResultInnovationPackageRepository.findOne as jest.Mock).mockResolvedValueOnce({ result_innovation_package_id: 2, is_active: true });
-      (mockIpsrRepository.findOne as jest.Mock).mockResolvedValueOnce({ result_by_innovation_package_id: 20, result_id: 9 });
-      (mockAaRepo.find as jest.Mock).mockResolvedValueOnce([{ result_ip_action_area_outcome_id: 1 }]);
-      (mockRbiInitRepo.findOne as jest.Mock).mockResolvedValueOnce({ result_id: 9, initiative_id: 77 });
-      (mockAaRepo.retrieveAaOutcomes as jest.Mock).mockResolvedValueOnce(['ok']);
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 2,
+        is_active: true,
+      });
+      (
+        mockResultInnovationPackageRepository.findOne as jest.Mock
+      ).mockResolvedValueOnce({
+        result_innovation_package_id: 2,
+        is_active: true,
+      });
+      (mockIpsrRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        result_by_innovation_package_id: 20,
+        result_id: 9,
+      });
+      (mockAaRepo.find as jest.Mock).mockResolvedValueOnce([
+        { result_ip_action_area_outcome_id: 1 },
+      ]);
+      (mockRbiInitRepo.findOne as jest.Mock).mockResolvedValueOnce({
+        result_id: 9,
+        initiative_id: 77,
+      });
+      (mockAaRepo.retrieveAaOutcomes as jest.Mock).mockResolvedValueOnce([
+        'ok',
+      ]);
 
       const res = await service.retrieveAaOutcomes(2, user);
       expect(res.status).toBe(HttpStatus.OK);
-      expect(mockAaRepo.update).toHaveBeenCalledWith(1, expect.objectContaining({ is_active: false }));
+      expect(mockAaRepo.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ is_active: false }),
+      );
       expect(res.response).toEqual(['ok']);
     });
   });
@@ -239,7 +388,9 @@ describe('InnovationPathwayStepOneService', () => {
     const result = { id: 50 } as any;
 
     it('creates and deactivates EOI outcomes as needed', async () => {
-      (mockIpsrRepository.findOneBy as jest.Mock).mockResolvedValueOnce({ result_by_innovation_package_id: 5 });
+      (mockIpsrRepository.findOneBy as jest.Mock).mockResolvedValueOnce({
+        result_by_innovation_package_id: 5,
+      });
       // First eoi -> not exists -> save, second -> exists -> update
       (mockEoiRepo.findOne as jest.Mock)
         .mockResolvedValueOnce(null)
@@ -249,14 +400,22 @@ describe('InnovationPathwayStepOneService', () => {
         { result_ip_eoi_outcome_id: 101, toc_result_id: 2 },
       ]);
 
-      const dto = { eoiOutcomes: [{ toc_result_id: 2 }, { toc_result_id: 3 }] } as any;
-      const res = await service.saveSpecifyAspiredOutcomesAndImpact(result, dto, user);
+      const dto = {
+        eoiOutcomes: [{ toc_result_id: 2 }, { toc_result_id: 3 }],
+      } as any;
+      const res = await service.saveSpecifyAspiredOutcomesAndImpact(
+        result,
+        dto,
+        user,
+      );
       expect(res.status).toBe(HttpStatus.OK);
       expect(mockEoiRepo.save).toHaveBeenCalled();
       expect(mockEoiRepo.update).toHaveBeenCalledWith(22, expect.any(Object));
       // Deactivated the missing one (toc_result_id 1)
-      expect(mockEoiRepo.update).toHaveBeenCalledWith(100, expect.objectContaining({ is_active: false }));
+      expect(mockEoiRepo.update).toHaveBeenCalledWith(
+        100,
+        expect.objectContaining({ is_active: false }),
+      );
     });
   });
 });
-

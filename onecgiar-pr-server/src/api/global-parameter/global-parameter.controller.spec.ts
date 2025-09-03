@@ -7,11 +7,15 @@ describe('GlobalParameterController', () => {
 
   const mockService = {
     findAll: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
-    findByCategoryId: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
+    findByCategoryId: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: [] }),
     getPlatformGlobalVariables: jest
       .fn()
       .mockResolvedValue({ statusCode: 200, response: {} }),
-    findOneByName: jest.fn().mockResolvedValue({ statusCode: 200, response: {} }),
+    findOneByName: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: {} }),
     updateGlobalParameter: jest
       .fn()
       .mockResolvedValue({ statusCode: 200, response: { updated: true } }),
@@ -64,4 +68,3 @@ describe('GlobalParameterController', () => {
     expect(res.statusCode).toBe(200);
   });
 });
-

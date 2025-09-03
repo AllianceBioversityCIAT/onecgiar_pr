@@ -6,7 +6,9 @@ describe('DeleteRecoverDataController', () => {
   let controller: DeleteRecoverDataController;
 
   const mockService = {
-    deleteResult: jest.fn().mockResolvedValue({ statusCode: 200, response: {} }),
+    deleteResult: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: {} }),
     changeResultType: jest
       .fn()
       .mockResolvedValue({ statusCode: 200, response: { updated: true } }),
@@ -55,4 +57,3 @@ describe('DeleteRecoverDataController', () => {
     expect(res.statusCode).toBe(200);
   });
 });
-

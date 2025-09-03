@@ -14,4 +14,3 @@ describe('ResultsRoutes', () => {
     expect(paths).toContain('result-folders');
   });
 });
-

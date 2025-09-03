@@ -33,4 +33,3 @@ describe('ResultsModule (configure)', () => {
     ]);
   });
 });
-

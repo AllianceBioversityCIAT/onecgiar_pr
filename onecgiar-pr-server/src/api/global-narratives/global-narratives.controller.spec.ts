@@ -6,8 +6,12 @@ describe('GlobalNarrativesController', () => {
   let controller: GlobalNarrativesController;
 
   const mockService = {
-    findOneById: jest.fn().mockResolvedValue({ statusCode: 200, response: { id: 1 } }),
-    findOneByName: jest.fn().mockResolvedValue({ statusCode: 200, response: { name: 'X' } }),
+    findOneById: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: { id: 1 } }),
+    findOneByName: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: { name: 'X' } }),
   } as unknown as jest.Mocked<GlobalNarrativesService>;
 
   beforeEach(async () => {
@@ -36,4 +40,3 @@ describe('GlobalNarrativesController', () => {
     expect(res.statusCode).toBe(200);
   });
 });
-
