@@ -1,0 +1,129 @@
+<p-dialog
+  class="support_information"
+  header="Title"
+  [visible]="this.createResultManagementService.showModal()"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px', width: '80vw' }">
+  <div class="modal_header">
+    <h1 class="modal_title">AI Assistant</h1>
+    <i class="material-icons-round close_icon" (click)="this.createResultManagementService.closeModal()">close</i>
+  </div>
+
+  @if (this.createResultManagementService.documentAnalyzed() && this.createResultManagementService.selectedFile()) {
+    <div class="document-analyzed-container">
+      <i class="pi pi-file upload-icon" style="font-size: 28px; margin: 0"></i>
+      <p class="upload-text" style="font-weight: 500; margin: 0">{{ this.createResultManagementService.selectedFile()?.name }}</p>
+    </div>
+  }
+
+  <div class="modal_container">
+    @if (
+      !this.createResultManagementService.analyzingDocument() &&
+      !this.createResultManagementService.documentAnalyzed() &&
+      !this.createResultManagementService.noResults()
+    ) {
+      <app-pr-select
+        class="segment_title_margin"
+        [group]="true"
+        groupName="name"
+        [options]="this.initiatives()"
+        label="Select Science Program / Accelerator"
+        [isStatic]="true"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select Science Program / Accelerator"
+        [(ngModel)]="createResultManagementService.selectedInitiative">
+      </app-pr-select>
+
+      <app-ai-upload-file></app-ai-upload-file>
+    }
+
+    @if (this.createResultManagementService.analyzingDocument() && !this.createResultManagementService.documentAnalyzed()) {
+      <app-ai-loading-state></app-ai-loading-state>
+    }
+
+    @if (this.createResultManagementService.documentAnalyzed()) {
+      <section class="analyze-result-container">
+        <div class="analyze-result-content">
+          <div class="analyze-result-title">
+            <h1 class="pr-h3 font-weight-700">
+              THE AI IDENTIFIED
+              <span class="text-primary-300">{{ createResultManagementService.items().length }}</span>
+              RESULTS
+            </h1>
+            <p class="pr-body-2 font-weight-400 text-secondary-400">Select the ones you want to create.</p>
+          </div>
+
+          <app-ai-feedback></app-ai-feedback>
+        </div>
+
+        @if (createResultManagementService.items().length === 0) {
+          <div class="analyze-result-content no-results-container">
+            <div class="flex flex-col items-center justify-center bg-white py-12 px-10 w-full h-full">
+              <h1 class="no-results-title">ALL RESULTS DISCARDED</h1>
+              <p class="no-results-description">You've discarded all the generated results. What would you like to do next?</p>
+
+              <div class="no-results-buttons">
+                <app-pr-button
+                  [text]="'Return to Create Result'"
+                  colorType="secondary"
+                  (click)="this.createResultManagementService.closeModal()"></app-pr-button>
+                <app-pr-button [text]="'Upload a new file'" (click)="this.createResultManagementService.goBackToUploadNewFile()"></app-pr-button>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="w-full analyze-result-content" style="flex-direction: column">
+            @for (item of createResultManagementService.items(); track $index) {
+              <app-result-ai-item
+                [item]="item"
+                [isFirstItem]="$index === 0"
+                [isLastItem]="$index === rows() - 1 || $index === createResultManagementService.items().length - 1 - first()"
+                style="width: 100%">
+              </app-result-ai-item>
+            }
+          </div>
+        }
+        @if (createResultManagementService.items().length > 0) {
+          <div class="paginator_container">
+            <p-paginator
+              (onPageChange)="onPageChange($event)"
+              [first]="first()"
+              [rows]="rows()"
+              [totalRecords]="createResultManagementService.items().length"
+              [showCurrentPageReport]="true"
+              [showJumpToPageDropdown]="false"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords}" />
+          </div>
+        }
+      </section>
+    }
+
+    @if (this.createResultManagementService.noResults()) {
+      <app-ai-not-data-found></app-ai-not-data-found>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    @if (
+      !this.createResultManagementService.analyzingDocument() &&
+      !this.createResultManagementService.documentAnalyzed() &&
+      !this.createResultManagementService.noResults()
+    ) {
+      <app-pr-button [text]="'Cancel'" (click)="createResultManagementService.closeModal()" colorType="secondary"></app-pr-button>
+
+      <app-pr-button
+        text="Analyze file"
+        icon="arrow_forward"
+        [disabled]="!createResultManagementService.selectedFile()"
+        [ngClass]="{ globalDisabled: !createResultManagementService.selectedFile() }"
+        (click)="handleAnalyzeFile()"></app-pr-button>
+    }
+
+    @if (this.createResultManagementService.documentAnalyzed()) {}
+  </ng-template>
+</p-dialog>

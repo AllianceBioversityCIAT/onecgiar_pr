@@ -47,7 +47,9 @@
           <div class="selected-user-display">
             {{ addUserForm().displayName }}
 
-            <i class="pi pi-times remove-user-btn" (click)="removeUser()"></i>
+            @if (!editingMode()) {
+              <i class="pi pi-times remove-user-btn" (click)="removeUser()"></i>
+            }
           </div>
         </div>
       }

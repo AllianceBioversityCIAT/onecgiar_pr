@@ -47,6 +47,8 @@ export interface CurrentResult {
   role_id?: any;
   initiative_entity_map?: any;
   initiative_entity_user?: any;
+  portfolio?: string;
+  portfolio_id?: number;
   // ?: string | number;
   // ?: string | number;
   // ?: string | number;

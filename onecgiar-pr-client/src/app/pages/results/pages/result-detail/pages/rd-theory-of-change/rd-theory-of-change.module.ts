@@ -15,6 +15,7 @@ import { FilterIndicatorsPipe } from './components/toc-impact-section/pipes/filt
 import { TocInitiativeOutModule } from './components/shared/toc-initiative-out/toc-initiative-out.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [
@@ -34,7 +35,8 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
     RadioButtonModule,
     TocInitiativeOutModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule
+    TooltipModule,
+    TermPipe
   ]
 })
 export class RdTheoryOfChangeModule {}

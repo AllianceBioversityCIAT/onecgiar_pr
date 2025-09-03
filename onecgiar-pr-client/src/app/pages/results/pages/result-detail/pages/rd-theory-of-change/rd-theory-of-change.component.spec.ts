@@ -11,6 +11,7 @@ import { FeedbackValidationDirective } from '../../../../../../shared/directives
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 jest.useFakeTimers();
 
@@ -120,7 +121,7 @@ describe('RdTheoryOfChangeComponent', () => {
         DetailSectionTitleComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule, TermPipe],
       providers: [
         {
           provide: ApiService,

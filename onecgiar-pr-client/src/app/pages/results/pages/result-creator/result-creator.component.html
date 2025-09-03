@@ -26,6 +26,15 @@
         )
       "></div>
     <div class="report_container">
+      <!-- Ai button -->
+      <div style="display: flex; justify-content: flex-end; width: fit-content">
+        <app-pr-button
+          text="Use AI assistant for reporting"
+          icon="auto_awesome"
+          [reverse]="true"
+          (click)="this.createResultManagementService.showModal.set(true)"></app-pr-button>
+      </div>
+
       <app-pr-select
         class="segment_title_margin"
         [group]="true"
@@ -122,3 +131,7 @@
   </div>
 </div>
 <app-retrieve-modal></app-retrieve-modal>
+
+@if (this.createResultManagementService.showModal()) {
+  <app-result-ai-assistant></app-result-ai-assistant>
+}
