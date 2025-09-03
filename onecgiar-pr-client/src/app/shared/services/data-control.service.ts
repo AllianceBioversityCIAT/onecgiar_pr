@@ -67,20 +67,22 @@ export class DataControlService {
     );
   }
 
-  getCurrentIPSRPhase() {
-    this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.IPSR).subscribe(({ response }) => {
-      this.IPSRCurrentPhase.phaseYear = response[0]?.phase_year;
-      this.IPSRCurrentPhase.phaseName = response[0]?.phase_name;
-      this.IPSRCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
+  getCurrentIPSRPhase(): Observable<any> {
+    return this.resultsSE.GET_versioning(StatusPhaseEnum.OPEN, ModuleTypeEnum.IPSR).pipe(
+      tap(({ response }) => {
+        this.IPSRCurrentPhase.phaseYear = response[0]?.phase_year;
+        this.IPSRCurrentPhase.phaseName = response[0]?.phase_name;
+        this.IPSRCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
 
-      if (response[0]?.obj_previous_phase) {
-        this.previousIPSRPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
-        this.previousIPSRPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
-      } else {
-        this.previousIPSRPhase.phaseYear = null;
-        this.previousIPSRPhase.phaseName = null;
-      }
-    });
+        if (response[0]?.obj_previous_phase) {
+          this.previousIPSRPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;
+          this.previousIPSRPhase.phaseName = response[0]?.obj_previous_phase.phase_name;
+        } else {
+          this.previousIPSRPhase.phaseYear = null;
+          this.previousIPSRPhase.phaseName = null;
+        }
+      })
+    );
   }
 
   validateBody(body: any) {

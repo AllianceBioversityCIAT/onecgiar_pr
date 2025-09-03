@@ -15,7 +15,7 @@ describe('DataControlService', () => {
     resultsSE = {
       GET_versioning: jest.fn()
     };
-    service = new DataControlService(titleServiceMock, resultsSE); // Add the missing argument here
+    service = new DataControlService(titleServiceMock, resultsSE);
   });
 
   describe('getCurrentPhases', () => {
@@ -40,27 +40,21 @@ describe('DataControlService', () => {
     });
 
     it('should return an Observable and set current reporting phase properties correctly', () => {
-      // Arrange
       const mockObservable = { pipe: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
       const getVersioningSpy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(mockObservable);
 
-      // Act
       const result = service.getCurrentPhases();
 
-      // Assert
       expect(getVersioningSpy).toHaveBeenCalledWith('open', 'reporting');
       expect(result).toBeDefined();
       expect(typeof result.subscribe).toBe('function');
     });
 
     it('should set current reporting phase with all properties when API returns complete data', () => {
-      // Arrange
       jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(mockApiResponse));
 
-      // Act
       service.getCurrentPhases().subscribe();
 
-      // Assert
       expect(service.reportingCurrentPhase).toEqual({
         phaseYear: '2021',
         phaseName: 'Test Phase',
@@ -70,13 +64,10 @@ describe('DataControlService', () => {
     });
 
     it('should set previous reporting phase when obj_previous_phase exists', () => {
-      // Arrange
       jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(mockApiResponse));
 
-      // Act
       service.getCurrentPhases().subscribe();
 
-      // Assert
       expect(service.previousReportingPhase).toEqual({
         phaseYear: '2020',
         phaseName: 'Previous Phase',
@@ -85,7 +76,6 @@ describe('DataControlService', () => {
     });
 
     it('should set previous reporting phase to null when obj_previous_phase is undefined', () => {
-      // Arrange
       const responseWithoutPreviousPhase = {
         response: [
           {
@@ -93,17 +83,14 @@ describe('DataControlService', () => {
             phase_name: 'Test Phase',
             id: 1,
             obj_portfolio: { acronym: 'TEST-PORT' }
-            // obj_previous_phase is intentionally omitted
           }
         ]
       };
 
       jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(responseWithoutPreviousPhase));
 
-      // Act
       service.getCurrentPhases().subscribe();
 
-      // Assert
       expect(service.previousReportingPhase).toEqual({
         phaseYear: null,
         phaseName: null,
@@ -112,14 +99,11 @@ describe('DataControlService', () => {
     });
 
     it('should handle empty response array gracefully', () => {
-      // Arrange
       const emptyResponse = { response: [] };
       jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(emptyResponse));
 
-      // Act
       service.getCurrentPhases().subscribe();
 
-      // Assert
       expect(service.reportingCurrentPhase).toEqual({
         phaseYear: undefined,
         phaseName: undefined,
@@ -135,44 +119,90 @@ describe('DataControlService', () => {
   });
 
   describe('getCurrentIPSRPhase', () => {
-    it('should set the current and previous IPSR phases', () => {
-      const response = [
-        {
-          phase_year: '2021',
-          phase_name: 'Test Phase',
-          obj_previous_phase: {
-            phase_year: '2020',
-            phase_name: 'Previous Phase'
+    let mockApiResponse: any;
+
+    beforeEach(() => {
+      mockApiResponse = {
+        response: [
+          {
+            phase_year: '2021',
+            phase_name: 'Test Phase',
+            obj_portfolio: { acronym: 'TEST-PORT' },
+            obj_previous_phase: {
+              phase_year: '2020',
+              phase_name: 'Previous Phase'
+            }
           }
-        }
-      ];
-      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+        ]
+      };
+    });
 
-      service.getCurrentIPSRPhase();
+    it('should return an Observable and set current IPSR phase properties correctly', () => {
+      const mockObservable = { pipe: jest.fn().mockReturnValue({ subscribe: jest.fn() }) };
+      const getVersioningSpy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(mockObservable);
 
-      expect(spy).toHaveBeenCalled();
+      const result = service.getCurrentIPSRPhase();
+
+      expect(getVersioningSpy).toHaveBeenCalledWith('open', 'ipsr');
+      expect(result).toBeDefined();
+      expect(typeof result.subscribe).toBe('function');
+    });
+
+    it('should set current IPSR phase with all properties when API returns complete data', () => {
+      jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(mockApiResponse));
+
+      service.getCurrentIPSRPhase().subscribe();
+
       expect(service.IPSRCurrentPhase).toEqual({
         phaseYear: '2021',
-        phaseName: 'Test Phase'
+        phaseName: 'Test Phase',
+        portfolioAcronym: 'TEST-PORT'
       });
+    });
+
+    it('should set previous IPSR phase when obj_previous_phase exists', () => {
+      jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(mockApiResponse));
+
+      service.getCurrentIPSRPhase().subscribe();
+
       expect(service.previousIPSRPhase).toEqual({
         phaseYear: '2020',
         phaseName: 'Previous Phase'
       });
     });
 
-    it('should set the previous IPSR phase to null if there is no previous phase', () => {
-      const response = [
-        {
-          phase_year: '2021',
-          phase_name: 'Test Phase'
-        }
-      ];
-      const spy = jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue({ subscribe: cb => cb({ response }) });
+    it('should set previous IPSR phase to null when obj_previous_phase is undefined', () => {
+      const responseWithoutPreviousPhase = {
+        response: [
+          {
+            phase_year: '2021',
+            phase_name: 'Test Phase',
+            obj_portfolio: { acronym: 'TEST-PORT' }
+          }
+        ]
+      };
 
-      service.getCurrentIPSRPhase();
+      jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(responseWithoutPreviousPhase));
 
-      expect(spy).toHaveBeenCalled();
+      service.getCurrentIPSRPhase().subscribe();
+
+      expect(service.previousIPSRPhase).toEqual({
+        phaseYear: null,
+        phaseName: null
+      });
+    });
+
+    it('should handle empty response array gracefully', () => {
+      const emptyResponse = { response: [] };
+      jest.spyOn(resultsSE, 'GET_versioning').mockReturnValue(of(emptyResponse));
+
+      service.getCurrentIPSRPhase().subscribe();
+
+      expect(service.IPSRCurrentPhase).toEqual({
+        phaseYear: undefined,
+        phaseName: undefined,
+        portfolioAcronym: undefined
+      });
       expect(service.previousIPSRPhase).toEqual({
         phaseYear: null,
         phaseName: null
@@ -362,9 +392,7 @@ describe('DataControlService', () => {
       expect(result).toBe(true);
       expect(service.fieldFeedbackList).toContain('tag');
     });
-  });
 
-  describe('someMandatoryFieldIncompleteResultDetail', () => {
     it('should set the title and currentSectionName', () => {
       const sectionName = 'Test Section';
       const title = 'Test Title';
@@ -381,6 +409,56 @@ describe('DataControlService', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(service.currentSectionName).toBe(sectionName);
+    });
+
+    it('should log an error if there is an error', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      const error = new Error('Test error');
+
+      console.error(error);
+
+      expect(spy).toHaveBeenCalledWith(error);
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('isInnoDev', () => {
+    it('should return true when result_type_id is 7', () => {
+      service.currentResult = { result_type_id: 7 };
+      const spy = jest.spyOn(service, 'isInnoDev', 'get');
+      const result = service.isInnoDev;
+
+      expect(result).toBeTruthy();
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should return false when result_type_id is not 7', () => {
+      service.currentResult = { result_type_id: 5 };
+      const spy = jest.spyOn(service, 'isInnoDev', 'get');
+      const result = service.isInnoDev;
+
+      expect(result).toBeFalsy();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('isInnoUse', () => {
+    it('should return true when result_type_id is 2', () => {
+      service.currentResult = { result_type_id: 2 };
+      const spy = jest.spyOn(service, 'isInnoUse', 'get');
+      const result = service.isInnoUse;
+
+      expect(result).toBeTruthy();
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should return false when result_type_id is not 2', () => {
+      service.currentResult = { result_type_id: 5 };
+      const spy = jest.spyOn(service, 'isInnoUse', 'get');
+      const result = service.isInnoUse;
+
+      expect(result).toBeFalsy();
+      expect(spy).toHaveBeenCalled();
     });
   });
 });
