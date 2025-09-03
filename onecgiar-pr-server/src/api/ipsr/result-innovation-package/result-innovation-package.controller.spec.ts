@@ -9,7 +9,9 @@ describe('ResultInnovationPackageController', () => {
     createHeader: jest.fn().mockResolvedValue({ status: 200 }),
     generalInformation: jest.fn().mockResolvedValue({ status: 200 }),
     findActiveBackstopping: jest.fn().mockResolvedValue({ status: 200 }),
-    findConsensusInitiativeWorkPackage: jest.fn().mockResolvedValue({ status: 200 }),
+    findConsensusInitiativeWorkPackage: jest
+      .fn()
+      .mockResolvedValue({ status: 200 }),
     findRegionalIntegrated: jest.fn().mockResolvedValue({ status: 200 }),
     findRegionalLeadership: jest.fn().mockResolvedValue({ status: 200 }),
     findRelevantCountry: jest.fn().mockResolvedValue({ status: 200 }),
@@ -22,7 +24,9 @@ describe('ResultInnovationPackageController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ResultInnovationPackageController],
-      providers: [{ provide: ResultInnovationPackageService, useValue: mockService }],
+      providers: [
+        { provide: ResultInnovationPackageService, useValue: mockService },
+      ],
     }).compile();
 
     controller = module.get(ResultInnovationPackageController);
@@ -80,4 +84,3 @@ describe('ResultInnovationPackageController', () => {
     expect(mockService.findUnitTime).toHaveBeenCalled();
   });
 });
-

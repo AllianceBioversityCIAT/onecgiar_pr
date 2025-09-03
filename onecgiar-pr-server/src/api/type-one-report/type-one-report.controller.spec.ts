@@ -6,8 +6,12 @@ describe('TypeOneReportController', () => {
   let controller: TypeOneReportController;
 
   const mockService = {
-    getFactSheetByInit: jest.fn().mockResolvedValue({ statusCode: 200, response: {} }),
-    getKeyResultStory: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
+    getFactSheetByInit: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: {} }),
+    getKeyResultStory: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: [] }),
   } as unknown as jest.Mocked<TypeOneReportService>;
 
   beforeEach(async () => {
@@ -36,4 +40,3 @@ describe('TypeOneReportController', () => {
     expect(res.statusCode).toBe(200);
   });
 });
-

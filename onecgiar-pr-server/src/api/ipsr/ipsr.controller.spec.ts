@@ -8,10 +8,18 @@ describe('IpsrController', () => {
   let controller: IpsrController;
 
   const mockService = {
-    findAllInnovations: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
-    findOneInnovation: jest.fn().mockResolvedValue({ status: 200, response: {} }),
-    allInnovationPackages: jest.fn().mockResolvedValue({ status: 200, response: [] }),
-    findInnovationDetail: jest.fn().mockResolvedValue({ status: 200, response: {} }),
+    findAllInnovations: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: [] }),
+    findOneInnovation: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: {} }),
+    allInnovationPackages: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
+    findInnovationDetail: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: {} }),
     getIpsrList: jest
       .fn()
       .mockResolvedValue({ status: 200, message: 'ok', response: [{ id: 1 }] }),
@@ -57,14 +65,18 @@ describe('IpsrController', () => {
   });
 
   it('getIpsrList throws HttpException with service payload', async () => {
-    await expect(controller.getIpsrList({} as any)).rejects.toThrow(HttpException);
+    await expect(controller.getIpsrList({} as any)).rejects.toThrow(
+      HttpException,
+    );
     try {
       await controller.getIpsrList({} as any);
     } catch (e) {
       const err = e as HttpException;
       expect(err.getStatus()).toBe(200);
-      expect(err.getResponse()).toEqual({ message: 'ok', response: [{ id: 1 }] });
+      expect(err.getResponse()).toEqual({
+        message: 'ok',
+        response: [{ id: 1 }],
+      });
     }
   });
 });
-

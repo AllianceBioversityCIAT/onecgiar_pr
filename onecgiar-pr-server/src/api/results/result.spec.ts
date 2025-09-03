@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
-
 import { ResultsService } from './results.service';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -41,7 +40,6 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
 import { ResultsCenterRepository } from './results-centers/results-centers.repository';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
-
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
@@ -52,7 +50,6 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { GeneralInformationDto } from './dto/general-information.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { v4 } from 'uuid';
-import { ResultsModule } from './results.module';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
