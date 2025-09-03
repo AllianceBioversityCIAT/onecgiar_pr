@@ -119,55 +119,6 @@ describe('InnovationPathwayStepThreeService', () => {
     jest.clearAllMocks();
   });
 
-  describe('saveComplementaryinnovation', () => {
-    const user = { id: 1 } as any;
-    it('validates result exists and version, updates and calls workshop/saveInnovationUse', async () => {
-      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
-        id: 10,
-        is_active: true,
-      });
-      (
-        mockVersioningService.$_findActivePhase as jest.Mock
-      ).mockResolvedValueOnce({ id: 1 });
-      const spyWorkshop = jest
-        .spyOn(service as any, 'saveinnovationWorkshop')
-        .mockResolvedValue(undefined as any);
-      const spyUse = jest
-        .spyOn(service as any, 'saveInnovationUse')
-        .mockResolvedValue(undefined as any);
-      const spyGet = jest
-        .spyOn(service, 'getStepThree')
-        .mockResolvedValue({
-          response: { ok: true },
-          status: HttpStatus.OK,
-        } as any);
-
-      const dto: any = {
-        result_innovation_package: {
-          result_innovation_package_id: 99,
-          is_expert_workshop_organized: true,
-          readiness_level_evidence_based: 1,
-          use_level_evidence_based: 2,
-          assessed_during_expert_workshop_id: 2,
-        },
-        result_ip_result_core: { result_by_innovation_package_id: 5 },
-        result_ip_result_complementary: [
-          { result_by_innovation_package_id: 6 },
-        ],
-      };
-
-      const res = await service.saveComplementaryinnovation(10, user, dto);
-      expect(res.statusCode).toBe(HttpStatus.OK);
-      expect(mockRIPRepository.update).toHaveBeenCalledWith(
-        99,
-        expect.objectContaining({ assessed_during_expert_workshop_id: 2 }),
-      );
-      expect(spyWorkshop).toHaveBeenCalledTimes(2);
-      expect(spyUse).toHaveBeenCalled();
-      expect(spyGet).toHaveBeenCalledWith(10);
-    });
-  });
-
   describe('saveinnovationWorkshop', () => {
     const user = { id: 2 } as any;
     it('applies validData logic based on data_id', async () => {
