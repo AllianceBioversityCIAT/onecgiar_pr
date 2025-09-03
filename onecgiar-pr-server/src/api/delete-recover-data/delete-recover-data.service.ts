@@ -77,6 +77,9 @@ import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultInstitutionsBudget } from '../results/result_budget/entities/result_institutions_budget.entity';
+import { VersionRepository } from '../versioning/versioning.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { RoleEnum } from '../../shared/constants/role-type.enum';
 
 @Injectable()
 export class DeleteRecoverDataService {
@@ -146,6 +149,8 @@ export class DeleteRecoverDataService {
     private readonly _elasticService: ElasticService,
     private readonly _resultsService: ResultsService,
     private readonly _logRepository: LogRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _versionRepository: VersionRepository,
   ) {}
 
   async deleteResult(result_id: number, user: TokenDto) {
@@ -163,12 +168,42 @@ export class DeleteRecoverDataService {
         });
       }
 
+      const hasPermission =
+        await this._roleByUserRepository.validationRolePermissions(
+          user.id,
+          resultData.id,
+          [
+            RoleEnum.ADMIN,
+            RoleEnum.LEAD,
+            RoleEnum.CO_LEAD,
+            RoleEnum.COORDINATOR,
+          ],
+        );
+      if (!hasPermission) {
+        throw this._returnResponse.format({
+          message: 'The user does not have the necessary role for this action.',
+          response: {},
+          statusCode: HttpStatus.UNAUTHORIZED,
+        });
+      }
+
       if (resultData.status_id == 2)
         throw this._returnResponse.format({
           message: 'Is already Quality Assessed',
           statusCode: HttpStatus.BAD_REQUEST,
           response: resultData,
         });
+
+      const phase = await this._versionRepository.findOne({
+        where: { id: resultData.version_id, is_active: true, status: true },
+      });
+      if (!phase) {
+        throw this._returnResponse.format({
+          message: 'The result belongs to an inactive or closed phase',
+          response: resultData.version_id,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
 
       await this._ipsrRepository.logicalDelete(resultData.id);
       await this._innovationPackagingExpertRepository.logicalDelete(

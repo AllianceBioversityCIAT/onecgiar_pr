@@ -1,15 +1,23 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { MenuItem } from 'primeng/api';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
-import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
+
+interface ItemMenu {
+  label: string;
+  icon: string;
+  visible?: boolean;
+  command: () => void;
+  tooltipText?: string;
+  tooltipShow?: boolean;
+  disabled?: boolean;
+}
 
 @Component({
   selector: 'app-results-list',
@@ -30,10 +38,11 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     { title: 'Creation date	', attr: 'created_date' },
     { title: 'Created by	', attr: 'full_name' }
   ];
-  items: MenuItem[] = [
+  items: ItemMenu[] = [
     {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
+      visible: true,
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
@@ -41,15 +50,17 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     {
       label: 'Update result',
       icon: 'pi pi-fw pi-clone',
+      visible: true,
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
     }
   ];
-  itemsWithDelete: MenuItem[] = [
+  itemsWithDelete: ItemMenu[] = [
     {
       label: 'Map to TOC',
       icon: 'pi pi-fw pi-sitemap',
+      visible: true,
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
@@ -57,6 +68,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     {
       label: 'Update result',
       icon: 'pi pi-fw pi-clone',
+      visible: true,
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
@@ -76,7 +88,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     public resultsNotificationsSE: ResultsNotificationsService,
     public api: ApiService,
     public resultsListService: ResultsListService,
-    private ResultLevelSE: ResultLevelService,
     private exportTablesSE: ExportTablesService,
     private shareRequestModalSE: ShareRequestModalService,
     private retrieveModalSE: RetrieveModalService,
@@ -85,7 +96,10 @@ export class ResultsListComponent implements OnInit, OnDestroy {
 
   validateOrder(columnAttr) {
     setTimeout(() => {
-      if (columnAttr == 'result_code') return (this.combine = true);
+      if (columnAttr == 'result_code') {
+        this.combine = true;
+        return;
+      }
       const resultListTableHTML = document.getElementById('resultListTable');
       this.combine =
         !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length &&
@@ -121,6 +135,85 @@ export class ResultsListComponent implements OnInit, OnDestroy {
         ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
           this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear
         : canUpdate;
+
+    if (!this.api.rolesSE.isAdmin) {
+      this.itemsWithDelete[2] = {
+        ...this.itemsWithDelete[2],
+        disabled:
+          (this.api.dataControlSE.currentResult?.role_id !== 3 &&
+            this.api.dataControlSE.currentResult?.role_id !== 4 &&
+            this.api.dataControlSE.currentResult?.role_id !== 5) ||
+          this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipShow:
+          (this.api.dataControlSE.currentResult?.role_id !== 3 &&
+            this.api.dataControlSE.currentResult?.role_id !== 4 &&
+            this.api.dataControlSE.currentResult?.role_id !== 5) ||
+          this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: this.getDeleteTooltipText()
+      };
+    } else {
+      this.itemsWithDelete[2] = {
+        ...this.itemsWithDelete[2],
+        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
+      };
+    }
+
+    if (this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym == this.api.dataControlSE.currentResult?.acronym) {
+      this.itemsWithDelete[2].visible = true;
+    } else {
+      this.itemsWithDelete[2].visible = false;
+    }
+  }
+
+  private shouldShowUpdate(result: CurrentResult): boolean {
+    const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    const hasInitiatives = initiativeMap.length > 0;
+    const isPastPhase = this.isPastReportingPhase(result);
+
+    if (this.api.rolesSE.isAdmin) {
+      return hasInitiatives && isPastPhase;
+    }
+
+    return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
+  }
+
+  private isPastReportingPhase(result: CurrentResult): boolean {
+    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
+  }
+
+  private isUserIncludedInAnyInitiative(result: CurrentResult): boolean {
+    const mapIds = this.getInitiativeIdsFromMap(result);
+    const userInitiativeIds = this.getUserInitiativeIds(result);
+    return mapIds.some(entityId => userInitiativeIds.includes(entityId));
+  }
+
+  private getInitiativeIdsFromMap(result: CurrentResult): Array<string | number> {
+    const mapArray = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    return mapArray.map((item: any) => item?.entityId).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  private getUserInitiativeIds(result: CurrentResult): Array<string | number> {
+    const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
+    return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  private getDeleteTooltipText(): string {
+    if (this.api.dataControlSE.currentResult?.status_id == '2') {
+      return 'You are not allowed to perform this action because the result is in the status "QAed".';
+    }
+
+    if (
+      this.api.dataControlSE.currentResult?.role_id !== 3 &&
+      this.api.dataControlSE.currentResult?.role_id !== 4 &&
+      this.api.dataControlSE.currentResult?.role_id !== 5
+    ) {
+      return 'You are not allowed to perform this action. Please contact your leader or co-leader.';
+    }
+
+    return '';
   }
 
   onDownLoadTableAsExcel() {
