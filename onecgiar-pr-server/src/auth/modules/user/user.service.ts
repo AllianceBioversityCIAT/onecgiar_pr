@@ -908,20 +908,17 @@ export class UserService {
 
   async findCurrentPortfolioByUserId(userId: number) {
     try {
-      // 1) Get active and open versions, with their modules
       const activeVersions = await this._versionRepository.find({
         where: { is_active: true, status: true },
         relations: { obj_app_module: true },
         order: { id: 'DESC' },
       });
 
-      // 2) Group by module and fetch initiatives for each version's portfolio
       const groups: Record<string, any[]> = {};
 
       for (const v of activeVersions) {
         if (!v?.portfolio_id) continue;
 
-        // Normalize module key (e.g., 'reporting', 'ipsr', fallback to module id)
         const modName = (v.obj_app_module?.name || '').toLowerCase();
         const key = modName.includes('ipsr')
           ? 'ipsr'
@@ -929,7 +926,6 @@ export class UserService {
             ? 'reporting'
             : `module_${v.app_module_id ?? 'unknown'}`;
 
-        // Fetch user initiatives tied to this portfolio
         const rbus = await this._roleByUserRepository.find({
           where: {
             user: userId,
