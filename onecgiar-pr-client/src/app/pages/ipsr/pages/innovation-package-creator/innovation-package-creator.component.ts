@@ -83,7 +83,6 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     if (!this.api.rolesSE.isAdmin) return;
 
     const activePortfolio = this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym;
-    console.log(activePortfolio);
 
     this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe({
       next: ({ response }) => {
