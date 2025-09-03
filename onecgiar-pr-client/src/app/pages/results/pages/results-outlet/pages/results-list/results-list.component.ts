@@ -76,9 +76,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     {
       label: 'Delete',
       icon: 'pi pi-fw pi-trash',
-      tooltipText: 'You are not allowed to perform this action. Please contact your leader or co-leader.',
-      tooltipShow: false,
-      disabled: false,
       command: () => {
         this.onDeleteREsult();
       }
@@ -143,13 +140,23 @@ export class ResultsListComponent implements OnInit, OnDestroy {
       this.itemsWithDelete[2] = {
         ...this.itemsWithDelete[2],
         disabled:
-          this.api.dataControlSE.currentResult?.role_id !== 3 &&
-          this.api.dataControlSE.currentResult?.role_id !== 4 &&
-          this.api.dataControlSE.currentResult?.role_id !== 5,
+          (this.api.dataControlSE.currentResult?.role_id !== 3 &&
+            this.api.dataControlSE.currentResult?.role_id !== 4 &&
+            this.api.dataControlSE.currentResult?.role_id !== 5) ||
+          this.api.dataControlSE.currentResult?.status_id == '2',
         tooltipShow:
-          this.api.dataControlSE.currentResult?.role_id !== 3 &&
-          this.api.dataControlSE.currentResult?.role_id !== 4 &&
-          this.api.dataControlSE.currentResult?.role_id !== 5
+          (this.api.dataControlSE.currentResult?.role_id !== 3 &&
+            this.api.dataControlSE.currentResult?.role_id !== 4 &&
+            this.api.dataControlSE.currentResult?.role_id !== 5) ||
+          this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: this.getDeleteTooltipText()
+      };
+    } else {
+      this.itemsWithDelete[2] = {
+        ...this.itemsWithDelete[2],
+        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
       };
     }
 
@@ -191,6 +198,22 @@ export class ResultsListComponent implements OnInit, OnDestroy {
   private getUserInitiativeIds(result: CurrentResult): Array<string | number> {
     const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
     return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  private getDeleteTooltipText(): string {
+    if (this.api.dataControlSE.currentResult?.status_id == '2') {
+      return 'You are not allowed to perform this action because the result is in the status "QAed".';
+    }
+
+    if (
+      this.api.dataControlSE.currentResult?.role_id !== 3 &&
+      this.api.dataControlSE.currentResult?.role_id !== 4 &&
+      this.api.dataControlSE.currentResult?.role_id !== 5
+    ) {
+      return 'You are not allowed to perform this action. Please contact your leader or co-leader.';
+    }
+
+    return '';
   }
 
   onDownLoadTableAsExcel() {

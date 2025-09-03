@@ -19,6 +19,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
+import { PopoverModule } from 'primeng/popover';
 
 jest.useFakeTimers();
 
@@ -100,7 +101,7 @@ describe('ResultsListComponent', () => {
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
