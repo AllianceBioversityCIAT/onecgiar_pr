@@ -540,21 +540,36 @@ export class IpsrRepository
             rl.name AS result_level_name,
             rt.id AS result_type_id,
             r.created_date,
-            ci.official_code AS submitter,
+            (
+                SELECT
+                    ci.official_code
+                FROM
+                    clarisa_initiatives ci
+                WHERE
+                    ci.id = rbi.inititiative_id
+            ) AS official_code,
             ci.id AS submitter_id,
             rbi.inititiative_id AS initiative_id,
-            r.status,
-            r.status_id,
-            rs.status_name AS status_name,
-            NULL as role_id,
-            NULL as role_name,
+            rs.status_name AS status,
+            r.reported_year_id,
             if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
             v.phase_year,
             r.result_level_id,
             r.no_applicable_partner,
             if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
             r.legacy_id,
-            r.created_by,
+            (
+                SELECT
+                    CONCAT(
+                        u.first_name,
+                        ' ',
+                        u.last_name
+                    )
+                FROM
+                    users u
+                WHERE
+                    u.id = r.created_by
+            ) AS created_by,
             u.first_name as create_first_name,
             u.last_name as create_last_name,
             r.version_id,
