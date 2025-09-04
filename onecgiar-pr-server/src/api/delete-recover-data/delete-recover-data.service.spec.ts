@@ -71,6 +71,7 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseMeasuresRepository } from '../results/summary/repositories/results-innovations-use-measures.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 
 describe('DeleteRecoverDataService', () => {
   let service: DeleteRecoverDataService;
@@ -220,6 +221,7 @@ describe('DeleteRecoverDataService', () => {
   const mockLogRepository = {
     createLog: jest.fn().mockResolvedValue(undefined),
   } as any as jest.Mocked<LogRepository>;
+  const mockRoleByUserRepo = {} as any as jest.Mocked<RoleByUserRepository>;
 
   const providers = [
     DeleteRecoverDataService,
@@ -229,6 +231,10 @@ describe('DeleteRecoverDataService', () => {
     {
       provide: InnovationPackagingExpertRepository,
       useValue: mockInnovationPackagingExpertRepository,
+    },
+    {
+      provide: RoleByUserRepository,
+      useValue: mockRoleByUserRepo,
     },
     {
       provide: ResultIpExpertisesRepository,

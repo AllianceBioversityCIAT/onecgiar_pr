@@ -37,6 +37,7 @@ import { IpsrService } from '../ipsr.service';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { VersioningService } from '../../versioning/versioning.service';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 
 describe('ResultInnovationPackageService', () => {
   let service: ResultInnovationPackageService;
@@ -128,6 +129,7 @@ describe('ResultInnovationPackageService', () => {
   const mockLinkedRepo = {} as any as jest.Mocked<LinkedResultRepository>;
   const mockEvidenceRepo = {} as any as jest.Mocked<EvidencesRepository>;
   const mockIpsrService = {} as any as jest.Mocked<IpsrService>;
+  const mockRoleByUserRepo = {} as any as jest.Mocked<RoleByUserRepository>;
   const mockDiscontinuedRepo = {
     inactiveData: jest.fn(),
     findOne: jest.fn(),
@@ -150,6 +152,7 @@ describe('ResultInnovationPackageService', () => {
         ReturnResponse,
         { provide: ResultRepository, useValue: mockResultRepository },
         { provide: VersionsService, useValue: mockVersionsService },
+        { provide: RoleByUserRepository, useValue: mockRoleByUserRepo },
         {
           provide: ResultByInitiativesRepository,
           useValue: mockResultByInitiativeRepository,
