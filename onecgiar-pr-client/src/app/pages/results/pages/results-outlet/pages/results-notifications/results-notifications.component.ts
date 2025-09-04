@@ -6,10 +6,10 @@ import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../shared/enum/a
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-    selector: 'app-results-notifications',
-    templateUrl: './results-notifications.component.html',
-    styleUrls: ['./results-notifications.component.scss'],
-    standalone: false
+  selector: 'app-results-notifications',
+  templateUrl: './results-notifications.component.html',
+  styleUrls: ['./results-notifications.component.scss'],
+  standalone: false
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   allInitiatives = [];
@@ -28,7 +28,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     if (this.api.rolesSE.isAdmin) this.GET_AllInitiatives();
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
-    this.api.dataControlSE.getCurrentPhases();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
   }
 
   ngOnDestroy() {

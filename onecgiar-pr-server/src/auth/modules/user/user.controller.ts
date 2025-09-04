@@ -278,6 +278,57 @@ export class UserController {
     return this.userService.findInitiativeByUserId(userId);
   }
 
+  @Get('get/initiative/current-portfolio/:userId')
+  @ApiOperation({
+    summary: 'Get current-portfolio initiatives by module',
+    description:
+      'Returns the user initiatives grouped by active/open versions per application module (IPSR and Reporting). Each group contains initiatives filtered by the portfolio associated to the active version of that module.',
+  })
+  @ApiParam({
+    name: 'userId',
+    type: 'number',
+    description: 'User ID to fetch initiatives for',
+    example: 326,
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Initiatives grouped by module returned successfully',
+    schema: {
+      example: {
+        status: 200,
+        message: 'Successful response',
+        response: {
+          ipsr: [
+            {
+              initiative_id: 52,
+              official_code: 'SP03',
+              initiative_name: 'Sustainable Animal and Aquatic Foods ',
+              short_name: 'Sustainable Animal and Aquatic Foods ',
+              cgiar_entity_type_id: 22,
+              portfolio_id: 3,
+              obj_cgiar_entity_type: { code: 22, name: 'Science programs' },
+            },
+          ],
+          reporting: [
+            {
+              initiative_id: 3,
+              official_code: 'INIT-03',
+              initiative_name: 'Genebanks',
+              short_name: 'Genebanks',
+              cgiar_entity_type_id: 6,
+              portfolio_id: 2,
+              obj_cgiar_entity_type: { code: 6, name: 'Initiative' },
+            },
+          ],
+        },
+      },
+    },
+  })
+  findCurrentPortfolioByUserId(@Param('userId') userId: number) {
+    return this.userService.findCurrentPortfolioByUserId(userId);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Find user by ID',

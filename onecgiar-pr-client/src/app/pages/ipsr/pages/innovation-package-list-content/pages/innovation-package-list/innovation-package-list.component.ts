@@ -6,10 +6,10 @@ import { IpsrListFilterService } from './services/ipsr-list-filter.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 
 @Component({
-    selector: 'app-innovation-package-list',
-    templateUrl: './innovation-package-list.component.html',
-    styleUrls: ['./innovation-package-list.component.scss'],
-    standalone: false
+  selector: 'app-innovation-package-list',
+  templateUrl: './innovation-package-list.component.html',
+  styleUrls: ['./innovation-package-list.component.scss'],
+  standalone: false
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
   totalResults: number = 0;
@@ -30,7 +30,7 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
     }
 
     this.GETAllInnovationPackages();
-    this.api.dataControlSE.getCurrentIPSRPhase();
+    this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
   }
 

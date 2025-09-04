@@ -9,7 +9,6 @@ import {
   Query,
   UseInterceptors,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -74,12 +73,10 @@ export class VersioningController {
   async phaseChangeProcess(
     @Param('resultId') result_id: string,
     @UserToken() user: TokenDto,
-    @Req() req: Request,
     @Body() body: ChangePhaseDto,
   ) {
-    const apiVersion = req['apiVersion'];
     const entity_id = body?.entityId;
-    if (apiVersion !== 'v2') {
+    if (!entity_id || entity_id === undefined || entity_id === null) {
       return this.versioningService.versionProcess(+result_id, user);
     } else {
       return this.versioningService.versionProcessV2(

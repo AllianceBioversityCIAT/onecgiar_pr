@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { CreateResultManagementService } from './services/create-result-management.service';
+import { TerminologyService } from '../../../../internationalization/terminology.service';
 
 @Component({
   selector: 'app-result-creator',
@@ -45,12 +46,27 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
     public createResultManagementService: CreateResultManagementService,
+    public terminologyService: TerminologyService,
     private router: Router,
     private phasesService: PhasesService
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases();
+    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+      this.api.rolesSE.validateReadOnly().then(() => {
+        this.GET_AllInitiatives();
+      });
+      this.api.alertsFs.show({
+        id: 'indoasd',
+        status: 'success',
+        title: '',
+        description: this.naratives.alerts(
+          this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
+        ),
+        querySelector: '.report_container',
+        position: 'beforebegin'
+      });
+    });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
@@ -59,17 +75,6 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.api.updateUserData(() => {
       if (this.api.dataControlSE.myInitiativesList.length == 1)
         this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
-    });
-    this.api.alertsFs.show({
-      id: 'indoasd',
-      status: 'success',
-      title: '',
-      description: this.naratives.alerts.info,
-      querySelector: '.report_container',
-      position: 'beforebegin'
-    });
-    this.api.rolesSE.validateReadOnly().then(() => {
-      this.GET_AllInitiatives();
     });
 
     setTimeout(() => {
@@ -107,7 +112,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
 
   GET_AllInitiatives(callback?) {
     if (!this.api.rolesSE.isAdmin) return;
-    this.api.resultsSE.GET_AllInitiatives().subscribe({
+
+    const activePortfolio = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym;
+
+    this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe({
       next: ({ response }) => {
         this.GET_cgiarEntityTypes(entityTypesResponse => {
           this.cgiarEntityTypes = entityTypesResponse;
@@ -223,14 +231,6 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
         }
       });
     }
-  }
-
-  valdiateNormalFields() {
-    if (!this.resultLevelSE.resultBody.initiative_id) return true;
-    if (!this.resultLevelSE.resultBody.result_type_id) return true;
-    if (!this.resultLevelSE.resultBody.result_level_id) return true;
-    if (!this.resultLevelSE.resultBody.result_name) return true;
-    return false;
   }
 
   ngDoCheck(): void {

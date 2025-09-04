@@ -13,6 +13,7 @@ import { RetrieveModalModule } from '../result-detail/components/retrieve-modal/
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
+import { TermPipe } from '../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
@@ -25,7 +26,8 @@ import { ResultAiAssistantComponent } from './components/result-ai-assistant/res
     MenuModule,
     RetrieveModalModule,
     AlertGlobalInfoModule,
-    ResultAiAssistantComponent
+    ResultAiAssistantComponent,
+    TermPipe
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
