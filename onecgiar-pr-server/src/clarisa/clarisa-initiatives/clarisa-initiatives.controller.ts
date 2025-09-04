@@ -23,13 +23,13 @@ export class ClarisaInitiativesController {
     return this.clarisaInitiativesService.findAll();
   }
 
-  @Get(':portfolio')
-  getByPortfolio(@Param('portfolio') portfolio: string) {
-    return this.clarisaInitiativesService.getByPortfolio(portfolio);
-  }
-
   @Get('entities')
   getInitiativesEntities() {
     return this.clarisaInitiativesService.getInitiativesEntitiesGrouped();
+  }
+
+  @Get(':portfolio')
+  getByPortfolio(@Param('portfolio') portfolio: string) {
+    return this.clarisaInitiativesService.getByPortfolio(portfolio);
   }
 }
