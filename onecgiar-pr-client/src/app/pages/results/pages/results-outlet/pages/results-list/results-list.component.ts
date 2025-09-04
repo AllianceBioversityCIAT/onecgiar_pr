@@ -8,6 +8,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 interface ItemMenu {
   label: string;
@@ -88,6 +89,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     public resultsNotificationsSE: ResultsNotificationsService,
     public api: ApiService,
     public resultsListService: ResultsListService,
+    private resultLevelSE: ResultLevelService,
     private exportTablesSE: ExportTablesService,
     private shareRequestModalSE: ShareRequestModalService,
     private retrieveModalSE: RetrieveModalService,
