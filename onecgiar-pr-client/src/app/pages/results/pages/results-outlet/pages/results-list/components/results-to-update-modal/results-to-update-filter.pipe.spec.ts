@@ -1,6 +1,7 @@
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ResultsToUpdateFilterPipe } from './results-to-update-filter.pipe';
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 
 describe('ResultsToUpdateFilterPipe', () => {
   let pipe: ResultsToUpdateFilterPipe;
@@ -10,7 +11,7 @@ describe('ResultsToUpdateFilterPipe', () => {
     mockApiService = {
       rolesSE: { isAdmin: true },
       dataControlSE: {
-        getCurrentPhases: () => {}, // Mock function
+        getCurrentPhases: jest.fn(() => of({})), // Mock function
         reportingCurrentPhase: { phaseYear: 2024 } // Add mock data as needed
       }
     };

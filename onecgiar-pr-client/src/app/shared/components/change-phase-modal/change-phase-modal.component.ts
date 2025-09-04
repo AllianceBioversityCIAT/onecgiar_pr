@@ -4,10 +4,10 @@ import { ApiService } from '../../services/api/api.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 
 @Component({
-    selector: 'app-change-phase-modal',
-    templateUrl: './change-phase-modal.component.html',
-    styleUrls: ['./change-phase-modal.component.scss'],
-    standalone: false
+  selector: 'app-change-phase-modal',
+  templateUrl: './change-phase-modal.component.html',
+  styleUrls: ['./change-phase-modal.component.scss'],
+  standalone: false
 })
 export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;
@@ -21,8 +21,8 @@ export class ChangePhaseModalComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases();
-    this.api.dataControlSE.getCurrentIPSRPhase();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
 
   accept() {
