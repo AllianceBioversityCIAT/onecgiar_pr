@@ -260,6 +260,8 @@ export class PlatformReportService implements OnModuleInit {
         'PRMS-Result-' +
         cleanResultCodeInput +
         '_' +
+        data.portfolio_acronym +
+        '_' +
         data.generation_date_filename +
         '.pdf';
 
