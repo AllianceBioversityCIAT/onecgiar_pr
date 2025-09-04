@@ -27,6 +27,7 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
 import { ClarisaPortfoliosModule } from '../../../clarisa/clarisa-portfolios/clarisa-portfolios.module';
 import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/clarisa-initiatives.module';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
+import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
 @Module({
   controllers: [UserController],
@@ -40,6 +41,7 @@ import { VersionRepository } from '../../../api/versioning/versioning.repository
     ReturnResponse,
     ActiveDirectoryService,
     VersionRepository,
+    GlobalParameterRepository
   ],
   imports: [
     UserModule,
