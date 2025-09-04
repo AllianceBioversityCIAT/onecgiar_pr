@@ -1,3 +1,5 @@
+@let isP25 = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
+
 <p-dialog
   class="support_information"
   header="Title"
@@ -30,19 +32,22 @@
           <div class="pr-my"><b>Title:</b> {{ api.dataControlSE?.currentResult?.title }}</div>
           <div class="pr-my"><b>From phase:</b> "{{ api.dataControlSE?.currentResult?.phase_name }}"</div>
         </div>
-        <div>
-          <app-pr-select
-            [group]="true"
-            groupName="name"
-            [options]="this.api.dataControlSE.currentResult.initiative_entity_map"
-            [required]="false"
-            [isStatic]="true"
-            optionLabel="entityName"
-            optionValue="entityId"
-            placeholder="Select new submitter"
-            [(ngModel)]="this.selectedInitiative">
-          </app-pr-select>
-        </div>
+
+        @if (isP25) {
+          <div>
+            <app-pr-select
+              [group]="true"
+              groupName="name"
+              [options]="this.api.dataControlSE.currentResult.initiative_entity_map"
+              [required]="false"
+              [isStatic]="true"
+              optionLabel="entityName"
+              optionValue="entityId"
+              placeholder="Select new submitter"
+              [(ngModel)]="this.selectedInitiative">
+            </app-pr-select>
+          </div>
+        }
       </div>
 
       <div class="info-phase-change">
@@ -101,12 +106,12 @@
           [ngClass]="{ globalDisabled: this.requesting }"
           [rotating]="this.requesting"
           padding="medium"
-          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3 || !this.selectedInitiative"
+          [disabled]="this.api.dataControlSE?.currentResult?.result_type_id === 3 || (isP25 && !this.selectedInitiative)"
           [icon]="this.requesting ? 'loop' : ''"
           [tooltipText]="
             this.api.dataControlSE?.currentResult?.result_type_id === 3
               ? 'This functionality is not available for capacity change result types.'
-              : !this.selectedInitiative
+              : isP25 && !this.selectedInitiative
                 ? 'Please select an initiative.'
                 : null
           "

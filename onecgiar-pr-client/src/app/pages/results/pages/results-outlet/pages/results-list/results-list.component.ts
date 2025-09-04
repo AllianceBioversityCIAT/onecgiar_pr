@@ -128,7 +128,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    const canUpdate = this.shouldShowUpdate(result);
+    const canUpdate = this.api.shouldShowUpdate(result);
     this.items[1].visible = this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25' ? false : canUpdate;
     this.itemsWithDelete[1].visible =
       this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25'
@@ -165,39 +165,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     } else {
       this.itemsWithDelete[2].visible = false;
     }
-  }
-
-  private shouldShowUpdate(result: CurrentResult): boolean {
-    const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
-    const hasInitiatives = initiativeMap.length > 0;
-    const isPastPhase = this.isPastReportingPhase(result);
-
-    if (this.api.rolesSE.isAdmin) {
-      return hasInitiatives && isPastPhase;
-    }
-
-    return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
-  }
-
-  private isPastReportingPhase(result: CurrentResult): boolean {
-    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
-    return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
-  }
-
-  private isUserIncludedInAnyInitiative(result: CurrentResult): boolean {
-    const mapIds = this.getInitiativeIdsFromMap(result);
-    const userInitiativeIds = this.getUserInitiativeIds(result);
-    return mapIds.some(entityId => userInitiativeIds.includes(entityId));
-  }
-
-  private getInitiativeIdsFromMap(result: CurrentResult): Array<string | number> {
-    const mapArray = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
-    return mapArray.map((item: any) => item?.entityId).filter((id: unknown): id is string | number => id !== undefined && id !== null);
-  }
-
-  private getUserInitiativeIds(result: CurrentResult): Array<string | number> {
-    const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
-    return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
   }
 
   private getDeleteTooltipText(): string {

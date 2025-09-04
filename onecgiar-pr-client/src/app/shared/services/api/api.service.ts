@@ -16,6 +16,7 @@ import { ResultsListService } from '../../../pages/results/pages/results-outlet/
 import { GlobalVariablesService } from '../global-variables.service';
 import { EndpointsService } from './endpoints/endpoints.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
+import { CurrentResult } from '../../interfaces/current-result.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -47,13 +48,10 @@ export class ApiService {
     forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser()]).subscribe(
       resp => {
         const [GET_allRolesByUser, GET_initiativesByUser] = resp;
-        //? Update role list
-        // this.rolesSE.roles = GET_allRolesByUser.response;
-        //?
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
         this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
-        this.dataControlSE.myInitiativesList.map(myInit => {
+        this.dataControlSE.myInitiativesList.forEach(myInit => {
           myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
           myInit.name = myInit.official_code;
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
@@ -134,20 +132,55 @@ export class ApiService {
             name: this.authSE.localStorageUser.user_name,
             email: this.authSE.localStorageUser.email
           },
-          err => {}
+          err => {
+            console.error(err);
+          }
         );
       };
 
       window['Tawk_API'].onChatEnded = function () {
         window['Tawk_API'].hideWidget();
         window['Tawk_API'].minimize();
-        //('ENDING CHAT');
       };
     } catch (error) {
-      //(error);
+      console.error(error);
     }
   }
+
   setTitle(title) {
     this.titleService.setTitle(title);
+  }
+
+  shouldShowUpdate(result: CurrentResult): boolean {
+    const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    const hasInitiatives = initiativeMap.length > 0;
+    const isPastPhase = this.isPastReportingPhase(result);
+
+    if (this.rolesSE.isAdmin) {
+      return hasInitiatives && isPastPhase;
+    }
+
+    return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
+  }
+
+  isPastReportingPhase(result: CurrentResult): boolean {
+    const phaseYear = this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
+  }
+
+  isUserIncludedInAnyInitiative(result: CurrentResult): boolean {
+    const mapIds = this.getInitiativeIdsFromMap(result);
+    const userInitiativeIds = this.getUserInitiativeIds(result);
+    return mapIds.some(entityId => userInitiativeIds.includes(entityId));
+  }
+
+  getInitiativeIdsFromMap(result: CurrentResult): Array<string | number> {
+    const mapArray = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
+    return mapArray.map((item: any) => item?.entityId).filter((id: unknown): id is string | number => id !== undefined && id !== null);
+  }
+
+  getUserInitiativeIds(result: CurrentResult): Array<string | number> {
+    const userArray = Array.isArray(result?.initiative_entity_user) ? result.initiative_entity_user : [];
+    return userArray.map((item: any) => item?.initiative_id).filter((id: unknown): id is string | number => id !== undefined && id !== null);
   }
 }
