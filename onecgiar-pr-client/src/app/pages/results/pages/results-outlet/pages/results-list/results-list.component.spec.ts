@@ -47,7 +47,7 @@ describe('ResultsListComponent', () => {
         currentResultId: 1
       },
       dataControlSE: {
-        getCurrentPhases: () => {},
+        getCurrentPhases: jest.fn(() => of({})),
         reportingCurrentPhase: { phaseYear: 2024 },
         currentResult: {
           phase_year: 2023

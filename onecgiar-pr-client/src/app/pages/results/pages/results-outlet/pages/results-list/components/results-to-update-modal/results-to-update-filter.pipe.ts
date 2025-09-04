@@ -7,7 +7,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class ResultsToUpdateFilterPipe implements PipeTransform {
   constructor(private api: ApiService) {
-    this.api.dataControlSE.getCurrentPhases();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
   }
 
   transform(list, word: string) {

@@ -48,7 +48,7 @@ describe('PhaseManagementTableComponent', () => {
     };
     mockCustomizedAlertsFeService = { show: jest.fn() };
     mockPhasesService = { getNewPhases: jest.fn() };
-    mockApiService = { dataControlSE: { getCurrentPhases: jest.fn(), getCurrentIPSRPhase: jest.fn() } };
+    mockApiService = { dataControlSE: { getCurrentPhases: jest.fn(() => of({})), getCurrentIPSRPhase: jest.fn(() => of({})) } };
 
     await TestBed.configureTestingModule({
       declarations: [PhaseManagementTableComponent],

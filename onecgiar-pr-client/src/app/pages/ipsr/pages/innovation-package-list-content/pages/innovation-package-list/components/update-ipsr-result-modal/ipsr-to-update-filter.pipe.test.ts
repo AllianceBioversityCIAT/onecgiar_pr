@@ -4,6 +4,7 @@ import { IpsrToUpdateFilterPipe } from './ipsr-to-update-filter.pipe';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { DataControlService } from '../../../../../../../../shared/services/data-control.service';
+import { of } from 'rxjs';
 
 describe('IpsrToUpdateFilterPipe', () => {
   let pipe: IpsrToUpdateFilterPipe;
@@ -12,7 +13,7 @@ describe('IpsrToUpdateFilterPipe', () => {
   beforeEach(() => {
     apiServiceMock = {
       dataControlSE: {
-        getCurrentIPSRPhase: jest.fn(),
+        getCurrentIPSRPhase: jest.fn(() => of({})),
         IPSRCurrentPhase: { phaseName: 'IPSR 2023', phaseYear: 2023 },
         myInitiativesList: [{ id: 1 }, { id: 2 }]
       } as unknown as DataControlService,
