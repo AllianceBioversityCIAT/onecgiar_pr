@@ -16,13 +16,17 @@ import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthService } from '../../auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { RoleByUserModule } from '../role-by-user/role-by-user.module';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import {
+  HandlersError,
+  ReturnResponse,
+} from '../../../shared/handlers/error.utils';
 import { AuthMicroserviceModule } from '../../../shared/microservices/auth-microservice/auth-microservice.module';
 import { PlatformReportModule } from '../../../api/platform-report/platform-report.module';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { ClarisaPortfoliosModule } from '../../../clarisa/clarisa-portfolios/clarisa-portfolios.module';
 import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/clarisa-initiatives.module';
+import { VersionRepository } from '../../../api/versioning/versioning.repository';
 
 @Module({
   controllers: [UserController],
@@ -33,7 +37,9 @@ import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/c
     UserRepository,
     AuthService,
     HandlersError,
+    ReturnResponse,
     ActiveDirectoryService,
+    VersionRepository,
   ],
   imports: [
     UserModule,

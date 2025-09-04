@@ -1,87 +1,99 @@
 <div class="section_container">
-    <a routerLink="/ipsr/list">
-        <app-pr-button text="Back to Innovation packages list" icon="arrow_back" [reverse]="true"
-            [showBackground]="false" optionLabel="name" optionValue="code"></app-pr-button>
-    </a>
+  <a routerLink="/ipsr/list">
+    <app-pr-button
+      text="Back to Innovation packages list"
+      icon="arrow_back"
+      [reverse]="true"
+      [showBackground]="false"
+      optionLabel="name"
+      optionValue="code"></app-pr-button>
+  </a>
 
-    <app-section-header titleText="Creation of innovation package"
-        description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
+  <app-section-header
+    titleText="Creation of innovation package"
+    description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
 
-    <div class="dropdown-50p">
-        <app-pr-select *ngIf="!this.api.rolesSE.isAdmin" class="segment_title_margin"
-            [options]="this.api.dataControlSE.myInitiativesList" label="Primary submitter of the innovation package"
-            [isStatic]="true" optionLabel="full_name" optionValue="initiative_id" placeholder="Select initiative"
-            description="Select an Initiative"
-            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false; this.api.rolesSE.readOnly = false;"
-            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
-        </app-pr-select>
+  <div class="dropdown-50p">
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListIPSRByPortfolio"
+      label="Primary submitter of the innovation package"
+      [isStatic]="true"
+      [group]="true"
+      groupName="name"
+      optionLabel="full_name"
+      optionValue="initiative_id"
+      [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+      [description]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+      (selectOptionEvent)="
+        this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);
+        status = false;
+        this.api.rolesSE.readOnly = false
+      "
+      [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+    </app-pr-select>
+  </div>
 
-        <app-pr-select *ngIf="this.api.rolesSE.isAdmin" class="segment_title_margin" [options]="this.allInitiatives"
-            label="Primary submitter of the innovation package" [isStatic]="true" optionLabel="full_name"
-            optionValue="initiative_id" placeholder="Select initiative" description="Select an Initiative"
-            (selectOptionEvent)="this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id); status= false;"
-            [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
-        </app-pr-select>
-    </div>
+  <app-pr-field-header
+    label="Select Core Innovation for innovation packaging and scaling readiness assessment"
+    [required]="false"
+    description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
 
+  <app-pr-button text="Select Core Innovation." [ngClass]="{ globalDisabled: status }" (click)="statusPdialog = true"></app-pr-button>
 
+  <div appFeedbackValidation labelText="Innovation package" [isComplete]="!!this.innovationPackageCreatorBody.result_id"></div>
 
+  @if (this.innovationPackageCreatorBody.result_id) {
+    <div>
+      <app-pr-field-header
+        [label]="
+          'Core innovation selected and CGIAR ' +
+          ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym) +
+          ' leading the development'
+        "
+        [required]="false"></app-pr-field-header>
 
-
-    <app-pr-field-header label="Select Core Innovation for innovation packaging and scaling readiness assessment"
-        [required]="false"
-        description="Only one can be selected. Only QAed innovations will be listed."></app-pr-field-header>
-
-    <app-pr-button text="Select Core Innovation." [ngClass]="{'globalDisabled' : status }"
-        (click)="statusPdialog = true"></app-pr-button>
-
-
-    <div appFeedbackValidation labelText="Innovation package"
-        [isComplete]="!!this.innovationPackageCreatorBody.result_id">
-    </div>
-
-    <div *ngIf="this.innovationPackageCreatorBody.result_id">
-        <app-pr-field-header label="Core innovation selected and CGIAR Initiative leading the development"
-            [required]="false"></app-pr-field-header>
-
-        <div class="core_innovation_selected ">
-            <div>
-                <strong>{{this.innovationPackageCreatorBody.result_code}}</strong> -
-                {{this.innovationPackageCreatorBody.title}}
-                -
-                <strong>{{this.innovationPackageCreatorBody.official_code}}</strong>
-            </div>
-            <i class="material-icons-round" (click)="this.innovationPackageCreatorBody.result_id = null">
-                cancel
-            </i>
-
+      <div class="core_innovation_selected">
+        <div>
+          <strong>{{ this.innovationPackageCreatorBody.result_code }}</strong> -
+          {{ this.innovationPackageCreatorBody.title }}
+          -
+          <strong>{{ this.innovationPackageCreatorBody.official_code }}</strong>
         </div>
+        <i class="material-icons-round" (click)="this.innovationPackageCreatorBody.result_id = null"> cancel </i>
+      </div>
     </div>
-    <app-geoscope-management 
-        [body]="this.innovationPackageCreatorBody" 
-        module="ipsr"
-        *ngIf="this.innovationPackageCreatorBody.result_id">
-    </app-geoscope-management>
 
-    <app-save-button class="position_sticky" (clickSave)="onSaveSection()" text="Save and continue"
-        [disabled]="!this.innovationPackageCreatorBody.result_id  || !this.innovationPackageCreatorBody.initiative_id || !this.areLists">
-    </app-save-button>
+    <app-geoscope-management [body]="this.innovationPackageCreatorBody" module="ipsr"> </app-geoscope-management>
+  }
 
+  <app-save-button
+    class="position_sticky"
+    (clickSave)="onSaveSection()"
+    text="Save and continue"
+    [disabled]="!this.innovationPackageCreatorBody.result_id || !this.innovationPackageCreatorBody.initiative_id || !this.areLists">
+  </app-save-button>
 </div>
 
-
-
-
-<p-dialog class="support_information" header="Select core Innovation" [(visible)]="statusPdialog" [draggable]="false"
-    [modal]="true" [closeOnEscape]="true" [showHeader]="true" [dismissableMask]="true"
-    [style]="{padding: '0px', margin:'0px', width:'70vw'}" [blockScroll]="true" appendTo="body">
-
-    <div style="display: flex; justify-content: center; flex-direction: column;">
-
-        <div class="modal_container">
-            <app-results-innovation-output-list *ngIf="this.innovationPackageCreatorBody.initiative_id"
-                [body]="this.innovationPackageCreatorBody"
-                (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
-        </div>
-    </div>
+<p-dialog
+  class="support_information"
+  header="Select core Innovation"
+  [(visible)]="statusPdialog"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="true"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
+  [blockScroll]="true"
+  appendTo="body">
+  <div style="display: flex; justify-content: center; flex-direction: column">
+    @if (this.innovationPackageCreatorBody.initiative_id) {
+      <div class="modal_container">
+        <app-results-innovation-output-list
+          [body]="this.innovationPackageCreatorBody"
+          (selectInnovationEvent)="selectInnovationEvent($event)"></app-results-innovation-output-list>
+      </div>
+    }
+  </div>
 </p-dialog>

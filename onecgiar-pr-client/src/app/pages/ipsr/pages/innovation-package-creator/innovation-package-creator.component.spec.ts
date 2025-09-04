@@ -17,6 +17,9 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { jest } from '@jest/globals';
 import { Router } from '@angular/router';
+import { TermPipe } from '../../../../internationalization/term.pipe';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
 describe('InnovationPackageCreatorComponent', () => {
   let component: InnovationPackageCreatorComponent;
@@ -50,12 +53,15 @@ describe('InnovationPackageCreatorComponent', () => {
           status: 'status'
         },
         myInitiativesList: myInitiativesList,
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        myInitiativesListIPSRByPortfolio: myInitiativesList,
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        getCurrentIPSRPhase: () => of({})
       },
       resultsSE: {
+        GET_cgiarEntityTypes: () => of({ response: mockResponse }),
         GETInnovationByResultId: () => of({ response: mockResponse }),
         GET_AllInitiatives: () => of({ response: [{}] }),
-        POSTResultInnovationPackage: () => of({ response: mockPOSTResultInnovationPackageResponse }),
+        POSTResultInnovationPackage: () => of({ response: mockPOSTResultInnovationPackageResponse })
       },
       alertsFe: {
         show: jest.fn()
@@ -63,7 +69,7 @@ describe('InnovationPackageCreatorComponent', () => {
     };
 
     mockRouter = {
-      navigateByUrl: jest.fn(),
+      navigateByUrl: jest.fn()
     };
     await TestBed.configureTestingModule({
       declarations: [
@@ -77,13 +83,7 @@ describe('InnovationPackageCreatorComponent', () => {
         SectionHeaderComponent,
         FeedbackValidationDirective
       ],
-      imports: [
-        HttpClientTestingModule,
-        ScrollingModule,
-        FormsModule,
-        DialogModule,
-        TooltipModule
-      ],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule, DialogModule, TooltipModule, TermPipe, IconFieldModule, InputIconModule],
       providers: [
         {
           provide: ApiService,
@@ -92,10 +92,9 @@ describe('InnovationPackageCreatorComponent', () => {
         {
           provide: Router,
           useValue: mockRouter
-        },
+        }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(InnovationPackageCreatorComponent);
     component = fixture.componentInstance;
@@ -168,7 +167,7 @@ describe('InnovationPackageCreatorComponent', () => {
     });
     it('should return false for geo_scope_id 5 when sub_national length is not in the countries array', () => {
       component.innovationPackageCreatorBody.geo_scope_id = 5;
-      component.innovationPackageCreatorBody.countries = [{ id: '1'}];
+      component.innovationPackageCreatorBody.countries = [{ id: '1' }];
 
       const result = component.areLists;
 
@@ -183,18 +182,41 @@ describe('InnovationPackageCreatorComponent', () => {
     });
   });
 
-  describe('GET_AllInitiatives', () => {
-    it('should set allInitiatives when GET_AllInitiatives is successful', () => {
-      component.GET_AllInitiatives();
-
-      expect(component.allInitiatives).toEqual([{}]);
+  describe('GET_cgiarEntityTypes', () => {
+    it('should call callback with response', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_cgiarEntityTypes');
+      component.GET_cgiarEntityTypes(callback => {
+        expect(callback).toHaveBeenCalledWith(mockResponse);
+      });
+      expect(spy).toHaveBeenCalled();
     });
-    it('should not set allInitiatives when user is not admin', () => {
+
+    it('should call callback with empty array if GET_cgiarEntityTypes fails', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_cgiarEntityTypes').mockReturnValue(throwError(new Error('Test error')));
+      component.GET_cgiarEntityTypes(callback => {
+        expect(callback).toHaveBeenCalledWith([]);
+      });
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET_AllInitiatives', () => {
+    it('should set allInitiatives correctly if user is an admin', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
+
+      component.GET_AllInitiatives(() => {
+        expect(component.allInitiatives).toEqual(myInitiativesList);
+        expect(spy).toHaveBeenCalled();
+      });
+    });
+
+    it('should not set allInitiatives if user is not an admin', () => {
       mockApiService.rolesSE.isAdmin = false;
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
 
       component.GET_AllInitiatives();
 
+      expect(component.allInitiatives).toEqual([]);
       expect(spy).not.toHaveBeenCalled();
     });
   });
@@ -210,7 +232,7 @@ describe('InnovationPackageCreatorComponent', () => {
       ];
       component.innovationPackageCreatorBody.countries = [
         {
-          id: 1,
+          id: 1
         }
       ];
       const routerNavigateByUrlSpy = jest.spyOn(mockRouter, 'navigateByUrl').mockResolvedValue(true);
@@ -227,18 +249,17 @@ describe('InnovationPackageCreatorComponent', () => {
         id: 'ipsr-creator',
         title: 'Innovation package created',
         status: 'success',
-        closeIn: 500,
+        closeIn: 500
       });
     });
     it('should show error alert and reset sub-national data when onSaveSection fails', () => {
       component.innovationPackageCreatorBody.countries = [
         {
-          id: 1,
+          id: 1
         }
       ];
       const mockError = { error: { message: 'Some error message' } };
-      jest.spyOn(mockApiService.resultsSE, 'POSTResultInnovationPackage')
-        .mockReturnValue(throwError(mockError));
+      jest.spyOn(mockApiService.resultsSE, 'POSTResultInnovationPackage').mockReturnValue(throwError(mockError));
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSaveSection();
@@ -247,7 +268,7 @@ describe('InnovationPackageCreatorComponent', () => {
         id: 'ipsr-creator-error',
         title: 'Error!',
         description: mockError.error.message,
-        status: 'error',
+        status: 'error'
       });
     });
   });

@@ -3,10 +3,10 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 
 @Component({
-    selector: 'app-result-level-buttons',
-    templateUrl: './result-level-buttons.component.html',
-    styleUrls: ['./result-level-buttons.component.scss'],
-    standalone: false
+  selector: 'app-result-level-buttons',
+  templateUrl: './result-level-buttons.component.html',
+  styleUrls: ['./result-level-buttons.component.scss'],
+  standalone: false
 })
 export class ResultLevelButtonsComponent {
   alertList = [
@@ -14,5 +14,8 @@ export class ResultLevelButtonsComponent {
     'In case you have an AA outcome to report, please reach out to your MELIA Focal Point for guidance on how to report, contact your Science Group MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place).'
   ];
   @Input() currentResultType: any;
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService
+  ) {}
 }

@@ -10,10 +10,22 @@ import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ip
 import { FeedbackValidationDirectiveModule } from '../../../../shared/directives/feedback-validation-directive.module';
 import { DialogModule } from 'primeng/dialog';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
+import { TermPipe } from '../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [InnovationPackageCreatorComponent],
-  imports: [CommonModule, InnovationPackageCreatorRoutingModule, CustomFieldsModule, SectionHeaderModule, ResultsInnovationOutputListModule, IpsrGeoscopeCreatorModule, FeedbackValidationDirectiveModule, DialogModule, GeoscopeManagementModule],
+  imports: [
+    CommonModule,
+    InnovationPackageCreatorRoutingModule,
+    CustomFieldsModule,
+    SectionHeaderModule,
+    ResultsInnovationOutputListModule,
+    IpsrGeoscopeCreatorModule,
+    FeedbackValidationDirectiveModule,
+    DialogModule,
+    GeoscopeManagementModule,
+    TermPipe
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class InnovationPackageCreatorModule {}

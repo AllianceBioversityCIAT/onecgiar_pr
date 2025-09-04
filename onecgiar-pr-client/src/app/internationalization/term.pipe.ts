@@ -9,7 +9,7 @@ export class TermPipe implements PipeTransform {
   private terms = inject(TerminologyService);
   private dataControlSE = inject(DataControlService);
 
-  transform(key: TermKey): string {
-    return this.terms.t(key, this.dataControlSE.currentResult?.portfolio);
+  transform(key: TermKey, portfolioAcronym: string = this.dataControlSE.currentResult?.portfolio): string {
+    return this.terms.t(key, portfolioAcronym);
   }
 }
