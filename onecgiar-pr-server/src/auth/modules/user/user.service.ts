@@ -416,12 +416,8 @@ export class UserService {
           `External users can only be assigned the "Member" role.`,
         );
       }
-
-      if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
-        throw new BadRequestException(
-          `Only "Member" role is allowed in inactive portfolios.`,
-        );
-      }
+      // TODO: Review delete validation
+      // TODO
 
       const isLeadRole =
         role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
@@ -440,6 +436,7 @@ export class UserService {
         role: role_id,
         user: user.id,
         initiative_id: entity_id,
+        active: true,
         created_by: currentUser.id,
         last_updated_by: currentUser.id,
       });
@@ -1316,12 +1313,8 @@ export class UserService {
       emailBody: {
         subject: 'PRMS - Your Account Details Have Been Updated',
         to: [user.email],
-        cc: technicalTeamEmailsRecord.value
-          ? technicalTeamEmailsRecord.value
-              .split(',')
-              .map((email: string) => email.trim())
-          : [],
-        bcc: '',
+        cc: [],
+        bcc: technicalTeamEmailsRecord.value,
         message: {
           text: 'Account roles updated',
           socketFile: compiledTemplate(emailData),
@@ -1331,33 +1324,75 @@ export class UserService {
   }
 
   private async buildInitiativesFromAssignments(
-    assignments: { entity_id: number }[],
-  ): Promise<{ initiative_code: string; initiative_name: string }[]> {
+    assignments: { entity_id: number; role_id: number }[],
+  ): Promise<
+    { initiative_code: string; initiative_name: string; role_name: string }[]
+  > {
     if (!assignments || assignments.length === 0) return [];
-    const ids = Array.from(new Set(assignments.map((a) => a.entity_id)));
-    const initiatives = await this.clarisaInitiativesRepository.find({
-      where: { id: In(ids) },
-    });
-    return initiatives.map((i) => ({
-      initiative_code: i.official_code,
-      initiative_name: i.short_name || i.name,
-    }));
+    const entityIds = Array.from(new Set(assignments.map((a) => a.entity_id)));
+    const roleIds = Array.from(new Set(assignments.map((a) => a.role_id)));
+
+    const [initiatives, roles] = await Promise.all([
+      this.clarisaInitiativesRepository.find({ where: { id: In(entityIds) } }),
+      this._roleRepository.find({ where: { id: In(roleIds) } }),
+    ]);
+
+    const entityMap = new Map(initiatives.map((i) => [i.id, i]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    return assignments
+      .map((a) => {
+        const ent = entityMap.get(a.entity_id);
+        const rol = roleMap.get(a.role_id);
+        if (!ent || !rol) return null;
+        return {
+          initiative_code: ent.official_code,
+          initiative_name: ent.short_name || ent.name,
+          role_name: rol.description,
+        };
+      })
+      .filter(Boolean) as {
+      initiative_code: string;
+      initiative_name: string;
+      role_name: string;
+    }[];
   }
 
   private async buildInitiativesFromRemoved(
     removed: RoleByUser[],
-  ): Promise<{ initiative_code: string; initiative_name: string }[]> {
+  ): Promise<
+    { initiative_code: string; initiative_name: string; role_name: string }[]
+  > {
     if (!removed || removed.length === 0) return [];
-    const ids = Array.from(
+    const entityIds = Array.from(
       new Set(removed.map((r) => Number(r.initiative_id))),
     );
-    const initiatives = await this.clarisaInitiativesRepository.find({
-      where: { id: In(ids) },
-    });
-    return initiatives.map((i) => ({
-      initiative_code: i.official_code,
-      initiative_name: i.short_name || i.name,
-    }));
+    const roleIds = Array.from(new Set(removed.map((r) => Number(r.role))));
+
+    const [initiatives, roles] = await Promise.all([
+      this.clarisaInitiativesRepository.find({ where: { id: In(entityIds) } }),
+      this._roleRepository.find({ where: { id: In(roleIds) } }),
+    ]);
+
+    const entityMap = new Map(initiatives.map((i) => [i.id, i]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    return removed
+      .map((r) => {
+        const ent = entityMap.get(Number(r.initiative_id));
+        const rol = roleMap.get(Number(r.role));
+        if (!ent || !rol) return null;
+        return {
+          initiative_code: ent.official_code,
+          initiative_name: ent.short_name || ent.name,
+          role_name: rol.description,
+        };
+      })
+      .filter(Boolean) as {
+      initiative_code: string;
+      initiative_name: string;
+      role_name: string;
+    }[];
   }
 
   async findRoleByEntity(email: string): Promise<any> {
