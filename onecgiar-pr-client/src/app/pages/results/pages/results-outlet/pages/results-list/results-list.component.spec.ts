@@ -34,6 +34,7 @@ describe('ResultsListComponent', () => {
 
   beforeEach(async () => {
     mockApiService = {
+      shouldShowUpdate: jest.fn(),
       updateResultsList: jest.fn(),
       resultsSE: {
         GET_reportingList: () => of({ response: [] }),

@@ -9,6 +9,7 @@ describe('ResultsToUpdateFilterPipe', () => {
 
   beforeEach(() => {
     mockApiService = {
+      shouldShowUpdate: jest.fn().mockReturnValue(true),
       rolesSE: { isAdmin: true },
       dataControlSE: {
         getCurrentPhases: jest.fn(() => of({})), // Mock function
@@ -26,8 +27,8 @@ describe('ResultsToUpdateFilterPipe', () => {
 
   it('should return the filtered list when the search word is not provided', () => {
     const inputList = [
-      { result_type_id: 1, phase_status: null, role_id: 2, joinAll: 'Result1', phase_year: 2021 },
-      { result_type_id: 6, phase_status: 'Completed', role_id: 3, joinAll: 'Result2' }
+      { result_type_id: 1, phase_status: null, role_id: 2, joinAll: 'Result1', phase_year: 2021, initiative_entity_map: [{ entityId: 1 }] },
+      { result_type_id: 6, phase_status: 'Completed', role_id: 3, joinAll: 'Result2', initiative_entity_map: [{ entityId: 1 }] }
     ];
 
     const filteredList = pipe.transform(inputList, 'R');
@@ -38,9 +39,16 @@ describe('ResultsToUpdateFilterPipe', () => {
   it('should filter results based on the search word', () => {
     mockApiService.rolesSE.isAdmin = false;
     const inputList = [
-      { result_type_id: 1, phase_status: null, role_id: 2, joinAll: 'Result1', phase_year: 2021 },
-      { result_type_id: 6, phase_status: 'Completed', role_id: 3, joinAll: 'Result2', phase_year: 2021 },
-      { result_type_id: 1, phase_status: 'In Progress', role_id: 1, joinAll: 'AnotherResult', phase_year: 2021 }
+      { result_type_id: 1, phase_status: null, role_id: 2, joinAll: 'Result1', phase_year: 2021, initiative_entity_map: [{ entityId: 1 }] },
+      { result_type_id: 6, phase_status: 'Completed', role_id: 3, joinAll: 'Result2', phase_year: 2021, initiative_entity_map: [{ entityId: 1 }] },
+      {
+        result_type_id: 1,
+        phase_status: 'In Progress',
+        role_id: 1,
+        joinAll: 'AnotherResult',
+        phase_year: 2021,
+        initiative_entity_map: [{ entityId: 1 }]
+      }
     ];
 
     const filteredList = pipe.transform(inputList, 'Result');
