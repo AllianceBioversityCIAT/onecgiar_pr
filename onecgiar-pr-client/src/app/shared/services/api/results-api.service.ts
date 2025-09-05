@@ -30,7 +30,7 @@ export class ResultsApiService {
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
-  private readonly elasicCredentials = `Basic ${btoa(`${environment.elastic.username}:${environment.elastic.password}`)}`;
+  private readonly elasticCredentials = `Basic ${btoa(environment.elastic.username + ':' + environment.elastic.password)}`;
   GET_AllResultLevel() {
     return this.http.get<any>(`${this.apiBaseUrl}levels/all`);
   }
@@ -115,7 +115,7 @@ export class ResultsApiService {
         }
       ]
     };
-    const options = { headers: new HttpHeaders({ Authorization: this.elasicCredentials }) };
+    const options = { headers: new HttpHeaders({ Authorization: this.elasticCredentials }) };
     return this.http.post<ElasticResult>(`${environment.elastic.baseUrl}`, body, options).pipe(
       map(resp =>
         (resp?.hits?.hits ?? []).map(h => {
@@ -1011,7 +1011,7 @@ export class ResultsApiService {
   }
 
   PATCH_versioningProcessV2(id, entityId) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}?version=v2`, {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/phase-change/process/result/${id}`, {
       entityId
     });
   }

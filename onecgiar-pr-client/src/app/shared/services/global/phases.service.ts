@@ -38,12 +38,16 @@ export class PhasesService {
             name: label + (item.status ? ' (Open)' : ' (Closed)')
           };
         });
-        this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => ({
-          attr: item.phase_name,
-          selected: item.status,
-          name: `${item.phase_name} - ${item.status ? 'Open' : 'Closed'}`,
-          id: item.id
-        }));
+        this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => {
+          const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
+
+          return {
+            attr: label,
+            selected: item.status,
+            name: label + (item.status ? ' (Open)' : ' (Closed)'),
+            id: item.id
+          };
+        });
         this.phasesSubject.next(this.phases.reporting);
       }
     });

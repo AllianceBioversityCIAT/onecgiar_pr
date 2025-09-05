@@ -34,6 +34,7 @@ describe('ResultsListComponent', () => {
 
   beforeEach(async () => {
     mockApiService = {
+      shouldShowUpdate: jest.fn(),
       updateResultsList: jest.fn(),
       resultsSE: {
         GET_reportingList: () => of({ response: [] }),
@@ -45,7 +46,7 @@ describe('ResultsListComponent', () => {
         currentResultId: 1
       },
       dataControlSE: {
-        getCurrentPhases: () => {},
+        getCurrentPhases: jest.fn(() => of({})),
         reportingCurrentPhase: { phaseYear: 2024 },
         currentResult: {
           phase_year: 2023

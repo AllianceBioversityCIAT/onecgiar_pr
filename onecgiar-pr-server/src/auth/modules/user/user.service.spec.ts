@@ -17,6 +17,7 @@ import { RoleRepository } from '../role/Role.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { DataSource } from 'typeorm';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { VersionRepository } from '../../../api/versioning/versioning.repository';
 
 describe('UserService', () => {
   let service: UserService;
@@ -28,6 +29,7 @@ describe('UserService', () => {
   let awsCognitoService: AuthMicroserviceService;
   let clarisaInitiativesRepository: ClarisaInitiativesRepository;
   let roleRepository: RoleRepository;
+  let versionRepository: VersionRepository;
 
   const mockUser: User = {
     id: 1,
@@ -90,13 +92,14 @@ describe('UserService', () => {
   }));
 
   const mockTemplateRepository = {
-    findOne: jest.fn(), // no hace falta poner el mockResolvedValue aquí aún
+    findOne: jest.fn(),
   };
   const mockTemplateRepositoryFactory = () => mockTemplateRepository;
 
   const mockRoleByUserRepositoryFactory = jest.fn(() => ({
     save: jest.fn(),
     createGuestRoleForUser: jest.fn(),
+    find: jest.fn(),
   }));
 
   const mockBcryptPasswordEncoderFactory = jest.fn(() => ({
@@ -201,6 +204,12 @@ describe('UserService', () => {
           provide: RoleRepository,
           useFactory: mockRoleRepositoryFactory,
         },
+        {
+          provide: VersionRepository,
+          useValue: {
+            find: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -218,6 +227,7 @@ describe('UserService', () => {
       ClarisaInitiativesRepository,
     );
     roleRepository = module.get<RoleRepository>(RoleRepository);
+    versionRepository = module.get<VersionRepository>(VersionRepository);
   });
 
   it('should be defined', () => {
@@ -343,7 +353,7 @@ describe('UserService', () => {
         is_cgiar: false,
         first_name: 'Test',
         last_name: 'User',
-        role_assignments: [], // ✅ necesario para evitar errores
+        role_assignments: [],
       };
 
       jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
@@ -706,6 +716,91 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockErrorResponse);
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('findCurrentPortfolioByUserId', () => {
+    it('should group initiatives by active module portfolios (IPSR/Reporting)', async () => {
+      (versionRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 100,
+          is_active: true,
+          status: true,
+          portfolio_id: 3,
+          app_module_id: 1,
+          obj_app_module: { name: 'IPSR' },
+        },
+        {
+          id: 101,
+          is_active: true,
+          status: true,
+          portfolio_id: 2,
+          app_module_id: 2,
+          obj_app_module: { name: 'Reporting' },
+        },
+      ]);
+
+      (roleByUserRepository.find as jest.Mock)
+        .mockResolvedValueOnce([
+          {
+            obj_initiative: {
+              id: 52,
+              official_code: 'SP03',
+              name: 'Sustainable Animal and Aquatic Foods ',
+              short_name: 'Sustainable Animal and Aquatic Foods ',
+              cgiar_entity_type_id: 22,
+              portfolio_id: 3,
+              obj_cgiar_entity_type: { code: 22, name: 'Science programs' },
+              active: true,
+            } as any,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            obj_initiative: {
+              id: 3,
+              official_code: 'INIT-03',
+              name: 'Genebanks',
+              short_name: 'Genebanks',
+              cgiar_entity_type_id: 6,
+              portfolio_id: 2,
+              obj_cgiar_entity_type: { code: 6, name: 'Initiative' },
+              active: true,
+            } as any,
+          },
+        ]);
+
+      const result = await service.findCurrentPortfolioByUserId(326);
+
+      expect(versionRepository.find).toHaveBeenCalledWith({
+        where: { is_active: true, status: true },
+        relations: { obj_app_module: true },
+        order: { id: 'DESC' },
+      });
+      expect(roleByUserRepository.find).toHaveBeenCalledTimes(2);
+      expect(result.status).toBe(HttpStatus.OK);
+      const resp: any = result.response as any;
+      expect(resp.ipsr).toBeDefined();
+      expect(resp.reporting).toBeDefined();
+      expect(resp.ipsr[0]).toEqual(
+        expect.objectContaining({ portfolio_id: 3, initiative_id: 52 }),
+      );
+      expect(resp.reporting[0]).toEqual(
+        expect.objectContaining({ portfolio_id: 2, initiative_id: 3 }),
+      );
+    });
+
+    it('should handle errors with returnErrorRes', async () => {
+      const error = new Error('DB error');
+      (versionRepository.find as jest.Mock).mockRejectedValue(error);
+
+      const result = await service.findCurrentPortfolioByUserId(1);
+      expect(result).toEqual(
+        expect.objectContaining({
+          message: expect.any(String),
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        }),
+      );
     });
   });
 
