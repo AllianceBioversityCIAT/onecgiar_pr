@@ -23,7 +23,7 @@
     </div>
 
     <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
-      <div class="title pr-body-2">My Initiatives:</div>
+      <div class="title pr-body-2">My roles:</div>
       <div class="items custom_scroll">
         <div class="item pr-body-2" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
           <div class="init">{{ item?.official_code }}</div>
