@@ -41,7 +41,7 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
     ReturnResponse,
     ActiveDirectoryService,
     VersionRepository,
-    GlobalParameterRepository
+    GlobalParameterRepository,
   ],
   imports: [
     UserModule,

@@ -408,6 +408,10 @@ export class UserService {
       });
 
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
+      this._logger.log(
+        '🚀 ~ UserService ~ validateAndAssignRoles ~ portfolioIsActive:',
+        portfolioIsActive,
+      );
       const isExternal = !user?.is_cgiar;
 
       const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
