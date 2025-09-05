@@ -35,6 +35,7 @@ import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
+import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
 @Injectable()
 export class UserService {
@@ -55,6 +56,7 @@ export class UserService {
     private readonly clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleRepository: RoleRepository,
     private readonly _versionRepository: VersionRepository,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
@@ -81,8 +83,6 @@ export class UserService {
         };
       }
 
-      // true if the platform (not Cognito) must send the confirmation email.
-      // This happens for CGIAR users or when Cognito user already exists.
       let shouldSendConfirmationEmail = true;
 
       if (createUserDto.is_cgiar) {
@@ -266,17 +266,14 @@ export class UserService {
     await queryRunner.startTransaction();
 
     try {
-      // Bring info about user from the database
       const user = await this._userRepository.findOne({
         where: { email: cleanEmail },
       });
 
-      // Get the current Admin user from the token
       const currentUser = await this._userRepository.findOne({
         where: { id: token.id },
       });
 
-      // Create an array of role assignments checking if there are duplicates
       if (dto.role_assignments?.length) {
         const seenEntities = new Set<number>();
         for (const assignment of dto.role_assignments) {
@@ -295,8 +292,6 @@ export class UserService {
       let newUser: User;
 
       if (user) {
-        // Just in case the user exists (Deactivate / Activate / Update Roles) NOT to create a new user
-        // changeStatus true? Then update the user status to active, if not, stay the same as before
         await queryRunner.manager.update(User, user.id, {
           active: changeStatus ? true : user.active,
           last_updated_by: currentUser?.id,
@@ -306,7 +301,6 @@ export class UserService {
           id: user.id,
         });
       } else {
-        // Create a new user
         dto.email = cleanEmail;
         dto.created_by = currentUser?.id || null;
         dto.last_updated_by = currentUser?.id || null;
@@ -322,7 +316,6 @@ export class UserService {
         (!dto.role_assignments || dto.role_assignments.length === 0) &&
         idRoleByUser
       ) {
-        // If there are no role assignments and the user had roles, deactivate all roles for the user
         await queryRunner.manager.update(
           RoleByUser,
           { user: newUser.id },
@@ -365,7 +358,6 @@ export class UserService {
     currentUserId: number,
     rolePlatform: number,
   ) {
-    // Obtain the roles platform for the user (there are cases where the user has more than one register with an platform role)
     const rolesPlat = await queryRunner.manager.find(RoleByUser, {
       where: {
         user: userId,
@@ -374,7 +366,6 @@ export class UserService {
       },
     });
 
-    // If the update/create/activate brings role_platform and the user has more than one register with an platform role, then update all of the register to the new role_platform
     if (rolesPlat.length) {
       for (const role of rolesPlat) {
         await queryRunner.manager.save(RoleByUser, {
@@ -384,7 +375,6 @@ export class UserService {
         });
       }
     } else {
-      // If the user does not have any platform role, create a new one
       await queryRunner.manager.save(RoleByUser, {
         user: userId,
         role: rolePlatform,
@@ -418,6 +408,10 @@ export class UserService {
       });
 
       const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
+      this._logger.log(
+        '🚀 ~ UserService ~ validateAndAssignRoles ~ portfolioIsActive:',
+        portfolioIsActive,
+      );
       const isExternal = !user?.is_cgiar;
 
       const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
@@ -426,14 +420,9 @@ export class UserService {
           `External users can only be assigned the "Member" role.`,
         );
       }
+      // TODO: Review delete validation
+      // TODO
 
-      if (!portfolioIsActive && role_id !== ROLE_IDS.MEMBER) {
-        throw new BadRequestException(
-          `Only "Member" role is allowed in inactive portfolios.`,
-        );
-      }
-
-      // If the user came to Lead or Co-Lead, check if there is already a Lead or Co-Lead assigned to the entity
       const isLeadRole =
         role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
       if (isLeadRole) {
@@ -451,6 +440,7 @@ export class UserService {
         role: role_id,
         user: user.id,
         initiative_id: entity_id,
+        active: true,
         created_by: currentUser.id,
         last_updated_by: currentUser.id,
       });
@@ -719,7 +709,6 @@ export class UserService {
 
         query.andWhere(
           new Brackets((qb) => {
-            // Search by first name, last name, email (single or multiple keywords)
             if (keywords.length === 1) {
               const word = `%${keywords[0]}%`;
 
@@ -727,7 +716,6 @@ export class UserService {
                 .orWhere('users.last_name LIKE :word', { word })
                 .orWhere('users.email LIKE :word', { word });
             } else {
-              // Try to match first and last name in any order
               const first = `%${keywords[0]}%`;
               const last = `%${keywords[1]}%`;
 
@@ -745,18 +733,15 @@ export class UserService {
                 },
               );
 
-              // Try to match users with two names (first_name with two words)
               const firstTwo = `%${keywords.slice(0, 2).join(' ')}%`;
               qb.orWhere('users.first_name LIKE :firstTwo', { firstTwo });
 
               if (keywords.length >= 3) {
-                // Try to match first_name with three words
                 const firstThree = `%${keywords.slice(0, 3).join(' ')}%`;
                 qb.orWhere('users.first_name LIKE :firstThree', { firstThree });
               }
             }
 
-            // Date-based search
             const yearRegex = /^\d{4}$/;
             const yearMonthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
             const fullDateRegex = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
@@ -1094,13 +1079,11 @@ export class UserService {
   ): Promise<returnErrorDto | returnFormatUser> {
     const guestRole = ROLE_IDS.GUEST; //2 is the ID for the Guest role
 
-    // Update the user's roles to deactivate all active roles in entities
     await this._roleByUserRepository.update(
       { user: user.id },
       { active: false, last_updated_by: currentUser.id },
     );
 
-    // Set the user as inactive (Guest Role)
     await this._roleByUserRepository.save({
       user: user.id,
       role: guestRole,
@@ -1227,9 +1210,11 @@ export class UserService {
         },
       });
 
-      // Bring incoming role assignments ids
-      const incomingIds = new Set(
-        dto.role_assignments?.map((r) => r.rbu_id).filter(Boolean),
+      const existingPairs = new Set(
+        existingRoles.map((r) => `${r.initiative_id}:${r.role}`),
+      );
+      const incomingPairs = new Set(
+        (dto.role_assignments || []).map((r) => `${r.entity_id}:${r.role_id}`),
       );
 
       await this._userRepository.update(user.id, {
@@ -1238,9 +1223,10 @@ export class UserService {
         last_name: dto?.last_name,
       });
 
-      const rolesToRemove = existingRoles.filter((existing) => {
-        return !incomingIds.has(existing.id);
-      });
+      const rolesToRemove = existingRoles.filter(
+        (existing) =>
+          !incomingPairs.has(`${existing.initiative_id}:${existing.role}`),
+      );
 
       for (const role of rolesToRemove) {
         role.active = false;
@@ -1248,8 +1234,19 @@ export class UserService {
         await this._roleByUserRepository.save(role);
       }
 
-      // Asignar nuevos roles
       await this.saveUserToDB(dto, token);
+
+      const newlyAssigned = (dto.role_assignments || []).filter(
+        (r) => !existingPairs.has(`${r.entity_id}:${r.role_id}`),
+      );
+
+      if (newlyAssigned.length > 0 || rolesToRemove.length > 0) {
+        await this.sendUserRolesUpdatedEmail({
+          user,
+          newlyAssigned,
+          rolesRemoved: rolesToRemove,
+        });
+      }
 
       return {
         response: { id: user.id, email: user.email },
@@ -1272,6 +1269,134 @@ export class UserService {
         `An unexpected error occurred while updating user role: ${error.message}`,
       );
     }
+  }
+
+  private async sendUserRolesUpdatedEmail(params: {
+    user: User;
+    newlyAssigned: { entity_id: number; role_id: number }[];
+    rolesRemoved: RoleByUser[];
+  }): Promise<void> {
+    const { user, newlyAssigned, rolesRemoved } = params;
+
+    const templateDB = await this._templateRepository.findOne({
+      where: { name: EmailTemplate.ROLES_UPDATE },
+    });
+
+    if (!templateDB) {
+      this._logger.warn(
+        'Email template email_template_roles_update not found. Skipping notification.',
+      );
+      return;
+    }
+
+    const compiledTemplate = handlebars.compile(templateDB.template);
+
+    const [assignedList, revokedList] = await Promise.all([
+      this.buildInitiativesFromAssignments(newlyAssigned),
+      this.buildInitiativesFromRemoved(rolesRemoved),
+    ]);
+
+    const emailData: Record<string, any> = {
+      userName: `${user.first_name} ${user.last_name}`.trim(),
+      new_roles_assigned_per_entity:
+        assignedList && assignedList.length > 0 ? assignedList : [],
+      revoked_roles: revokedList && revokedList.length > 0 ? revokedList : [],
+    };
+
+    const technicalTeamEmailsRecord =
+      await this._globalParametersRepository.findOne({
+        where: { name: 'technical_team_email' },
+        select: { value: true },
+      });
+
+    this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
+      },
+      emailBody: {
+        subject: 'PRMS - Your Account Details Have Been Updated',
+        to: [user.email],
+        cc: [],
+        bcc: technicalTeamEmailsRecord.value,
+        message: {
+          text: 'Account roles updated',
+          socketFile: compiledTemplate(emailData),
+        },
+      },
+    });
+  }
+
+  private async buildInitiativesFromAssignments(
+    assignments: { entity_id: number; role_id: number }[],
+  ): Promise<
+    { initiative_code: string; initiative_name: string; role_name: string }[]
+  > {
+    if (!assignments || assignments.length === 0) return [];
+    const entityIds = Array.from(new Set(assignments.map((a) => a.entity_id)));
+    const roleIds = Array.from(new Set(assignments.map((a) => a.role_id)));
+
+    const [initiatives, roles] = await Promise.all([
+      this.clarisaInitiativesRepository.find({ where: { id: In(entityIds) } }),
+      this._roleRepository.find({ where: { id: In(roleIds) } }),
+    ]);
+
+    const entityMap = new Map(initiatives.map((i) => [i.id, i]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    return assignments
+      .map((a) => {
+        const ent = entityMap.get(a.entity_id);
+        const rol = roleMap.get(a.role_id);
+        if (!ent || !rol) return null;
+        return {
+          initiative_code: ent.official_code,
+          initiative_name: ent.short_name || ent.name,
+          role_name: rol.description,
+        };
+      })
+      .filter(Boolean) as {
+      initiative_code: string;
+      initiative_name: string;
+      role_name: string;
+    }[];
+  }
+
+  private async buildInitiativesFromRemoved(
+    removed: RoleByUser[],
+  ): Promise<
+    { initiative_code: string; initiative_name: string; role_name: string }[]
+  > {
+    if (!removed || removed.length === 0) return [];
+    const entityIds = Array.from(
+      new Set(removed.map((r) => Number(r.initiative_id))),
+    );
+    const roleIds = Array.from(new Set(removed.map((r) => Number(r.role))));
+
+    const [initiatives, roles] = await Promise.all([
+      this.clarisaInitiativesRepository.find({ where: { id: In(entityIds) } }),
+      this._roleRepository.find({ where: { id: In(roleIds) } }),
+    ]);
+
+    const entityMap = new Map(initiatives.map((i) => [i.id, i]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    return removed
+      .map((r) => {
+        const ent = entityMap.get(Number(r.initiative_id));
+        const rol = roleMap.get(Number(r.role));
+        if (!ent || !rol) return null;
+        return {
+          initiative_code: ent.official_code,
+          initiative_name: ent.short_name || ent.name,
+          role_name: rol.description,
+        };
+      })
+      .filter(Boolean) as {
+      initiative_code: string;
+      initiative_name: string;
+      role_name: string;
+    }[];
   }
 
   async findRoleByEntity(email: string): Promise<any> {

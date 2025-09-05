@@ -18,6 +18,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { DataSource } from 'typeorm';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
+import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
 describe('UserService', () => {
   let service: UserService;
@@ -210,6 +211,12 @@ describe('UserService', () => {
             find: jest.fn(),
           },
         },
+        {
+          provide: GlobalParameterRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ value: '' }),
+          },
+        },
       ],
     }).compile();
 
@@ -251,8 +258,8 @@ describe('UserService', () => {
       });
 
       mockTemplateRepository.findOne.mockResolvedValue({
-        name: 'EXTERNAL_USER',
-        html: '<p>{{assignedEntity}} - {{assignedRole}}</p>',
+        name: 'email_template_new_external_user',
+        template: '<p>{{assignedEntity}} - {{assignedRole}}</p>',
       });
       jest
         .spyOn(Handlebars, 'compile')
@@ -307,7 +314,7 @@ describe('UserService', () => {
       expect(awsCognitoService.createUser).toHaveBeenCalled();
     });
 
-    it('❌ debe lanzar error si el usuario ya existe', async () => {
+    it('throws error if the user already exists', async () => {
       const dto = { email: 'exists@example.com', is_cgiar: false };
       jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
         response: mockUser,
@@ -326,7 +333,7 @@ describe('UserService', () => {
       expect(awsCognitoService.createUser).not.toHaveBeenCalled();
     });
 
-    it('❌ debe lanzar error si el correo es @cgiar.org y no es CGIAR', async () => {
+    it('throws error if email is @cgiar.org and user is not CGIAR', async () => {
       const dto = {
         email: 'someone@cgiar.org',
         is_cgiar: false,
@@ -347,7 +354,7 @@ describe('UserService', () => {
       );
     });
 
-    it('❌ debe lanzar error si falla Cognito', async () => {
+    it('throws error if Cognito fails', async () => {
       const dto = {
         email: 'external@example.com',
         is_cgiar: false,
@@ -362,9 +369,10 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      templateRepository.findOne = jest
-        .fn()
-        .mockResolvedValue('<p>Welcome</p>');
+      templateRepository.findOne = jest.fn().mockResolvedValue({
+        name: 'email_template_new_external_user',
+        template: '<p>Welcome</p>',
+      });
       jest
         .spyOn(Handlebars, 'compile')
         .mockReturnValue(() => '<p>template</p>');
@@ -389,7 +397,7 @@ describe('UserService', () => {
       );
     });
 
-    it('❌ debe manejar error general con _handlersError', async () => {
+    it('handles general error with _handlersError', async () => {
       jest.spyOn(service, 'findOneByEmail').mockImplementation(() => {
         throw new Error('Unexpected failure');
       });
@@ -638,6 +646,88 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockErrorResponse);
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('updateUserRoles', () => {
+    it('sends roles-updated email when roles change (same initiative, different role)', async () => {
+      // Arrange
+      const dto: any = {
+        email: 'test@example.com',
+        first_name: 'Test',
+        last_name: 'User',
+        role_assignments: [
+          { entity_id: 1, role_id: 4 }, // new role in same entity
+        ],
+      };
+
+      // user exists
+      userRepository.findOneByOrFail = jest.fn().mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        first_name: 'Test',
+        last_name: 'User',
+        is_cgiar: true,
+      } as User);
+
+      // existing active role for same initiative but different role
+      roleByUserRepository.find = jest
+        .fn()
+        .mockResolvedValue([
+          { id: 101, user: 1, initiative_id: 1, role: 3, active: true },
+        ]);
+
+      // deactivate old role
+      roleByUserRepository.save = jest.fn().mockResolvedValue({});
+
+      // compile template for roles update
+      mockTemplateRepository.findOne.mockResolvedValue({
+        name: 'email_template_roles_update',
+        template: '<p>{{userName}}</p>',
+      });
+
+      jest.spyOn(Handlebars, 'compile').mockReturnValue((data: any) => {
+        return `<p>${data.userName}</p>`;
+      });
+
+      // initiatives and roles for mapping
+      (clarisaInitiativesRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          official_code: 'INIT-001',
+          short_name: 'CI',
+          name: 'Climate Initiative',
+        } as any,
+      ]);
+      roleRepository.find = jest.fn().mockResolvedValue([
+        { id: 3, description: 'Coordinator' },
+        { id: 4, description: 'Member' },
+      ]);
+
+      // update name
+      userRepository.update = jest.fn().mockResolvedValue({});
+
+      // persist new assignment through main flow (avoid deep behavior)
+      jest.spyOn(service as any, 'saveUserToDB').mockResolvedValue({
+        response: { id: 1, email: 'test@example.com' },
+        message: 'Roles updated successfully',
+        status: 200,
+      });
+
+      const emailService = (service as any)
+        ._emailNotificationManagementService as EmailNotificationManagementService;
+      const sendEmailSpy = jest.spyOn(emailService, 'sendEmail');
+
+      // Act
+      const result = await service.updateUserRoles(dto, mockTokenDto);
+
+      // Assert
+      expect(result.status).toBe(200);
+      expect(sendEmailSpy).toHaveBeenCalled();
+      const payload = (sendEmailSpy.mock.calls[0] || [])[0];
+      expect(payload?.emailBody?.subject).toBe(
+        'PRMS - Your Account Details Have Been Updated',
+      );
     });
   });
 
