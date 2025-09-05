@@ -1,4 +1,16 @@
-<div class="report_new_result" *ngIf="!this.api.rolesSE.platformIsClosed" routerLink="/result/result-creator"
-    [ngClass]="{'globalDisabled': !this.api?.dataControlSE?.myInitiativesList?.length && !this.api.rolesSE.isAdmin}">
-    <app-pr-button text="Report new result" icon="note_add" [reverse]="true"></app-pr-button>
+@let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+
+<div
+  class="report_new_result"
+  *ngIf="!this.api.rolesSE.platformIsClosed"
+  routerLink="/result/result-creator"
+  [ngClass]="{ globalDisabled: !this.api?.dataControlSE?.myInitiativesList?.length && !this.api.rolesSE.isAdmin }">
+  <app-pr-button
+    text="Report new result"
+    icon="note_add"
+    [reverse]="true"
+    tooltipTextPosition="bottom"
+    [tooltipText]="
+      !activeButtons ? 'To create a result, please ensure that you have a role assigned in the active portfolio.' : null
+    "></app-pr-button>
 </div>
