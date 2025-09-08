@@ -48,8 +48,9 @@
       <i class="material-icons-round info_icon">rocket_launch</i>
     </div>
 
-    <div (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
-      <app-pr-button text="Logout" icon="logout" colorType="secondary"></app-pr-button>
+    <div class="logout_btn" (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
+      Logout
+      <i class="material-icons-round logout_icon">logout</i>
     </div>
   </div>
 </div>

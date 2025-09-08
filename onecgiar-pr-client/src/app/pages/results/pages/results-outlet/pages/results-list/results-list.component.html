@@ -10,7 +10,7 @@
       tooltipTextPosition="bottom"
       [ngClass]="{ disabledButtons: !activeButtons }"
       [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
-      (click)="this.api.dataControlSE.updateResultModal = true"></app-pr-button>
+      (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
   </div>
 
   <br />
