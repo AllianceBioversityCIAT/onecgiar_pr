@@ -1002,6 +1002,114 @@ export class ResultsService {
     }
   }
 
+  async findAllByRoleFiltered(userId: number, query: Record<string, any> = {}) {
+    try {
+      const pageNum = Number(query.page);
+      const limitNum = Number(query.limit);
+      const page =
+        Number.isFinite(pageNum) && pageNum > 0 ? pageNum : undefined;
+      const limit =
+        Number.isFinite(limitNum) && limitNum > 0 ? limitNum : undefined;
+      const offset = page && limit ? (page - 1) * limit : undefined;
+
+      const toNumberArray = (val: any): number[] | undefined => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const asArray = Array.isArray(val) ? val : String(val).split(',');
+        const nums = asArray
+          .map((v) => Number(v))
+          .filter((n) => Number.isFinite(n));
+        return nums.length ? nums : undefined;
+      };
+
+      const initiativeCode: string | undefined =
+        query.initiative ?? query.initiativeCode ?? undefined;
+
+      const filters = {
+        initiativeCode,
+        versionId: toNumberArray(
+          query.phase ?? query.version_id ?? query.versionId,
+        ),
+        submitterId: toNumberArray(query.submitter ?? query.submitter_id),
+        resultTypeId: toNumberArray(
+          query.result_type ?? query.result_type_id ?? query.type,
+        ),
+        portfolioId: toNumberArray(
+          query.portfolio ?? query.portfolio_id ?? query.portfolioId,
+        ),
+        statusId: toNumberArray(query.status_id ?? query.status),
+      };
+
+      const repoRes =
+        await this._customResultRepository.AllResultsByRoleUserAndInitiativeFiltered(
+          userId,
+          filters,
+          undefined,
+          limit !== undefined ? { limit, offset: offset ?? 0 } : undefined,
+        );
+      let result: any[] = repoRes.results ?? [];
+      const total = repoRes.total ?? result.length;
+
+      const entity_init_map = await this._initiativeEntityMapRepository.find({
+        where: { initiativeId: In(result.map((item) => item.submitter_id)) },
+        relations: ['entity_obj'],
+      });
+
+      const userInitiatives = await this._roleByUserRepository.find({
+        where: { user: userId, active: true },
+        relations: ['obj_initiative'],
+      });
+
+      const initiativesPortfolio3 = userInitiatives.filter(
+        (rbu) => rbu.obj_initiative?.portfolio_id === 3,
+      );
+
+      result = result.map((item) => {
+        const entityMaps = entity_init_map.filter(
+          (map) => map.initiativeId === item.submitter_id,
+        );
+        return {
+          ...item,
+          initiative_entity_map: entityMaps.length
+            ? entityMaps.map((entityMap) => ({
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
+            : [],
+          initiative_entity_user: initiativesPortfolio3,
+        };
+      });
+
+      if (!result.length) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response:
+          limit !== undefined
+            ? {
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
+            : result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async findAllResultsLegacyNew(title: string) {
     try {
       const results: DepthSearch[] =
