@@ -3,7 +3,7 @@
 <div
   class="report_new_result"
   *ngIf="!this.api.rolesSE.platformIsClosed"
-  routerLink="/result/result-creator"
+  [routerLink]="activeButtons ? '/result/result-creator' : null"
   [ngClass]="{ globalDisabled: !this.api?.dataControlSE?.myInitiativesList?.length && !this.api.rolesSE.isAdmin }">
   <app-pr-button
     text="Report new result"

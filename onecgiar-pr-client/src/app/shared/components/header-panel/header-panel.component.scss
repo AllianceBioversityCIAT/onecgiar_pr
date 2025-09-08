@@ -1,3 +1,5 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
 .header_panel {
   width: 100%;
   height: 70px;
@@ -210,6 +212,23 @@
   padding: 5px;
   border-radius: 5px;
   cursor: pointer;
+}
+
+.logout_btn {
+  border-radius: 5px;
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  align-items: center;
+  background-color: var(--pr-color-secondary-400);
+  padding: 6px 12px;
+  color: var(--pr-color-white);
+  @include fonts.pr-typography('body-2');
+}
+
+.logout_icon {
+  font-size: 1.4em;
+  margin-right: -6px;
 }
 
 ::ng-deep {
