@@ -17,6 +17,7 @@ import { NoDataTextComponent } from '../../../../../../../../custom-fields/no-da
 import { DialogModule } from 'primeng/dialog';
 import { PrSelectComponent } from '../../../../../../../../custom-fields/pr-select/pr-select.component';
 import { LabelNamePipe } from '../../../../../../../../custom-fields/pr-select/label-name.pipe';
+import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 describe('StepN4Component', () => {
   let component: StepN4Component;
@@ -24,8 +25,22 @@ describe('StepN4Component', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, FormsModule, TooltipModule, DialogModule],
-      declarations: [StepN4Component, PrButtonComponent, StepN4InitiativeInvestmentTableComponent, LabelNamePipe, StepN4BilateralInvestmentTableComponent, StepN4PartnerCoInvestmentTableComponent, PrRadioButtonComponent, SaveButtonComponent, PrFieldHeaderComponent, StepN4AddBilateralComponent, StepN4AddPartnerComponent, NoDataTextComponent, PrSelectComponent]
+      imports: [HttpClientTestingModule, FormsModule, TooltipModule, DialogModule, TermPipe],
+      declarations: [
+        StepN4Component,
+        PrButtonComponent,
+        StepN4InitiativeInvestmentTableComponent,
+        LabelNamePipe,
+        StepN4BilateralInvestmentTableComponent,
+        StepN4PartnerCoInvestmentTableComponent,
+        PrRadioButtonComponent,
+        SaveButtonComponent,
+        PrFieldHeaderComponent,
+        StepN4AddBilateralComponent,
+        StepN4AddPartnerComponent,
+        NoDataTextComponent,
+        PrSelectComponent
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4Component);

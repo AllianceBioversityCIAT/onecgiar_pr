@@ -1,5 +1,11 @@
 <div class="step_title"><strong>Step 1:</strong>Scaling Ambition, Experts and Consultation</div>
-<app-pr-field-header [required]="false" label="Core innovation selected and CGIAR Initiative leading the development"></app-pr-field-header>
+<app-pr-field-header
+  [required]="false"
+  [label]="
+    'Core innovation selected and CGIAR ' +
+    ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) +
+    ' leading the development'
+  "></app-pr-field-header>
 
 <div class="ipsr_chip_container">
   <div class="text">

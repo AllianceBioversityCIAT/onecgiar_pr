@@ -6,7 +6,6 @@ import { PrMultiSelectComponent } from '../../../../../../../../custom-fields/pr
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 describe('IpsrContributorsTocComponent', () => {
