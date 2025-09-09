@@ -1,6 +1,12 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
+import { In } from 'typeorm';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
+
+type InitiativeWhere = {
+  portfolio_id: number;
+  cgiar_entity_type_id?: ReturnType<typeof In>;
+};
 
 @Injectable()
 export class ClarisaInitiativesService {
@@ -9,11 +15,19 @@ export class ClarisaInitiativesService {
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
 
-  async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
+  async getAllInitiativesWithoutCurrentInitiative(
+    resultId: number,
+    portfolio?: string,
+  ) {
     try {
+      const key = (portfolio || '').toString().toLowerCase();
+      const map: Record<string, number> = { p22: 2, p25: 3 };
+      const portfolio_id = map[key];
+
       const initiative =
         await this._clarisaInitiativesRepository.getAllInitiativesWithoutCurrentInitiative(
           resultId,
+          portfolio_id,
         );
       if (!initiative.length) {
         throw {
@@ -61,8 +75,13 @@ export class ClarisaInitiativesService {
         };
       }
 
+      const where: InitiativeWhere = { portfolio_id };
+      if (key === 'p25') {
+        where.cgiar_entity_type_id = In([22, 23, 24]);
+      }
+
       const items = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id },
+        where,
         order: { id: 'ASC' },
         relations: ['obj_cgiar_entity_type'],
       });
