@@ -31,4 +31,5 @@ interface DetailData {
   status: string;
   status_id: number;
   validResult: string | number;
+  portfolio: string;
 }

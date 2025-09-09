@@ -14,6 +14,7 @@ import { of } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutComponent } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/components/shared/toc-initiative-out/toc-initiative-out.component';
 import { PrYesOrNotComponent } from '../../../../../../custom-fields/pr-yes-or-not/pr-yes-or-not.component';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 describe('IpsrContributorsComponent', () => {
   let component: IpsrContributorsComponent;
@@ -80,7 +81,7 @@ describe('IpsrContributorsComponent', () => {
         TocInitiativeOutComponent,
         PrYesOrNotComponent
       ],
-      imports: [HttpClientTestingModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,

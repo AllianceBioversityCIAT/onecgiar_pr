@@ -1,20 +1,23 @@
-<app-pr-field-header label="Lead and Contributing Initiatives" [required]="false"></app-pr-field-header>
+<app-pr-field-header
+  [label]="'Lead and Contributing ' + ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio)"
+  [required]="false"></app-pr-field-header>
 
 <div class="dropdown-50p">
   <app-pr-multi-select
     [options]="this.getcontributingInitiativesList"
-    label="Contributing CGIAR Initiatives"
+    [label]="'Contributing CGIAR ' + ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio)"
     [disableOptions]="this.disabledOptions"
     optionLabel="full_name"
     optionValue="id"
     [required]="false"
     [(ngModel)]="this.contributorsBody.contributingInitiativeNew"
-    placeholder="Select Initiative(s)">
+    [placeholder]="'Select ' + ('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
   </app-pr-multi-select>
 </div>
 <br />
 
-<app-pr-field-header description="Initiative(s) selected:"></app-pr-field-header>
+<app-pr-field-header
+  [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'"></app-pr-field-header>
 
 <div class="chips_container">
   <div class="pr_chip_selected" *ngFor="let item of this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives; let i = index">
