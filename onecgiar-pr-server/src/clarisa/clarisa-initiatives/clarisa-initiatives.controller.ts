@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { ClarisaInitiativesService } from './clarisa-initiatives.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
