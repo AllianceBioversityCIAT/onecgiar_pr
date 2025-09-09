@@ -1,38 +1,56 @@
-<div class="ipsr-sub-title" style="margin-bottom: 10px;">Anticipated investment in improving the scaling readiness of
-    the innovation package</div>
+<div class="ipsr-sub-title" style="margin-bottom: 10px">Anticipated investment in improving the scaling readiness of the innovation package</div>
 <app-pr-field-header [description]="usdQuestionDescription()" [required]="false"></app-pr-field-header>
 <div class="unit_of_time_container">
-    <div>
-        <app-pr-field-header
-            label="Expected CGIAR Initiative investment in improving the scaling readiness of the Innovation Package in"></app-pr-field-header>
-    </div>
+  <div>
+    <app-pr-field-header
+      [label]="
+        'Expected CGIAR ' +
+        ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) +
+        ' investment in improving the scaling readiness of the Innovation Package in'
+      "></app-pr-field-header>
+  </div>
 </div>
 
-
 <table>
-    <tr>
-        <th>Initiative</th>
-        <th>Current calendar year <br> (USD value)</th>
-        <th>Next calendar year <br> (USD value)</th>
-        <th></th>
-    </tr>
-    <tr *ngFor="let item of this.body.initiative_expected_investment">
-        <td>{{item.obj_result_initiative.obj_initiative.official_code}} -
-            {{item.obj_result_initiative.obj_initiative.name}}</td>
-        <td>
-            <app-pr-input [(ngModel)]="item.current_year" placeholder="Enter text" type="currency"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-input [(ngModel)]="item.next_year" placeholder="Enter text" type="currency"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-radio-button [(ngModel)]="item.is_determined" optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]">
-            </app-pr-radio-button>
-        </td>
-    </tr>
+  <tr>
+    <th>{{ 'term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio }}</th>
+    <th>
+      Current calendar year <br />
+      (USD value)
+    </th>
+    <th>
+      Next calendar year <br />
+      (USD value)
+    </th>
+    <th></th>
+  </tr>
+  <tr *ngFor="let item of this.body.initiative_expected_investment">
+    <td>{{ item.obj_result_initiative.obj_initiative.official_code }} - {{ item.obj_result_initiative.obj_initiative.name }}</td>
+    <td>
+      <app-pr-input
+        [(ngModel)]="item.current_year"
+        placeholder="Enter text"
+        type="currency"
+        [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+        [required]="false">
+      </app-pr-input>
+    </td>
+    <td>
+      <app-pr-input
+        [(ngModel)]="item.next_year"
+        placeholder="Enter text"
+        type="currency"
+        [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+        [required]="false">
+      </app-pr-input>
+    </td>
+    <td>
+      <app-pr-radio-button
+        [(ngModel)]="item.is_determined"
+        optionLabel="name"
+        optionValue="id"
+        [options]="[{ name: 'This is yet to be determined', id: true }]">
+      </app-pr-radio-button>
+    </td>
+  </tr>
 </table>

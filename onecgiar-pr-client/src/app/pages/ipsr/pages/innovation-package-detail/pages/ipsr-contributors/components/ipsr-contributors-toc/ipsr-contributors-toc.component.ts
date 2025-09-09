@@ -2,6 +2,7 @@ import { Component, OnInit, Input } from '@angular/core';
 import { ContributorsBody } from '../../model/contributorsBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
+import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 
 @Component({
   selector: 'app-ipsr-contributors-toc',
@@ -16,7 +17,8 @@ export class IpsrContributorsTocComponent implements OnInit {
 
   constructor(
     public api: ApiService,
-    public rolesSE: RolesService
+    public rolesSE: RolesService,
+    public ipsrDataControlSE: IpsrDataControlService
   ) {}
 
   ngOnInit(): void {
