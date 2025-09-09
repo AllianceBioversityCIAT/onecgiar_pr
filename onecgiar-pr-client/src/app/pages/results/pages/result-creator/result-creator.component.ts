@@ -73,8 +73,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.api.updateResultsList();
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
-      if (this.api.dataControlSE.myInitiativesList.length == 1)
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesList[0].id;
+      if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1)
+        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
     });
 
     setTimeout(() => {
@@ -83,7 +83,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
@@ -205,6 +205,16 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   onSaveSection() {
+    if (!this.resultLevelSE.resultBody.initiative_id) {
+      this.api.alertsFe.show({
+        id: 'reportResultError',
+        title: 'Error!',
+        description: `Please select ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)}`,
+        status: 'error'
+      });
+      return;
+    }
+
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
       this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe({
