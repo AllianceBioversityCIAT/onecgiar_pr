@@ -66,5 +66,16 @@ describe('ClarisaInitiativesRepository', () => {
       expect(args[1]).toEqual([5]);
       expect(res).toEqual([{ id: 9 }]);
     });
+
+    it('adds portfolioId to params when provided', async () => {
+      const spy = jest
+        .spyOn(repository as any, 'query')
+        .mockResolvedValue([{ id: 9 }] as any);
+      const res = await repository.getAllInitiativesWithoutCurrentInitiative(5, 2);
+      expect(spy).toHaveBeenCalled();
+      const args = (spy as jest.Mock).mock.calls[0];
+      expect(args[1]).toEqual([5, 2]);
+      expect(res).toEqual([{ id: 9 }]);
+    });
   });
 });

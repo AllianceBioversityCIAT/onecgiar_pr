@@ -45,7 +45,21 @@ describe('ClarisaInitiativesController', () => {
     );
     expect(
       service.getAllInitiativesWithoutCurrentInitiative,
-    ).toHaveBeenCalledWith(1);
+    ).toHaveBeenCalledWith(1, undefined);
+    expect(result).toEqual({ status: 200, response: [] });
+  });
+
+  it('getAllInitiativesWithoutCurrentInitiative passes portfolio when provided', async () => {
+    (
+      service.getAllInitiativesWithoutCurrentInitiative as any
+    ).mockResolvedValue({ status: 200, response: [] });
+    const result = await controller.getAllInitiativesWithoutCurrentInitiative(
+      1 as any,
+      'p22',
+    );
+    expect(
+      service.getAllInitiativesWithoutCurrentInitiative,
+    ).toHaveBeenCalledWith(1, 'p22');
     expect(result).toEqual({ status: 200, response: [] });
   });
 

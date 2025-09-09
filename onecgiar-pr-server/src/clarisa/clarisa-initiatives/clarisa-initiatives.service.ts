@@ -15,11 +15,19 @@ export class ClarisaInitiativesService {
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
 
-  async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
+  async getAllInitiativesWithoutCurrentInitiative(
+    resultId: number,
+    portfolio?: string,
+  ) {
     try {
+      const key = (portfolio || '').toString().toLowerCase();
+      const map: Record<string, number> = { p22: 2, p25: 3 };
+      const portfolio_id = map[key];
+
       const initiative =
         await this._clarisaInitiativesRepository.getAllInitiativesWithoutCurrentInitiative(
           resultId,
+          portfolio_id,
         );
       if (!initiative.length) {
         throw {
