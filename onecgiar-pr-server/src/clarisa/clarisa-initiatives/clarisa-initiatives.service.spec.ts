@@ -65,16 +65,18 @@ describe('ClarisaInitiativesService', () => {
       expect(res.status).toBe(HttpStatus.OK);
       expect(res.response).toEqual(data);
     });
-    
+
     it('filters by portfolio when provided (p22)', async () => {
       (repo.getAllInitiativesWithoutCurrentInitiative as any).mockResolvedValue(
         [{ id: 1 }],
       );
-      const res = await service.getAllInitiativesWithoutCurrentInitiative(10, 'p22');
-      expect(repo.getAllInitiativesWithoutCurrentInitiative).toHaveBeenCalledWith(
+      const res = await service.getAllInitiativesWithoutCurrentInitiative(
         10,
-        2,
+        'p22',
       );
+      expect(
+        repo.getAllInitiativesWithoutCurrentInitiative,
+      ).toHaveBeenCalledWith(10, 2);
       expect(res.status).toBe(HttpStatus.OK);
     });
 
@@ -82,11 +84,13 @@ describe('ClarisaInitiativesService', () => {
       (repo.getAllInitiativesWithoutCurrentInitiative as any).mockResolvedValue(
         [{ id: 1 }],
       );
-      const res = await service.getAllInitiativesWithoutCurrentInitiative(10, 'p25');
-      expect(repo.getAllInitiativesWithoutCurrentInitiative).toHaveBeenCalledWith(
+      const res = await service.getAllInitiativesWithoutCurrentInitiative(
         10,
-        3,
+        'p25',
       );
+      expect(
+        repo.getAllInitiativesWithoutCurrentInitiative,
+      ).toHaveBeenCalledWith(10, 3);
       expect(res.status).toBe(HttpStatus.OK);
     });
   });

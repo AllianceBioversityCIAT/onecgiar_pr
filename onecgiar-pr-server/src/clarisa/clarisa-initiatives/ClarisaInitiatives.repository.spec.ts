@@ -71,7 +71,10 @@ describe('ClarisaInitiativesRepository', () => {
       const spy = jest
         .spyOn(repository as any, 'query')
         .mockResolvedValue([{ id: 9 }] as any);
-      const res = await repository.getAllInitiativesWithoutCurrentInitiative(5, 2);
+      const res = await repository.getAllInitiativesWithoutCurrentInitiative(
+        5,
+        2,
+      );
       expect(spy).toHaveBeenCalled();
       const args = (spy as jest.Mock).mock.calls[0];
       expect(args[1]).toEqual([5, 2]);
