@@ -1021,8 +1021,18 @@ export class ResultsService {
         return nums.length ? nums : undefined;
       };
 
-      const initiativeCode: string | undefined =
-        query.initiative ?? query.initiativeCode ?? undefined;
+      const toStringArray = (val: any): string[] | undefined => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const asArray = Array.isArray(val) ? val : String(val).split(',');
+        const strs = asArray
+          .map((v) => String(v).trim())
+          .filter((s) => s.length > 0);
+        return strs.length ? strs : undefined;
+      };
+
+      const initiativeCode = toStringArray(
+        query.initiative ?? query.initiativeCode ?? undefined,
+      );
 
       const filters = {
         initiativeCode,

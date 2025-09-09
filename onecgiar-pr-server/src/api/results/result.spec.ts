@@ -103,6 +103,9 @@ describe('ResultsService (unit, pure mocks)', () => {
     resultsForElasticSearch: jest.fn().mockResolvedValue([{}]),
     getResultByIdElastic: jest.fn(),
     transformResultCode: jest.fn(),
+    AllResultsByRoleUserAndInitiativeFiltered: jest
+      .fn()
+      .mockResolvedValue({ results: [], total: 0 }),
     findOne: jest.fn().mockImplementation(async (opts: any) => {
       const id = opts?.where?.id;
       if (id === 3) return { id: '3', status_id: 2, result_type_id: 1 };
@@ -841,5 +844,84 @@ describe('ResultsService (unit, pure mocks)', () => {
     ).mockRejectedValueOnce(new Error('boom'));
     const res = await resultService.getCenters(2);
     expect(res.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  it('findAllByRoleFiltered returns paginated items and parses filters as arrays', async () => {
+    const items = [
+      {
+        id: 1,
+        title: 'Res 1',
+        submitter_id: 100,
+      },
+    ];
+    (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mockResolvedValueOnce({ results: items, total: 15 });
+
+    const query: Record<string, any> = {
+      initiative: 'I1,I2',
+      version_id: '1,2',
+      submitter: '10',
+      result_type: '3',
+      portfolio: '5',
+      status_id: '1,2',
+      page: '2',
+      limit: '10',
+    };
+
+    const res = await resultService.findAllByRoleFiltered(7, query);
+    expect(res.status).toBe(HttpStatus.OK);
+    const payload: any = res.response as any;
+    expect(payload.items).toHaveLength(1);
+    expect(payload.meta.total).toBe(15);
+    expect(payload.meta.page).toBe(2);
+    expect(payload.meta.limit).toBe(10);
+    expect(payload.meta.totalPages).toBe(Math.ceil(15 / 10));
+
+    const call = (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mock.calls.pop();
+    expect(call[0]).toBe(7);
+    expect(call[1]).toEqual({
+      initiativeCode: ['I1', 'I2'],
+      versionId: [1, 2],
+      submitterId: [10],
+      resultTypeId: [3],
+      portfolioId: [5],
+      statusId: [1, 2],
+    });
+    expect(call[3]).toEqual({ limit: 10, offset: 10 });
+  });
+
+  it('findAllByRoleFiltered returns items array when not paginated', async () => {
+    const items = [
+      {
+        id: 2,
+        title: 'Res 2',
+        submitter_id: 200,
+      },
+    ];
+    (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mockResolvedValueOnce({ results: items, total: 1 });
+
+    const res = await resultService.findAllByRoleFiltered(9, {
+      initiative: 'ABC',
+      result_type_id: '4',
+    });
+
+    expect(res.status).toBe(HttpStatus.OK);
+    expect(Array.isArray(res.response)).toBe(true);
+    expect(res.response).toHaveLength(1);
+  });
+
+  it('findAllByRoleFiltered returns NOT_FOUND when no items', async () => {
+    (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mockResolvedValueOnce({ results: [], total: 0 });
+
+    const res = await resultService.findAllByRoleFiltered(1, {});
+    expect(res.status).toBe(HttpStatus.NOT_FOUND);
+    expect(res.message).toBe('Results Not Found');
   });
 });
