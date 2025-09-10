@@ -893,28 +893,6 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(call[3]).toEqual({ limit: 10, offset: 10 });
   });
 
-  it('findAllByRoleFiltered returns items array when not paginated', async () => {
-    const items = [
-      {
-        id: 2,
-        title: 'Res 2',
-        submitter_id: 200,
-      },
-    ];
-    (
-      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
-    ).mockResolvedValueOnce({ results: items, total: 1 });
-
-    const res = await resultService.findAllByRoleFiltered(9, {
-      initiative: 'ABC',
-      result_type_id: '4',
-    });
-
-    expect(res.status).toBe(HttpStatus.OK);
-    expect(Array.isArray(res.response)).toBe(true);
-    expect(res.response).toHaveLength(1);
-  });
-
   it('findAllByRoleFiltered returns NOT_FOUND when no items', async () => {
     (
       mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock

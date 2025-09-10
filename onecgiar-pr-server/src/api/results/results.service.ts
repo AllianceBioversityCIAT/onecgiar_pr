@@ -1111,7 +1111,7 @@ export class ResultsService {
                   totalPages: Math.max(1, Math.ceil(total / limit)),
                 },
               }
-            : result,
+            : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
       };

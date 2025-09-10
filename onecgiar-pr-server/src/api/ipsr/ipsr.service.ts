@@ -144,12 +144,17 @@ export class IpsrService {
     }
   }
 
-  async allInnovationPackagesFiltered(user: TokenDto, query: Record<string, any> = {}) {
+  async allInnovationPackagesFiltered(
+    user: TokenDto,
+    query: Record<string, any> = {},
+  ) {
     try {
       const pageNum = Number(query.page);
       const limitNum = Number(query.limit);
-      const page = Number.isFinite(pageNum) && pageNum > 0 ? pageNum : undefined;
-      const limit = Number.isFinite(limitNum) && limitNum > 0 ? limitNum : undefined;
+      const page =
+        Number.isFinite(pageNum) && pageNum > 0 ? pageNum : undefined;
+      const limit =
+        Number.isFinite(limitNum) && limitNum > 0 ? limitNum : undefined;
       const offset = page && limit ? (page - 1) * limit : undefined;
 
       const toNumberArray = (val: any): number[] | undefined => {
@@ -166,20 +171,24 @@ export class IpsrService {
 
       const filters = {
         initiativeCode,
-        versionId:
-          toNumberArray(query.phase ?? query.version_id ?? query.versionId),
+        versionId: toNumberArray(
+          query.phase ?? query.version_id ?? query.versionId,
+        ),
         submitterId: toNumberArray(query.submitter ?? query.submitter_id),
-        resultTypeId:
-          toNumberArray(query.result_type ?? query.result_type_id ?? query.type),
-        portfolioId:
-          toNumberArray(query.portfolio ?? query.portfolio_id ?? query.portfolioId),
+        resultTypeId: toNumberArray(
+          query.result_type ?? query.result_type_id ?? query.type,
+        ),
+        portfolioId: toNumberArray(
+          query.portfolio ?? query.portfolio_id ?? query.portfolioId,
+        ),
         statusId: toNumberArray(query.status_id ?? query.status),
       };
 
-      const repoRes = await this._ipsrRespository.getAllInnovationPackagesFiltered(
-        filters,
-        limit !== undefined ? { limit, offset: offset ?? 0 } : undefined,
-      );
+      const repoRes =
+        await this._ipsrRespository.getAllInnovationPackagesFiltered(
+          filters,
+          limit !== undefined ? { limit, offset: offset ?? 0 } : undefined,
+        );
 
       let result: any[] = repoRes.results ?? [];
       const total = repoRes.total ?? result.length;
@@ -225,17 +234,18 @@ export class IpsrService {
       }
 
       return {
-        response: limit !== undefined
-          ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
-          : result,
+        response:
+          limit !== undefined
+            ? {
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
+            : result,
         message: 'Successful response',
         status: HttpStatus.OK,
       };
