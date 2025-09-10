@@ -5,7 +5,6 @@ import { ResultsListRoutingModule } from './results-list-routing.module';
 import { ResultsListComponent } from './results-list.component';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { MenuModule } from 'primeng/menu';
 import { RouterModule } from '@angular/router';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
@@ -17,6 +16,7 @@ import { ResultsToUpdateModalModule } from './components/results-to-update-modal
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { CustomSpinnerModule } from '../../../../../../shared/components/custom-spinner/custom-spinner.module';
+import { PopoverModule } from 'primeng/popover';
 
 @NgModule({
   declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
@@ -26,7 +26,6 @@ import { CustomSpinnerModule } from '../../../../../../shared/components/custom-
     CustomSpinnerModule,
     TableModule,
     ButtonModule,
-    MenuModule,
     ResultsToUpdateModalModule,
     ChangePhaseModalModule,
     RouterModule,
@@ -34,7 +33,8 @@ import { CustomSpinnerModule } from '../../../../../../shared/components/custom-
     CustomFieldsModule,
     ResultsListFilterPipeModule,
     PdfIconModule,
-    TooltipModule
+    TooltipModule,
+    PopoverModule
   ]
 })
 export class ResultsListModule {}
