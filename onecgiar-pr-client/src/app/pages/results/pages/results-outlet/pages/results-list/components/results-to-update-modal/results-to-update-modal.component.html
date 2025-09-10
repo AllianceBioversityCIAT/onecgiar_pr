@@ -1,7 +1,12 @@
 <p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.updateResultModal"
     [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
     [style]="{padding: '0px'}">
-    <div class="modal_title">Update result</div>
+    <div class="modal_title">
+        Update result
+        <i class="material-icons-round modal_close_icon" (click)="this.api.dataControlSE.updateResultModal = false">
+            close
+        </i>
+    </div>
     <div class="modal_container">
         <div class="description">
             Here you have the ability to choose a result from a previous phase and replicate its metadata into the

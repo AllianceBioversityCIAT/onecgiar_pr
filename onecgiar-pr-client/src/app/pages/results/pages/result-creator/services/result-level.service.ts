@@ -39,9 +39,6 @@ export class ResultLevelService {
     this.api.resultsSE.GET_TypeByResultLevel().subscribe(resp => {
       this.removeResultTypes(resp.response);
       this.resultLevelList = resp.response;
-      this.resultLevelList.forEach(resultLevel => {
-        resultLevel.name = resultLevel.name.replace('Initiative ', '');
-      });
 
       this.resultsListFilterSE.setFiltersByResultLevelTypes(this.resultLevelList);
     });

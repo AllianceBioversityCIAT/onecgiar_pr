@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Input, signal } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
 import { CreateResultManagementService } from '../../services/create-result-management.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
@@ -59,28 +59,16 @@ interface MiningTextItem {
   styleUrl: './result-ai-assistant.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ResultAiAssistantComponent implements OnInit {
+export class ResultAiAssistantComponent {
   createResultManagementService = inject(CreateResultManagementService);
   api = inject(ApiService);
   aiLoadingStateService = inject(AiLoadingStateService);
   customizedAlertsFeSE = inject(CustomizedAlertsFeService);
 
-  initiatives = signal<Initiative[]>([]);
+  @Input() initiatives: Initiative[] = [];
 
   first = signal(0);
   rows = signal(5);
-
-  ngOnInit() {
-    this.getInitiatives();
-  }
-
-  getInitiatives() {
-    const activePortfolio = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym;
-
-    this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(resp => {
-      this.initiatives.set(resp.response);
-    });
-  }
 
   handleAnalyzeFile() {
     if (!this.createResultManagementService.selectedFile()) {

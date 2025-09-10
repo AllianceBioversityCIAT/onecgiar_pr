@@ -2,12 +2,12 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Pipe({
-    name: 'ipsrToUpdateFilter',
-    standalone: false
+  name: 'ipsrToUpdateFilter',
+  standalone: false
 })
 export class IpsrToUpdateFilterPipe implements PipeTransform {
   constructor(private api: ApiService) {
-    this.api.dataControlSE.getCurrentIPSRPhase();
+    this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
 
   transform(list, word: string) {

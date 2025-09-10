@@ -5,7 +5,8 @@ export type TermKey =
   | 'term.entity.orPlatforms'
   | 'term.entity.orPlatformsPlural'
   | 'term.entity.orPlatformsWith()'
-  | 'term.entity.singularWith()';
+  | 'term.entity.singularWith()'
+  | 'term.entity.orPlatformsOrSGP';
 
 export const LEGACY_TERMS: Record<TermKey, string> = {
   'term.entity.singular': 'Initiative',
@@ -13,14 +14,16 @@ export const LEGACY_TERMS: Record<TermKey, string> = {
   'term.entity.plural': 'Initiatives',
   'term.entity.orPlatforms': 'Initiative or platform',
   'term.entity.orPlatformsPlural': 'Initiatives or platforms',
-  'term.entity.orPlatformsWith()': 'Initiative(s) or platform(s)'
+  'term.entity.orPlatformsWith()': 'Initiative(s) or platform(s)',
+  'term.entity.orPlatformsOrSGP': 'Initiative, Platform or SGP'
 };
 
 export const NEW_TERMS: Record<TermKey, string> = {
-  'term.entity.singular': 'Science Program or Accelerator',
-  'term.entity.singularWith()': 'Science Program or Accelerator',
-  'term.entity.plural': 'Science Program or Accelerator',
-  'term.entity.orPlatforms': 'Science Program or Accelerator',
-  'term.entity.orPlatformsPlural': 'Science Program or Accelerator',
-  'term.entity.orPlatformsWith()': 'Science Program or Accelerator'
+  'term.entity.singular': 'Science Program/Accelerator',
+  'term.entity.singularWith()': 'Science Program/Accelerator',
+  'term.entity.plural': 'Science Program/Accelerator',
+  'term.entity.orPlatforms': 'Science Program/Accelerator',
+  'term.entity.orPlatformsPlural': 'Science Program/Accelerator',
+  'term.entity.orPlatformsWith()': 'Science Program/Accelerator',
+  'term.entity.orPlatformsOrSGP': 'Science Program/Accelerator'
 };

@@ -21,8 +21,8 @@ export class ChangePhaseModalComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases();
-    this.api.dataControlSE.getCurrentIPSRPhase();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
 
   accept() {

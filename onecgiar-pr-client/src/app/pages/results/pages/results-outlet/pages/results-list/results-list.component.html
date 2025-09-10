@@ -1,8 +1,18 @@
 <div class="local_container">
+  @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+
   <div class="action_buttons">
-    <app-report-new-result-button> </app-report-new-result-button>
-    <app-pr-button text="Update result" icon="moving" [reverse]="true" (click)="this.api.dataControlSE.updateResultModal = true"></app-pr-button>
+    <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
+    <app-pr-button
+      text="Update result"
+      icon="moving"
+      [reverse]="true"
+      tooltipTextPosition="bottom"
+      [ngClass]="{ disabledButtons: !activeButtons }"
+      [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
+      (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
   </div>
+
   <br />
   <app-results-list-filters></app-results-list-filters>
 </div>
