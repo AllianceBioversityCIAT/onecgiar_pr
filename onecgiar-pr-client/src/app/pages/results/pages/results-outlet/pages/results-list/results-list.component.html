@@ -168,7 +168,7 @@
         [pTooltip]="item.disabled ? item.tooltipText : null"
         tooltipPosition="bottom"
         [ngClass]="{ itemDisabled: item.disabled }"
-        (click)="item.disabled ? null : item.command()">
+        (click)="item.disabled ? null : item.command(); menu.toggle($event)">
         <i [class]="item.icon"></i>
         <span>{{ item.label }}</span>
       </div>
