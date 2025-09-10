@@ -177,7 +177,7 @@ describe('InnovationPathwayStepThreeService', () => {
       (mockEvidenceRepo.findOne as jest.Mock).mockResolvedValueOnce(null);
       const res = await service.saveWorkshop(11, user, {
         result_ip: { is_expert_workshop_organized: true },
-        link_workshop_list: 'http://x',
+        link_workshop_list: 'https://x',
         result_ip_expert_workshop_organized: [
           { first_name: '', last_name: '' },
         ],
@@ -197,7 +197,7 @@ describe('InnovationPathwayStepThreeService', () => {
       ]);
       const res = await service.saveWorkshop(11, user, {
         result_ip: { is_expert_workshop_organized: true },
-        link_workshop_list: 'http://x',
+        link_workshop_list: 'https://x',
         result_ip_expert_workshop_organized: [
           {
             first_name: 'New',
