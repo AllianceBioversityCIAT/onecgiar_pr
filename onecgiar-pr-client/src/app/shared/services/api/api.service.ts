@@ -150,10 +150,10 @@ export class ApiService {
     this.titleService.setTitle(title);
   }
 
-  shouldShowUpdate(result: CurrentResult): boolean {
+  shouldShowUpdate(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
     const initiativeMap = Array.isArray(result?.initiative_entity_map) ? result.initiative_entity_map : [];
     const hasInitiatives = initiativeMap.length > 0;
-    const isPastPhase = this.isPastReportingPhase(result);
+    const isPastPhase = this.isPastReportingPhase(result, currentPhase);
 
     if (this.rolesSE.isAdmin) {
       return hasInitiatives && isPastPhase;
@@ -162,8 +162,8 @@ export class ApiService {
     return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
   }
 
-  isPastReportingPhase(result: CurrentResult): boolean {
-    const phaseYear = this.dataControlSE.reportingCurrentPhase?.phaseYear;
+  isPastReportingPhase(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
+    const phaseYear = currentPhase?.phaseYear;
     return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
   }
 
