@@ -86,32 +86,36 @@ describe('ResultsApiService', () => {
     it('should call GET_AllResultsWithUseRole and map response correctly', done => {
       const userId = 'userId';
       mockResponse = {
-        response: [
-          {
-            id: '1',
-            result_code: '1001',
-            create_last_name: 'Doe',
-            create_first_name: 'John'
-          }
-        ]
+        response: {
+          items: [
+            {
+              id: '1',
+              result_code: '1001',
+              create_last_name: 'Doe',
+              create_first_name: 'John'
+            }
+          ]
+        }
       };
 
       service.GET_AllResultsWithUseRole(userId).subscribe(result => {
         expect(result).toEqual({
-          response: [
-            {
-              id: 1,
-              result_code: 1001,
-              full_name: 'Doe John',
-              create_first_name: 'John',
-              create_last_name: 'Doe'
-            }
-          ]
+          response: {
+            items: [
+              {
+                id: 1,
+                result_code: 1001,
+                full_name: 'Doe John',
+                create_first_name: 'John',
+                create_last_name: 'Doe'
+              }
+            ]
+          }
         });
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/${userId}`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}?`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);

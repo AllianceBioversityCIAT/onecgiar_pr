@@ -721,9 +721,14 @@ export class IpsrRepository
       addIn('ci.portfolio_id', filters?.portfolioId);
       addIn('r.status_id', filters?.statusId);
 
-      const limit = pagination?.limit && pagination.limit > 0 ? pagination.limit : undefined;
+      const limit =
+        pagination?.limit && pagination.limit > 0
+          ? pagination.limit
+          : undefined;
       const offset =
-        limit !== undefined && pagination?.offset !== undefined && pagination.offset >= 0
+        limit !== undefined &&
+        pagination?.offset !== undefined &&
+        pagination.offset >= 0
           ? pagination.offset
           : undefined;
 

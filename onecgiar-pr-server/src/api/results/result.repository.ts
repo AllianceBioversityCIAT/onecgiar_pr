@@ -566,7 +566,7 @@ WHERE
   async AllResultsByRoleUserAndInitiativeFiltered(
     userid: number,
     filters?: {
-      initiativeCode?: string;
+      initiativeCode?: string | string[];
       versionId?: number | number[];
       submitterId?: number | number[];
       resultTypeId?: number | number[];
@@ -634,29 +634,25 @@ WHERE
     const params: (string | number)[] = [userid];
     const where: string[] = [];
 
-    const addFilter = (clause: string, values: (number | string)[]) => {
-      where.push(clause);
-      params.push(...values);
-    };
-
-    const addIn = (field: string, values?: number | number[]) => {
+    const addInGeneric = (
+      field: string,
+      values?: number | string | (number | string)[],
+    ) => {
       if (values === undefined || values === null) return;
       const arr = Array.isArray(values) ? values : [values];
       if (!arr.length) return;
       const placeholders = arr.map(() => '?').join(',');
       where.push(`AND ${field} IN (${placeholders})`);
-      params.push(...arr);
+      params.push(...(arr as (number | string)[]));
     };
 
     try {
-      if (filters?.initiativeCode) {
-        addFilter('AND ci.official_code = ?', [filters.initiativeCode]);
-      }
-      addIn('r.version_id', filters?.versionId);
-      addIn('ci.id', filters?.submitterId);
-      addIn('rt.id', filters?.resultTypeId);
-      addIn('ci.portfolio_id', filters?.portfolioId);
-      addIn('r.status_id', filters?.statusId);
+      addInGeneric('ci.official_code', filters?.initiativeCode);
+      addInGeneric('r.version_id', filters?.versionId);
+      addInGeneric('ci.id', filters?.submitterId);
+      addInGeneric('rt.id', filters?.resultTypeId);
+      addInGeneric('ci.portfolio_id', filters?.portfolioId);
+      addInGeneric('r.status_id', filters?.statusId);
 
       const limit =
         pagination?.limit && pagination.limit > 0

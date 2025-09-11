@@ -1,0 +1,35 @@
+.filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.filters_items_container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 20px 20px 10px 20px;
+}
+
+.filters_items_container_left,
+.filters_items_container_drawer,
+.filters_items_container_right {
+  display: flex;
+  gap: 10px;
+}
+
+::ng-deep {
+  .p-drawer-title {
+    color: var(--pr-color-primary-300);
+  }
+}
+
+.drawer_footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
