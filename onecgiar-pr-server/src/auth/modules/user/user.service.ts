@@ -34,6 +34,7 @@ import { RoleRepository } from '../role/Role.repository';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { VersionRepository } from '../../../api/versioning/versioning.repository';
 
 @Injectable()
 export class UserService {
@@ -53,6 +54,7 @@ export class UserService {
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
     private readonly clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleRepository: RoleRepository,
+    private readonly _versionRepository: VersionRepository,
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
@@ -896,6 +898,80 @@ export class UserService {
 
       return {
         response: initiativeByUser,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findCurrentPortfolioByUserId(userId: number) {
+    try {
+      const activeVersions = await this._versionRepository.find({
+        where: { is_active: true, status: true },
+        relations: { obj_app_module: true },
+        order: { id: 'DESC' },
+      });
+
+      const groups: Record<string, any[]> = {};
+
+      for (const v of activeVersions) {
+        if (!v?.portfolio_id) continue;
+
+        const modName = (v.obj_app_module?.name || '').toLowerCase();
+        const getModuleKey = (
+          moduleName: string,
+          appModuleId?: number,
+        ): string => {
+          if (moduleName.includes('ipsr')) {
+            return 'ipsr';
+          }
+          if (moduleName.includes('report')) {
+            return 'reporting';
+          }
+          return `module_${appModuleId ?? 'unknown'}`;
+        };
+
+        const key = getModuleKey(modName, v.app_module_id);
+
+        const rbus = await this._roleByUserRepository.find({
+          where: {
+            user: userId,
+            active: true,
+            obj_initiative: { active: true, portfolio_id: v.portfolio_id },
+          },
+          relations: {
+            obj_initiative: { obj_cgiar_entity_type: true },
+          },
+          order: { id: 'ASC' },
+        });
+
+        const initiatives = rbus
+          .filter((r) => !!r.obj_initiative)
+          .map((r) => {
+            const ci = r.obj_initiative;
+            return {
+              initiative_id: ci.id,
+              official_code: ci.official_code,
+              initiative_name: ci.name,
+              short_name: ci.short_name,
+              cgiar_entity_type_id: ci.cgiar_entity_type_id,
+              portfolio_id: ci.portfolio_id,
+              obj_cgiar_entity_type: ci.obj_cgiar_entity_type
+                ? {
+                    code: ci.obj_cgiar_entity_type.code,
+                    name: ci.obj_cgiar_entity_type.name,
+                  }
+                : null,
+            };
+          });
+
+        groups[key] = (groups[key] || []).concat(initiatives);
+      }
+
+      return {
+        response: groups,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

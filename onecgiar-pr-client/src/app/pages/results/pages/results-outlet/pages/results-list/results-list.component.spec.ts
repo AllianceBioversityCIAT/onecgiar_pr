@@ -19,6 +19,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
+import { PopoverModule } from 'primeng/popover';
 
 jest.useFakeTimers();
 
@@ -46,7 +47,7 @@ describe('ResultsListComponent', () => {
         currentResultId: 1
       },
       dataControlSE: {
-        getCurrentPhases: () => {},
+        getCurrentPhases: jest.fn(() => of({})),
         reportingCurrentPhase: { phaseYear: 2024 },
         currentResult: {
           phase_year: 2023
@@ -101,7 +102,7 @@ describe('ResultsListComponent', () => {
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
@@ -164,19 +165,19 @@ describe('ResultsListComponent', () => {
 
   describe('Menu Items', () => {
     it('should set showShareRequest to true', () => {
-      component.items[0].command(null);
+      component.items[0].command();
 
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set showShareRequest to true on command call of itemsWithDelete[0]', () => {
-      component.itemsWithDelete[0].command(null);
+      component.itemsWithDelete[0].command();
 
       expect(mockApiService.dataControlSE.showShareRequest).toBeTruthy();
     });
 
     it('should set chagePhaseModal to true on command call of itemsWithDelete[1]', () => {
-      component.itemsWithDelete[1].command(null);
+      component.itemsWithDelete[1].command();
 
       expect(mockApiService.dataControlSE.chagePhaseModal).toBeTruthy();
     });
@@ -187,7 +188,7 @@ describe('ResultsListComponent', () => {
         scrollIntoView: jest.fn()
       });
 
-      component.itemsWithDelete[2].command(null);
+      component.itemsWithDelete[2].command();
       jest.runAllTimers();
 
       expect(spy).toHaveBeenCalled();

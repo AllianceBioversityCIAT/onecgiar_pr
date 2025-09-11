@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, BadRequestException } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
@@ -47,28 +47,26 @@ export class ClarisaInitiativesService {
     }
   }
 
-  async getInitiatives() {
+  async getByPortfolio(portfolio: string) {
     try {
-      const initiatives = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id: 2 },
-      });
-      return {
-        response: initiatives,
-        message: 'Successful response',
-        status: HttpStatus.OK,
-      };
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error });
-    }
-  }
+      const key = (portfolio || '').toString().toLowerCase();
+      const map: Record<string, number> = { p22: 2, p25: 3 };
+      const portfolio_id = map[key];
 
-  async getEntities() {
-    try {
-      const entities = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id: 3 },
+      if (!portfolio_id) {
+        throw new BadRequestException(
+          `Invalid portfolio parameter: ${portfolio}. Use 'p22' or 'p25'.`,
+        );
+      }
+
+      const items = await this._clarisaInitiativesRepository.find({
+        where: { portfolio_id },
+        order: { id: 'ASC' },
+        relations: ['obj_cgiar_entity_type'],
       });
+
       return {
-        response: entities,
+        response: items,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

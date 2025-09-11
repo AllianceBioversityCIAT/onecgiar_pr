@@ -4,10 +4,10 @@ import { OutcomeIndicatorService } from './services/outcome-indicator.service';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-    selector: 'app-outcome-indicator-module',
-    templateUrl: './outcome-indicator.component.html',
-    styleUrls: ['./outcome-indicator.component.scss'],
-    standalone: false
+  selector: 'app-outcome-indicator-module',
+  templateUrl: './outcome-indicator.component.html',
+  styleUrls: ['./outcome-indicator.component.scss'],
+  standalone: false
 })
 export class OutcomeIndicatorComponent implements OnInit {
   readonly QUERY_PARAM_INITIATIVE = 'init';
@@ -26,7 +26,7 @@ export class OutcomeIndicatorComponent implements OnInit {
   }
 
   async initializeComponent(): Promise<void> {
-    this.api.dataControlSE.getCurrentPhases();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
 
     if (this.api.rolesSE.isAdmin) {
       await this.loadAllInitiatives();

@@ -18,8 +18,8 @@ describe('ChangePhaseModalComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       dataControlSE: {
-        getCurrentPhases: jest.fn(),
-        getCurrentIPSRPhase: jest.fn(),
+        getCurrentPhases: jest.fn(() => of({})),
+        getCurrentIPSRPhase: jest.fn(() => of({})),
         currentResult: { id: '123', result_code: 'RES-001' },
         chagePhaseModal: false,
         updateResultModal: false,

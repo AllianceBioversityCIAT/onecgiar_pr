@@ -1,12 +1,9 @@
 // terminology.service.ts
-import { Injectable, inject } from '@angular/core';
-import { DataControlService } from '../shared/services/data-control.service';
+import { Injectable } from '@angular/core';
 import { LEGACY_TERMS, NEW_TERMS, TermKey } from './terminology.config';
 
 @Injectable({ providedIn: 'root' })
 export class TerminologyService {
-  private data = inject(DataControlService);
-
   private getActiveDict(portfolioAcronym: string) {
     if (portfolioAcronym == null) return LEGACY_TERMS;
 

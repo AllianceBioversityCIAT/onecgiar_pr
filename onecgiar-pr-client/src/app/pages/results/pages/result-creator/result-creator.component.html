@@ -21,8 +21,10 @@
       [innerHTML]="
         naratives.greeting(
           this.api.authSE.localStorageUser?.user_name,
-          this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesList),
-          this.api.rolesSE.isAdmin
+          this.api.dataControlSE.myInitiativesListText(this.api.dataControlSE.myInitiativesListReportingByPortfolio),
+          this.api.rolesSE.isAdmin,
+          this.terminologyService.t('term.entity.orPlatformsOrSGP', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym),
+          this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
         )
       "></div>
     <div class="report_container">
@@ -39,28 +41,12 @@
         class="segment_title_margin"
         [group]="true"
         groupName="name"
-        [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin"
+        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
         label="Report for"
         [isStatic]="true"
         optionLabel="full_name"
         optionValue="initiative_id"
-        placeholder="Select Initiative"
-        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
-        (ngModelChange)="onSelectInit()">
-      </app-pr-select>
-
-      <app-pr-select
-        class="segment_title_margin"
-        [group]="true"
-        groupName="name"
-        [options]="this.allInitiatives"
-        label="Report for"
-        [isStatic]="true"
-        *ngIf="this.api.rolesSE.isAdmin"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select"
+        [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
         (ngModelChange)="onSelectInit()">
       </app-pr-select>
@@ -133,5 +119,8 @@
 <app-retrieve-modal></app-retrieve-modal>
 
 @if (this.createResultManagementService.showModal()) {
-  <app-result-ai-assistant></app-result-ai-assistant>
+  <app-result-ai-assistant
+    [initiatives]="
+      this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio
+    "></app-result-ai-assistant>
 }

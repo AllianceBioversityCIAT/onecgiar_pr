@@ -14,6 +14,7 @@ describe('InnovationPackageCustomTableComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       updateResultsList: jest.fn(),
+      shouldShowUpdate: jest.fn(),
       resultsSE: {
         GET_reportingList: () => of({ response: [] }),
         PATCH_DeleteResult: () => of({}),
@@ -33,7 +34,10 @@ describe('InnovationPackageCustomTableComponent', () => {
           { id: 2, selected: false }
         ],
         showShareRequest: false,
-        chagePhaseModal: false
+        chagePhaseModal: false,
+        IPSRCurrentPhase: {
+          portfolioAcronym: 'P25'
+        }
       },
       alertsFe: {
         show: jest.fn().mockImplementationOnce((config, callback) => {
@@ -60,13 +64,13 @@ describe('InnovationPackageCustomTableComponent', () => {
   });
 
   it('should set showShareRequest to true when "Map to TOC" is selected', () => {
-    component.items[0].command(null);
+    component.items[0].command();
 
     expect(component.api.dataControlSE.showShareRequest).toBe(true);
   });
 
   it('should set showShareRequest to true when "Map to TOC" is selected', () => {
-    component.itemsWithDelete[0].command(null);
+    component.itemsWithDelete[0].command();
 
     expect(component.api.dataControlSE.showShareRequest).toBe(true);
   });
@@ -74,7 +78,7 @@ describe('InnovationPackageCustomTableComponent', () => {
   it('should call onDelete when "Delete" is selected', () => {
     const onDeleteSpy = jest.spyOn(component, 'onDelete');
 
-    component.itemsWithDelete[2].command(null);
+    component.itemsWithDelete[2].command();
 
     expect(onDeleteSpy).toHaveBeenCalled();
   });

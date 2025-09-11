@@ -60,9 +60,9 @@ export class PhaseManagementTableComponent implements OnInit {
     }
 
     if (this.moduleType === ModuleTypeEnum.IPSR) {
-      this.api.dataControlSE.getCurrentIPSRPhase();
+      this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
     } else {
-      this.api.dataControlSE.getCurrentPhases();
+      this.api.dataControlSE.getCurrentPhases().subscribe();
     }
   }
 
@@ -189,9 +189,9 @@ export class PhaseManagementTableComponent implements OnInit {
         this.phaseUpdate.emit();
 
         if (this.moduleType === ModuleTypeEnum.IPSR) {
-          this.api.dataControlSE.getCurrentIPSRPhase();
+          this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
         } else {
-          this.api.dataControlSE.getCurrentPhases();
+          this.api.dataControlSE.getCurrentPhases().subscribe();
         }
       },
       error: err => {
@@ -214,9 +214,9 @@ export class PhaseManagementTableComponent implements OnInit {
         this.phaseUpdate.emit();
 
         if (this.moduleType === ModuleTypeEnum.IPSR) {
-          this.api.dataControlSE.getCurrentIPSRPhase();
+          this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
         } else {
-          this.api.dataControlSE.getCurrentPhases();
+          this.api.dataControlSE.getCurrentPhases().subscribe();
         }
       },
       error: err => {

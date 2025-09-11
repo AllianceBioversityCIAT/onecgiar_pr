@@ -7,14 +7,14 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class ResultsToUpdateFilterPipe implements PipeTransform {
   constructor(private api: ApiService) {
-    this.api.dataControlSE.getCurrentPhases();
+    this.api.dataControlSE.getCurrentPhases().subscribe();
   }
 
   transform(list, word: string) {
     const isP25 = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
 
     const canShow = (item: any): boolean => {
-      if (isP25) return this.api.shouldShowUpdate(item);
+      if (isP25) return this.api.shouldShowUpdate(item, this.api.dataControlSE.reportingCurrentPhase);
 
       if (this.api.rolesSE.isAdmin) return true;
       return Boolean(item?.role_id);
