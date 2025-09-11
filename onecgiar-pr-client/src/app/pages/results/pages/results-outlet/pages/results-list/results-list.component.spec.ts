@@ -278,58 +278,6 @@ describe('ResultsListComponent', () => {
     });
   });
 
-  describe('onDownLoadTableAsExcel()', () => {
-    it('should set gettingReport to true and export Excel on exportExcel API response', () => {
-      const spyExportExcel = jest.spyOn(mockExportTablesService, 'exportExcel');
-      const wscols = [
-        { header: 'Result code', key: 'result_code', width: 13 },
-        { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
-        { header: 'Reporting year', key: 'reported_year_id', width: 13 },
-        { header: 'Result title', key: 'title', width: 125 },
-        { header: 'Description', key: 'description', width: 125 },
-        { header: 'Result type', key: 'result_type', width: 45 },
-        { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
-        { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
-        { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
-        { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-        { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
-        { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
-        { header: 'Submitter', key: 'official_code', width: 14 },
-        { header: 'Status', key: 'status_name', width: 17 },
-        { header: 'Creation date', key: 'creation_date', width: 15 },
-        { header: 'Work package id', key: 'work_package_id', width: 18 },
-        { header: 'Work package title', key: 'work_package_title', width: 125 },
-        { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-        { header: 'ToC result title', key: 'toc_result_title', width: 125 },
-        { header: 'Action Area(s)', key: 'action_areas', width: 53 },
-        { header: 'Center(s)', key: 'centers', width: 80 },
-        { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
-        { header: 'PDF Link', key: 'pdf_link', width: 65 }
-      ];
-
-      component.onDownLoadTableAsExcel();
-
-      expect(spyExportExcel).toHaveBeenCalledWith([], 'results_list', wscols, [
-        {
-          cellNumber: 23,
-          cellKey: 'pdf_link'
-        }
-      ]);
-      expect(component.gettingReport).toBeFalsy();
-    });
-
-    it('should handle errors fromexportExcelresponse', () => {
-      const errorMessage = 'error message';
-      jest.spyOn(mockApiService.resultsSE, 'GET_reportingList').mockReturnValue(throwError(errorMessage));
-      const consoleErrorSpy = jest.spyOn(console, 'error');
-
-      component.onDownLoadTableAsExcel();
-
-      expect(component.gettingReport).toBeFalsy();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
-    });
-  });
-
   describe('onDeleteREsult()', () => {
     it('should show confirmation alert and delete result on confirmed action', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult');

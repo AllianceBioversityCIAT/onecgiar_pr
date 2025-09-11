@@ -13,36 +13,30 @@ describe('ResultsListFilterPipe', () => {
           {
             options: [
               { selected: true, cleanAll: false },
-              { selected: false, cleanAll: false },
-            ],
-
+              { selected: false, cleanAll: false }
+            ]
           },
           {
             options: [
               { attr: 'Phase one', selected: true, cleanAll: false },
-              { attr: 'Phase two', selected: false, cleanAll: false },
-            ],
-
-          },
+              { attr: 'Phase two', selected: false, cleanAll: false }
+            ]
+          }
         ],
         resultLevel: [
           {
             id: 456,
             options: [
               { id: 789, selected: true, cleanAll: false },
-              { id: 2, selected: false, cleanAll: false },
-            ],
-
-          },
-        ],
-      },
+              { id: 2, selected: false, cleanAll: false }
+            ]
+          }
+        ]
+      }
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        ResultsListFilterPipe,
-        { provide: ResultsListFilterService, useValue: mockResultsListFilterService },
-      ],
+      providers: [ResultsListFilterPipe, { provide: ResultsListFilterService, useValue: mockResultsListFilterService }]
     });
 
     pipe = TestBed.inject(ResultsListFilterPipe);
@@ -73,9 +67,9 @@ describe('ResultsListFilterPipe', () => {
               result_level_id: 456,
               result_type_id: 789,
               joinAll: 'Result one 123 Phase one 456 789 Result one 123 Phase one 456 789  '
-            },
-          ],
-        },
+            }
+          ]
+        }
       ]);
     });
   });
@@ -96,7 +90,7 @@ describe('ResultsListFilterPipe', () => {
       const resultList = [
         { submitter_id: 1, legacy_id: 5 },
         { submitter_id: 2, legacy_id: 6 },
-        { submitter_id: 3, legacy_id: 7 },
+        { submitter_id: 3, legacy_id: 7 }
       ];
       mockResultsListFilterService.filters.general[0].options.forEach(option => (option.selected = false));
 
@@ -106,31 +100,21 @@ describe('ResultsListFilterPipe', () => {
     });
 
     it('should filter results by submitter and is_legacy', () => {
-      const resultList = [
-        { submitter_id: 1, legacy_id: 5 },
-        { submitter_id: 2 },
-        { submitter_id: 3, legacy_id: 7 },
-      ];
-      mockResultsListFilterService.filters.general[0].options = [
-        { id: 1, attr: 'is_legacy', selected: true, cleanAll: false },
-      ];
+      const resultList = [{ submitter_id: 1, legacy_id: 5 }, { submitter_id: 2 }, { submitter_id: 3, legacy_id: 7 }];
+      mockResultsListFilterService.filters.general[0].options = [{ id: 1, attr: 'is_legacy', selected: true, cleanAll: false }];
 
       const result = pipe.filterByInitsAndYear(resultList);
 
       expect(result).toEqual([
         { submitter_id: 1, legacy_id: 5 },
-        { submitter_id: 3, legacy_id: 7 },
+        { submitter_id: 3, legacy_id: 7 }
       ]);
     });
   });
 
   describe('filterByPhase', () => {
     it('should return the original result list when no phase filters are selected', () => {
-      const resultList = [
-        { phase_name: 'Phase 1' },
-        { phase_name: 'Phase 2' },
-        { phase_name: 'Phase 3' },
-      ];
+      const resultList = [{ phase_name: 'Phase 1' }, { phase_name: 'Phase 2' }, { phase_name: 'Phase 3' }];
       mockResultsListFilterService.filters.general[1].options = [];
 
       const result = pipe.filterByPhase(resultList);
@@ -138,20 +122,12 @@ describe('ResultsListFilterPipe', () => {
       expect(result).toEqual(resultList);
     });
     it('should return true if at least one phase filter matches the result', () => {
-      const resultList = [
-        { phase_name: 'Phase 1' },
-        { phase_name: 'Phase 2' },
-        { phase_name: 'Phase 3' },
-      ];
-      mockResultsListFilterService.filters.general[1].options = [
-        { attr: 'Phase 2', selected: true, cleanAll: false },
-      ];
+      const resultList = [{ phase_name: 'Phase 1' }, { phase_name: 'Phase 2' }, { phase_name: 'Phase 3' }];
+      mockResultsListFilterService.filters.general[1].options = [{ attr: 'Phase 2', selected: true, cleanAll: false }];
 
       const result = pipe.filterByPhase(resultList);
 
-      expect(result).toEqual([
-        { phase_name: 'Phase 2' },
-      ]);
+      expect(result).toEqual([{ phase_name: 'Phase 2' }]);
     });
   });
 
@@ -160,7 +136,7 @@ describe('ResultsListFilterPipe', () => {
       const resultList = [
         { result_level_id: 1, result_type_id: 1 },
         { result_level_id: 2, result_type_id: 2 },
-        { result_level_id: 3, result_type_id: 3 },
+        { result_level_id: 3, result_type_id: 3 }
       ];
       mockResultsListFilterService.filters.resultLevel[0].options = [];
 
@@ -172,11 +148,9 @@ describe('ResultsListFilterPipe', () => {
       const resultList = [
         { result_level_id: 1, result_type_id: 1 },
         { result_level_id: 2, result_type_id: 2 },
-        { result_level_id: 3, result_type_id: 3 },
+        { result_level_id: 3, result_type_id: 3 }
       ];
-      mockResultsListFilterService.filters.resultLevel[0].options = [
-        { id: 99, selected: true, cleanAll: false },
-      ];
+      mockResultsListFilterService.filters.resultLevel[0].options = [{ id: 99, selected: true, cleanAll: false }];
 
       const result = pipe.filterByResultLevelOptions(resultList);
 
@@ -188,7 +162,7 @@ describe('ResultsListFilterPipe', () => {
     it('should separate results into an array', () => {
       const results = [
         { result_code: 1, submitter: 'Submitter 1' },
-        { result_code: 2, submitter: 'Submitter 2' },
+        { result_code: 2, submitter: 'Submitter 2' }
       ];
 
       const separatedResults = pipe.separateResultInList(results);

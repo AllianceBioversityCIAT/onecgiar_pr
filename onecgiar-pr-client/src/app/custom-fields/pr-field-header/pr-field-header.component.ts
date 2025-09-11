@@ -17,6 +17,7 @@ export class PrFieldHeaderComponent {
   @Input() showDescriptionLabel: boolean = true;
   @Input() descInlineStyles?: string = '';
   @Input() labelDescInlineStyles?: string = '';
+  @Input() labelDescStyleClass?: string = '';
 
   constructor(public rolesSE: RolesService) {}
 

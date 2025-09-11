@@ -18,7 +18,7 @@ export class DataControlService {
   myInitiativesListReportingByPortfolio = [];
   myInitiativesListIPSRByPortfolio = [];
   myInitiativesLoaded = false;
-  resultsList: ResultItem[];
+  resultsList: ResultItem[] = [];
   currentResult: CurrentResult = {};
   showSectionSpinner = false;
   currentSectionName = '';

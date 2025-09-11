@@ -33,11 +33,26 @@ export class PhasesService {
         this.filterService.filters.general[1].options = this.phases.reporting.map(item => {
           const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
           return {
+            ...item,
             attr: label,
             selected: item.status,
             name: label + (item.status ? ' (Open)' : ' (Closed)')
           };
         });
+        // this.filterService.phasesOptions.set(this.filterService.filters.general[1].options);
+
+        // this.filterService.selectedPhases.set(this.filterService.phasesOptions().filter(item => item.selected));
+
+        // this.filterService.submittersOptions.set(
+        //   this.filterService.filters.general[0].options.filter(
+        //     item =>
+        //       this.filterService.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id) ||
+        //       item.portfolio_id == 0 ||
+        //       item.portfolio_id == 999
+        //   )
+        // );
+        // this.filterService.selectedSubmitters.set(this.filterService.submittersOptions().filter(option => option.id != 0));
+
         this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => {
           const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
 

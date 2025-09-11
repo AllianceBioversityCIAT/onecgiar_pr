@@ -15,6 +15,7 @@ import { ElasticResult, Source } from '../../interfaces/elastic.interface';
 import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/knowledge-product-info/model/knowledge-product-save.dto';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
+import { SearchParams } from './api.service';
 
 @Injectable({
   providedIn: 'root'
@@ -40,10 +41,22 @@ export class ResultsApiService {
   GET_AllResults() {
     return this.http.get<any>(`${this.apiBaseUrl}get/all`);
   }
-  GET_AllResultsWithUseRole(userId) {
-    return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/${userId}`).pipe(
+  GET_AllResultsWithUseRole(userId, searchParams?: SearchParams) {
+    const queryParams: string[] = [];
+
+    if (searchParams) {
+      if (searchParams.limit) queryParams.push(`limit=${searchParams.limit}`);
+      if (searchParams.page) queryParams.push(`page=${searchParams.page}`);
+      if (searchParams.status_id) queryParams.push(`status_id=${searchParams.status_id}`);
+      if (searchParams.portfolio_id) queryParams.push(`portfolio_id=${searchParams.portfolio_id}`);
+      if (searchParams.result_type_id) queryParams.push(`result_type_id=${searchParams.result_type_id}`);
+      if (searchParams.submitter_id) queryParams.push(`submitter_id=${searchParams.submitter_id}`);
+      if (searchParams.version_id) queryParams.push(`version_id=${searchParams.version_id}`);
+    }
+
+    return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/filter/${userId}?${queryParams.join('&')}`).pipe(
       map(resp => {
-        resp.response.map(result => {
+        resp.response.items.map(result => {
           result.id = Number(result.id);
           result.result_code = Number(result.result_code);
           result.full_name = `${result.create_last_name} ${result.create_first_name}`;

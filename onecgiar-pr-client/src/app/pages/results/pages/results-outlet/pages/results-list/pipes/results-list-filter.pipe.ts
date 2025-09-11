@@ -2,70 +2,99 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { ResultsListFilterService } from '../services/results-list-filter.service';
 
 @Pipe({
-    name: 'resultsListFilter',
-    standalone: false
+  name: 'resultsListFilter',
+  standalone: false
 })
 export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
+
   constructor(private readonly resultsListFilterSE: ResultsListFilterService) {}
-  transform(resultList: any[], word: string, combine: boolean, filterJoin: number): any {
-    return this.convertList(this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))), combine);
+
+  transform(
+    resultList: any[],
+    word: string,
+    combine: boolean,
+    selectedPhases: any[],
+    selectedSubmitters: any[],
+    selectedIndicatorCategories: any[],
+    selectedStatus: any[]
+  ): any {
+    return this.convertList(
+      // this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))),
+      this.filterByPhase(
+        this.filterBySubmitters(
+          this.filterByIndicatorCategories(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedIndicatorCategories),
+          selectedSubmitters
+        ),
+        selectedPhases
+      ),
+
+      combine
+    );
   }
 
-  filterByText(resultList: any[], word: string) {
-    if (!resultList?.length) return [];
-    resultList.forEach(item => {
-      item.joinAll = '';
-      Object.keys(item).forEach(attr => {
-        if (attr != 'created_date' && attr != 'id') item.joinAll += (item[attr] ? item[attr] : '') + ' ';
-      });
-    });
-    return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
+  filterByStatus(resultList: any[], selectedStatus: any[]) {
+    if (!selectedStatus.length) return resultList;
+
+    const resultsFilter = resultList.filter(result => selectedStatus.some(status => status.status_id == result.status_id));
+
+    if (!resultsFilter.length && selectedStatus.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
-  filterByInitsAndYear(resultList: any[]) {
-    const [submitter] = this.resultsListFilterSE.filters.general;
-    const resultsFilters = [];
+  filterByIndicatorCategories(resultList: any[], selectedIndicatorCategories: any[]) {
+    if (!selectedIndicatorCategories.length) return resultList;
 
-    for (const option of submitter?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
-    if (!resultsFilters.length) return resultList;
-    resultList = resultList.filter(result => {
-      //(result);
-      for (const filter of resultsFilters) if (filter?.id == result?.submitter_id || (filter?.attr == 'is_legacy' && result.legacy_id)) return true;
-      return false;
-    });
+    const resultsFilter = resultList.filter(result =>
+      selectedIndicatorCategories.some(
+        indicatorCategory => indicatorCategory.resultLevelId == result.result_level_id && indicatorCategory.id == result.result_type_id
+      )
+    );
 
-    return resultList;
+    if (!resultsFilter.length && selectedIndicatorCategories.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
-  filterByPhase(resultList: any[]) {
-    const [submitter, phase] = this.resultsListFilterSE.filters.general;
-    const resultsFilters = [];
+  filterBySubmitters(resultList: any[], selectedSubmitters: any[]) {
+    if (!selectedSubmitters.length) return resultList;
 
-    for (const option of phase?.options) if (option?.selected === true && option?.cleanAll !== true) resultsFilters.push(option);
-    if (!resultsFilters.length) return resultList;
-    resultList = resultList.filter(result => {
-      for (const filter of resultsFilters) if (filter?.attr == result?.phase_name) return true;
-      return false;
-    });
+    const resultsFilter = resultList.filter(result => selectedSubmitters.some(submitter => submitter.official_code == result.submitter));
 
-    return resultList;
+    if (!resultsFilter.length && selectedSubmitters.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
-  filterByResultLevelOptions(resultList: any[]) {
-    const resultsFilters = [];
-    this.resultsListFilterSE.filters.resultLevel.map((filter: any) => {
-      for (const option of filter?.options) if (option?.selected === true) resultsFilters.push({ result_level_id: filter?.id, result_type_id: option?.id });
-    });
+  filterByPhase(resultList: any[], selectedPhases: any[]) {
+    if (!selectedPhases.length) return resultList;
 
-    if (!resultsFilters.length) return resultList;
-    resultList = resultList.filter(result => {
-      for (const filter of resultsFilters) if (filter.result_level_id == result.result_level_id && filter.result_type_id == result.result_type_id) return true;
-      return false;
-    });
+    const resultsFilter = resultList.filter(result => selectedPhases.some(phase => phase.attr == result.phase_name));
 
-    return resultList;
+    if (!resultsFilter.length && selectedPhases.length === 0) return resultList;
+
+    return resultsFilter;
+  }
+
+  filterByText(resultList: any[], word: string): any[] {
+    if (!resultList?.length || !word?.trim()) {
+      return resultList || [];
+    }
+
+    const searchTerm = word.trim().toUpperCase();
+    const excludedFields = new Set(['created_date', 'id']);
+
+    return resultList.filter(item => {
+      const searchableText = Object.keys(item)
+        .filter(attr => !excludedFields.has(attr))
+        .map(attr => item[attr] || '')
+        .join(' ')
+        .toUpperCase();
+
+      return searchableText.includes(searchTerm);
+    });
   }
 
   convertList(results, combine) {
@@ -76,12 +105,11 @@ export class ResultsListFilterPipe implements PipeTransform {
     results.map(result => {
       result.results = [result];
     });
-    // //(results);
+
     return results;
   }
 
   combineRepeatedResults(results) {
-    // //('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
@@ -98,10 +126,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     });
 
     const transformedData = Object.values(resultMap);
-    // //(transformedData);
 
     return transformedData;
-
-    // teniendo los resultados anteriores necesito combinar los resultados iguales segun el result_code dejar un objeto con title y result_code pero dentro un array con la demas informacion de los resultados repetidos
   }
 }
