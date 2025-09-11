@@ -905,11 +905,20 @@ export class UserService {
         if (!v?.portfolio_id) continue;
 
         const modName = (v.obj_app_module?.name || '').toLowerCase();
-        const key = modName.includes('ipsr')
-          ? 'ipsr'
-          : modName.includes('report')
-            ? 'reporting'
-            : `module_${v.app_module_id ?? 'unknown'}`;
+        const getModuleKey = (
+          moduleName: string,
+          appModuleId?: number,
+        ): string => {
+          if (moduleName.includes('ipsr')) {
+            return 'ipsr';
+          }
+          if (moduleName.includes('report')) {
+            return 'reporting';
+          }
+          return `module_${appModuleId ?? 'unknown'}`;
+        };
+
+        const key = getModuleKey(modName, v.app_module_id);
 
         const rbus = await this._roleByUserRepository.find({
           where: {
@@ -932,7 +941,7 @@ export class UserService {
               official_code: ci.official_code,
               initiative_name: ci.name,
               short_name: ci.short_name,
-              cgiar_entity_type_id: ci.cgiar_entity_type_id as any,
+              cgiar_entity_type_id: ci.cgiar_entity_type_id,
               portfolio_id: ci.portfolio_id,
               obj_cgiar_entity_type: ci.obj_cgiar_entity_type
                 ? {
