@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { ResultsListService } from '../../services/results-list.service';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -36,7 +36,21 @@ import { InputTextModule } from 'primeng/inputtext';
 export class ResultsListFiltersComponent implements OnInit {
   gettingReport = signal(false);
   visible = signal(false);
-  portfolioList = signal([]);
+  filtersCount = computed(() => {
+    let count = 0;
+
+    if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
+    if (this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
+    if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
+    if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
+    if (this.resultsListFilterSE.text_to_search().length > 0) count++;
+
+    return count;
+  });
+  filtersCountText = computed(() => {
+    if (this.filtersCount() === 0) return 'See all filters';
+    return `See all filters (${this.filtersCount()})`;
+  });
 
   constructor(
     public resultsListService: ResultsListService,
@@ -46,75 +60,40 @@ export class ResultsListFiltersComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.getPortfolios();
+    this.getData();
     this.getResultStatus();
   }
 
-  getFiltersCount() {
-    let count = 0;
-
-    if (this.resultsListFilterSE.selectedPortfolios().length > 0) count++;
-    if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
-    if (this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
-    if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
-    if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
-    if (this.resultsListFilterSE.text_to_search().length > 0) count++;
-
-    return count;
-  }
-
-  getFiltersCountText() {
-    if (this.getFiltersCount() === 0) return 'See all filters';
-
-    return `See all filters (${this.getFiltersCount()})`;
-  }
-
-  getPortfolios() {
+  getData() {
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
-      this.api.resultsSE.GET_portfolioList().subscribe(response => {
-        this.portfolioList.set(response);
+      this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
+        next: ({ response }) => {
+          this.resultsListFilterSE.phasesOptions.set(
+            response.map(item => ({
+              ...item,
+              selected: item.status,
+              name: item.phase_name + (item.status ? ' (Open)' : ' (Closed)'),
+              attr: item.phase_name + (item.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : '')
+            }))
+          );
+          this.resultsListFilterSE.phasesOptionsOld.set(this.resultsListFilterSE.phasesOptions());
 
-        this.resultsListFilterSE.selectedPortfolios.set(
-          response.filter(item => item.acronym == this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
-        );
+          this.resultsListFilterSE.selectedPhases.set(
+            this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
+          );
 
-        this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
-          next: ({ response }) => {
-            this.resultsListFilterSE.phasesOptions.set(
-              response.map(item => ({
-                ...item,
-                selected: item.status,
-                name: item.phase_name + (item.status ? ' (Open)' : ' (Closed)'),
-                attr: item.phase_name + (item.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : '')
-              }))
-            );
-            this.resultsListFilterSE.phasesOptionsOld.set(this.resultsListFilterSE.phasesOptions());
+          this.resultsListFilterSE.submittersOptions.set(
+            this.resultsListFilterSE
+              .submittersOptionsOld()
+              .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+          );
 
-            this.resultsListFilterSE.phasesOptions.set(
-              this.resultsListFilterSE
-                .phasesOptions()
-                .filter(item => this.resultsListFilterSE.selectedPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-            );
-
-            this.resultsListFilterSE.selectedPhases.set(
-              this.resultsListFilterSE
-                .phasesOptions()
-                .filter(item => this.resultsListFilterSE.selectedPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-            );
-
-            this.resultsListFilterSE.submittersOptions.set(
-              this.resultsListFilterSE
-                .submittersOptionsOld()
-                .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-            );
-
-            this.resultsListFilterSE.selectedSubmitters.set(
-              this.resultsListFilterSE
-                .submittersOptions()
-                .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-            );
-          }
-        });
+          this.resultsListFilterSE.selectedSubmitters.set(
+            this.resultsListFilterSE
+              .submittersOptions()
+              .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+          );
+        }
       });
     });
   }
@@ -125,22 +104,22 @@ export class ResultsListFiltersComponent implements OnInit {
     });
   }
 
-  onSelectPortfolios(event: any) {
-    this.resultsListFilterSE.selectedPhases.set([]);
-    this.resultsListFilterSE.selectedSubmitters.set([]);
+  // onSelectPortfolios(event: any) {
+  //   this.resultsListFilterSE.selectedPhases.set([]);
+  //   this.resultsListFilterSE.selectedSubmitters.set([]);
 
-    this.resultsListFilterSE.phasesOptions.set(
-      this.resultsListFilterSE
-        .phasesOptionsOld()
-        .filter(item => this.resultsListFilterSE.selectedPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-    );
+  //   this.resultsListFilterSE.phasesOptions.set(
+  //     this.resultsListFilterSE
+  //       .phasesOptionsOld()
+  //       .filter(item => this.resultsListFilterSE.selectedPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
+  //   );
 
-    this.resultsListFilterSE.submittersOptions.set(
-      this.resultsListFilterSE
-        .submittersOptionsOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-    );
-  }
+  //   this.resultsListFilterSE.submittersOptions.set(
+  //     this.resultsListFilterSE
+  //       .submittersOptionsOld()
+  //       .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+  //   );
+  // }
 
   onSelectPhases(event: any) {
     this.resultsListFilterSE.selectedSubmitters.set([]);

@@ -122,7 +122,7 @@ export class ApiService {
         this.resultsListSE.showLoadingResultSpinner = false;
       },
       error: err => {
-        console.log(err);
+        console.error(err);
         this.resultsListSE.showLoadingResultSpinner = false;
       }
     });

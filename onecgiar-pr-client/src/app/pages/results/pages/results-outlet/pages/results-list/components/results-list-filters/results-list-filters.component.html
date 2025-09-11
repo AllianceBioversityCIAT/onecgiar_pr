@@ -69,8 +69,8 @@
     </div>
 
     <div class="filters_items_container_right">
-      <p-overlaybadge value="" [badgeDisabled]="getFiltersCount() === 0">
-        <app-pr-button (click)="visible.set(true)" [text]="getFiltersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
+      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+        <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
       </p-overlaybadge>
       <app-pr-button (click)="this.resultsListFilterSE.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
     </div>
@@ -80,7 +80,7 @@
 <div class="filters">
   <p-iconfield>
     <p-inputicon styleClass="pi pi-search" />
-    <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" />
+    <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '350px' }" />
   </p-iconfield>
 
   <app-pr-button
@@ -94,7 +94,7 @@
   <p>Filter your table data by applying custom criteria.</p>
 
   <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
-    <div>
+    <!-- <div>
       <app-pr-field-header
         label="Portfolio"
         labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
@@ -110,7 +110,7 @@
         placeholder="Select portfolio"
         [maxSelectedLabels]="3"
         [style]="{ width: '100%' }" />
-    </div>
+    </div> -->
 
     <div>
       <app-pr-field-header

@@ -20,6 +20,7 @@ import { ExportTablesService } from '../../../../../../shared/services/export-ta
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 import { PopoverModule } from 'primeng/popover';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 
 jest.useFakeTimers();
 
@@ -96,13 +97,11 @@ describe('ResultsListComponent', () => {
         ResultsListFilterPipe,
         ResultsToUpdateModalComponent,
         ResultsToUpdateFilterPipe,
-        PrFieldHeaderComponent,
         PrButtonComponent,
-        ResultsListFiltersComponent,
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent, CustomFieldsModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },

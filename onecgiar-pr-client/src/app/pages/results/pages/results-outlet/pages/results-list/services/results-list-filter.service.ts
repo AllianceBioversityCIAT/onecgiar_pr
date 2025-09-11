@@ -30,7 +30,6 @@ export class ResultsListFilterService {
   selectedPhases = signal([]);
   selectedSubmitters = signal([]);
   selectedIndicatorCategories = signal([]);
-  selectedPortfolios = signal([]);
   selectedStatus = signal([]);
   text_to_search = signal('');
 
