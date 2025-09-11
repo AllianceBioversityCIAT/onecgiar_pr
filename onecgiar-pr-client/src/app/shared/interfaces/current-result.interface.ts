@@ -49,7 +49,5 @@ export interface CurrentResult {
   initiative_entity_user?: any;
   portfolio?: string;
   portfolio_id?: number;
-  // ?: string | number;
-  // ?: string | number;
-  // ?: string | number;
+  acronym?: string;
 }

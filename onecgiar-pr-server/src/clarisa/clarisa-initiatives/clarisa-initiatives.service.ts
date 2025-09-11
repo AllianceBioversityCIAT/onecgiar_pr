@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, BadRequestException } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ClarisaInitiativesRepository } from './ClarisaInitiatives.repository';
 
@@ -54,11 +54,9 @@ export class ClarisaInitiativesService {
       const portfolio_id = map[key];
 
       if (!portfolio_id) {
-        throw {
-          response: {},
-          message: `Invalid portfolio parameter: ${portfolio}. Use 'p22' or 'p25'.`,
-          status: HttpStatus.BAD_REQUEST,
-        };
+        throw new BadRequestException(
+          `Invalid portfolio parameter: ${portfolio}. Use 'p22' or 'p25'.`,
+        );
       }
 
       const items = await this._clarisaInitiativesRepository.find({
