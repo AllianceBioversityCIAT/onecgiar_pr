@@ -241,6 +241,148 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('validateAndAssignRoles (versions/portfolio rules)', () => {
+    const baseUser: User = {
+      id: 55,
+      email: 'u@cgiar.org',
+      first_name: 'U',
+      last_name: 'S',
+      is_cgiar: true,
+      active: true,
+    } as any;
+    const currentUser: User = { id: 99 } as any;
+
+    beforeEach(() => {
+      // Reset manager mock per test
+      (mockQueryRunner.manager.findOne as jest.Mock).mockReset();
+      (mockQueryRunner.manager.save as jest.Mock).mockReset();
+      (versionRepository.find as jest.Mock).mockReset();
+    });
+
+    it('allows non-member role when entity portfolio has an open phase', async () => {
+      // Active versions contain portfolio_id 5
+      (versionRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          is_active: true,
+          status: true,
+          portfolio_id: 5,
+          app_module_id: 1,
+        },
+      ]);
+
+      // No previous assignment in that entity
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          // Existing assignment (RoleByUser without relations)
+          if (!opts?.relations) return null;
+          // Entity fetch (ClarisaInitiative with obj_portfolio relation)
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 5,
+              obj_portfolio: { id: 5 },
+            } as any as ClarisaInitiative;
+          }
+          // Existing lead (RoleByUser with obj_user,obj_initiative relations) -> none
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 3, entity_id: 777 }],
+          baseUser,
+          currentUser,
+        ),
+      ).resolves.not.toThrow();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalled();
+    });
+
+    it('blocks non-member role when entity portfolio has no open phase', async () => {
+      // Active versions contain portfolio_id 7 (not 5)
+      (versionRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          is_active: true,
+          status: true,
+          portfolio_id: 7,
+          app_module_id: 2,
+        },
+      ]);
+
+      // No previous assignment; entity portfolio_id = 5
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          if (!opts?.relations) return null;
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 5,
+              obj_portfolio: { id: 5 },
+            } as any as ClarisaInitiative;
+          }
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 3, entity_id: 888 }],
+          baseUser,
+          currentUser,
+        ),
+      ).rejects.toThrow(
+        'Only "Member" role is allowed in portfolios without an open phase.',
+      );
+      expect(mockQueryRunner.manager.save).not.toHaveBeenCalled();
+    });
+
+    it('skips versions validation if user previously had non-member role in entity', async () => {
+      (versionRepository.find as jest.Mock).mockResolvedValue([]); // would block if not skipped
+
+      // Existing non-member role assignment in same entity
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          if (!opts?.relations)
+            return {
+              id: 1234,
+              role: 3, // non-member
+              user: baseUser.id,
+              initiative_id: 999,
+              active: true,
+            };
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 42,
+              obj_portfolio: { id: 42 },
+            } as any as ClarisaInitiative;
+          }
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 4, entity_id: 999 }],
+          baseUser,
+          currentUser,
+        ),
+      ).resolves.not.toThrow();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalled();
+    });
+  });
+
   describe('createFull', () => {
     it('should create the user correctly if it does not exist and is not CGIAR', async () => {
       const createUserDto = {
