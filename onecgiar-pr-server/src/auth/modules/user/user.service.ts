@@ -395,7 +395,15 @@ export class UserService {
         where: { user: user.id, initiative_id: entity_id, active: true },
       });
 
-      const isDuplicateRoleAssignment = existingAssignment && !rbu_id;
+      const hadNonMemberRolePreviously =
+        !!existingAssignment &&
+        Number(existingAssignment.role) !== ROLE_IDS.MEMBER;
+      const roleByUserId =
+        !rbu_id && hadNonMemberRolePreviously && existingAssignment
+          ? existingAssignment.id
+          : rbu_id;
+
+      const isDuplicateRoleAssignment = existingAssignment && !roleByUserId;
       if (isDuplicateRoleAssignment) {
         throw new BadRequestException(
           `The user already has a role in the selected entity.`,
@@ -407,11 +415,6 @@ export class UserService {
         relations: ['obj_portfolio'],
       });
 
-      const portfolioIsActive = entity?.obj_portfolio?.isActive ?? true;
-      this._logger.log(
-        '🚀 ~ UserService ~ validateAndAssignRoles ~ portfolioIsActive:',
-        portfolioIsActive,
-      );
       const isExternal = !user?.is_cgiar;
 
       const isInvalidExternalRole = isExternal && role_id !== ROLE_IDS.MEMBER;
@@ -420,8 +423,31 @@ export class UserService {
           `External users can only be assigned the "Member" role.`,
         );
       }
-      // TODO: Review delete validation
-      // TODO
+
+      if (!hadNonMemberRolePreviously) {
+        const activeVersions = await this._versionRepository.find({
+          where: { is_active: true, status: true },
+          select: { id: true, portfolio_id: true, app_module_id: true },
+        });
+
+        const activePortfolioIds = new Set(
+          (activeVersions || [])
+            .map((v) => v?.portfolio_id)
+            .filter((pid): pid is number => typeof pid === 'number'),
+        );
+
+        const entityPortfolioId =
+          entity?.portfolio_id ?? entity?.obj_portfolio?.id;
+
+        const isInAnyOpenPhase = activePortfolioIds.has(
+          Number(entityPortfolioId),
+        );
+        if (!isInAnyOpenPhase && role_id !== ROLE_IDS.MEMBER) {
+          throw new BadRequestException(
+            `Only "Member" role is allowed in portfolios without an open phase.`,
+          );
+        }
+      }
 
       const isLeadRole =
         role_id === ROLE_IDS.LEAD || role_id === ROLE_IDS.COLEAD;
@@ -436,7 +462,7 @@ export class UserService {
       }
 
       await queryRunner.manager.save(RoleByUser, {
-        id: rbu_id,
+        id: roleByUserId,
         role: role_id,
         user: user.id,
         initiative_id: entity_id,
