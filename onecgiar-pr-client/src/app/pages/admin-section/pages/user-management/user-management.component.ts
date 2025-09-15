@@ -117,6 +117,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
             user.isCGIAR = user.cgIAR === 'Yes';
           });
           this.users.set(res.response);
+          this.userTable.reset();
           this.loading.set(false);
         },
         error: error => {
