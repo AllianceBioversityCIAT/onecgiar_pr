@@ -12,6 +12,7 @@ import { DialogModule } from 'primeng/dialog';
 import { StepN4EditBilateralComponent } from './components/step-n4-bilateral-investment-table/modal/step-n4-edit-bilateral/step-n4-edit-bilateral.component';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-reference-material-links/step-n4-reference-material-links.component';
+import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,6 @@ import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-refe
     StepN4AddPartnerComponent,
     StepN4EditBilateralComponent
   ],
-  imports: [CommonModule, StepN4RoutingModule, CustomFieldsModule, DialogModule, CustomFieldsModule]
+  imports: [CommonModule, StepN4RoutingModule, CustomFieldsModule, DialogModule, CustomFieldsModule, TermPipe]
 })
 export class StepN4Module {}

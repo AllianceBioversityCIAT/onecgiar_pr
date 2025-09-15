@@ -6,38 +6,41 @@ import { PrMultiSelectComponent } from '../../../../../../../../custom-fields/pr
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 describe('IpsrContributorsTocComponent', () => {
   let component: IpsrContributorsTocComponent;
   let fixture: ComponentFixture<IpsrContributorsTocComponent>;
   let mockApiService: any;
-  const mockResponse = [{ id: 1, name: 'Initiative 1' }]
+  const mockResponse = [{ id: 1, name: 'Initiative 1' }];
 
   beforeEach(async () => {
     mockApiService = {
       resultsSE: {
         GET_AllWithoutResults: () => of({ response: mockResponse }),
+        GETInnovationPackageDetail: () => of({ response: { portfolio: 'P25' } })
       },
+      dataControlSE: {
+        currentResult: { portfolio: 'P25' }
+      },
+      rolesSE: {
+        readOnly: false,
+        platformIsClosed: false,
+        validateInitiative: jest.fn().mockReturnValue(true),
+        isAdmin: false
+      }
     };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        IpsrContributorsTocComponent,
-        PrFieldHeaderComponent,
-        PrMultiSelectComponent
-       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      declarations: [IpsrContributorsTocComponent, PrFieldHeaderComponent, PrMultiSelectComponent],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,
-          useValue: mockApiService,
-        },
+          useValue: mockApiService
+        }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IpsrContributorsTocComponent);
     component = fixture.componentInstance;
@@ -61,7 +64,7 @@ describe('IpsrContributorsTocComponent', () => {
       component.GET_AllWithoutResults();
 
       expect(spy).toHaveBeenCalled();
-      expect(component.contributingInitiativesList).toEqual(mockResponse)
+      expect(component.contributingInitiativesList).toEqual(mockResponse);
     });
   });
 
@@ -94,5 +97,5 @@ describe('IpsrContributorsTocComponent', () => {
 
       expect(item.is_active).toBeFalsy();
     });
-  })
+  });
 });
