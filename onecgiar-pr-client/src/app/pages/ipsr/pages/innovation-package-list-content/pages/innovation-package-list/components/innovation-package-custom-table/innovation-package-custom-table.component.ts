@@ -122,9 +122,13 @@ export class InnovationPackageCustomTableComponent {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    const canUpdate = this.shouldShowUpdate(result);
+    const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.IPSRCurrentPhase);
     this.items[1].visible = canUpdate;
-    this.itemsWithDelete[1].visible = canUpdate;
+    this.itemsWithDelete[1].visible =
+      this.api.dataControlSE.IPSRCurrentPhase.portfolioAcronym !== 'P25'
+        ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.IPSRCurrentPhase.phaseYear &&
+          this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.IPSRCurrentPhase.phaseYear
+        : canUpdate;
 
     if (!this.api.rolesSE.isAdmin) {
       this.itemsWithDelete[2] = {
@@ -186,7 +190,7 @@ export class InnovationPackageCustomTableComponent {
   }
 
   private isPastReportingPhase(result): boolean {
-    const phaseYear = this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
+    const phaseYear = this.api.dataControlSE.IPSRCurrentPhase?.phaseYear;
     return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;
   }
 

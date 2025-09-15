@@ -83,6 +83,10 @@ describe('RdTheoryOfChangeComponent', () => {
       ]
     }
   };
+  const mockGET_resultByIdResponse = {
+    id: 1,
+    portfolio: 'portfolio'
+  };
 
   beforeEach(async () => {
     mockApiService = {
@@ -94,7 +98,8 @@ describe('RdTheoryOfChangeComponent', () => {
         GET_AllCLARISACenters: () => of({ response: [] }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
-        GET_allChildlessInstitutionTypes: () => of({ response: [] })
+        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+        GET_resultById: () => of({ response: mockGET_resultByIdResponse })
       },
       alertsFe: {
         show: jest.fn().mockImplementationOnce((config, callback) => {

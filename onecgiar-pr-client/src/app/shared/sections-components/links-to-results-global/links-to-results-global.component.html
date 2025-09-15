@@ -117,7 +117,7 @@
         </div>
 
         <app-pr-yes-or-not label="Is this policy change linked to a reported innovation use outcome?"
-            [(ngModel)]="this.linksToResultsBody?.linkedInnovation.linked_innovation_use"
+            [(ngModel)]="this.linksToResultsBody.linkedInnovation.linked_innovation_use"
             [readOnly]="this.innoUseLinks.length > 0"></app-pr-yes-or-not>
 
         <app-alert-status

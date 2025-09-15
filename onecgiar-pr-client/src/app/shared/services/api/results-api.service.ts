@@ -265,8 +265,8 @@ export class ResultsApiService {
     );
   }
 
-  GET_AllWithoutResults() {
-    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}`).pipe(
+  GET_AllWithoutResults(portfolioId?: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${this.currentResultId}/${portfolioId}`).pipe(
       map(resp => {
         resp.response.map(
           initiative => (initiative.full_name = `${initiative?.official_code} - <strong>${initiative?.short_name}</strong> - ${initiative?.name}`)
@@ -444,7 +444,7 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}capdevs-delivery-methods/get/all`);
   }
 
-  GET_AllInitiatives(portfolioId?: 'p22' | 'p25') {
+  GET_AllInitiatives(portfolioId?: string) {
     let url = `${environment.apiBaseUrl}clarisa/initiatives`;
     if (portfolioId) url += `/${portfolioId}`;
 

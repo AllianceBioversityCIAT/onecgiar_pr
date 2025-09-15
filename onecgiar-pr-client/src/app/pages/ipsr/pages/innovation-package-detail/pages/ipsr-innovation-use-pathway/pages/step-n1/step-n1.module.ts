@@ -10,6 +10,7 @@ import { GeoscopeManagementModule } from '../../../../../../../../shared/compone
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { CollapsibleContainerModule } from '../../../../../../../../shared/components/collapsible-container/collapsible-container.module';
 import { MessageModule } from 'primeng/message';
+import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [StepN1Component],
@@ -22,7 +23,8 @@ import { MessageModule } from 'primeng/message';
     GeoscopeManagementModule,
     YmzListStructureItemModule,
     CollapsibleContainerModule,
-    MessageModule
+    MessageModule,
+    TermPipe
   ]
 })
 export class StepN1Module {}

@@ -87,7 +87,10 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
     }
   }
 
-  async getAllInitiativesWithoutCurrentInitiative(resultId: number) {
+  async getAllInitiativesWithoutCurrentInitiative(
+    resultId: number,
+    portfolioId?: number,
+  ) {
     const queryData = `
     select
       	DISTINCT 
@@ -115,12 +118,17 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
       	where
       		rbi2.result_id = ?
       		and rbi2.initiative_role_id = 1)
-        and ci.active > 0;
+        and ci.active > 0
+        ${portfolioId ? 'and ci.portfolio_id = ?' : ''}
+        ${portfolioId === 3 ? 'and ci.cgiar_entity_type_id IN (22, 23, 24)' : ''};
     `;
     try {
-      const initiative: ClarisaInitiative[] = await this.query(queryData, [
-        resultId,
-      ]);
+      const params: any[] = [resultId];
+      if (portfolioId) params.push(portfolioId);
+      const initiative: ClarisaInitiative[] = await this.query(
+        queryData,
+        params,
+      );
       return initiative;
     } catch (error) {
       throw {

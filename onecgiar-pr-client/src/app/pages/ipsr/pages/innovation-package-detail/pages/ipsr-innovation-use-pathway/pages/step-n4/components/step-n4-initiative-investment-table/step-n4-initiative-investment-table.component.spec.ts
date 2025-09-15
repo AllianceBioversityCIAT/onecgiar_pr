@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN4InitiativeInvestmentTableComponent } from './step-n4-initiative-investment-table.component';
 import { HttpClientModule } from '@angular/common/http';
+import { TermPipe } from '../../../../../../../../../../internationalization/term.pipe';
 
 describe('StepN4InitiativeInvestmentTableComponent', () => {
   let component: StepN4InitiativeInvestmentTableComponent;
@@ -10,7 +11,7 @@ describe('StepN4InitiativeInvestmentTableComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN4InitiativeInvestmentTableComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientModule, TermPipe]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4InitiativeInvestmentTableComponent);

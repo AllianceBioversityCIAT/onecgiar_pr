@@ -131,8 +131,8 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
-    const canUpdate = this.api.shouldShowUpdate(result);
-    this.items[1].visible = this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25' ? false : canUpdate;
+    const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.reportingCurrentPhase);
+    this.items[1].visible = canUpdate;
     this.itemsWithDelete[1].visible =
       this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25'
         ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&

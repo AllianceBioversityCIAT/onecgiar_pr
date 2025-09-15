@@ -14,6 +14,7 @@ describe('InnovationPackageCustomTableComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       updateResultsList: jest.fn(),
+      shouldShowUpdate: jest.fn(),
       resultsSE: {
         GET_reportingList: () => of({ response: [] }),
         PATCH_DeleteResult: () => of({}),

@@ -736,7 +736,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${service.currentResultId}`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/get/all/without/result/${service.currentResultId}/undefined`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);

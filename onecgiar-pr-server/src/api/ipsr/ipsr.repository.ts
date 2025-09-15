@@ -13,6 +13,7 @@ import { predeterminedDateValidation } from '../../shared/utils/versioning.utils
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 import { env } from 'process';
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class IpsrRepository
@@ -253,7 +254,15 @@ export class IpsrRepository
             r.is_replicated,
             r.is_discontinued,
             v.phase_name,
-            v.phase_year
+            v.phase_year,
+            (
+                SELECT
+                    cp.acronym
+                FROM
+                    clarisa_portfolios cp
+                WHERE
+                    cp.id = v.portfolio_id
+            ) AS portfolio
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
@@ -529,7 +538,8 @@ export class IpsrRepository
     }
   }
 
-  async getAllInnovationPackages() {
+  async getAllInnovationPackages(user: TokenDto) {
+    const user_id = user.id;
     const innovationPackagesQuery = `
         SELECT
             DISTINCT r.id,
@@ -578,7 +588,8 @@ export class IpsrRepository
             r.in_qa as inQA,
             ci.portfolio_id,
             cp.name as portfolio_name,
-            cp.acronym as acronym
+            cp.acronym as acronym,
+            r2.id AS role_id
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
@@ -590,7 +601,11 @@ export class IpsrRepository
             INNER JOIN result_level rl on rl.id = r.result_level_id
             INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
             LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
-            LEFT JOIN \`year\` y ON y.active > 0
+            LEFT JOIN year y ON y.active > 0
+            LEFT JOIN role_by_user rbu on rbu.initiative_id = rbi.inititiative_id
+                and rbu.user = ?
+                and rbu.active = 1
+            LEFT JOIN role r2 on r2.id  = rbu.role
         WHERE
             r.is_active = 1
             AND r.id = ibr.result_innovation_package_id
@@ -603,6 +618,7 @@ export class IpsrRepository
     try {
       const getAllInnovationPackages: any[] = await this.dataSource.query(
         innovationPackagesQuery,
+        [user_id],
       );
       return getAllInnovationPackages;
     } catch (error) {

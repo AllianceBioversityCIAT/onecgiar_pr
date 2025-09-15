@@ -100,7 +100,7 @@ export class IpsrService {
 
   async allInnovationPackages(user: TokenDto) {
     try {
-      let result = await this._ipsrRespository.getAllInnovationPackages();
+      let result = await this._ipsrRespository.getAllInnovationPackages(user);
 
       const entity_init_map = await this._initiativeEntityMapRepository.find({
         where: { initiativeId: In(result.map((item) => item.initiative_id)) },
