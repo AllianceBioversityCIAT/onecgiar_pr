@@ -12,7 +12,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'Type 1 report elements',
-    prHide: false,
+    prHide: true,
     underConstruction: false,
     onlytest: false,
     canActivate: [CheckLoginGuard],
@@ -43,7 +43,7 @@ export const routingApp: PrRoute[] = [
     loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule)
   },
   {
-    prName: 'Results Monitoring Center',
+    prName: 'My Admin',
     onlytest: false,
     prHide: false,
     canActivate: [CheckLoginGuard],
@@ -53,7 +53,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Outcome Indicator Module',
     onlytest: false,
-    prHide: false,
+    prHide: true,
     underConstruction: false,
     canActivate: [CheckLoginGuard],
     path: 'outcome-indicator-module',
