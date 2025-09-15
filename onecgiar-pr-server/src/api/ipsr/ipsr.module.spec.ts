@@ -6,4 +6,3 @@ describe('IpsrModule', () => {
     expect(module).toBeDefined();
   });
 });
-

@@ -1,5 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { ClarisaInitiative } from './entities/clarisa-initiative.entity';
 import { OstTocIdDto } from './dto/ost-toc-id.dto';
 import { env } from 'process';
@@ -29,7 +29,10 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
   async getAllInitiatives() {
     try {
       return this.find({
-        where: { active: true },
+        where: {
+          active: true,
+          cgiar_entity_type_id: In([6, 9, 10, 22, 23, 24]),
+        },
         relations: { obj_cgiar_entity_type: true },
         order: { official_code: 'ASC' },
       });

@@ -112,7 +112,6 @@ describe('ClarisaInitiativesService', () => {
       expect(repo.find).toHaveBeenCalled();
       const args = (repo.find as jest.Mock).mock.calls[0][0];
       expect(args.where.portfolio_id).toBe(3);
-      // Ensure condition was added
       expect('cgiar_entity_type_id' in args.where).toBe(true);
       expect(res.status).toBe(HttpStatus.OK);
       expect(res.response).toEqual([{ id: 2 }]);
@@ -122,6 +121,52 @@ describe('ClarisaInitiativesService', () => {
       const res = await service.getByPortfolio('foo');
       expect(res.status).toBe(HttpStatus.BAD_REQUEST);
       expect(repo.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getInitiativesEntitiesGrouped', () => {
+    it('returns grouped list for P22 and P25 with labels', async () => {
+      const p22 = [
+        { id: 11, name: 'Init A', active: true, cgiar_entity_type_id: 6 },
+      ];
+      const p25 = [
+        { id: 21, name: 'Init B', active: true, cgiar_entity_type_id: 22 },
+      ];
+      (repo.find as any).mockResolvedValueOnce(p22).mockResolvedValueOnce(p25);
+
+      const res = await service.getInitiativesEntitiesGrouped();
+
+      expect(repo.find).toHaveBeenCalledTimes(2);
+      const firstArgs = (repo.find as jest.Mock).mock.calls[0][0];
+      const secondArgs = (repo.find as jest.Mock).mock.calls[1][0];
+
+      expect(firstArgs.where.portfolio_id).toBe(2);
+      expect(firstArgs.where.active).toBe(true);
+      expect('cgiar_entity_type_id' in firstArgs.where).toBe(true);
+
+      expect(secondArgs.where.portfolio_id).toBe(3);
+      expect(secondArgs.where.active).toBe(true);
+      expect('cgiar_entity_type_id' in secondArgs.where).toBe(true);
+
+      expect(res.status).toBe(HttpStatus.OK);
+      const list = res.response as any[];
+      expect(list[0]).toEqual({ name: 'P22', isLabel: true });
+      expect(list[1]).toMatchObject({
+        initiative_id: 11,
+        full_name: 'Init A',
+        id: 11,
+        name: 'Init A',
+      });
+      const p25LabelIndex = list.findIndex(
+        (x: any) => x && x.name === 'P25' && x.isLabel,
+      );
+      expect(p25LabelIndex).toBeGreaterThan(1);
+      expect(list[p25LabelIndex + 1]).toMatchObject({
+        initiative_id: 21,
+        full_name: 'Init B',
+        id: 21,
+        name: 'Init B',
+      });
     });
   });
 });

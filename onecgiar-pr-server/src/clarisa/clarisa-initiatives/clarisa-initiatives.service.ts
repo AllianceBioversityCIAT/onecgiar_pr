@@ -97,11 +97,19 @@ export class ClarisaInitiativesService {
   async getInitiativesEntitiesGrouped() {
     try {
       const p22 = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id: 2, active: true },
+        where: {
+          portfolio_id: 2,
+          active: true,
+          cgiar_entity_type_id: In([6, 9, 10]),
+        },
         order: { id: 'ASC' },
       });
       const p25 = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id: 3, active: true },
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
         order: { id: 'ASC' },
       });
 
