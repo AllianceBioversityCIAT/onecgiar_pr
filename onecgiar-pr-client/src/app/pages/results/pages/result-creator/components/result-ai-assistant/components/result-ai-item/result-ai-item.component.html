@@ -63,19 +63,19 @@
 
   @if (!hideButtons && isAIAssistantResult(item)) {
     <div class="result-item-actions">
-      <!-- @if (!isCreated()) { -->
-      <app-pr-button [text]="'Discard'" colorType="danger" (click)="discardResult(item)" [ngClass]="{ globalDisabled: isCreating() }"></app-pr-button>
+      @if (!isCreated()) {
+        <app-pr-button [text]="'Discard'" colorType="danger" (click)="discardResult(item)" [ngClass]="{ globalDisabled: true }"></app-pr-button>
 
-      <app-pr-button
-        [text]="'Create'"
-        colorType="primary"
-        (click)="createResult(item)"
-        [rotating]="isCreating()"
-        [icon]="isCreating() ? 'loop' : 'add'"
-        [ngClass]="{ globalDisabled: isCreating() }"></app-pr-button>
-      <!-- } @else {
+        <app-pr-button
+          [text]="'Create'"
+          colorType="primary"
+          (click)="createResult(item)"
+          [rotating]="isCreating()"
+          [icon]="isCreating() ? 'loop' : 'add'"
+          [ngClass]="{ globalDisabled: true }"></app-pr-button>
+      } @else {
         <app-pr-button [text]="'Open Result'" colorType="primary" (click)="openResult(item)" icon="arrow_right"></app-pr-button>
-      } -->
+      }
     </div>
   }
 
