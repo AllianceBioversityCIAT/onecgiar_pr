@@ -160,12 +160,21 @@
   </div>
 </div>
 
-<p-menu
-  #menu
-  [popup]="true"
-  [model]="this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items"
-  aria-hidden="true">
-</p-menu>
+<p-popover #menu>
+  @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
+    @if (item.visible) {
+      <div
+        class="table_menu_item"
+        [pTooltip]="item.disabled ? item.tooltipText : null"
+        tooltipPosition="bottom"
+        [ngClass]="{ itemDisabled: item.disabled }"
+        (click)="item.disabled ? null : item.command(); menu.toggle($event)">
+        <i [class]="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </div>
+    }
+  }
+</p-popover>
 
 <app-results-to-update-modal></app-results-to-update-modal>
 @if (this.api.dataControlSE.chagePhaseModal) {

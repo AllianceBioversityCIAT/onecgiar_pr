@@ -43,7 +43,7 @@ export const routingApp: PrRoute[] = [
     loadChildren: () => import('../../pages/quality-assurance/quality-assurance.module').then(m => m.QualityAssuranceModule)
   },
   {
-    prName: 'INIT Admin Module',
+    prName: 'Results Monitoring Center',
     onlytest: false,
     prHide: false,
     canActivate: [CheckLoginGuard],

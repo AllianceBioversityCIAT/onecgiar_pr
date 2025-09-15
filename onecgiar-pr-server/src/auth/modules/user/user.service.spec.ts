@@ -18,6 +18,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { DataSource } from 'typeorm';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
+import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
 describe('UserService', () => {
   let service: UserService;
@@ -210,6 +211,12 @@ describe('UserService', () => {
             find: jest.fn(),
           },
         },
+        {
+          provide: GlobalParameterRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ value: '' }),
+          },
+        },
       ],
     }).compile();
 
@@ -234,6 +241,148 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('validateAndAssignRoles (versions/portfolio rules)', () => {
+    const baseUser: User = {
+      id: 55,
+      email: 'u@cgiar.org',
+      first_name: 'U',
+      last_name: 'S',
+      is_cgiar: true,
+      active: true,
+    } as any;
+    const currentUser: User = { id: 99 } as any;
+
+    beforeEach(() => {
+      // Reset manager mock per test
+      (mockQueryRunner.manager.findOne as jest.Mock).mockReset();
+      (mockQueryRunner.manager.save as jest.Mock).mockReset();
+      (versionRepository.find as jest.Mock).mockReset();
+    });
+
+    it('allows non-member role when entity portfolio has an open phase', async () => {
+      // Active versions contain portfolio_id 5
+      (versionRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          is_active: true,
+          status: true,
+          portfolio_id: 5,
+          app_module_id: 1,
+        },
+      ]);
+
+      // No previous assignment in that entity
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          // Existing assignment (RoleByUser without relations)
+          if (!opts?.relations) return null;
+          // Entity fetch (ClarisaInitiative with obj_portfolio relation)
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 5,
+              obj_portfolio: { id: 5 },
+            } as any as ClarisaInitiative;
+          }
+          // Existing lead (RoleByUser with obj_user,obj_initiative relations) -> none
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 3, entity_id: 777 }],
+          baseUser,
+          currentUser,
+        ),
+      ).resolves.not.toThrow();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalled();
+    });
+
+    it('blocks non-member role when entity portfolio has no open phase', async () => {
+      // Active versions contain portfolio_id 7 (not 5)
+      (versionRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          is_active: true,
+          status: true,
+          portfolio_id: 7,
+          app_module_id: 2,
+        },
+      ]);
+
+      // No previous assignment; entity portfolio_id = 5
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          if (!opts?.relations) return null;
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 5,
+              obj_portfolio: { id: 5 },
+            } as any as ClarisaInitiative;
+          }
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 3, entity_id: 888 }],
+          baseUser,
+          currentUser,
+        ),
+      ).rejects.toThrow(
+        'Only "Member" role is allowed in portfolios without an open phase.',
+      );
+      expect(mockQueryRunner.manager.save).not.toHaveBeenCalled();
+    });
+
+    it('skips versions validation if user previously had non-member role in entity', async () => {
+      (versionRepository.find as jest.Mock).mockResolvedValue([]); // would block if not skipped
+
+      // Existing non-member role assignment in same entity
+      (mockQueryRunner.manager.findOne as jest.Mock).mockImplementation(
+        (_entity: any, opts: any) => {
+          if (!opts?.relations)
+            return {
+              id: 1234,
+              role: 3, // non-member
+              user: baseUser.id,
+              initiative_id: 999,
+              active: true,
+            };
+          if (opts?.relations?.includes('obj_portfolio')) {
+            return {
+              id: opts.where.id,
+              active: true,
+              portfolio_id: 42,
+              obj_portfolio: { id: 42 },
+            } as any as ClarisaInitiative;
+          }
+          if (opts?.relations?.includes('obj_user')) return null;
+          return null;
+        },
+      );
+
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 4, entity_id: 999 }],
+          baseUser,
+          currentUser,
+        ),
+      ).resolves.not.toThrow();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalled();
+    });
+  });
+
   describe('createFull', () => {
     it('should create the user correctly if it does not exist and is not CGIAR', async () => {
       const createUserDto = {
@@ -251,8 +400,8 @@ describe('UserService', () => {
       });
 
       mockTemplateRepository.findOne.mockResolvedValue({
-        name: 'EXTERNAL_USER',
-        html: '<p>{{assignedEntity}} - {{assignedRole}}</p>',
+        name: 'email_template_new_external_user',
+        template: '<p>{{assignedEntity}} - {{assignedRole}}</p>',
       });
       jest
         .spyOn(Handlebars, 'compile')
@@ -307,7 +456,7 @@ describe('UserService', () => {
       expect(awsCognitoService.createUser).toHaveBeenCalled();
     });
 
-    it('❌ debe lanzar error si el usuario ya existe', async () => {
+    it('throws error if the user already exists', async () => {
       const dto = { email: 'exists@example.com', is_cgiar: false };
       jest.spyOn(service, 'findOneByEmail').mockResolvedValue({
         response: mockUser,
@@ -326,7 +475,7 @@ describe('UserService', () => {
       expect(awsCognitoService.createUser).not.toHaveBeenCalled();
     });
 
-    it('❌ debe lanzar error si el correo es @cgiar.org y no es CGIAR', async () => {
+    it('throws error if email is @cgiar.org and user is not CGIAR', async () => {
       const dto = {
         email: 'someone@cgiar.org',
         is_cgiar: false,
@@ -347,7 +496,7 @@ describe('UserService', () => {
       );
     });
 
-    it('❌ debe lanzar error si falla Cognito', async () => {
+    it('throws error if Cognito fails', async () => {
       const dto = {
         email: 'external@example.com',
         is_cgiar: false,
@@ -362,9 +511,10 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      templateRepository.findOne = jest
-        .fn()
-        .mockResolvedValue('<p>Welcome</p>');
+      templateRepository.findOne = jest.fn().mockResolvedValue({
+        name: 'email_template_new_external_user',
+        template: '<p>Welcome</p>',
+      });
       jest
         .spyOn(Handlebars, 'compile')
         .mockReturnValue(() => '<p>template</p>');
@@ -389,7 +539,7 @@ describe('UserService', () => {
       );
     });
 
-    it('❌ debe manejar error general con _handlersError', async () => {
+    it('handles general error with _handlersError', async () => {
       jest.spyOn(service, 'findOneByEmail').mockImplementation(() => {
         throw new Error('Unexpected failure');
       });
@@ -638,6 +788,88 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockErrorResponse);
       expect(handlersError.returnErrorRes).toHaveBeenCalledWith({ error });
+    });
+  });
+
+  describe('updateUserRoles', () => {
+    it('sends roles-updated email when roles change (same initiative, different role)', async () => {
+      // Arrange
+      const dto: any = {
+        email: 'test@example.com',
+        first_name: 'Test',
+        last_name: 'User',
+        role_assignments: [
+          { entity_id: 1, role_id: 4 }, // new role in same entity
+        ],
+      };
+
+      // user exists
+      userRepository.findOneByOrFail = jest.fn().mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        first_name: 'Test',
+        last_name: 'User',
+        is_cgiar: true,
+      } as User);
+
+      // existing active role for same initiative but different role
+      roleByUserRepository.find = jest
+        .fn()
+        .mockResolvedValue([
+          { id: 101, user: 1, initiative_id: 1, role: 3, active: true },
+        ]);
+
+      // deactivate old role
+      roleByUserRepository.save = jest.fn().mockResolvedValue({});
+
+      // compile template for roles update
+      mockTemplateRepository.findOne.mockResolvedValue({
+        name: 'email_template_roles_update',
+        template: '<p>{{userName}}</p>',
+      });
+
+      jest.spyOn(Handlebars, 'compile').mockReturnValue((data: any) => {
+        return `<p>${data.userName}</p>`;
+      });
+
+      // initiatives and roles for mapping
+      (clarisaInitiativesRepository.find as jest.Mock).mockResolvedValue([
+        {
+          id: 1,
+          official_code: 'INIT-001',
+          short_name: 'CI',
+          name: 'Climate Initiative',
+        } as any,
+      ]);
+      roleRepository.find = jest.fn().mockResolvedValue([
+        { id: 3, description: 'Coordinator' },
+        { id: 4, description: 'Member' },
+      ]);
+
+      // update name
+      userRepository.update = jest.fn().mockResolvedValue({});
+
+      // persist new assignment through main flow (avoid deep behavior)
+      jest.spyOn(service as any, 'saveUserToDB').mockResolvedValue({
+        response: { id: 1, email: 'test@example.com' },
+        message: 'Roles updated successfully',
+        status: 200,
+      });
+
+      const emailService = (service as any)
+        ._emailNotificationManagementService as EmailNotificationManagementService;
+      const sendEmailSpy = jest.spyOn(emailService, 'sendEmail');
+
+      // Act
+      const result = await service.updateUserRoles(dto, mockTokenDto);
+
+      // Assert
+      expect(result.status).toBe(200);
+      expect(sendEmailSpy).toHaveBeenCalled();
+      const payload = (sendEmailSpy.mock.calls[0] || [])[0];
+      expect(payload?.emailBody?.subject).toBe(
+        'PRMS - Your Account Details Have Been Updated',
+      );
     });
   });
 

@@ -149,6 +149,34 @@ td {
   height: 17px;
 }
 
+.table_menu_item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  width: 140px;
+
+  &:hover {
+    background-color: var(--pr-color-primary-25);
+    cursor: pointer;
+  }
+}
+
+.itemDisabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+::ng-deep {
+  .p-popover:before,
+  .p-popover:after {
+    display: none;
+  }
+
+  .p-popover-content {
+    padding: 0.25rem !important;
+  }
+}
 .disabledButtons {
   opacity: 0.5;
 }
