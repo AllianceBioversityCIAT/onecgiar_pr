@@ -13,8 +13,8 @@
     <div class="feedback-container">
       <span class="pr-body-2 font-weight-500 text-accent-3">Was this response helpful?</span>
 
-      <p-button (click)="this.toggleFeedback($event, 'good')" icon="pi pi-thumbs-up" [text]="true" />
-      <p-button (click)="this.toggleFeedback($event, 'bad')" icon="pi pi-thumbs-down" [text]="true" />
+      <p-button (click)="this.toggleFeedback($event, 'good')" icon="pi pi-thumbs-up" [text]="true" [ngClass]="{ globalDisabled: true }" />
+      <p-button (click)="this.toggleFeedback($event, 'bad')" icon="pi pi-thumbs-down" [text]="true" [ngClass]="{ globalDisabled: true }" />
     </div>
 
     <p-popover #feedbackPanel [style]="{ width: '400px' }">
