@@ -9,9 +9,16 @@ import { IpsrContributorsTocComponent } from './components/ipsr-contributors-toc
 import { IpsrNonPooledProjectsComponent } from './components/ipsr-non-pooled-projects/ipsr-non-pooled-projects.component';
 import { IpsrContributorsNonCgiarPartnersComponent } from './components/ipsr-contributors-non-cgiar-partners/ipsr-contributors-non-cgiar-partners.component';
 import { IpsrContributorsCentersComponent } from './components/ipsr-contributors-centers/ipsr-contributors-centers.component';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 @NgModule({
-  declarations: [IpsrContributorsComponent, IpsrContributorsTocComponent, IpsrNonPooledProjectsComponent, IpsrContributorsNonCgiarPartnersComponent, IpsrContributorsCentersComponent],
-  imports: [CommonModule, IpsrContributorsRoutingModule, CustomFieldsModule, TocInitiativeOutModule]
+  declarations: [
+    IpsrContributorsComponent,
+    IpsrContributorsTocComponent,
+    IpsrNonPooledProjectsComponent,
+    IpsrContributorsNonCgiarPartnersComponent,
+    IpsrContributorsCentersComponent
+  ],
+  imports: [CommonModule, IpsrContributorsRoutingModule, CustomFieldsModule, TocInitiativeOutModule, TermPipe]
 })
 export class IpsrContributorsModule {}

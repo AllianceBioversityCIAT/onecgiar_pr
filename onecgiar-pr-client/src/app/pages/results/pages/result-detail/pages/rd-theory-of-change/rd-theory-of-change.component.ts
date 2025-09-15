@@ -39,9 +39,18 @@ export class RdTheoryOfChangeComponent implements OnInit {
   }
 
   GET_AllWithoutResults() {
-    this.api.resultsSE.GET_AllWithoutResults().subscribe(({ response }) => {
-      this.contributingInitiativesList = response;
-      this.changeDetectorRef.detectChanges();
+    this.api.resultsSE.GET_resultById().subscribe({
+      next: ({ response }) => {
+        this.api.dataControlSE.currentResult = response;
+        const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+        this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
+          this.contributingInitiativesList = response;
+          this.changeDetectorRef.detectChanges();
+        });
+      },
+      error: err => {
+        console.error(err);
+      }
     });
   }
 

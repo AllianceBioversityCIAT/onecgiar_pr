@@ -17,15 +17,8 @@ describe('InitAdminSectionComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        InitAdminSectionComponent,
-        DynamicPanelMenuComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        TooltipModule,
-        RouterTestingModule
-      ],
+      declarations: [InitAdminSectionComponent, DynamicPanelMenuComponent],
+      imports: [HttpClientTestingModule, TooltipModule, RouterTestingModule],
       providers: [
         {
           provide: DataControlService,
@@ -45,7 +38,7 @@ describe('InitAdminSectionComponent', () => {
 
       component.ngOnInit();
 
-      expect(spyDetailSectionTitle).toHaveBeenCalledWith('INIT Admin Module');
+      expect(spyDetailSectionTitle).toHaveBeenCalledWith('Results Monitoring Center');
     });
   });
 });

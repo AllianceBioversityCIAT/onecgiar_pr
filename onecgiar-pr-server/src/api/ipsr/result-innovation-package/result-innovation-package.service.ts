@@ -47,12 +47,17 @@ import { EvidencesRepository } from '../../results/evidences/evidences.repositor
 import { IpsrService } from '../ipsr.service';
 import { ResultIpSdgTargets } from '../innovation-pathway/entities/result-ip-sdg-targets.entity';
 import { VersioningService } from '../../versioning/versioning.service';
-import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import {
+  AppModuleIdEnum,
+  RoleEnum,
+} from '../../../shared/constants/role-type.enum';
 import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ClarisaSubnationalScope } from '../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { AdUserService, AdUserRepository } from '../../ad_users';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { VersionRepository } from '../../versioning/versioning.repository';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -97,6 +102,8 @@ export class ResultInnovationPackageService {
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
+    private readonly _roleByUserRepository?: RoleByUserRepository,
+    private readonly _versionRepository?: VersionRepository,
   ) {}
 
   async findUnitTime() {
@@ -1007,8 +1014,9 @@ export class ResultInnovationPackageService {
     const resultToUpdate = await this._resultRepository.find({
       where: { id: resultId },
     });
+    const currentResult = resultToUpdate?.[0];
 
-    if (!resultToUpdate) {
+    if (!currentResult) {
       return {
         response: { valid: false },
         message: 'The result was not found',
@@ -1016,12 +1024,46 @@ export class ResultInnovationPackageService {
       };
     }
 
+    if (this._roleByUserRepository) {
+      const hasPermission =
+        await this._roleByUserRepository.validationRolePermissions(
+          user.id,
+          currentResult.id,
+          [
+            RoleEnum.ADMIN,
+            RoleEnum.LEAD,
+            RoleEnum.CO_LEAD,
+            RoleEnum.COORDINATOR,
+          ],
+        );
+      if (!hasPermission) {
+        return {
+          response: {},
+          message: 'The user does not have the necessary role for this action.',
+          status: HttpStatus.UNAUTHORIZED,
+        };
+      }
+    }
+
+    if (this._versionRepository) {
+      const phase = await this._versionRepository.findOne({
+        where: { id: currentResult.version_id, is_active: true, status: true },
+      });
+      if (!phase) {
+        return {
+          response: currentResult.version_id,
+          message: 'The result belongs to an inactive or closed phase',
+          status: HttpStatus.CONFLICT,
+        };
+      }
+    }
+
     const resultByInnovationPackageToUpdate =
       await this._innovationByResultRepository.find({
         where: { result_innovation_package_id: resultId, is_active: true },
       });
 
-    const id = resultToUpdate[0].id;
+    const id = currentResult.id;
     const result_by_innovation_package_id =
       resultByInnovationPackageToUpdate[0].result_by_innovation_package_id;
 

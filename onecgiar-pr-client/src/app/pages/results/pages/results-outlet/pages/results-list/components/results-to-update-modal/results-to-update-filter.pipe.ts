@@ -14,7 +14,7 @@ export class ResultsToUpdateFilterPipe implements PipeTransform {
     const isP25 = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
 
     const canShow = (item: any): boolean => {
-      if (isP25) return this.api.shouldShowUpdate(item);
+      if (isP25) return this.api.shouldShowUpdate(item, this.api.dataControlSE.reportingCurrentPhase);
 
       if (this.api.rolesSE.isAdmin) return true;
       return Boolean(item?.role_id);

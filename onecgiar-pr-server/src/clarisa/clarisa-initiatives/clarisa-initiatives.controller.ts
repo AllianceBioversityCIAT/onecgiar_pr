@@ -9,12 +9,14 @@ export class ClarisaInitiativesController {
     private readonly clarisaInitiativesService: ClarisaInitiativesService,
   ) {}
 
-  @Get('get/all/without/result/:resultId')
+  @Get('get/all/without/result/:resultId/:portfolio')
   getAllInitiativesWithoutCurrentInitiative(
     @Param('resultId') resultId: number,
+    @Param('portfolio') portfolio?: string,
   ) {
     return this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(
       resultId,
+      portfolio,
     );
   }
 
@@ -23,13 +25,13 @@ export class ClarisaInitiativesController {
     return this.clarisaInitiativesService.findAll();
   }
 
-  @Get(':portfolio')
-  getByPortfolio(@Param('portfolio') portfolio: string) {
-    return this.clarisaInitiativesService.getByPortfolio(portfolio);
-  }
-
   @Get('entities')
   getInitiativesEntities() {
     return this.clarisaInitiativesService.getInitiativesEntitiesGrouped();
+  }
+
+  @Get(':portfolio')
+  getByPortfolio(@Param('portfolio') portfolio: string) {
+    return this.clarisaInitiativesService.getByPortfolio(portfolio);
   }
 }
