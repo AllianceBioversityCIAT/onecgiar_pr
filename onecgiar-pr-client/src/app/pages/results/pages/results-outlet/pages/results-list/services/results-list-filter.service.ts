@@ -44,8 +44,10 @@ export class ResultsListFilterService {
       ...initiatives,
       { attr: 'is_legacy', name: 'Pre-2022 results', id: 999, portfolio_id: 2 }
     ];
-    this.submittersOptionsOld.set([{ name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 }, ...initiatives]);
-    this.submittersOptions.set([{ name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 }, ...initiatives]);
+    this.submittersOptionsOld.set([
+      { name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 },
+      ...initiatives.sort((a, b) => a.initiative_id - b.initiative_id)
+    ]);
   }
 
   onSelectChip(option: any) {
