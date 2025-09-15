@@ -254,7 +254,15 @@ export class IpsrRepository
             r.is_replicated,
             r.is_discontinued,
             v.phase_name,
-            v.phase_year
+            v.phase_year,
+            (
+                SELECT
+                    cp.acronym
+                FROM
+                    clarisa_portfolios cp
+                WHERE
+                    cp.id = v.portfolio_id
+            ) AS portfolio
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id

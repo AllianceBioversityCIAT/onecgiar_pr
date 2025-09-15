@@ -9,12 +9,14 @@ export class ClarisaInitiativesController {
     private readonly clarisaInitiativesService: ClarisaInitiativesService,
   ) {}
 
-  @Get('get/all/without/result/:resultId')
+  @Get('get/all/without/result/:resultId/:portfolio')
   getAllInitiativesWithoutCurrentInitiative(
     @Param('resultId') resultId: number,
+    @Param('portfolio') portfolio?: string,
   ) {
     return this.clarisaInitiativesService.getAllInitiativesWithoutCurrentInitiative(
       resultId,
+      portfolio,
     );
   }
 

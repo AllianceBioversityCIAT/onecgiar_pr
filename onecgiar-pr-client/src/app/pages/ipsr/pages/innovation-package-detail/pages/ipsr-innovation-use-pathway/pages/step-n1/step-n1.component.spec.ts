@@ -24,6 +24,7 @@ import { FeedbackValidationDirective } from '../../../../../../../../shared/dire
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { Router } from '@angular/router';
+import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 jest.useFakeTimers();
 
@@ -127,7 +128,7 @@ describe('StepN1Component', () => {
         SaveButtonComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule, CdkCopyToClipboard],
+      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule, CdkCopyToClipboard, TermPipe],
       providers: [
         {
           provide: ApiService,
