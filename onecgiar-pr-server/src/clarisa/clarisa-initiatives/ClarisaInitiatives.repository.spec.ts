@@ -22,11 +22,12 @@ describe('ClarisaInitiativesRepository', () => {
         .spyOn(repository as any, 'find')
         .mockResolvedValue([{ id: 1 } as ClarisaInitiative]);
       const res = await repository.getAllInitiatives();
-      expect(spy).toHaveBeenCalledWith({
-        where: { active: true },
-        relations: { obj_cgiar_entity_type: true },
-        order: { official_code: 'ASC' },
-      });
+      expect(spy).toHaveBeenCalled();
+      const args = (spy as jest.Mock).mock.calls[0][0];
+      expect(args.order).toEqual({ official_code: 'ASC' });
+      expect(args.relations).toEqual({ obj_cgiar_entity_type: true });
+      expect(args.where.active).toBe(true);
+      expect('cgiar_entity_type_id' in args.where).toBe(true);
       expect(res).toEqual([{ id: 1 }]);
     });
   });
@@ -62,7 +63,6 @@ describe('ClarisaInitiativesRepository', () => {
       const res = await repository.getAllInitiativesWithoutCurrentInitiative(5);
       expect(spy).toHaveBeenCalled();
       const args = (spy as jest.Mock).mock.calls[0];
-      // second arg are parameters array
       expect(args[1]).toEqual([5]);
       expect(res).toEqual([{ id: 9 }]);
     });
