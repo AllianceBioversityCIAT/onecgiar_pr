@@ -2,8 +2,7 @@
 
 .local_container {
   padding: 30px 30px;
-  margin: 20px 20px 50px 20px !important;
-  overflow: hidden;
+  margin: 20px auto 50px auto !important;
   transition: all 0.3s ease-in-out;
 
   .header-container {
@@ -259,7 +258,6 @@
   box-shadow:
     0 1px 3px 0 rgba(var(--pr-color-black-rgb), 0.1),
     0 1px 2px 0 rgba(var(--pr-color-black-rgb), 0.06);
-  overflow: hidden;
   position: relative;
 
   .counter {
