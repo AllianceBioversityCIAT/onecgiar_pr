@@ -18,3 +18,21 @@
     }
   }
 }
+
+.text_mining_container {
+  display: flex;
+  justify-content: flex-end;
+  width: fit-content;
+  position: relative;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 10px;
+  border: 1px dashed var(--pr-color-yellow-300);
+}
+
+.under_construction_icon {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  height: 20px;
+}

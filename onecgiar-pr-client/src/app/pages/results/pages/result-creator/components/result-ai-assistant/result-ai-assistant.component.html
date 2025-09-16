@@ -77,7 +77,9 @@
             </div>
           </div>
         } @else {
-          <div class="w-full analyze-result-content" style="flex-direction: column">
+          <div
+            class="w-full analyze-result-content"
+            style="flex-direction: column; overflow-y: auto; max-height: calc(70vh - 135px); min-height: calc(70vh - 135px)">
             @for (item of createResultManagementService.items(); track $index) {
               <app-result-ai-item
                 [item]="item"

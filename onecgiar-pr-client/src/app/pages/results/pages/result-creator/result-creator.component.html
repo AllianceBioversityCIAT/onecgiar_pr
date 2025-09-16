@@ -29,11 +29,14 @@
       "></div>
     <div class="report_container">
       <!-- Ai button -->
-      <div style="display: flex; justify-content: flex-end; width: fit-content">
+      <div class="text_mining_container">
+        <img src="assets/work-in-progress.png" alt="under construction icon" class="under_construction_icon" />
+
         <app-pr-button
           text="Use AI assistant for reporting"
           icon="auto_awesome"
           [reverse]="true"
+          [verticalMargin]="0"
           (click)="this.createResultManagementService.showModal.set(true)"></app-pr-button>
       </div>
 
