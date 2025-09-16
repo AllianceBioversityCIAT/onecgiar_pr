@@ -18,6 +18,5 @@ export class ResultsComponent implements OnInit {
     this.api.dataControlSE.detailSectionTitle('Results');
     this.ipsrDataControlSE.inIpsr = false;
     this.api.rolesSE.platformIsClosed = this.api.globalVariablesSE.get?.result_is_closed;
-    this.api.rolesSE.validateReadOnly();
   }
 }

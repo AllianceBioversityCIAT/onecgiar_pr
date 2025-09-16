@@ -29,15 +29,27 @@
           labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
           [required]="false"></app-pr-field-header>
 
-        <p-multiselect
-          [filter]="false"
-          [options]="this.resultsListFilterSE.submittersOptions()"
-          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
-          [optionLabel]="this.isAdmin ? 'official_code' : 'name'"
-          placeholder="Select submitter(s)"
-          [maxSelectedLabels]="1"
-          [filter]="true"
-          [style]="{ width: '245px' }" />
+        @if (this.isAdmin) {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+            optionLabel="official_code"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        } @else {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptions()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+            optionLabel="name"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        }
       </div>
 
       <div>
@@ -117,15 +129,27 @@
         labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
         [required]="false"></app-pr-field-header>
 
-      <p-multiselect
-        [filter]="false"
-        [options]="this.resultsListFilterSE.submittersOptions()"
-        [(ngModel)]="resultsListFilterSE.selectedSubmitters"
-        [optionLabel]="this.isAdmin ? 'official_code' : 'name'"
-        placeholder="Select submitter(s)"
-        [maxSelectedLabels]="6"
-        [filter]="true"
-        [style]="{ width: '100%' }" />
+      @if (this.isAdmin) {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+          optionLabel="official_code"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      } @else {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptions()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+          optionLabel="name"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      }
     </div>
 
     <div>

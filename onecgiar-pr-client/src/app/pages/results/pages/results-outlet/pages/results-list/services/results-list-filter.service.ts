@@ -25,10 +25,15 @@ export class ResultsListFilterService {
   phasesOptions = signal([]);
   submittersOptionsOld = signal([]);
   submittersOptions = signal([]);
+  submittersOptionsAdmin = signal([]);
+  submittersOptionsAdminOld = signal([]);
+
   statusOptions = signal([]);
 
   selectedPhases = signal([]);
   selectedSubmitters = signal([]);
+  selectedSubmittersAdmin = signal([]);
+
   selectedIndicatorCategories = signal([]);
   selectedStatus = signal([]);
   text_to_search = signal('');

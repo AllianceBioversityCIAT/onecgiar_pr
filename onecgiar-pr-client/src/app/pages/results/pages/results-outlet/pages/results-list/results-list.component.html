@@ -1,3 +1,6 @@
+@let selectedSubmittersValue =
+  this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters();
+
 <div class="local_container">
   @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
 
@@ -29,7 +32,7 @@
           : this.resultsListFilterSE.text_to_search()
           : this.combine
           : this.resultsListFilterSE.selectedPhases()
-          : this.resultsListFilterSE.selectedSubmitters()
+          : selectedSubmittersValue
           : this.resultsListFilterSE.selectedIndicatorCategories()
           : this.resultsListFilterSE.selectedStatus()
     "
@@ -42,7 +45,7 @@
             : this.resultsListFilterSE.text_to_search()
             : this.combine
             : this.resultsListFilterSE.selectedPhases()
-            : this.resultsListFilterSE.selectedSubmitters()
+            : selectedSubmittersValue
             : this.resultsListFilterSE.selectedIndicatorCategories()
             : this.resultsListFilterSE.selectedStatus()
         )?.length)
@@ -55,7 +58,7 @@
           : this.resultsListFilterSE.text_to_search()
           : this.combine
           : this.resultsListFilterSE.selectedPhases()
-          : this.resultsListFilterSE.selectedSubmitters()
+          : selectedSubmittersValue
           : this.resultsListFilterSE.selectedIndicatorCategories()
           : this.resultsListFilterSE.selectedStatus()
       )?.length
@@ -139,7 +142,7 @@
               : this.resultsListFilterSE.text_to_search()
               : this.combine
               : this.resultsListFilterSE.selectedPhases()
-              : this.resultsListFilterSE.selectedSubmitters()
+              : selectedSubmittersValue
               : this.resultsListFilterSE.selectedIndicatorCategories()
               : this.resultsListFilterSE.selectedStatus()
           )?.length
@@ -167,7 +170,7 @@
           : this.resultsListFilterSE.text_to_search()
           : this.combine
           : this.resultsListFilterSE.selectedPhases()
-          : this.resultsListFilterSE.selectedSubmitters()
+          : selectedSubmittersValue
           : this.resultsListFilterSE.selectedIndicatorCategories()
           : this.resultsListFilterSE.selectedStatus()
       )?.length
@@ -180,7 +183,7 @@
           : this.resultsListFilterSE.text_to_search()
           : this.combine
           : this.resultsListFilterSE.selectedPhases()
-          : this.resultsListFilterSE.selectedSubmitters()
+          : selectedSubmittersValue
           : this.resultsListFilterSE.selectedIndicatorCategories()
           : this.resultsListFilterSE.selectedStatus()
       )?.length

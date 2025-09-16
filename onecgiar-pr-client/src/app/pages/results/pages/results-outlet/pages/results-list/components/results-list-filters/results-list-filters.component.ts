@@ -42,6 +42,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
 
     if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
     if (this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
+    if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
@@ -73,11 +74,15 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   }
 
   getAllInitiatives() {
-    console.log('sisas');
     if (!this.api.rolesSE.isAdmin) return;
 
-    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      this.resultsListFilterSE.submittersOptionsOld.set(response);
+    this.api.resultsSE.GET_AllInitiatives().subscribe({
+      next: ({ response }) => {
+        this.resultsListFilterSE.submittersOptionsAdminOld.set(response);
+      },
+      error: err => {
+        console.error(err);
+      }
     });
   }
 
@@ -99,8 +104,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     );
 
     this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
 
     this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptions()));
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdmin()));
   }
 
   private buildPhaseOptions(response: any[]) {
@@ -125,6 +132,13 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
 
   onSelectPhases() {
     this.resultsListFilterSE.selectedSubmitters.set([]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+
+    this.resultsListFilterSE.submittersOptionsAdmin.set(
+      this.resultsListFilterSE
+        .submittersOptionsAdminOld()
+        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+    );
 
     this.resultsListFilterSE.submittersOptions.set(
       this.resultsListFilterSE
