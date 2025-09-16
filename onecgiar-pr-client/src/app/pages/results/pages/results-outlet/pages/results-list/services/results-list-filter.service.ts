@@ -25,10 +25,15 @@ export class ResultsListFilterService {
   phasesOptions = signal([]);
   submittersOptionsOld = signal([]);
   submittersOptions = signal([]);
+  submittersOptionsAdmin = signal([]);
+  submittersOptionsAdminOld = signal([]);
+
   statusOptions = signal([]);
 
   selectedPhases = signal([]);
   selectedSubmitters = signal([]);
+  selectedSubmittersAdmin = signal([]);
+
   selectedIndicatorCategories = signal([]);
   selectedStatus = signal([]);
   text_to_search = signal('');
@@ -44,8 +49,10 @@ export class ResultsListFilterService {
       ...initiatives,
       { attr: 'is_legacy', name: 'Pre-2022 results', id: 999, portfolio_id: 2 }
     ];
-    this.submittersOptionsOld.set([{ name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 }, ...initiatives]);
-    this.submittersOptions.set([{ name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 }, ...initiatives]);
+    this.submittersOptionsOld.set([
+      { name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 },
+      ...initiatives.sort((a, b) => a.initiative_id - b.initiative_id)
+    ]);
   }
 
   onSelectChip(option: any) {

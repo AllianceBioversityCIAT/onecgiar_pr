@@ -16,7 +16,7 @@
           [options]="this.resultsListFilterSE.phasesOptions()"
           [(ngModel)]="resultsListFilterSE.selectedPhases"
           optionLabel="name"
-          (onChange)="onSelectPhases($event)"
+          (onChange)="onSelectPhases()"
           placeholder="Select phase"
           [maxSelectedLabels]="1"
           [style]="{ width: '245px' }" />
@@ -29,16 +29,27 @@
           labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
           [required]="false"></app-pr-field-header>
 
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.submittersOptions()"
-          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
-          optionLabel="name"
-          (onChange)="onSelectSubmitters($event)"
-          placeholder="Select submitter(s)"
-          [maxSelectedLabels]="1"
-          [style]="{ width: '245px' }" />
+        @if (this.isAdmin) {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+            optionLabel="official_code"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        } @else {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptions()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+            optionLabel="name"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        }
       </div>
 
       <div>
@@ -94,24 +105,6 @@
   <p>Filter your table data by applying custom criteria.</p>
 
   <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
-    <!-- <div>
-      <app-pr-field-header
-        label="Portfolio"
-        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-        [required]="false"></app-pr-field-header>
-
-      <p-multiselect
-        [filter]="false"
-        [showHeader]="false"
-        [options]="this.portfolioList()"
-        [(ngModel)]="resultsListFilterSE.selectedPortfolios"
-        (onChange)="onSelectPortfolios($event)"
-        optionLabel="acronym"
-        placeholder="Select portfolio"
-        [maxSelectedLabels]="3"
-        [style]="{ width: '100%' }" />
-    </div> -->
-
     <div>
       <app-pr-field-header
         label="Phase"
@@ -123,7 +116,7 @@
         [showHeader]="false"
         [options]="this.resultsListFilterSE.phasesOptions()"
         [(ngModel)]="resultsListFilterSE.selectedPhases"
-        (onChange)="onSelectPhases($event)"
+        (onChange)="onSelectPhases()"
         optionLabel="name"
         placeholder="Select phase"
         [maxSelectedLabels]="1"
@@ -136,16 +129,27 @@
         labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
         [required]="false"></app-pr-field-header>
 
-      <p-multiselect
-        [filter]="false"
-        [showHeader]="false"
-        [options]="this.resultsListFilterSE.submittersOptions()"
-        [(ngModel)]="resultsListFilterSE.selectedSubmitters"
-        (onChange)="onSelectSubmitters($event)"
-        optionLabel="name"
-        placeholder="Select submitter(s)"
-        [maxSelectedLabels]="6"
-        [style]="{ width: '100%' }" />
+      @if (this.isAdmin) {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+          optionLabel="official_code"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      } @else {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptions()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+          optionLabel="name"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      }
     </div>
 
     <div>
@@ -189,10 +193,5 @@
         [maxSelectedLabels]="3"
         [style]="{ width: '100%' }" />
     </div>
-
-    <!-- <div class="drawer_footer">
-      <app-pr-button (click)="visible.set(false)" text="Cancel" [verticalMargin]="0" colorType="secondary" />
-      <app-pr-button text="Apply filters" [verticalMargin]="0" />
-    </div> -->
   </div>
 </p-drawer>

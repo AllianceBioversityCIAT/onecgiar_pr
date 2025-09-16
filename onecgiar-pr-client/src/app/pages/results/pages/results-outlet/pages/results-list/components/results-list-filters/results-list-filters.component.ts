@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges } from '@angular/core';
 import { ResultsListService } from '../../services/results-list.service';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -14,6 +14,7 @@ import { BadgeModule } from 'primeng/badge';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-results-list-filters',
@@ -33,7 +34,7 @@ import { InputTextModule } from 'primeng/inputtext';
     InputTextModule
   ]
 })
-export class ResultsListFiltersComponent implements OnInit {
+export class ResultsListFiltersComponent implements OnInit, OnChanges {
   gettingReport = signal(false);
   visible = signal(false);
   filtersCount = computed(() => {
@@ -41,6 +42,7 @@ export class ResultsListFiltersComponent implements OnInit {
 
     if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
     if (this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
+    if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
@@ -51,6 +53,7 @@ export class ResultsListFiltersComponent implements OnInit {
     if (this.filtersCount() === 0) return 'See all filters';
     return `See all filters (${this.filtersCount()})`;
   });
+  @Input() isAdmin = false;
 
   constructor(
     public resultsListService: ResultsListService,
@@ -64,38 +67,61 @@ export class ResultsListFiltersComponent implements OnInit {
     this.getResultStatus();
   }
 
-  getData() {
-    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
-      this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
-        next: ({ response }) => {
-          this.resultsListFilterSE.phasesOptions.set(
-            response.map(item => ({
-              ...item,
-              selected: item.status,
-              name: item.phase_name + (item.status ? ' (Open)' : ' (Closed)'),
-              attr: item.phase_name + (item.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : '')
-            }))
-          );
-          this.resultsListFilterSE.phasesOptionsOld.set(this.resultsListFilterSE.phasesOptions());
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isAdmin']) {
+      this.getAllInitiatives();
+    }
+  }
 
-          this.resultsListFilterSE.selectedPhases.set(
-            this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
-          );
+  getAllInitiatives() {
+    if (!this.api.rolesSE.isAdmin) return;
 
-          this.resultsListFilterSE.submittersOptions.set(
-            this.resultsListFilterSE
-              .submittersOptionsOld()
-              .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-          );
-
-          this.resultsListFilterSE.selectedSubmitters.set(
-            this.resultsListFilterSE
-              .submittersOptions()
-              .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-          );
-        }
-      });
+    this.api.resultsSE.GET_AllInitiatives().subscribe({
+      next: ({ response }) => {
+        this.resultsListFilterSE.submittersOptionsAdminOld.set(response);
+      },
+      error: err => {
+        console.error(err);
+      }
     });
+  }
+
+  getData() {
+    this.api.dataControlSE
+      .getCurrentPhases()
+      .pipe(switchMap(() => this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING)))
+      .subscribe({
+        next: ({ response }) => this.handleVersioningResponse(response)
+      });
+  }
+
+  private handleVersioningResponse(response: any[]) {
+    this.resultsListFilterSE.phasesOptions.set(this.buildPhaseOptions(response));
+    this.resultsListFilterSE.phasesOptionsOld.set(this.resultsListFilterSE.phasesOptions());
+
+    this.resultsListFilterSE.selectedPhases.set(
+      this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
+    );
+
+    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+
+    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptions()));
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdmin()));
+  }
+
+  private buildPhaseOptions(response: any[]) {
+    return response.map(item => ({
+      ...item,
+      selected: item.status,
+      name: item.phase_name + (item.status ? ' (Open)' : ' (Closed)'),
+      attr: item.phase_name + (item.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : '')
+    }));
+  }
+
+  private filterOptionsBySelectedPhases<T extends { portfolio_id: any }>(options: T[]): T[] {
+    const selected = this.resultsListFilterSE.selectedPhases();
+    return options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
   }
 
   getResultStatus() {
@@ -104,37 +130,21 @@ export class ResultsListFiltersComponent implements OnInit {
     });
   }
 
-  // onSelectPortfolios(event: any) {
-  //   this.resultsListFilterSE.selectedPhases.set([]);
-  //   this.resultsListFilterSE.selectedSubmitters.set([]);
-
-  //   this.resultsListFilterSE.phasesOptions.set(
-  //     this.resultsListFilterSE
-  //       .phasesOptionsOld()
-  //       .filter(item => this.resultsListFilterSE.selectedPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-  //   );
-
-  //   this.resultsListFilterSE.submittersOptions.set(
-  //     this.resultsListFilterSE
-  //       .submittersOptionsOld()
-  //       .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-  //   );
-  // }
-
-  onSelectPhases(event: any) {
+  onSelectPhases() {
     this.resultsListFilterSE.selectedSubmitters.set([]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+
+    this.resultsListFilterSE.submittersOptionsAdmin.set(
+      this.resultsListFilterSE
+        .submittersOptionsAdminOld()
+        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+    );
 
     this.resultsListFilterSE.submittersOptions.set(
       this.resultsListFilterSE
         .submittersOptionsOld()
         .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
     );
-  }
-
-  onSelectSubmitters(event: any) {
-    if (event.itemValue.id == 0) {
-      this.resultsListFilterSE.selectedSubmitters.set(this.resultsListFilterSE.submittersOptions().filter(option => option.id != 0));
-    }
   }
 
   onDownLoadTableAsExcel() {
