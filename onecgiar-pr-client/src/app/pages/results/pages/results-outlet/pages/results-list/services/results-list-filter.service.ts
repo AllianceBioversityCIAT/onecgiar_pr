@@ -90,6 +90,7 @@ export class ResultsListFilterService {
   clearAllNewFilters() {
     this.selectedPhases.set([]);
     this.selectedSubmitters.set([]);
+    this.selectedSubmittersAdmin.set([]);
     this.selectedIndicatorCategories.set([]);
     this.selectedStatus.set([]);
     this.text_to_search.set('');

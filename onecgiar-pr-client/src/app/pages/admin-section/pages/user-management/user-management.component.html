@@ -25,7 +25,7 @@
         <div class="filters-row">
           <!-- User search -->
           <div class="search-container">
-            <label class="search-label" for="search-user-input">Search by user:</label>
+            <label class="search-label" for="search-user-input" style="line-height: 20px; margin-bottom: 0">Search by user:</label>
             <p-iconfield style="width: 100%">
               <p-inputicon styleClass="pi pi-search" />
               <input
@@ -35,7 +35,7 @@
                 [value]="searchText()"
                 (input)="onSearchInputChange($event)"
                 class="search-field"
-                style="height: 38px; width: 100%"
+                style="height: 36px; width: 100%"
                 id="search-user-input" />
             </p-iconfield>
           </div>
