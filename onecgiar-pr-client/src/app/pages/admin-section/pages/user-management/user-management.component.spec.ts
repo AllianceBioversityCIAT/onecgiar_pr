@@ -63,6 +63,12 @@ describe('UserManagementComponent', () => {
 
     fixture = TestBed.createComponent(UserManagementComponent);
     component = fixture.componentInstance;
+
+    // Mock the userTable ViewChild
+    component.userTable = {
+      reset: jest.fn()
+    } as any;
+
     fixture.detectChanges();
   });
 
