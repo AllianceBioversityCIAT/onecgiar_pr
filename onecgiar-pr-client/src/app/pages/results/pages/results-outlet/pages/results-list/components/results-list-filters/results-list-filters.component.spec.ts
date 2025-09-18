@@ -542,6 +542,19 @@ describe('ResultsListFiltersComponent', () => {
       ]);
     });
 
+    it('should update submittersOptions to filtered options by selected phases', () => {
+      // Set some initial submitters options
+      mockResultsListFilterService.submittersOptions.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
+
+      component.clearAllNewFilters();
+
+      // Should update available submitters options to only those with portfolio_id = 1
+      expect(mockResultsListFilterService.submittersOptions()).toEqual([
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
+      ]);
+    });
+
     it('should reset selectedSubmittersAdmin to filtered options by selected phases', () => {
       // Set some initial selected admin submitters
       mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
@@ -550,6 +563,16 @@ describe('ResultsListFiltersComponent', () => {
 
       // Should only select admin submitters with portfolio_id = 1 (matching selected phases)
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
+    });
+
+    it('should update submittersOptionsAdmin to filtered options by selected phases', () => {
+      // Set some initial admin submitters options
+      mockResultsListFilterService.submittersOptionsAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
+
+      component.clearAllNewFilters();
+
+      // Should update available admin submitters options to only those with portfolio_id = 1
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
 
     it('should clear selectedIndicatorCategories', () => {
@@ -620,6 +643,10 @@ describe('ResultsListFiltersComponent', () => {
       mockResultsListFilterService.selectedStatus.set([{ id: 1, name: 'Draft' }]);
       mockResultsListFilterService.text_to_search.set('test search');
 
+      // Set some initial options that should be filtered
+      mockResultsListFilterService.submittersOptions.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
+      mockResultsListFilterService.submittersOptionsAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
+
       component.clearAllNewFilters();
 
       // Verify all filters are reset appropriately
@@ -634,6 +661,13 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([]);
       expect(mockResultsListFilterService.text_to_search()).toBe('');
+
+      // Verify that available options are also updated
+      expect(mockResultsListFilterService.submittersOptions()).toEqual([
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
+      ]);
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
   });
 });

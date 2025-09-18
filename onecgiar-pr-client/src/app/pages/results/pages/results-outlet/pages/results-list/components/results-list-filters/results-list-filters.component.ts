@@ -126,8 +126,15 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     this.resultsListFilterSE.selectedPhases.set(
       this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
+
+    // Update available submitter options based on the reset phases
+    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+
+    // Set selected submitters to match the filtered options
     this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
     this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+
     this.resultsListFilterSE.selectedIndicatorCategories.set([]);
     this.resultsListFilterSE.selectedStatus.set([]);
     this.resultsListFilterSE.text_to_search.set('');
