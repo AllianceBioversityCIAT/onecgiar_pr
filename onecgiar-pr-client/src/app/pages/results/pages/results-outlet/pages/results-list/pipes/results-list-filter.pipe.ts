@@ -1,5 +1,4 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { ResultsListFilterService } from '../services/results-list-filter.service';
 
 @Pipe({
   name: 'resultsListFilter',
@@ -8,8 +7,6 @@ import { ResultsListFilterService } from '../services/results-list-filter.servic
 export class ResultsListFilterPipe implements PipeTransform {
   list: any[];
   word: string;
-
-  constructor(private readonly resultsListFilterSE: ResultsListFilterService) {}
 
   transform(
     resultList: any[],
@@ -21,7 +18,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     selectedStatus: any[]
   ): any {
     return this.convertList(
-      // this.filterByPhase(this.filterByResultLevelOptions(this.filterByInitsAndYear(this.filterByText(resultList, word)))),
       this.filterByPhase(
         this.filterBySubmitters(
           this.filterByIndicatorCategories(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedIndicatorCategories),

@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges } from '@angular/core';
-import { ResultsListService } from '../../services/results-list.service';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -41,8 +40,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     let count = 0;
 
     if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
-    if (this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
-    if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
+    if (this.isAdmin && this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
+    if (!this.isAdmin && this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
@@ -56,7 +55,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   @Input() isAdmin = false;
 
   constructor(
-    public resultsListService: ResultsListService,
     public resultsListFilterSE: ResultsListFilterService,
     public api: ApiService,
     private exportTablesSE: ExportTablesService
@@ -74,7 +72,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   }
 
   getAllInitiatives() {
-    if (!this.api.rolesSE.isAdmin) return;
+    if (!this.isAdmin) return;
 
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
@@ -122,6 +120,17 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   private filterOptionsBySelectedPhases<T extends { portfolio_id: any }>(options: T[]): T[] {
     const selected = this.resultsListFilterSE.selectedPhases();
     return options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
+  }
+
+  clearAllNewFilters() {
+    this.resultsListFilterSE.selectedPhases.set(
+      this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
+    );
+    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    this.resultsListFilterSE.selectedIndicatorCategories.set([]);
+    this.resultsListFilterSE.selectedStatus.set([]);
+    this.resultsListFilterSE.text_to_search.set('');
   }
 
   getResultStatus() {
