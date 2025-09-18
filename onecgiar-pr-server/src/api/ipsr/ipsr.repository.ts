@@ -630,6 +630,134 @@ export class IpsrRepository
     }
   }
 
+  async getAllInnovationPackagesFiltered(
+    filters?: {
+      initiativeCode?: string;
+      versionId?: number | number[];
+      submitterId?: number | number[];
+      resultTypeId?: number | number[];
+      portfolioId?: number | number[];
+      statusId?: number | number[];
+    },
+    pagination?: { limit?: number; offset?: number },
+  ) {
+    const baseQuery = `
+        SELECT
+            DISTINCT r.id,
+            r.result_code,
+            r.title,
+            r.reported_year_id AS reported_year,
+            rt.name AS result_type,
+            rl.name AS result_level_name,
+            rt.id AS result_type_id,
+            r.created_date,
+            (
+                SELECT ci2.official_code FROM clarisa_initiatives ci2 WHERE ci2.id = rbi.inititiative_id
+            ) AS official_code,
+            ci.id AS submitter_id,
+            rbi.inititiative_id AS initiative_id,
+            rs.status_name AS status,
+            r.reported_year_id,
+            if(y.\`year\` = r.reported_year_id, 'New', '') as is_new,
+            v.phase_year,
+            r.result_level_id,
+            r.no_applicable_partner,
+            if(r.geographic_scope_id in (3, 4), 3, r.geographic_scope_id ) as geographic_scope_id,
+            r.legacy_id,
+            (
+                SELECT CONCAT(u.first_name, ' ', u.last_name) FROM users u WHERE u.id = r.created_by
+            ) AS created_by,
+            u.first_name as create_first_name,
+            u.last_name as create_last_name,
+            r.version_id,
+            CONCAT(v.phase_name, ' - ', cp.acronym) as phase_name,
+            v.status as phase_status,
+            r.in_qa as inQA,
+            ci.portfolio_id,
+            cp.name as portfolio_name,
+            cp.acronym as acronym
+        FROM
+            result r
+            LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            LEFT JOIN result_by_innovation_package ibr ON ibr.result_innovation_package_id = r.id
+            LEFT JOIN result_type rt ON rt.id = r.result_type_id
+            INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+            LEFT JOIN users u on u.id = r.created_by
+            INNER JOIN version v ON v.id = r.version_id
+            INNER JOIN result_level rl on rl.id = r.result_level_id
+            INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
+            LEFT JOIN clarisa_portfolios cp ON ci.portfolio_id = cp.id
+            LEFT JOIN \`year\` y ON y.active > 0
+        WHERE
+            r.is_active = 1
+            AND r.id = ibr.result_innovation_package_id
+            AND rbi.is_active = 1
+            AND rbi.initiative_role_id = 1`;
+
+    const params: (string | number)[] = [];
+    const where: string[] = [];
+
+    const addFilter = (clause: string, values: (number | string)[]) => {
+      where.push(clause);
+      params.push(...values);
+    };
+
+    const addIn = (field: string, values?: number | number[]) => {
+      if (values === undefined || values === null) return;
+      const arr = Array.isArray(values) ? values : [values];
+      if (!arr.length) return;
+      const placeholders = arr.map(() => '?').join(',');
+      where.push(`AND ${field} IN (${placeholders})`);
+      params.push(...arr);
+    };
+
+    try {
+      if (filters?.initiativeCode) {
+        addFilter('AND ci.official_code = ?', [filters.initiativeCode]);
+      }
+      addIn('r.version_id', filters?.versionId);
+      addIn('ci.id', filters?.submitterId);
+      addIn('rt.id', filters?.resultTypeId);
+      addIn('ci.portfolio_id', filters?.portfolioId);
+      addIn('r.status_id', filters?.statusId);
+
+      const limit =
+        pagination?.limit && pagination.limit > 0
+          ? pagination.limit
+          : undefined;
+      const offset =
+        limit !== undefined &&
+        pagination?.offset !== undefined &&
+        pagination.offset >= 0
+          ? pagination.offset
+          : undefined;
+
+      const orderClause = ` ORDER BY r.result_code ASC`;
+      const paginatedClause =
+        limit !== undefined
+          ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
+          : '';
+
+      const queryData = `${baseQuery} ${where.join(' ')}${orderClause}${paginatedClause};`;
+      const results = await this.query(queryData, params);
+
+      if (limit !== undefined) {
+        const countQuery = `SELECT COUNT(1) as total FROM (${baseQuery} ${where.join(' ')}) as sub`;
+        const totalRows = await this.query(countQuery, params);
+        const total = totalRows?.[0]?.total ?? 0;
+        return { results, total };
+      }
+
+      return { results, total: results.length };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
   async getStepTwoOne(resultId: number) {
     const query = `
         SELECT

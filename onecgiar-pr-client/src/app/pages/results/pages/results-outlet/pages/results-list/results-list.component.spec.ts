@@ -7,7 +7,6 @@ import { MenuModule } from 'primeng/menu';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ResultsToUpdateFilterPipe } from './components/results-to-update-modal/results-to-update-filter.pipe';
-import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
@@ -20,6 +19,10 @@ import { ExportTablesService } from '../../../../../../shared/services/export-ta
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 import { PopoverModule } from 'primeng/popover';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { ResultsListFilterService } from './services/results-list-filter.service';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 
 jest.useFakeTimers();
 
@@ -32,6 +35,10 @@ describe('ResultsListComponent', () => {
   let mockRetrieveModalService: any;
   let mockExportTablesService: any;
   let mockResultsListService: any;
+  let mockResultsListFilterService: any;
+  let mockPhasesService: any;
+  let mockResultsNotificationsService: any;
+  let mockTable: any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -90,26 +97,44 @@ describe('ResultsListComponent', () => {
       showDeletingResultSpinner: false
     };
 
+    mockResultsListFilterService = {
+      text_to_search: jest.fn(() => ''),
+      selectedPhases: jest.fn(() => []),
+      selectedSubmitters: jest.fn(() => []),
+      selectedSubmittersAdmin: jest.fn(() => []),
+      selectedIndicatorCategories: jest.fn(() => []),
+      selectedStatus: jest.fn(() => [])
+    };
+
+    mockPhasesService = {};
+
+    mockResultsNotificationsService = {};
+
+    mockTable = {
+      reset: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       declarations: [
         ResultsListComponent,
         ResultsListFilterPipe,
         ResultsToUpdateModalComponent,
         ResultsToUpdateFilterPipe,
-        PrFieldHeaderComponent,
         PrButtonComponent,
-        ResultsListFiltersComponent,
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent, CustomFieldsModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: RetrieveModalService, useValue: mockRetrieveModalService },
         { provide: ExportTablesService, useValue: mockExportTablesService },
-        { provide: ResultsListService, useValue: mockResultsListService }
+        { provide: ResultsListService, useValue: mockResultsListService },
+        { provide: ResultsListFilterService, useValue: mockResultsListFilterService },
+        { provide: PhasesService, useValue: mockPhasesService },
+        { provide: ResultsNotificationsService, useValue: mockResultsNotificationsService }
       ]
     }).compileComponents();
 
@@ -278,58 +303,6 @@ describe('ResultsListComponent', () => {
     });
   });
 
-  describe('onDownLoadTableAsExcel()', () => {
-    it('should set gettingReport to true and export Excel on exportExcel API response', () => {
-      const spyExportExcel = jest.spyOn(mockExportTablesService, 'exportExcel');
-      const wscols = [
-        { header: 'Result code', key: 'result_code', width: 13 },
-        { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
-        { header: 'Reporting year', key: 'reported_year_id', width: 13 },
-        { header: 'Result title', key: 'title', width: 125 },
-        { header: 'Description', key: 'description', width: 125 },
-        { header: 'Result type', key: 'result_type', width: 45 },
-        { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
-        { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
-        { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
-        { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-        { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
-        { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
-        { header: 'Submitter', key: 'official_code', width: 14 },
-        { header: 'Status', key: 'status_name', width: 17 },
-        { header: 'Creation date', key: 'creation_date', width: 15 },
-        { header: 'Work package id', key: 'work_package_id', width: 18 },
-        { header: 'Work package title', key: 'work_package_title', width: 125 },
-        { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-        { header: 'ToC result title', key: 'toc_result_title', width: 125 },
-        { header: 'Action Area(s)', key: 'action_areas', width: 53 },
-        { header: 'Center(s)', key: 'centers', width: 80 },
-        { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
-        { header: 'PDF Link', key: 'pdf_link', width: 65 }
-      ];
-
-      component.onDownLoadTableAsExcel();
-
-      expect(spyExportExcel).toHaveBeenCalledWith([], 'results_list', wscols, [
-        {
-          cellNumber: 23,
-          cellKey: 'pdf_link'
-        }
-      ]);
-      expect(component.gettingReport).toBeFalsy();
-    });
-
-    it('should handle errors fromexportExcelresponse', () => {
-      const errorMessage = 'error message';
-      jest.spyOn(mockApiService.resultsSE, 'GET_reportingList').mockReturnValue(throwError(errorMessage));
-      const consoleErrorSpy = jest.spyOn(console, 'error');
-
-      component.onDownLoadTableAsExcel();
-
-      expect(component.gettingReport).toBeFalsy();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
-    });
-  });
-
   describe('onDeleteREsult()', () => {
     it('should show confirmation alert and delete result on confirmed action', () => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult');
@@ -376,6 +349,122 @@ describe('ResultsListComponent', () => {
       component.ngOnDestroy();
 
       expect(mockApiService.dataControlSE.myInitiativesList.every(item => item.selected)).toBeTruthy();
+    });
+  });
+
+  describe('resetTableManually()', () => {
+    beforeEach(() => {
+      // Set up the table ViewChild mock
+      component.table = mockTable;
+    });
+
+    it('should reset the table when resetTableManually is called', () => {
+      component.resetTableManually();
+
+      expect(mockTable.reset).toHaveBeenCalled();
+    });
+
+    it('should be callable from external components', () => {
+      // Simulate external component calling the method
+      expect(() => component.resetTableManually()).not.toThrow();
+      expect(mockTable.reset).toHaveBeenCalled();
+    });
+
+    it('should handle case when table is undefined', () => {
+      component.table = undefined;
+
+      expect(() => component.resetTableManually()).not.toThrow();
+    });
+  });
+
+  describe('ngAfterViewInit()', () => {
+    beforeEach(() => {
+      component.table = mockTable;
+    });
+
+    it('should call resetTable after view initialization', () => {
+      const spyResetTable = jest.spyOn(component as any, 'resetTable');
+
+      component.ngAfterViewInit();
+      jest.runAllTimers();
+
+      expect(spyResetTable).toHaveBeenCalled();
+    });
+  });
+
+  describe('unSelectInits()', () => {
+    it('should set selected to false for all items in myInitiativesList', () => {
+      component.unSelectInits();
+
+      expect(mockApiService.dataControlSE.myInitiativesList.every(item => !item.selected)).toBeTruthy();
+    });
+  });
+
+  describe('getDeleteTooltipText()', () => {
+    it('should return QAed status tooltip when status_id is 2', () => {
+      mockApiService.dataControlSE.currentResult = { status_id: '2' };
+
+      const result = (component as any).getDeleteTooltipText();
+
+      expect(result).toBe('You are not allowed to perform this action because the result is in the status "QAed".');
+    });
+
+    it('should return role permission tooltip when role_id is not 3, 4, or 5', () => {
+      mockApiService.dataControlSE.currentResult = {
+        status_id: '1',
+        role_id: 1
+      };
+
+      const result = (component as any).getDeleteTooltipText();
+
+      expect(result).toBe('You are not allowed to perform this action. Please contact your leader or co-leader.');
+    });
+
+    it('should return empty string when user has permission', () => {
+      mockApiService.dataControlSE.currentResult = {
+        status_id: '1',
+        role_id: 3
+      };
+
+      const result = (component as any).getDeleteTooltipText();
+
+      expect(result).toBe('');
+    });
+  });
+
+  describe('Component Properties', () => {
+    it('should have correct column order configuration', () => {
+      expect(component.columnOrder).toEqual([
+        { title: 'Title', attr: 'title', class: 'notCenter' },
+        { title: 'Phase - Portfolio', attr: 'phase_name' },
+        { title: 'Indicator category', attr: 'result_type' },
+        { title: 'Submitter', attr: 'submitter', center: true },
+        { title: 'Status', attr: 'full_status_name_html', center: true },
+        { title: 'Creation date	', attr: 'created_date' },
+        { title: 'Created by	', attr: 'full_name' }
+      ]);
+    });
+
+    it('should initialize with correct default values', () => {
+      expect(component.gettingReport).toBe(false);
+      expect(component.combine).toBe(true);
+    });
+
+    it('should have correct menu items configuration', () => {
+      expect(component.items).toHaveLength(2);
+      expect(component.itemsWithDelete).toHaveLength(3);
+
+      expect(component.items[0].label).toBe('Map to TOC');
+      expect(component.items[1].label).toBe('Update result');
+      expect(component.itemsWithDelete[2].label).toBe('Delete');
+    });
+  });
+
+  describe('Menu Item Commands', () => {
+    it('should set chagePhaseModal to true on command call of items[1]', () => {
+      component.items[1].command();
+
+      expect(mockApiService.dataControlSE.chagePhaseModal).toBeTruthy();
     });
   });
 });

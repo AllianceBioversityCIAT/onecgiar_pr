@@ -18,6 +18,16 @@ import { EndpointsService } from './endpoints/endpoints.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { CurrentResult } from '../../interfaces/current-result.interface';
 
+export interface SearchParams {
+  limit?: number;
+  page?: number;
+  status_id?: string;
+  portfolio_id?: string;
+  result_type_id?: string;
+  submitter_id?: string;
+  version_id?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -104,12 +114,11 @@ export class ApiService {
     this.dataControlSE.myInitiativesList = [];
   }
 
-  updateResultsList() {
+  updateResultsList(searchParams?: SearchParams) {
     this.resultsListSE.showLoadingResultSpinner = true;
-    this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id).subscribe({
+    this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id, searchParams).subscribe({
       next: resp => {
-        this.dataControlSE.resultsList = resp.response;
-
+        this.dataControlSE.resultsList = resp.response.items;
         this.dataControlSE.resultsList.forEach((result: any) => {
           result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
@@ -117,6 +126,7 @@ export class ApiService {
         this.resultsListSE.showLoadingResultSpinner = false;
       },
       error: err => {
+        console.error(err);
         this.resultsListSE.showLoadingResultSpinner = false;
       }
     });

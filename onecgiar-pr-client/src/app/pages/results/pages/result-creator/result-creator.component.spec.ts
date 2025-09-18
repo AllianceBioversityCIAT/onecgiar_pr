@@ -42,7 +42,6 @@ describe('ResultCreatorComponent', () => {
 
   beforeEach(async () => {
     mockApiService = {
-      updateResultsList: jest.fn(),
       updateUserData: jest.fn(() => {
         mockResultLevelService.resultBody.initiative_id = mockApiService.dataControlSE.myInitiativesList[0].id;
       }),
@@ -80,7 +79,6 @@ describe('ResultCreatorComponent', () => {
         result_name: 'result_name',
         handler: jest.fn()
       },
-      updateResultsList: jest.fn(),
       currentResultTypeList: [{ id: 1, name: 'Type1' }]
     };
     mockPhasesService = {
@@ -133,7 +131,6 @@ describe('ResultCreatorComponent', () => {
           result_type: []
         }
       ];
-      const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
       const spyCleanData = jest.spyOn(mockResultLevelService, 'cleanData');
       const spyShow = jest.spyOn(mockApiService.alertsFs, 'show');
       const spyValidateReadOnly = jest.spyOn(mockApiService.rolesSE, 'validateReadOnly');
@@ -145,7 +142,6 @@ describe('ResultCreatorComponent', () => {
 
       expect(component.resultLevelSE.resultLevelList[0].selected).toBeFalsy();
       expect(component.resultLevelSE.currentResultTypeList).toEqual([]);
-      expect(spyUpdateResultsList).toHaveBeenCalled();
       expect(spyCleanData).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'indoasd',
