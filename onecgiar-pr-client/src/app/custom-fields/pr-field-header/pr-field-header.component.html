@@ -1,5 +1,5 @@
 <div
-  class="pr_label"
+  class="pr_label {{ labelDescStyleClass }}"
   [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
   *ngIf="this.label"
   [innerHTML]="this.label + (this.useColon ? ':' : '')"

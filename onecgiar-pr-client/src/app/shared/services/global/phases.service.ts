@@ -33,11 +33,13 @@ export class PhasesService {
         this.filterService.filters.general[1].options = this.phases.reporting.map(item => {
           const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
           return {
+            ...item,
             attr: label,
             selected: item.status,
             name: label + (item.status ? ' (Open)' : ' (Closed)')
           };
         });
+
         this.ipsrFilterService.filters.general[1].options = this.phases.ipsr.map(item => {
           const label = `${item.phase_name}${item?.obj_portfolio?.acronym ? ' - ' + item.obj_portfolio.acronym : ''}`;
 

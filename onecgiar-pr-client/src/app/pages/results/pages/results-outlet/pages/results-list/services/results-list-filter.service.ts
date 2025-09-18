@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
@@ -19,9 +19,24 @@ export class ResultsListFilterService {
     ],
     resultLevel: []
   };
-
-  filtersPipeList = [];
   filterJoin: number = 0;
+
+  phasesOptionsOld = signal([]);
+  phasesOptions = signal([]);
+  submittersOptionsOld = signal([]);
+  submittersOptions = signal([]);
+  submittersOptionsAdmin = signal([]);
+  submittersOptionsAdminOld = signal([]);
+
+  statusOptions = signal([]);
+
+  selectedPhases = signal([]);
+  selectedSubmitters = signal([]);
+  selectedSubmittersAdmin = signal([]);
+
+  selectedIndicatorCategories = signal([]);
+  selectedStatus = signal([]);
+  text_to_search = signal('');
 
   updateMyInitiatives(initiatives) {
     initiatives?.forEach(init => {
@@ -29,7 +44,15 @@ export class ResultsListFilterService {
       init.attr = init.name;
       init.id = init.initiative_id;
     });
-    this.filters.general[0].options = [{ name: 'All results', selected: false, cleanAll: true }, ...initiatives, { attr: 'is_legacy', name: 'Pre-2022 results' }];
+    this.filters.general[0].options = [
+      { name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 },
+      ...initiatives,
+      { attr: 'is_legacy', name: 'Pre-2022 results', id: 999, portfolio_id: 2 }
+    ];
+    this.submittersOptionsOld.set([
+      { name: 'All results', selected: false, cleanAll: true, id: 0, portfolio_id: 0 },
+      ...initiatives.sort((a, b) => a.initiative_id - b.initiative_id)
+    ]);
   }
 
   onSelectChip(option: any) {
@@ -37,6 +60,7 @@ export class ResultsListFilterService {
     if (option.name != 'All results') this.filters.general[0].options[0].selected = false;
     this.filterJoin++;
   }
+
   cleanAllFilters(option) {
     if (!option.selected) return;
     if (option?.cleanAll !== true) return;

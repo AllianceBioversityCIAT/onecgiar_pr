@@ -1,14 +1,13 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
-import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
-import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 interface ItemMenu {
   label: string;
@@ -19,6 +18,7 @@ interface ItemMenu {
   tooltipShow?: boolean;
   disabled?: boolean;
 }
+import { ResultsListFilterService } from './services/results-list-filter.service';
 
 @Component({
   selector: 'app-results-list',
@@ -26,7 +26,7 @@ interface ItemMenu {
   styleUrls: ['./results-list.component.scss', './results-list.responsive.scss'],
   standalone: false
 })
-export class ResultsListComponent implements OnInit, OnDestroy {
+export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   gettingReport = false;
   combine = true;
 
@@ -89,12 +89,27 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     public resultsNotificationsSE: ResultsNotificationsService,
     public api: ApiService,
     public resultsListService: ResultsListService,
-    private resultLevelSE: ResultLevelService,
-    private exportTablesSE: ExportTablesService,
+    private ResultLevelSE: ResultLevelService,
     private shareRequestModalSE: ShareRequestModalService,
     private retrieveModalSE: RetrieveModalService,
-    public phasesService: PhasesService
-  ) {}
+    public phasesService: PhasesService,
+    public resultsListFilterSE: ResultsListFilterService
+  ) {
+    // Set up reactive table reset that responds to filter changes
+    effect(() => {
+      // Track all filter signals to trigger reset when any change
+      this.resultsListFilterSE.text_to_search();
+      this.resultsListFilterSE.selectedPhases();
+      this.api?.rolesSE?.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters();
+      this.resultsListFilterSE.selectedIndicatorCategories();
+      this.resultsListFilterSE.selectedStatus();
+
+      // Reset table when any filter changes (only if table is available)
+      if (this.table) {
+        this.resetTable();
+      }
+    });
+  }
 
   validateOrder(columnAttr) {
     setTimeout(() => {
@@ -102,6 +117,7 @@ export class ResultsListComponent implements OnInit, OnDestroy {
         this.combine = true;
         return;
       }
+
       const resultListTableHTML = document.getElementById('resultListTable');
       this.combine =
         !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length &&
@@ -119,6 +135,24 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
+  }
+
+  ngAfterViewInit(): void {
+    // Trigger initial table reset after view is initialized
+    setTimeout(() => {
+      this.resetTable();
+    }, 500);
+  }
+
+  private resetTable(): void {
+    if (this.table) {
+      this.table.reset();
+    }
+  }
+
+  // Public method to manually reset table (can be called from template or other components)
+  public resetTableManually(): void {
+    this.resetTable();
   }
 
   unSelectInits() {
@@ -183,51 +217,6 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     }
 
     return '';
-  }
-
-  onDownLoadTableAsExcel() {
-    this.gettingReport = true;
-    this.api.resultsSE.GET_reportingList().subscribe({
-      next: ({ response }) => {
-        const wscols = [
-          { header: 'Result code', key: 'result_code', width: 13 },
-          { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
-          { header: 'Reporting year', key: 'reported_year_id', width: 13 },
-          { header: 'Result title', key: 'title', width: 125 },
-          { header: 'Description', key: 'description', width: 125 },
-          { header: 'Result type', key: 'result_type', width: 45 },
-          { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
-          { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
-          { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
-          { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-          { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
-          { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
-          { header: 'Submitter', key: 'official_code', width: 14 },
-          { header: 'Status', key: 'status_name', width: 17 },
-          { header: 'Creation date', key: 'creation_date', width: 15 },
-          { header: 'Work package id', key: 'work_package_id', width: 18 },
-          { header: 'Work package title', key: 'work_package_title', width: 125 },
-          { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-          { header: 'ToC result title', key: 'toc_result_title', width: 125 },
-          { header: 'Action Area(s)', key: 'action_areas', width: 53 },
-          { header: 'Center(s)', key: 'centers', width: 80 },
-          { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
-          { header: 'PDF Link', key: 'pdf_link', width: 65 }
-        ];
-
-        this.exportTablesSE.exportExcel(response, 'results_list', wscols, [
-          {
-            cellNumber: 23,
-            cellKey: 'pdf_link'
-          }
-        ]);
-        this.gettingReport = false;
-      },
-      error: err => {
-        console.error(err);
-        this.gettingReport = false;
-      }
-    });
   }
 
   onDeleteREsult() {

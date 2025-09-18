@@ -6,6 +6,45 @@ describe('ResultsListFilterPipe', () => {
   let pipe: ResultsListFilterPipe;
   let mockResultsListFilterService: any;
 
+  const mockResultList = [
+    {
+      id: 1,
+      title: 'Test Result One',
+      result_code: 123,
+      phase_name: 'Phase One',
+      result_level_id: 456,
+      result_type_id: 789,
+      submitter: 'ORG001',
+      status_id: 1,
+      description: 'This is a test result',
+      created_date: '2023-01-01'
+    },
+    {
+      id: 2,
+      title: 'Test Result Two',
+      result_code: 124,
+      phase_name: 'Phase Two',
+      result_level_id: 457,
+      result_type_id: 790,
+      submitter: 'ORG002',
+      status_id: 2,
+      description: 'Another test result',
+      created_date: '2023-01-02'
+    },
+    {
+      id: 3,
+      title: 'Duplicate Result',
+      result_code: 123, // Same as first result
+      phase_name: 'Phase One',
+      result_level_id: 456,
+      result_type_id: 789,
+      submitter: 'ORG003',
+      status_id: 1,
+      description: 'Duplicate result code',
+      created_date: '2023-01-03'
+    }
+  ];
+
   beforeEach(() => {
     mockResultsListFilterService = {
       filters: {
@@ -13,192 +52,330 @@ describe('ResultsListFilterPipe', () => {
           {
             options: [
               { selected: true, cleanAll: false },
-              { selected: false, cleanAll: false },
-            ],
-
+              { selected: false, cleanAll: false }
+            ]
           },
           {
             options: [
-              { attr: 'Phase one', selected: true, cleanAll: false },
-              { attr: 'Phase two', selected: false, cleanAll: false },
-            ],
-
-          },
+              { attr: 'Phase One', selected: true, cleanAll: false },
+              { attr: 'Phase Two', selected: false, cleanAll: false }
+            ]
+          }
         ],
         resultLevel: [
           {
             id: 456,
             options: [
               { id: 789, selected: true, cleanAll: false },
-              { id: 2, selected: false, cleanAll: false },
-            ],
-
-          },
-        ],
-      },
+              { id: 790, selected: false, cleanAll: false }
+            ]
+          }
+        ]
+      }
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        ResultsListFilterPipe,
-        { provide: ResultsListFilterService, useValue: mockResultsListFilterService },
-      ],
+      providers: [ResultsListFilterPipe, { provide: ResultsListFilterService, useValue: mockResultsListFilterService }]
     });
 
     pipe = TestBed.inject(ResultsListFilterPipe);
   });
 
   describe('transform', () => {
-    it('should filter results based on filters', () => {
-      const resultList = [
-        { title: 'Result one', result_code: 123, phase_name: 'Phase one', result_level_id: 456, result_type_id: 789 },
-        { title: 'Result two', result_code: 2, phase_name: 'Phase two', result_level_id: 2, result_type_id: 2 },
-        {}
-      ];
-      const word = 'Result one';
-      const combine = true;
-      const filterJoin = 0;
+    it('should return empty array when resultList is null or undefined', () => {
+      expect(pipe.transform(null, 'test', false, [], [], [], [])).toEqual([]);
+      expect(pipe.transform(undefined, 'test', false, [], [], [], [])).toEqual([]);
+    });
 
-      const result = pipe.transform(resultList, word, combine, filterJoin);
+    it('should return original list when no filters are applied', () => {
+      const result = pipe.transform(mockResultList, '', false, [], [], [], []);
+      expect(result).toEqual(mockResultList);
+    });
 
-      expect(result).toEqual([
-        {
-          result_code: 123,
-          submitter: undefined,
-          results: [
-            {
-              title: 'Result one',
-              result_code: 123,
-              phase_name: 'Phase one',
-              result_level_id: 456,
-              result_type_id: 789,
-              joinAll: 'Result one 123 Phase one 456 789 Result one 123 Phase one 456 789  '
-            },
-          ],
-        },
-      ]);
+    it('should apply text filter correctly', () => {
+      const result = pipe.transform(mockResultList, 'Test Result One', false, [], [], [], []);
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Test Result One');
+    });
+
+    it('should apply phase filter correctly', () => {
+      const selectedPhases = [{ attr: 'Phase One' }];
+      const result = pipe.transform(mockResultList, '', false, selectedPhases, [], [], []);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.phase_name === 'Phase One')).toBe(true);
+    });
+
+    it('should apply status filter correctly', () => {
+      const selectedStatus = [{ status_id: 1 }];
+      const result = pipe.transform(mockResultList, '', false, [], [], [], selectedStatus);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.status_id === 1)).toBe(true);
+    });
+
+    it('should apply indicator categories filter correctly', () => {
+      const selectedIndicatorCategories = [{ resultLevelId: 456, id: 789 }];
+      const result = pipe.transform(mockResultList, '', false, [], [], selectedIndicatorCategories, []);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.result_level_id === 456 && r.result_type_id === 789)).toBe(true);
+    });
+
+    it('should apply submitters filter correctly', () => {
+      const selectedSubmitters = [{ official_code: 'ORG001' }];
+      const result = pipe.transform(mockResultList, '', false, [], selectedSubmitters, [], []);
+      expect(result).toHaveLength(1);
+      expect(result[0].submitter).toBe('ORG001');
+    });
+
+    it('should combine results when combine is true', () => {
+      const result = pipe.transform(mockResultList, '', true, [], [], [], []);
+      expect(result).toHaveLength(2); // Two unique result codes
+      const combinedResult = result.find(r => r.result_code === 123);
+      expect(combinedResult.results).toHaveLength(2);
+    });
+
+    it('should separate results when combine is false', () => {
+      const result = pipe.transform(mockResultList, '', false, [], [], [], []);
+      expect(result).toHaveLength(3);
+      result.forEach(r => {
+        expect(r.results).toHaveLength(1);
+        expect(r.results[0]).toEqual(r);
+      });
+    });
+
+    it('should apply multiple filters simultaneously', () => {
+      const selectedPhases = [{ attr: 'Phase One' }];
+      const selectedStatus = [{ status_id: 1 }];
+      const result = pipe.transform(mockResultList, 'Test', true, selectedPhases, [], [], selectedStatus);
+      expect(result).toHaveLength(1);
+      expect(result[0].result_code).toBe(123);
     });
   });
 
-  describe('filterByText', () => {
-    it('should return empty array for empty resultList', () => {
-      const resultList = [];
-      const word = 'Result';
+  describe('filterByStatus', () => {
+    it('should return original list when no status filters are selected', () => {
+      const result = pipe.filterByStatus(mockResultList, []);
+      expect(result).toEqual(mockResultList);
+    });
 
-      const result = pipe.filterByText(resultList, word);
+    it('should filter by single status', () => {
+      const selectedStatus = [{ status_id: 1 }];
+      const result = pipe.filterByStatus(mockResultList, selectedStatus);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.status_id === 1)).toBe(true);
+    });
 
+    it('should filter by multiple statuses', () => {
+      const selectedStatus = [{ status_id: 1 }, { status_id: 2 }];
+      const result = pipe.filterByStatus(mockResultList, selectedStatus);
+      expect(result).toHaveLength(3);
+    });
+
+    it('should return empty array when no matches found', () => {
+      const selectedStatus = [{ status_id: 999 }];
+      const result = pipe.filterByStatus(mockResultList, selectedStatus);
       expect(result).toEqual([]);
     });
   });
 
-  describe('filterByInitsAndYear', () => {
-    it('should return original list when no submitter options are selected', () => {
-      const resultList = [
-        { submitter_id: 1, legacy_id: 5 },
-        { submitter_id: 2, legacy_id: 6 },
-        { submitter_id: 3, legacy_id: 7 },
-      ];
-      mockResultsListFilterService.filters.general[0].options.forEach(option => (option.selected = false));
-
-      const result = pipe.filterByInitsAndYear(resultList);
-
-      expect(result).toEqual(resultList);
+  describe('filterByIndicatorCategories', () => {
+    it('should return original list when no indicator categories are selected', () => {
+      const result = pipe.filterByIndicatorCategories(mockResultList, []);
+      expect(result).toEqual(mockResultList);
     });
 
-    it('should filter results by submitter and is_legacy', () => {
-      const resultList = [
-        { submitter_id: 1, legacy_id: 5 },
-        { submitter_id: 2 },
-        { submitter_id: 3, legacy_id: 7 },
-      ];
-      mockResultsListFilterService.filters.general[0].options = [
-        { id: 1, attr: 'is_legacy', selected: true, cleanAll: false },
-      ];
+    it('should filter by single indicator category', () => {
+      const selectedIndicatorCategories = [{ resultLevelId: 456, id: 789 }];
+      const result = pipe.filterByIndicatorCategories(mockResultList, selectedIndicatorCategories);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.result_level_id === 456 && r.result_type_id === 789)).toBe(true);
+    });
 
-      const result = pipe.filterByInitsAndYear(resultList);
+    it('should filter by multiple indicator categories', () => {
+      const selectedIndicatorCategories = [
+        { resultLevelId: 456, id: 789 },
+        { resultLevelId: 457, id: 790 }
+      ];
+      const result = pipe.filterByIndicatorCategories(mockResultList, selectedIndicatorCategories);
+      expect(result).toHaveLength(3);
+    });
 
-      expect(result).toEqual([
-        { submitter_id: 1, legacy_id: 5 },
-        { submitter_id: 3, legacy_id: 7 },
-      ]);
+    it('should return empty array when no matches found', () => {
+      const selectedIndicatorCategories = [{ resultLevelId: 999, id: 999 }];
+      const result = pipe.filterByIndicatorCategories(mockResultList, selectedIndicatorCategories);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('filterBySubmitters', () => {
+    it('should return original list when no submitters are selected', () => {
+      const result = pipe.filterBySubmitters(mockResultList, []);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should filter by single submitter', () => {
+      const selectedSubmitters = [{ official_code: 'ORG001' }];
+      const result = pipe.filterBySubmitters(mockResultList, selectedSubmitters);
+      expect(result).toHaveLength(1);
+      expect(result[0].submitter).toBe('ORG001');
+    });
+
+    it('should filter by multiple submitters', () => {
+      const selectedSubmitters = [{ official_code: 'ORG001' }, { official_code: 'ORG002' }];
+      const result = pipe.filterBySubmitters(mockResultList, selectedSubmitters);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no matches found', () => {
+      const selectedSubmitters = [{ official_code: 'ORG999' }];
+      const result = pipe.filterBySubmitters(mockResultList, selectedSubmitters);
+      expect(result).toEqual([]);
     });
   });
 
   describe('filterByPhase', () => {
-    it('should return the original result list when no phase filters are selected', () => {
-      const resultList = [
-        { phase_name: 'Phase 1' },
-        { phase_name: 'Phase 2' },
-        { phase_name: 'Phase 3' },
-      ];
-      mockResultsListFilterService.filters.general[1].options = [];
-
-      const result = pipe.filterByPhase(resultList);
-
-      expect(result).toEqual(resultList);
+    it('should return original list when no phases are selected', () => {
+      const result = pipe.filterByPhase(mockResultList, []);
+      expect(result).toEqual(mockResultList);
     });
-    it('should return true if at least one phase filter matches the result', () => {
-      const resultList = [
-        { phase_name: 'Phase 1' },
-        { phase_name: 'Phase 2' },
-        { phase_name: 'Phase 3' },
-      ];
-      mockResultsListFilterService.filters.general[1].options = [
-        { attr: 'Phase 2', selected: true, cleanAll: false },
-      ];
 
-      const result = pipe.filterByPhase(resultList);
-
-      expect(result).toEqual([
-        { phase_name: 'Phase 2' },
-      ]);
+    it('should filter by single phase', () => {
+      const selectedPhases = [{ attr: 'Phase One' }];
+      const result = pipe.filterByPhase(mockResultList, selectedPhases);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.phase_name === 'Phase One')).toBe(true);
     });
-  });
 
-  describe('filterByResultLevelOptions', () => {
-    it('should return the original result list when no result level filters are selected', () => {
-      const resultList = [
-        { result_level_id: 1, result_type_id: 1 },
-        { result_level_id: 2, result_type_id: 2 },
-        { result_level_id: 3, result_type_id: 3 },
-      ];
-      mockResultsListFilterService.filters.resultLevel[0].options = [];
-
-      const result = pipe.filterByResultLevelOptions(resultList);
-
-      expect(result).toEqual(resultList);
+    it('should filter by multiple phases', () => {
+      const selectedPhases = [{ attr: 'Phase One' }, { attr: 'Phase Two' }];
+      const result = pipe.filterByPhase(mockResultList, selectedPhases);
+      expect(result).toHaveLength(3);
     });
-    it('should return false if no result level filter matches the result', () => {
-      const resultList = [
-        { result_level_id: 1, result_type_id: 1 },
-        { result_level_id: 2, result_type_id: 2 },
-        { result_level_id: 3, result_type_id: 3 },
-      ];
-      mockResultsListFilterService.filters.resultLevel[0].options = [
-        { id: 99, selected: true, cleanAll: false },
-      ];
 
-      const result = pipe.filterByResultLevelOptions(resultList);
-
+    it('should return empty array when no matches found', () => {
+      const selectedPhases = [{ attr: 'Non-existent Phase' }];
+      const result = pipe.filterByPhase(mockResultList, selectedPhases);
       expect(result).toEqual([]);
     });
   });
 
-  describe('separateResultInList', () => {
-    it('should separate results into an array', () => {
-      const results = [
-        { result_code: 1, submitter: 'Submitter 1' },
-        { result_code: 2, submitter: 'Submitter 2' },
+  describe('filterByText', () => {
+    it('should return original list when word is empty or null', () => {
+      expect(pipe.filterByText(mockResultList, '')).toEqual(mockResultList);
+      expect(pipe.filterByText(mockResultList, null)).toEqual(mockResultList);
+      expect(pipe.filterByText(mockResultList, undefined)).toEqual(mockResultList);
+    });
+
+    it('should return empty array when resultList is null or undefined', () => {
+      expect(pipe.filterByText(null, 'test')).toEqual([]);
+      expect(pipe.filterByText(undefined, 'test')).toEqual([]);
+    });
+
+    it('should filter by title', () => {
+      const result = pipe.filterByText(mockResultList, 'Test Result One');
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Test Result One');
+    });
+
+    it('should filter by description', () => {
+      const result = pipe.filterByText(mockResultList, 'Another test');
+      expect(result).toHaveLength(1);
+      expect(result[0].description).toBe('Another test result');
+    });
+
+    it('should filter by result code', () => {
+      const result = pipe.filterByText(mockResultList, '123');
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.result_code === 123)).toBe(true);
+    });
+
+    it('should be case insensitive', () => {
+      const result = pipe.filterByText(mockResultList, 'test result one');
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Test Result One');
+    });
+
+    it('should exclude created_date and id fields from search', () => {
+      const result = pipe.filterByText(mockResultList, '2023-01-01');
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle empty strings in object values', () => {
+      const testList = [
+        { title: 'Test', description: '', result_code: 123 },
+        { title: '', description: 'Test', result_code: 456 }
       ];
+      const result = pipe.filterByText(testList, 'Test');
+      expect(result).toHaveLength(2);
+    });
 
-      const separatedResults = pipe.separateResultInList(results);
+    it('should trim whitespace from search term', () => {
+      const result = pipe.filterByText(mockResultList, '  Test Result One  ');
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Test Result One');
+    });
+  });
 
-      expect(separatedResults.length).toBe(results.length);
-      separatedResults.forEach((separatedResult, index) => {
-        expect(separatedResult.result_code).toBe(results[index].result_code);
-        expect(separatedResult.submitter).toBe(results[index].submitter);
-        expect(separatedResult.results.length).toBe(1);
-        expect(separatedResult.results[0]).toEqual(results[index]);
+  describe('convertList', () => {
+    it('should call combineRepeatedResults when combine is true', () => {
+      jest.spyOn(pipe, 'combineRepeatedResults').mockReturnValue([]);
+      pipe.convertList(mockResultList, true);
+      expect(pipe.combineRepeatedResults).toHaveBeenCalledWith(mockResultList);
+    });
+
+    it('should call separateResultInList when combine is false', () => {
+      jest.spyOn(pipe, 'separateResultInList').mockReturnValue([]);
+      pipe.convertList(mockResultList, false);
+      expect(pipe.separateResultInList).toHaveBeenCalledWith(mockResultList);
+    });
+  });
+
+  describe('separateResultInList', () => {
+    it('should separate each result into its own array', () => {
+      const result = pipe.separateResultInList(mockResultList);
+      expect(result).toHaveLength(3);
+      result.forEach((item, index) => {
+        expect(item.results).toHaveLength(1);
+        expect(item.results[0]).toEqual(mockResultList[index]);
+      });
+    });
+
+    it('should handle empty array', () => {
+      const result = pipe.separateResultInList([]);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('combineRepeatedResults', () => {
+    it('should combine results with same result_code', () => {
+      const result = pipe.combineRepeatedResults(mockResultList);
+      expect(result).toHaveLength(2);
+
+      const combinedResult = result.find(r => r.result_code === 123);
+      expect(combinedResult).toBeDefined();
+      expect(combinedResult.results).toHaveLength(2);
+      expect(combinedResult.submitter).toBe('ORG001'); // First result's submitter
+    });
+
+    it('should preserve unique result codes', () => {
+      const result = pipe.combineRepeatedResults(mockResultList);
+      const resultCodes = result.map(r => r.result_code);
+      expect(resultCodes).toEqual([123, 124]);
+    });
+
+    it('should handle empty array', () => {
+      const result = pipe.combineRepeatedResults([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should handle array with no duplicates', () => {
+      const uniqueResults = [
+        { result_code: 1, submitter: 'ORG001', title: 'Test 1' },
+        { result_code: 2, submitter: 'ORG002', title: 'Test 2' }
+      ];
+      const result = pipe.combineRepeatedResults(uniqueResults);
+      expect(result).toHaveLength(2);
+      result.forEach(r => {
+        expect(r.results).toHaveLength(1);
       });
     });
   });

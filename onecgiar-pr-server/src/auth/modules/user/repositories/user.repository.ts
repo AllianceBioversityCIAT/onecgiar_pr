@@ -150,6 +150,7 @@ export class UserRepository extends Repository<User> {
     	ci.name as initiative_name,
       ci.short_name,
       ci.cgiar_entity_type_id,
+      ci.portfolio_id,
       JSON_OBJECT('code', ccet.code, 'name', ccet.name) as  obj_cgiar_entity_type
     from role_by_user rbu 
     	inner join clarisa_initiatives ci on ci.id = rbu.initiative_id 
