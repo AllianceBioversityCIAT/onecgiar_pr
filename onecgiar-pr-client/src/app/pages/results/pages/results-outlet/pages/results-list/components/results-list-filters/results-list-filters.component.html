@@ -83,7 +83,7 @@
       <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
         <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
       </p-overlaybadge>
-      <app-pr-button (click)="this.resultsListFilterSE.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
+      <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
     </div>
   </div>
 </div>

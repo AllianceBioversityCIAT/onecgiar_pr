@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -26,7 +26,7 @@ import { ResultsListFilterService } from './services/results-list-filter.service
   styleUrls: ['./results-list.component.scss', './results-list.responsive.scss'],
   standalone: false
 })
-export class ResultsListComponent implements OnInit, OnDestroy {
+export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   gettingReport = false;
   combine = true;
 
@@ -94,7 +94,22 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     private retrieveModalSE: RetrieveModalService,
     public phasesService: PhasesService,
     public resultsListFilterSE: ResultsListFilterService
-  ) {}
+  ) {
+    // Set up reactive table reset that responds to filter changes
+    effect(() => {
+      // Track all filter signals to trigger reset when any change
+      this.resultsListFilterSE.text_to_search();
+      this.resultsListFilterSE.selectedPhases();
+      this.api?.rolesSE?.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters();
+      this.resultsListFilterSE.selectedIndicatorCategories();
+      this.resultsListFilterSE.selectedStatus();
+
+      // Reset table when any filter changes (only if table is available)
+      if (this.table) {
+        this.resetTable();
+      }
+    });
+  }
 
   validateOrder(columnAttr) {
     setTimeout(() => {
@@ -120,6 +135,24 @@ export class ResultsListComponent implements OnInit, OnDestroy {
     this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
+  }
+
+  ngAfterViewInit(): void {
+    // Trigger initial table reset after view is initialized
+    setTimeout(() => {
+      this.resetTable();
+    }, 500);
+  }
+
+  private resetTable(): void {
+    if (this.table) {
+      this.table.reset();
+    }
+  }
+
+  // Public method to manually reset table (can be called from template or other components)
+  public resetTableManually(): void {
+    this.resetTable();
   }
 
   unSelectInits() {
