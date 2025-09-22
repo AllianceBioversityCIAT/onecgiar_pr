@@ -1,125 +1,135 @@
 @use '../../../../styles/fonts.scss' as fonts;
 
-.header_panel {
+.header_panel_container {
   width: 100%;
-  height: 70px;
-  max-height: 70px;
+  height: 80px;
   overflow: hidden;
-  background-color: var(--pr-color-primary-950);
+  background-color: var(--pr-color-secondary-300);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0px 60px;
-  box-sizing: border-box;
+  padding: 15px 30px;
+}
 
-  .logo {
-    display: flex;
-    gap: 20px;
-    cursor: pointer;
+.logo_container {
+  display: flex;
+  gap: 20px;
+  cursor: pointer;
 
-    .cgiar_logo {
-      width: 40px;
-      object-fit: cover;
-      filter: contrast(0) brightness(5);
-    }
+  .cgiar_logo {
+    width: 50px;
+  }
+}
 
-    .title {
+.logo_content {
+  @include fonts.pr-typography('h4');
+  color: var(--pr-color-white);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+
+  p {
+    margin: 0;
+  }
+
+  .logo_platform_name {
+    @include fonts.pr-typography('h4');
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .logo_platform_name_secondary {
+    @include fonts.pr-typography('body-3');
+    font-weight: 300;
+  }
+}
+
+.information {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  .admin_module {
+    .admin_module_btn {
       color: var(--pr-color-white);
+      padding: 5px 10px;
+      border-radius: 4px;
+      background-color: var(--pr-color-primary-300);
       display: flex;
       align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      transition: all ease 0.3s;
 
-      .second-text {
-        margin-top: -4px;
-        font-weight: 600;
+      &:hover {
+        background-color: rgba(var(--pr-color-primary-rgb), 0.8);
       }
     }
   }
 
-  .information {
+  .user_tag {
+    @include fonts.pr-typography('body-2');
+    border-radius: 5px;
+    color: var(--pr-color-white);
     display: flex;
     align-items: center;
-    gap: 20px;
+    justify-content: center;
+    gap: 10px;
+    padding: 5px 10px;
 
-    .admin_module {
-      .admin_module_btn {
-        color: var(--pr-color-white);
-        padding: 5px 10px;
-        border-radius: 4px;
-        background-color: var(--pr-color-primary-300);
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        cursor: pointer;
-        transition: all ease 0.3s;
-
-        &:hover {
-          background-color: rgba(var(--pr-color-primary-rgb), 0.8);
-        }
-      }
+    .admin_tag {
+      background-color: var(--pr-color-primary-300);
+      padding: 3px 10px;
+      border-radius: 3px;
     }
 
-    .user_tag {
-      background-color: var(--pr-color-secondary-400);
-      border-radius: 5px;
+    .icon {
       color: var(--pr-color-white);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 5px 10px;
+    }
+  }
 
-      .admin_tag {
-        background-color: var(--pr-color-primary-300);
-        padding: 3px 10px;
+  .my_initiatives {
+    color: var(--pr-color-white);
+    display: flex;
+    align-items: center;
+    padding: 5px 15px;
+    border-radius: 5px;
+    gap: 10px;
+
+    .title {
+      @include fonts.pr-typography('h4');
+      text-align: center;
+      margin-bottom: 2px;
+    }
+
+    .items {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      max-width: 300px;
+      padding-bottom: 5px;
+
+      .item {
+        @include fonts.pr-typography('body-2');
+        display: flex;
         border-radius: 3px;
-      }
+        overflow: auto;
+        min-width: max-content;
 
-      .icon {
-        color: var(--pr-color-white);
-      }
-    }
+        .init,
+        .role {
+          padding: 4px 12px;
+          font-weight: 600;
+        }
 
-    .my_initiatives {
-      color: var(--pr-color-white);
-      background-color: var(--pr-color-secondary-400);
-      display: flex;
-      align-items: center;
-      padding: 5px 15px;
-      border-radius: 5px;
-      gap: 10px;
+        .init {
+          background-color: var(--pr-color-primary-300);
+        }
 
-      .title {
-        text-align: center;
-        margin-bottom: 2px;
-      }
-
-      .items {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        max-width: 300px;
-        padding-bottom: 5px;
-
-        .item {
-          display: flex;
-          border-radius: 3px;
-          overflow: auto;
-          min-width: max-content;
-
-          .init,
-          .role {
-            padding: 4px 12px;
-            font-weight: 600;
-          }
-
-          .init {
-            background-color: var(--pr-color-primary-300);
-          }
-
-          .role {
-            background-color: var(--pr-color-white);
-            color: var(--pr-color-primary-300);
-          }
+        .role {
+          background-color: var(--pr-color-white);
+          color: var(--pr-color-primary-300);
         }
       }
     }
@@ -127,23 +137,79 @@
 }
 
 .overlay_panel {
-  border-radius: 25px;
+  border-radius: 15px;
   background-color: var(--pr-color-white);
-  width: 340px;
   box-shadow: 4px 4px 10px 4px rgba(var(--pr-color-black-rgb), 0.251);
   margin-top: 10px;
 
   .overlay_panel_header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1.2rem 1.5rem 0 1.5rem;
+    padding: 14px 14px 0;
+
+    .overlay_panel_header_title {
+      margin: 0;
+      @include fonts.pr-typography('h3');
+    }
+
+    .overlay_panel_header_userInfo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .overlay_panel_header_userInfo_content {
+      display: flex;
+      flex-direction: column;
+
+      .overlay_panel_header_userInfo_content_name {
+        margin: 0;
+        @include fonts.pr-typography('h4');
+        font-weight: 600;
+      }
+
+      .overlay_panel_header_userInfo_content_email {
+        margin: 0;
+        @include fonts.pr-typography('body-3');
+        font-weight: 300;
+      }
+    }
+  }
+
+  .overlay_panel_userInfo_content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+
+    .overlay_panel_userInfo_content_item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: var(--pr-color-secondary-300);
+
+      h1,
+      p {
+        margin: 0;
+      }
+
+      .overlay_panel_userInfo_content_item_title {
+        @include fonts.pr-typography('body-3');
+        font-weight: 300;
+        color: var(--pr-color-accents-5);
+      }
+
+      .overlay_panel_userInfo_content_item_desc {
+        @include fonts.pr-typography('body-2');
+        font-weight: 500;
+      }
+    }
   }
 
   .no_notifications {
     font-weight: 500;
     text-wrap: pretty;
-    padding: 10px 1.5rem;
+    padding: 10px 14px;
   }
 
   .notifications_list {
@@ -173,7 +239,7 @@
     }
 
     .notification {
-      padding: 15px 1.5rem 10px 1.5rem;
+      padding: 15px 14px 10px;
       background-color: var(--pr-color-primary-25);
       border-bottom: 1px solid var(--pr-color-primary-300);
     }
@@ -195,6 +261,26 @@
     }
   }
 
+  .footer_userInfo {
+    padding: 5px 14px 15px;
+    justify-content: flex-start;
+    gap: 5px;
+    width: fit-content;
+    cursor: pointer;
+
+    .logout_icon {
+      font-size: 15px;
+      color: var(--pr-color-red-300);
+    }
+
+    .logout_button {
+      @include fonts.pr-typography('body-2');
+      font-weight: 400;
+      color: var(--pr-color-red-300);
+      margin: 0;
+    }
+  }
+
   .overlay_panel_separator {
     width: 100%;
     height: 1px;
@@ -205,35 +291,20 @@
 
 .info_icon {
   color: var(--pr-color-white);
-  background-color: var(--pr-color-secondary-400);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 5px;
-  border-radius: 5px;
   cursor: pointer;
-}
-
-.logout_btn {
-  border-radius: 5px;
-  display: flex;
-  gap: 10px;
-  cursor: pointer;
-  align-items: center;
-  background-color: var(--pr-color-secondary-400);
-  padding: 6px 12px;
-  color: var(--pr-color-white);
-  @include fonts.pr-typography('body-2');
-}
-
-.logout_icon {
-  font-size: 1.4em;
-  margin-right: -6px;
+  font-size: 28px;
 }
 
 ::ng-deep {
   .p-overlaybadge {
     height: 24px !important;
+  }
+
+  .p-avatar-text {
+    font-size: 14px !important;
   }
 }
 
