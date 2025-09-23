@@ -40,7 +40,7 @@ function initializeClarityService(clarityService: ClarityService) {
 }
 
 @NgModule({
-  declarations: [AppComponent, NavigationBarComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, GoogleAnalyticsComponent],
+  declarations: [AppComponent, ExternalToolsComponent, TestEnvironmentLabelComponent, GoogleAnalyticsComponent],
   bootstrap: [AppComponent],
   imports: [
     BrowserModule,
@@ -56,6 +56,7 @@ function initializeClarityService(clarityService: ClarityService) {
     OverlayBadgeModule,
     SatPopoverModule,
     HeaderPanelComponent,
+    NavigationBarComponent,
     TawkComponent,
     FormatTimeAgoModule,
     ToastModule,

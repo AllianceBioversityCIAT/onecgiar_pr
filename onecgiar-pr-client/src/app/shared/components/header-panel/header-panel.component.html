@@ -11,6 +11,8 @@
       </div>
     </div>
 
+    <app-navigation-bar></app-navigation-bar>
+
     <div class="information">
       <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
         <i class="material-icons-round info_icon">rocket_launch</i>
@@ -37,7 +39,7 @@
 }
 
 <sat-popover #userInfoPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
-  <div class="overlay_panel" [style]="{ width: '250px' }">
+  <div class="overlay_panel" [style]="{ width: '230px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
         <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '36px', height: '36px' }" />
@@ -59,14 +61,6 @@
           }
         </div>
       }
-
-      <div class="overlay_panel_userInfo_content_item">
-        <p class="overlay_panel_userInfo_content_item_title">My Bilaterals</p>
-
-        <p class="overlay_panel_userInfo_content_item_desc">Bilateral 1 - SP01 (TEST)</p>
-        <p class="overlay_panel_userInfo_content_item_desc">Bilateral 2 - SP02 (TEST)</p>
-        <p class="overlay_panel_userInfo_content_item_desc">Bilateral 3 - SP03 (TEST)</p>
-      </div>
     </div>
 
     <div class="overlay_panel_separator"></div>

@@ -3,7 +3,6 @@
 </div>
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-header-panel></app-header-panel>
-  <app-navigation-bar></app-navigation-bar>
 }
 <router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
 <app-external-tools></app-external-tools>

@@ -13,13 +13,23 @@ import { CommonModule } from '@angular/common';
 import { FormatTimeAgoModule } from '../../pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
+import { NavigationBarComponent } from '../navigation-bar/navigation-bar.component';
 
 @Component({
   selector: 'app-header-panel',
   templateUrl: './header-panel.component.html',
   styleUrls: ['./header-panel.component.scss'],
   standalone: true,
-  imports: [CommonModule, AvatarModule, SatPopoverModule, OverlayBadgeModule, FormatTimeAgoModule, PopUpNotificationItemComponent, TawkComponent]
+  imports: [
+    CommonModule,
+    AvatarModule,
+    SatPopoverModule,
+    OverlayBadgeModule,
+    FormatTimeAgoModule,
+    PopUpNotificationItemComponent,
+    TawkComponent,
+    NavigationBarComponent
+  ]
 })
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;

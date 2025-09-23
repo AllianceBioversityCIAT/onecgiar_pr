@@ -59,7 +59,6 @@ export class ApiService {
       next: resp => {
         const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        console.log(this.dataControlSE.myInitiativesList);
         this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting.sort(
           (a, b) => a.initiative_id - b.initiative_id
         );
