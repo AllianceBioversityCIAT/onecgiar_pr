@@ -29,6 +29,15 @@
   overflow: hidden;
 }
 
+.p-dialog {
+  border: none !important;
+  overflow: hidden !important;
+}
+
+.p-dialog-content {
+  padding: 0px !important;
+}
+
 input::placeholder,
 .p-dropdown .p-dropdown-label.p-placeholder,
 .p-inputtextarea::placeholder,
