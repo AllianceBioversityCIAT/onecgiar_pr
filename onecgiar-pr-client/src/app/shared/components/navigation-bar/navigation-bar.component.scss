@@ -1,34 +1,29 @@
 .navigation_bar {
-  background-color: var(--pr-color-secondary-400);
   display: flex;
-  gap: 10px;
-  padding: 10px 100px;
-
-  @media screen and (max-width: 1200px) {
-    padding: 10px 60px;
-  }
-
-  &.sticky {
-    position: sticky;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 6;
-  }
+  gap: 20px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  padding: 0px 20px;
 
   .section_active {
-    background-color: var(--pr-color-white);
     font-weight: 600 !important;
-    color: var(--pr-color-primary-950);
+    color: var(--pr-color-primary-100) !important;
+    border-bottom: 4px solid var(--pr-color-primary-100) !important;
   }
 
-  a {
+  .navigation_bar_item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
     text-decoration: none;
+    cursor: pointer;
     color: var(--pr-color-white);
-    padding: 8px 15px;
-    border-radius: 7px;
-    font-weight: 300;
-    position: relative;
+    height: 80px;
+    padding: 0px 5px;
+    border-bottom: 4px solid transparent;
+    transition: all ease-in-out 0.3s;
 
     img {
       position: absolute;

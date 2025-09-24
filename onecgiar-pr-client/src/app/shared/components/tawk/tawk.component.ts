@@ -4,10 +4,10 @@ import { ApiService } from '../../services/api/api.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
-    selector: 'app-tawk',
-    templateUrl: './tawk.component.html',
-    styleUrls: ['./tawk.component.scss'],
-    standalone: false
+  selector: 'app-tawk',
+  templateUrl: './tawk.component.html',
+  styleUrls: ['./tawk.component.scss'],
+  standalone: true
 })
 export class TawkComponent implements OnInit {
   @Input() id: string;
@@ -17,16 +17,18 @@ export class TawkComponent implements OnInit {
 
   script = this._renderer.createElement('script');
 
-  constructor(private readonly _renderer: Renderer2, @Inject(DOCUMENT) private _document, public api: ApiService) {}
+  constructor(
+    private readonly _renderer: Renderer2,
+    @Inject(DOCUMENT) private _document,
+    public api: ApiService
+  ) {}
 
   ngOnInit(): void {
     this.initializeTawkIo();
   }
 
   initializeTawkIo() {
-
     if (this.user != undefined) {
-
       this.script.text = `
 
       var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();

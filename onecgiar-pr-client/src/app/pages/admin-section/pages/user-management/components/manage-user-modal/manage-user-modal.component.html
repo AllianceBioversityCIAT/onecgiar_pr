@@ -1,5 +1,6 @@
 <!-- Add User Modal -->
 <p-dialog
+  appendTo="body"
   [header]="this.userActivatorMode() ? 'Activate user' : this.editingMode() ? 'Edit user' : 'Add user'"
   [(visible)]="visible"
   [modal]="true"

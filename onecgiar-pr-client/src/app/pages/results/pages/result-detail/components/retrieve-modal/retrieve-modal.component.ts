@@ -28,7 +28,6 @@ export class RetrieveModalComponent implements OnInit {
   }
 
   cleanObject() {
-    //('cleanForm');
     this.showForm = false;
     this.retrieveModalSE.retrieveRequestBody = new RetrieveRequestBody();
     setTimeout(() => {
@@ -40,16 +39,11 @@ export class RetrieveModalComponent implements OnInit {
     this.requesting = true;
     this.retrieveModalSE.retrieveRequestBody.result_level_id = this.resultLevelSE.resultBody.result_level_id;
     this.retrieveModalSE.retrieveRequestBody.result_type_id = this.resultLevelSE.resultBody.result_type_id;
-    //? get result type
-    // this.getResultType();
-    //(this.retrieveModalSE.retrieveRequestBody);
     this.api.resultsSE.POST_updateRequest(this.retrieveModalSE.retrieveRequestBody).subscribe(
       resp => {
-        //(resp?.response?.newResultHeader?.id);
         this.api.alertsFe.show({ id: 'partners', title: `The Legacy Result was retrieved successfully!`, description: `The selected result is already list in the reported results.`, status: 'success' });
         this.requesting = false;
         this.api.dataControlSE.showRetrieveRequest = false;
-        //(resp);
         this.router.navigate([`/result/result-detail/${resp?.response?.newResultHeader?.result_code}/general-information`]);
       },
       err => {
@@ -59,11 +53,4 @@ export class RetrieveModalComponent implements OnInit {
       }
     );
   }
-
-  // getResultType() {
-  //   const resultLevelFinded = this.resultLevelSE.resultLevelList.find(resultLevel => resultLevel.id == this.retrieveModalSE.retrieveRequestBody.result_level_id);
-  //   const resultTypeFinded = resultLevelFinded?.result_type?.find(resultType => resultType.name.indexOf('Other') >= 0);
-  //   this.retrieveModalSE.retrieveRequestBody.result_type_id = resultTypeFinded?.id ? resultTypeFinded?.id : 9;
-  //   return;
-  // }
 }

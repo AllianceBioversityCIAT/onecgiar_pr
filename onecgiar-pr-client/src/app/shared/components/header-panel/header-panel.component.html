@@ -1,71 +1,88 @@
 @let unreadNotifications = this.resultsNotificationsSE.updatesPopUpData;
 
-<div class="header_panel" id="sdsdsdsd" *ngIf="!this.dataControlSE.show_qa_full_screen">
-  <div class="logo" routerLink="/">
-    <img class="cgiar_logo" src="/assets/cgiar_logo.png" alt="" srcset="" />
-    <div class="title pr-h4">
-      <div class="second-text">{{ this.internationalizationData.global.platformName }}</div>
+@if (!this.dataControlSE.show_qa_full_screen) {
+  <div class="header_panel_container">
+    <div class="logo_container" routerLink="/">
+      <img class="cgiar_logo" src="/assets/PR_logo.svg" alt="Reporting Tool Logo" />
+
+      <div class="logo_content">
+        <p class="logo_platform_name">{{ this.internationalizationData.global.platformName }}</p>
+        <p class="logo_platform_name_secondary">P25 - Reporting 2025</p>
+      </div>
+    </div>
+
+    <app-navigation-bar></app-navigation-bar>
+
+    <div class="information">
+      <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
+        <i class="material-icons-round info_icon">rocket_launch</i>
+      </div>
+
+      <div [satPopoverAnchor]="notificationsPopover" (click)="notificationsPopover.toggle()" class="info_icon">
+        @if (unreadNotifications.length === 0) {
+          <i class="material-icons-round info_icon">notifications</i>
+        } @else {
+          <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
+            <i class="material-icons-round animate_bell info_icon"> notifications </i>
+          </p-overlayBadge>
+        }
+      </div>
+
+      <p-avatar
+        [label]="getUserInitials()"
+        shape="circle"
+        [style]="{ width: '32px', height: '32px', cursor: 'pointer' }"
+        [satPopoverAnchor]="userInfoPopover"
+        (click)="userInfoPopover.toggle()" />
     </div>
   </div>
+}
 
-  <div class="information">
-    <div class="admin_module" *ngIf="this.api?.rolesSE?.isAdmin">
-      <a class="admin_module_btn" routerLink="/admin-module/">
-        Admin module
-        <i class="material-icons-round"> navigate_next </i>
-      </a>
-    </div>
+<sat-popover #userInfoPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
+  <div class="overlay_panel" [style]="{ width: '230px' }">
+    <div class="overlay_panel_header">
+      <div class="overlay_panel_header_userInfo">
+        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '36px', height: '36px' }" />
 
-    <div class="user_tag pr-body-2">
-      <i class="material-icons-round icon">account_circle</i>
-      <div class="title">{{ this.api.authSE?.localStorageUser?.user_name }}</div>
-      <div class="admin_tag" *ngIf="this.api?.rolesSE?.isAdmin">Admin</div>
-    </div>
-
-    <div class="my_initiatives" *ngIf="this.api.dataControlSE?.myInitiativesList?.length">
-      <div class="title pr-body-2">My roles:</div>
-      <div class="items custom_scroll">
-        <div class="item pr-body-2" *ngFor="let item of this.api.dataControlSE.myInitiativesList">
-          <div class="init">{{ item?.official_code }}</div>
-          <div class="role">{{ item?.role }}</div>
+        <div class="overlay_panel_header_userInfo_content">
+          <p class="overlay_panel_header_userInfo_content_name">{{ this.api.authSE.localStorageUser?.user_name }}</p>
+          <p class="overlay_panel_header_userInfo_content_email">{{ this.api.authSE.localStorageUser?.email }}</p>
         </div>
       </div>
     </div>
 
-    <div [satPopoverAnchor]="popover" (click)="popover.toggle()" class="info_icon">
-      @if (unreadNotifications.length === 0) {
-        <i class="material-icons-round">notifications</i>
-      } @else {
-        <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
-          <i class="material-icons-round animate_bell"> notifications </i>
-        </p-overlayBadge>
+    <div class="overlay_panel_userInfo_content">
+      @if (this.getInitiativeSeparatedByPortfolio().length > 0) {
+        <div class="overlay_panel_userInfo_content_item">
+          <p class="overlay_panel_userInfo_content_item_title">My Science Programs/Accelerators</p>
+
+          @for (item of this.getInitiativeSeparatedByPortfolio(); track $index) {
+            <p class="overlay_panel_userInfo_content_item_desc">{{ item.official_code }} - {{ item.role }}</p>
+          }
+        </div>
       }
     </div>
 
-    <app-user-roles-info-modal></app-user-roles-info-modal>
+    <div class="overlay_panel_separator"></div>
 
-    <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
-      <i class="material-icons-round info_icon">rocket_launch</i>
-    </div>
-
-    <div class="logout_btn" (click)="this.api.authSE.logout(); this.api.clearAll(); this.resultsNotificationsSE.resetNotificationInformation()">
-      Logout
+    <div class="overlay_panel_footer footer_userInfo">
       <i class="material-icons-round logout_icon">logout</i>
+      <p class="logout_button" (click)="userInfoPopover.toggle(); this.api.authSE.logout()">Log out</p>
     </div>
   </div>
-</div>
+</sat-popover>
 
 <sat-popover
-  #popover
+  #notificationsPopover
   hasBackdrop
   horizontalAlign="center"
   verticalAlign="below"
   scrollStrategy="close"
   [autoFocus]="false"
   (closed)="handleClosePopUp()">
-  <div class="overlay_panel">
+  <div class="overlay_panel" [style]="{ width: '340px' }">
     <div class="overlay_panel_header">
-      <h1 class="m-0 pr-h3">Notifications</h1>
+      <h1 class="overlay_panel_header_title">Notifications</h1>
     </div>
 
     <div class="overlay_panel_separator" [ngStyle]="{ 'margin-bottom': unreadNotifications.length > 0 && '0' }"></div>
@@ -77,7 +94,7 @@
     } @else {
       <div class="notifications_list">
         @for (notification of unreadNotifications; track $index) {
-          <app-pop-up-notification-item [notification]="notification" (click)="popover.toggle()"></app-pop-up-notification-item>
+          <app-pop-up-notification-item [notification]="notification" (click)="notificationsPopover.toggle()"></app-pop-up-notification-item>
         }
       </div>
     }
@@ -85,7 +102,7 @@
     <div class="overlay_panel_separator" *ngIf="unreadNotifications.length === 0"></div>
 
     <div class="overlay_panel_footer" [ngStyle]="{ 'padding-top': unreadNotifications.length > 0 && '15px' }">
-      <p class="see_all_notifications" (click)="goToNotifications(); popover.toggle()">See all the notifications</p>
+      <p class="see_all_notifications" (click)="goToNotifications(); notificationsPopover.toggle()">See all the notifications</p>
     </div>
   </div>
 </sat-popover>
