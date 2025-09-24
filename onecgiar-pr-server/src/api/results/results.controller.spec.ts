@@ -47,6 +47,12 @@ describe('ResultsController', () => {
       .mockResolvedValue({ status: 200, response: [] }),
     versioningResultsById: jest.fn().mockResolvedValue(undefined),
     getCenters: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
+    findAllByRoleFiltered: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: { items: [] } }),
+    getScienceProgramProgress: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: {} }),
   } as unknown as jest.Mocked<ResultsService>;
 
   const user = { id: 1 } as any;
@@ -111,6 +117,12 @@ describe('ResultsController', () => {
     const res = await controller.findAllResultRoles(7, 'INIT');
     expect(mockService.findAllByRole).toHaveBeenCalledWith(7, 'INIT');
     expect(res.status).toBe(200);
+  });
+
+  it('findAllResultRolesFiltered delegates to service with query', async () => {
+    const query = { page: '1', initiative: 'SP01' } as any;
+    await controller.findAllResultRolesFiltered(8, query);
+    expect(mockService.findAllByRoleFiltered).toHaveBeenCalledWith(8, query);
   });
 
   it('depthSearch delegates to service', async () => {
@@ -207,5 +219,22 @@ describe('ResultsController', () => {
   it('getCentersByResultId delegates', async () => {
     await controller.getCentersByResultId(14);
     expect(mockService.getCenters).toHaveBeenCalledWith(14);
+  });
+
+  it('getScienceProgramProgress parses numeric version', async () => {
+    await controller.getScienceProgramProgress(user, '34');
+    expect(mockService.getScienceProgramProgress).toHaveBeenCalledWith(
+      user,
+      34,
+    );
+  });
+
+  it('getScienceProgramProgress passes undefined when version is invalid', async () => {
+    mockService.getScienceProgramProgress.mockClear();
+    await controller.getScienceProgramProgress(user, 'invalid');
+    expect(mockService.getScienceProgramProgress).toHaveBeenCalledWith(
+      user,
+      undefined,
+    );
   });
 });

@@ -14,6 +14,7 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { MapLegacy } from './dto/map-legacy.dto';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
+import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
@@ -214,6 +215,42 @@ export class ResultsController {
     @Query() query: Record<string, any>,
   ) {
     return this.resultsService.findAllByRoleFiltered(userId, query);
+  }
+
+  @Get('get/science-programs/progress')
+  @ApiOperation({
+    summary: 'Get science program progress',
+    description:
+      'Aggregates reported results by science program (portfolio 3) and splits them by the user permissions.',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description: 'Optional phase/version identifier to filter the results.',
+  })
+  @ApiOkResponse({
+    description: 'Science program progress grouped by initiatives.',
+    type: ScienceProgramProgressResponseDto,
+  })
+  getScienceProgramProgress(
+    @UserToken() user: TokenDto,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' && Number.isFinite(parsedVersion)
+        ? parsedVersion
+        : undefined;
+
+    return this.resultsService.getScienceProgramProgress(
+      user,
+      normalizedVersion,
+    );
   }
 
   @Get('get/depth-search/:title')

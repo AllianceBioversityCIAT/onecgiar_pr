@@ -50,6 +50,7 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { GeneralInformationDto } from './dto/general-information.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { v4 } from 'uuid';
+import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -132,6 +133,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       .mockImplementation(async ({ where: { id } }) =>
         id > 0 ? { id } : null,
       ),
+    find: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockResultTypesService = {
@@ -420,6 +422,11 @@ describe('ResultsService (unit, pure mocks)', () => {
     }).compile();
 
     resultService = module.get(ResultsService);
+    mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mockResolvedValue(
+      { results: [], total: 0 },
+    );
+    mockClarisaInitiativesRepository.find.mockResolvedValue([]);
+    mockRoleByUserRepository.find.mockResolvedValue([]);
   });
 
   it('should be defined', () => {
@@ -522,6 +529,81 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
     expect(response.status).toBe(HttpStatus.NOT_FOUND);
     expect(response.message).toBe('Result Level not found');
+  });
+
+  it('getScienceProgramProgress includes initiatives without results', async () => {
+    const initiativesSeed = [
+      {
+        id: 50,
+        official_code: 'SP01',
+        name: 'Breeding for Tomorrow',
+        short_name: 'Breeding',
+        portfolio_id: 3,
+        obj_portfolio: { name: 'Portfolio', acronym: 'P25' },
+      },
+      {
+        id: 51,
+        official_code: 'SP02',
+        name: 'Sustainable Farming',
+        short_name: 'Sustainable',
+        portfolio_id: 3,
+        obj_portfolio: { name: 'Portfolio', acronym: 'P25' },
+      },
+    ];
+    mockClarisaInitiativesRepository.find.mockResolvedValueOnce(
+      initiativesSeed,
+    );
+    mockRoleByUserRepository.find.mockResolvedValueOnce([
+      { initiative_id: 50, role: 5 },
+    ]);
+    mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mockResolvedValueOnce(
+      {
+        results: [
+          {
+            submitter_id: 50,
+            submitter: 'SP01',
+            submitter_name: 'Breeding for Tomorrow',
+            submitter_short_name: 'Breeding',
+            portfolio_id: 3,
+            portfolio_name: 'Portfolio',
+            acronym: 'P25',
+            role_id: 5,
+            version_id: 34,
+            phase_name: 'Reporting 2025 - P25',
+            phase_year: 2025,
+            status_id: 1,
+            status_name: 'Editing',
+          },
+        ],
+        total: 1,
+      },
+    );
+
+    const result = await resultService.getScienceProgramProgress(userTest);
+
+    expect(
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered,
+    ).toHaveBeenCalledWith(userTest.id, { portfolioId: 3, versionId: 1 });
+
+    const payload = result.response as ScienceProgramProgressResponseDto;
+
+    expect(payload.mySciencePrograms).toHaveLength(1);
+    expect(payload.otherSciencePrograms).toHaveLength(1);
+
+    const mySp = payload.mySciencePrograms[0];
+    expect(mySp.initiativeCode).toBe('SP01');
+    expect(mySp.totalResults).toBe(1);
+    expect(mySp.progress).toBe(80);
+    expect(mySp.versions[0].totalResults).toBe(1);
+    expect(mySp.versions[0].statuses[0]).toEqual(
+      expect.objectContaining({ statusId: 1, count: 1 }),
+    );
+
+    const otherSp = payload.otherSciencePrograms[0];
+    expect(otherSp.initiativeCode).toBe('SP02');
+    expect(otherSp.totalResults).toBeNull();
+    expect(otherSp.progress).toBe(0);
+    expect(otherSp.versions).toHaveLength(0);
   });
 
   it('should error when creating a new result with invalid result type', async () => {
