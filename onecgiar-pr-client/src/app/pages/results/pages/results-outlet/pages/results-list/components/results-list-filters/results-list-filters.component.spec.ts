@@ -81,7 +81,7 @@ describe('ResultsListFiltersComponent', () => {
       resultsSE: {
         GET_versioning: jest.fn(() => of(mockVersioningResponse)),
         GET_allResultStatuses: jest.fn(() => of({ response: [{ id: 1, name: 'Draft' }] })),
-        GET_reportingList: jest.fn(() => of({ response: [{ result_code: 'R-1', pdf_link: 'http://x' }] })),
+        GET_reportingList: jest.fn(() => of({ response: [{ result_code: 'R-1', pdf_link: 'https://localhost:4200/reports/result-details/1' }] })),
         GET_AllInitiatives: jest.fn(() => of({ response: [{ id: 1, name: 'Initiative A' }] }))
       },
       rolesSE: {
