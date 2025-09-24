@@ -113,14 +113,47 @@
       }
 
       .overlay_panel_userInfo_content_item_title {
-        @include fonts.pr-typography('body-3');
-        font-weight: 300;
-        color: var(--pr-color-accents-5);
+        @include fonts.pr-typography('body-2');
+        font-weight: 500;
+        color: var(--pr-color-primary-200);
       }
 
       .overlay_panel_userInfo_content_item_desc {
         @include fonts.pr-typography('body-2');
         font-weight: 500;
+      }
+    }
+
+    .overlay_panel_admin_module {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+
+      &:hover {
+        .admin_module_icon {
+          color: var(--pr-color-primary-300);
+        }
+        .overlay_panel_admin_module_title {
+          color: var(--pr-color-primary-300);
+        }
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .admin_module_icon {
+        font-size: 15px;
+        color: var(--pr-color-primary-200);
+        transition: all 0.3s ease;
+      }
+
+      .overlay_panel_admin_module_title {
+        @include fonts.pr-typography('body-2');
+        font-weight: 500;
+        color: var(--pr-color-primary-200);
+        transition: all 0.3s ease;
       }
     }
   }
@@ -184,12 +217,22 @@
     padding: 5px 14px 15px;
     justify-content: flex-start;
     gap: 5px;
-    width: fit-content;
+    width: 100%;
     cursor: pointer;
+
+    &:hover {
+      .logout_icon {
+        color: var(--pr-color-red-500);
+      }
+      .logout_button {
+        color: var(--pr-color-red-500);
+      }
+    }
 
     .logout_icon {
       font-size: 15px;
       color: var(--pr-color-red-300);
+      transition: all 0.3s ease;
     }
 
     .logout_button {
@@ -197,6 +240,7 @@
       font-weight: 400;
       color: var(--pr-color-red-300);
       margin: 0;
+      transition: all 0.3s ease;
     }
   }
 

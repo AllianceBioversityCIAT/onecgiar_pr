@@ -12,7 +12,7 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./navigation-bar.component.scss'],
   standalone: true,
   imports: [CommonModule, RouterModule],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class NavigationBarComponent {
   readonly navigationOptions = signal<PrRoute[]>(routingApp);
@@ -23,7 +23,7 @@ export class NavigationBarComponent {
   validateAdminModuleAndRole(option: PrRoute): boolean {
     if (option?.onlyTest && environment.production) return true;
 
-    if (this.rolesSE.isAdmin) return false;
+    if (this?.rolesSE?.isAdmin) return false;
 
     if (option?.path === 'init-admin-module') return this.validateCoordAndLead();
 
@@ -31,7 +31,7 @@ export class NavigationBarComponent {
   }
 
   validateCoordAndLead(): boolean {
-    const initiatives = this.dataControlSE.myInitiativesList ?? [];
+    const initiatives = this.dataControlSE?.myInitiativesList ?? [];
     const hasLeadOrCoordinator = initiatives.some(init => init?.role === 'Lead' || init?.role === 'Coordinator');
     return !hasLeadOrCoordinator;
   }

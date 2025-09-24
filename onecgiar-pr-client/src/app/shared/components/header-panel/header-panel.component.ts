@@ -4,7 +4,7 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { AvatarModule } from 'primeng/avatar';
 import { SatPopoverModule } from '@ncstate/sat-popover';
@@ -28,7 +28,8 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
     FormatTimeAgoModule,
     PopUpNotificationItemComponent,
     TawkComponent,
-    NavigationBarComponent
+    NavigationBarComponent,
+    RouterModule
   ]
 })
 export class HeaderPanelComponent implements OnInit {
