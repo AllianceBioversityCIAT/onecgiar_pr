@@ -39,7 +39,7 @@
 }
 
 <sat-popover #userInfoPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
-  <div class="overlay_panel" [style]="{ width: '230px' }">
+  <div class="overlay_panel" [style]="{ width: '250px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
         <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '36px', height: '36px' }" />
@@ -61,25 +61,23 @@
           }
         </div>
       }
+
+      <div class="overlay_panel_admin_module" routerLink="/admin-module/completeness-status" (click)="userInfoPopover.toggle()">
+        <i class="pi pi-wrench admin_module_icon"></i>
+        <p class="overlay_panel_admin_module_title">Admin module</p>
+      </div>
     </div>
 
     <div class="overlay_panel_separator"></div>
 
-    <div class="overlay_panel_footer footer_userInfo">
+    <div class="overlay_panel_footer footer_userInfo" (click)="userInfoPopover.toggle(); this.api.authSE.logout()">
       <i class="material-icons-round logout_icon">logout</i>
-      <p class="logout_button" (click)="userInfoPopover.toggle(); this.api.authSE.logout()">Log out</p>
+      <p class="logout_button">Log out</p>
     </div>
   </div>
 </sat-popover>
 
-<sat-popover
-  #notificationsPopover
-  hasBackdrop
-  horizontalAlign="center"
-  verticalAlign="below"
-  scrollStrategy="close"
-  [autoFocus]="false"
-  (closed)="handleClosePopUp()">
+<sat-popover #notificationsPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
   <div class="overlay_panel" [style]="{ width: '340px' }">
     <div class="overlay_panel_header">
       <h1 class="overlay_panel_header_title">Notifications</h1>
