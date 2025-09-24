@@ -1,4 +1,4 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.api.dataControlSE.showRetrieveRequest"
+<p-dialog appendTo="body" header="Title" [(visible)]="this.api.dataControlSE.showRetrieveRequest"
     (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
     [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Retrieve result from previous portfolio</div>
@@ -39,9 +39,6 @@
         <div class="information">
             As this result has not been recovered by anyone else, you will be the new submitter.
         </div>
-
-
-        <!-- flagsCode="iso_alpha_2" -->
     </div>
     <div class="buttons">
         <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"

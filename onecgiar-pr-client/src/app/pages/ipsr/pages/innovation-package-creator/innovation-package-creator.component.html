@@ -76,7 +76,7 @@
 </div>
 
 <p-dialog
-  class="support_information"
+  appendTo="body"
   header="Select core Innovation"
   [(visible)]="statusPdialog"
   [draggable]="false"
@@ -85,8 +85,7 @@
   [showHeader]="true"
   [dismissableMask]="true"
   [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
-  [blockScroll]="true"
-  appendTo="body">
+  [blockScroll]="true">
   <div style="display: flex; justify-content: center; flex-direction: column">
     @if (this.innovationPackageCreatorBody.initiative_id) {
       <div class="modal_container">

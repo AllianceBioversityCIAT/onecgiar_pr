@@ -1,23 +1,45 @@
-<p-dialog class="support_information" header="Title" [(visible)]="this.submissionModalSE.showModal"
-    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
-    [dismissableMask]="true" [style]="{padding: '0px'}">
-    <div class="modal_title">Submission
+<p-dialog
+  appendTo="body"
+  header="Title"
+  [(visible)]="this.submissionModalSE.showModal"
+  (onHide)="cleanObject()"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px' }">
+  <div class="modal_title">Submission</div>
+  <div class="modal_container partners-request-container">
+    <div class="information_title">Confirm submission</div>
+    <div class="description">
+      The <strong>"{{ this.dataControlSE?.currentResult?.title }}"</strong> is about to be submitted. Please note that further changes cannot be made
+      once approved. You are welcome to add any comments related to this result in the box below.
     </div>
-    <div class="modal_container partners-request-container">
-        <div class="information_title">Confirm submission</div>
-        <div class="description">The <strong>"{{this.dataControlSE?.currentResult?.title}}"</strong> is about to be
-            submitted. Please note that further changes cannot be made once approved. You are welcome to add any
-            comments related to this result in the box below.</div>
-        <app-pr-textarea placeholder="Type your comment here..." label="Comment (optional)" type="text"
-            [required]="false" [(ngModel)]="this.comment" [isStatic]="true" [maxWords]="150"></app-pr-textarea>
-    </div>
-    <div class="buttons">
-        <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
-            (clickEvent)="this.submissionModalSE.showModal = false">
-        </app-pr-button>
-        <app-pr-button [ngClass]="{'globalDisabled': this.requesting}" [text]="this.requesting?'Submitting':'Submit'"
-            [rotating]="this.requesting" [icon]="this.requesting?'loop':'send'" padding="medium"
-            (clickEvent)="onSubmit()">
-        </app-pr-button>
-    </div>
+    <app-pr-textarea
+      placeholder="Type your comment here..."
+      label="Comment (optional)"
+      type="text"
+      [required]="false"
+      [(ngModel)]="this.comment"
+      [isStatic]="true"
+      [maxWords]="150"></app-pr-textarea>
+  </div>
+  <div class="buttons">
+    <app-pr-button
+      padding="medium"
+      text="Cancel"
+      icon="cancel_schedule_send"
+      colorType="secondary"
+      (clickEvent)="this.submissionModalSE.showModal = false">
+    </app-pr-button>
+    <app-pr-button
+      [ngClass]="{ globalDisabled: this.requesting }"
+      [text]="this.requesting ? 'Submitting' : 'Submit'"
+      [rotating]="this.requesting"
+      [icon]="this.requesting ? 'loop' : 'send'"
+      padding="medium"
+      (clickEvent)="onSubmit()">
+    </app-pr-button>
+  </div>
 </p-dialog>

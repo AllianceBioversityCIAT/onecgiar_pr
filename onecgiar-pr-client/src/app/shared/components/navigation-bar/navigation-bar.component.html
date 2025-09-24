@@ -1,16 +1,17 @@
-<div class="navigation_bar" [ngClass]="{ sticky: isSticky }">
-  @for (navOption of navigationOptions; track navOption.prName) {
-    <a
-      [hidden]="navOption.prHide || validateAdminModuleAndRole(navOption)"
-      [routerLink]="navOption.path"
-      routerLinkActive="section_active transition-all"
-      class="pr-body-2"
-      [ngClass]="{ 'padding-right-40': navOption?.underConstruction }">
-      {{ navOption.prName }}
+<div class="navigation_bar">
+  @for (navOption of navigationOptions(); track navOption.prName) {
+    @if (!(navOption.prHide || validateAdminModuleAndRole(navOption))) {
+      <div
+        [routerLink]="navOption.path"
+        routerLinkActive="section_active"
+        class="pr-body-1 navigation_bar_item"
+        [ngClass]="{ 'padding-right-40': navOption?.underConstruction }">
+        {{ navOption.prName }}
 
-      @if (navOption?.underConstruction) {
-        <img src="assets/work-in-progress.png" alt="" srcset="" />
-      }
-    </a>
+        @if (navOption?.underConstruction) {
+          <img src="assets/work-in-progress.png" alt="" srcset="" />
+        }
+      </div>
+    }
   }
 </div>
