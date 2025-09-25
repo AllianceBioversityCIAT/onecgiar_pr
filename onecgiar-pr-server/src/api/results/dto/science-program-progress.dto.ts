@@ -64,6 +64,12 @@ export class ScienceProgramProgressDto {
   })
   portfolioAcronym?: string;
 
+  @ApiProperty({ description: 'CGIAR entity type code.', required: false })
+  entityTypeCode?: number;
+
+  @ApiProperty({ description: 'CGIAR entity type name.', required: false })
+  entityTypeName?: string;
+
   @ApiProperty({
     description: 'Total number of results linked to the initiative.',
     nullable: true,

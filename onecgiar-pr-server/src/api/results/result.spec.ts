@@ -540,6 +540,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         short_name: 'Breeding',
         portfolio_id: 3,
         obj_portfolio: { name: 'Portfolio', acronym: 'P25' },
+        obj_cgiar_entity_type: { code: 101, name: 'Science Program' },
       },
       {
         id: 51,
@@ -548,6 +549,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         short_name: 'Sustainable',
         portfolio_id: 3,
         obj_portfolio: { name: 'Portfolio', acronym: 'P25' },
+        obj_cgiar_entity_type: { code: 102, name: 'Accelerator' },
       },
     ];
     mockClarisaInitiativesRepository.find.mockResolvedValueOnce(
@@ -594,6 +596,8 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(mySp.initiativeCode).toBe('SP01');
     expect(mySp.totalResults).toBe(1);
     expect(mySp.progress).toBe(80);
+    expect(mySp.entityTypeCode).toBe(101);
+    expect(mySp.entityTypeName).toBe('Science Program');
     expect(mySp.versions[0].totalResults).toBe(1);
     expect(mySp.versions[0].statuses[0]).toEqual(
       expect.objectContaining({ statusId: 1, count: 1 }),
@@ -603,6 +607,8 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(otherSp.initiativeCode).toBe('SP02');
     expect(otherSp.totalResults).toBeNull();
     expect(otherSp.progress).toBe(0);
+    expect(otherSp.entityTypeCode).toBe(102);
+    expect(otherSp.entityTypeName).toBe('Accelerator');
     expect(otherSp.versions).toHaveLength(0);
   });
 
