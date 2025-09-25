@@ -1143,6 +1143,8 @@ export class ResultsService {
         portfolioId?: number;
         portfolioName?: string;
         portfolioAcronym?: string;
+        entityTypeCode?: number;
+        entityTypeName?: string;
       }
     >();
 
@@ -1155,6 +1157,8 @@ export class ResultsService {
         portfolioId: initiative.portfolio_id ?? undefined,
         portfolioName: initiative.obj_portfolio?.name ?? undefined,
         portfolioAcronym: initiative.obj_portfolio?.acronym ?? undefined,
+        entityTypeCode: initiative.obj_cgiar_entity_type?.code ?? undefined,
+        entityTypeName: initiative.obj_cgiar_entity_type?.name ?? undefined,
       });
     });
 
@@ -1182,6 +1186,8 @@ export class ResultsService {
         portfolioId?: number;
         portfolioName?: string;
         portfolioAcronym?: string;
+        entityTypeCode?: number;
+        entityTypeName?: string;
       }>,
     ) => {
       const current = metadata.get(initiativeId);
@@ -1207,6 +1213,14 @@ export class ResultsService {
           override?.portfolioAcronym !== undefined
             ? override.portfolioAcronym
             : current?.portfolioAcronym,
+        entityTypeCode:
+          override?.entityTypeCode !== undefined
+            ? override.entityTypeCode
+            : current?.entityTypeCode,
+        entityTypeName:
+          override?.entityTypeName !== undefined
+            ? override.entityTypeName
+            : current?.entityTypeName,
       };
       metadata.set(initiativeId, merged);
       return merged;
@@ -1229,6 +1243,8 @@ export class ResultsService {
             portfolioId: info.portfolioId,
             portfolioName: info.portfolioName,
             portfolioAcronym: info.portfolioAcronym,
+            entityTypeCode: info.entityTypeCode,
+            entityTypeName: info.entityTypeName,
             totalResults: 0,
             progress: 0,
             versions: [],
@@ -1250,6 +1266,10 @@ export class ResultsService {
           container.dto.portfolioName ?? meta.portfolioName;
         container.dto.portfolioAcronym =
           container.dto.portfolioAcronym ?? meta.portfolioAcronym;
+        container.dto.entityTypeCode =
+          container.dto.entityTypeCode ?? meta.entityTypeCode;
+        container.dto.entityTypeName =
+          container.dto.entityTypeName ?? meta.entityTypeName;
       }
       return container;
     };
@@ -1270,6 +1290,11 @@ export class ResultsService {
             : undefined,
         portfolioName: row?.portfolio_name ?? undefined,
         portfolioAcronym: row?.acronym ?? undefined,
+        entityTypeCode:
+          row?.entity_type_code !== undefined
+            ? Number(row.entity_type_code)
+            : undefined,
+        entityTypeName: row?.entity_type_name ?? undefined,
       });
 
       const container = ensureContainer(initiativeId, meta);
@@ -1424,8 +1449,12 @@ export class ResultsService {
       }
 
       const initiativesSeed = await this._clarisaInitiativesRepository.find({
-        where: { portfolio_id: 3, active: true },
-        relations: ['obj_portfolio'],
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+        relations: ['obj_portfolio', 'obj_cgiar_entity_type'],
       });
 
       const userRoleMap = new Map<number, { hasEdit: boolean }>();
