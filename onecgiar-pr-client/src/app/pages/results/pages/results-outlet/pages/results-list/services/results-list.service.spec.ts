@@ -11,15 +11,8 @@ describe('ResultsListService', () => {
   });
 
   it('should have initial properties set', () => {
-    expect(service.text_to_search).toEqual('');
     expect(service.showDeletingResultSpinner).toBeFalsy();
     expect(service.showLoadingResultSpinner).toBeFalsy();
-  });
-
-  it('should update text_to_search property', () => {
-    const text = 'New search text';
-    service.text_to_search = text;
-    expect(service.text_to_search).toEqual(text);
   });
 
   it('should update showDeletingResultSpinner property', () => {

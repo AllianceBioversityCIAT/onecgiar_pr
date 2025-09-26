@@ -70,7 +70,6 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
-    this.api.updateResultsList();
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
       if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1)

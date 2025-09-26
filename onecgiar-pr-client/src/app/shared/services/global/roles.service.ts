@@ -33,7 +33,10 @@ export class RolesService {
     }
   ];
 
-  constructor(private authSE: AuthService, private dataControlSE: DataControlService) {}
+  constructor(
+    private authSE: AuthService,
+    private dataControlSE: DataControlService
+  ) {}
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
@@ -73,7 +76,7 @@ export class RolesService {
   }
 
   getIsAdminValue() {
-    this.roles?.application?.role_id == 1 ? (this.isAdmin = true) : (this.isAdmin = false);
+    this.isAdmin = this.roles?.application?.role_id == 1;
   }
 
   async updateRolesListFromLocalStorage() {
@@ -84,8 +87,8 @@ export class RolesService {
 
   async updateRolesList() {
     return new Promise((resolve, reject) => {
-      this.authSE.GET_allRolesByUser().subscribe(
-        ({ response }) => {
+      this.authSE.GET_allRolesByUser().subscribe({
+        next: ({ response }) => {
           this.roles = response;
           localStorage.setItem('roles', JSON.stringify(response));
           this.getIsAdminValue();
@@ -93,11 +96,10 @@ export class RolesService {
           this.firstValidationOfReadOnly = true;
           resolve(response);
         },
-        err => {
+        error: err => {
           console.error(err);
-          reject();
         }
-      );
+      });
     });
   }
 

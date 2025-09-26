@@ -14,15 +14,7 @@
   </div>
 
   <br />
-  <app-results-list-filters></app-results-list-filters>
-</div>
-
-<div class="download_button_container">
-  <app-pr-button
-    text="Download"
-    (click)="onDownLoadTableAsExcel()"
-    [rotating]="this.gettingReport"
-    [icon]="this.gettingReport ? 'loop' : 'file_download'"></app-pr-button>
+  <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin"></app-results-list-filters>
 </div>
 
 <div class="table">
@@ -33,28 +25,46 @@
     [sortOrder]="-1"
     [value]="
       this.api.dataControlSE.resultsList
-        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter
+          : this.resultsListFilterSE.text_to_search()
+          : this.combine
+          : this.resultsListFilterSE.selectedPhases()
+          : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+          : this.resultsListFilterSE.selectedIndicatorCategories()
+          : this.resultsListFilterSE.selectedStatus()
     "
     [loading]="
       this.resultsListService.showDeletingResultSpinner ||
       (this.resultsListService.showLoadingResultSpinner &&
         !(
           this.api.dataControlSE.resultsList
-          | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+          | resultsListFilter
+            : this.resultsListFilterSE.text_to_search()
+            : this.combine
+            : this.resultsListFilterSE.selectedPhases()
+            : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+            : this.resultsListFilterSE.selectedIndicatorCategories()
+            : this.resultsListFilterSE.selectedStatus()
         )?.length)
     "
     [showLoader]="false"
     [paginator]="
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter
+          : this.resultsListFilterSE.text_to_search()
+          : this.combine
+          : this.resultsListFilterSE.selectedPhases()
+          : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+          : this.resultsListFilterSE.selectedIndicatorCategories()
+          : this.resultsListFilterSE.selectedStatus()
       )?.length
     "
     responsiveLayout="scroll"
     [rows]="10"
     styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
-    [first]="this.resultsListService.text_to_search && 0"
+    [first]="this.resultsListFilterSE.text_to_search() && 0"
     [rowsPerPageOptions]="[10, 50, 100]">
     <ng-template pTemplate="header">
       <tr>
@@ -125,7 +135,13 @@
         [style]="{
           height: (
             this.api.dataControlSE.resultsList
-            | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+            | resultsListFilter
+              : this.resultsListFilterSE.text_to_search()
+              : this.combine
+              : this.resultsListFilterSE.selectedPhases()
+              : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+              : this.resultsListFilterSE.selectedIndicatorCategories()
+              : this.resultsListFilterSE.selectedStatus()
           )?.length
             ? '100%'
             : '400px'
@@ -147,14 +163,26 @@
     *ngIf="
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter
+          : this.resultsListFilterSE.text_to_search()
+          : this.combine
+          : this.resultsListFilterSE.selectedPhases()
+          : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+          : this.resultsListFilterSE.selectedIndicatorCategories()
+          : this.resultsListFilterSE.selectedStatus()
       )?.length
     ">
     Total:
     {{
       (
         this.api.dataControlSE.resultsList
-        | resultsListFilter: this.resultsListService.text_to_search : this.combine : this.api.resultsListFilterSE.filterJoin
+        | resultsListFilter
+          : this.resultsListFilterSE.text_to_search()
+          : this.combine
+          : this.resultsListFilterSE.selectedPhases()
+          : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
+          : this.resultsListFilterSE.selectedIndicatorCategories()
+          : this.resultsListFilterSE.selectedStatus()
       )?.length
     }}/{{ this.api.dataControlSE.resultsList?.length }}
   </div>

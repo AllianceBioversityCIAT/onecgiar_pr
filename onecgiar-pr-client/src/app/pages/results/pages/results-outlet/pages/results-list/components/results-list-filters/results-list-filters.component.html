@@ -1,38 +1,197 @@
-<div class="filters">
-  <div *ngFor="let filter of this.resultsListFilterSE.filters.general" class="filter {{ filter.attr }}">
-    <div class="filter_title">{{ filter.filter_title }}</div>
-    <div class="chips">
-      <div
-        class="chip"
-        [ngClass]="{ chip_selected: option.selected, disabled: option.name == '2023' || option.name == '2024' }"
-        (click)="this.resultsListFilterSE.onSelectChip(option); this.resultsListFilterSE.cleanAllFilters(option)"
-        *ngFor="let option of filter?.options">
-        {{ option.name }}
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="result_level_container">
-  <div class="result_level_title">Result level</div>
-  <div class="filters">
-    <div *ngFor="let filter of this.resultsListFilterSE.filters.resultLevel" class="filter">
-      <div class="filter_title">{{ filter.name }}</div>
-      <div class="chips">
-        <div
-          class="chip"
-          [ngClass]="{ chip_selected: option.selected }"
-          [style.background]="option.selected ? 'var(--pr-color-result-level-' + filter?.id + ')' : ''"
-          (click)="this.resultsListFilterSE.onSelectChip(option)"
-          *ngFor="let option of filter?.options">
-          {{ option.name }}
-        </div>
+  <div class="result_level_title">Filters</div>
+
+  <div class="filters_items_container">
+    <div class="filters_items_container_left">
+      <div>
+        <app-pr-field-header
+          label="Phase"
+          labelDescStyleClass="pr-body-2"
+          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
+          [required]="false"></app-pr-field-header>
+
+        <p-multiselect
+          [filter]="false"
+          [showHeader]="false"
+          [options]="this.resultsListFilterSE.phasesOptions()"
+          [(ngModel)]="resultsListFilterSE.selectedPhases"
+          optionLabel="name"
+          (onChange)="onSelectPhases()"
+          placeholder="Select phase"
+          [maxSelectedLabels]="1"
+          [style]="{ width: '245px' }" />
       </div>
+
+      <div>
+        <app-pr-field-header
+          label="Submitter(s)"
+          labelDescStyleClass="pr-body-2"
+          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
+          [required]="false"></app-pr-field-header>
+
+        @if (this.isAdmin) {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+            optionLabel="official_code"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        } @else {
+          <p-multiselect
+            [filter]="false"
+            [options]="this.resultsListFilterSE.submittersOptions()"
+            [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+            optionLabel="name"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            [filter]="true"
+            [style]="{ width: '245px' }" />
+        }
+      </div>
+
+      <div>
+        <app-pr-field-header
+          label="Indicator category(ies)"
+          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
+          labelDescStyleClass="pr-body-2"
+          [required]="false"></app-pr-field-header>
+
+        <p-multiselect
+          [filter]="false"
+          [showHeader]="false"
+          [options]="this.resultsListFilterSE.filters.resultLevel"
+          [(ngModel)]="resultsListFilterSE.selectedIndicatorCategories"
+          optionLabel="name"
+          placeholder="Select indicator category(ies)"
+          [maxSelectedLabels]="1"
+          [group]="true"
+          optionGroupChildren="options"
+          [style]="{ width: '245px' }">
+          <ng-template let-group #group>
+            <div class="flex items-center">
+              <span>{{ group.name }}</span>
+            </div>
+          </ng-template>
+        </p-multiselect>
+      </div>
+    </div>
+
+    <div class="filters_items_container_right">
+      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+        <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
+      </p-overlaybadge>
+      <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
     </div>
   </div>
 </div>
 
-<div class="search_input">
-  <i class="material-icons-round">search</i>
-  <input type="text" placeholder="Find result..." [(ngModel)]="this.resultsListService.text_to_search" class="pr-body-2" id="results_search" />
+<div class="filters">
+  <p-iconfield>
+    <p-inputicon styleClass="pi pi-search" />
+    <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '350px' }" />
+  </p-iconfield>
+
+  <app-pr-button
+    text="Download"
+    (click)="onDownLoadTableAsExcel()"
+    [rotating]="this.gettingReport()"
+    [icon]="this.gettingReport() ? 'loop' : 'file_download'"></app-pr-button>
 </div>
+
+<p-drawer [(visible)]="visible" header="Table Filters" position="right" [style]="{ width: '350px', backgroundColor: 'var(--pr-color-accents-1)' }">
+  <p>Filter your table data by applying custom criteria.</p>
+
+  <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
+    <div>
+      <app-pr-field-header
+        label="Phase"
+        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+        [required]="false"></app-pr-field-header>
+
+      <p-multiselect
+        [filter]="false"
+        [showHeader]="false"
+        [options]="this.resultsListFilterSE.phasesOptions()"
+        [(ngModel)]="resultsListFilterSE.selectedPhases"
+        (onChange)="onSelectPhases()"
+        optionLabel="name"
+        placeholder="Select phase"
+        [maxSelectedLabels]="1"
+        [style]="{ width: '100%' }" />
+    </div>
+
+    <div>
+      <app-pr-field-header
+        label="Submitter(s)"
+        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+        [required]="false"></app-pr-field-header>
+
+      @if (this.isAdmin) {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+          optionLabel="official_code"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      } @else {
+        <p-multiselect
+          [filter]="false"
+          [options]="this.resultsListFilterSE.submittersOptions()"
+          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+          optionLabel="name"
+          placeholder="Select submitter(s)"
+          [maxSelectedLabels]="6"
+          [filter]="true"
+          [style]="{ width: '100%' }" />
+      }
+    </div>
+
+    <div>
+      <app-pr-field-header
+        label="Indicator category(ies)"
+        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+        [required]="false"></app-pr-field-header>
+
+      <p-multiselect
+        [filter]="false"
+        [showHeader]="false"
+        [options]="this.resultsListFilterSE.filters.resultLevel"
+        [(ngModel)]="resultsListFilterSE.selectedIndicatorCategories"
+        optionLabel="name"
+        placeholder="Select indicator category(ies)"
+        [maxSelectedLabels]="1"
+        [group]="true"
+        optionGroupChildren="options"
+        [style]="{ width: '100%' }">
+        <ng-template let-group #group>
+          <div class="flex items-center">
+            <span>{{ group.name }}</span>
+          </div>
+        </ng-template>
+      </p-multiselect>
+    </div>
+
+    <div>
+      <app-pr-field-header
+        label="Status"
+        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+        [required]="false"></app-pr-field-header>
+
+      <p-multiselect
+        [filter]="false"
+        [showHeader]="false"
+        [options]="this.resultsListFilterSE.statusOptions()"
+        [(ngModel)]="resultsListFilterSE.selectedStatus"
+        optionLabel="name"
+        placeholder="Select status"
+        [maxSelectedLabels]="3"
+        [style]="{ width: '100%' }" />
+    </div>
+  </div>
+</p-drawer>

@@ -19,7 +19,7 @@ import { CustomSpinnerModule } from '../../../../../../shared/components/custom-
 import { PopoverModule } from 'primeng/popover';
 
 @NgModule({
-  declarations: [ResultsListComponent, ResultsListFiltersComponent, ReportNewResultButtonComponent],
+  declarations: [ResultsListComponent, ReportNewResultButtonComponent],
   imports: [
     CommonModule,
     ResultsListRoutingModule,
@@ -34,7 +34,8 @@ import { PopoverModule } from 'primeng/popover';
     ResultsListFilterPipeModule,
     PdfIconModule,
     TooltipModule,
-    PopoverModule
+    PopoverModule,
+    ResultsListFiltersComponent
   ]
 })
 export class ResultsListModule {}

@@ -56,7 +56,6 @@
   padding-bottom: 15px;
   margin: 15px 0px;
   background-color: var(--pr-color-accents-1);
-  overflow: hidden;
   border-radius: 10px;
 
   .filters {
@@ -70,6 +69,7 @@
     width: max-content;
     @include fonts.pr-typography('body-2');
     border-end-end-radius: 10px;
+    border-start-start-radius: 10px;
   }
 }
 
