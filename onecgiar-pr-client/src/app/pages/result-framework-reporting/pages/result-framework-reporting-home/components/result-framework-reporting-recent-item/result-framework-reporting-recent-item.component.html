@@ -1,0 +1,19 @@
+<div class="recent-activity-card">
+  <div class="recent-activity-card__row">
+    <div class="recent-activity-card__row_left">
+      <i class="pi pi-info-circle" style="font-size: 16px; color: var(--pr-color-neutral-200)"></i>
+
+      <span class="recent-activity-card__title">
+        Result created: <span class="font-weight-500">{{ item?.title }}</span></span
+      >
+    </div>
+
+    <span class="recent-activity-card__time">
+      <i class="pi pi-clock" style="font-size: 12px"></i>
+
+      {{ item?.time }}
+    </span>
+  </div>
+
+  <div class="recent-activity-card__desc">{{ item?.description }}</div>
+</div>
