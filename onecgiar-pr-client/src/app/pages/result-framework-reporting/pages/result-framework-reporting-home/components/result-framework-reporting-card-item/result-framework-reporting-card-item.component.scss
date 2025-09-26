@@ -1,0 +1,68 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.framework-reporting-card-item {
+  background-color: var(--pr-color-white);
+  height: 100%;
+  min-height: 126px;
+  padding: 20px 16px;
+  box-shadow: 0px 1.76px 7.03px 0px rgba(var(--pr-color-secondary-rgb), 0.2);
+  border-radius: 10px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-width: 1.17px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+}
+
+.framework-reporting-card-item_header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  height: 100%;
+}
+
+.framework-reporting-card-item_header_desc {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-6);
+}
+
+.framework-reporting-card-item_header_title {
+  @include fonts.pr-typography('h3');
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+}
+
+.framework-reporting-card-item_progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.framework-reporting-card-item_progress_title {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  color: var(--pr-color-accents-6);
+  margin-bottom: 10px;
+}
+
+.framework-reporting-card-item_progress_value {
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+}
