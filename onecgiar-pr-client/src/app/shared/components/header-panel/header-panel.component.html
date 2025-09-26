@@ -62,10 +62,12 @@
         </div>
       }
 
-      <div class="overlay_panel_admin_module" routerLink="/admin-module/completeness-status" (click)="userInfoPopover.toggle()">
-        <i class="pi pi-wrench admin_module_icon"></i>
-        <p class="overlay_panel_admin_module_title">Admin module</p>
-      </div>
+      @if (this.api.rolesSE.isAdmin) {
+        <div class="overlay_panel_admin_module" routerLink="/admin-module/completeness-status" (click)="userInfoPopover.toggle()">
+          <i class="pi pi-wrench admin_module_icon"></i>
+          <p class="overlay_panel_admin_module_title">Admin module</p>
+        </div>
+      }
     </div>
 
     <div class="overlay_panel_separator"></div>
