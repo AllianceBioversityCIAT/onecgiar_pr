@@ -57,10 +57,19 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   getUserInitials() {
-    return this.api.authSE.localStorageUser?.user_name
+    if (this.api.authSE.localStorageUser?.user_acronym) {
+      return this.api.authSE.localStorageUser?.user_acronym;
+    }
+
+    const userName = this.api.authSE.localStorageUser?.user_name ?? '';
+    const initials = userName
       .split(' ')
+      .filter(name => !!name)
       .map(name => name[0])
-      .join('');
+      .join('')
+      .toUpperCase();
+
+    return initials.slice(0, 2);
   }
 
   notificationBadgeLength() {
