@@ -92,9 +92,16 @@ describe('main bootstrap', () => {
       'PRMS Reporting API',
     );
     expect(createDocumentMock).toHaveBeenCalled();
-    expect(setupMock).toHaveBeenCalledWith('api', expect.anything(), {
-      doc: true,
-    });
+    expect(setupMock).toHaveBeenCalledWith(
+      'api',
+      expect.anything(),
+      {
+        doc: true,
+      },
+      {
+        swaggerOptions: { filter: true },
+      },
+    );
     expect(listenMock).toHaveBeenCalledWith('4500');
   });
 });
