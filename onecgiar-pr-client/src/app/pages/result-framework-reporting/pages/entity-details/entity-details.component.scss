@@ -45,8 +45,9 @@ p {
 .entity-details_header {
   display: flex;
   flex-direction: column;
-  margin: 38px 30px;
   max-width: 1600px;
+  padding: 0px 30px;
+  margin: 38px auto;
 }
 
 .entity-details_container {
