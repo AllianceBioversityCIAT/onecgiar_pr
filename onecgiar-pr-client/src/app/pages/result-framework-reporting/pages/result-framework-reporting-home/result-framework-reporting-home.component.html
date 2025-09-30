@@ -41,7 +41,7 @@
     </div>
 
     <div class="framework-reporting_right_content">
-      @for (item of recentActivityList(); track $index) {
+      @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
         <app-result-framework-reporting-recent-item [item]="item" />
       }
     </div>
