@@ -13,7 +13,8 @@ describe('ResultFrameworkReportingHomeComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       resultsSE: {
-        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } }))
+        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
+        GET_RecentActivity: jest.fn().mockReturnValue(of({ response: [] }))
       }
     };
     await TestBed.configureTestingModule({

@@ -76,6 +76,11 @@ import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 import { In } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { NotificationService } from '../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../notification/enum/notification.enum';
 
 @Injectable()
 export class ResultsService {
@@ -116,12 +121,13 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
+    private readonly _roleByUserRepository?: RoleByUserRepository,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
-    private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
-    private readonly _roleByUserRepository?: RoleByUserRepository,
+    @Optional() private readonly _notificationService?: NotificationService,
   ) {}
 
   async createOwnerResult(
@@ -252,6 +258,12 @@ export class ResultsService {
       });
 
       await this.insertResultIntoElastic(newResultHeader);
+
+      await this.emitResultCreatedNotification(
+        newResultHeader,
+        Number(initiative.id),
+        user.id,
+      );
 
       return {
         response: newResultHeader,
@@ -1982,6 +1994,59 @@ export class ResultsService {
         error,
         !EnvironmentExtractor.isProduction(),
       );
+    }
+  }
+
+  private async emitResultCreatedNotification(
+    result: Result,
+    initiativeId: number,
+    userId: number,
+  ) {
+    try {
+      const recipientIds = await this.getInitiativeUserIds(initiativeId);
+      if (!recipientIds.length) {
+        return;
+      }
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_CREATED,
+        recipientIds,
+        userId,
+        result.id,
+      );
+    } catch (error) {
+      this._logger.warn(
+        `Failed to emit result created notification for result ${result.id}`,
+        error as Error,
+      );
+    }
+  }
+
+  private async getInitiativeUserIds(initiativeId: number): Promise<number[]> {
+    if (!this._roleByUserRepository) {
+      return [];
+    }
+
+    try {
+      const roles = await this._roleByUserRepository.find({
+        where: { initiative_id: initiativeId, active: true },
+      });
+
+      const ids = new Set<number>();
+      roles.forEach((role) => {
+        if (role?.user) {
+          ids.add(Number(role.user));
+        }
+      });
+
+      return Array.from(ids.values());
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve users for initiative ${initiativeId}`,
+        error as Error,
+      );
+      return [];
     }
   }
 }
