@@ -1,0 +1,109 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.entity-details_breadcrumb {
+  @include fonts.pr-typography('body-1');
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 30px;
+  gap: 6px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  background-color: var(--pr-color-white);
+}
+
+.entity-details_breadcrumb_homeLink {
+  font-weight: 400;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--pr-color-accents-6);
+  }
+}
+
+.entity-details_breadcrumb_separator {
+  color: var(--pr-color-accents-5);
+}
+
+.entity-details_breadcrumb_link {
+  color: var(--pr-color-primary-300);
+  font-weight: 600;
+  cursor: default;
+}
+
+.entity-details_header {
+  display: flex;
+  flex-direction: column;
+  margin: 38px 30px;
+  max-width: 1600px;
+}
+
+.entity-details_container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0px 30px 120px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.entity-details_title {
+  @include fonts.pr-typography('h1');
+  font-weight: 700;
+  color: var(--pr-color-secondary-600);
+}
+
+.entity-details_description {
+  @include fonts.pr-typography('h3');
+  font-weight: 400;
+  color: var(--pr-color-accents-6);
+}
+
+.entity-details_card {
+  background-color: var(--pr-color-white);
+  border-radius: 10px;
+  box-shadow: 0px 4px 30px 0px rgba(var(--pr-color-secondary-rgb), 0.051);
+  display: flex;
+  flex-direction: column;
+}
+
+.entity-details_card_header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 24px;
+  height: 46px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  color: var(--pr-color-secondary-600);
+}
+
+.entity-details_card_content_graph {
+  height: 365px;
+  background-color: var(--pr-color-neutral-1000);
+}
+
+.entity-details_cards {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+}
+
+.entity-details_card_content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 30px;
+}

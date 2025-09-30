@@ -1,0 +1,40 @@
+<div class="entity-details_breadcrumb">
+  <span class="entity-details_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
+  <i class="pi pi-chevron-right entity-details_breadcrumb_separator"></i>
+  <span class="entity-details_breadcrumb_link"> {{ entityId() }} - Entity Name </span>
+</div>
+
+<div class="entity-details_header">
+  <h1 class="entity-details_title">{{ entityId() }} - Entity Name</h1>
+  <p class="entity-details_description">Overview of progress and access to detailed Areas of Work and Results for this Science Program.</p>
+</div>
+
+<div class="entity-details_container">
+  <div class="entity-details_card">
+    <div class="entity-details_card_header">General insights</div>
+
+    <div class="entity-details_card_content_graph"></div>
+  </div>
+
+  <div class="entity-details_cards">
+    <div class="entity-details_card">
+      <div class="entity-details_card_header">Areas of work</div>
+
+      <div class="entity-details_card_content">
+        @for (item of entityAows(); track $index) {
+          <app-entity-aow-card [item]="item"></app-entity-aow-card>
+        }
+      </div>
+    </div>
+
+    <div class="entity-details_card">
+      <div class="entity-details_card_header">Results by indicator category</div>
+
+      <div class="entity-details_card_content">
+        @for (item of entityResultsByIndicatorCategory(); track $index) {
+          <app-entity-results-by-indicator-category-card [item]="item"></app-entity-results-by-indicator-category-card>
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -457,6 +457,12 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
         m => m.ResultFrameworkReportingHomeComponent
       )
   },
+  {
+    prName: 'Entity details',
+    path: 'entity-details/:id',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
