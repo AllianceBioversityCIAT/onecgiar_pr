@@ -345,7 +345,7 @@ export class ClarisaTaskService {
         const key = this.buildGlobalUnitKey(composeCode, year, code);
         const existing = unitsByKey.get(key);
 
-        let entity = existing ?? globalUnitRepo.create();
+        const entity = existing ?? globalUnitRepo.create();
         const wasActive = entity.isActive ?? true;
 
         const prevKey = existing
