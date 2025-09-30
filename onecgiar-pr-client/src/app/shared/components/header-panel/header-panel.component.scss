@@ -1,5 +1,12 @@
 @use '../../../../styles/fonts.scss' as fonts;
 
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
 .header_panel_container {
   width: 100%;
   height: 80px;
@@ -205,6 +212,7 @@
     align-items: center;
 
     .see_all_notifications {
+      @include fonts.pr-typography('body-2');
       cursor: pointer;
       font-weight: 400;
       color: var(--pr-color-primary-300);
@@ -259,8 +267,6 @@
   align-items: center;
   cursor: pointer;
   font-size: 28px;
-  padding: 2px;
-  border-radius: 5px;
 }
 
 .info_icon_active {

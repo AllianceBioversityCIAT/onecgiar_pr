@@ -2,54 +2,78 @@
 
 @if (!this.dataControlSE.show_qa_full_screen) {
   <div class="header_panel_container">
-    <div class="logo_container" routerLink="/">
+    <a
+      class="logo_container"
+      routerLink="/"
+      aria-label="Go to home"
+      #homeLink
+      (keydown.space)="$event.preventDefault(); homeLink.click()"
+      (keydown.enter)="homeLink.click()">
       <img class="cgiar_logo" src="/assets/PR_logo.svg" alt="Reporting Tool Logo" />
 
       <div class="logo_content">
         <p class="logo_platform_name">{{ this.internationalizationData.global.platformName }}</p>
         <p class="logo_platform_name_secondary">P25 - Reporting 2025</p>
       </div>
-    </div>
+    </a>
 
     <app-navigation-bar></app-navigation-bar>
 
     <div class="information">
-      <div
+      <a
+        #whatsNewLink
+        (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         pTooltip="What's new?"
         tooltipPosition="bottom"
         routerLinkActive="section_active"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         <i class="material-icons-round info_icon" routerLinkActive="info_icon_active">rocket_launch</i>
-      </div>
+      </a>
 
-      <div
+      <button
+        type="button"
         [satPopoverAnchor]="notificationsPopover"
         (click)="notificationsPopover.toggle()"
+        aria-label="Notifications"
+        aria-haspopup="true"
+        [attr.aria-expanded]="notificationsPopover.isOpen()"
+        aria-controls="notifications-popover"
         [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 && '-6px' }"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }">notifications</i>
+          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true"
+            >notifications</i
+          >
         } @else {
           <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
-            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }"> notifications </i>
+            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+              notifications
+            </i>
           </p-overlayBadge>
         }
-      </div>
+      </button>
 
-      <div style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
-        <p-avatar
-          [label]="getUserInitials()"
-          shape="circle"
-          [style]="{ width: '32px', height: '32px', cursor: 'pointer' }"
-          [satPopoverAnchor]="userInfoPopover"
-          (click)="userInfoPopover.toggle()" />
-      </div>
+      <button
+        type="button"
+        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent"
+        aria-label="User menu"
+        [satPopoverAnchor]="userInfoPopover"
+        (click)="userInfoPopover.toggle()">
+        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
+      </button>
     </div>
   </div>
 }
 
-<sat-popover #userInfoPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
+<sat-popover
+  #userInfoPopover
+  id="user-info-popover"
+  hasBackdrop
+  horizontalAlign="center"
+  verticalAlign="below"
+  scrollStrategy="close"
+  [autoFocus]="false">
   <div class="overlay_panel" [style]="{ width: '250px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
@@ -74,23 +98,41 @@
       }
 
       @if (this.api.rolesSE.isAdmin) {
-        <div class="overlay_panel_admin_module" routerLink="/admin-module/completeness-status" (click)="userInfoPopover.toggle()">
-          <i class="pi pi-wrench admin_module_icon"></i>
+        <a
+          class="overlay_panel_admin_module"
+          routerLink="/admin-module/completeness-status"
+          role="menuitem"
+          #adminLink
+          (keydown.space)="$event.preventDefault(); adminLink.click()"
+          (keydown.enter)="adminLink.click()"
+          (click)="userInfoPopover.toggle()">
+          <i class="pi pi-wrench admin_module_icon" aria-hidden="true"></i>
           <p class="overlay_panel_admin_module_title">Admin module</p>
-        </div>
+        </a>
       }
     </div>
 
     <div class="overlay_panel_separator"></div>
 
-    <div class="overlay_panel_footer footer_userInfo" (click)="userInfoPopover.toggle(); this.api.authSE.logout()">
-      <i class="material-icons-round logout_icon">logout</i>
+    <button
+      type="button"
+      class="overlay_panel_footer footer_userInfo"
+      (click)="userInfoPopover.toggle(); this.api.authSE.logout()"
+      aria-label="Log out">
+      <i class="material-icons-round logout_icon" aria-hidden="true">logout</i>
       <p class="logout_button">Log out</p>
-    </div>
+    </button>
   </div>
 </sat-popover>
 
-<sat-popover #notificationsPopover hasBackdrop horizontalAlign="center" verticalAlign="below" scrollStrategy="close" [autoFocus]="false">
+<sat-popover
+  #notificationsPopover
+  id="notifications-popover"
+  hasBackdrop
+  horizontalAlign="center"
+  verticalAlign="below"
+  scrollStrategy="close"
+  [autoFocus]="false">
   <div class="overlay_panel" [style]="{ width: '340px' }">
     <div class="overlay_panel_header">
       <h1 class="overlay_panel_header_title">Notifications</h1>
@@ -113,7 +155,13 @@
     <div class="overlay_panel_separator" *ngIf="unreadNotifications.length === 0"></div>
 
     <div class="overlay_panel_footer" [ngStyle]="{ 'padding-top': unreadNotifications.length > 0 && '15px' }">
-      <p class="see_all_notifications" (click)="goToNotifications(); notificationsPopover.toggle()">See all the notifications</p>
+      <button
+        type="button"
+        class="see_all_notifications"
+        (click)="goToNotifications(); notificationsPopover.toggle()"
+        aria-label="See all the notifications">
+        See all the notifications
+      </button>
     </div>
   </div>
 </sat-popover>
