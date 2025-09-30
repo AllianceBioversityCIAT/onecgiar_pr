@@ -46,8 +46,8 @@
   <div *ngSwitchCase="2" class="update_notification_content">
     <div class="update_notification_content_body">
       <p class="update_notification_content_body_text">
-        @if (notification?.notification_type === 1 || notification?.notification_type === 2) {
-          <b> {{ emitterName }} has {{ notification?.notification_type === 1 ? 'submitted' : 'unsubmitted' }} the result </b>
+        @if (notification?.notification_type === 1 || notification?.notification_type === 2 || notification?.notification_type === 5) {
+          <b> {{ emitterName }} has {{ getNotificationAction(notification?.notification_type) }} the result </b>
         } @else {
           The result
         }
