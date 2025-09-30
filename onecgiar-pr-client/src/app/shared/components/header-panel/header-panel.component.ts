@@ -50,6 +50,7 @@ export class HeaderPanelComponent implements OnInit {
       this.resultsNotificationsSE.get_updates_notifications();
       this.resultsNotificationsSE.get_updates_pop_up_notifications();
     });
+    this.api.dataControlSE.getCurrentPhases().subscribe();
   }
 
   getInitiativeSeparatedByPortfolio() {
