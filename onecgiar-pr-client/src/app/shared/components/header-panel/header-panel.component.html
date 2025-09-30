@@ -13,7 +13,9 @@
 
       <div class="logo_content">
         <p class="logo_platform_name">{{ this.internationalizationData.global.platformName }}</p>
-        <p class="logo_platform_name_secondary">P25 - Reporting 2025</p>
+        <p class="logo_platform_name_secondary">
+          {{ this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym }} - {{ this.api.dataControlSE?.reportingCurrentPhase?.phaseName }}
+        </p>
       </div>
     </a>
 
