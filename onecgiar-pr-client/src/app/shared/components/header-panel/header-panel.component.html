@@ -41,12 +41,12 @@
         aria-haspopup="true"
         [attr.aria-expanded]="notificationsPopover.isOpen()"
         aria-controls="notifications-popover"
-        [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 && '-6px' }"
+        [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 ? '-5px' : '0' }"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true"
-            >notifications</i
-          >
+          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+            notifications
+          </i>
         } @else {
           <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
             <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
@@ -134,7 +134,8 @@
   horizontalAlign="center"
   verticalAlign="below"
   scrollStrategy="close"
-  [autoFocus]="false">
+  [autoFocus]="false"
+  (closed)="handleClosePopUp()">
   <div class="overlay_panel" [style]="{ width: '340px' }">
     <div class="overlay_panel_header">
       <h1 class="overlay_panel_header_title">Notifications</h1>
