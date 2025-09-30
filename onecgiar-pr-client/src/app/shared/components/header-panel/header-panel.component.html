@@ -14,26 +14,37 @@
     <app-navigation-bar></app-navigation-bar>
 
     <div class="information">
-      <div routerLink="/whats-new" pTooltip="What's new?" tooltipPosition="bottom">
-        <i class="material-icons-round info_icon">rocket_launch</i>
+      <div
+        routerLink="/whats-new"
+        pTooltip="What's new?"
+        tooltipPosition="bottom"
+        routerLinkActive="section_active"
+        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
+        <i class="material-icons-round info_icon" routerLinkActive="info_icon_active">rocket_launch</i>
       </div>
 
-      <div [satPopoverAnchor]="notificationsPopover" (click)="notificationsPopover.toggle()" class="info_icon">
+      <div
+        [satPopoverAnchor]="notificationsPopover"
+        (click)="notificationsPopover.toggle()"
+        [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 && '-6px' }"
+        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon">notifications</i>
+          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }">notifications</i>
         } @else {
           <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
-            <i class="material-icons-round animate_bell info_icon"> notifications </i>
+            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }"> notifications </i>
           </p-overlayBadge>
         }
       </div>
 
-      <p-avatar
-        [label]="getUserInitials()"
-        shape="circle"
-        [style]="{ width: '32px', height: '32px', cursor: 'pointer' }"
-        [satPopoverAnchor]="userInfoPopover"
-        (click)="userInfoPopover.toggle()" />
+      <div style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
+        <p-avatar
+          [label]="getUserInitials()"
+          shape="circle"
+          [style]="{ width: '32px', height: '32px', cursor: 'pointer' }"
+          [satPopoverAnchor]="userInfoPopover"
+          (click)="userInfoPopover.toggle()" />
+      </div>
     </div>
   </div>
 }

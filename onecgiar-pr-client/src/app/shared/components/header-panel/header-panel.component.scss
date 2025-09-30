@@ -259,6 +259,21 @@
   align-items: center;
   cursor: pointer;
   font-size: 28px;
+  padding: 2px;
+  border-radius: 5px;
+}
+
+.info_icon_active {
+  color: var(--pr-color-primary-100) !important;
+}
+
+.section_active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  color: var(--pr-color-primary-100) !important;
+  border-bottom: 4px solid var(--pr-color-primary-100) !important;
 }
 
 ::ng-deep {
