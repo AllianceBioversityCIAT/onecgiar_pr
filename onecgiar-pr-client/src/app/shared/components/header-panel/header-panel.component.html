@@ -79,7 +79,7 @@
   <div class="overlay_panel" [style]="{ width: '250px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
-        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '36px', height: '36px' }" />
+        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }" />
 
         <div class="overlay_panel_header_userInfo_content">
           <p class="overlay_panel_header_userInfo_content_name">{{ this.api.authSE.localStorageUser?.user_name }}</p>
