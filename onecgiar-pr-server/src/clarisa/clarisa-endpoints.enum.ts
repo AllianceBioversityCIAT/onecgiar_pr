@@ -38,6 +38,7 @@ import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/cl
 import { ClarisaInnovationUseLevel } from './clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
 import { ClarisaPortfolios } from './clarisa-portfolios/entities/clarisa-portfolios.entity';
 import { ClarisaPortfolioDto } from './dtos/clarisa-portfolio.dto';
+import { ClarisaGlobalUnit } from './clarisa-global-unit/entities/clarisa-global-unit.entity';
 
 /**
  * Represents a mapping of CLARISA parameters to their corresponding values.
@@ -268,6 +269,17 @@ export class ClarisaEndpoints<Entity, Dto> {
     ClarisaGeographicScope,
     ClarisaEndpoints.geographicScopeMapper,
     { type: 'legacy' },
+  );
+
+  /**
+   * Represents the endpoint configuration for fetching all global units (version 2).
+   */
+  public static readonly GLOBAL_UNITS = new ClarisaEndpoints(
+    'cgiar-entities',
+    'GET',
+    ClarisaGlobalUnit,
+    undefined,
+    { version: 2 },
   );
 
   /**
