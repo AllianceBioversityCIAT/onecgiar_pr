@@ -7,7 +7,10 @@ import { SocketManagementService } from '../../shared/microservices/socket-manag
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
-import { NotificationLevelEnum, NotificationTypeEnum } from './enum/notification.enum';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from './enum/notification.enum';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 const mockNotificationLevelRepository = {
@@ -171,7 +174,9 @@ describe('NotificationService', () => {
         99,
       );
 
-      expect(mockSocketManagementService.sendNotificationToUsers).not.toHaveBeenCalled();
+      expect(
+        mockSocketManagementService.sendNotificationToUsers,
+      ).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         message: 'Notifications stored; no online recipients.',
         status: 201,
@@ -220,7 +225,9 @@ describe('NotificationService', () => {
                 },
               ],
             },
-            obj_notification_type: { type: NotificationTypeEnum.RESULT_SUBMITTED },
+            obj_notification_type: {
+              type: NotificationTypeEnum.RESULT_SUBMITTED,
+            },
             obj_emitter_user: {
               first_name: 'Alice',
               last_name: 'Smith',
@@ -236,7 +243,9 @@ describe('NotificationService', () => {
               title: 'Result without owner',
               obj_result_by_initiatives: [],
             },
-            obj_notification_type: { type: NotificationTypeEnum.RESULT_CREATED },
+            obj_notification_type: {
+              type: NotificationTypeEnum.RESULT_CREATED,
+            },
             obj_emitter_user: null,
             emitter_user: null,
             created_date: new Date('2024-01-02'),
@@ -248,11 +257,13 @@ describe('NotificationService', () => {
         queryBuilder,
       );
 
-      mockResultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValueOnce({
-        id: 77,
-        initiative_name: 'Fallback Initiative',
-        official_code: 'FB-01',
-      });
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValueOnce(
+        {
+          id: 77,
+          initiative_name: 'Fallback Initiative',
+          official_code: 'FB-01',
+        },
+      );
 
       const result = await service.getRecentResultActivity(user, 5);
 
