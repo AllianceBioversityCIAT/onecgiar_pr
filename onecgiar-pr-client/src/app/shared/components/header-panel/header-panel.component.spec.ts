@@ -5,6 +5,8 @@ import { HttpClientModule } from '@angular/common/http';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { RouterTestingModule } from '@angular/router/testing';
+import { of } from 'rxjs';
 
 describe('HeaderPanelComponent', () => {
   let component: HeaderPanelComponent;
@@ -12,8 +14,8 @@ describe('HeaderPanelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [HeaderPanelComponent, PrButtonComponent],
-      imports: [HttpClientModule, SatPopoverModule, TooltipModule]
+      declarations: [PrButtonComponent],
+      imports: [HttpClientModule, SatPopoverModule, TooltipModule, HeaderPanelComponent, RouterTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HeaderPanelComponent);
@@ -31,16 +33,19 @@ describe('HeaderPanelComponent', () => {
       .spyOn(component.resultsNotificationsSE, 'get_updates_pop_up_notifications')
       .mockImplementation(() => {});
     const updateUserDataSpy = jest.spyOn(component.api, 'updateUserData').mockImplementation(callback => callback());
+    const getCurrentPhasesSpy = jest.spyOn(component.api.dataControlSE, 'getCurrentPhases').mockImplementation(() => of({}));
 
     component.ngOnInit();
 
     expect(updateUserDataSpy).toHaveBeenCalled();
     expect(getUpdatesNotificationsSpy).toHaveBeenCalled();
     expect(getUpdatesPopUpNotificationsSpy).toHaveBeenCalled();
+    expect(getCurrentPhasesSpy).toHaveBeenCalled();
 
     getUpdatesNotificationsSpy.mockRestore();
     getUpdatesPopUpNotificationsSpy.mockRestore();
     updateUserDataSpy.mockRestore();
+    getCurrentPhasesSpy.mockRestore();
   });
 
   it('should return "0" when updatesPopUpData is empty', () => {

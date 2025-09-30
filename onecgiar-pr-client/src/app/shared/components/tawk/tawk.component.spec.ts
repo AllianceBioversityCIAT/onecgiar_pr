@@ -9,8 +9,7 @@ describe('TawkComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [TawkComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientModule, TawkComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(TawkComponent);

@@ -5,7 +5,7 @@ export interface PrRoute extends Route {
   prName?: string;
   prHide?: boolean | number;
   underConstruction?: boolean | number;
-  onlytest?: boolean;
+  onlyTest?: boolean;
   backButton?: boolean;
 }
 

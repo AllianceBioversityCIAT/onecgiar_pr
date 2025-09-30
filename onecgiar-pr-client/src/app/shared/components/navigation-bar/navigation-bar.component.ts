@@ -1,55 +1,38 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { PrRoute, routingApp } from '../../routing/routing-data';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 @Component({
-    selector: 'app-navigation-bar',
-    templateUrl: './navigation-bar.component.html',
-    styleUrls: ['./navigation-bar.component.scss'],
-    standalone: false
+  selector: 'app-navigation-bar',
+  templateUrl: './navigation-bar.component.html',
+  styleUrls: ['./navigation-bar.component.scss'],
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.Default
 })
-export class NavigationBarComponent implements OnInit, OnDestroy {
-  navigationOptions: PrRoute[] = routingApp;
-  isSticky = false;
-  private ticking = false;
+export class NavigationBarComponent {
+  readonly navigationOptions = signal<PrRoute[]>(routingApp);
 
-  constructor(
-    public rolesSE: RolesService,
-    public dataControlSE: DataControlService
-  ) {}
+  public readonly rolesSE = inject(RolesService);
+  public readonly dataControlSE = inject(DataControlService);
 
-  ngOnInit() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('scroll', this.onScroll, { passive: true });
-    }
-  }
+  validateAdminModuleAndRole(option: PrRoute): boolean {
+    if (option?.onlyTest && environment.production) return true;
 
-  onScroll = () => {
-    if (!this.ticking) {
-      window.requestAnimationFrame(() => {
-        this.isSticky = window.scrollY > 70;
-        this.ticking = false;
-      });
-      this.ticking = true;
-    }
-  };
+    if (this?.rolesSE?.isAdmin) return false;
 
-  ngOnDestroy() {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('scroll', this.onScroll);
-    }
-  }
+    if (option?.path === 'init-admin-module') return this.validateCoordAndLead();
 
-  validateAdminModuleAndRole(option) {
-    if (option.onlytest && environment.production) return true;
-    if (this.rolesSE.isAdmin) return false;
-    if (option?.path == 'init-admin-module') return this.validateCoordAndLead();
     return false;
   }
 
-  validateCoordAndLead() {
-    return !this.dataControlSE.myInitiativesList.some(init => init?.role == 'Lead' || init?.role == 'Coordinator');
+  validateCoordAndLead(): boolean {
+    const initiatives = this.dataControlSE?.myInitiativesList ?? [];
+    const hasLeadOrCoordinator = initiatives.some(init => init?.role === 'Lead' || init?.role === 'Coordinator');
+    return !hasLeadOrCoordinator;
   }
 }

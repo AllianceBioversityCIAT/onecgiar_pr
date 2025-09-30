@@ -6,7 +6,6 @@
 }
 
 .core_innovation_selected {
-  width: 100% !important;
   background-color: var(--pr-color-primary-50);
   padding: 5px 10px;
   border-radius: 3px;
@@ -18,4 +17,8 @@
   i {
     cursor: pointer;
   }
+}
+
+.modal_container {
+  padding: 0 15px 15px;
 }
