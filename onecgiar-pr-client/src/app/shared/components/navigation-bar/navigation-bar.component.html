@@ -1,17 +1,20 @@
-<div class="navigation_bar">
+<nav class="navigation_bar" aria-label="Primary navigation">
   @for (navOption of navigationOptions(); track navOption.prName) {
     @if (!(navOption.prHide || validateAdminModuleAndRole(navOption))) {
-      <div
+      <a
+        #navLink
         [routerLink]="navOption.path"
         routerLinkActive="section_active"
         class="pr-body-1 navigation_bar_item"
-        [ngClass]="{ 'padding-right-40': navOption?.underConstruction }">
+        [ngClass]="{ 'padding-right-40': navOption?.underConstruction }"
+        (keydown.space)="$event.preventDefault(); navLink.click()"
+        (keydown.enter)="navLink.click()">
         {{ navOption.prName }}
 
         @if (navOption?.underConstruction) {
-          <img src="assets/work-in-progress.png" alt="" srcset="" />
+          <img src="assets/work-in-progress.png" alt="Under construction" srcset="" />
         }
-      </div>
+      </a>
     }
   }
-</div>
+</nav>
