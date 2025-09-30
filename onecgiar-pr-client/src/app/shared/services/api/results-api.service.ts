@@ -1211,4 +1211,8 @@ export class ResultsApiService {
   GET_ScienceProgramsProgress() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/get/science-programs/progress`);
   }
+
+  GET_RecentActivity() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/notification/recent-activity`);
+  }
 }

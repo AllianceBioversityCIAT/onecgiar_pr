@@ -6,6 +6,7 @@ import { MessageService } from 'primeng/api';
 import { ApiService } from '../shared/services/api/api.service';
 import { ResultsNotificationsService } from '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../environments/environment';
+import { ResultFrameworkReportingHomeService } from '../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Injectable({
   providedIn: 'root'
@@ -26,7 +27,12 @@ export class WebsocketService {
   userList: WritableSignal<any> = signal([]);
   currentRoom: WritableSignal<any> = signal({ id: '', userList: [] });
 
-  constructor(public api: ApiService, public messageService: MessageService, public resultsNotificationsService: ResultsNotificationsService) {
+  constructor(
+    public api: ApiService,
+    public messageService: MessageService,
+    public resultsNotificationsService: ResultsNotificationsService,
+    public resultFrameworkReportingHomeService: ResultFrameworkReportingHomeService
+  ) {
     this.runsockets();
   }
 
@@ -97,6 +103,7 @@ export class WebsocketService {
     this.listen(`notifications`).subscribe((msg: { result: any; title: string; desc: string }) => {
       this.showToast1(msg);
       this.resultsNotificationsService.updatesPopUpData.unshift(msg.result);
+      this.resultFrameworkReportingHomeService.getRecentActivity();
 
       if (!msg?.result?.notification_id) {
         this.resultsNotificationsService.get_section_information();

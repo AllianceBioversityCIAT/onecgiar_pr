@@ -4,6 +4,7 @@ export enum NotificationLevelEnum {
 }
 
 export enum NotificationTypeEnum {
+  RESULT_CREATED = 'Result Created',
   RESULT_SUBMITTED = 'Result Submitted',
   RESULT_UNSUBMITTED = 'Result Unsubmitted',
   RESULT_QUALITY_ASSESED = 'Result QAed',

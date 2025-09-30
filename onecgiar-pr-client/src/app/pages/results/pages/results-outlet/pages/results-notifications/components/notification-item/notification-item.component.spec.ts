@@ -57,8 +57,8 @@ describe('NotificationItemComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [NotificationItemComponent, FormatTimeAgoPipe],
-      imports: [HttpClientTestingModule],
+      declarations: [NotificationItemComponent],
+      imports: [HttpClientTestingModule, FormatTimeAgoPipe],
       providers: [
         {
           provide: ApiService,
