@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { Unit } from '../../interfaces/entity-details.interface';
 
 @Component({
   selector: 'app-entity-aow-card',
@@ -9,5 +10,5 @@ import { ProgressBarModule } from 'primeng/progressbar';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityAowCardComponent {
-  @Input() item: any;
+  @Input() item: Unit;
 }

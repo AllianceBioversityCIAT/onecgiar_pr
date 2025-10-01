@@ -49,6 +49,7 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
 import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
+import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { apiVersionMiddleware } from './shared/middleware/api-versioning.middlew
     AuthMicroserviceModule,
     AdUsersModule,
     InitiativeEntityMapModule,
+    ResultsFrameworkReportingModule,
   ],
   controllers: [AppController],
   providers: [

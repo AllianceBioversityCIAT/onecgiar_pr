@@ -8,6 +8,8 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
+import { Initiative, Unit } from './interfaces/entity-details.interface';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-entity-details',
@@ -18,7 +20,8 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
     RouterModule,
     ProgressBarModule,
     EntityAowCardComponent,
-    EntityResultsByIndicatorCategoryCardComponent
+    EntityResultsByIndicatorCategoryCardComponent,
+    SkeletonModule
   ],
   templateUrl: './entity-details.component.html',
   styleUrl: './entity-details.component.scss',
@@ -29,28 +32,43 @@ export class EntityDetailsComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
 
-  entityAows = signal<any[]>([
-    {
-      aowCode: 'AOW00',
-      aowName: 'Cross-Cutting and Management',
-      progress: 80
-    },
-    {
-      aowCode: 'AOW01',
-      aowName: 'Market Intelligence',
-      progress: 60
-    },
-    {
-      aowCode: 'AOW02',
-      aowName: 'Accelerated Breeding',
-      progress: 20
-    }
-  ]);
+  entityId = signal<string>('');
+  entityDetails = signal<Initiative>({} as Initiative);
+  entityAows = signal<Unit[]>([]);
+  isLoading = signal<boolean>(false);
 
   entityResultsByIndicatorCategory = signal<any[]>([
     {
-      indicatorType: 1,
+      indicatorType: 7,
+      indicatorName: 'Innovation Development',
+      resultsEditing: 80,
+      resultsSubmitted: 50,
+      resultsQualityAssessed: 30
+    },
+    {
+      indicatorType: 6,
+      indicatorName: 'Knowledge Products',
+      resultsEditing: 80,
+      resultsSubmitted: 50,
+      resultsQualityAssessed: 30
+    },
+    {
+      indicatorType: 5,
       indicatorName: 'Capacity Sharing for Development',
+      resultsEditing: 80,
+      resultsSubmitted: 50,
+      resultsQualityAssessed: 30
+    },
+    {
+      indicatorType: 2,
+      indicatorName: 'Innovation Use',
+      resultsEditing: 80,
+      resultsSubmitted: 50,
+      resultsQualityAssessed: 30
+    },
+    {
+      indicatorType: 1,
+      indicatorName: 'Policy Change',
       resultsEditing: 80,
       resultsSubmitted: 50,
       resultsQualityAssessed: 30
@@ -60,6 +78,17 @@ export class EntityDetailsComponent implements OnInit {
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
+    });
+    this.getClarisaGlobalUnits();
+  }
+
+  getClarisaGlobalUnits() {
+    this.isLoading.set(true);
+
+    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(({ response }) => {
+      this.entityDetails.set(response?.initiative);
+      this.entityAows.set(response?.units ?? []);
+      this.isLoading.set(false);
     });
   }
 }

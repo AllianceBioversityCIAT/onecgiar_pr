@@ -12,8 +12,14 @@
         <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
 
         <div class="framework-reporting_left_content_mySPs_items">
-          @for (item of mySPsList(); track $index) {
-            <app-result-framework-reporting-card-item [item]="item" />
+          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+            @for (item of [0, 1]; track $index) {
+              <p-skeleton width="100%" height="136px" />
+            }
+          } @else {
+            @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
+              <app-result-framework-reporting-card-item [item]="item" />
+            }
           }
         </div>
       </div>
@@ -27,8 +33,14 @@
         </div>
 
         <div class="framework-reporting_left_content_otherSPs_items">
-          @for (item of otherSPsList(); track $index) {
-            <app-result-framework-reporting-card-item [item]="item" />
+          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+            @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
+              <p-skeleton width="100%" height="136px" />
+            }
+          } @else {
+            @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
+              <app-result-framework-reporting-card-item [item]="item" />
+            }
           }
         </div>
       </div>
@@ -41,8 +53,14 @@
     </div>
 
     <div class="framework-reporting_right_content">
-      @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
-        <app-result-framework-reporting-recent-item [item]="item" />
+      @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+        @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
+          <p-skeleton width="100%" height="72px" />
+        }
+      } @else {
+        @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
+          <app-result-framework-reporting-recent-item [item]="item" />
+        }
       }
     </div>
   </div>

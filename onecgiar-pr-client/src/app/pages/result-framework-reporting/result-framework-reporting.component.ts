@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { ResultFrameworkReportingHomeService } from './pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../shared/services/api/api.service';
 
 @Component({
@@ -7,9 +8,12 @@ import { ApiService } from '../../shared/services/api/api.service';
   standalone: false
 })
 export class ResultFrameworkReportingComponent implements OnInit {
-  constructor(private api: ApiService) {}
+  api = inject(ApiService);
+  resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Results Framework & Reporting');
+    this.resultFrameworkReportingHomeService.getScienceProgramsProgress();
+    this.resultFrameworkReportingHomeService.getRecentActivity();
   }
 }
