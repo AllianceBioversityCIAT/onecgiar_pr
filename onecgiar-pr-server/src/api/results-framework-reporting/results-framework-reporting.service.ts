@@ -36,7 +36,8 @@ export class ResultsFrameworkReportingService {
       if (!initiative) {
         throw {
           response: {},
-          message: 'No initiative was found with the provided program identifier.',
+          message:
+            'No initiative was found with the provided program identifier.',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -50,7 +51,8 @@ export class ResultsFrameworkReportingService {
         if (!isAdmin) {
           throw {
             response: {},
-            message: 'The authenticated user is not linked to the requested initiative.',
+            message:
+              'The authenticated user is not linked to the requested initiative.',
             status: HttpStatus.FORBIDDEN,
           };
         }
@@ -83,7 +85,8 @@ export class ResultsFrameworkReportingService {
       if (!parentUnit) {
         throw {
           response: {},
-          message: 'No global unit catalogue entry matches the provided program.',
+          message:
+            'No global unit catalogue entry matches the provided program.',
           status: HttpStatus.NOT_FOUND,
         };
       }

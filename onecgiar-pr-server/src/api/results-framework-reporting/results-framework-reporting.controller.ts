@@ -1,7 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
-import { ApiOperation, ApiQuery, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiQuery,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
@@ -62,7 +67,9 @@ export class ResultsFrameworkReportingController {
     required: true,
     description: 'Initiative official code to query the Clarisa global units.',
   })
-  @ApiOkResponse({ description: 'Clarisa global units retrieved successfully.' })
+  @ApiOkResponse({
+    description: 'Clarisa global units retrieved successfully.',
+  })
   getClarisaGlobalUnits(
     @UserToken() user: TokenDto,
     @Query('programId') programId: string,
