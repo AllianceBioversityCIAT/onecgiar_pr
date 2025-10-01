@@ -170,7 +170,7 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     SocketManagementService,
     UserRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware],
+  exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
