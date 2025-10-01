@@ -2,7 +2,7 @@
   <span class="entity-details_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
   <i class="pi pi-chevron-right entity-details_breadcrumb_separator"></i>
   <div class="entity-details_title_container">
-    <span class="entity-details_breadcrumb_link"> {{ entityId() }} - </span>
+    <span class="entity-details_breadcrumb_link"> {{ entityAowService.entityId() }} - </span>
     @if (isLoading()) {
       <p-skeleton width="200px" height="21px" />
     } @else {
@@ -13,7 +13,7 @@
 
 <div class="entity-details_header">
   <div class="entity-details_title_container">
-    <h1 class="entity-details_title">{{ entityId() }} -</h1>
+    <h1 class="entity-details_title">{{ entityAowService.entityId() }} -</h1>
     @if (isLoading()) {
       <p-skeleton width="200px" height="30px" />
     } @else {

@@ -32,7 +32,6 @@ export class EntityDetailsComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
 
-  entityId = signal<string>('');
   entityDetails = signal<Initiative>({} as Initiative);
   entityAows = signal<Unit[]>([]);
   isLoading = signal<boolean>(false);
@@ -85,7 +84,7 @@ export class EntityDetailsComponent implements OnInit {
   getClarisaGlobalUnits() {
     this.isLoading.set(true);
 
-    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(({ response }) => {
+    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityAowService.entityId()).subscribe(({ response }) => {
       this.entityDetails.set(response?.initiative);
       this.entityAows.set(response?.units ?? []);
       this.isLoading.set(false);
