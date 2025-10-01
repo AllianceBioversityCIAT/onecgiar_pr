@@ -459,9 +459,39 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
   },
   {
     prName: 'Entity details',
-    path: 'entity-details/:id',
+    path: 'entity-details/:entityId',
     loadComponent: () =>
       import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
+  },
+  {
+    prName: 'Entity AOW',
+    path: 'entity-details/:entityId/aow',
+    loadComponent: () => import('../../pages/result-framework-reporting/pages/entity-aow/entity-aow.component').then(m => m.EntityAowComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'all' },
+      {
+        path: 'all',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-all/entity-aow-all.component').then(
+            m => m.EntityAowAllComponent
+          )
+      },
+      // unplanned route
+      {
+        path: 'unplanned',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-unplanned/entity-aow-unplanned.component').then(
+            m => m.EntityAowUnplannedComponent
+          )
+      },
+      {
+        path: ':aowId',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/entity-aow-aow.component').then(
+            m => m.EntityAowAowComponent
+          )
+      }
+    ]
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];

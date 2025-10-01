@@ -1,0 +1,46 @@
+@let url = '/result-framework-reporting/entity-details/' + entityAowService.entityId();
+
+<div class="entity-aow_breadcrumb">
+  <span class="entity-aow_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
+  <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
+  <span class="entity-aow_breadcrumb_link" routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}">
+    {{ entityAowService.entityId() }} - Entity Name
+  </span>
+  <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
+  <span class="entity-aow_breadcrumb_link breadcrumb_link"> {{ getCurrentRoute() }} </span>
+</div>
+
+<div class="entity-aow_layout">
+  <aside class="entity-aow_sidebar">
+    <span class="entity-aow_sidebar_title">Indicators</span>
+
+    <div class="entity-aow_sidebar_option_items">
+      @for (item of sideBarItems(); track item.routerLink) {
+        @if (!item.isTree) {
+          <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.routerLink" routerLinkActive="active">
+            <i class="pi pi-folder" style="font-size: 14px"></i>
+            <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
+          </div>
+        } @else {
+          <div class="entity-aow_sidebar_option_items_tree" (click)="toggleAOWTree(item)">
+            <p class="entity-aow_sidebar_option_items_tree_title">{{ item.label }}</p>
+            <i class="pi" [ngClass]="{ 'pi-chevron-down': isAOWTreeOpen(), 'pi-chevron-right': !isAOWTreeOpen() }" style="font-size: 10px"></i>
+          </div>
+
+          @if (item.isOpen) {
+            @for (item of item.items; track item.routerLink) {
+              <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.routerLink" routerLinkActive="active">
+                <i class="pi pi-folder" style="font-size: 14px"></i>
+                <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
+              </div>
+            }
+          }
+        }
+      }
+    </div>
+  </aside>
+
+  <main class="entity-aow_main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
+import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -24,10 +25,10 @@ import { EntityResultsByIndicatorCategoryCardComponent } from './components/enti
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityDetailsComponent implements OnInit {
-  api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
+  api = inject(ApiService);
+  entityAowService = inject(EntityAowService);
 
-  entityId = signal<string>('');
   entityAows = signal<any[]>([
     {
       aowCode: 'AOW00',
@@ -58,7 +59,7 @@ export class EntityDetailsComponent implements OnInit {
 
   ngOnInit() {
     this.route.params.subscribe(params => {
-      this.entityId.set(params['id']);
+      this.entityAowService.entityId.set(params['entityId']);
     });
   }
 }
