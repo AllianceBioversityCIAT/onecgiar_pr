@@ -12,15 +12,15 @@ export class EntityResultsByIndicatorCategoryCardComponent {
 
   getIcon(indicatorType: number) {
     switch (indicatorType) {
-      case 1:
+      case 7:
         return 'pi pi-flag';
-      case 2:
+      case 6:
         return 'pi pi-book';
-      case 3:
-        return 'pi pi-users';
-      case 4:
-        return 'pi pi-sun';
       case 5:
+        return 'pi pi-users';
+      case 2:
+        return 'pi pi-sun';
+      case 1:
         return 'pi pi-folder-open';
       default:
         return 'pi pi-folder';

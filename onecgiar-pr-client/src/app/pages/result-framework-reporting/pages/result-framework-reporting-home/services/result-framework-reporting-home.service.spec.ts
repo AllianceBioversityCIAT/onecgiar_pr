@@ -42,7 +42,8 @@ describe('ResultFrameworkReportingHomeService', () => {
   beforeEach(() => {
     mockApiService = {
       resultsSE: {
-        GET_RecentActivity: jest.fn()
+        GET_RecentActivity: jest.fn(),
+        GET_ScienceProgramsProgress: jest.fn()
       }
     } as any;
 
@@ -111,6 +112,44 @@ describe('ResultFrameworkReportingHomeService', () => {
 
       expect(service.recentActivityList()).toEqual(mockRecentActivity);
       expect(service.recentActivityList()).not.toEqual(initialActivity);
+    });
+  });
+
+  describe('getScienceProgramsProgress', () => {
+    it('should fetch and set SP progress lists', () => {
+      const mockResponse = {
+        response: {
+          mySciencePrograms: [{ id: 1, acronym: 'SP1', name: 'Science Program 1', progress: 50 }],
+          otherSciencePrograms: [{ id: 2, acronym: 'SP2', name: 'Science Program 2', progress: 25 }]
+        }
+      } as any;
+
+      mockApiService.resultsSE.GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(mockResponse));
+
+      service.getScienceProgramsProgress();
+
+      expect(mockApiService.resultsSE.GET_ScienceProgramsProgress).toHaveBeenCalledTimes(1);
+      expect(service.mySPsList()).toEqual(mockResponse.response.mySciencePrograms);
+      expect(service.otherSPsList()).toEqual(mockResponse.response.otherSciencePrograms);
+    });
+
+    it('should handle missing response properties gracefully', () => {
+      const mockResponse = { response: {} } as any;
+      mockApiService.resultsSE.GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(mockResponse));
+
+      service.getScienceProgramsProgress();
+
+      expect(service.mySPsList()).toBeUndefined();
+      expect(service.otherSPsList()).toBeUndefined();
+    });
+
+    it('signals should be settable and readable', () => {
+      const myList = [{ id: 3 } as any];
+      const otherList = [{ id: 4 } as any];
+      service.mySPsList.set(myList as any);
+      service.otherSPsList.set(otherList as any);
+      expect(service.mySPsList()).toEqual(myList as any);
+      expect(service.otherSPsList()).toEqual(otherList as any);
     });
   });
 

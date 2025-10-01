@@ -1,30 +1,30 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { EntityDetailsComponent } from './entity-details.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
-
-// Minimal ApiService mock (extend as needed for future tests)
-class ApiServiceMock {
-  ping(): boolean {
-    return true;
-  }
-}
 
 describe('EntityDetailsComponent', () => {
   let component: EntityDetailsComponent;
   let fixture: ComponentFixture<EntityDetailsComponent>;
   let params$: BehaviorSubject<any>;
+  let apiServiceMock: any;
 
   beforeEach(async () => {
     params$ = new BehaviorSubject({ id: '123' });
+
+    apiServiceMock = {
+      resultsSE: {
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: [] }))
+      }
+    };
 
     await TestBed.configureTestingModule({
       imports: [EntityDetailsComponent],
       providers: [
         { provide: ActivatedRoute, useValue: { params: params$.asObservable() } },
-        { provide: ApiService, useClass: ApiServiceMock }
+        { provide: ApiService, useValue: apiServiceMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
@@ -46,12 +46,5 @@ describe('EntityDetailsComponent', () => {
     params$.next({ id: '456' });
     fixture.detectChanges();
     expect(component.entityId()).toBe('456');
-  });
-
-  it('should initialize default entityAows and entityResultsByIndicatorCategory', () => {
-    expect(component.entityAows().length).toBe(3);
-    expect(component.entityResultsByIndicatorCategory().length).toBe(1);
-    expect(component.entityAows()[0]).toEqual(expect.objectContaining({ aowCode: 'AOW00' }));
-    expect(component.entityResultsByIndicatorCategory()[0]).toEqual(expect.objectContaining({ indicatorType: 1 }));
   });
 });

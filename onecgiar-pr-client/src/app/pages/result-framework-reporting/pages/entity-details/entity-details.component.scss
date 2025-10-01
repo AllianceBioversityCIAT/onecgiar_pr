@@ -59,6 +59,12 @@ p {
   margin: 0 auto;
 }
 
+.entity-details_title_container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .entity-details_title {
   @include fonts.pr-typography('h1');
   font-weight: 700;
@@ -106,5 +112,13 @@ p {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 24px 30px;
+}
+
+.entity-details_card_content_empty {
+  @include fonts.pr-typography('h2');
+  font-weight: 600;
+  color: var(--pr-color-secondary-600);
+  text-align: center;
   padding: 24px 30px;
 }
