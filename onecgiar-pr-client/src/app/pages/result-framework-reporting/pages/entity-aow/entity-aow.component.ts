@@ -15,63 +15,35 @@ export class EntityAowComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly entityAowService = inject(EntityAowService);
 
-  sideBarItems = signal<any[]>([
-    {
-      label: 'All indicators',
-      routerLink: `/aow/all`
-    },
-    {
-      label: 'Unplanned results',
-      routerLink: `/aow/unplanned`
-    },
-    {
-      isTree: true,
-      label: 'By AOW',
-      isOpen: true,
-      items: [
-        {
-          label: 'AOW01',
-          routerLink: `/aow/AOW01`
-        },
-        {
-          label: 'AOW02',
-          routerLink: `/aow/AOW02`
-        },
-        {
-          label: 'AOW03',
-          routerLink: `/aow/AOW03`
-        },
-        {
-          label: 'AOW04',
-          routerLink: `/aow/AOW04`
-        }
-      ]
-    }
-  ]);
-
   isAOWTreeOpen = signal<boolean>(true);
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
     });
+
+    if (!this.entityAowService.entityAows().length) {
+      this.entityAowService.getClarisaGlobalUnits();
+
+      if (!this.entityAowService.entityAows().length) {
+        this.router.navigate(['/result-framework-reporting/entity-details', this.entityAowService.entityId()]);
+        return;
+      }
+    }
   }
 
   getCurrentRoute(): string {
-    // Remove the initial url path (e.g., '/result-framework-reporting/entity-details/:entityId')
-    // and match only the subpath (e.g., '/aow/all', '/aow/AOW01', etc.)
     const currentUrl = this.router.url;
-    // Find the '/aow/...' part in the current URL
     const aowIndex = currentUrl.indexOf('/aow/');
     const subPath = aowIndex !== -1 ? currentUrl.substring(aowIndex) : currentUrl;
 
-    const found = this.sideBarItems().find(item => item.routerLink === subPath);
+    const found = this.entityAowService.sideBarItems().find(item => item.itemLink === subPath);
     if (found) {
       return found.label;
     }
-    for (const item of this.sideBarItems()) {
+    for (const item of this.entityAowService.sideBarItems()) {
       if (item.isTree && Array.isArray(item.items)) {
-        const subItem = item.items.find((sub: any) => sub.routerLink === subPath);
+        const subItem = item.items.find((sub: any) => sub.itemLink === subPath);
         if (subItem) {
           return subItem.label;
         }

@@ -1,2 +1,39 @@
-<p>entity-aow-aow works! {{ entityAowService.aowId() }}</p>
-,
+<div class="entity-aow-aow_tabs">
+  @for (tab of tabs(); track tab.id) {
+    <button
+      pButton
+      type="button"
+      class="entity-aow-aow_tabs_button"
+      [ngClass]="{ 'tab-button_active': isActiveTab(tab.id), 'tab-button_inactive': !isActiveTab(tab.id) }"
+      (click)="setActiveTab(tab.id)">
+      {{ tab.label }}
+      @if (tab.count) {
+        ({{ tab.count }})
+      }
+    </button>
+  }
+</div>
+
+<div class="entity-aow-aow_content">
+  @switch (activeTabId()) {
+    @case ('high-level-outputs') {
+      <div class="tab-content">
+        <h3>High-Level Outputs</h3>
+        <p>Content for High-Level Outputs will go here.</p>
+        <p>AoW ID: {{ entityAowService.aowId() }}</p>
+      </div>
+    }
+    @case ('outcomes') {
+      <div class="tab-content">
+        <h3>Outcomes</h3>
+        <p>Content for Outcomes will go here.</p>
+        <p>AoW ID: {{ entityAowService.aowId() }}</p>
+      </div>
+    }
+    @default {
+      <div class="tab-content">
+        <p>Select a tab to view content.</p>
+      </div>
+    }
+  }
+</div>

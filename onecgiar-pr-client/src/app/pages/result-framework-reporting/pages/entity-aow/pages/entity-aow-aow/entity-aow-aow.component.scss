@@ -1,3 +1,55 @@
-:host {
-  display: block;
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.entity-aow-aow_tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.entity-aow-aow_tabs_button {
+  @include fonts.pr-typography('body-2');
+  width: 100%;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(var(--pr-color-primary-rgb), 0.85) !important;
+    border-color: rgba(var(--pr-color-primary-rgb), 0.85) !important;
+  }
+}
+
+.tab-button_inactive {
+  background-color: var(--pr-color-neutral-1000);
+  border-color: var(--pr-color-neutral-1000);
+  color: var(--pr-color-secondary-400);
+
+  &:hover {
+    color: var(--pr-color-secondary-400) !important;
+    background-color: var(--pr-color-accents-2) !important;
+    border-color: var(--pr-color-accents-2) !important;
+  }
+}
+
+.entity-aow-aow_content {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 8px;
+  background-color: var(--pr-color-neutral-1000);
+  min-height: 200px;
+}
+
+.tab-content {
 }

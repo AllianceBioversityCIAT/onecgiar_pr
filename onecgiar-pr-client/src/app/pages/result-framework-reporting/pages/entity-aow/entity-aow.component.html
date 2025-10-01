@@ -15,9 +15,9 @@
     <span class="entity-aow_sidebar_title">Indicators</span>
 
     <div class="entity-aow_sidebar_option_items">
-      @for (item of sideBarItems(); track item.routerLink) {
+      @for (item of entityAowService.sideBarItems(); track item) {
         @if (!item.isTree) {
-          <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.routerLink" routerLinkActive="active">
+          <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.itemLink" routerLinkActive="active">
             <i class="pi pi-folder" style="font-size: 14px"></i>
             <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
           </div>
@@ -28,8 +28,8 @@
           </div>
 
           @if (item.isOpen) {
-            @for (item of item.items; track item.routerLink) {
-              <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.routerLink" routerLinkActive="active">
+            @for (item of item.items; track item) {
+              <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.itemLink" routerLinkActive="active">
                 <i class="pi pi-folder" style="font-size: 14px"></i>
                 <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
               </div>

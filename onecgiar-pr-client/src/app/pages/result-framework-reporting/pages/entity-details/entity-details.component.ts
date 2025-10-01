@@ -8,7 +8,6 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
-import { Initiative, Unit } from './interfaces/entity-details.interface';
 import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
@@ -31,10 +30,6 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
-
-  entityDetails = signal<Initiative>({} as Initiative);
-  entityAows = signal<Unit[]>([]);
-  isLoading = signal<boolean>(false);
 
   entityResultsByIndicatorCategory = signal<any[]>([
     {
@@ -78,16 +73,6 @@ export class EntityDetailsComponent implements OnInit {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
     });
-    this.getClarisaGlobalUnits();
-  }
-
-  getClarisaGlobalUnits() {
-    this.isLoading.set(true);
-
-    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityAowService.entityId()).subscribe(({ response }) => {
-      this.entityDetails.set(response?.initiative);
-      this.entityAows.set(response?.units ?? []);
-      this.isLoading.set(false);
-    });
+    this.entityAowService.getClarisaGlobalUnits();
   }
 }
