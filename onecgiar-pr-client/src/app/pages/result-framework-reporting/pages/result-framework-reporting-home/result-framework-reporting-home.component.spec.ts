@@ -32,13 +32,7 @@ describe('ResultFrameworkReportingHomeComponent', () => {
     component = fixture.componentInstance;
   });
 
-  describe('ngOnInit', () => {
-    it('should set properties correctly in ngOnInit', () => {
-      const spy = jest.spyOn(component, 'getScienceProgramsProgress');
-
-      component.ngOnInit();
-
-      expect(spy).toHaveBeenCalled();
-    });
+  it('should create', () => {
+    expect(component).toBeTruthy();
   });
 });

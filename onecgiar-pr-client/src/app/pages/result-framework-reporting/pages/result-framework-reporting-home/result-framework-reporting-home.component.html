@@ -12,7 +12,7 @@
         <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
 
         <div class="framework-reporting_left_content_mySPs_items">
-          @for (item of mySPsList(); track $index) {
+          @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
             <app-result-framework-reporting-card-item [item]="item" />
           }
         </div>
@@ -27,7 +27,7 @@
         </div>
 
         <div class="framework-reporting_left_content_otherSPs_items">
-          @for (item of otherSPsList(); track $index) {
+          @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
             <app-result-framework-reporting-card-item [item]="item" />
           }
         </div>
