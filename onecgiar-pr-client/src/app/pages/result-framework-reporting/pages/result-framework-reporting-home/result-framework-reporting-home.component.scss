@@ -110,7 +110,7 @@ p {
 
 .framework-reporting_left_content_mySPs_items {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
   gap: 20px;
 }
 
@@ -177,7 +177,7 @@ p {
 
   @media screen and (max-width: 1115px) {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(305px, 1fr));
     gap: 12px;
     padding: 16px 16px 25px;
   }

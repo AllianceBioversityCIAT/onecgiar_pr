@@ -17,6 +17,7 @@ p {
   background-color: var(--pr-color-accents-1);
   border-radius: 10px;
   padding: 15px 12px;
+  height: 100%;
 }
 
 .recent-activity-card__row {
@@ -40,6 +41,11 @@ p {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--pr-color-secondary-400);
+
+  @media screen and (max-width: 1115px) {
+    @include fonts.pr-typography('body-2');
+    max-width: 165px;
+  }
 }
 
 .recent-activity-card__time {

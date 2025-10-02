@@ -44,7 +44,7 @@
               <p-skeleton width="100%" height="72px" />
             }
           } @else {
-            @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
+            @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
               <app-result-framework-reporting-recent-item [item]="item" />
             }
           }
