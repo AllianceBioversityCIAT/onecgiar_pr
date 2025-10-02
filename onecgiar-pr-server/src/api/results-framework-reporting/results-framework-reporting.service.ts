@@ -42,22 +42,6 @@ export class ResultsFrameworkReportingService {
         };
       }
 
-      const initiativeMembership = await this._roleByUserRepository.findOne({
-        where: { user: user.id, initiative_id: initiative.id, active: true },
-      });
-
-      if (!initiativeMembership) {
-        const isAdmin = await this._roleByUserRepository.isUserAdmin(user.id);
-        if (!isAdmin) {
-          throw {
-            response: {},
-            message:
-              'The authenticated user is not linked to the requested initiative.',
-            status: HttpStatus.FORBIDDEN,
-          };
-        }
-      }
-
       const activeYear = await this._yearRepository.findOne({
         where: { active: true },
         select: ['year'],

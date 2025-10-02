@@ -103,9 +103,6 @@ describe('ResultsFrameworkReportingService', () => {
         where: { official_code: 'PR-001', active: true },
         select: ['id', 'official_code', 'name', 'short_name', 'portfolio_id'],
       });
-      expect(mockRoleByUserRepository.findOne).toHaveBeenCalledWith({
-        where: { user: user.id, initiative_id: 5, active: true },
-      });
       expect(mockClarisaGlobalUnitRepository.find).toHaveBeenCalledWith({
         where: {
           parentId: 100,
@@ -163,9 +160,6 @@ describe('ResultsFrameworkReportingService', () => {
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-002');
 
-      expect(mockRoleByUserRepository.isUserAdmin).toHaveBeenCalledWith(
-        user.id,
-      );
       expect(result.status).toBe(200);
     });
 
