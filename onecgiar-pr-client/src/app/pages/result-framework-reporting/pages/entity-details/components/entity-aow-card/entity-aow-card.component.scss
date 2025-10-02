@@ -50,11 +50,14 @@ p {
 .entity-aow-card_header_actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 5px;
   color: var(--pr-color-primary-300);
   font-weight: 500;
   cursor: pointer;
   transition: color 0.3s ease-out;
+  min-width: 92px;
+  max-width: 92px;
 
   &:hover {
     color: var(--pr-color-primary-400);
