@@ -17,17 +17,61 @@
 <div class="entity-aow-aow_content">
   @switch (activeTabId()) {
     @case ('high-level-outputs') {
+      <div class="tab-content_header">
+        <h3>High-Level Outputs Indicators</h3>
+        <div class="tab-content_header_dot"></div>
+        <h3 class="tab-content_header_phase">Reporting Phase 2025</h3>
+      </div>
+
       <div class="tab-content">
-        <h3>High-Level Outputs</h3>
-        <p>Content for High-Level Outputs will go here.</p>
-        <p>AoW ID: {{ entityAowService.aowId() }}</p>
+        <p-table styleClass="" [value]="[]">
+          <ng-template pTemplate="header">
+            <tr>
+              @for (column of columnOrder(); track column.attr) {
+                <th [pSortableColumn]="column.attr" [id]="column.attr">
+                  <p-sortIcon [field]="column.attr"></p-sortIcon>
+                  {{ column.title }}
+                </th>
+              }
+              <th id="actions">Actions</th>
+            </tr>
+          </ng-template>
+
+          <ng-template #emptymessage>
+            <tr style="height: 200px">
+              <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     }
     @case ('outcomes') {
+      <div class="tab-content_header">
+        <h3>Outcomes Indicators</h3>
+        <div class="tab-content_header_dot"></div>
+        <h3 class="tab-content_header_phase">Reporting Phase 2025</h3>
+      </div>
+
       <div class="tab-content">
-        <h3>Outcomes</h3>
-        <p>Content for Outcomes will go here.</p>
-        <p>AoW ID: {{ entityAowService.aowId() }}</p>
+        <p-table styleClass="" [value]="[]">
+          <ng-template pTemplate="header">
+            <tr>
+              @for (column of columnOrder(); track column.attr) {
+                <th [pSortableColumn]="column.attr" [id]="column.attr">
+                  <p-sortIcon [field]="column.attr"></p-sortIcon>
+                  {{ column.title }}
+                </th>
+              }
+              <th id="actions">Actions</th>
+            </tr>
+          </ng-template>
+
+          <ng-template #emptymessage>
+            <tr style="height: 200px">
+              <td colspan="8" class="tab-content_empty">There are no Outcomes Indicators found.</td>
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     }
     @default {

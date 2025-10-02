@@ -11,9 +11,9 @@ import { EntityAowService } from './services/entity-aow.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityAowComponent implements OnInit {
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  readonly entityAowService = inject(EntityAowService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  entityAowService = inject(EntityAowService);
 
   isAOWTreeOpen = signal<boolean>(true);
 
@@ -24,11 +24,6 @@ export class EntityAowComponent implements OnInit {
 
     if (!this.entityAowService.entityAows().length) {
       this.entityAowService.getClarisaGlobalUnits();
-
-      if (!this.entityAowService.entityAows().length) {
-        this.router.navigate(['/result-framework-reporting/entity-details', this.entityAowService.entityId()]);
-        return;
-      }
     }
   }
 

@@ -1,18 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { EntityDetailsComponent } from './entity-details.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 
 describe('EntityDetailsComponent', () => {
   let component: EntityDetailsComponent;
   let fixture: ComponentFixture<EntityDetailsComponent>;
   let params$: BehaviorSubject<any>;
   let apiServiceMock: any;
+  let entityAowServiceMock: any;
 
   beforeEach(async () => {
-    params$ = new BehaviorSubject({ id: '123' });
+    params$ = new BehaviorSubject({ entityId: '123' });
 
     apiServiceMock = {
       resultsSE: {
@@ -20,11 +22,23 @@ describe('EntityDetailsComponent', () => {
       }
     };
 
+    entityAowServiceMock = {
+      entityId: signal<string>(''),
+      aowId: signal<string>(''),
+      entityDetails: signal<any>({}),
+      entityAows: signal<any[]>([]),
+      isLoadingDetails: signal<boolean>(false),
+      sideBarItems: signal<any[]>([]),
+      getClarisaGlobalUnits: jest.fn(),
+      setSideBarItems: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [EntityDetailsComponent],
       providers: [
         { provide: ActivatedRoute, useValue: { params: params$.asObservable() } },
-        { provide: ApiService, useValue: apiServiceMock }
+        { provide: ApiService, useValue: apiServiceMock },
+        { provide: EntityAowService, useValue: entityAowServiceMock }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
@@ -39,12 +53,12 @@ describe('EntityDetailsComponent', () => {
   });
 
   it('should set entityId from route params on init', () => {
-    expect(component.entityId()).toBe('123');
+    expect(entityAowServiceMock.entityId()).toBe('123');
   });
 
   it('should update entityId when route params change', () => {
-    params$.next({ id: '456' });
+    params$.next({ entityId: '456' });
     fixture.detectChanges();
-    expect(component.entityId()).toBe('456');
+    expect(entityAowServiceMock.entityId()).toBe('456');
   });
 });
