@@ -1210,7 +1210,7 @@ export class ResultsApiService {
   }
 
   GET_ScienceProgramsProgress() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/get/science-programs/progress`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
   }
 
   GET_RecentActivity() {
@@ -1219,7 +1219,7 @@ export class ResultsApiService {
 
   GET_ClarisaGlobalUnits(entityId: string) {
     return this.http.get<{ message: string; response: EntityDetails; status: boolean }>(
-      `${environment.apiBaseUrl}results-framework-reporting/clarisa-global-units?programId=${entityId}`
+      `${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=${entityId}`
     );
   }
 }

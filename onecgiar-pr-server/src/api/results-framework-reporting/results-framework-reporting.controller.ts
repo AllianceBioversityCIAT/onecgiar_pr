@@ -11,7 +11,7 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
 
-@Controller('results-framework-reporting')
+@Controller()
 @ApiTags('Results Framework and Reporting')
 export class ResultsFrameworkReportingController {
   constructor(
