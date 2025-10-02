@@ -106,6 +106,10 @@ p {
   gap: 20px;
 }
 
+.framework-reporting_left_content_mySPs_items_empty {
+  grid-column: span 2;
+}
+
 .framework-reporting_left_content_otherSPs {
   display: flex;
   flex-direction: column;
