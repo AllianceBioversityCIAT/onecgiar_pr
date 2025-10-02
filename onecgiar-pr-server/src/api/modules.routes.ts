@@ -16,6 +16,7 @@ import { NotificationModule } from './notification/notification.module';
 import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
 import { AdUsersModule } from './ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
+import { ResultsFrameworkReportingModule } from './results-framework-reporting/results-framework-reporting.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -76,5 +77,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'initiatives-entity',
     module: InitiativeEntityMapModule,
+  },
+  {
+    path: 'results-framework-reporting',
+    module: ResultsFrameworkReportingModule,
   },
 ];
