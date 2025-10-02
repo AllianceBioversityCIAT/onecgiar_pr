@@ -4,6 +4,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingHomeComponent } from './result-framework-reporting-home.component';
 import { of } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 describe('ResultFrameworkReportingHomeComponent', () => {
   let component: ResultFrameworkReportingHomeComponent;
@@ -25,7 +26,7 @@ describe('ResultFrameworkReportingHomeComponent', () => {
           useValue: mockApiService
         }
       ],
-      imports: [RouterModule, ResultFrameworkReportingHomeComponent, HttpClientTestingModule]
+      imports: [RouterModule, ResultFrameworkReportingHomeComponent, HttpClientTestingModule, CustomFieldsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultFrameworkReportingHomeComponent);

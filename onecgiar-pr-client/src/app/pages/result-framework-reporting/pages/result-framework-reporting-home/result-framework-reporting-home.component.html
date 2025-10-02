@@ -17,8 +17,17 @@
               <p-skeleton width="100%" height="136px" />
             }
           } @else {
-            @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
-              <app-result-framework-reporting-card-item [item]="item" />
+            @if (resultFrameworkReportingHomeService.mySPsList().length > 0) {
+              @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
+                <app-result-framework-reporting-card-item [item]="item" />
+              }
+            } @else {
+              <div class="framework-reporting_left_content_mySPs_items_empty">
+                <app-alert-status
+                  inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+                  description=" You currently do not have a member role in any Science Program or Accelerator. If you require access or permissions, please contact
+                your Science Program or Accelerator coordinator."></app-alert-status>
+              </div>
             }
           }
         </div>
