@@ -178,7 +178,6 @@ p {
   @media screen and (max-width: 1115px) {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(305px, 1fr));
-    // grid-template-columns: repeat(3, 1fr);
     gap: 12px;
     padding: 16px 16px 25px;
   }
