@@ -5,6 +5,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
+import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
 };
@@ -31,6 +32,10 @@ const mockHandlersError = {
   })),
 };
 
+const mockTocResultsRepository = {
+  findByCompositeCode: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -51,6 +56,10 @@ describe('ResultsFrameworkReportingService', () => {
         },
         { provide: YearRepository, useValue: mockYearRepository },
         { provide: HandlersError, useValue: mockHandlersError },
+        {
+          provide: TocResultsRepository,
+          useValue: mockTocResultsRepository,
+        },
       ],
     }).compile();
 
@@ -179,6 +188,104 @@ describe('ResultsFrameworkReportingService', () => {
         error: thrown,
         debug: true,
       });
+    });
+  });
+
+  describe('getWorkPackagesByProgramAndArea', () => {
+    beforeEach(() => {
+      mockTocResultsRepository.findByCompositeCode.mockReset();
+    });
+
+    it('should return work packages when repository returns data', async () => {
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          id: 1,
+          category: 'OUTPUT',
+          result_title: 'Result 1',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              id: 100,
+              indicator_description: 'Indicator 1',
+              toc_result_indicator_id: 'TRI-1',
+              related_node_id: 'NODE-1-IND',
+              unit_meassurament: 'km',
+              type_value: null,
+              type_name: null,
+              location: null,
+            },
+          ],
+        },
+      ]);
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(mockTocResultsRepository.findByCompositeCode).toHaveBeenCalledWith(
+        'SP01',
+        'SP01-AOW01',
+        2024,
+      );
+      expect(result).toMatchObject({
+        status: 200,
+        response: {
+          compositeCode: 'SP01-AOW01',
+          year: 2024,
+          tocResults: [
+            {
+              id: 1,
+              category: 'OUTPUT',
+              result_title: 'Result 1',
+              related_node_id: 'NODE-1',
+            },
+          ],
+        },
+      });
+    });
+
+    it('should handle optional year when not provided', async () => {
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          id: 2,
+          category: 'OUTPUT',
+          result_title: 'Result 2',
+          related_node_id: null,
+          indicators: [],
+        },
+      ]);
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'sp02',
+        'aow03',
+      );
+
+      expect(mockTocResultsRepository.findByCompositeCode).toHaveBeenCalledWith(
+        'SP02',
+        'SP02-AOW03',
+        undefined,
+      );
+      expect(result.response.year).toBeNull();
+    });
+
+    it('should return handler error when parameters are missing', async () => {
+      const result: any = await service.getWorkPackagesByProgramAndArea('', '');
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+    });
+
+    it('should return handler error when repository yields empty result', async () => {
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([]);
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP03',
+        'AOW05',
+      );
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
     });
   });
 });

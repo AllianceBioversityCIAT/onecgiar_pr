@@ -16,6 +16,7 @@ describe('ResultsFrameworkReportingController', () => {
           provide: ResultsFrameworkReportingService,
           useValue: {
             getGlobalUnitsByProgram: jest.fn(),
+            getWorkPackagesByProgramAndArea: jest.fn(),
           },
         },
         {
@@ -78,6 +79,20 @@ describe('ResultsFrameworkReportingController', () => {
         user,
         'PR-001',
       );
+    });
+  });
+
+  describe('getTocWorkPackages', () => {
+    it('should delegate to reporting service with supplied filters', () => {
+      reportingService.getWorkPackagesByProgramAndArea.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getTocWorkPackages('SP01', 'AOW01', '2024');
+
+      expect(
+        reportingService.getWorkPackagesByProgramAndArea,
+      ).toHaveBeenCalledWith('SP01', 'AOW01', '2024');
     });
   });
 });
