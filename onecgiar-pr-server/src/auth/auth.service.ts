@@ -405,6 +405,7 @@ export class AuthService {
         user: {
           id: user.id,
           user_name: `${user.first_name} ${user.last_name}`,
+          user_acronym: user.first_name.charAt(0) + user.last_name.charAt(0),
           email: user.email,
         },
         auth_tokens: authTokens,

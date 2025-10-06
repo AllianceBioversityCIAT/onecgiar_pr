@@ -353,36 +353,34 @@ describe('ExportTablesService', () => {
       const fileName = 'testFile';
       const isIPSR = true;
 
+      // Mock the current date to ensure consistent test results
+      const mockDate = new Date('2025-01-01T00:41:00Z'); // 00:41 CET
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
       service.saveAsExcelFile(buffer, fileName, isIPSR);
 
-      const dateCETTime = new Date().toLocaleString('en-US', {
+      // Use the same logic as the service implementation
+      const options: Intl.DateTimeFormatOptions = {
         timeZone: 'Europe/Madrid',
-        hour12: false
-      });
-
-      const date = dateCETTime.split(',')[0].split('/');
-      let day = date[1];
-      let month = date[0];
-      const year = date[2];
-
-      if (day.length === 1) {
-        day = '0' + day;
-      }
-
-      if (month.length === 1) {
-        month = '0' + month;
-      }
-
-      const dateCET = year + month + day;
-
-      const timeCET = dateCETTime.split(',')[1].trim().replace(':', '').slice(0, 4);
-
-      const expectedFileName = fileName + '_' + dateCET + '_' + timeCET + 'cet.xlsx';
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      const formatted = mockDate.toLocaleString('en-GB', options).replace(/[/,:\s]/g, '');
+      const formattedDate = formatted.slice(4, 8) + formatted.slice(2, 4) + formatted.slice(0, 2);
+      const timePart = formatted.slice(8, 12) + 'cet';
+      const expectedFileName = fileName + '_' + formattedDate + '_' + timePart + '.xlsx';
 
       expect(FileSaver.saveAs).toHaveBeenCalledWith(
         new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' }),
         expectedFileName
       );
+
+      // Restore the original Date implementation
+      jest.restoreAllMocks();
     });
 
     it('should save the file with a timestamp when isIPSR is false', () => {

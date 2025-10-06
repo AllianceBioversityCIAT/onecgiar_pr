@@ -23,6 +23,7 @@ interface UserData {
 export interface LocalStorageUser {
   id: number;
   user_name: string;
+  user_acronym?: string;
   email: string;
 }
 
