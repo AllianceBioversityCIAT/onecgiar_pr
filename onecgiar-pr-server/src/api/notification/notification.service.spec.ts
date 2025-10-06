@@ -33,7 +33,9 @@ const mockSocketManagementService = {
 };
 
 const mockShareResultRequestService = {};
-const mockUserRepository = {};
+const mockUserRepository = {
+  InitiativeByUser: jest.fn(),
+};
 
 const mockResultByInitiativesRepository = {
   getOwnerInitiativeByResult: jest.fn(),
@@ -197,6 +199,7 @@ describe('NotificationService', () => {
       mockNotificationLevelRepository.findOne.mockResolvedValue({
         notifications_level_id: 1,
       });
+      mockUserRepository.InitiativeByUser.mockResolvedValue([{ id: 1 }]);
 
       const queryBuilder: any = {
         innerJoinAndSelect: jest.fn().mockReturnThis(),
@@ -267,6 +270,7 @@ describe('NotificationService', () => {
 
       const result = await service.getRecentResultActivity(user, 5);
 
+      expect(mockUserRepository.InitiativeByUser).toHaveBeenCalledWith(user.id);
       expect(
         mockResultByInitiativesRepository.getOwnerInitiativeByResult,
       ).toHaveBeenCalledWith(201);
@@ -283,6 +287,94 @@ describe('NotificationService', () => {
           }),
         ]),
       );
+      expect(result.status).toBe(200);
+    });
+
+    it('should return global notifications when user lacks initiative roles', async () => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 1,
+      });
+      mockUserRepository.InitiativeByUser.mockResolvedValue([]);
+
+      const rawQueryBuilder: any = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          { notification_id: '10', result_id: 300 },
+          { notification_id: '11', result_id: 301 },
+        ]),
+      };
+
+      const baseQueryBuilder: any = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            notification_id: '10',
+            result_id: 300,
+            obj_result: {
+              result_code: 9001,
+              title: 'Global Result 1',
+              obj_result_by_initiatives: [],
+            },
+            obj_notification_type: {
+              type: NotificationTypeEnum.RESULT_CREATED,
+            },
+            obj_emitter_user: null,
+            emitter_user: null,
+            created_date: new Date('2024-01-03'),
+          },
+          {
+            notification_id: '11',
+            result_id: 301,
+            obj_result: {
+              result_code: 9002,
+              title: 'Global Result 2',
+              obj_result_by_initiatives: [],
+            },
+            obj_notification_type: {
+              type: NotificationTypeEnum.RESULT_SUBMITTED,
+            },
+            obj_emitter_user: null,
+            emitter_user: null,
+            created_date: new Date('2024-01-04'),
+          },
+        ]),
+      };
+
+      mockNotificationRepository.createQueryBuilder
+        .mockReturnValueOnce(rawQueryBuilder)
+        .mockReturnValueOnce(baseQueryBuilder);
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        null,
+      );
+
+      const result = await service.getRecentResultActivity(user, 2);
+
+      expect(mockUserRepository.InitiativeByUser).toHaveBeenCalledWith(user.id);
+      expect(rawQueryBuilder.getRawMany).toHaveBeenCalled();
+      expect(baseQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'notification.notification_id IN (:...notificationIds)',
+        {
+          notificationIds: [10, 11],
+        },
+      );
+      expect(
+        mockResultByInitiativesRepository.getOwnerInitiativeByResult,
+      ).toHaveBeenNthCalledWith(1, 300);
+      expect(
+        mockResultByInitiativesRepository.getOwnerInitiativeByResult,
+      ).toHaveBeenNthCalledWith(2, 301);
+      expect(result.response).toHaveLength(2);
       expect(result.status).toBe(200);
     });
   });
