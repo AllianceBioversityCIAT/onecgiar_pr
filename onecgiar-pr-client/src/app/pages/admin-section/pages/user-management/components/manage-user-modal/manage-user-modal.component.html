@@ -113,20 +113,23 @@
 
         @for (item of addUserForm().role_assignments; track $index) {
           <div class="selects-item">
-            <div style="width: 45%">
-              <app-pr-select
-                [group]="true"
-                groupName="name"
-                [options]="entities()"
-                optionLabel="official_code"
-                optionValue="initiative_id"
-                placeholder="Select entity"
-                [ngModel]="item.entity_id"
-                (ngModelChange)="onRoleEntityChange($event, $index)"
-                [indexReference]="$index + 10"
-                [required]="false">
-              </app-pr-select>
-            </div>
+            @if (loadingRoleAssignment()) {
+              <div style="width: 45%">
+                <app-pr-select
+                  [group]="true"
+                  groupName="name"
+                  [options]="entities()"
+                  optionLabel="official_code"
+                  optionValue="initiative_id"
+                  placeholder="Select entity"
+                  [ngModel]="item.entity_id"
+                  (ngModelChange)="onRoleEntityChange($event, $index)"
+                  [disableOptions]="disabledRoleAssignmentOptions()"
+                  [indexReference]="$index + 10"
+                  [required]="false">
+                </app-pr-select>
+              </div>
+            }
 
             <div style="width: 45%">
               <app-pr-select

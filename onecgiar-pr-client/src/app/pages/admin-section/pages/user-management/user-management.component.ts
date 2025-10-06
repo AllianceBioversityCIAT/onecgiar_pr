@@ -246,6 +246,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
           role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
         }));
+        this.manageUserModal.updateDisableOptions();
         this.loadingUserRole.set(false);
       },
       error: error => {
