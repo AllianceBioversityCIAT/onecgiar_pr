@@ -12,16 +12,16 @@
     <div class="section_container">
       <div class="metadata">
         <div class="item">
-          Status: <strong>{{ this.dataControlSE?.currentResult?.status_name }}</strong>
+          Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
         </div>
         <div class="item">
-          Result level: <strong>{{ this.dataControlSE.currentResult?.result_level_name }}</strong>
+          Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
         </div>
         <div class="item">
-          Indicator category: <strong>{{ this.dataControlSE.currentResult?.result_type_name }}</strong>
+          Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
         </div>
         <div class="item">
-          Result code: <strong>{{ this.api.resultsSE.currentResultCode }}</strong>
+          Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
         </div>
         <div class="item">
           {{ this.dataControlSE.currentResult?.initiative_official_code }} -

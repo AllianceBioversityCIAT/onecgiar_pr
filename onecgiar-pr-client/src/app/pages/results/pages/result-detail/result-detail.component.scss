@@ -25,19 +25,20 @@
     border-top-right-radius: 0px !important;
 
     .metadata {
-      position: absolute;
-      top: 0;
-      right: 0;
-      margin-right: 20px;
+      padding: 10px 20px 0px 20px;
       display: flex;
       gap: 10px;
       @include fonts.pr-typography('body-3');
 
       .item {
-        background-color: var(--pr-color-primary-300);
-        color: var(--pr-color-white);
+        border: 1px solid var(--pr-color-primary-300);
+        color: var(--pr-color-primary-300);
         padding: 5px 10px;
-        border-radius: 0px 0px 10px 10px;
+        border-radius: 7px;
+        font-size: 12px;
+        span {
+          color: var(--pr-color-secondary-100);
+        }
       }
     }
   }
