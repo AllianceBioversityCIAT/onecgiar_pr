@@ -1,0 +1,137 @@
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { env } from 'process';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+
+interface toc_result_row {
+  id: number;
+  category: string;
+  result_title: string;
+  related_node_id: string | null;
+  indicator_id: number | null;
+  indicator_description: string | null;
+  toc_result_indicator_id: string | null;
+  indicator_related_node_id: string | null;
+  unit_messurament: string | null;
+  type_value: string | null;
+  type_name: string | null;
+  location: string | null;
+  baseline_value: string | null;
+}
+
+export interface toc_result_response {
+  id: number;
+  category: string;
+  result_title: string;
+  related_node_id: string | null;
+  indicators: Array<{
+    id: number;
+    indicator_description: string | null;
+    toc_result_indicator_id: string | null;
+    related_node_id: string | null;
+    unit_messurament: string | null;
+    type_value: string | null;
+    type_name: string | null;
+    location: string | null;
+    baseline_value: string | null;
+  }>;
+}
+
+@Injectable()
+export class TocResultsRepository {
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
+  ) {}
+
+  async findByCompositeCode(
+    program: string,
+    composite_code: string,
+    year?: number,
+  ) {
+    const params: Array<string | number> = [program, composite_code];
+
+    let query = `
+      SELECT
+        tr.id,
+        tr.category,
+        tr.result_title AS result_title,
+        tr.related_node_id AS related_node_id,
+        tri.id AS indicator_id,
+        tri.indicator_description,
+        tri.toc_result_indicator_id,
+        tri.related_node_id AS indicator_related_node_id,
+        tri.unit_messurament AS unit_messurament,
+        tri.type_value,
+        tri.type_name,
+        tri.location,
+        tri.baseline_value
+      FROM ${env.DB_TOC}.toc_work_packages wp
+      JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
+        AND tr.official_code = ?
+      JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+      WHERE 
+        wp.wp_official_code = ?
+        AND tr.category = 'OUTPUT'
+    `;
+
+    if (year !== undefined) {
+      params.push(year);
+      query += `
+        AND wp.phase IN (
+          SELECT v.toc_pahse_id
+          FROM ${env.DB_NAME}.\`version\` v
+          WHERE v.phase_year = ?
+            AND v.app_module_id = 1
+            AND v.is_active = 1
+            AND v.status = 1
+        )
+      `;
+    }
+
+    query += ' ORDER BY tr.id ASC, tri.id ASC';
+
+    try {
+      const rows = (await this.dataSource.query(
+        query,
+        params,
+      )) as toc_result_row[];
+
+      const grouped = new Map<number, toc_result_response>();
+
+      for (const row of rows) {
+        if (!grouped.has(row.id)) {
+          grouped.set(row.id, {
+            id: row.id,
+            category: row.category,
+            result_title: row.result_title,
+            related_node_id: row.related_node_id,
+            indicators: [],
+          });
+        }
+
+        if (row.indicator_id !== null) {
+          grouped.get(row.id)?.indicators.push({
+            id: row.indicator_id,
+            indicator_description: row.indicator_description,
+            toc_result_indicator_id: row.toc_result_indicator_id,
+            related_node_id: row.indicator_related_node_id,
+            unit_messurament: row.unit_messurament,
+            type_value: row.type_value,
+            type_name: row.type_name,
+            location: row.location,
+            baseline_value: row.baseline_value,
+          });
+        }
+      }
+
+      return Array.from(grouped.values());
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+}
