@@ -4,7 +4,7 @@
     : this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
 
 <p-dialog
-  class="support_information"
+  appendTo="body"
   header="Title"
   [(visible)]="this.api.dataControlSE.chagePhaseModal"
   [draggable]="false"

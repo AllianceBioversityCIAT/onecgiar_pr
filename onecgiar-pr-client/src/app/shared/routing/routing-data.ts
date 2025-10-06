@@ -4,7 +4,7 @@ import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   {
-    prName: 'Results',
+    prName: 'Results Center',
     underConstruction: false,
     canActivate: [CheckLoginGuard],
     path: 'result',
@@ -14,7 +14,7 @@ export const routingApp: PrRoute[] = [
     prName: 'Type 1 report elements',
     prHide: true,
     underConstruction: false,
-    onlytest: false,
+    onlyTest: false,
     canActivate: [CheckLoginGuard],
     path: 'type-one-report',
     loadChildren: () => import('../../pages/type-one-report/type-one-report.module').then(m => m.TypeOneReportModule)
@@ -22,7 +22,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Innovation Packages',
     underConstruction: false,
-    onlytest: false,
+    onlyTest: false,
     canActivate: [CheckLoginGuard],
     path: 'ipsr',
     loadChildren: () => import('../../pages/ipsr/ipsr.module').then(m => m.IpsrModule)
@@ -36,7 +36,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'Quality Assurance',
-    onlytest: false,
+    onlyTest: false,
     underConstruction: false,
     canActivate: [CheckLoginGuard],
     path: 'quality-assurance',
@@ -44,7 +44,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'My Admin',
-    onlytest: false,
+    onlyTest: false,
     prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'init-admin-module',
@@ -52,7 +52,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'Outcome Indicator Module',
-    onlytest: false,
+    onlyTest: false,
     prHide: true,
     underConstruction: false,
     canActivate: [CheckLoginGuard],
@@ -61,7 +61,7 @@ export const routingApp: PrRoute[] = [
   },
   {
     prName: 'Whats new',
-    onlytest: false,
+    onlyTest: false,
     prHide: true,
     underConstruction: false,
     canActivate: [CheckLoginGuard],
@@ -86,7 +86,7 @@ export const routingApp: PrRoute[] = [
 export const extraRoutingApp: PrRoute[] = [
   {
     prName: 'Admin module',
-    onlytest: false,
+    onlyTest: false,
     canActivate: [CheckAdminGuard],
     prHide: false,
     path: 'admin-module',
@@ -444,5 +444,5 @@ export interface PrRoute extends Route {
   prName: string;
   prHide?: boolean | number;
   underConstruction?: boolean | number;
-  onlytest?: boolean;
+  onlyTest?: boolean;
 }

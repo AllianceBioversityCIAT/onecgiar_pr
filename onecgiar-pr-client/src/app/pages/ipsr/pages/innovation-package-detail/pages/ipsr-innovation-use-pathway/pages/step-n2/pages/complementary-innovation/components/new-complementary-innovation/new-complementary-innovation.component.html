@@ -8,7 +8,7 @@
 }
 
 <p-dialog
-  class="support_information"
+  appendTo="body"
   [(visible)]="complementaryInnovationService.dialogStatus"
   [draggable]="false"
   [modal]="true"
@@ -17,7 +17,6 @@
   [dismissableMask]="true"
   [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
   [blockScroll]="true"
-  appendTo="body"
   (onHide)="complementaryInnovationService.resetAll()">
   <div style="display: flex; justify-content: center; flex-direction: column">
     <div class="modal_title">
