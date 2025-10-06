@@ -74,7 +74,7 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
 import {
@@ -2003,15 +2003,20 @@ export class ResultsService {
     userId: number,
   ) {
     try {
-      const recipientIds = await this.getInitiativeUserIds(initiativeId);
-      if (!recipientIds.length) {
+      const recipientIds = new Set<number>(
+        await this.getInitiativeUserIds(initiativeId),
+      );
+      const applicationRecipientIds = await this.getApplicationUserIds();
+      applicationRecipientIds.forEach((id) => recipientIds.add(id));
+
+      if (!recipientIds.size) {
         return;
       }
 
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,
         NotificationTypeEnum.RESULT_CREATED,
-        recipientIds,
+        Array.from(recipientIds.values()),
         userId,
         result.id,
       );
@@ -2044,6 +2049,39 @@ export class ResultsService {
     } catch (error) {
       this._logger.warn(
         `Failed to resolve users for initiative ${initiativeId}`,
+        error as Error,
+      );
+      return [];
+    }
+  }
+
+  private async getApplicationUserIds(): Promise<number[]> {
+    if (!this._roleByUserRepository) {
+      return [];
+    }
+
+    try {
+      const roles = await this._roleByUserRepository.find({
+        select: ['user'],
+        where: {
+          active: true,
+          initiative_id: IsNull(),
+          action_area_id: IsNull(),
+          role: In([RoleEnum.ADMIN, RoleEnum.GUEST]),
+        },
+      });
+
+      const ids = new Set<number>();
+      roles.forEach((role) => {
+        if (role?.user) {
+          ids.add(Number(role.user));
+        }
+      });
+
+      return Array.from(ids.values());
+    } catch (error) {
+      this._logger.warn(
+        'Failed to resolve application-level notification recipients',
         error as Error,
       );
       return [];
