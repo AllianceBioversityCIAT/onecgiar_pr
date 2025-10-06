@@ -103,13 +103,6 @@ export class RdGeneralInformationComponent implements OnInit {
     });
   }
 
-  titleTextInfo() {
-    return `<ul>
-    <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
-    <li>Avoid abbreviations or (technical) jargon.</li>
-    </ul>`;
-  }
-
   descriptionTextInfo() {
     return `<ul>
     <li>Ensure the description is understandable for a non-specialist reader.</li>

@@ -8,7 +8,7 @@ export class FieldsManagerService {
   portfolioAcronym = signal('P22');
   fields = computed(() => {
     return {
-      '(result-general-info)-f-description': {
+      '[general-info]-description': {
         label: 'Description',
         placeholder: 'Enter text',
         show: true,
@@ -16,6 +16,15 @@ export class FieldsManagerService {
     <li>Ensure the description is understandable for a non-specialist reader.</li>
      <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>
+    </ul>`
+      },
+      '[general-info]-title': {
+        label: 'Title',
+        placeholder: 'Enter text',
+        show: true,
+        description: `<ul>
+    <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
+    <li>Avoid abbreviations or (technical) jargon.</li>
     </ul>`
       }
     };

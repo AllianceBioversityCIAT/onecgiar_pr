@@ -44,17 +44,15 @@
   </div>
 
   <app-pr-input
-    placeholder="Enter text"
-    label="Title"
+    fieldRef="[general-info]-title"
     type="text"
-    [description]="titleTextInfo()"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
     [maxWords]="30">
   </app-pr-input>
 
   <app-pr-textarea
-    fieldRef="(result-general-info)-f-description"
+    fieldRef="[general-info]-description"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
