@@ -15,6 +15,7 @@ import { FindOperator, MoreThan } from 'typeorm';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
+import { Notification } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationService {
@@ -164,34 +165,28 @@ export class NotificationService {
         };
       }
 
-      const notifications = await this._notificationRepository
-        .createQueryBuilder('notification')
-        .innerJoinAndSelect('notification.obj_result', 'result')
-        .innerJoin(
-          'result.obj_version',
-          'version',
-          'version.is_active = :versionActive AND version.status = :versionStatus AND version.app_module_id = :appModuleId',
-          {
-            versionActive: true,
-            versionStatus: true,
-            appModuleId: AppModuleIdEnum.REPORTING,
-          },
+      const userInitiatives = await this._userRepository.InitiativeByUser(
+        user.id,
+      );
+      const hasInitiativeRoles =
+        Array.isArray(userInitiatives) && userInitiatives.length > 0;
+
+      let notifications: Notification[] = [];
+
+      if (hasInitiativeRoles) {
+        notifications = await this.buildResultNotificationBaseQuery(
+          level.notifications_level_id,
         )
-        .leftJoinAndSelect(
-          'result.obj_result_by_initiatives',
-          'resultInitiative',
-          'resultInitiative.initiative_role_id = 1 AND resultInitiative.is_active = true',
-        )
-        .leftJoinAndSelect('resultInitiative.obj_initiative', 'initiative')
-        .leftJoinAndSelect('notification.obj_notification_type', 'type')
-        .leftJoinAndSelect('notification.obj_emitter_user', 'emitter')
-        .where('notification.target_user = :userId', { userId: user.id })
-        .andWhere('notification.notification_level = :levelId', {
-          levelId: level.notifications_level_id,
-        })
-        .orderBy('notification.created_date', 'DESC')
-        .take(limit)
-        .getMany();
+          .andWhere('notification.target_user = :userId', { userId: user.id })
+          .orderBy('notification.created_date', 'DESC')
+          .take(limit)
+          .getMany();
+      } else {
+        notifications = await this.getGlobalResultNotifications(
+          level.notifications_level_id,
+          limit,
+        );
+      }
 
       const missingOwnerResultIds = notifications
         .filter(
@@ -295,6 +290,64 @@ export class NotificationService {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
+  }
+
+  private buildResultNotificationBaseQuery(levelId: number) {
+    return this._notificationRepository
+      .createQueryBuilder('notification')
+      .innerJoinAndSelect('notification.obj_result', 'result')
+      .innerJoin(
+        'result.obj_version',
+        'version',
+        'version.is_active = :versionActive AND version.status = :versionStatus AND version.app_module_id = :appModuleId',
+        {
+          versionActive: true,
+          versionStatus: true,
+          appModuleId: AppModuleIdEnum.REPORTING,
+        },
+      )
+      .leftJoinAndSelect(
+        'result.obj_result_by_initiatives',
+        'resultInitiative',
+        'resultInitiative.initiative_role_id = 1 AND resultInitiative.is_active = true',
+      )
+      .leftJoinAndSelect('resultInitiative.obj_initiative', 'initiative')
+      .leftJoinAndSelect('notification.obj_notification_type', 'type')
+      .leftJoinAndSelect('notification.obj_emitter_user', 'emitter')
+      .where('notification.notification_level = :levelId', {
+        levelId,
+      });
+  }
+
+  private async getGlobalResultNotifications(
+    levelId: number,
+    limit: number,
+  ): Promise<Notification[]> {
+    const latestNotifications = await this._notificationRepository
+      .createQueryBuilder('notification')
+      .select('MAX(notification.notification_id)', 'notification_id')
+      .addSelect('notification.result_id', 'result_id')
+      .where('notification.notification_level = :levelId', { levelId })
+      .andWhere('notification.result_id IS NOT NULL')
+      .groupBy('notification.result_id')
+      .orderBy('MAX(notification.created_date)', 'DESC')
+      .limit(limit)
+      .getRawMany<{ notification_id: string | number }>();
+
+    const notificationIds = latestNotifications
+      .map((row) => Number(row.notification_id))
+      .filter((id) => !Number.isNaN(id));
+
+    if (!notificationIds.length) {
+      return [];
+    }
+
+    return this.buildResultNotificationBaseQuery(levelId)
+      .andWhere('notification.notification_id IN (:...notificationIds)', {
+        notificationIds,
+      })
+      .orderBy('notification.created_date', 'DESC')
+      .getMany();
   }
 
   async emitApplicationAnouncement(
