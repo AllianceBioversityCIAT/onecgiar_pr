@@ -7,10 +7,10 @@ import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-    selector: 'app-rd-geographic-location',
-    templateUrl: './rd-geographic-location.component.html',
-    styleUrls: ['./rd-geographic-location.component.scss'],
-    standalone: false
+  selector: 'app-rd-geographic-location',
+  templateUrl: './rd-geographic-location.component.html',
+  styleUrls: ['./rd-geographic-location.component.scss'],
+  standalone: false
 })
 export class RdGeographicLocationComponent implements OnInit {
   geographicLocationBody = new GeographicLocationBody();
@@ -35,7 +35,14 @@ export class RdGeographicLocationComponent implements OnInit {
     }
   ];
 
-  constructor(public api: ApiService, public resultLevelSE: ResultLevelService, public regionsCountriesSE: RegionsCountriesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    public regionsCountriesSE: RegionsCountriesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Geographic location');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -45,10 +52,12 @@ export class RdGeographicLocationComponent implements OnInit {
     let tags = '';
     switch (id) {
       case 2:
-        tags += 'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
+        tags +=
+          'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
         break;
       case 3:
-        tags += 'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
+        tags +=
+          'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
         break;
     }
     tags += '';
@@ -59,7 +68,8 @@ export class RdGeographicLocationComponent implements OnInit {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
       this.geographicLocationBody = response;
       const legacyCountries = 4;
-      this.geographicLocationBody.geo_scope_id = this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
+      this.geographicLocationBody.geo_scope_id =
+        this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
     });
   }
   onSaveSection() {

@@ -1,4 +1,3 @@
-<app-detail-section-title sectionName="Innovation Development information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
   <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title"> </app-pr-input>
@@ -59,7 +58,7 @@
     [required]="false"
     label="Innovation Developer"
     description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
-        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br> 
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
         Please provide information such as first name, family name, email address and organizational affiliations."
     [(ngModel)]="innovationDevInfoBody.innovation_developers">
   </app-pr-textarea>
