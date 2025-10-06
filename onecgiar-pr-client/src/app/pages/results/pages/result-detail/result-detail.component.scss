@@ -21,10 +21,9 @@
   .section_container {
     width: 95% !important;
     position: relative;
-    border-top-left-radius: 0px !important;
-    border-top-right-radius: 0px !important;
+
     .fixed_data_container {
-      padding: 30px 80px 30px 80px;
+      padding: 25px 80px 30px 80px;
       display: flex;
       flex-direction: column;
       gap: 30px;
