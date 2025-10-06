@@ -47,9 +47,14 @@ export class ResultsKnowledgeProductMapper {
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    knowledgeProductDto.cgspace_countries = this.getAsArray(
-      mqapResponseDto?.['Country ISO code'],
-    );
+    const countryCodes =
+      mqapResponseDto?.['Country ISO code'] && mqapResponseDto['Country ISO code'].length > 0
+        ? mqapResponseDto['Country ISO code']
+        : mqapResponseDto?.Countries ?? [];
+
+    console.log('Country codes from MQAP:', countryCodes);
+    
+    knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
