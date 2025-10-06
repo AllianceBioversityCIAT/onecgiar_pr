@@ -79,4 +79,43 @@ export class ResultsFrameworkReportingController {
       programId,
     );
   }
+
+  @Get('toc-results')
+  @ApiOperation({
+    summary: 'List ToC results by program and area of work',
+    description:
+      'Retrieves the ToC result identifiers for the provided program and area of work combination.',
+  })
+  @ApiQuery({
+    name: 'program',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiQuery({
+    name: 'areaOfWork',
+    type: String,
+    required: true,
+    description: 'Area of work identifier (e.g. AOW01).',
+  })
+  @ApiQuery({
+    name: 'year',
+    type: Number,
+    required: false,
+    description: 'Optional phase year to filter the work packages.',
+  })
+  @ApiOkResponse({
+    description: 'Work packages retrieved successfully.',
+  })
+  getTocWorkPackages(
+    @Query('program') program: string,
+    @Query('areaOfWork') areaOfWork: string,
+    @Query('year') year?: string,
+  ) {
+    return this.resultsFrameworkReportingService.getWorkPackagesByProgramAndArea(
+      program,
+      areaOfWork,
+      year,
+    );
+  }
 }

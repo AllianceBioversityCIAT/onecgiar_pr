@@ -7,6 +7,7 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultsModule } from '../results/results.module';
+import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 
 @Module({
   imports: [ResultsModule],
@@ -18,6 +19,7 @@ import { ResultsModule } from '../results/results.module';
     ClarisaGlobalUnitRepository,
     YearRepository,
     HandlersError,
+    TocResultsRepository,
   ],
 })
 export class ResultsFrameworkReportingModule {}

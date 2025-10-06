@@ -5,6 +5,7 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -14,6 +15,7 @@ export class ResultsFrameworkReportingService {
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _tocResultsRepository: TocResultsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -117,6 +119,80 @@ export class ResultsFrameworkReportingService {
           },
         },
         message: 'Global units retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getWorkPackagesByProgramAndArea(
+    program?: string,
+    areaOfWork?: string,
+    year?: string,
+  ) {
+    try {
+      const normalizedProgram = program?.trim();
+      const normalizedArea = areaOfWork?.trim();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!normalizedArea) {
+        throw {
+          response: {},
+          message:
+            'The area of work identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const normalizedYear =
+        year !== undefined && year !== null && `${year}`.trim() !== ''
+          ? Number(year)
+          : undefined;
+
+      if (
+        normalizedYear !== undefined &&
+        (!Number.isFinite(normalizedYear) || normalizedYear < 0)
+      ) {
+        throw {
+          response: {},
+          message:
+            'The year filter must be a valid positive integer when provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const compositeCode = `${normalizedProgram.toUpperCase()}-${normalizedArea.toUpperCase()}`;
+
+      const tocResults = await this._tocResultsRepository.findByCompositeCode(
+        normalizedProgram.toUpperCase(),
+        compositeCode,
+        normalizedYear,
+      );
+
+      if (!tocResults.length) {
+        throw {
+          response: {},
+          message:
+            'No work packages were found for the provided filters in the ToC catalogue.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: {
+          compositeCode,
+          year: normalizedYear ?? null,
+          tocResults,
+        },
+        message: 'Work packages retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {
