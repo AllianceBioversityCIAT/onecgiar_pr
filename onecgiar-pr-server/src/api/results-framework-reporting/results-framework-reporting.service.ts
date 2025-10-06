@@ -169,12 +169,39 @@ export class ResultsFrameworkReportingService {
         };
       }
 
+      let resolvedYear = normalizedYear;
+
+      if (resolvedYear === undefined) {
+        const activeYear = await this._yearRepository.findOne({
+          where: { active: true },
+          select: ['year'],
+        });
+
+        if (!activeYear) {
+          throw {
+            response: {},
+            message: 'No active reporting year was found.',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        resolvedYear = Number(activeYear.year);
+
+        if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
+          throw {
+            response: {},
+            message: 'The active reporting year configured is invalid.',
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+          };
+        }
+      }
+
       const compositeCode = `${normalizedProgram.toUpperCase()}-${normalizedArea.toUpperCase()}`;
 
       const tocResults = await this._tocResultsRepository.findByCompositeCode(
         normalizedProgram.toUpperCase(),
         compositeCode,
-        normalizedYear,
+        resolvedYear,
       );
 
       if (!tocResults.length) {
@@ -189,7 +216,7 @@ export class ResultsFrameworkReportingService {
       return {
         response: {
           compositeCode,
-          year: normalizedYear ?? null,
+          year: resolvedYear,
           tocResults,
         },
         message: 'Work packages retrieved successfully.',

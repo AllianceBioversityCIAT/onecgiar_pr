@@ -1,0 +1,62 @@
+import { DataSource } from 'typeorm';
+import { env } from 'process';
+import { TocResultsRepository } from './toc-work-packages.repository';
+import { HandlersError } from '../../../shared/handlers/error.utils';
+
+describe('TocResultsRepository', () => {
+  const mockDataSource = {
+    query: jest.fn(),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }) => error),
+  } as unknown as HandlersError;
+
+  let repository: TocResultsRepository;
+
+  beforeAll(() => {
+    env.DB_TOC = 'toc_test';
+  });
+
+  beforeEach(() => {
+    (mockDataSource.query as jest.Mock).mockReset();
+    (mockHandlersError.returnErrorRepository as jest.Mock).mockClear();
+    repository = new TocResultsRepository(mockDataSource, mockHandlersError);
+  });
+
+  it('should execute the aggregate query with expected clauses', async () => {
+    (mockDataSource.query as jest.Mock).mockResolvedValueOnce([]);
+
+    await repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025);
+
+    expect(mockDataSource.query).toHaveBeenCalledTimes(1);
+    const [query, params] = (mockDataSource.query as jest.Mock).mock.calls[0];
+
+    expect(params).toEqual(['SP01', 'SP01-AOW01']);
+    expect(query).toContain(
+      'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+    );
+    expect(query).toContain('GROUP BY');
+    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
+    expect(query).toContain('FROM toc_test.toc_work_packages');
+    expect(query).toContain('AND trit.target_date = 2025');
+  });
+
+  it('should delegate query failures to the handlers error utility', async () => {
+    const dbError = new Error('db failure');
+    (mockDataSource.query as jest.Mock).mockRejectedValueOnce(dbError);
+    (
+      mockHandlersError.returnErrorRepository as jest.Mock
+    ).mockImplementationOnce(({ error }) => error);
+
+    await expect(
+      repository.findByCompositeCode('SP02', 'SP02-AOW02', 2026),
+    ).rejects.toBe(dbError);
+
+    expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
+      error: dbError,
+      className: TocResultsRepository.name,
+      debug: true,
+    });
+  });
+});
