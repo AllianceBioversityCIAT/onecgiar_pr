@@ -8,24 +8,27 @@
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
     </div>
-    <app-result-title></app-result-title>
+
     <div class="section_container">
-      <div class="metadata">
-        <div class="item">
-          Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
-        </div>
-        <div class="item">
-          Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
-        </div>
-        <div class="item">
-          Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
-        </div>
-        <div class="item">
-          Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
-        </div>
-        <div class="item">
-          Submitter:
-          <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
+      <div class="fixed_data_container">
+        <div class="section_name">{{ this.dataControlSE.currentResultSectionName() }}</div>
+        <div class="metadata">
+          <div class="item">
+            Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
+          </div>
+          <div class="item">
+            Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
+          </div>
+          <div class="item">
+            Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
+          </div>
+          <div class="item">
+            Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
+          </div>
+          <div class="item">
+            Submitter:
+            <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
+          </div>
         </div>
       </div>
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>

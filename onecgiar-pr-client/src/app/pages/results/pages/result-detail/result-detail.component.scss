@@ -23,21 +23,31 @@
     position: relative;
     border-top-left-radius: 0px !important;
     border-top-right-radius: 0px !important;
-
-    .metadata {
-      padding: 10px 20px 0px 20px;
+    .fixed_data_container {
+      padding: 10px 80px 0px 80px;
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      @include fonts.pr-typography('body-3');
+      .section_name {
+        font-size: 16px;
+        color: #808080;
+        font-weight: 400;
+      }
 
-      .item {
-        border: 1px solid var(--pr-color-primary-300);
-        color: var(--pr-color-primary-300);
-        padding: 5px 10px;
-        border-radius: 7px;
-        font-size: 12px;
-        span {
-          color: var(--pr-color-secondary-100);
+      .metadata {
+        display: flex;
+        gap: 10px;
+        @include fonts.pr-typography('body-3');
+
+        .item {
+          border: 1px solid var(--pr-color-primary-300);
+          color: var(--pr-color-primary-300);
+          padding: 5px 10px;
+          border-radius: 7px;
+          font-size: 12px;
+          span {
+            color: var(--pr-color-secondary-100);
+          }
         }
       }
     }

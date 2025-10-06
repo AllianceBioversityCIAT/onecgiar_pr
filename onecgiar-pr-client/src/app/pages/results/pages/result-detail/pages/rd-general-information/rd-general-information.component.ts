@@ -12,10 +12,10 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
 import { UserSearchService } from './services/user-search-service.service';
 
 @Component({
-    selector: 'app-rd-general-information',
-    templateUrl: './rd-general-information.component.html',
-    styleUrls: ['./rd-general-information.component.scss'],
-    standalone: false
+  selector: 'app-rd-general-information',
+  templateUrl: './rd-general-information.component.html',
+  styleUrls: ['./rd-general-information.component.scss'],
+  standalone: false
 })
 export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
@@ -37,6 +37,7 @@ export class RdGeneralInformationComponent implements OnInit {
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
+    this.dataControlSE.currentResultSectionName.set('General information');
   }
 
   get disableOptions() {
@@ -118,7 +119,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   leadContactPersonTextInfo() {
-    return `For more precise results, we recommend searching by email or username. 
+    return `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
   }
 
