@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { CustomField } from '../interfaces/customField.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -6,7 +7,7 @@ import { Injectable, computed, signal } from '@angular/core';
 export class FieldsManagerService {
   show = signal(false);
   portfolioAcronym = signal('P22');
-  fields = computed(() => {
+  fields = computed<Record<string, CustomField>>(() => {
     return {
       '[general-info]-description': {
         label: 'Description',
