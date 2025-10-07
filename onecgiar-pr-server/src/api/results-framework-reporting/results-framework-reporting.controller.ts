@@ -118,4 +118,26 @@ export class ResultsFrameworkReportingController {
       year,
     );
   }
+
+  @Get('programs/indicator-contribution-summary')
+  @ApiOperation({
+    summary: 'Get summary of results contributing to ToC indicators',
+    description:
+      'Aggregates result counts by type and status for the provided program, considering only results linked to ToC indicators in the current active phase.',
+  })
+  @ApiQuery({
+    name: 'program',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiOkResponse({
+    description:
+      'Indicator contribution summary retrieved for the requested program.',
+  })
+  getProgramIndicatorContributionSummary(@Query('program') program: string) {
+    return this.resultsFrameworkReportingService.getProgramIndicatorContributionSummary(
+      program,
+    );
+  }
 }

@@ -6,6 +6,7 @@ import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { ResultRepository } from '../results/result.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -16,6 +17,7 @@ export class ResultsFrameworkReportingService {
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
     private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _resultRepository: ResultRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -220,6 +222,147 @@ export class ResultsFrameworkReportingService {
           tocResults,
         },
         message: 'Work packages retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getProgramIndicatorContributionSummary(program?: string) {
+    try {
+      const normalizedProgram = program?.trim().toUpperCase();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { official_code: normalizedProgram, active: true },
+        select: ['id', 'official_code', 'name'],
+      });
+
+      if (!initiative) {
+        throw {
+          response: {},
+          message:
+            'No initiative was found with the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const [rawSummary, activeResultTypes] = await Promise.all([
+        this._resultRepository.getIndicatorContributionSummaryByProgram(
+          initiative.id,
+        ),
+        this._resultRepository.getActiveResultTypes(),
+      ]);
+
+      const typeMap = new Map<
+        number,
+        {
+          resultTypeId: number;
+          resultTypeName: string;
+          totalResults: number;
+          editing: number;
+          qualityAssessed: number;
+          submitted: number;
+          others: number;
+        }
+      >();
+
+      for (const typeRow of activeResultTypes ?? []) {
+        const typeId = Number(typeRow.id);
+        const typeName = typeRow.name ?? 'Unknown';
+
+        if (!Number.isFinite(typeId)) {
+          continue;
+        }
+
+        typeMap.set(typeId, {
+          resultTypeId: typeId,
+          resultTypeName: typeName,
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        });
+      }
+
+      const statusTotals = {
+        editing: 0,
+        qualityAssessed: 0,
+        submitted: 0,
+        others: 0,
+        total: 0,
+      };
+
+      for (const row of rawSummary ?? []) {
+        const resultTypeId = Number(row.result_type_id);
+        const resultTypeName =
+          typeMap.get(resultTypeId)?.resultTypeName ??
+          row.result_type_name ??
+          'Unknown';
+        const statusId = Number(row.status_id);
+        const total = Number(row.total_results) || 0;
+
+        if (!typeMap.has(resultTypeId)) {
+          typeMap.set(resultTypeId, {
+            resultTypeId,
+            resultTypeName,
+            totalResults: 0,
+            editing: 0,
+            qualityAssessed: 0,
+            submitted: 0,
+            others: 0,
+          });
+        }
+
+        const typeEntry = typeMap.get(resultTypeId)!;
+        typeEntry.totalResults += total;
+        statusTotals.total += total;
+
+        switch (statusId) {
+          case 1:
+            typeEntry.editing += total;
+            statusTotals.editing += total;
+            break;
+          case 2:
+            typeEntry.qualityAssessed += total;
+            statusTotals.qualityAssessed += total;
+            break;
+          case 3:
+            typeEntry.submitted += total;
+            statusTotals.submitted += total;
+            break;
+          default:
+            typeEntry.others += total;
+            statusTotals.others += total;
+            break;
+        }
+      }
+
+      const totalsByType = Array.from(typeMap.values()).sort((a, b) =>
+        a.resultTypeName.localeCompare(b.resultTypeName),
+      );
+
+      return {
+        response: {
+          program: {
+            id: initiative.id,
+            officialCode: initiative.official_code,
+            name: initiative.name,
+          },
+          totalsByType,
+          statusTotals,
+        },
+        message:
+          'Program indicator contribution summary retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {
