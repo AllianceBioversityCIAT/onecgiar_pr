@@ -50,7 +50,6 @@ export class SSelectComponent implements ControlValueAccessor {
 
   @Output() selectOptionEvent = new EventEmitter();
 
-  private _optionsIntance: any[];
   public fullValue: any = {};
   public searchText: string;
   public isDropdownOpen?: boolean = false; // Track dropdown state
@@ -111,31 +110,32 @@ export class SSelectComponent implements ControlValueAccessor {
   }
   cont = 0;
   optionsIntance = computed(() => {
+    let _optionsIntance: any[] = [];
     this.cont++;
-    // console.log('mero event', this.cont);
+    console.log('mero event', this.cont);
     console.log(this.options());
     if (!this.options()?.length) return [];
-    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options()];
+    if (!_optionsIntance?.length) _optionsIntance = [...this.options()];
 
-    this._optionsIntance.forEach((resp: any) => {
+    _optionsIntance.forEach((resp: any) => {
       resp.disabled = false;
       resp.selected = false;
     });
 
     this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      const itemFinded = _optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
       if (itemFinded && itemFinded[this.optionValue] != this.value) itemFinded.disabled = true;
     });
     this.fullValue[this.optionValue] = this.value;
 
-    if (!this.value) return this._optionsIntance;
+    if (!this.value) return _optionsIntance;
     const id = typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
-    const itemFinded = this._optionsIntance?.find(listItem => listItem[this.optionValue] == id);
-    if (!itemFinded) return this._optionsIntance;
+    const itemFinded = _optionsIntance?.find(listItem => listItem[this.optionValue] == id);
+    if (!itemFinded) return _optionsIntance;
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
 
-    return this._optionsIntance;
+    return _optionsIntance;
   });
 
   onSelectOption(option) {
