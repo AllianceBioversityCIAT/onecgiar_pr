@@ -6,6 +6,7 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { ResultRepository } from '../results/result.repository';
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
 };
@@ -36,6 +37,11 @@ const mockTocResultsRepository = {
   findByCompositeCode: jest.fn(),
 };
 
+const mockResultRepository = {
+  getIndicatorContributionSummaryByProgram: jest.fn(),
+  getActiveResultTypes: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -59,6 +65,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: TocResultsRepository,
           useValue: mockTocResultsRepository,
+        },
+        {
+          provide: ResultRepository,
+          useValue: mockResultRepository,
         },
       ],
     }).compile();
@@ -338,6 +348,205 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockTocResultsRepository.findByCompositeCode,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getProgramIndicatorContributionSummary', () => {
+    beforeEach(() => {
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
+      mockResultRepository.getActiveResultTypes.mockReset();
+    });
+
+    it('should aggregate indicator contribution summaries for the program', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+        { id: 2, name: 'Output' },
+        { id: 5, name: 'Innovation' },
+      ]);
+
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 1,
+            total_results: '2',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 2,
+            total_results: '1',
+          },
+          {
+            result_type_id: 2,
+            result_type_name: 'Output',
+            status_id: 3,
+            total_results: '4',
+          },
+        ],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15);
+      expect(mockResultRepository.getActiveResultTypes).toHaveBeenCalled();
+      expect(result.status).toBe(200);
+      expect(result.response.program).toEqual({
+        id: 15,
+        officialCode: 'SP05',
+        name: 'Sample Program',
+      });
+      expect(result.response.totalsByType).toEqual([
+        {
+          resultTypeId: 5,
+          resultTypeName: 'Innovation',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 1,
+          resultTypeName: 'Outcome',
+          totalResults: 3,
+          editing: 2,
+          qualityAssessed: 1,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 2,
+          resultTypeName: 'Output',
+          totalResults: 4,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 4,
+          others: 0,
+        },
+      ]);
+      expect(result.response.statusTotals).toEqual({
+        editing: 2,
+        qualityAssessed: 1,
+        submitted: 4,
+        others: 0,
+        total: 7,
+      });
+    });
+
+    it('should return zeroed totals when no indicator-linked results are found', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 99,
+        official_code: 'SP99',
+        name: 'Program 99',
+      });
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+        { id: 2, name: 'Output' },
+        { id: 5, name: 'Innovation' },
+        { id: 6, name: 'Policy' },
+        { id: 7, name: 'Scaling' },
+      ]);
+
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp99');
+
+      expect(result.status).toBe(200);
+      expect(result.response.totalsByType).toEqual([
+        {
+          resultTypeId: 5,
+          resultTypeName: 'Innovation',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 1,
+          resultTypeName: 'Outcome',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 2,
+          resultTypeName: 'Output',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 6,
+          resultTypeName: 'Policy',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+        {
+          resultTypeId: 7,
+          resultTypeName: 'Scaling',
+          totalResults: 0,
+          editing: 0,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 0,
+        },
+      ]);
+      expect(result.response.statusTotals).toEqual({
+        editing: 0,
+        qualityAssessed: 0,
+        submitted: 0,
+        others: 0,
+        total: 0,
+      });
+    });
+
+    it('should return handler error when program identifier is missing', async () => {
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('   ');
+
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).not.toHaveBeenCalled();
+      expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when program does not exist', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('SP00');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).not.toHaveBeenCalled();
+      expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
     });
   });
 });
