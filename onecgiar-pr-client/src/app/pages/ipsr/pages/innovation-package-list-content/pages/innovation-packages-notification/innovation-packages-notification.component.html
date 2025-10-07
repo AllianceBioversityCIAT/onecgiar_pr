@@ -23,6 +23,17 @@
           placeholder="Select entity"
           [(ngModel)]="initiativeIdFilter">
         </app-pr-select>
+
+        <s-select
+          [options]="this.initiativesByPortfolio()"
+          label="Entity"
+          [isStatic]="true"
+          [required]="false"
+          optionLabel="full_name"
+          optionValue="initiative_id"
+          placeholder="Select entity"
+          [(ngModel)]="initiativeIdFilter">
+        </s-select>
       }
     </div>
   </div>

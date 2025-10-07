@@ -5,18 +5,18 @@ import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 's-select',
-  templateUrl: './pr-select.component.html',
-  styleUrls: ['./pr-select.component.scss'],
+  templateUrl: './s-select.component.html',
+  styleUrls: ['./s-select.component.scss'],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => PrSelectComponent),
+      useExisting: forwardRef(() => SSelectComponent),
       multi: true
     }
   ],
   standalone: false
 })
-export class PrSelectComponent implements ControlValueAccessor {
+export class SSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -109,7 +109,10 @@ export class PrSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen = true; // Only track state if expansion is enabled
     }
   }
+  cont = 0;
   get optionsIntance() {
+    this.cont++;
+    console.log('mero event', this.cont);
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
 
@@ -133,6 +136,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
     return this._optionsIntance;
   }
+
   onSelectOption(option) {
     if (option?.disabled) return;
     this.fullValue = option;
