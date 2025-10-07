@@ -6,10 +6,12 @@ describe('main bootstrap', () => {
 
     const useMock = jest.fn();
     const listenMock = jest.fn().mockResolvedValue(undefined);
+    const enableVersioningMock = jest.fn();
 
     const nestAppMock: Partial<INestApplication> = {
       use: useMock,
       listen: listenMock as any,
+      enableVersioning: enableVersioningMock as any,
     };
 
     const createMock = jest.fn().mockResolvedValue(nestAppMock);
@@ -64,6 +66,7 @@ describe('main bootstrap', () => {
       createMock,
       useMock,
       listenMock,
+      enableVersioningMock,
       documentBuilderChain,
       createDocumentMock,
       setupMock,
@@ -76,6 +79,7 @@ describe('main bootstrap', () => {
       createMock,
       useMock,
       listenMock,
+      enableVersioningMock,
       documentBuilderChain,
       createDocumentMock,
       setupMock,
@@ -87,6 +91,9 @@ describe('main bootstrap', () => {
     expect(useMock).toHaveBeenCalledWith('json-middleware');
     expect(useMock).toHaveBeenCalledWith('urlencoded-middleware');
     expect(useMock).toHaveBeenCalledWith('helmet-middleware');
+    expect(enableVersioningMock).toHaveBeenCalledWith({
+      type: expect.anything(),
+    });
 
     expect(documentBuilderChain.setTitle).toHaveBeenCalledWith(
       'PRMS Reporting API',
