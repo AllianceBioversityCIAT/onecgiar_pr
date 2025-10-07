@@ -16,7 +16,6 @@ export class ResultFrameworkReportingRecentItemComponent {
 
   getResultUrl() {
     const url = `/result/result-detail/${this.item?.resultCode}/general-information`;
-    console.log(this.item);
     return url;
   }
 
