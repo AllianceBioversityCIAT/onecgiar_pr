@@ -11,4 +11,5 @@ export interface RecentActivity {
   emitterId: number;
   emitterName: string;
   createdAt: Date;
+  phase: string;
 }

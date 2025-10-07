@@ -85,6 +85,20 @@ p {
   flex-direction: column;
 }
 
+.under_construction_container {
+  padding: 20px;
+  position: relative;
+  border: 2px dashed var(--pr-color-yellow-300);
+  border-radius: 10px;
+}
+
+.under_construction_icon {
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  width: 40px;
+}
+
 .entity-details_card_header {
   display: flex;
   align-items: center;

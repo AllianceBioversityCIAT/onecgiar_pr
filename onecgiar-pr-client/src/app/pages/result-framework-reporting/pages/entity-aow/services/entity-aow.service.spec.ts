@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, delay } from 'rxjs';
 import { EntityAowService } from './entity-aow.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { Initiative, Unit } from '../../entity-details/interfaces/entity-details.interface';
@@ -49,10 +49,56 @@ describe('EntityAowService', () => {
     status: true
   };
 
+  const mockTocResults = [
+    {
+      id: 1,
+      title: 'Test TOC Result 1',
+      description: 'Description 1',
+      aowId: 'AOW-001'
+    },
+    {
+      id: 2,
+      title: 'Test TOC Result 2',
+      description: 'Description 2',
+      aowId: 'AOW-001'
+    }
+  ];
+
+  const mockTocApiResponse = {
+    message: 'Success',
+    response: {
+      tocResults: mockTocResults
+    },
+    status: true
+  };
+
+  const mockIndicatorSummaries = [
+    {
+      type: 'Outcome',
+      total: 10,
+      completed: 8
+    },
+    {
+      type: 'Impact',
+      total: 5,
+      completed: 3
+    }
+  ];
+
+  const mockIndicatorApiResponse = {
+    message: 'Success',
+    response: {
+      totalsByType: mockIndicatorSummaries
+    },
+    status: true
+  };
+
   beforeEach(() => {
     mockApiService = {
       resultsSE: {
-        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of(mockApiResponse))
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of(mockApiResponse)),
+        GET_TocResultsByAowId: jest.fn().mockReturnValue(of(mockTocApiResponse)),
+        GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of(mockIndicatorApiResponse))
       }
     } as any;
 
@@ -73,17 +119,199 @@ describe('EntityAowService', () => {
       expect(service.aowId()).toBe('');
       expect(service.entityDetails()).toEqual({} as Initiative);
       expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual([]);
       expect(service.isLoadingDetails()).toBe(false);
-      expect(service.sideBarItems()).toEqual([
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
+      expect(service.sideBarItems()).toEqual([]);
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+  });
+
+  describe('getAllDetailsData', () => {
+    it('should set loading state to true when called', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      expect(service.isLoadingDetails()).toBe(true);
+    });
+
+    it('should call both APIs with correct entityId', async () => {
+      const entityId = 'test-entity-id';
+      service.entityId.set(entityId);
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      // Wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockApiService.resultsSE.GET_ClarisaGlobalUnits).toHaveBeenCalledWith(entityId);
+      expect(mockApiService.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith(entityId);
+    });
+
+    it('should update entityDetails, entityAows, and indicatorSummaries on successful API calls', async () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      // Wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityDetails()).toEqual(mockInitiative);
+      expect(service.entityAows()).toEqual(mockUnits);
+      expect(service.indicatorSummaries()).toEqual(mockIndicatorSummaries);
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle empty units array', async () => {
+      const responseWithEmptyUnits = {
+        ...mockApiResponse,
+        response: {
+          ...mockApiResponse.response,
+          units: []
         }
-      ]);
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(responseWithEmptyUnits));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual(mockIndicatorSummaries);
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle empty indicator summaries', async () => {
+      const responseWithEmptyIndicators = {
+        ...mockIndicatorApiResponse,
+        response: {
+          totalsByType: []
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(responseWithEmptyIndicators));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityDetails()).toEqual(mockInitiative);
+      expect(service.entityAows()).toEqual(mockUnits);
+      expect(service.indicatorSummaries()).toEqual([]);
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle null/undefined units', async () => {
+      const responseWithNullUnits = {
+        ...mockApiResponse,
+        response: {
+          ...mockApiResponse.response,
+          units: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(responseWithNullUnits));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual(mockIndicatorSummaries);
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle null/undefined indicator summaries', async () => {
+      const responseWithNullIndicators = {
+        ...mockIndicatorApiResponse,
+        response: {
+          totalsByType: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(responseWithNullIndicators));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityDetails()).toEqual(mockInitiative);
+      expect(service.entityAows()).toEqual(mockUnits);
+      expect(service.indicatorSummaries()).toEqual([]);
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should call setSideBarItems when units are available', async () => {
+      const setSideBarItemsSpy = jest.spyOn(service, 'setSideBarItems');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(setSideBarItemsSpy).toHaveBeenCalled();
+    });
+
+    it('should not call setSideBarItems when no units are available', async () => {
+      const responseWithEmptyUnits = {
+        ...mockApiResponse,
+        response: {
+          ...mockApiResponse.response,
+          units: []
+        }
+      };
+      const setSideBarItemsSpy = jest.spyOn(service, 'setSideBarItems');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(responseWithEmptyUnits));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(setSideBarItemsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle API error for clarisaGlobalUnits', async () => {
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(throwError(() => error));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle API error for indicatorSummaries', async () => {
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(throwError(() => error));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle both APIs error', async () => {
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(throwError(() => error));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(throwError(() => error));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.isLoadingDetails()).toBe(false);
     });
   });
 
@@ -173,14 +401,253 @@ describe('EntityAowService', () => {
       expect(setSideBarItemsSpy).not.toHaveBeenCalled();
     });
 
-    it('should handle API error', () => {
-      const error = new Error('API Error');
-      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(throwError(() => error));
+    it('should set loading to true initially when called', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse).pipe(delay(100)));
 
       service.getClarisaGlobalUnits();
 
-      // Loading should still be set to true initially
       expect(service.isLoadingDetails()).toBe(true);
+    });
+  });
+
+  describe('getIndicatorSummaries', () => {
+    it('should call API with correct entityId', () => {
+      const entityId = 'test-entity-id';
+      service.entityId.set(entityId);
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getIndicatorSummaries();
+
+      expect(mockApiService.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith(entityId);
+    });
+
+    it('should update indicatorSummaries on successful API call', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getIndicatorSummaries();
+
+      expect(service.indicatorSummaries()).toEqual(mockIndicatorSummaries);
+    });
+
+    it('should handle empty indicator summaries', () => {
+      const responseWithEmptyIndicators = {
+        ...mockIndicatorApiResponse,
+        response: {
+          totalsByType: []
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(responseWithEmptyIndicators));
+
+      service.getIndicatorSummaries();
+
+      expect(service.indicatorSummaries()).toEqual([]);
+    });
+
+    it('should handle null/undefined indicator summaries', () => {
+      const responseWithNullIndicators = {
+        ...mockIndicatorApiResponse,
+        response: {
+          totalsByType: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(responseWithNullIndicators));
+
+      service.getIndicatorSummaries();
+
+      expect(service.indicatorSummaries()).toEqual([]);
+    });
+
+    it('should handle undefined response', () => {
+      const responseWithUndefinedResponse = {
+        ...mockIndicatorApiResponse,
+        response: undefined
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(responseWithUndefinedResponse));
+
+      service.getIndicatorSummaries();
+
+      expect(service.indicatorSummaries()).toEqual([]);
+    });
+
+    it('should handle custom indicator summaries data structure', () => {
+      const customIndicatorSummaries = [
+        {
+          type: 'Custom Type',
+          total: 15,
+          completed: 10,
+          customField: 'customValue'
+        }
+      ];
+      const customResponse = {
+        ...mockIndicatorApiResponse,
+        response: {
+          totalsByType: customIndicatorSummaries
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(customResponse));
+
+      service.getIndicatorSummaries();
+
+      expect(service.indicatorSummaries()).toEqual(customIndicatorSummaries);
+    });
+
+    it('should call API method when invoked', () => {
+      const entityId = 'test-entity-id';
+      service.entityId.set(entityId);
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getIndicatorSummaries();
+
+      expect(mockApiService.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith(entityId);
+    });
+  });
+
+  describe('getTocResultsByAowId', () => {
+    it('should return early if entityId is empty', () => {
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId('', aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should return early if aowId is empty', () => {
+      const entityId = 'test-entity-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId(entityId, '');
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should return early if both entityId and aowId are empty', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId('', '');
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should set loading state to true when called with valid parameters', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      // Use a delayed observable to test the loading state
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse).pipe(delay(100)));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      // Loading should be true immediately after calling the method
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
+
+    it('should call API with correct entityId and aowId', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+    });
+
+    it('should update tocResultsByAowId and set loading to false on successful API call', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle empty tocResults array', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithEmptyTocResults = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: []
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithEmptyTocResults));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle null/undefined tocResults', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithNullTocResults = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithNullTocResults));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle undefined response', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithUndefinedResponse = {
+        ...mockTocApiResponse,
+        response: undefined
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithUndefinedResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should set loading to true initially when called with valid parameters', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse).pipe(delay(100)));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
+
+    it('should handle custom tocResults data structure', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const customTocResults = [
+        {
+          id: 3,
+          title: 'Custom TOC Result',
+          description: 'Custom Description',
+          aowId: 'AOW-002',
+          customField: 'customValue'
+        }
+      ];
+      const customResponse = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: customTocResults
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(customResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(customTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
     });
   });
 
@@ -190,14 +657,6 @@ describe('EntityAowService', () => {
       service.setSideBarItems();
 
       const expectedSideBarItems = [
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
-        },
         {
           isTree: true,
           label: 'By AOW',
@@ -223,14 +682,6 @@ describe('EntityAowService', () => {
       service.setSideBarItems();
 
       const expectedSideBarItems = [
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
-        },
         {
           isTree: true,
           label: 'By AOW',
@@ -316,6 +767,36 @@ describe('EntityAowService', () => {
       service.isLoadingDetails.set(true);
       expect(service.isLoadingDetails()).toBe(true);
     });
+
+    it('should update tocResultsByAowId signal', () => {
+      const newTocResults = [
+        {
+          id: 3,
+          title: 'New TOC Result',
+          description: 'New Description',
+          aowId: 'AOW-003'
+        }
+      ];
+      service.tocResultsByAowId.set(newTocResults);
+      expect(service.tocResultsByAowId()).toEqual(newTocResults);
+    });
+
+    it('should update isLoadingTocResultsByAowId signal', () => {
+      service.isLoadingTocResultsByAowId.set(true);
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
+
+    it('should update indicatorSummaries signal', () => {
+      const newIndicatorSummaries = [
+        {
+          type: 'New Type',
+          total: 20,
+          completed: 15
+        }
+      ];
+      service.indicatorSummaries.set(newIndicatorSummaries);
+      expect(service.indicatorSummaries()).toEqual(newIndicatorSummaries);
+    });
   });
 
   describe('Integration scenarios', () => {
@@ -331,9 +812,9 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
 
       const sideBarItems = service.sideBarItems();
-      expect(sideBarItems).toHaveLength(3);
-      expect(sideBarItems[2].isTree).toBe(true);
-      expect(sideBarItems[2].items).toHaveLength(2);
+      expect(sideBarItems).toHaveLength(1);
+      expect(sideBarItems[0].isTree).toBe(true);
+      expect(sideBarItems[0].items).toHaveLength(2);
     });
 
     it('should maintain state consistency across multiple operations', () => {
@@ -351,6 +832,74 @@ describe('EntityAowService', () => {
       expect(service.entityDetails()).toEqual(mockInitiative);
       expect(service.entityAows()).toEqual(mockUnits);
       expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle complete flow for getAllDetailsData', async () => {
+      const entityId = 'integration-test-id';
+      service.entityId.set(entityId);
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+
+      service.getAllDetailsData();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.entityDetails()).toEqual(mockInitiative);
+      expect(service.entityAows()).toEqual(mockUnits);
+      expect(service.indicatorSummaries()).toEqual(mockIndicatorSummaries);
+      expect(service.isLoadingDetails()).toBe(false);
+
+      const sideBarItems = service.sideBarItems();
+      expect(sideBarItems).toHaveLength(1);
+      expect(sideBarItems[0].isTree).toBe(true);
+      expect(sideBarItems[0].items).toHaveLength(2);
+    });
+
+    it('should handle complete flow for getTocResultsByAowId', () => {
+      const entityId = 'integration-test-id';
+      const aowId = 'integration-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+    });
+
+    it('should maintain state consistency across multiple TOC operations', () => {
+      const entityId = 'test-id';
+      const aowId1 = 'aow-id-1';
+      const aowId2 = 'aow-id-2';
+
+      // First call
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+      service.getTocResultsByAowId(entityId, aowId1);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+
+      // Second call with different aowId
+      const customTocResults = [
+        {
+          id: 4,
+          title: 'Different TOC Result',
+          description: 'Different Description',
+          aowId: 'AOW-004'
+        }
+      ];
+      const customResponse = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: customTocResults
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(customResponse));
+      service.getTocResultsByAowId(entityId, aowId2);
+
+      expect(service.tocResultsByAowId()).toEqual(customTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
     });
   });
 });

@@ -23,7 +23,7 @@ export class EntityAowComponent implements OnInit {
     });
 
     if (!this.entityAowService.entityAows().length) {
-      this.entityAowService.getClarisaGlobalUnits();
+      this.entityAowService.getAllDetailsData();
     }
   }
 
