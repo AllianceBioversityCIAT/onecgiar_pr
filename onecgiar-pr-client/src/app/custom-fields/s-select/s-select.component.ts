@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener, computed } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener, computed, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -110,16 +110,14 @@ export class SSelectComponent implements ControlValueAccessor {
   }
   cont = 0;
   optionsIntance = computed(() => {
-    let _optionsIntance: any[] = [];
+    let _optionsIntance: any[] = JSON.parse(JSON.stringify(this.options()));
     this.cont++;
-    console.log('mero event', this.cont);
-    console.log(this.options());
     if (!this.options()?.length) return [];
-    if (!_optionsIntance?.length) _optionsIntance = [...this.options()];
 
     _optionsIntance.forEach((resp: any) => {
-      resp.disabled = false;
-      resp.selected = false;
+      if (resp[this.optionValue] == this.currentSelected()?.[this.optionValue]) {
+        resp.selected = true;
+      }
     });
 
     this.disableOptions?.map(disableOption => {
@@ -134,15 +132,17 @@ export class SSelectComponent implements ControlValueAccessor {
     if (!itemFinded) return _optionsIntance;
     itemFinded.selected = true;
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
-
     return _optionsIntance;
   });
 
+  currentSelected = signal<any>(null);
+
   onSelectOption(option) {
     if (option?.disabled) return;
+    this.currentSelected.set(option);
     this.fullValue = option;
     this.value = option[this.optionValue];
-    option.selected = true;
+
     this.selectOptionEvent.emit(option);
     if (this.expandSpaceOnOpen) {
       this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
