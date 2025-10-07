@@ -17,6 +17,8 @@ interface toc_result_row {
   type_name: string | null;
   location: string | null;
   target_value_sum: number | null;
+  actual_achieved_value_sum: number | null;
+  progress_percentage: string | null;
 }
 
 export interface toc_result_response {
@@ -34,6 +36,8 @@ export interface toc_result_response {
     type_name: string | null;
     location: string | null;
     target_value_sum: number | null;
+    actual_achieved_value_sum?: number | null;
+    progress_percentage?: string | null;
   }>;
 }
 
@@ -65,7 +69,9 @@ export class TocResultsRepository {
         tri.type_value,
         tri.type_name,
         tri.location,
-        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum
+        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        0 AS actual_achieved_value_sum,
+        '50%' AS progress_percentage
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
@@ -124,6 +130,8 @@ export class TocResultsRepository {
             type_name: row.type_name,
             location: row.location,
             target_value_sum: row.target_value_sum,
+            actual_achieved_value_sum: row.actual_achieved_value_sum,
+            progress_percentage: row.progress_percentage,
           });
         }
       }
