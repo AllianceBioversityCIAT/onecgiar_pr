@@ -261,6 +261,7 @@ export class NotificationService {
           resultId: resultIdNumber,
           resultCode: notification.obj_result?.result_code ?? null,
           resultTitle: notification.obj_result?.title ?? null,
+          phase: notification.obj_result?.version_id ?? null,
           initiativeId: ownerInitiative?.initiative_id ?? fallback?.id ?? null,
           initiativeName: initiative?.name ?? fallback?.initiative_name ?? null,
           initiativeOfficialCode:
