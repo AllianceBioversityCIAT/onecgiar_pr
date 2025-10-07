@@ -113,8 +113,9 @@ export class SSelectComponent implements ControlValueAccessor {
   optionsIntance = computed(() => {
     this.cont++;
     // console.log('mero event', this.cont);
-    if (!this.options?.length) return [];
-    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
+    console.log(this.options());
+    if (!this.options()?.length) return [];
+    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options()];
 
     this._optionsIntance.forEach((resp: any) => {
       resp.disabled = false;
