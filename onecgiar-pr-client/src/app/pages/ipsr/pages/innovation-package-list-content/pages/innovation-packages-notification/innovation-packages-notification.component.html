@@ -8,32 +8,22 @@
       optionLabel="phase_name_status"
       optionValue="id"
       placeholder="Select phase"
+      (selectOptionEvent)="this.onSelectPhase($event)"
       [(ngModel)]="phaseFilter">
     </app-pr-select>
     <div>
-      <app-pr-select
-        [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin"
-        label="Entity"
-        [isStatic]="true"
-        [required]="false"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select entity"
-        [(ngModel)]="initiativeIdFilter">
-      </app-pr-select>
-
-      <app-pr-select
-        [options]="this.allInitiatives"
-        label="Entity"
-        [required]="false"
-        [isStatic]="true"
-        *ngIf="this.api.rolesSE.isAdmin"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select entity"
-        [(ngModel)]="initiativeIdFilter">
-      </app-pr-select>
+      @if (this.showInitiativeFilter()) {
+        <app-pr-select
+          [options]="this.initiativesByPortfolio()"
+          label="Entity"
+          [isStatic]="true"
+          [required]="false"
+          optionLabel="full_name"
+          optionValue="initiative_id"
+          placeholder="Select entity"
+          [(ngModel)]="initiativeIdFilter">
+        </app-pr-select>
+      }
     </div>
   </div>
 
