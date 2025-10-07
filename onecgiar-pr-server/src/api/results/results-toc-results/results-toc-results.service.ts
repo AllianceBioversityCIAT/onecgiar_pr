@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, HttpStatus } from '@nestjs/common';
 import {
   ContributorResultTocResult,
   CreateResultsTocResultDto,
@@ -38,6 +38,7 @@ export class ResultsTocResultsService {
     private readonly _resultsImpactAreaTargetRepository: ResultsImpactAreaTargetRepository,
     private readonly _resultsImpactAreaIndicatorRepository: ResultsImpactAreaIndicatorRepository,
     private readonly _clarisaImpactAreaRepository: ClarisaImpactAreaRepository,
+    @Inject(forwardRef(() => ShareResultRequestService))
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,

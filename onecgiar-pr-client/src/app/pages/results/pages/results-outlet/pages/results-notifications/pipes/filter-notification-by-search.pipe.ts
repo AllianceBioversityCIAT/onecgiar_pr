@@ -1,8 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-    name: 'appFilterNotificationBySearch',
-    standalone: false
+  name: 'appFilterNotificationBySearch',
+  standalone: false
 })
 export class FilterNotificationBySearchPipe implements PipeTransform {
   transform(list, searchFilter: string, isUpdateTab: boolean = false): any[] {
@@ -26,10 +26,10 @@ export class FilterNotificationBySearchPipe implements PipeTransform {
   }
 
   private createUpdateTabString(item): string {
-    if (item?.notification_type === 1 || item?.notification_type === 2) {
-      return `${item?.obj_emitter_user?.first_name} ${item?.obj_emitter_user?.last_name} has ${
-        item?.notification_type === 1 ? 'submitted' : 'unsubmitted'
-      } the result ${item?.obj_result?.result_code} - ${item?.obj_result?.title}`;
+    if (item?.notification_type === 1 || item?.notification_type === 2 || item?.notification_type === 5) {
+      return `${item?.obj_emitter_user?.first_name} ${item?.obj_emitter_user?.last_name} has ${this.getNotificationAction(
+        item?.notification_type
+      )} the result ${item?.obj_result?.result_code} - ${item?.obj_result?.title}`;
     }
 
     return `The result ${item?.obj_result?.result_code} - ${item?.obj_result?.title} was successfully Quality Assessed.`;
@@ -41,5 +41,20 @@ export class FilterNotificationBySearchPipe implements PipeTransform {
     }
 
     return `${item?.obj_requested_by?.first_name} ${item?.obj_requested_by?.last_name} from ${item?.obj_owner_initiative?.official_code} has requested inclusion of ${item?.obj_shared_inititiative?.official_code} as a contributor to result ${item?.obj_result?.result_code} - ${item?.obj_result?.title}`;
+  }
+
+  private getNotificationAction(notificationType: number) {
+    switch (notificationType) {
+      case 1:
+        return 'submitted';
+      case 2:
+        return 'unsubmitted';
+      case 3:
+        return 'Quality Assessed';
+      case 5:
+        return 'created';
+      default:
+        return '';
+    }
   }
 }

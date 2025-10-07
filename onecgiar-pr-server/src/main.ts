@@ -6,13 +6,16 @@ import { env } from 'process';
 
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Logger } from '@nestjs/common';
+import { Logger, VersioningType } from '@nestjs/common';
 
 async function bootstrap() {
   const logger: Logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, { cors: true });
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.enableVersioning({
+    type: VersioningType.URI,
+  });
   app.use(
     helmet({
       xssFilter: true,
@@ -48,7 +51,11 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      filter: true,
+    },
+  });
 
   await app
     .listen(port)

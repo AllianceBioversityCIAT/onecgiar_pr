@@ -16,6 +16,7 @@ import { KnowledgeProductSaveDto } from '../../../pages/results/pages/result-det
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
+import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -1206,5 +1207,30 @@ export class ResultsApiService {
 
   POST_fileMining(formData: FormData, headers: HttpHeaders) {
     return this.http.post<any>(`${environment.textMiningUrl}prms/text-mining`, formData, { headers });
+  }
+
+  GET_ScienceProgramsProgress() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+  }
+
+  GET_RecentActivity() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/notification/recent-activity`);
+  }
+
+  GET_ClarisaGlobalUnits(entityId: string) {
+    return this.http.get<{ message: string; response: EntityDetails; status: boolean }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=${entityId}`
+    );
+  }
+
+  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
+    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+
+    if (year) queryParams.push(`year=${year}`);
+
+    const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    return this.http.get<{ message: string; response: any; status: boolean }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
+    );
   }
 }

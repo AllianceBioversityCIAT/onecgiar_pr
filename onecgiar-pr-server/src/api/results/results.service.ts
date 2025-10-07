@@ -9,6 +9,7 @@ import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import {
   HandlersError,
   ReturnResponse,
@@ -18,6 +19,12 @@ import {
 import { ResultTypesService } from './result_types/result_types.service';
 import { ResultType } from './result_types/entities/result_type.entity';
 import { returnFormatResult } from './dto/return-format-result.dto';
+import {
+  ScienceProgramProgressDto,
+  ScienceProgramProgressResponseDto,
+  StatusBreakdownDto,
+  VersionProgressDto,
+} from './dto/science-program-progress.dto';
 import { Result } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { YearRepository } from './years/year.repository';
@@ -57,7 +64,7 @@ import { ResultsKnowledgeProductAltmetricRepository } from './results-knowledge-
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { Actions } from 'src/connection/dynamodb-logs/dto/enumAction.const';
 import { VersioningService } from '../versioning/versioning.service';
-import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
+import { AppModuleIdEnum, RoleEnum } from 'src/shared/constants/role-type.enum';
 import { InstitutionRoleEnum } from './results_by_institutions/entities/institution_role.enum';
 import { ResultsKnowledgeProductFairScoreRepository } from './results-knowledge-products/repositories/results-knowledge-product-fair-scores.repository';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
@@ -67,8 +74,13 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
-import { In } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { NotificationService } from '../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../notification/enum/notification.enum';
 
 @Injectable()
 export class ResultsService {
@@ -109,12 +121,13 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
+    private readonly _roleByUserRepository?: RoleByUserRepository,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
-    private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
-    private readonly _roleByUserRepository?: RoleByUserRepository,
+    @Optional() private readonly _notificationService?: NotificationService,
   ) {}
 
   async createOwnerResult(
@@ -245,6 +258,12 @@ export class ResultsService {
       });
 
       await this.insertResultIntoElastic(newResultHeader);
+
+      await this.emitResultCreatedNotification(
+        newResultHeader,
+        Number(initiative.id),
+        user.id,
+      );
 
       return {
         response: newResultHeader,
@@ -1120,6 +1139,382 @@ export class ResultsService {
     }
   }
 
+  private buildScienceProgramBuckets(
+    rows: any[],
+    initiativesSeed: ClarisaInitiative[],
+    userRoles: Map<number, { hasEdit: boolean }>,
+  ): ScienceProgramProgressResponseDto {
+    const DEFAULT_PROGRESS = 80;
+    const metadata = new Map<
+      number,
+      {
+        initiativeId: number;
+        initiativeCode: string;
+        initiativeName: string;
+        initiativeShortName?: string;
+        portfolioId?: number;
+        portfolioName?: string;
+        portfolioAcronym?: string;
+        entityTypeCode?: number;
+        entityTypeName?: string;
+      }
+    >();
+
+    initiativesSeed?.forEach((initiative) => {
+      metadata.set(initiative.id, {
+        initiativeId: initiative.id,
+        initiativeCode: initiative.official_code ?? '',
+        initiativeName: initiative.name ?? '',
+        initiativeShortName: initiative.short_name ?? undefined,
+        portfolioId: initiative.portfolio_id ?? undefined,
+        portfolioName: initiative.obj_portfolio?.name ?? undefined,
+        portfolioAcronym: initiative.obj_portfolio?.acronym ?? undefined,
+        entityTypeCode: initiative.obj_cgiar_entity_type?.code ?? undefined,
+        entityTypeName: initiative.obj_cgiar_entity_type?.name ?? undefined,
+      });
+    });
+
+    const initiatives = new Map<
+      number,
+      {
+        dto: ScienceProgramProgressDto;
+        editable: boolean;
+        versionsMap: Map<
+          number,
+          {
+            version: VersionProgressDto;
+            statusesMap: Map<number, StatusBreakdownDto>;
+          }
+        >;
+      }
+    >();
+
+    const resolveMetadata = (
+      initiativeId: number,
+      override?: Partial<{
+        initiativeCode: string;
+        initiativeName: string;
+        initiativeShortName?: string;
+        portfolioId?: number;
+        portfolioName?: string;
+        portfolioAcronym?: string;
+        entityTypeCode?: number;
+        entityTypeName?: string;
+      }>,
+    ) => {
+      const current = metadata.get(initiativeId);
+      const merged = {
+        initiativeId,
+        initiativeCode:
+          override?.initiativeCode ?? current?.initiativeCode ?? '',
+        initiativeName:
+          override?.initiativeName ?? current?.initiativeName ?? '',
+        initiativeShortName:
+          override?.initiativeShortName ??
+          current?.initiativeShortName ??
+          undefined,
+        portfolioId:
+          override?.portfolioId !== undefined
+            ? override.portfolioId
+            : current?.portfolioId,
+        portfolioName:
+          override?.portfolioName !== undefined
+            ? override.portfolioName
+            : current?.portfolioName,
+        portfolioAcronym:
+          override?.portfolioAcronym !== undefined
+            ? override.portfolioAcronym
+            : current?.portfolioAcronym,
+        entityTypeCode:
+          override?.entityTypeCode !== undefined
+            ? override.entityTypeCode
+            : current?.entityTypeCode,
+        entityTypeName:
+          override?.entityTypeName !== undefined
+            ? override.entityTypeName
+            : current?.entityTypeName,
+      };
+      metadata.set(initiativeId, merged);
+      return merged;
+    };
+
+    const ensureContainer = (
+      initiativeId: number,
+      meta?: ReturnType<typeof resolveMetadata>,
+    ) => {
+      let container = initiatives.get(initiativeId);
+      if (!container) {
+        const info =
+          meta ?? metadata.get(initiativeId) ?? resolveMetadata(initiativeId);
+        container = {
+          dto: {
+            initiativeId,
+            initiativeCode: info.initiativeCode,
+            initiativeName: info.initiativeName,
+            initiativeShortName: info.initiativeShortName,
+            portfolioId: info.portfolioId,
+            portfolioName: info.portfolioName,
+            portfolioAcronym: info.portfolioAcronym,
+            entityTypeCode: info.entityTypeCode,
+            entityTypeName: info.entityTypeName,
+            totalResults: 0,
+            progress: 0,
+            versions: [],
+          },
+          editable: false,
+          versionsMap: new Map(),
+        };
+        initiatives.set(initiativeId, container);
+      } else if (meta) {
+        container.dto.initiativeCode =
+          container.dto.initiativeCode || meta.initiativeCode;
+        container.dto.initiativeName =
+          container.dto.initiativeName || meta.initiativeName;
+        container.dto.initiativeShortName =
+          container.dto.initiativeShortName || meta.initiativeShortName;
+        container.dto.portfolioId =
+          container.dto.portfolioId ?? meta.portfolioId;
+        container.dto.portfolioName =
+          container.dto.portfolioName ?? meta.portfolioName;
+        container.dto.portfolioAcronym =
+          container.dto.portfolioAcronym ?? meta.portfolioAcronym;
+        container.dto.entityTypeCode =
+          container.dto.entityTypeCode ?? meta.entityTypeCode;
+        container.dto.entityTypeName =
+          container.dto.entityTypeName ?? meta.entityTypeName;
+      }
+      return container;
+    };
+
+    rows.forEach((row) => {
+      const initiativeId = Number(row?.submitter_id);
+      if (!initiativeId) {
+        return;
+      }
+
+      const meta = resolveMetadata(initiativeId, {
+        initiativeCode: row?.submitter ?? undefined,
+        initiativeName: row?.submitter_name ?? undefined,
+        initiativeShortName: row?.submitter_short_name ?? undefined,
+        portfolioId:
+          row?.portfolio_id !== undefined
+            ? Number(row.portfolio_id)
+            : undefined,
+        portfolioName: row?.portfolio_name ?? undefined,
+        portfolioAcronym: row?.acronym ?? undefined,
+        entityTypeCode:
+          row?.entity_type_code !== undefined
+            ? Number(row.entity_type_code)
+            : undefined,
+        entityTypeName: row?.entity_type_name ?? undefined,
+      });
+
+      const container = ensureContainer(initiativeId, meta);
+
+      const roleId =
+        row?.role_id !== null && row?.role_id !== undefined
+          ? Number(row.role_id)
+          : undefined;
+      if (
+        !container.editable &&
+        roleId !== undefined &&
+        roleId !== RoleEnum.GUEST
+      ) {
+        container.editable = true;
+      }
+
+      container.dto.totalResults += 1;
+
+      const versionId = Number(row?.version_id);
+      const phaseName = row?.phase_name ?? '';
+      const phaseYear =
+        row?.phase_year !== null && row?.phase_year !== undefined
+          ? Number(row.phase_year)
+          : null;
+
+      let versionContainer = container.versionsMap.get(versionId);
+      if (!versionContainer) {
+        versionContainer = {
+          version: {
+            versionId,
+            phaseName,
+            phaseYear,
+            totalResults: 0,
+            statuses: [],
+          },
+          statusesMap: new Map(),
+        };
+        container.versionsMap.set(versionId, versionContainer);
+      }
+
+      versionContainer.version.totalResults += 1;
+
+      const statusId = Number(row?.status_id);
+      const statusName = row?.status_name ?? '';
+      let statusContainer = versionContainer.statusesMap.get(statusId);
+      if (!statusContainer) {
+        statusContainer = {
+          statusId,
+          statusName,
+          count: 0,
+        };
+        versionContainer.statusesMap.set(statusId, statusContainer);
+      }
+      statusContainer.count += 1;
+    });
+
+    metadata.forEach((_value, initiativeId) => {
+      ensureContainer(initiativeId);
+    });
+
+    const sortByCode = (
+      a: ScienceProgramProgressDto,
+      b: ScienceProgramProgressDto,
+    ) =>
+      a.initiativeCode.localeCompare(b.initiativeCode, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+
+    const mySciencePrograms: ScienceProgramProgressDto[] = [];
+    const otherSciencePrograms: ScienceProgramProgressDto[] = [];
+
+    initiatives.forEach((container) => {
+      const versions: VersionProgressDto[] = Array.from(
+        container.versionsMap.values(),
+      ).map(({ version, statusesMap }) => {
+        const statuses = Array.from(statusesMap.values()).sort(
+          (a, b) => a.statusId - b.statusId,
+        );
+        return {
+          ...version,
+          statuses,
+        };
+      });
+
+      versions.sort((a, b) => {
+        const yearDiff = (b.phaseYear ?? 0) - (a.phaseYear ?? 0);
+        if (yearDiff !== 0) {
+          return yearDiff;
+        }
+        return b.versionId - a.versionId;
+      });
+
+      const userRole = userRoles.get(container.dto.initiativeId);
+      if (userRole?.hasEdit) {
+        container.editable = true;
+      }
+
+      container.dto.versions = versions;
+
+      const hasResults = (container.dto.totalResults ?? 0) > 0;
+      container.dto.progress = hasResults ? DEFAULT_PROGRESS : 0;
+      container.dto.totalResults = hasResults
+        ? container.dto.totalResults
+        : null;
+
+      if (container.editable) {
+        mySciencePrograms.push(container.dto);
+      } else {
+        otherSciencePrograms.push(container.dto);
+      }
+    });
+
+    mySciencePrograms.sort(sortByCode);
+    otherSciencePrograms.sort(sortByCode);
+
+    return {
+      mySciencePrograms,
+      otherSciencePrograms,
+    };
+  }
+
+  async getScienceProgramProgress(
+    user: TokenDto,
+    versionId?: number,
+  ): Promise<
+    ReturnResponseDto<ScienceProgramProgressResponseDto> | returnErrorDto
+  > {
+    try {
+      const filters: Record<string, number | number[]> = { portfolioId: 3 };
+
+      let effectiveVersionId = versionId;
+      if (
+        !(
+          typeof effectiveVersionId === 'number' &&
+          Number.isFinite(effectiveVersionId)
+        )
+      ) {
+        const activePhase = await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
+        if (activePhase?.id) {
+          effectiveVersionId = Number(activePhase.id);
+        }
+      }
+
+      if (
+        typeof effectiveVersionId === 'number' &&
+        Number.isFinite(effectiveVersionId)
+      ) {
+        filters.versionId = effectiveVersionId;
+      }
+
+      const initiativesSeed = await this._clarisaInitiativesRepository.find({
+        where: {
+          portfolio_id: 3,
+          active: true,
+          cgiar_entity_type_id: In([22, 23, 24]),
+        },
+        relations: ['obj_portfolio', 'obj_cgiar_entity_type'],
+      });
+
+      const userRoleMap = new Map<number, { hasEdit: boolean }>();
+      if (this._roleByUserRepository) {
+        const userRoles = await this._roleByUserRepository.find({
+          where: { user: user.id, active: true },
+        });
+
+        userRoles.forEach((role) => {
+          if (!role?.initiative_id) {
+            return;
+          }
+          const roleId = Number(role.role);
+          if (!Number.isFinite(roleId)) {
+            return;
+          }
+          const existing = userRoleMap.get(role.initiative_id) ?? {
+            hasEdit: false,
+          };
+          if (roleId !== RoleEnum.GUEST) {
+            existing.hasEdit = true;
+          }
+          userRoleMap.set(role.initiative_id, existing);
+        });
+      }
+
+      const { results } =
+        await this._customResultRepository.AllResultsByRoleUserAndInitiativeFiltered(
+          user.id,
+          filters,
+        );
+
+      const response = this.buildScienceProgramBuckets(
+        results ?? [],
+        initiativesSeed,
+        userRoleMap,
+      );
+
+      return {
+        response: response,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async findAllResultsLegacyNew(title: string) {
     try {
       const results: DepthSearch[] =
@@ -1599,6 +1994,97 @@ export class ResultsService {
         error,
         !EnvironmentExtractor.isProduction(),
       );
+    }
+  }
+
+  private async emitResultCreatedNotification(
+    result: Result,
+    initiativeId: number,
+    userId: number,
+  ) {
+    try {
+      const recipientIds = new Set<number>(
+        await this.getInitiativeUserIds(initiativeId),
+      );
+      const applicationRecipientIds = await this.getApplicationUserIds();
+      applicationRecipientIds.forEach((id) => recipientIds.add(id));
+
+      if (!recipientIds.size) {
+        return;
+      }
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        NotificationTypeEnum.RESULT_CREATED,
+        Array.from(recipientIds.values()),
+        userId,
+        result.id,
+      );
+    } catch (error) {
+      this._logger.warn(
+        `Failed to emit result created notification for result ${result.id}`,
+        error as Error,
+      );
+    }
+  }
+
+  private async getInitiativeUserIds(initiativeId: number): Promise<number[]> {
+    if (!this._roleByUserRepository) {
+      return [];
+    }
+
+    try {
+      const roles = await this._roleByUserRepository.find({
+        where: { initiative_id: initiativeId, active: true },
+      });
+
+      const ids = new Set<number>();
+      roles.forEach((role) => {
+        if (role?.user) {
+          ids.add(Number(role.user));
+        }
+      });
+
+      return Array.from(ids.values());
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve users for initiative ${initiativeId}`,
+        error as Error,
+      );
+      return [];
+    }
+  }
+
+  private async getApplicationUserIds(): Promise<number[]> {
+    if (!this._roleByUserRepository) {
+      return [];
+    }
+
+    try {
+      const roles = await this._roleByUserRepository.find({
+        select: ['user'],
+        where: {
+          active: true,
+          initiative_id: IsNull(),
+          action_area_id: IsNull(),
+          role: In([RoleEnum.ADMIN, RoleEnum.GUEST]),
+        },
+      });
+
+      const ids = new Set<number>();
+      roles.forEach((role) => {
+        if (role?.user) {
+          ids.add(Number(role.user));
+        }
+      });
+
+      return Array.from(ids.values());
+    } catch (error) {
+      this._logger.warn(
+        'Failed to resolve application-level notification recipients',
+        error as Error,
+      );
+      return [];
     }
   }
 }

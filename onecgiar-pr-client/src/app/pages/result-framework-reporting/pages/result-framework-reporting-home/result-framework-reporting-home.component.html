@@ -1,0 +1,94 @@
+<div class="framework-reporting_welcome">Welcome, {{ this.api.authSE.localStorageUser?.user_name }}!</div>
+
+<div class="framework-reporting_container">
+  <div class="framework-reporting_left">
+    <div class="framework-reporting_left_header">
+      <h1 class="framework-reporting_left_header_title">Your innovative digital reporting solution</h1>
+      <p class="framework-reporting_left_header_description">Welcome to PRMS! Explore, create, and manage your projects and results with ease.</p>
+    </div>
+
+    <div class="framework-reporting_left_content">
+      <div class="framework-reporting_left_content_mySPs">
+        <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
+
+        <div class="framework-reporting_left_content_mySPs_items" [ngClass]="{ empty: resultFrameworkReportingHomeService.mySPsList().length === 0 }">
+          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+            @for (item of [0, 1]; track $index) {
+              <p-skeleton width="100%" height="136px" />
+            }
+          } @else {
+            @if (resultFrameworkReportingHomeService.mySPsList().length > 0) {
+              @for (item of resultFrameworkReportingHomeService.mySPsList(); track $index) {
+                <app-result-framework-reporting-card-item [item]="item" />
+              }
+            } @else {
+              <div class="framework-reporting_left_content_mySPs_items_empty">
+                <app-alert-status
+                  inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+                  description=" You currently do not have a member role in any Science Program or Accelerator. If you require access or permissions, please contact
+                your Science Program or Accelerator coordinator."></app-alert-status>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="framework-reporting_right responsive-down">
+        <div class="framework-reporting_right_header">
+          <h2 class="framework-reporting_right_header_title">Recent activity</h2>
+        </div>
+
+        <div class="framework-reporting_right_content">
+          @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+            @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
+              <p-skeleton width="100%" height="72px" />
+            }
+          } @else {
+            @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
+              <app-result-framework-reporting-recent-item [item]="item" />
+            }
+          }
+        </div>
+      </div>
+
+      <div class="framework-reporting_left_content_otherSPs">
+        <div class="framework-reporting_left_content_header">
+          <h2 class="framework-reporting_left_content_title">Other Science Programs/Accelerators</h2>
+          <p class="framework-reporting_left_content_desc">
+            Explore other Science Programs and Accelerators driving research, innovation, and impact.
+          </p>
+        </div>
+
+        <div class="framework-reporting_left_content_otherSPs_items">
+          @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+            @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
+              <p-skeleton width="100%" height="136px" />
+            }
+          } @else {
+            @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
+              <app-result-framework-reporting-card-item [item]="item" />
+            }
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="framework-reporting_right responsive-right">
+    <div class="framework-reporting_right_header">
+      <h2 class="framework-reporting_right_header_title">Recent activity</h2>
+    </div>
+
+    <div class="framework-reporting_right_content">
+      @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+        @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
+          <p-skeleton width="100%" height="72px" />
+        }
+      } @else {
+        @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
+          <app-result-framework-reporting-recent-item [item]="item" />
+        }
+      }
+    </div>
+  </div>
+</div>

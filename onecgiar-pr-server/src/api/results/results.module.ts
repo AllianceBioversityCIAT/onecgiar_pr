@@ -79,6 +79,13 @@ import { ResultInitiativeBudgetRepository } from './result_budget/repositories/r
 import { ResultFoldersModule } from './result-folders/result-folders.module';
 import { AdUsersModule } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { NotificationModule } from '../notification/notification.module';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationLevelRepository } from '../notification/repositories/notification-level.respository';
+import { NotificationTypeRepository } from '../notification/repositories/notification-type.respository';
+import { NotificationRepository } from '../notification/repositories/notification.respository';
+import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
+import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -134,6 +141,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     ResultsInvestmentDiscontinuedOptionsModule,
     ResultFoldersModule,
     AdUsersModule,
+    NotificationModule,
   ],
   providers: [
     ResultsService,
@@ -155,8 +163,14 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     ResultsInvestmentDiscontinuedOptionRepository,
     ResultInitiativeBudgetRepository,
     InitiativeEntityMapRepository,
+    NotificationService,
+    NotificationRepository,
+    NotificationLevelRepository,
+    NotificationTypeRepository,
+    SocketManagementService,
+    UserRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware],
+  exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
