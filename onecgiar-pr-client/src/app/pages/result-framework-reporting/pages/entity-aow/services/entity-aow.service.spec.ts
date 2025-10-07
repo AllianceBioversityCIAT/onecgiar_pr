@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, delay } from 'rxjs';
 import { EntityAowService } from './entity-aow.service';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { Initiative, Unit } from '../../entity-details/interfaces/entity-details.interface';
@@ -49,10 +49,34 @@ describe('EntityAowService', () => {
     status: true
   };
 
+  const mockTocResults = [
+    {
+      id: 1,
+      title: 'Test TOC Result 1',
+      description: 'Description 1',
+      aowId: 'AOW-001'
+    },
+    {
+      id: 2,
+      title: 'Test TOC Result 2',
+      description: 'Description 2',
+      aowId: 'AOW-001'
+    }
+  ];
+
+  const mockTocApiResponse = {
+    message: 'Success',
+    response: {
+      tocResults: mockTocResults
+    },
+    status: true
+  };
+
   beforeEach(() => {
     mockApiService = {
       resultsSE: {
-        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of(mockApiResponse))
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of(mockApiResponse)),
+        GET_TocResultsByAowId: jest.fn().mockReturnValue(of(mockTocApiResponse))
       }
     } as any;
 
@@ -74,16 +98,9 @@ describe('EntityAowService', () => {
       expect(service.entityDetails()).toEqual({} as Initiative);
       expect(service.entityAows()).toEqual([]);
       expect(service.isLoadingDetails()).toBe(false);
-      expect(service.sideBarItems()).toEqual([
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
-        }
-      ]);
+      expect(service.sideBarItems()).toEqual([]);
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
     });
   });
 
@@ -184,20 +201,163 @@ describe('EntityAowService', () => {
     });
   });
 
+  describe('getTocResultsByAowId', () => {
+    it('should return early if entityId is empty', () => {
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId('', aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should return early if aowId is empty', () => {
+      const entityId = 'test-entity-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId(entityId, '');
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should return early if both entityId and aowId are empty', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId');
+
+      service.getTocResultsByAowId('', '');
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalled();
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should set loading state to true when called with valid parameters', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      // Use a delayed observable to test the loading state
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse).pipe(delay(100)));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      // Loading should be true immediately after calling the method
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
+
+    it('should call API with correct entityId and aowId', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+    });
+
+    it('should update tocResultsByAowId and set loading to false on successful API call', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle empty tocResults array', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithEmptyTocResults = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: []
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithEmptyTocResults));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle null/undefined tocResults', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithNullTocResults = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithNullTocResults));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle undefined response', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const responseWithUndefinedResponse = {
+        ...mockTocApiResponse,
+        response: undefined
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(responseWithUndefinedResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+
+    it('should handle API error', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(throwError(() => error));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      // Loading should still be set to true initially
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
+
+    it('should handle custom tocResults data structure', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const customTocResults = [
+        {
+          id: 3,
+          title: 'Custom TOC Result',
+          description: 'Custom Description',
+          aowId: 'AOW-002',
+          customField: 'customValue'
+        }
+      ];
+      const customResponse = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: customTocResults
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(customResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(customTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+    });
+  });
+
   describe('setSideBarItems', () => {
     it('should update sideBarItems with default items and AOW tree', () => {
       service.entityAows.set(mockUnits);
       service.setSideBarItems();
 
       const expectedSideBarItems = [
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
-        },
         {
           isTree: true,
           label: 'By AOW',
@@ -223,14 +383,6 @@ describe('EntityAowService', () => {
       service.setSideBarItems();
 
       const expectedSideBarItems = [
-        {
-          label: 'All indicators',
-          itemLink: '/aow/all'
-        },
-        {
-          label: 'Unplanned results',
-          itemLink: '/aow/unplanned'
-        },
         {
           isTree: true,
           label: 'By AOW',
@@ -316,6 +468,24 @@ describe('EntityAowService', () => {
       service.isLoadingDetails.set(true);
       expect(service.isLoadingDetails()).toBe(true);
     });
+
+    it('should update tocResultsByAowId signal', () => {
+      const newTocResults = [
+        {
+          id: 3,
+          title: 'New TOC Result',
+          description: 'New Description',
+          aowId: 'AOW-003'
+        }
+      ];
+      service.tocResultsByAowId.set(newTocResults);
+      expect(service.tocResultsByAowId()).toEqual(newTocResults);
+    });
+
+    it('should update isLoadingTocResultsByAowId signal', () => {
+      service.isLoadingTocResultsByAowId.set(true);
+      expect(service.isLoadingTocResultsByAowId()).toBe(true);
+    });
   });
 
   describe('Integration scenarios', () => {
@@ -331,9 +501,9 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
 
       const sideBarItems = service.sideBarItems();
-      expect(sideBarItems).toHaveLength(3);
-      expect(sideBarItems[2].isTree).toBe(true);
-      expect(sideBarItems[2].items).toHaveLength(2);
+      expect(sideBarItems).toHaveLength(1);
+      expect(sideBarItems[0].isTree).toBe(true);
+      expect(sideBarItems[0].items).toHaveLength(2);
     });
 
     it('should maintain state consistency across multiple operations', () => {
@@ -351,6 +521,53 @@ describe('EntityAowService', () => {
       expect(service.entityDetails()).toEqual(mockInitiative);
       expect(service.entityAows()).toEqual(mockUnits);
       expect(service.isLoadingDetails()).toBe(false);
+    });
+
+    it('should handle complete flow for getTocResultsByAowId', () => {
+      const entityId = 'integration-test-id';
+      const aowId = 'integration-aow-id';
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+    });
+
+    it('should maintain state consistency across multiple TOC operations', () => {
+      const entityId = 'test-id';
+      const aowId1 = 'aow-id-1';
+      const aowId2 = 'aow-id-2';
+
+      // First call
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+      service.getTocResultsByAowId(entityId, aowId1);
+
+      expect(service.tocResultsByAowId()).toEqual(mockTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+
+      // Second call with different aowId
+      const customTocResults = [
+        {
+          id: 4,
+          title: 'Different TOC Result',
+          description: 'Different Description',
+          aowId: 'AOW-004'
+        }
+      ];
+      const customResponse = {
+        ...mockTocApiResponse,
+        response: {
+          tocResults: customTocResults
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(customResponse));
+      service.getTocResultsByAowId(entityId, aowId2);
+
+      expect(service.tocResultsByAowId()).toEqual(customTocResults);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
     });
   });
 });

@@ -4,7 +4,7 @@
   <span class="entity-aow_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
   <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
   <span class="entity-aow_breadcrumb_link" routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}">
-    {{ entityAowService.entityId() }} - Entity Name
+    {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
   </span>
   <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
   <span class="entity-aow_breadcrumb_link breadcrumb_link"> {{ getCurrentRoute() }} </span>
@@ -29,7 +29,13 @@
 
           @if (item.isOpen) {
             @for (item of item.items; track item) {
-              <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.itemLink" routerLinkActive="active">
+              <div
+                class="entity-aow_sidebar_option_item"
+                [routerLink]="url + item.itemLink"
+                routerLinkActive="active"
+                [style.cursor]="entityAowService.aowId() === item.label ? 'not-allowed' : 'pointer'"
+                [style.pointer-events]="entityAowService.aowId() === item.label ? 'none' : 'auto'"
+                (click)="entityAowService.getTocResultsByAowId(entityAowService.entityId(), item.label)">
                 <i class="pi pi-folder" style="font-size: 14px"></i>
                 <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
               </div>

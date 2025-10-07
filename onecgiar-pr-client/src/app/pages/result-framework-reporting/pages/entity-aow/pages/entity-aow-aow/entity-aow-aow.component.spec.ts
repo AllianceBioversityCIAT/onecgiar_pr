@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { EntityAowAowComponent } from './entity-aow-aow.component';
 import { EntityAowService } from '../../services/entity-aow.service';
+import { signal } from '@angular/core';
 
 describe('EntityAowAowComponent', () => {
   let component: EntityAowAowComponent;
@@ -13,9 +14,11 @@ describe('EntityAowAowComponent', () => {
   beforeEach(async () => {
     // Mock EntityAowService
     mockEntityAowService = {
-      aowId: {
-        set: jest.fn()
-      }
+      aowId: signal<string>(''),
+      entityId: signal<string>(''),
+      getTocResultsByAowId: jest.fn(),
+      tocResultsByAowId: signal<any[]>([]),
+      isLoadingTocResultsByAowId: signal<boolean>(false)
     } as any;
 
     // Mock ActivatedRoute
@@ -43,18 +46,17 @@ describe('EntityAowAowComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'Code', attr: 'code', class: 'notCenter' },
-        { title: 'Indicator name', attr: 'indicator_name' },
-        { title: 'Type', attr: 'type' },
-        { title: 'Expected target 2025', attr: 'expected_target', center: true },
-        { title: 'Actual achieved', attr: 'actual_achieved', center: true },
-        { title: 'Progress', attr: 'progress' },
-        { title: 'Status', attr: 'status' }
+        { title: 'Indicator name', attr: 'indicator_description' },
+        { title: 'Type', attr: 'type_value' },
+        { title: 'Expected target 2025', attr: 'target_value_sum' },
+        { title: 'Actual achieved', attr: 'actual_achieved_value_sum' },
+        { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true },
+        { title: 'Status', attr: 'status', hideSortIcon: true }
       ]);
 
       expect(component.tabs()).toEqual([
         { id: 'high-level-outputs', label: 'High-Level Outputs', count: 0 },
-        { id: 'outcomes', label: 'Outcomes', count: 0 }
+        { id: 'outcomes', label: 'Outcomes', count: 0, disabled: true }
       ]);
 
       expect(component.activeTabId()).toBe('high-level-outputs');
@@ -74,7 +76,7 @@ describe('EntityAowAowComponent', () => {
 
       component.ngOnInit();
 
-      expect(mockEntityAowService.aowId.set).toHaveBeenCalledWith(aowId);
+      expect(mockEntityAowService.aowId()).toBe(aowId);
     });
 
     it('should handle different aowId values', () => {
@@ -84,7 +86,7 @@ describe('EntityAowAowComponent', () => {
 
       component.ngOnInit();
 
-      expect(mockEntityAowService.aowId.set).toHaveBeenCalledWith(aowId);
+      expect(mockEntityAowService.aowId()).toBe(aowId);
     });
   });
 
@@ -130,26 +132,24 @@ describe('EntityAowAowComponent', () => {
     it('should have correct column order structure', () => {
       const columns = component.columnOrder();
 
-      expect(columns).toHaveLength(7);
+      expect(columns).toHaveLength(6);
       expect(columns[0]).toEqual({
-        title: 'Code',
-        attr: 'code',
-        class: 'notCenter'
+        title: 'Indicator name',
+        attr: 'indicator_description'
       });
       expect(columns[1]).toEqual({
-        title: 'Indicator name',
-        attr: 'indicator_name'
+        title: 'Type',
+        attr: 'type_value'
       });
-      expect(columns[3]).toEqual({
+      expect(columns[2]).toEqual({
         title: 'Expected target 2025',
-        attr: 'expected_target',
-        center: true
+        attr: 'target_value_sum'
       });
     });
 
     it('should have all required column attributes', () => {
       const columns = component.columnOrder();
-      const requiredAttrs = ['code', 'indicator_name', 'type', 'expected_target', 'actual_achieved', 'progress', 'status'];
+      const requiredAttrs = ['indicator_description', 'type_value', 'target_value_sum', 'actual_achieved_value_sum', 'progress_percentage', 'status'];
 
       columns.forEach(column => {
         expect(requiredAttrs).toContain(column.attr);
@@ -170,7 +170,8 @@ describe('EntityAowAowComponent', () => {
       expect(tabs[1]).toEqual({
         id: 'outcomes',
         label: 'Outcomes',
-        count: 0
+        count: 0,
+        disabled: true
       });
     });
 
@@ -238,6 +239,58 @@ describe('EntityAowAowComponent', () => {
     });
   });
 
+  describe('getProgress Function', () => {
+    it('should extract numeric value from percentage string', () => {
+      const result = component.getProgress('75%');
+      expect(result).toBe(75);
+    });
+
+    it('should handle zero percentage', () => {
+      const result = component.getProgress('0%');
+      expect(result).toBe(0);
+    });
+
+    it('should handle 100% percentage', () => {
+      const result = component.getProgress('100%');
+      expect(result).toBe(100);
+    });
+
+    it('should handle decimal percentages', () => {
+      const result = component.getProgress('75.5%');
+      expect(result).toBe(75.5);
+    });
+
+    it('should handle negative percentages', () => {
+      const result = component.getProgress('-10%');
+      expect(result).toBe(-10);
+    });
+
+    it('should handle percentages with spaces', () => {
+      const result = component.getProgress(' 50 %');
+      expect(result).toBe(50);
+    });
+
+    it('should handle empty string before percentage', () => {
+      const result = component.getProgress('%');
+      expect(result).toBe(0);
+    });
+
+    it('should handle string without percentage symbol', () => {
+      const result = component.getProgress('75');
+      expect(result).toBe(75);
+    });
+
+    it('should handle string with multiple percentage symbols', () => {
+      const result = component.getProgress('75%%');
+      expect(result).toBe(75);
+    });
+
+    it('should handle very large numbers', () => {
+      const result = component.getProgress('999999%');
+      expect(result).toBe(999999);
+    });
+  });
+
   describe('Integration Tests', () => {
     it('should work with different aowId values from route', () => {
       const testCases = ['aow-1', 'aow-2', 'special-aow-id-123'];
@@ -248,7 +301,7 @@ describe('EntityAowAowComponent', () => {
 
         component.ngOnInit();
 
-        expect(mockEntityAowService.aowId.set).toHaveBeenCalledWith(aowId);
+        expect(mockEntityAowService.aowId()).toBe(aowId);
       });
     });
 

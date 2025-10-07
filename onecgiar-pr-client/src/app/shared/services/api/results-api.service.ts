@@ -1222,4 +1222,15 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=${entityId}`
     );
   }
+
+  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
+    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+
+    if (year) queryParams.push(`year=${year}`);
+
+    const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    return this.http.get<{ message: string; response: any; status: boolean }>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
+    );
+  }
 }
