@@ -1233,4 +1233,8 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/toc-results${queryString}`
     );
   }
+
+  GET_IndicatorContributionSummary(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
+  }
 }

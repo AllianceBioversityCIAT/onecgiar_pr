@@ -30,7 +30,10 @@ describe('EntityDetailsComponent', () => {
       isLoadingDetails: signal<boolean>(false),
       sideBarItems: signal<any[]>([]),
       getClarisaGlobalUnits: jest.fn(),
-      setSideBarItems: jest.fn()
+      setSideBarItems: jest.fn(),
+      getAllDetailsData: jest.fn(),
+      getIndicatorSummaries: jest.fn(),
+      indicatorSummaries: signal<any[]>([])
     };
 
     await TestBed.configureTestingModule({

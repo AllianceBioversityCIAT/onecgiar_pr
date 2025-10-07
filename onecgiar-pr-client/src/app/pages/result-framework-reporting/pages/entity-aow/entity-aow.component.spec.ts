@@ -15,7 +15,7 @@ describe('EntityAowComponent', () => {
 
   beforeEach(async () => {
     entityAowServiceMock = {
-      getClarisaGlobalUnits: jest.fn(),
+      getAllDetailsData: jest.fn(),
       entityAows: signal<any[]>([]),
       sideBarItems: signal<any[]>([])
     };
@@ -35,10 +35,10 @@ describe('EntityAowComponent', () => {
   });
 
   describe('ngOnInit', () => {
-    it('should call getClarisaGlobalUnits', () => {
-      const getClarisaGlobalUnitsSpy = jest.spyOn(entityAowServiceMock, 'getClarisaGlobalUnits');
+    it('should call getAllDetailsData', () => {
+      const getAllDetailsDataSpy = jest.spyOn(entityAowServiceMock, 'getAllDetailsData');
       component.ngOnInit();
-      expect(getClarisaGlobalUnitsSpy).toHaveBeenCalled();
+      expect(getAllDetailsDataSpy).toHaveBeenCalled();
     });
   });
 
