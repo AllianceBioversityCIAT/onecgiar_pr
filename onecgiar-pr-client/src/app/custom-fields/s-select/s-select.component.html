@@ -10,13 +10,13 @@
   <div
     [ngSwitch]="editable ? false : (readOnly || this.rolesSE.readOnly) && !isStatic"
     class="pr-field"
-    [ngClass]="{ mandatory: this.required, complete: (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel) }">
+    [ngClass]="{ mandatory: this.required, complete: (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel) }">
     <div
       class="text-secondary-400"
       *ngSwitchCase="true"
       [innerHtml]="
-        (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel)
-          ? (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel)
+        (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+          ? (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
           : this.noDataText || (this.required ? 'Not provided' : 'Not applicable')
       "></div>
     <div class="custom_select" *ngSwitchCase="false">
@@ -30,12 +30,12 @@
         <div
           class="text pr-body-2"
           [ngClass]="{
-            select_placeholder: !(this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel),
+            select_placeholder: !(this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel),
             truncate: this.truncateSelectionText
           }"
           [innerHtml]="
-            (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel)
-              ? (this.optionsIntance | labelName: this.value : this.optionValue : this.optionLabel)
+            (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+              ? (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
               : placeholder
           "></div>
 
@@ -53,7 +53,7 @@
 
           <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
             <div
-              *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText"
+              *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: this.optionLabel : this.searchText"
               class="option pr-body-2"
               [style]="extraInformation ? 'height: 50px;' : ''"
               [ngClass]="{
@@ -74,7 +74,7 @@
 
               <div class="event"></div>
             </div>
-            <div class="no-options-text" *ngIf="!optionsIntance?.length">There are no items available for this list.</div>
+            <div class="no-options-text" *ngIf="!optionsIntance()?.length">There are no items available for this list.</div>
           </cdk-virtual-scroll-viewport>
         </div>
       </a>

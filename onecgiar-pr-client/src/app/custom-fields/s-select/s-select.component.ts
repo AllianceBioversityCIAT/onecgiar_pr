@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener, computed } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -110,9 +110,9 @@ export class SSelectComponent implements ControlValueAccessor {
     }
   }
   cont = 0;
-  get optionsIntance() {
+  optionsIntance = computed(() => {
     this.cont++;
-    console.log('mero event', this.cont);
+    // console.log('mero event', this.cont);
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
 
@@ -135,7 +135,7 @@ export class SSelectComponent implements ControlValueAccessor {
     this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
 
     return this._optionsIntance;
-  }
+  });
 
   onSelectOption(option) {
     if (option?.disabled) return;
