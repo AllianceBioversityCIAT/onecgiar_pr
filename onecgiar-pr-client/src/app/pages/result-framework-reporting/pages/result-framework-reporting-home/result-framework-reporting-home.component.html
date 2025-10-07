@@ -11,7 +11,7 @@
       <div class="framework-reporting_left_content_mySPs">
         <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
 
-        <div class="framework-reporting_left_content_mySPs_items">
+        <div class="framework-reporting_left_content_mySPs_items" [ngClass]="{ empty: resultFrameworkReportingHomeService.mySPsList().length === 0 }">
           @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
             @for (item of [0, 1]; track $index) {
               <p-skeleton width="100%" height="136px" />

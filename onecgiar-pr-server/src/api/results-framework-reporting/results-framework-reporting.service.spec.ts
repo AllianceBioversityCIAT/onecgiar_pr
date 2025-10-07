@@ -194,6 +194,7 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockYearRepository.findOne.mockReset();
     });
 
     it('should return work packages when repository returns data', async () => {
@@ -213,6 +214,7 @@ describe('ResultsFrameworkReportingService', () => {
               type_value: null,
               type_name: null,
               location: null,
+              target_value_sum: 5,
             },
           ],
         },
@@ -229,6 +231,7 @@ describe('ResultsFrameworkReportingService', () => {
         'SP01-AOW01',
         2024,
       );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         status: 200,
         response: {
@@ -256,6 +259,7 @@ describe('ResultsFrameworkReportingService', () => {
           indicators: [],
         },
       ]);
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: '2026' });
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'sp02',
@@ -265,19 +269,25 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockTocResultsRepository.findByCompositeCode).toHaveBeenCalledWith(
         'SP02',
         'SP02-AOW03',
-        undefined,
+        2026,
       );
-      expect(result.response.year).toBeNull();
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(result.response.year).toBe(2026);
     });
 
     it('should return handler error when parameters are missing', async () => {
       const result: any = await service.getWorkPackagesByProgramAndArea('', '');
       expect(result.status).toBe(400);
       expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
     });
 
     it('should return handler error when repository yields empty result', async () => {
       mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([]);
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2025 });
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'SP03',
@@ -286,6 +296,48 @@ describe('ResultsFrameworkReportingService', () => {
 
       expect(result.status).toBe(404);
       expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year is not configured', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP03',
+        'AOW06',
+      );
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 404,
+          message: 'No active reporting year was found.',
+        }),
+        debug: true,
+      });
+      expect(
+        mockTocResultsRepository.findByCompositeCode,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year is invalid', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 'NaN' });
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP03',
+        'AOW07',
+      );
+
+      expect(result.status).toBe(500);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 500,
+          message: 'The active reporting year configured is invalid.',
+        }),
+        debug: true,
+      });
+      expect(
+        mockTocResultsRepository.findByCompositeCode,
+      ).not.toHaveBeenCalled();
     });
   });
 });

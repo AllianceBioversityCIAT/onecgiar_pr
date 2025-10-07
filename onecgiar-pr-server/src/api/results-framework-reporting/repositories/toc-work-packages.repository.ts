@@ -16,7 +16,7 @@ interface toc_result_row {
   type_value: string | null;
   type_name: string | null;
   location: string | null;
-  baseline_value: string | null;
+  target_value_sum: number | null;
 }
 
 export interface toc_result_response {
@@ -33,7 +33,7 @@ export interface toc_result_response {
     type_value: string | null;
     type_name: string | null;
     location: string | null;
-    baseline_value: string | null;
+    target_value_sum: number | null;
   }>;
 }
 
@@ -65,31 +65,34 @@ export class TocResultsRepository {
         tri.type_value,
         tri.type_name,
         tri.location,
-        tri.baseline_value
+        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+        AND trit.target_date = ${year}
       WHERE 
         wp.wp_official_code = ?
         AND tr.category = 'OUTPUT'
     `;
 
-    if (year !== undefined) {
-      params.push(year);
-      query += `
-        AND wp.phase IN (
-          SELECT v.toc_pahse_id
-          FROM ${env.DB_NAME}.\`version\` v
-          WHERE v.phase_year = ?
-            AND v.app_module_id = 1
-            AND v.is_active = 1
-            AND v.status = 1
-        )
-      `;
-    }
-
-    query += ' ORDER BY tr.id ASC, tri.id ASC';
+    query += `
+      GROUP BY
+        tr.id,
+        tr.category,
+        tr.result_title,
+        tr.related_node_id,
+        tri.id,
+        tri.indicator_description,
+        tri.toc_result_indicator_id,
+        tri.related_node_id,
+        tri.unit_messurament,
+        tri.type_value,
+        tri.type_name,
+        tri.location
+      ORDER BY tr.id ASC, tri.id ASC
+    `;
 
     try {
       const rows = (await this.dataSource.query(
@@ -120,7 +123,7 @@ export class TocResultsRepository {
             type_value: row.type_value,
             type_name: row.type_name,
             location: row.location,
-            baseline_value: row.baseline_value,
+            target_value_sum: row.target_value_sum,
           });
         }
       }

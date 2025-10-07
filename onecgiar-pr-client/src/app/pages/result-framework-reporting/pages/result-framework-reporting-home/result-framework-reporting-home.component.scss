@@ -114,6 +114,10 @@ p {
   gap: 20px;
 }
 
+.empty {
+  grid-template-columns: 1fr;
+}
+
 .framework-reporting_left_content_mySPs_items_empty {
   grid-column: span 2;
 }
