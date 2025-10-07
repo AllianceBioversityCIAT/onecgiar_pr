@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
-import { Initiative, Unit } from './interfaces/entity-details.interface';
+import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
@@ -27,13 +27,9 @@ import { SkeletonModule } from 'primeng/skeleton';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityDetailsComponent implements OnInit {
-  api = inject(ApiService);
   private readonly route = inject(ActivatedRoute);
-
-  entityId = signal<string>('');
-  entityDetails = signal<Initiative>({} as Initiative);
-  entityAows = signal<Unit[]>([]);
-  isLoading = signal<boolean>(false);
+  api = inject(ApiService);
+  entityAowService = inject(EntityAowService);
 
   entityResultsByIndicatorCategory = signal<any[]>([
     {
@@ -75,18 +71,8 @@ export class EntityDetailsComponent implements OnInit {
 
   ngOnInit() {
     this.route.params.subscribe(params => {
-      this.entityId.set(params['id']);
+      this.entityAowService.entityId.set(params['entityId']);
     });
-    this.getClarisaGlobalUnits();
-  }
-
-  getClarisaGlobalUnits() {
-    this.isLoading.set(true);
-
-    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(({ response }) => {
-      this.entityDetails.set(response?.initiative);
-      this.entityAows.set(response?.units ?? []);
-      this.isLoading.set(false);
-    });
+    this.entityAowService.getClarisaGlobalUnits();
   }
 }
