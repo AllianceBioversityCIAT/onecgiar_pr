@@ -13,6 +13,8 @@ import { ResultsTocResultRepository } from '../results/results-toc-results/repos
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
+import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
+
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
 };
@@ -74,6 +76,10 @@ const mockResultRepository = {
   getResultById: jest.fn(),
 };
 
+const mockResultsByProjectsService = {
+  linkBilateralProjectToResult: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -102,7 +108,6 @@ describe('ResultsFrameworkReportingService', () => {
           provide: ResultRepository,
           useValue: mockResultRepository,
         },
-        { provide: ResultRepository, useValue: mockResultRepository },
         { provide: ResultsService, useValue: mockResultsService },
         {
           provide: ResultsKnowledgeProductsService,
@@ -119,6 +124,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ShareResultRequestService,
           useValue: mockShareResultRequestService,
+        },
+        {
+          provide: ResultsByProjectsService,
+          useValue: mockResultsByProjectsService,
         },
       ],
     }).compile();
@@ -621,6 +630,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.findOne.mockReset();
       mockResultsTocResultIndicatorsRepository.save.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
+      mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -664,8 +674,12 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockResultsKnowledgeProductsService.create).not.toHaveBeenCalled();
       expect(mockResultsTocResultRepository.save).toHaveBeenCalled();
       expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
-      expect(mockShareResultRequestService.resultRequest).not.toHaveBeenCalled();
-      expect(response.status).toBe(201);
+      expect(
+        mockShareResultRequestService.resultRequest,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledWith(101, undefined, user.id);
       expect(response.response.tocResultLinkId).toBe(900);
     });
 
@@ -714,6 +728,9 @@ describe('ResultsFrameworkReportingService', () => {
               result_toc_results: [],
             },
           ],
+          bilateral_project: {
+            project_id: '260',
+          },
         },
         user,
       );
@@ -741,6 +758,9 @@ describe('ResultsFrameworkReportingService', () => {
         202,
         user,
       );
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledWith(202, '260', user.id);
       expect(response.status).toBe(201);
       expect(response.response.knowledgeProduct).toEqual(kpPayload);
     });

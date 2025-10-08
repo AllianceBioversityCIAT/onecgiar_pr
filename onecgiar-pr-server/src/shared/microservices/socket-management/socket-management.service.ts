@@ -65,7 +65,9 @@ export class SocketManagementService implements OnModuleInit {
         };
       }
       if (!this.url) {
-        this._logger.warn('SOCKET_URL is not configured; skipping socket push.');
+        this._logger.warn(
+          'SOCKET_URL is not configured; skipping socket push.',
+        );
         return {
           response: null,
           message: 'Socket service not configured',

@@ -11,9 +11,16 @@ import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-pro
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 
 @Module({
-  imports: [ResultsModule, ResultsKnowledgeProductsModule, ResultsTocResultsModule, ShareResultRequestModule],
+  imports: [
+    ResultsModule,
+    ResultsKnowledgeProductsModule,
+    ResultsTocResultsModule,
+    ShareResultRequestModule,
+    ResultsByProjectsModule,
+  ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
     ResultsFrameworkReportingService,

@@ -11,6 +11,35 @@ export class ResultsFrameworkTocIndicatorDto {
   toc_result_indicator_id: number;
 }
 
+export class ResultsFrameworkBilateralProjectDto {
+  @ApiProperty({
+    description: 'Identifier of the ToC result related to the project.',
+    required: false,
+  })
+  toc_result_id?: number;
+
+  @ApiProperty({
+    description: 'Official code of the program/portfolio owning the project.',
+    required: false,
+  })
+  official_code?: string;
+
+  @ApiProperty({ description: 'Internal identifier of the bilateral project.' })
+  project_id: number | string;
+
+  @ApiProperty({
+    description: 'Name of the bilateral project.',
+    required: false,
+  })
+  project_name?: string;
+
+  @ApiProperty({
+    description: 'Summary or description of the bilateral project.',
+    required: false,
+  })
+  project_summary?: string;
+}
+
 export class CreateResultsFrameworkResultDto {
   @ApiProperty({ type: () => CreateResultDto })
   result: CreateResultDto;
@@ -52,4 +81,11 @@ export class CreateResultsFrameworkResultDto {
       'Contributing initiatives to associate with the result for the ToC linkage.',
   })
   contributors_result_toc_result?: ContributorResultTocResult[];
+
+  @ApiProperty({
+    required: false,
+    type: () => ResultsFrameworkBilateralProjectDto,
+    description: 'Bilateral project information linked to the result.',
+  })
+  bilateral_project?: ResultsFrameworkBilateralProjectDto;
 }

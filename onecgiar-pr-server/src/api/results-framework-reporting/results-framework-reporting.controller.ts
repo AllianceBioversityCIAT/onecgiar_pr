@@ -161,4 +161,25 @@ export class ResultsFrameworkReportingController {
       user,
     );
   }
+
+  @Get('bilateral-projects')
+  @ApiOperation({
+    summary: 'List bilateral projects for a program and toc result',
+    description:
+      'Validates the user membership to the provided initiative and returns the bilateral projects mapped to that program for the active reporting year.',
+  })
+  @ApiQuery({
+    name: 'tocResultId',
+    type: Number,
+    required: true,
+    description: 'ToC Result ID to filter the bilateral projects.',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral projects retrieved successfully.',
+  })
+  getBilateralProjects(@Query('tocResultId') tocResultId: number) {
+    return this.resultsFrameworkReportingService.getBilateralProjectsByProgramAndTocResult(
+      tocResultId,
+    );
+  }
 }

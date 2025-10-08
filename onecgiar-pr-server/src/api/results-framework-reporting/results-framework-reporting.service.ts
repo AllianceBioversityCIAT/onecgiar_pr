@@ -1,6 +1,5 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -19,13 +18,12 @@ import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-res
 import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
+import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
-  private readonly _logger = new Logger(ResultsFrameworkReportingService.name);
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
-    private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
@@ -36,6 +34,7 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
+    private readonly _resultsByProjectsService: ResultsByProjectsService,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -427,7 +426,8 @@ export class ResultsFrameworkReportingService {
           const shareRequest: CreateTocShareResult = {
             initiativeShareId,
             isToc: false,
-            contributors_result_toc_result: payload.contributors_result_toc_result,
+            contributors_result_toc_result:
+              payload.contributors_result_toc_result,
           };
 
           await this._shareResultRequestService.resultRequest(
@@ -437,6 +437,12 @@ export class ResultsFrameworkReportingService {
           );
         }
       }
+
+      await this._resultsByProjectsService.linkBilateralProjectToResult(
+        createdResultId,
+        payload.bilateral_project?.project_id,
+        user.id,
+      );
 
       return {
         response: {
@@ -648,6 +654,32 @@ export class ResultsFrameworkReportingService {
         },
         message:
           'Program indicator contribution summary retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralProjectsByProgramAndTocResult(tocResultId?: number) {
+    try {
+      const resolvedTocResultId = Number(tocResultId);
+
+      if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
+        throw {
+          response: {},
+          message:
+            'A valid tocResultId query parameter is required (must be a positive integer).',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralProjects =
+        await this._tocResultsRepository.findBilateralProjectById(tocResultId);
+
+      return {
+        response: bilateralProjects,
+        message: 'Bilateral projects retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

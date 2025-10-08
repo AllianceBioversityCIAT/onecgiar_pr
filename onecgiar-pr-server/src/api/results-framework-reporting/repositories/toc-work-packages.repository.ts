@@ -190,4 +190,28 @@ export class TocResultsRepository {
       });
     }
   }
+
+  async findBilateralProjectById(tocResultId: number) {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.official_code AS official_code,
+        trp.project_id AS project_id, 
+        trp.name AS project_name,
+        trp.project_summary AS project_summary
+      FROM ${env.DB_TOC}.toc_results tr
+      JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      WHERE tr.id = ?
+    `;
+
+    try {
+      return this.dataSource.query(query, [tocResultId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
 }

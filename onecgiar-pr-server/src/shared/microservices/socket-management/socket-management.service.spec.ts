@@ -10,18 +10,18 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 describe('SocketManagementService', () => {
   let service: SocketManagementService;
 
-beforeEach(async () => {
-  process.env.SOCKET_URL = 'http://socket-service';
-  const module: TestingModule = await Test.createTestingModule({
-    providers: [SocketManagementService],
-  }).compile();
+  beforeEach(async () => {
+    process.env.SOCKET_URL = 'http://socket-service';
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [SocketManagementService],
+    }).compile();
 
-  service = module.get<SocketManagementService>(SocketManagementService);
-});
+    service = module.get<SocketManagementService>(SocketManagementService);
+  });
 
-afterEach(() => {
-  jest.clearAllMocks();
-});
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
