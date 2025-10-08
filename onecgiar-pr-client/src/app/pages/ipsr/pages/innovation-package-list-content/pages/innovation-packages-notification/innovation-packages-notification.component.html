@@ -23,7 +23,7 @@
           [(ngModel)]="initiativeIdFilter">
         </app-pr-select> -->
 
-      <s-select
+      <app-s-select
         [options]="this.initiativesByPortfolio"
         label="Entity"
         [isStatic]="true"
@@ -32,7 +32,7 @@
         optionValue="initiative_id"
         placeholder="Select entity"
         [(ngModel)]="initiativeIdFilter">
-      </s-select>
+      </app-s-select>
     </div>
   </div>
 

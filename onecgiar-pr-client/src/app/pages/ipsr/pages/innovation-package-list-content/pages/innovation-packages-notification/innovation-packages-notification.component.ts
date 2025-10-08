@@ -47,7 +47,6 @@ export class InnovationPackagesNotificationComponent implements OnInit {
 
   onSelectPhase(event) {
     this.portfolioIdSelected.set(event.portfolio_id);
-    console.log('portfolioIdSelected', this.portfolioIdSelected());
     this.initiativeIdFilter = null;
   }
 

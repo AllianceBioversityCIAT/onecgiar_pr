@@ -4,7 +4,7 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-  selector: 's-select',
+  selector: 'app-s-select',
   templateUrl: './s-select.component.html',
   styleUrls: ['./s-select.component.scss'],
   providers: [
