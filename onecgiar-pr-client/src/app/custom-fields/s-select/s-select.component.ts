@@ -110,7 +110,7 @@ export class SSelectComponent implements ControlValueAccessor {
   }
   cont = 0;
   optionsIntance = computed(() => {
-    let _optionsIntance: any[] = JSON.parse(JSON.stringify(this.options()));
+    const _optionsIntance: any[] = JSON.parse(JSON.stringify(this.options()));
     this.cont++;
     if (!this.options()?.length) return [];
 
