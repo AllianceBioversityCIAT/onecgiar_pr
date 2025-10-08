@@ -98,7 +98,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = 'CGSpace';
+    metadataCGSpace.source = knowledgeProductDto.repo;
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =

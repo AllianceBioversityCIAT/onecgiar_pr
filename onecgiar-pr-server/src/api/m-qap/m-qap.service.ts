@@ -5,6 +5,7 @@ import { lastValueFrom, map } from 'rxjs';
 import { MQAPResultDto } from './dtos/m-qap.dto';
 import { AxiosRequestConfig } from 'axios';
 import { MQAPBodyDto } from './dtos/m-qap-body.dto';
+import { logger } from 'handlebars';
 
 @Injectable()
 export class MQAPService {
@@ -24,7 +25,14 @@ export class MQAPService {
       return lastValueFrom(
         this._httpService
           .post(`${this._mqapUrl}`, body, requestConfig)
-          .pipe(map((resp) => resp.data))
+          .pipe(map((resp) => {
+                    
+            this._logger.debug(
+              `Respuesta completa del API MQAP: ${JSON.stringify(resp.data)}`,
+            );
+            
+            return resp.data;
+          }))
           .pipe(
             map((resp) => {
               delete resp['ORCID_Data'];
