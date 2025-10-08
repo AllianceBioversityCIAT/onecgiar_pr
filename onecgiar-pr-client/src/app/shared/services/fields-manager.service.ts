@@ -1,13 +1,17 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
+import { DataControlService } from './data-control.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FieldsManagerService {
+  dataControlSE = inject(DataControlService);
   show = signal(false);
   portfolioAcronym = signal('P22');
   fields = computed<Record<string, CustomField>>(() => {
+    console.log('fields');
+    console.log(this.dataControlSE.currentResultSignal().portfolio);
     return {
       '[general-info]-description': {
         label: 'Description',

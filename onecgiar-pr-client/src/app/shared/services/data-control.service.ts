@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, WritableSignal, signal } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
 import { Title } from '@angular/platform-browser';
@@ -20,6 +20,7 @@ export class DataControlService {
   myInitiativesLoaded = false;
   resultsList: ResultItem[] = [];
   currentResult: CurrentResult = {};
+  currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;
   currentSectionName = '';
   fieldFeedbackList = [];
