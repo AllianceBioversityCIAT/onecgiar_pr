@@ -11,6 +11,7 @@ import { InitiativesService } from '../../../../../../shared/services/global/ini
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { SelectModule } from 'primeng/select';
 
 interface AddUserForm {
   activate: boolean;
@@ -37,6 +38,7 @@ interface AddUserForm {
     CustomFieldsModule,
     SearchUserSelectComponent,
     ProgressSpinnerModule,
+    SelectModule,
     UserRolesInfoModalComponent
   ],
   templateUrl: './manage-user-modal.component.html',
@@ -109,11 +111,17 @@ export class ManageUserModalComponent {
     this.clearUserSearch();
   }
 
-  updateDisableOptions() {
+  getAvailableEntities(currentIndex: number) {
     const selectedRoleAssignments = this.addUserForm().role_assignments;
-    const selectedEntities = selectedRoleAssignments.map(item => item.entity_id);
-    const disableOptions = this.entities().filter(entity => selectedEntities.includes(entity.initiative_id));
-    this.disabledRoleAssignmentOptions.set(disableOptions);
+    const selectedEntities = selectedRoleAssignments
+      .map((item, index) => (index !== currentIndex ? item.entity_id : null))
+      .filter(entityId => entityId !== null);
+
+    // Filter within each group's entities array
+    return this.entities().map(group => ({
+      ...group,
+      entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
+    }));
   }
 
   onRoleEntityChange(event: number, index: number): void {
@@ -121,7 +129,6 @@ export class ManageUserModalComponent {
       ...form,
       role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, entity_id: event } : item))
     }));
-    this.updateDisableOptions();
   }
 
   onRoleAssignmentChange(event: number, index: number): void {
@@ -160,7 +167,6 @@ export class ManageUserModalComponent {
     }));
 
     setTimeout(() => {
-      this.updateDisableOptions();
       this.loadingRoleAssignment.set(true);
     }, 0);
   }
