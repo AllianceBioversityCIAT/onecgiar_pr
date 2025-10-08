@@ -11,9 +11,19 @@ enum Portfolios {
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
   show = signal(false);
-  portfolioAcronym = signal('P22');
+  portfolioAcronym = signal('P25');
   fields = computed<Record<string, CustomField>>(() => {
     return {
+      '[general-info]-title': {
+        label: 'Title',
+        placeholder: 'Enter text',
+        show: true,
+        description: `<ul>
+            <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
+            <li>Avoid abbreviations or (technical) jargon.</li>
+            ${Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? '<li>For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
+          </ul>`
+      },
       '[general-info]-description': {
         label: 'Description',
         placeholder: 'Enter text',
@@ -23,16 +33,6 @@ export class FieldsManagerService {
      <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>
     </ul>`
-      },
-      '[general-info]-title': {
-        label: 'Title',
-        placeholder: 'Enter text',
-        show: true,
-        description: `<ul>
-            <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
-            <li>Avoid abbreviations or (technical) jargon.</li>
-            ${Portfolios[this.dataControlSE.currentResultSignal().portfolio] == Portfolios.P25 && 'For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).'}
-          </ul>`
       }
     };
   });
