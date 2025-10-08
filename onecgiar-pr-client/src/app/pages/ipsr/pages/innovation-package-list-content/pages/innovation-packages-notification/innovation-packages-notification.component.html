@@ -12,8 +12,7 @@
       [(ngModel)]="phaseFilter">
     </app-pr-select>
     <div>
-      @if (this.showInitiativeFilter()) {
-        <!-- <app-pr-select
+      <!-- <app-pr-select
           [options]="this.initiativesByPortfolio()"
           label="Entity"
           [isStatic]="true"
@@ -24,17 +23,16 @@
           [(ngModel)]="initiativeIdFilter">
         </app-pr-select> -->
 
-        <s-select
-          [options]="this.initiativesByPortfolio"
-          label="Entity"
-          [isStatic]="true"
-          [required]="false"
-          optionLabel="full_name"
-          optionValue="initiative_id"
-          placeholder="Select entity"
-          [(ngModel)]="initiativeIdFilter">
-        </s-select>
-      }
+      <s-select
+        [options]="this.initiativesByPortfolio"
+        label="Entity"
+        [isStatic]="true"
+        [required]="false"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select entity"
+        [(ngModel)]="initiativeIdFilter">
+      </s-select>
     </div>
   </div>
 

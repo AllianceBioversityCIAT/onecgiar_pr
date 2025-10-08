@@ -14,7 +14,6 @@ export class InnovationPackagesNotificationComponent implements OnInit {
   phaseList = [];
   phaseFilter = null;
   initiativeIdFilter = null;
-  showInitiativeFilter = signal<boolean>(false);
   portfolioIdSelected = signal<null | number | string>(null);
   initiativesByPortfolio = computed<any[]>(() => {
     if (this.api.rolesSE.isAdmin) {
@@ -49,11 +48,7 @@ export class InnovationPackagesNotificationComponent implements OnInit {
   onSelectPhase(event) {
     this.portfolioIdSelected.set(event.portfolio_id);
     console.log('portfolioIdSelected', this.portfolioIdSelected());
-    this.showInitiativeFilter.set(false);
     this.initiativeIdFilter = null;
-    setTimeout(() => {
-      this.showInitiativeFilter.set(true);
-    }, 1000);
   }
 
   getAllPhases() {
