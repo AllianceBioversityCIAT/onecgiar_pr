@@ -145,4 +145,49 @@ export class TocResultsRepository {
       });
     }
   }
+
+  async findResultById(tocResultId: number) {
+    const query = `
+      SELECT
+        tr.id,
+        tr.result_title
+      FROM ${env.DB_TOC}.toc_results tr
+      WHERE tr.id = ?
+      LIMIT 1;
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [tocResultId]);
+      return rows?.[0] ?? null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findIndicatorById(indicatorId: number) {
+    const query = `
+      SELECT
+        tri.id,
+        tri.toc_results_id,
+        tri.toc_result_indicator_id
+      FROM ${env.DB_TOC}.toc_results_indicators tri
+      WHERE tri.id = ?
+      LIMIT 1;
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [indicatorId]);
+      return rows?.[0] ?? null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
 }

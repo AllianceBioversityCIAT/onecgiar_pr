@@ -477,7 +477,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
     expect(response.status).toBe(HttpStatus.BAD_REQUEST);
     expect(response.message).toBe(
-      'missing data: Result name, Initiative or Result type',
+      'Missing data: Result name, Initiative or Result type',
     );
   });
 

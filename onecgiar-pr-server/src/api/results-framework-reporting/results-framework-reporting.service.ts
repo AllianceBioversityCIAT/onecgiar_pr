@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
@@ -7,9 +7,21 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 import { ResultRepository } from '../results/result.repository';
+import { ResultsService } from '../results/results.service';
+import {
+  CreateResultsFrameworkResultDto,
+  ResultsFrameworkTocIndicatorDto,
+} from './dto/create-results-framework.dto';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
+import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
+import { ResultsTocResultsService } from '../results/results-toc-results/results-toc-results.service';
+import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
+  private readonly _logger = new Logger(ResultsFrameworkReportingService.name);
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
@@ -18,6 +30,11 @@ export class ResultsFrameworkReportingService {
     private readonly _handlersError: HandlersError,
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _resultRepository: ResultRepository,
+    private readonly _resultsService: ResultsService,
+    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsTocResultsService: ResultsTocResultsService,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -226,6 +243,263 @@ export class ResultsFrameworkReportingService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async createResultFromFramework(
+    payload: CreateResultsFrameworkResultDto,
+    user: TokenDto,
+  ) {
+    try {
+      if (!payload?.result) {
+        throw {
+          response: {},
+          message: 'The result header information is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const baseResultDto = { ...payload.result };
+      const initiativeId = Number(baseResultDto.initiative_id);
+
+      if (!Number.isFinite(initiativeId) || initiativeId <= 0) {
+        throw {
+          response: {},
+          message:
+            'A valid initiative identifier is required to create the result.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      let createdResultId: number;
+      let knowledgeProductResponse: ResultsKnowledgeProductDto | undefined;
+
+      if (
+        Number(baseResultDto.result_type_id) ===
+        ResultTypeEnum.KNOWLEDGE_PRODUCT
+      ) {
+        if (!payload.knowledge_product) {
+          throw {
+            response: {},
+            message:
+              'Knowledge product payload is required for knowledge product results.',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        if (
+          (!baseResultDto.result_name ||
+            `${baseResultDto.result_name}`.trim() === '') &&
+          payload.knowledge_product?.title
+        ) {
+          baseResultDto.result_name = payload.knowledge_product.title;
+        }
+
+        if (!payload.knowledge_product.result_data) {
+          payload.knowledge_product.result_data = baseResultDto;
+        } else {
+          payload.knowledge_product.result_data = {
+            ...payload.knowledge_product.result_data,
+            ...baseResultDto,
+          };
+        }
+
+        const knowledgeCreation =
+          await this._resultsKnowledgeProductsService.create(
+            payload.knowledge_product,
+            user,
+          );
+
+        if (knowledgeCreation.status >= HttpStatus.BAD_REQUEST) {
+          throw knowledgeCreation;
+        }
+
+        knowledgeProductResponse =
+          knowledgeCreation.response as ResultsKnowledgeProductDto;
+        createdResultId = Number(knowledgeProductResponse.id);
+      } else {
+        const creationResponse = await this._resultsService.createOwnerResultV2(
+          baseResultDto,
+          user,
+        );
+
+        if (creationResponse.status >= HttpStatus.BAD_REQUEST) {
+          throw creationResponse;
+        }
+
+        createdResultId = Number((creationResponse.response as any).id);
+      }
+
+      if (!Number.isFinite(createdResultId) || createdResultId <= 0) {
+        throw {
+          response: {},
+          message: 'Result creation failed to return a valid identifier.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
+      const resultSummary =
+        await this._resultRepository.getResultById(createdResultId);
+
+      if (!resultSummary) {
+        throw {
+          response: {},
+          message: 'The result could not be retrieved after creation.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
+      let primaryTocRecordId: number | null = null;
+
+      if (payload.toc_result_id !== undefined) {
+        const resolvedTocResultId = Number(payload.toc_result_id);
+
+        if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
+          throw {
+            response: {},
+            message: 'The provided ToC result identifier is invalid.',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        const tocResult =
+          await this._tocResultsRepository.findResultById(resolvedTocResultId);
+
+        if (!tocResult) {
+          throw {
+            response: {},
+            message:
+              'No ToC result was found with the provided identifier in the Integration catalogue.',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        let primaryTocRecord = await this._resultsTocResultRepository.findOne({
+          where: {
+            result_id: createdResultId,
+            initiative_ids: initiativeId,
+            is_active: true,
+          },
+        });
+
+        if (primaryTocRecord) {
+          await this._resultsTocResultRepository.update(
+            primaryTocRecord.result_toc_result_id,
+            {
+              toc_result_id: resolvedTocResultId,
+              toc_progressive_narrative:
+                payload.toc_progressive_narrative ?? null,
+              last_updated_by: user.id,
+              is_active: true,
+            },
+          );
+        } else {
+          primaryTocRecord = await this._resultsTocResultRepository.save({
+            initiative_ids: initiativeId,
+            toc_result_id: resolvedTocResultId,
+            result_id: createdResultId,
+            planned_result: true,
+            toc_progressive_narrative:
+              payload.toc_progressive_narrative ?? null,
+            created_by: user.id,
+            last_updated_by: user.id,
+            is_active: true,
+          });
+        }
+
+        primaryTocRecordId = primaryTocRecord.result_toc_result_id;
+
+        await this.upsertTocIndicators(
+          primaryTocRecord.result_toc_result_id,
+          resolvedTocResultId,
+          payload.toc_results ?? [],
+          user.id,
+        );
+      }
+
+      if (payload.contributors_result_toc_result?.length) {
+        await this._resultsTocResultsService.saveResultTocResultContributor(
+          payload.contributors_result_toc_result,
+          user,
+          resultSummary,
+          createdResultId,
+          initiativeId,
+        );
+      }
+
+      return {
+        response: {
+          result: resultSummary,
+          knowledgeProduct: knowledgeProductResponse ?? null,
+          tocResultLinkId: primaryTocRecordId,
+        },
+        message: 'Result created successfully through the reporting workflow.',
+        status: HttpStatus.CREATED,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async upsertTocIndicators(
+    resultTocResultId: number,
+    tocResultId: number,
+    indicators: ResultsFrameworkTocIndicatorDto[],
+    userId: number,
+  ) {
+    if (!Array.isArray(indicators) || !indicators.length) {
+      return;
+    }
+
+    for (const indicator of indicators) {
+      const indicatorId = Number(indicator.toc_result_indicator_id);
+      if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
+        throw {
+          response: {},
+          message: 'One of the provided ToC indicator identifiers is invalid.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const indicatorRow =
+        await this._tocResultsRepository.findIndicatorById(indicatorId);
+
+      if (!indicatorRow) {
+        throw {
+          response: {},
+          message: `No ToC indicator was found with id '${indicatorId}'.`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (Number(indicatorRow.toc_results_id) !== Number(tocResultId)) {
+        throw {
+          response: {},
+          message: `The indicator '${indicatorId}' does not belong to the provided ToC result '${tocResultId}'.`,
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const existingIndicator =
+        await this._resultsTocResultIndicatorsRepository.findOne({
+          where: {
+            results_toc_results_id: resultTocResultId,
+            toc_results_indicator_id: indicatorRow.toc_result_indicator_id,
+            is_active: true,
+          },
+        });
+
+      if (existingIndicator) {
+        continue;
+      }
+
+      await this._resultsTocResultIndicatorsRepository.save({
+        results_toc_results_id: resultTocResultId,
+        toc_results_indicator_id: indicatorRow.toc_result_indicator_id,
+        created_by: userId,
+        last_updated_by: userId,
+        is_active: true,
+      });
     }
   }
 

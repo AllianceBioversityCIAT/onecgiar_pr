@@ -145,7 +145,7 @@ export class ResultsService {
       ) {
         throw {
           response: {},
-          message: 'missing data: Result name, Initiative or Result type',
+          message: 'Missing data: Result name, Initiative or Result type',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -2013,6 +2013,9 @@ export class ResultsService {
         return;
       }
 
+      this._logger.verbose(
+        `Emitting result created notification for result ${result.id}`,
+      );
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,
         NotificationTypeEnum.RESULT_CREATED,
@@ -2067,7 +2070,7 @@ export class ResultsService {
           active: true,
           initiative_id: IsNull(),
           action_area_id: IsNull(),
-          role: In([RoleEnum.ADMIN, RoleEnum.GUEST]),
+          role: In([RoleEnum.ADMIN]),
         },
       });
 
@@ -2086,5 +2089,14 @@ export class ResultsService {
       );
       return [];
     }
+  }
+
+  async createOwnerResultV2(
+    createResultDto: CreateResultDto,
+    user: TokenDto,
+    isAdmin?: boolean,
+    versionId?: number,
+  ): Promise<returnFormatResult | returnErrorDto> {
+    return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
   }
 }

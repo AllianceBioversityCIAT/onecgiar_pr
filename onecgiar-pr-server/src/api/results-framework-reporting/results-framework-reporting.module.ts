@@ -7,10 +7,12 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultsModule } from '../results/results.module';
+import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-products/results-knowledge-products.module';
+import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 
 @Module({
-  imports: [ResultsModule],
+  imports: [ResultsModule, ResultsKnowledgeProductsModule, ResultsTocResultsModule],
   controllers: [ResultsFrameworkReportingController],
   providers: [
     ResultsFrameworkReportingService,

@@ -10,13 +10,18 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 describe('SocketManagementService', () => {
   let service: SocketManagementService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [SocketManagementService],
-    }).compile();
+beforeEach(async () => {
+  process.env.SOCKET_URL = 'http://socket-service';
+  const module: TestingModule = await Test.createTestingModule({
+    providers: [SocketManagementService],
+  }).compile();
 
-    service = module.get<SocketManagementService>(SocketManagementService);
-  });
+  service = module.get<SocketManagementService>(SocketManagementService);
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -53,6 +58,23 @@ describe('SocketManagementService', () => {
         response: null,
         message: '',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    });
+
+    it('should short-circuit when SOCKET_URL is missing', async () => {
+      delete process.env.SOCKET_URL;
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [SocketManagementService],
+      }).compile();
+      const localService = module.get<SocketManagementService>(
+        SocketManagementService,
+      );
+
+      const result = await localService.getActiveUsers();
+      expect(result).toEqual({
+        response: [],
+        message: 'Socket service not configured',
+        status: HttpStatus.OK,
       });
     });
   });
@@ -94,6 +116,31 @@ describe('SocketManagementService', () => {
         response: null,
         message: 'An error occurred while sending notification',
         status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    });
+
+    it('should short-circuit when SOCKET_URL is missing', async () => {
+      delete process.env.SOCKET_URL;
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [SocketManagementService],
+      }).compile();
+      const localService = module.get<SocketManagementService>(
+        SocketManagementService,
+      );
+
+      const notificationDto: NotificationDto = {
+        title: 'Test',
+        desc: 'Test body',
+        result: 'Test result',
+      };
+      const result = await localService.sendNotificationToUsers(
+        ['user1'],
+        notificationDto,
+      );
+      expect(result).toEqual({
+        response: null,
+        message: 'Socket service not configured',
+        status: HttpStatus.OK,
       });
     });
   });

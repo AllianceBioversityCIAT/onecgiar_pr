@@ -62,7 +62,7 @@ export class ResultsController {
     @Body() createResultDto: CreateResultDto,
     @UserToken() user: TokenDto,
   ) {
-    return this.resultsService.createOwnerResult(createResultDto, user);
+    return this.resultsService.createOwnerResultV2(createResultDto, user);
   }
 
   @Get('get/:id')
