@@ -86,7 +86,15 @@
               (onChange)="getUsers()"
               [ngModel]="selectedEntities()"
               [required]="false"
-              [style]="{ width: '100%', height: '38px' }"></p-multiSelect>
+              [group]="true"
+              optionGroupChildren="entities"
+              [style]="{ width: '100%', height: '38px' }">
+              <ng-template let-group #group>
+                <div class="flex items-center">
+                  <span>{{ group.name }}</span>
+                </div>
+              </ng-template>
+            </p-multiSelect>
           </div>
         </div>
 
