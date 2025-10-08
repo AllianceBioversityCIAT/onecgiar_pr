@@ -77,21 +77,6 @@ describe('ResultFrameworkReportingRecentItemComponent', () => {
       // Assert
       expect(result).toBe(expectedUrl);
     });
-
-    it('should log the item when called', () => {
-      // Arrange
-      component.item = mockRecentActivity;
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      // Act
-      component.getResultUrl();
-
-      // Assert
-      expect(consoleSpy).toHaveBeenCalledWith(mockRecentActivity);
-
-      // Cleanup
-      consoleSpy.mockRestore();
-    });
   });
 
   describe('getTooltipText', () => {

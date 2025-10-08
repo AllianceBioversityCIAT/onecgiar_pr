@@ -21,7 +21,8 @@ describe('ResultFrameworkReportingHomeService', () => {
       message: 'Test description 1',
       emitterId: 1,
       emitterName: 'Test Emitter 1',
-      createdAt: new Date('2024-01-01T00:00:00Z')
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+      phase: '1'
     },
     {
       id: 2,
@@ -35,7 +36,8 @@ describe('ResultFrameworkReportingHomeService', () => {
       message: 'Test description 2',
       emitterId: 2,
       emitterName: 'Test Emitter 2',
-      createdAt: new Date('2024-01-02T00:00:00Z')
+      createdAt: new Date('2024-01-02T00:00:00Z'),
+      phase: '2'
     }
   ];
 
@@ -100,7 +102,8 @@ describe('ResultFrameworkReportingHomeService', () => {
           message: 'Initial message',
           emitterId: 1,
           emitterName: 'Initial Emitter',
-          createdAt: new Date('2024-01-03T00:00:00Z')
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          phase: '1'
         }
       ];
       service.recentActivityList.set(initialActivity);
