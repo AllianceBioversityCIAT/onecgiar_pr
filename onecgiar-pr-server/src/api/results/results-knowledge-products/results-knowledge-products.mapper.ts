@@ -55,6 +55,8 @@ export class ResultsKnowledgeProductMapper {
 
     console.log('Country codes from MQAP:', countryCodes);
 
+    knowledgeProductDto.repo = mqapResponseDto?.repo;
+
     knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
     knowledgeProductDto = this.fillRelatedMetadata(
@@ -100,6 +102,7 @@ export class ResultsKnowledgeProductMapper {
       new ResultsKnowledgeProductMetadataDto();
 
     metadataCGSpace.source = knowledgeProductDto.repo;
+    console.log('Metadata source from MQAP:', knowledgeProductDto.repo);
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
