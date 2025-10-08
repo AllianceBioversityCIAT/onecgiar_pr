@@ -479,7 +479,11 @@ export class ResultsKnowledgeProductsService {
     const allClarisaCountries = await this._clarisaCountriesRepository.find();
 
     const normalize = (str: string) =>
-      str?.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      str
+        ?.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
 
     const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
       (mqapValue) => {
@@ -489,9 +493,10 @@ export class ResultsKnowledgeProductsService {
             newKnowledgeProduct.result_object.result_country_array ?? []
           ).find(
             (orc) =>
-              normalize(orc.country_object?.iso_alpha_2) == normalize(mqapValue) ||
+              normalize(orc.country_object?.iso_alpha_2) ==
+                normalize(mqapValue) ||
               normalize(orc.country_object?.name) === normalize(mqapValue),
-            );
+          );
           if (country) {
             country['matched'] = true;
           }
