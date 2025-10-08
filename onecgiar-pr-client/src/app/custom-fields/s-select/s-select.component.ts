@@ -108,10 +108,8 @@ export class SSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen = true; // Only track state if expansion is enabled
     }
   }
-  cont = 0;
   optionsIntance = computed(() => {
     const _optionsIntance: any[] = JSON.parse(JSON.stringify(this.options()));
-    this.cont++;
     if (!this.options()?.length) return [];
 
     _optionsIntance.forEach((resp: any) => {
