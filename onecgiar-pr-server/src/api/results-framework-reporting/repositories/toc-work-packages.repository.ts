@@ -76,7 +76,7 @@ export class TocResultsRepository {
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
-      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
         AND trit.target_date = ${year}
       WHERE 
         wp.wp_official_code = ?
