@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 
 import { SSelectComponent } from './s-select.component';
 import { HttpClientModule } from '@angular/common/http';
@@ -18,6 +19,10 @@ describe('SSelectComponent', () => {
 
     fixture = TestBed.createComponent(SSelectComponent);
     component = fixture.componentInstance;
+
+    // Initialize options as a signal
+    (component as any).options = signal([]);
+
     fixture.detectChanges();
   });
 
