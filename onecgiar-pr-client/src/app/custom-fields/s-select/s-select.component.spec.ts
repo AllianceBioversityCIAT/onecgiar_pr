@@ -1,22 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { PrSelectComponent } from './pr-select.component';
+import { SSelectComponent } from './s-select.component';
 import { HttpClientModule } from '@angular/common/http';
 import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
-import { LabelNamePipe } from './label-name.pipe';
+import { LabelNamePipe } from '../pr-select/label-name.pipe';
 import { FormsModule } from '@angular/forms';
 
-describe('PrSelectComponent', () => {
-  let component: PrSelectComponent;
-  let fixture: ComponentFixture<PrSelectComponent>;
+describe('SSelectComponent', () => {
+  let component: SSelectComponent;
+  let fixture: ComponentFixture<SSelectComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PrSelectComponent, PrFieldHeaderComponent, LabelNamePipe],
+      declarations: [SSelectComponent, PrFieldHeaderComponent, LabelNamePipe],
       imports: [HttpClientModule, FormsModule]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PrSelectComponent);
+    fixture = TestBed.createComponent(SSelectComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
