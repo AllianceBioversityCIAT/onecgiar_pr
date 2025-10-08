@@ -59,4 +59,36 @@ describe('TocResultsRepository', () => {
       debug: true,
     });
   });
+
+  it('should fetch a single ToC result by id', async () => {
+    (mockDataSource.query as jest.Mock).mockResolvedValueOnce([
+      { id: 10, result_title: 'Sample' },
+    ]);
+
+    const result = await repository.findResultById(10);
+
+    expect(mockDataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('FROM toc_test.toc_results'),
+      [10],
+    );
+    expect(result).toEqual({ id: 10, result_title: 'Sample' });
+  });
+
+  it('should fetch a single ToC indicator by id', async () => {
+    (mockDataSource.query as jest.Mock).mockResolvedValueOnce([
+      { id: 50, toc_results_id: 10, toc_result_indicator_id: 'KP-01' },
+    ]);
+
+    const indicator = await repository.findIndicatorById(50);
+
+    expect(mockDataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('FROM toc_test.toc_results_indicators'),
+      [50],
+    );
+    expect(indicator).toEqual({
+      id: 50,
+      toc_results_id: 10,
+      toc_result_indicator_id: 'KP-01',
+    });
+  });
 });

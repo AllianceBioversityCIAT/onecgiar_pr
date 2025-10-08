@@ -7,6 +7,14 @@ import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 import { ResultRepository } from '../results/result.repository';
+import { ResultsService } from '../results/results.service';
+import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
+import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
+import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
+
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
 };
@@ -35,11 +43,41 @@ const mockHandlersError = {
 
 const mockTocResultsRepository = {
   findByCompositeCode: jest.fn(),
+  findResultById: jest.fn(),
+  findIndicatorById: jest.fn(),
+};
+
+const mockResultsService = {
+  createOwnerResultV2: jest.fn(),
+};
+
+const mockResultsKnowledgeProductsService = {
+  create: jest.fn(),
+};
+
+const mockResultsTocResultRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+};
+
+const mockResultsTocResultIndicatorsRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+};
+
+const mockShareResultRequestService = {
+  resultRequest: jest.fn(),
 };
 
 const mockResultRepository = {
   getIndicatorContributionSummaryByProgram: jest.fn(),
   getActiveResultTypes: jest.fn(),
+  getResultById: jest.fn(),
+};
+
+const mockResultsByProjectsService = {
+  linkBilateralProjectToResult: jest.fn(),
 };
 
 describe('ResultsFrameworkReportingService', () => {
@@ -69,6 +107,27 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultRepository,
           useValue: mockResultRepository,
+        },
+        { provide: ResultsService, useValue: mockResultsService },
+        {
+          provide: ResultsKnowledgeProductsService,
+          useValue: mockResultsKnowledgeProductsService,
+        },
+        {
+          provide: ResultsTocResultRepository,
+          useValue: mockResultsTocResultRepository,
+        },
+        {
+          provide: ResultsTocResultIndicatorsRepository,
+          useValue: mockResultsTocResultIndicatorsRepository,
+        },
+        {
+          provide: ShareResultRequestService,
+          useValue: mockShareResultRequestService,
+        },
+        {
+          provide: ResultsByProjectsService,
+          useValue: mockResultsByProjectsService,
         },
       ],
     }).compile();
@@ -547,6 +606,163 @@ describe('ResultsFrameworkReportingService', () => {
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).not.toHaveBeenCalled();
       expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createResultFromFramework', () => {
+    const baseResult = {
+      initiative_id: 15,
+      result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      result_level_id: 2,
+      result_name: 'Test Result',
+      handler: 'handler',
+    } as any;
+
+    beforeEach(() => {
+      mockResultsService.createOwnerResultV2.mockReset();
+      mockResultsKnowledgeProductsService.create.mockReset();
+      mockResultRepository.getResultById.mockReset();
+      mockTocResultsRepository.findResultById.mockReset();
+      mockTocResultsRepository.findIndicatorById.mockReset();
+      mockResultsTocResultRepository.findOne.mockReset();
+      mockResultsTocResultRepository.save.mockReset();
+      mockResultsTocResultRepository.update.mockReset();
+      mockResultsTocResultIndicatorsRepository.findOne.mockReset();
+      mockResultsTocResultIndicatorsRepository.save.mockReset();
+      mockShareResultRequestService.resultRequest.mockReset();
+      mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
+    });
+
+    it('should create a non-knowledge product result and link ToC data', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 101 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({
+        id: 101,
+        result_level_id: 2,
+      });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 555,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 900,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 777,
+        toc_results_id: 555,
+        toc_result_indicator_id: 'IND-1',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      const response: any = await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 555,
+          toc_results: [{ toc_result_indicator_id: 777 }],
+        },
+        user,
+      );
+
+      expect(mockResultsService.createOwnerResultV2).toHaveBeenCalledWith(
+        baseResult,
+        user,
+      );
+      expect(mockResultsKnowledgeProductsService.create).not.toHaveBeenCalled();
+      expect(mockResultsTocResultRepository.save).toHaveBeenCalled();
+      expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
+      expect(
+        mockShareResultRequestService.resultRequest,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledWith(101, undefined, user.id);
+      expect(response.response.tocResultLinkId).toBe(900);
+    });
+
+    it('should create a knowledge product result and reuse existing ToC record', async () => {
+      const kpPayload: any = {
+        id: 202,
+        result_data: baseResult,
+      };
+
+      mockResultsKnowledgeProductsService.create.mockResolvedValueOnce({
+        status: 201,
+        response: kpPayload,
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({
+        id: 202,
+        result_level_id: 3,
+      });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 888,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce({
+        result_toc_result_id: 333,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 999,
+        toc_results_id: 888,
+        toc_result_indicator_id: 'KP-99',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      const response: any = await service.createResultFromFramework(
+        {
+          result: {
+            ...baseResult,
+            result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          },
+          knowledge_product: kpPayload,
+          toc_result_id: 888,
+          toc_results: [{ toc_result_indicator_id: 999 }],
+          contributors_result_toc_result: [
+            {
+              initiative_id: 20,
+              planned_result: true,
+              result_toc_results: [],
+            },
+          ],
+          bilateral_project: {
+            project_id: '260',
+          },
+        },
+        user,
+      );
+
+      expect(mockResultsKnowledgeProductsService.create).toHaveBeenCalled();
+      expect(mockResultsService.createOwnerResultV2).not.toHaveBeenCalled();
+      expect(mockResultsTocResultRepository.update).toHaveBeenCalledWith(333, {
+        toc_result_id: 888,
+        toc_progressive_narrative: null,
+        last_updated_by: user.id,
+        is_active: true,
+      });
+      expect(mockShareResultRequestService.resultRequest).toHaveBeenCalledWith(
+        {
+          initiativeShareId: [20],
+          isToc: false,
+          contributors_result_toc_result: [
+            {
+              initiative_id: 20,
+              planned_result: true,
+              result_toc_results: [],
+            },
+          ],
+        },
+        202,
+        user,
+      );
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledWith(202, '260', user.id);
+      expect(response.status).toBe(201);
+      expect(response.response.knowledgeProduct).toEqual(kpPayload);
     });
   });
 });

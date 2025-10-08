@@ -145,4 +145,73 @@ export class TocResultsRepository {
       });
     }
   }
+
+  async findResultById(tocResultId: number) {
+    const query = `
+      SELECT
+        tr.id,
+        tr.result_title
+      FROM ${env.DB_TOC}.toc_results tr
+      WHERE tr.id = ?
+      LIMIT 1;
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [tocResultId]);
+      return rows?.[0] ?? null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findIndicatorById(indicatorId: number) {
+    const query = `
+      SELECT
+        tri.id,
+        tri.toc_results_id,
+        tri.toc_result_indicator_id
+      FROM ${env.DB_TOC}.toc_results_indicators tri
+      WHERE tri.id = ?
+      LIMIT 1;
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [indicatorId]);
+      return rows?.[0] ?? null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findBilateralProjectById(tocResultId: number) {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.official_code AS official_code,
+        trp.project_id AS project_id, 
+        trp.name AS project_name,
+        trp.project_summary AS project_summary
+      FROM ${env.DB_TOC}.toc_results tr
+      JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      WHERE tr.id = ?
+    `;
+
+    try {
+      return this.dataSource.query(query, [tocResultId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
 }

@@ -1,15 +1,18 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
 import {
   ApiOperation,
   ApiQuery,
+  ApiBody,
   ApiOkResponse,
+  ApiCreatedResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
+import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 
 @Controller()
 @ApiTags('Results Framework and Reporting')
@@ -138,6 +141,45 @@ export class ResultsFrameworkReportingController {
   getProgramIndicatorContributionSummary(@Query('program') program: string) {
     return this.resultsFrameworkReportingService.getProgramIndicatorContributionSummary(
       program,
+    );
+  }
+
+  @Post('create')
+  @ApiOperation({
+    summary: 'Create result header through reporting workflow',
+    description:
+      'Creates a new result (or knowledge product) and links it to ToC elements when provided.',
+  })
+  @ApiBody({ type: CreateResultsFrameworkResultDto })
+  @ApiCreatedResponse({ description: 'Result created successfully.' })
+  createResultFromFramework(
+    @Body() payload: CreateResultsFrameworkResultDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsFrameworkReportingService.createResultFromFramework(
+      payload,
+      user,
+    );
+  }
+
+  @Get('bilateral-projects')
+  @ApiOperation({
+    summary: 'List bilateral projects for a program and toc result',
+    description:
+      'Validates the user membership to the provided initiative and returns the bilateral projects mapped to that program for the active reporting year.',
+  })
+  @ApiQuery({
+    name: 'tocResultId',
+    type: Number,
+    required: true,
+    description: 'ToC Result ID to filter the bilateral projects.',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral projects retrieved successfully.',
+  })
+  getBilateralProjects(@Query('tocResultId') tocResultId: number) {
+    return this.resultsFrameworkReportingService.getBilateralProjectsByProgramAndTocResult(
+      tocResultId,
     );
   }
 }

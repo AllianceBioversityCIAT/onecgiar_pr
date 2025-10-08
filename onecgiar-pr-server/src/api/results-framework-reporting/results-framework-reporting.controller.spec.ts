@@ -18,6 +18,7 @@ describe('ResultsFrameworkReportingController', () => {
             getGlobalUnitsByProgram: jest.fn(),
             getWorkPackagesByProgramAndArea: jest.fn(),
             getProgramIndicatorContributionSummary: jest.fn(),
+            createResultFromFramework: jest.fn(),
           },
         },
         {
@@ -108,6 +109,18 @@ describe('ResultsFrameworkReportingController', () => {
       expect(
         reportingService.getProgramIndicatorContributionSummary,
       ).toHaveBeenCalledWith('SP05');
+    });
+  });
+
+  describe('createResultFromFramework', () => {
+    it('should delegate to reporting service', () => {
+      reportingService.createResultFromFramework.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.createResultFromFramework({} as any, { id: 1 } as any);
+
+      expect(reportingService.createResultFromFramework).toHaveBeenCalled();
     });
   });
 });
