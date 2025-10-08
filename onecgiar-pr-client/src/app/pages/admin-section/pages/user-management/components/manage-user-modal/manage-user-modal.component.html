@@ -179,7 +179,13 @@
           <!-- Created By -->
           <div class="form-field">
             <div class="field-label">Created by</div>
-            <div class="created-by">{{ currentUserName }} ({{ currentUserEmail }})</div>
+            <div class="created-by">
+              @if (editingMode()) {
+                {{ addUserForm().created_by }}
+              } @else {
+                {{ currentUserName }} ({{ currentUserEmail }})
+              }
+            </div>
           </div>
         </div>
       }

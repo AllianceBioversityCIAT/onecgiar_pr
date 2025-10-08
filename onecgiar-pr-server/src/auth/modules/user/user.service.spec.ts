@@ -911,6 +911,9 @@ describe('UserService', () => {
           userStatus: 'Active',
           userCreationDate: new Date(),
           entities: 'ENT-001, ENT-002',
+          createdByFirstName: 'Creator',
+          createdByLastName: 'Owner',
+          createdByEmail: 'creator@example.com',
         },
       ];
 

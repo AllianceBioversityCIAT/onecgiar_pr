@@ -717,6 +717,7 @@ export class UserService {
         .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
         .leftJoin('role', 'rol', 'rol.id = rbu.role')
         .leftJoin('role_levels', 'rlvl', 'rol.role_level_id = rlvl.id')
+        .leftJoin(User, 'creator', 'creator.id = users.created_by')
         .select([
           'users.first_name AS "firstName"',
           'users.last_name AS "lastName"',
@@ -736,6 +737,9 @@ export class UserService {
             ORDER BY ent.official_code SEPARATOR ', '
           ) AS "entities"
           `,
+          'creator.first_name AS "createdByFirstName"',
+          'creator.last_name AS "createdByLastName"',
+          'creator.email AS "createdByEmail"',
         ])
         .groupBy('users.id');
 
@@ -838,7 +842,10 @@ export class UserService {
         .addGroupBy('users.email')
         .addGroupBy('users.is_cgiar')
         .addGroupBy('users.active')
-        .addGroupBy('users.created_date');
+        .addGroupBy('users.created_date')
+        .addGroupBy('creator.first_name')
+        .addGroupBy('creator.last_name')
+        .addGroupBy('creator.email');
 
       if (status) {
         query.having(`userStatus = :status`, { status });

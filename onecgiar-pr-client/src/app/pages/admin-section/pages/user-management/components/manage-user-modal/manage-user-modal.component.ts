@@ -24,6 +24,7 @@ interface AddUserForm {
     role_id: number;
     entity_id: number;
   }[];
+  created_by?: string;
 }
 
 @Component({
