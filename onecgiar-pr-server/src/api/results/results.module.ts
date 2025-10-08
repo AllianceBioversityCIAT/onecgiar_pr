@@ -86,6 +86,7 @@ import { NotificationTypeRepository } from '../notification/repositories/notific
 import { NotificationRepository } from '../notification/repositories/notification.respository';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
 
 @Module({
   controllers: [ResultsController],
@@ -142,6 +143,7 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     ResultFoldersModule,
     AdUsersModule,
     NotificationModule,
+    ResultsByProjectsModule,
   ],
   providers: [
     ResultsService,
