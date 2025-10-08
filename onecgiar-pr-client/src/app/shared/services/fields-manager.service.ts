@@ -10,7 +10,7 @@ enum Portfolios {
 })
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
-  show = signal(false);
+
   portfolioAcronym = signal('P25');
   fields = computed<Record<string, CustomField>>(() => {
     return {
@@ -38,10 +38,8 @@ export class FieldsManagerService {
     };
   });
   constructor() {
-    // setInterval(() => {
-    //   this.show.set(!this.show());
-    //   this.portfolioAcronym.set(this.portfolioAcronym() === 'P22' ? 'P25' : 'P22');
-    //   console.log(this.show());
-    // }, 1000);
+    setInterval(() => {
+      this.portfolioAcronym.set(this.portfolioAcronym() === 'P22' ? 'P25' : 'P22');
+    }, 1000);
   }
 }
