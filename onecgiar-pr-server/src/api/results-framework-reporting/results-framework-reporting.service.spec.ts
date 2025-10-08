@@ -11,8 +11,8 @@ import { ResultsService } from '../results/results.service';
 import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { ResultsTocResultsService } from '../results/results-toc-results/results-toc-results.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
 };
@@ -64,8 +64,8 @@ const mockResultsTocResultIndicatorsRepository = {
   save: jest.fn(),
 };
 
-const mockResultsTocResultsService = {
-  saveResultTocResultContributor: jest.fn(),
+const mockShareResultRequestService = {
+  resultRequest: jest.fn(),
 };
 
 const mockResultRepository = {
@@ -117,8 +117,8 @@ describe('ResultsFrameworkReportingService', () => {
           useValue: mockResultsTocResultIndicatorsRepository,
         },
         {
-          provide: ResultsTocResultsService,
-          useValue: mockResultsTocResultsService,
+          provide: ShareResultRequestService,
+          useValue: mockShareResultRequestService,
         },
       ],
     }).compile();
@@ -620,7 +620,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultRepository.update.mockReset();
       mockResultsTocResultIndicatorsRepository.findOne.mockReset();
       mockResultsTocResultIndicatorsRepository.save.mockReset();
-      mockResultsTocResultsService.saveResultTocResultContributor.mockReset();
+      mockShareResultRequestService.resultRequest.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -664,6 +664,7 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockResultsKnowledgeProductsService.create).not.toHaveBeenCalled();
       expect(mockResultsTocResultRepository.save).toHaveBeenCalled();
       expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
+      expect(mockShareResultRequestService.resultRequest).not.toHaveBeenCalled();
       expect(response.status).toBe(201);
       expect(response.response.tocResultLinkId).toBe(900);
     });
@@ -725,9 +726,21 @@ describe('ResultsFrameworkReportingService', () => {
         last_updated_by: user.id,
         is_active: true,
       });
-      expect(
-        mockResultsTocResultsService.saveResultTocResultContributor,
-      ).toHaveBeenCalled();
+      expect(mockShareResultRequestService.resultRequest).toHaveBeenCalledWith(
+        {
+          initiativeShareId: [20],
+          isToc: false,
+          contributors_result_toc_result: [
+            {
+              initiative_id: 20,
+              planned_result: true,
+              result_toc_results: [],
+            },
+          ],
+        },
+        202,
+        user,
+      );
       expect(response.status).toBe(201);
       expect(response.response.knowledgeProduct).toEqual(kpPayload);
     });

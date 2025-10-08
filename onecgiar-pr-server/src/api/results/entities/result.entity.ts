@@ -32,6 +32,7 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
+import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 
 @Entity()
 export class Result {
@@ -414,4 +415,7 @@ export class Result {
 
   @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
   obj_result_qaed: ResultQaedLog[];
+
+  @OneToMany(() => ResultsByProjects, (rbp) => rbp.obj_result_project)
+  obj_result_by_project: ResultsByProjects[];
 }

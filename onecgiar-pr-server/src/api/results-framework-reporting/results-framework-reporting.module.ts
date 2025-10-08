@@ -9,10 +9,11 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultsModule } from '../results/results.module';
 import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-products/results-knowledge-products.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
+import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 
 @Module({
-  imports: [ResultsModule, ResultsKnowledgeProductsModule, ResultsTocResultsModule],
+  imports: [ResultsModule, ResultsKnowledgeProductsModule, ResultsTocResultsModule, ShareResultRequestModule],
   controllers: [ResultsFrameworkReportingController],
   providers: [
     ResultsFrameworkReportingService,

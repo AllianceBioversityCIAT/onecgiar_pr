@@ -16,8 +16,9 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { ResultsTocResultsService } from '../results/results-toc-results/results-toc-results.service';
 import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
+import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
+import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -34,7 +35,7 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
-    private readonly _resultsTocResultsService: ResultsTocResultsService,
+    private readonly _shareResultRequestService: ShareResultRequestService,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -418,13 +419,23 @@ export class ResultsFrameworkReportingService {
       }
 
       if (payload.contributors_result_toc_result?.length) {
-        await this._resultsTocResultsService.saveResultTocResultContributor(
-          payload.contributors_result_toc_result,
-          user,
-          resultSummary,
-          createdResultId,
-          initiativeId,
-        );
+        const initiativeShareId = payload.contributors_result_toc_result
+          .map((contributor) => Number(contributor.initiative_id))
+          .filter((id) => Number.isFinite(id) && id > 0);
+
+        if (initiativeShareId.length) {
+          const shareRequest: CreateTocShareResult = {
+            initiativeShareId,
+            isToc: false,
+            contributors_result_toc_result: payload.contributors_result_toc_result,
+          };
+
+          await this._shareResultRequestService.resultRequest(
+            shareRequest,
+            createdResultId,
+            user,
+          );
+        }
       }
 
       return {
