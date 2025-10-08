@@ -32,6 +32,7 @@ export class FieldsManagerService {
     <li>Ensure the description is understandable for a non-specialist reader.</li>
      <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>
+      ${Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? '<li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
     </ul>`
       }
     };
