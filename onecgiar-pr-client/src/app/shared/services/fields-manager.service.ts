@@ -1,7 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
 import { DataControlService } from './data-control.service';
-
+enum Portfolios {
+  'P22' = 0,
+  'P25' = 1
+}
 @Injectable({
   providedIn: 'root'
 })
@@ -10,8 +13,6 @@ export class FieldsManagerService {
   show = signal(false);
   portfolioAcronym = signal('P22');
   fields = computed<Record<string, CustomField>>(() => {
-    console.log('fields');
-    console.log(this.dataControlSE.currentResultSignal().portfolio);
     return {
       '[general-info]-description': {
         label: 'Description',
@@ -28,9 +29,10 @@ export class FieldsManagerService {
         placeholder: 'Enter text',
         show: true,
         description: `<ul>
-    <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
-    <li>Avoid abbreviations or (technical) jargon.</li>
-    </ul>`
+            <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
+            <li>Avoid abbreviations or (technical) jargon.</li>
+            ${Portfolios[this.dataControlSE.currentResultSignal().portfolio] == Portfolios.P25 && 'For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).'}
+          </ul>`
       }
     };
   });
