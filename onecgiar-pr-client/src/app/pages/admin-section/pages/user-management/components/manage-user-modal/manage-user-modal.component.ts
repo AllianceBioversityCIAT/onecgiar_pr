@@ -68,6 +68,8 @@ export class ManageUserModalComponent {
   isLoading = signal<boolean>(false);
 
   entities = computed(() => this.initiativesService.allInitiatives());
+  loadingRoleAssignment = signal<boolean>(true);
+  disabledRoleAssignmentOptions = signal([]);
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
@@ -106,11 +108,19 @@ export class ManageUserModalComponent {
     this.clearUserSearch();
   }
 
+  updateDisableOptions() {
+    const selectedRoleAssignments = this.addUserForm().role_assignments;
+    const selectedEntities = selectedRoleAssignments.map(item => item.entity_id);
+    const disableOptions = this.entities().filter(entity => selectedEntities.includes(entity.initiative_id));
+    this.disabledRoleAssignmentOptions.set(disableOptions);
+  }
+
   onRoleEntityChange(event: number, index: number): void {
     this.addUserForm.update(form => ({
       ...form,
       role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, entity_id: event } : item))
     }));
+    this.updateDisableOptions();
   }
 
   onRoleAssignmentChange(event: number, index: number): void {
@@ -142,10 +152,16 @@ export class ManageUserModalComponent {
   }
 
   removeRoleAssignment(index: number) {
+    this.loadingRoleAssignment.set(false);
     this.addUserForm.update(form => ({
       ...form,
       role_assignments: form.role_assignments.filter((_, i) => i !== index)
     }));
+
+    setTimeout(() => {
+      this.updateDisableOptions();
+      this.loadingRoleAssignment.set(true);
+    }, 0);
   }
 
   onModalCgiarChange(isCgiar: boolean): void {
@@ -373,6 +389,7 @@ export class ManageUserModalComponent {
     this.editingMode.set(false);
     this.userActivatorMode.set(false);
     this.resetAddUserForm();
+    this.disabledRoleAssignmentOptions.set([]);
   }
 
   get currentUserName(): string {
