@@ -40,10 +40,11 @@ export class PrTextareaComponent implements ControlValueAccessor {
 
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { show, label, placeholder, description } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { show, label, placeholder, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
+    this.required = required;
     return show;
   });
 

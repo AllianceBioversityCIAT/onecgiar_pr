@@ -4,4 +4,5 @@ export interface CustomField {
   type?: string;
   show?: boolean;
   description?: string;
+  required?: boolean;
 }

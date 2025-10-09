@@ -54,7 +54,6 @@
   <app-pr-textarea
     fieldRef="[general-info]-description"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
-    [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="150"></app-pr-textarea>
 
