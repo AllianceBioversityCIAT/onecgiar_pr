@@ -153,6 +153,17 @@
           <td>{{ user.emailAddress }}</td>
           <td>
             <div class="entities-container">
+              @if (user.appRole) {
+                <div class="app-role-chip" [class.admin-role]="(user.appRole || '').toLowerCase() === 'admin'">
+                  <span>{{ user.appRole }}</span>
+                </div>
+              } @else {
+                <span class="no-entities">No platform role assigned</span>
+              }
+            </div>
+          </td>
+          <td>
+            <div class="entities-container">
               @if (user.entities?.length > 0) {
                 @let displayEntities = getDisplayEntities(user.entities);
                 @for (entity of displayEntities; track entity) {
@@ -178,12 +189,8 @@
                     </div>
                   </p-popover>
                 }
-              } @else if (user.appRole) {
-                <div class="app-role-chip">
-                  <span>{{ user.appRole }}</span>
-                </div>
               } @else {
-                <span class="no-entities">No app role or entities.</span>
+                <span class="no-entities">No reporting role assigned</span>
               }
             </div>
           </td>
