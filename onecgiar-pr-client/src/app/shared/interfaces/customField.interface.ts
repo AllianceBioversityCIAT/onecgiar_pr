@@ -2,7 +2,7 @@ export interface CustomField {
   label?: string;
   placeholder?: string;
   type?: string;
-  show?: boolean;
+  hide?: boolean;
   description?: string;
   required?: boolean;
 }

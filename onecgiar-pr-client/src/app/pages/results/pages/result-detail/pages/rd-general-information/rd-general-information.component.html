@@ -143,7 +143,8 @@
   </div>
 
   <app-pr-yes-or-not
-    label="Is this result featured in a Key Result Story for the reporting year?"
+    fieldRef="[general-info]-is_krs"
+    label="yes"
     [(ngModel)]="this.generalInfoBody.is_krs"
     (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 

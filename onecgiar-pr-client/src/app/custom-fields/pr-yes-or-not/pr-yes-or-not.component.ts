@@ -1,20 +1,21 @@
-import { Component, forwardRef, Input, EventEmitter, Output } from '@angular/core';
+import { Component, forwardRef, Input, EventEmitter, Output, computed, inject } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-pr-yes-or-not',
-    templateUrl: './pr-yes-or-not.component.html',
-    styleUrls: ['./pr-yes-or-not.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrYesOrNotComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-yes-or-not',
+  templateUrl: './pr-yes-or-not.component.html',
+  styleUrls: ['./pr-yes-or-not.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrYesOrNotComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrYesOrNotComponent {
   @Input() label: string;
@@ -28,11 +29,23 @@ export class PrYesOrNotComponent {
   @Input() showDescriptionLabel: boolean = true;
   @Input() descInlineStyles: string = '';
   @Input() labelDescInlineStyles?: string = '';
+  @Input() fieldRef: string | number;
 
   @Output() selectOptionEvent = new EventEmitter<boolean>();
   private _value: boolean;
+  fieldsManager = inject(FieldsManagerService);
 
-  constructor(public rolesSE: RolesService, public dataControlSE: DataControlService) {}
+  dynamicData = computed<boolean>(() => {
+    if (!this.fieldRef) return true;
+    const { hide, label } = this.fieldsManager.fields()[this.fieldRef] || {};
+    this.label = label;
+    return !hide;
+  });
+
+  constructor(
+    public rolesSE: RolesService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get value() {
     return this._value;

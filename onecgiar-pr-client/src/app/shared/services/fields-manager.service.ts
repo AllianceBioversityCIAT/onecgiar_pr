@@ -13,15 +13,10 @@ export class FieldsManagerService {
 
   portfolioAcronym = signal('P25');
   fields = computed<Record<string, CustomField>>(() => {
-    console.log('fields');
-    console.log(this.dataControlSE.isKnowledgeProductSignal());
-    console.log(this.dataControlSE.currentResultSignal());
-    console.log(this.dataControlSE.currentResultSignal()?.result_type_id);
-    return {
+    const fields: Record<string, CustomField> = {
       '[general-info]-title': {
         label: 'Title',
         placeholder: 'Enter text',
-        show: true,
         description: `<ul>
             <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
             <li>Avoid abbreviations or (technical) jargon.</li>
@@ -31,7 +26,6 @@ export class FieldsManagerService {
       '[general-info]-description': {
         label: 'Description',
         placeholder: 'Enter text',
-        show: true,
         required: !this.dataControlSE.isKnowledgeProductSignal(),
         description: `<ul>
     <li>Ensure the description is understandable for a non-specialist reader.</li>
@@ -43,12 +37,16 @@ export class FieldsManagerService {
       '[general-info]-lead_contact_person': {
         label: 'Lead contact person',
         placeholder: 'Search for a person (min 4 characters)',
-        show: true,
         description: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
         required: Portfolios[this.portfolioAcronym()] == Portfolios.P25
+      },
+      '[general-info]-is_krs': {
+        label: 'Is this result featured in a Key Result Story for the reporting year?',
+        hide: Portfolios[this.portfolioAcronym()] == Portfolios.P25
       }
     };
+    return fields;
   });
   constructor() {
     // setInterval(() => {

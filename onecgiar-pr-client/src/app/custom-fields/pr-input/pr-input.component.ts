@@ -51,14 +51,14 @@ export class PrInputComponent implements ControlValueAccessor {
 
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { show, label, placeholder, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { hide, label, placeholder, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
     console.log(this.fieldRef);
     this.required = required;
     console.log(this.required);
-    return show;
+    return !hide;
   });
 
   constructor(
