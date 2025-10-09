@@ -145,7 +145,7 @@
           <td>
             <div class="entities-container">
               @if (user.appRole) {
-                <div class="app-role-chip">
+                <div class="app-role-chip" [class.admin-role]="(user.appRole || '').toLowerCase() === 'admin'">
                   <span>{{ user.appRole }}</span>
                 </div>
               } @else {

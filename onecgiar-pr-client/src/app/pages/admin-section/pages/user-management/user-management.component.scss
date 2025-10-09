@@ -167,6 +167,11 @@
   span {
     line-height: 1;
   }
+
+  &.admin-role {
+    background-color: #edf1ff;
+    color: #9ca2c3;
+  }
 }
 
 // Controls section
