@@ -155,8 +155,8 @@
   border-radius: 12px;
   @include fonts.pr-typography('body-2');
   font-weight: 600;
-  background-color: #fff7d6; // Amarillo claro
-  color: #b59f3b; // Amarillo oscuro
+  background-color: var(--pr-color-yellow-50);
+  color: var(--pr-color-yellow-100);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border: none;
@@ -169,8 +169,8 @@
   }
 
   &.admin-role {
-    background-color: #edf1ff;
-    color: #9ca2c3;
+    background-color: var(--pr-color-primary-50);
+    color: var(--pr-color-secondary-100);
   }
 }
 
