@@ -1,4 +1,7 @@
-@let isP25 = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
+@let isP25 =
+  this.ipsrDataControlSE.inIpsr
+    ? this.api.dataControlSE.IPSRCurrentPhase.portfolioAcronym === 'P25'
+    : this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
 
 <p-dialog
   appendTo="body"

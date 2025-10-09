@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import * as FileSaver from 'file-saver';
-import * as ExcelJS from 'exceljs';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import { OutcomeIndicatorService } from '../../pages/outcome-indicator/services/outcome-indicator.service';
 
@@ -37,7 +36,8 @@ export class ExportTablesService {
     }[]
   ) {
     try {
-      import('exceljs').then(async ExcelJS => {
+      import('exceljs').then(async ExcelJSModule => {
+        const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
 
@@ -71,7 +71,8 @@ export class ExportTablesService {
 
   exportExcelAdminKP(list: any[], fileName: string, wscols?: any[], callback?: () => void) {
     try {
-      import('exceljs').then(async ExcelJS => {
+      import('exceljs').then(async ExcelJSModule => {
+        const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
 
@@ -138,7 +139,8 @@ export class ExportTablesService {
 
   exportExcelIpsr(list: any[], fileName: string, wscols?: any[], callback?: () => void, isIPSR = false) {
     try {
-      import('exceljs').then(async ExcelJS => {
+      import('exceljs').then(async ExcelJSModule => {
+        const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
 
@@ -176,7 +178,8 @@ export class ExportTablesService {
 
   async exportMultipleSheetsExcel(list: any[], fileName: string, wscolsResults?: any[], tocToExport?: any[], wscolsToc?: any[], callback?) {
     try {
-      await import('exceljs').then(async ExcelJS => {
+      await import('exceljs').then(async ExcelJSModule => {
+        const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
         const tocSheet = workbook.addWorksheet('TOC indicators by result');
@@ -228,7 +231,8 @@ export class ExportTablesService {
     callback?;
   }) {
     try {
-      await import('exceljs').then(async ExcelJS => {
+      await import('exceljs').then(async ExcelJSModule => {
+        const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
 
         if (EOIsConfig?.data?.length > 0) {
@@ -281,7 +285,7 @@ export class ExportTablesService {
     index,
     showInitiativeCode
   }: {
-    worksheet: ExcelJS.Worksheet;
+    worksheet: any;
     data: any;
     isT1R: boolean;
     index: number;
@@ -338,17 +342,7 @@ export class ExportTablesService {
     }
   }
 
-  private addWPSRow({
-    worksheet,
-    data,
-    isT1R,
-    showInitiativeCode
-  }: {
-    worksheet: ExcelJS.Worksheet;
-    data: any;
-    isT1R: boolean;
-    showInitiativeCode: boolean;
-  }) {
+  private addWPSRow({ worksheet, data, isT1R, showInitiativeCode }: { worksheet: any; data: any; isT1R: boolean; showInitiativeCode: boolean }) {
     if (!data.workpackage_name) {
       return;
     }
@@ -408,7 +402,7 @@ export class ExportTablesService {
     });
   }
 
-  private formatWorksheet(worksheet: ExcelJS.Worksheet, cellsToCenter?: number[]) {
+  private formatWorksheet(worksheet: any, cellsToCenter?: number[]) {
     worksheet.getRow(1).height = 20;
 
     worksheet.getRow(1).eachCell(cell => {
