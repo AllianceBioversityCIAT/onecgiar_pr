@@ -55,6 +55,12 @@ export class FieldsManagerService {
       },
       '[general-info]-nutrition_tag_level_id': {
         label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`
+      },
+      '[general-info]-environmental_biodiversity_tag_level_id': {
+        label: `Environmental health and biodiversity ${this.isP25() ? 'tag' : 'score'}`
+      },
+      '[general-info]-poverty_tag_level_id': {
+        label: `Poverty reduction, livelihoods and jobs ${this.isP25() ? 'tag' : 'score'}`
       }
     };
     return fields;
