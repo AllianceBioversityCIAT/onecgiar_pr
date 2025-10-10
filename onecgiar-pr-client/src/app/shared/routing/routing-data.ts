@@ -4,12 +4,6 @@ import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   {
-    prName: '',
-    path: '',
-    pathMatch: 'full',
-    redirectTo: 'result-framework-reporting'
-  },
-  {
     prName: 'Results Framework & Reporting',
     underConstruction: false,
     canActivate: [CheckLoginGuard],
