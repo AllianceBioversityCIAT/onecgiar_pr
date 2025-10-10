@@ -72,6 +72,7 @@
   <h1 class="pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 
+  <!------- [1] ------->
   <div class="block_container">
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -89,10 +90,11 @@
       optionLabel="full_name"
       optionValue="id"
       label="Which component of the Impact Area is this result intended to impact?"
-      [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
     </app-pr-radio-button>
   </div>
 
+  <!------- [2] ------->
   <div class="block_container">
     <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
@@ -110,10 +112,11 @@
       optionLabel="full_name"
       optionValue="id"
       label="Which component of the Impact Area is this result intended to impact?"
-      [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
     </app-pr-radio-button>
   </div>
 
+  <!------- [3] ------->
   <div class="block_container">
     <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -131,10 +134,11 @@
       optionLabel="full_name"
       optionValue="id"
       label="Which component of the Impact Area is this result intended to impact?"
-      [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
     </app-pr-radio-button>
   </div>
 
+  <!------- [4] ------->
   <div class="block_container">
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -152,10 +156,11 @@
       optionLabel="full_name"
       optionValue="id"
       label="Which component of the Impact Area is this result intended to impact?"
-      [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
     </app-pr-radio-button>
   </div>
 
+  <!------- [5] ------->
   <div class="block_container">
     <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -173,7 +178,7 @@
       optionLabel="full_name"
       optionValue="id"
       label="Which component of the Impact Area is this result intended to impact?"
-      [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
     </app-pr-radio-button>
   </div>
 
