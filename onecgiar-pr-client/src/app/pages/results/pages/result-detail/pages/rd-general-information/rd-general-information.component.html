@@ -85,12 +85,15 @@
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
-    <app-pr-radio-button
-      [options]="this.scoreSE.genderTagScoreList"
-      optionLabel="full_name"
-      optionValue="id"
-      [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.generalInfoBody.gender_tag_id == 3) {
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        fieldRef="[general-info]-gender_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <!------- [2] ------->
@@ -106,12 +109,15 @@
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
-    <app-pr-radio-button
-      [options]="this.scoreSE.genderTagScoreList"
-      optionLabel="full_name"
-      optionValue="id"
-      [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.generalInfoBody.climate_change_tag_id == 3) {
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        fieldRef="[general-info]-climate_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <!------- [3] ------->
@@ -127,12 +133,15 @@
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
-    <app-pr-radio-button
-      [options]="this.scoreSE.genderTagScoreList"
-      optionLabel="full_name"
-      optionValue="id"
-      [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        fieldRef="[general-info]-nutrition_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <!------- [4] ------->
@@ -148,12 +157,15 @@
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
-    <app-pr-radio-button
-      [options]="this.scoreSE.genderTagScoreList"
-      optionLabel="full_name"
-      optionValue="id"
-      [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <!------- [5] ------->
@@ -169,12 +181,15 @@
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
-    <app-pr-radio-button
-      [options]="this.scoreSE.genderTagScoreList"
-      optionLabel="full_name"
-      optionValue="id"
-      [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.generalInfoBody.poverty_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        fieldRef="[general-info]-poverty_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <app-pr-yes-or-not
