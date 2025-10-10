@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -10,6 +10,7 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { PusherService } from '../../../../../../shared/services/pusher.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 import { UserSearchService } from './services/user-search-service.service';
+import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -21,6 +22,8 @@ export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
+
+  getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
   constructor(
     public api: ApiService,

@@ -1207,4 +1207,8 @@ export class ResultsApiService {
   POST_fileMining(formData: FormData, headers: HttpHeaders) {
     return this.http.post<any>(`${environment.textMiningUrl}prms/text-mining`, formData, { headers });
   }
+
+  GET_impactAreasScoresComponentsAll() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
+  }
 }
