@@ -55,9 +55,7 @@ export class PrInputComponent implements ControlValueAccessor {
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
-    console.log(this.fieldRef);
     this.required = required;
-    console.log(this.required);
     return !hide;
   });
 

@@ -44,6 +44,9 @@ export class FieldsManagerService {
       '[general-info]-is_krs': {
         label: 'Is this result featured in a Key Result Story for the reporting year?',
         hide: Portfolios[this.portfolioAcronym()] == Portfolios.P25
+      },
+      '[general-info]-gender_tag_id': {
+        label: Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
       }
     };
     return fields;

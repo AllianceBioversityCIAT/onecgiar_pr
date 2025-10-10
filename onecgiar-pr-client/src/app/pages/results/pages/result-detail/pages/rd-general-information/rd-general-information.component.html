@@ -79,7 +79,17 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Gender equality score"
+        fieldRef="[general-info]-gender_tag_id"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
+      <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+    </div>
+    <div class="radio_grid">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Which component of the Impact Area is this result intended to impact?"
         [(ngModel)]="this.generalInfoBody.gender_tag_id">
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
@@ -98,6 +108,16 @@
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
+    <div class="radio_grid">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Which component of the Impact Area is this result intended to impact?"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
+      <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+    </div>
   </div>
 
   <div class="block_container">
@@ -111,6 +131,16 @@
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
+    </div>
+    <div class="radio_grid">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Which component of the Impact Area is this result intended to impact?"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
+      <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
   </div>
 
@@ -126,6 +156,16 @@
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
+    <div class="radio_grid">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Which component of the Impact Area is this result intended to impact?"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
+      <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
+    </div>
   </div>
 
   <div class="block_container">
@@ -139,6 +179,16 @@
         [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
+    </div>
+    <div class="radio_grid">
+      <app-pr-radio-button
+        [options]="this.scoreSE.genderTagScoreList"
+        optionLabel="full_name"
+        optionValue="id"
+        label="Which component of the Impact Area is this result intended to impact?"
+        [(ngModel)]="this.generalInfoBody.gender_tag_id">
+      </app-pr-radio-button>
+      <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
   </div>
 
