@@ -9,10 +9,10 @@ import { RolesService } from '../../../../../../../shared/services/global/roles.
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-    selector: 'app-knowledge-product-info',
-    templateUrl: './knowledge-product-info.component.html',
-    styleUrls: ['./knowledge-product-info.component.scss'],
-    standalone: false
+  selector: 'app-knowledge-product-info',
+  templateUrl: './knowledge-product-info.component.html',
+  styleUrls: ['./knowledge-product-info.component.scss'],
+  standalone: false
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
@@ -86,6 +86,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
     mapped.onlineYearCG = response.metadataCG?.online_year;
+    const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
+    mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
 
     this.fair_data = this.filterOutObject(response.fair_data);
 
