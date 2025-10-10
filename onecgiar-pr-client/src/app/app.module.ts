@@ -21,7 +21,6 @@ import { DialogModule } from 'primeng/dialog';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
-import { FormatTimeAgoModule } from './shared/pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 import { SocketIoModule } from 'ngx-socket-io';
 import { ToastModule } from 'primeng/toast';
@@ -34,6 +33,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import { reportingTheme } from './theme/reportingTheme';
 import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -58,7 +58,7 @@ function initializeClarityService(clarityService: ClarityService) {
     HeaderPanelComponent,
     NavigationBarComponent,
     TawkComponent,
-    FormatTimeAgoModule,
+    FormatTimeAgoPipe,
     ToastModule,
     TooltipModule,
     PopUpNotificationItemComponent,

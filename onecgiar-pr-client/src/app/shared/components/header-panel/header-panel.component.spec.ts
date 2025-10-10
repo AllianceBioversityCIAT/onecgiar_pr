@@ -40,6 +40,7 @@ describe('HeaderPanelComponent', () => {
     expect(updateUserDataSpy).toHaveBeenCalled();
     expect(getUpdatesNotificationsSpy).toHaveBeenCalled();
     expect(getUpdatesPopUpNotificationsSpy).toHaveBeenCalled();
+    expect(getCurrentPhasesSpy).toHaveBeenCalled();
 
     getUpdatesNotificationsSpy.mockRestore();
     getUpdatesPopUpNotificationsSpy.mockRestore();

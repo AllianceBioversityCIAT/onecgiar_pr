@@ -1,0 +1,58 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.recent-activity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: var(--pr-color-accents-1);
+  border-radius: 10px;
+  padding: 15px 12px;
+}
+
+.recent-activity-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.recent-activity-card__row_left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.recent-activity-card__title {
+  @include fonts.pr-typography('body-1');
+  max-width: 205px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pr-color-secondary-400);
+}
+
+.recent-activity-card__time {
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-secondary-100);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.recent-activity-card__desc {
+  @include fonts.pr-typography('body-3');
+  color: var(--pr-color-accents-6);
+  font-weight: 400;
+}
