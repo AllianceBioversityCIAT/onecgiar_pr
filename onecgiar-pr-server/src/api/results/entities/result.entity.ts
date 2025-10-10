@@ -33,6 +33,11 @@ import { ContributionToIndicatorResult } from '../../contribution-to-indicators/
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
 
+export enum SourceEnum {
+  Result = 'Result',
+  Bilateral = 'API',
+}
+
 @Entity()
 export class Result {
   @PrimaryGeneratedColumn({
@@ -363,6 +368,16 @@ export class Result {
 
   @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
   is_lead_by_partner: boolean;
+
+  @Column({
+    name: 'source',
+    nullable: true,
+    default: 'Result',
+    enum: SourceEnum,
+    type: 'enum',
+    enumName: 'source_enum',
+  })
+  source: SourceEnum = SourceEnum.Result;
 
   // helpers??
   initiative_id!: number;

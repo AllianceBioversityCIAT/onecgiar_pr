@@ -19,6 +19,7 @@ import { ResultInnovationPackageRepository } from '../result-innovation-package/
 import { SaveStepFour } from './dto/save-step-four.dto';
 import { InnovationPathwayStepFourService } from './innovation-pathway-step-four.service';
 import { Version } from '../../versioning/entities/version.entity';
+import { SourceEnum } from '../../results/entities/result.entity';
 
 interface InstitutionsInterface {
   institutions_id: number;
@@ -368,6 +369,7 @@ describe('InnovationPathwayStepFourService', () => {
         justification_action_type: null,
         is_lead_by_partner: false,
         initiative_id: 1,
+        source: SourceEnum.Result,
         obj_result_type: null,
         obj_result_level: null,
         obj_gender_tag_level: null,
