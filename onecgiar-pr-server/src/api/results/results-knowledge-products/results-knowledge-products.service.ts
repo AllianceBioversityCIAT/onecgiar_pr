@@ -150,6 +150,8 @@ export class ResultsKnowledgeProductsService {
 
       const confidenceThreshold = +globalParameter.value;
 
+      console.log('Justo antes de llamar a CGSpace');
+
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
         user,
@@ -157,12 +159,16 @@ export class ResultsKnowledgeProductsService {
         false,
       );
 
+      console.log('CGSpace response:', cgspaceResponse);
+
       if (cgspaceResponse.status !== HttpStatus.OK) {
         throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
       }
 
       const newMetadata =
         cgspaceResponse.response as ResultsKnowledgeProductDto;
+
+      console.log('New Metadata:', newMetadata);
 
       const updatedKnowledgeProduct =
         this._resultsKnowledgeProductMapper.updateEntity(
@@ -472,13 +478,25 @@ export class ResultsKnowledgeProductsService {
   ) {
     const allClarisaCountries = await this._clarisaCountriesRepository.find();
 
+    const normalize = (str: string) =>
+      str
+        ?.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
     const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
-      (mqapIso) => {
+      (mqapValue) => {
         let country: ResultCountry;
         if (upsert) {
           country = (
             newKnowledgeProduct.result_object.result_country_array ?? []
-          ).find((orc) => orc.country_object?.iso_alpha_2 == mqapIso);
+          ).find(
+            (orc) =>
+              normalize(orc.country_object?.iso_alpha_2) ==
+                normalize(mqapValue) ||
+              normalize(orc.country_object?.name) === normalize(mqapValue),
+          );
           if (country) {
             country['matched'] = true;
           }
@@ -487,14 +505,16 @@ export class ResultsKnowledgeProductsService {
         country ??= new ResultCountry();
 
         //searching for country by iso-2
-        const clarisaCountry = allClarisaCountries.find(
-          (cc) => cc.iso_alpha_2 == mqapIso,
-        )?.id;
+        const clarisaCountry = allClarisaCountries.find((cc) => {
+          const iso2Match = normalize(cc.iso_alpha_2) == normalize(mqapValue);
+          const nameMatch = normalize(cc.name) === normalize(mqapValue);
+          return iso2Match || nameMatch;
+        })?.id;
 
         country.country_id = clarisaCountry;
         if (!clarisaCountry) {
           console.warn(
-            `country with ISO Code "${mqapIso}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
+            `country with ISO Code "${mqapValue}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
           );
         }
 

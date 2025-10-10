@@ -47,9 +47,17 @@ export class ResultsKnowledgeProductMapper {
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    knowledgeProductDto.cgspace_countries = this.getAsArray(
-      mqapResponseDto?.['Country ISO code'],
-    );
+    const countryCodes =
+      mqapResponseDto?.['Country ISO code'] &&
+      mqapResponseDto['Country ISO code'].length > 0
+        ? mqapResponseDto['Country ISO code']
+        : (mqapResponseDto?.Countries ?? []);
+
+    console.log('Country codes from MQAP:', countryCodes);
+
+    knowledgeProductDto.repo = mqapResponseDto?.repo;
+
+    knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
@@ -93,7 +101,8 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = 'CGSpace';
+    metadataCGSpace.source = knowledgeProductDto.repo;
+    console.log('Metadata source from MQAP:', knowledgeProductDto.repo);
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
