@@ -1,15 +1,24 @@
-import { Controller, Post, Body, Get, Param, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateAnnouncementNotificationDto } from './dto/create-notification.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 
 @ApiTags('Notifications')
-@ApiHeader({
-  name: 'auth',
-  description: 'the token we need for auth.',
-})
 @Controller()
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
@@ -93,5 +102,21 @@ export class NotificationController {
   @Get('updates-pop-up')
   getPopUpNotifications(@UserToken() user: TokenDto) {
     return this.notificationService.getPopUpNotifications(user);
+  }
+
+  @Get('recent-activity')
+  @ApiOperation({
+    summary: 'List recent result activity for the authenticated user',
+    description: 'Returns the last eight notifications related to results.',
+  })
+  @ApiOkResponse({ description: 'Recent activity retrieved.' })
+  getRecentActivity(
+    @UserToken() user: TokenDto,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = Number(limit);
+    const safeLimit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+    return this.notificationService.getRecentResultActivity(user, safeLimit);
   }
 }

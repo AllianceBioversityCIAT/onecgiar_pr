@@ -4,6 +4,13 @@ import { CheckAdminGuard } from '../guards/check-admin.guard';
 
 export const routingApp: PrRoute[] = [
   {
+    prName: 'Results Framework & Reporting',
+    underConstruction: false,
+    canActivate: [CheckLoginGuard],
+    path: 'result-framework-reporting',
+    loadChildren: () => import('../../pages/result-framework-reporting/result-framework-reporting.module').then(m => m.ResultFrameworkReportingModule)
+  },
+  {
     prName: 'Results Center',
     underConstruction: false,
     canActivate: [CheckLoginGuard],
@@ -80,7 +87,7 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting/home', prHide: true }
 ];
 
 export const extraRoutingApp: PrRoute[] = [
@@ -436,6 +443,19 @@ export const WhatsNewRouting: PrRoute[] = [
     path: 'details/:id',
     loadComponent: () =>
       import('../../pages/whats-new/pages/whats-new-page-details/whats-new-page-details.component').then(m => m.WhatsNewPageDetailsComponent)
+  },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
+];
+
+export const ResultFrameworkReportingRouting: PrRoute[] = [
+  { prName: 'Result Framework & Reporting', path: 'result-framework-reporting', redirectTo: 'result-framework-reporting/home', pathMatch: 'full' },
+  {
+    prName: 'Result Framework & Reporting',
+    path: 'home',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/result-framework-reporting-home/result-framework-reporting-home.component').then(
+        m => m.ResultFrameworkReportingHomeComponent
+      )
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
