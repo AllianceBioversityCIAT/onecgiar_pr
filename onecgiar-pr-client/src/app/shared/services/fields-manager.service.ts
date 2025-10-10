@@ -12,6 +12,8 @@ export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
 
   portfolioAcronym = signal('P25');
+  isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
+  isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
   fields = computed<Record<string, CustomField>>(() => {
     const fields: Record<string, CustomField> = {
       '[general-info]-title': {
@@ -20,7 +22,7 @@ export class FieldsManagerService {
         description: `<ul>
             <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
             <li>Avoid abbreviations or (technical) jargon.</li>
-            ${Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? '<li>For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
+            ${this.isP25() ? '<li>For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
           </ul>`
       },
       '[general-info]-description': {
@@ -31,7 +33,7 @@ export class FieldsManagerService {
     <li>Ensure the description is understandable for a non-specialist reader.</li>
      <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>
-      ${Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? '<li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
+      ${this.isP25() ? '<li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
     </ul>`
       },
       '[general-info]-lead_contact_person': {
@@ -39,14 +41,20 @@ export class FieldsManagerService {
         placeholder: 'Search for a person (min 4 characters)',
         description: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
-        required: Portfolios[this.portfolioAcronym()] == Portfolios.P25
+        required: this.isP25()
       },
       '[general-info]-is_krs': {
         label: 'Is this result featured in a Key Result Story for the reporting year?',
-        hide: Portfolios[this.portfolioAcronym()] == Portfolios.P25
+        hide: this.isP25()
       },
       '[general-info]-gender_tag_id': {
-        label: Portfolios[this.portfolioAcronym()] == Portfolios.P25 ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
+        label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
+      },
+      '[general-info]-climate_change_tag_id': {
+        label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score'
+      },
+      '[general-info]-nutrition_tag_level_id': {
+        label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`
       }
     };
     return fields;

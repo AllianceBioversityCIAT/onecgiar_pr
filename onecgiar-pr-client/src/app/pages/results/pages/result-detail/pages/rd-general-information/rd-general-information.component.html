@@ -97,13 +97,14 @@
   </div>
 
   <div class="block_container">
+    <!-- <h1>here</h1> -->
     <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Climate change score"
+        fieldRef="[general-info]-climate_change_tag_id"
         [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
@@ -127,7 +128,7 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Nutrition, health and food security score"
+        fieldRef="[general-info]-nutrition_tag_level_id"
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
