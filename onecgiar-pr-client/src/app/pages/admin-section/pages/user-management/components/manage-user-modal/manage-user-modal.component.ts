@@ -11,6 +11,7 @@ import { InitiativesService } from '../../../../../../shared/services/global/ini
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { SelectModule } from 'primeng/select';
 
 interface AddUserForm {
   activate: boolean;
@@ -24,6 +25,7 @@ interface AddUserForm {
     role_id: number;
     entity_id: number;
   }[];
+  created_by?: string;
 }
 
 @Component({
@@ -36,6 +38,7 @@ interface AddUserForm {
     CustomFieldsModule,
     SearchUserSelectComponent,
     ProgressSpinnerModule,
+    SelectModule,
     UserRolesInfoModalComponent
   ],
   templateUrl: './manage-user-modal.component.html',
@@ -68,6 +71,8 @@ export class ManageUserModalComponent {
   isLoading = signal<boolean>(false);
 
   entities = computed(() => this.initiativesService.allInitiatives());
+  loadingRoleAssignment = signal<boolean>(true);
+  disabledRoleAssignmentOptions = signal([]);
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
@@ -106,6 +111,19 @@ export class ManageUserModalComponent {
     this.clearUserSearch();
   }
 
+  getAvailableEntities(currentIndex: number) {
+    const selectedRoleAssignments = this.addUserForm().role_assignments;
+    const selectedEntities = selectedRoleAssignments
+      .map((item, index) => (index !== currentIndex ? item.entity_id : null))
+      .filter(entityId => entityId !== null);
+
+    // Filter within each group's entities array
+    return this.entities().map(group => ({
+      ...group,
+      entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
+    }));
+  }
+
   onRoleEntityChange(event: number, index: number): void {
     this.addUserForm.update(form => ({
       ...form,
@@ -142,10 +160,15 @@ export class ManageUserModalComponent {
   }
 
   removeRoleAssignment(index: number) {
+    this.loadingRoleAssignment.set(false);
     this.addUserForm.update(form => ({
       ...form,
       role_assignments: form.role_assignments.filter((_, i) => i !== index)
     }));
+
+    setTimeout(() => {
+      this.loadingRoleAssignment.set(true);
+    }, 0);
   }
 
   onModalCgiarChange(isCgiar: boolean): void {
@@ -373,6 +396,7 @@ export class ManageUserModalComponent {
     this.editingMode.set(false);
     this.userActivatorMode.set(false);
     this.resetAddUserForm();
+    this.disabledRoleAssignmentOptions.set([]);
   }
 
   get currentUserName(): string {
