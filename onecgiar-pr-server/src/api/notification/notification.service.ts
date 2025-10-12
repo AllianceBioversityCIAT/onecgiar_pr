@@ -315,9 +315,13 @@ export class NotificationService {
       .leftJoinAndSelect('resultInitiative.obj_initiative', 'initiative')
       .leftJoinAndSelect('notification.obj_notification_type', 'type')
       .leftJoinAndSelect('notification.obj_emitter_user', 'emitter')
-      .where('notification.notification_level = :levelId', {
-        levelId,
-      });
+      .where(
+        'notification.notification_level = :levelId AND result.is_active = :resultActive',
+        {
+          levelId,
+          resultActive: true,
+        },
+      );
   }
 
   private async getGlobalResultNotifications(
