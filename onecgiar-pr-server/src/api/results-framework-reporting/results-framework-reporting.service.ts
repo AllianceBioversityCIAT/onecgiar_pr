@@ -412,7 +412,7 @@ export class ResultsFrameworkReportingService {
         await this.upsertTocIndicators(
           primaryTocRecord.result_toc_result_id,
           resolvedTocResultId,
-          payload.toc_results ?? [],
+          payload.indicators ?? [],
           user.id,
         );
       }
@@ -469,7 +469,7 @@ export class ResultsFrameworkReportingService {
     }
 
     for (const indicator of indicators) {
-      const indicatorId = Number(indicator.toc_result_indicator_id);
+      const indicatorId = Number(indicator.indicator_id);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
         throw {
           response: {},

@@ -662,7 +662,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 555,
-          toc_results: [{ toc_result_indicator_id: 777 }],
+          indicators: [{ indicator_id: 777 }],
         },
         user,
       );
@@ -720,7 +720,7 @@ describe('ResultsFrameworkReportingService', () => {
           },
           knowledge_product: kpPayload,
           toc_result_id: 888,
-          toc_results: [{ toc_result_indicator_id: 999 }],
+          indicators: [{ indicator_id: 999 }],
           contributors_result_toc_result: [
             {
               initiative_id: 20,

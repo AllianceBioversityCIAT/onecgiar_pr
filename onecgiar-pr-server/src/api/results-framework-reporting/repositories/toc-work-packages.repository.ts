@@ -4,7 +4,7 @@ import { env } from 'process';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 
 interface toc_result_row {
-  id: number;
+  toc_result_id: number;
   category: string;
   result_title: string;
   related_node_id: string | null;
@@ -22,12 +22,12 @@ interface toc_result_row {
 }
 
 export interface toc_result_response {
-  id: number;
+  toc_result_id: number;
   category: string;
   result_title: string;
   related_node_id: string | null;
   indicators: Array<{
-    id: number;
+    indicator_id: number;
     indicator_description: string | null;
     toc_result_indicator_id: string | null;
     related_node_id: string | null;
@@ -57,7 +57,7 @@ export class TocResultsRepository {
 
     let query = `
       SELECT
-        tr.id,
+        tr.id as toc_result_id,
         tr.category,
         tr.result_title AS result_title,
         tr.related_node_id AS related_node_id,
@@ -109,9 +109,9 @@ export class TocResultsRepository {
       const grouped = new Map<number, toc_result_response>();
 
       for (const row of rows) {
-        if (!grouped.has(row.id)) {
-          grouped.set(row.id, {
-            id: row.id,
+        if (!grouped.has(row.toc_result_id)) {
+          grouped.set(row.toc_result_id, {
+            toc_result_id: row.toc_result_id,
             category: row.category,
             result_title: row.result_title,
             related_node_id: row.related_node_id,
@@ -120,8 +120,8 @@ export class TocResultsRepository {
         }
 
         if (row.indicator_id !== null) {
-          grouped.get(row.id)?.indicators.push({
-            id: row.indicator_id,
+          grouped.get(row.toc_result_id)?.indicators.push({
+            indicator_id: row.indicator_id,
             indicator_description: row.indicator_description,
             toc_result_indicator_id: row.toc_result_indicator_id,
             related_node_id: row.indicator_related_node_id,

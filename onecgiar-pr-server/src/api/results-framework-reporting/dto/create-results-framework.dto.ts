@@ -8,7 +8,7 @@ export class ResultsFrameworkTocIndicatorDto {
     description:
       'Identifier of the ToC indicator (Integration DB primary key).',
   })
-  toc_result_indicator_id: number;
+  indicator_id: number;
 }
 
 export class ResultsFrameworkBilateralProjectDto {
@@ -72,7 +72,7 @@ export class CreateResultsFrameworkResultDto {
     description:
       'List of ToC indicators (from the Integration catalogue) that the result contributes to.',
   })
-  toc_results?: ResultsFrameworkTocIndicatorDto[];
+  indicators?: ResultsFrameworkTocIndicatorDto[];
 
   @ApiProperty({
     required: false,
