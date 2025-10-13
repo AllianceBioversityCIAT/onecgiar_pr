@@ -3,17 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { CustomSpinnerModule } from '../../../../../../shared/components/custom-spinner/custom-spinner.module';
-import { ProgressBarModule } from 'primeng/progressbar';
-
-export interface ColumnOrder {
-  title: string;
-  attr: string;
-  class?: string;
-  width?: string;
-  hideSortIcon?: boolean;
-}
+import { AowHloTableComponent } from './components/aow-hlo-table/aow-hlo-table.component';
 
 export interface Tab {
   id: string;
@@ -24,7 +14,7 @@ export interface Tab {
 
 @Component({
   selector: 'app-entity-aow-aow',
-  imports: [CommonModule, ButtonModule, TableModule, CustomSpinnerModule, ProgressBarModule],
+  imports: [CommonModule, ButtonModule, AowHloTableComponent],
   templateUrl: './entity-aow-aow.component.html',
   styleUrl: './entity-aow-aow.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -32,15 +22,6 @@ export interface Tab {
 export class EntityAowAowComponent implements OnInit {
   route = inject(ActivatedRoute);
   entityAowService = inject(EntityAowService);
-
-  columnOrder = signal<ColumnOrder[]>([
-    { title: 'Indicator name', attr: 'indicator_description' },
-    { title: 'Type', attr: 'type_value' },
-    { title: 'Expected target 2025', attr: 'target_value_sum' },
-    { title: 'Actual achieved', attr: 'actual_achieved_value_sum' },
-    { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true },
-    { title: 'Status', attr: 'status', hideSortIcon: true }
-  ]);
 
   // Tab management
   readonly tabs = signal<Tab[]>([
@@ -63,11 +44,5 @@ export class EntityAowAowComponent implements OnInit {
 
   isActiveTab(tabId: string): boolean {
     return this.activeTabId() === tabId;
-  }
-
-  getProgress(value: string): number {
-    const progress = value.split('%')[0];
-
-    return Number(progress);
   }
 }
