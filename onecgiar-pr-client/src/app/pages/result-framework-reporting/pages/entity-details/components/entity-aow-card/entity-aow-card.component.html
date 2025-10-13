@@ -1,0 +1,28 @@
+<div class="entity-aow-card">
+  <div class="entity-aow-card_header">
+    <div class="entity-aow-card_header_content">
+      <i class="pi pi-folder" style="font-size: 22px; color: var(--pr-color-neutral-200)"></i>
+
+      <div>
+        <p class="entity-aow-card_header_desc">{{ item?.code }}</p>
+        <p class="entity-aow-card_header_title">{{ item?.name }}</p>
+      </div>
+    </div>
+
+    <div
+      class="entity-aow-card_header_actions"
+      routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}/aow/{{ item.code }}">
+      <p>View details</p>
+      <i class="pi pi-arrow-right" style="font-size: 12px"></i>
+    </div>
+  </div>
+
+  <div style="width: 100%; height: 37px">
+    <div class="entity-aow-card_progress">
+      <p class="entity-aow-card_progress_title">Progress</p>
+      <p class="entity-aow-card_progress_value">{{ item?.progress || 50 }}%</p>
+    </div>
+
+    <p-progressbar [value]="item?.progress || 50" [showValue]="false" [style]="{ height: '9px', width: '100%' }" />
+  </div>
+</div>

@@ -25,6 +25,11 @@ p {
   align-items: flex-start;
   gap: 14px;
   width: 100%;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--pr-color-accents-1);
+  }
 }
 
 .framework-reporting-card-item_header {

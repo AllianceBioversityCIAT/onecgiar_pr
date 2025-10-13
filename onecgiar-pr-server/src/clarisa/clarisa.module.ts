@@ -42,6 +42,7 @@ import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clari
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
 import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
 import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios.module';
+import { ClarisaGlobalUnitModule } from './clarisa-global-unit/clarisa-global-unit.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios
     ClarisaCgiarEntityTypesModule,
     ClarisaInitiativeStageModule,
     ClarisaPortfoliosModule,
+    ClarisaGlobalUnitModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],

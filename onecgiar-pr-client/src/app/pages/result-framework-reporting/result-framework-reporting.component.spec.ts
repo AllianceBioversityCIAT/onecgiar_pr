@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { ResultFrameworkReportingComponent } from './result-framework-reporting.component';
 import { ApiService } from '../../shared/services/api/api.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 
 describe('ResultFrameworkReportingComponent', () => {
   let component: ResultFrameworkReportingComponent;
@@ -10,6 +12,18 @@ describe('ResultFrameworkReportingComponent', () => {
 
   beforeEach(async () => {
     mockApiService = {
+      resultsSE: {
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(
+          of({
+            response: {
+              mySciencePrograms: [],
+              otherSciencePrograms: []
+            }
+          })
+        ),
+        GET_RecentActivity: jest.fn().mockReturnValue(of({ response: [] }))
+      },
       dataControlSE: {
         detailSectionTitle: jest.fn()
       },
@@ -30,7 +44,7 @@ describe('ResultFrameworkReportingComponent', () => {
           useValue: mockApiService
         }
       ],
-      imports: [RouterModule]
+      imports: [RouterModule, HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultFrameworkReportingComponent);
@@ -42,6 +56,16 @@ describe('ResultFrameworkReportingComponent', () => {
       component.ngOnInit();
       const spy = jest.spyOn(mockApiService.dataControlSE, 'detailSectionTitle');
       expect(spy).toHaveBeenCalledWith('Results Framework & Reporting');
+    });
+
+    it('should call getScienceProgramsProgress and getRecentActivity on service', () => {
+      const getScienceProgramsProgressSpy = jest.spyOn(component.resultFrameworkReportingHomeService, 'getScienceProgramsProgress');
+      const getRecentActivitySpy = jest.spyOn(component.resultFrameworkReportingHomeService, 'getRecentActivity');
+
+      component.ngOnInit();
+
+      expect(getScienceProgramsProgressSpy).toHaveBeenCalled();
+      expect(getRecentActivitySpy).toHaveBeenCalled();
     });
   });
 });

@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseInterceptors,
+  Version,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -46,6 +47,22 @@ export class ResultsController {
     @UserToken() user: TokenDto,
   ) {
     return this.resultsService.createOwnerResult(createResultDto, user);
+  }
+
+  @Version('2')
+  @Post('create/header')
+  @ApiOperation({
+    summary: 'Create result header',
+    description:
+      'Registers the base information for a result and links it to the authenticated user.',
+  })
+  @ApiBody({ type: CreateResultDto })
+  @ApiCreatedResponse({ description: 'Result header created successfully.' })
+  createV2(
+    @Body() createResultDto: CreateResultDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.createOwnerResultV2(createResultDto, user);
   }
 
   @Get('get/:id')
