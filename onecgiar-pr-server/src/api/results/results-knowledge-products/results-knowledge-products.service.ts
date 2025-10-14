@@ -820,6 +820,15 @@ export class ResultsKnowledgeProductsService {
         };
       }
 
+      if (resultsKnowledgeProductDto.handle) {
+        const existingKP = await this.validateKPExistanceByHandle(
+          resultsKnowledgeProductDto.handle,
+        );
+        if (existingKP) {
+          return existingKP;
+        }
+      }
+
       const currentVersion: Version =
         await this._versioningService.$_findActivePhase(
           AppModuleIdEnum.REPORTING,

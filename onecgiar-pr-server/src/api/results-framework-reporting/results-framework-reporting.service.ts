@@ -440,11 +440,12 @@ export class ResultsFrameworkReportingService {
           );
         }
       }
+
       if (
-        Array.isArray((payload as any).bilateral_projects) &&
-        (payload as any).bilateral_projects.length
+        Array.isArray(payload.bilateral_project) &&
+        payload.bilateral_project.length
       ) {
-        for (const project of (payload as any).bilateral_projects) {
+        for (const project of payload.bilateral_project) {
           const projectIdNum = Number(project?.project_id);
           if (Number.isFinite(projectIdNum) && projectIdNum > 0) {
             await this._resultsByProjectsService.linkBilateralProjectToResult(
@@ -453,15 +454,6 @@ export class ResultsFrameworkReportingService {
               user.id,
             );
           }
-        }
-      } else if (payload.bilateral_project?.project_id) {
-        const singleProjectId = Number(payload.bilateral_project.project_id);
-        if (Number.isFinite(singleProjectId) && singleProjectId > 0) {
-          await this._resultsByProjectsService.linkBilateralProjectToResult(
-            createdResultId,
-            singleProjectId,
-            user.id,
-          );
         }
       }
 

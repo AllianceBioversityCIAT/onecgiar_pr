@@ -84,16 +84,9 @@ export class CreateResultsFrameworkResultDto {
 
   @ApiProperty({
     required: false,
-    type: () => ResultsFrameworkBilateralProjectDto,
-    description: 'Bilateral project information linked to the result.',
-  })
-  bilateral_project?: ResultsFrameworkBilateralProjectDto;
-
-  @ApiProperty({
-    required: false,
     type: () => [ResultsFrameworkBilateralProjectDto],
     description:
       'List of bilateral projects linked to the result. If provided, supersedes bilateral_project.',
   })
-  bilateral_projects?: ResultsFrameworkBilateralProjectDto[];
+  bilateral_project?: ResultsFrameworkBilateralProjectDto[];
 }
