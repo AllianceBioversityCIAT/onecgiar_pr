@@ -134,6 +134,7 @@ export class AowHloCreateModalComponent implements OnInit {
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: resp => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        this.entityAowService.onCloseReportResultModal();
         this.creatingResult.set(false);
       },
       error: err => {

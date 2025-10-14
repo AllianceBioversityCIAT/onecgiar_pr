@@ -125,5 +125,6 @@ export class EntityAowService {
     this.w3BilateralProjects.set([]);
     this.selectedW3BilateralProjects.set([]);
     this.selectedEntities.set([]);
+    this.existingResultsContributors.set([]);
   }
 }
