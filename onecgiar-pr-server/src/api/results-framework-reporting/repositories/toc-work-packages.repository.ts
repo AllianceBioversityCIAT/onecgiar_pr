@@ -81,7 +81,7 @@ export class TocResultsRepository {
           WHEN tri.type_value LIKE '%innovation%' THEN 7
           ELSE NULL
         END AS result_type_id,
-        CAST(3 AS SIGNED) AS result_level_id
+        CAST(4 AS SIGNED) AS result_level_id
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
