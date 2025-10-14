@@ -26,13 +26,24 @@
         </div>
 
         @if (entityAowService.currentResultIsKnowledgeProduct()) {
-          <div class="mqap_sync_title">
-            <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text" labelDescInlineStyles="margin-top: 0 !important">
-            </app-pr-input>
+          <div>
+            <div class="mqap_sync_title">
+              <app-pr-input
+                [isStatic]="true"
+                placeholder="Handle..."
+                label="CGSpace link"
+                type="text"
+                labelDescInlineStyles="margin-top: 0 !important"
+                [(ngModel)]="createResultBody().handler">
+              </app-pr-input>
 
-            <div (click)="GET_mqapValidation()" class="sync_button">
-              <app-pr-button padding="medium" padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="true"></app-pr-button>
+              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() }">
+                <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
+              </div>
             </div>
+            @if (mqapUrlError().status) {
+              <div class="error__link" [innerHTML]="mqapUrlError().message"></div>
+            }
           </div>
         }
 
@@ -43,7 +54,9 @@
           type="text"
           [description]="entityAowService.currentResultIsKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
           labelDescInlineStyles="margin-top: 0 !important"
+          [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
+          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
           [autogenerate]="entityAowService.currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
@@ -55,8 +68,9 @@
           [label]="
             entityAowService.currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'
           "
+          [(ngModel)]="createResultBody().toc_progressive_narrative"
           type="text"
-          [readOnly]="true"
+          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
 
         <div>
@@ -121,7 +135,7 @@
             [style]="{ width: '100%', height: '32px', marginTop: '10px' }">
             <ng-template let-project #item>
               <div class="flex items-center gap-2">
-                <div>{{ project.official_code }} - {{ project.project_name }}</div>
+                <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">{{ project.project_name }}</div>
               </div>
             </ng-template>
           </p-multiselect>
@@ -132,7 +146,7 @@
                 <div class="selected_bilateral_item">
                   <div class="selected_bilateral_item_content">
                     <p class="pr-body-1 font-weight-300">
-                      <span class="font-weight-500">{{ project.project_id }} -</span> {{ project.project_name }}
+                      {{ project.project_name }}
                     </p>
                     <p class="pr-body-2 font-weight-300 italic">
                       <span class="font-weight-500 normal">Grant title:</span> {{ project.project_summary }}
@@ -151,7 +165,7 @@
         </div>
 
         <div class="report-result-content_left_content_actions">
-          <app-pr-button [verticalMargin]="0" text="Create and continue"></app-pr-button>
+          <app-pr-button [verticalMargin]="0" text="Create and continue" (click)="createResult()"></app-pr-button>
         </div>
       </div>
     </div>

@@ -104,13 +104,8 @@ export class EntityAowService {
   }
 
   getW3BilateralProjects() {
-    this.api.resultsSE.GET_W3BilateralProjects(this.currentResultToReport()?.id).subscribe(response => {
-      this.w3BilateralProjects.set(
-        response?.response.map(item => ({
-          ...item,
-          optionLabel: `${item.project_id} - ${item.project_name}`
-        }))
-      );
+    this.api.resultsSE.GET_W3BilateralProjects(this.currentResultToReport()?.toc_result_id).subscribe(response => {
+      this.w3BilateralProjects.set(response?.response ?? []);
     });
   }
 
