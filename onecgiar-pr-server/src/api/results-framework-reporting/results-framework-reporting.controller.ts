@@ -191,4 +191,36 @@ export class ResultsFrameworkReportingController {
       tocResultId,
     );
   }
+
+  @Get('existing-result-contributors')
+  @ApiOperation({
+    summary: 'Get contributors and partners for an existing result',
+    description:
+      'Retrieves the contributors and partners information for a specified result ID, including details about initiatives, institutions, centers, and projects associated with the result.',
+  })
+  @ApiQuery({
+    name: 'resultTocResultId',
+    type: Number,
+    required: true,
+    description: 'The ID of the result to fetch contributors and partners for.',
+  })
+  @ApiQuery({
+    name: 'tocResultIndicatorId',
+    type: String,
+    required: true,
+    description:
+      'The ID of the ToC result indicator to fetch contributors and partners for.',
+  })
+  @ApiOkResponse({
+    description: 'Contributors and partners fetched successfully.',
+  })
+  getExistingResultContributorsAndPartners(
+    @Query('resultTocResultId') resultTocResultId: number,
+    @Query('tocResultIndicatorId') tocResultIndicatorId: string,
+  ) {
+    return this.resultsFrameworkReportingService.getExistingResultContributorsToIndicators(
+      resultTocResultId,
+      tocResultIndicatorId,
+    );
+  }
 }

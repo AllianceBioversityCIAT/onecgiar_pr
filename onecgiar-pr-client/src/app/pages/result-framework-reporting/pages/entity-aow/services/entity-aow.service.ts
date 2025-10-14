@@ -1,12 +1,14 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Initiative, Unit } from '../../entity-details/interfaces/entity-details.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
+import { forkJoin } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EntityAowService {
   private readonly api = inject(ApiService);
+
   entityId = signal<string>('');
   aowId = signal<string>('');
 
@@ -20,29 +22,29 @@ export class EntityAowService {
   tocResultsByAowId = signal<any[]>([]);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
+  showReportResultModal = signal<boolean>(true);
+
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
 
-    import('rxjs').then(({ forkJoin }) => {
-      forkJoin({
-        clarisaGlobalUnits: this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()),
-        indicatorSummaries: this.api.resultsSE.GET_IndicatorContributionSummary(this.entityId())
-      }).subscribe({
-        next: ({ clarisaGlobalUnits, indicatorSummaries }) => {
-          this.entityDetails.set(clarisaGlobalUnits?.response?.initiative);
-          this.entityAows.set(clarisaGlobalUnits?.response?.units ?? []);
+    forkJoin({
+      clarisaGlobalUnits: this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()),
+      indicatorSummaries: this.api.resultsSE.GET_IndicatorContributionSummary(this.entityId())
+    }).subscribe({
+      next: ({ clarisaGlobalUnits, indicatorSummaries }) => {
+        this.entityDetails.set(clarisaGlobalUnits?.response?.initiative);
+        this.entityAows.set(clarisaGlobalUnits?.response?.units ?? []);
 
-          this.indicatorSummaries.set(indicatorSummaries?.response?.totalsByType ?? []);
+        this.indicatorSummaries.set(indicatorSummaries?.response?.totalsByType ?? []);
 
-          if (this.entityAows().length) {
-            this.setSideBarItems();
-          }
-          this.isLoadingDetails.set(false);
-        },
-        error: () => {
-          this.isLoadingDetails.set(false);
+        if (this.entityAows().length) {
+          this.setSideBarItems();
         }
-      });
+        this.isLoadingDetails.set(false);
+      },
+      error: () => {
+        this.isLoadingDetails.set(false);
+      }
     });
   }
 

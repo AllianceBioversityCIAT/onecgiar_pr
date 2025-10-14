@@ -11,6 +11,7 @@ import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-pro
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
 
@@ -32,6 +33,7 @@ import { ContributorsPartnersModule } from './contributors-partners/contributors
     YearRepository,
     HandlersError,
     TocResultsRepository,
+    ContributionToIndicatorResultsRepository,
   ],
 })
 export class ResultsFrameworkReportingModule {}

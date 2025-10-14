@@ -8,7 +8,7 @@ export class ResultsFrameworkTocIndicatorDto {
     description:
       'Identifier of the ToC indicator (Integration DB primary key).',
   })
-  indicator_id: number;
+  indicator_id: number | string;
 }
 
 export class ResultsFrameworkBilateralProjectDto {
