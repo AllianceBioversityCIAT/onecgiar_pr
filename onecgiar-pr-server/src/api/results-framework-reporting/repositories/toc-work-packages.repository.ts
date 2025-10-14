@@ -81,7 +81,7 @@ export class TocResultsRepository {
           WHEN tri.type_value LIKE '%innovation%' THEN 7
           ELSE NULL
         END AS result_type_id,
-        3 AS result_level_id
+        CAST(3 AS SIGNED) AS result_level_id
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
@@ -142,8 +142,12 @@ export class TocResultsRepository {
             target_value_sum: row.target_value_sum,
             actual_achieved_value_sum: row.actual_achieved_value_sum,
             progress_percentage: row.progress_percentage,
-            result_type_id: row.result_type_id ?? null,
-            result_level_id: row.result_level_id ?? null,
+            result_type_id: row.result_type_id
+              ? Number(row.result_type_id)
+              : null,
+            result_level_id: row.result_level_id
+              ? Number(row.result_level_id)
+              : null,
           });
         }
       }
