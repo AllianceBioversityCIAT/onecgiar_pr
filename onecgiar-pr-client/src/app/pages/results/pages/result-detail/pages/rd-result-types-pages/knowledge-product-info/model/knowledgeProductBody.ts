@@ -26,6 +26,7 @@ export class KnowledgeProductBody {
   warnings: string[];
   cgspace_phase_year: number;
   fair_data: FullFairData;
+  repo?: string;
 }
 
 interface Institution {

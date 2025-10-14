@@ -41,8 +41,18 @@
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true"> </app-pr-input>
   <div class="auto_fit_container">
-    <app-pr-input [(ngModel)]="knowledgeProductBody.onlineYearCG" label="Date online (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.onlineYearCG"
+      [label]="`Date online (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.yearCG"
+      [label]="`Issue date (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
     <app-pr-input
       *ngIf="knowledgeProductBody.year_WOS"
       [(ngModel)]="knowledgeProductBody.year_WOS"
@@ -60,7 +70,11 @@
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false" [readOnly]="true"> </app-pr-input>
   <div class="auto_fit_container">
-    <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" label="Peer reviewed (CGSpace)" [required]="false" [readOnly]="true">
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
+      [label]="`Peer reviewed (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
     </app-pr-input>
     <app-pr-input
       *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
@@ -74,7 +88,7 @@
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.is_isi_CG"
-        label="Web of Science Core Collection (former ISI) (CGSpace)"
+        [label]="`Web of Science Core Collection (former ISI) (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
       <p-message
@@ -97,7 +111,7 @@
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.accessibility_CG"
-        label="Accessibility (CGSpace)"
+        [label]="`Accessibility (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
       <p-message

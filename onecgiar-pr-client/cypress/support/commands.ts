@@ -66,7 +66,7 @@ Cypress.Commands.add('login', (role?: string, email?: string, password?: string)
   cy.get('.signin-btn').should('be.visible').should('not.be.disabled').click();
 
   // Wait for login to complete and navigation to results list
-  cy.url().should('include', '/result/results-outlet/results-list');
+  cy.url().should('include', '/result-framework-reporting/home');
 
   cy.log(`✅ Successfully logged in as ${userRole} user`);
 });

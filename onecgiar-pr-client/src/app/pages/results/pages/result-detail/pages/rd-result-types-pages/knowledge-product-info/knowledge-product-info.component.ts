@@ -9,10 +9,10 @@ import { RolesService } from '../../../../../../../shared/services/global/roles.
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-    selector: 'app-knowledge-product-info',
-    templateUrl: './knowledge-product-info.component.html',
-    styleUrls: ['./knowledge-product-info.component.scss'],
-    standalone: false
+  selector: 'app-knowledge-product-info',
+  templateUrl: './knowledge-product-info.component.html',
+  styleUrls: ['./knowledge-product-info.component.scss'],
+  standalone: false
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
@@ -73,7 +73,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     const mapped = new KnowledgeProductBodyMapped();
     mapped.warnings = response.warnings;
 
-    mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
     mapped.authors = response.authors?.map(m => m.name);
     mapped.type = response.type;
     mapped.doi = response.metadataCG?.doi;
@@ -86,6 +85,14 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.altmetric_img_url = response.altmetric_image_url;
     mapped.references = response.references_other_knowledge_products;
     mapped.onlineYearCG = response.metadataCG?.online_year;
+    const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
+    mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
+
+    if (mapped.source === 'CGSPACE') {
+      mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
+    } else if (mapped.source === 'MELSPACE') {
+      mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
+    }
 
     this.fair_data = this.filterOutObject(response.fair_data);
 
