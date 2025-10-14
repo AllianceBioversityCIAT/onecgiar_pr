@@ -6,4 +6,5 @@ export class ResultsKnowledgeProductMetadataDto {
   online_year: number;
   doi: string;
   is_peer_reviewed: boolean;
+  open_access: string;
 }

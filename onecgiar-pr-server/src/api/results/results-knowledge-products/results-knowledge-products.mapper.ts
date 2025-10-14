@@ -110,6 +110,8 @@ export class ResultsKnowledgeProductMapper {
           'Open Access',
           dto?.['Open Access'],
         ) == 0;
+      
+      metadataCGSpace.open_access = dto?.['Open Access'];
     }
 
     metadataCGSpace.doi = dto?.DOI;
@@ -424,14 +426,18 @@ export class ResultsKnowledgeProductMapper {
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
       metadataDto.issue_year = m.year;
       metadataDto.online_year = m.online_year;
+      metadataDto.open_access = m.open_access;
 
       return metadataDto;
     });
-    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.find(
-      (m) => m.source === 'CGSpace',
-    );
+    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
+      ? knowledgeProductDto.metadata[0]
+      : null;
+    console.log('Metadata source from entity:', knowledgeProductDto.metadataCG?.source);
+    console.log('Full metadata from entity:', knowledgeProductDto.metadata);
+    console.log('metadata (stringified):', JSON.stringify(knowledgeProductDto.metadata, null, 2));
     knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.find(
-      (m) => m.source !== 'CGSpace',
+      (m) => m.source !== 'MELSPACE',
     );
 
     const altmetric =
