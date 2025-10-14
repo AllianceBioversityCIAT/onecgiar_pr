@@ -12,6 +12,7 @@ import { ResultsTocResultsModule } from '../results/results-toc-results/results-
 import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
+import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ResultsByProjectsModule } from '../results/results_by_projects/results_
     ResultsTocResultsModule,
     ShareResultRequestModule,
     ResultsByProjectsModule,
+    ContributorsPartnersModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [

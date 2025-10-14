@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
 import {
@@ -13,8 +20,10 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 @ApiTags('Results Framework and Reporting')
 export class ResultsFrameworkReportingController {
   constructor(
