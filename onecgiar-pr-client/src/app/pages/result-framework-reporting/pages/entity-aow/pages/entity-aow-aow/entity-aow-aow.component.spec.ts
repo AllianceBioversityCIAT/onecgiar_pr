@@ -18,7 +18,8 @@ describe('EntityAowAowComponent', () => {
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
       tocResultsByAowId: signal<any[]>([]),
-      isLoadingTocResultsByAowId: signal<boolean>(false)
+      isLoadingTocResultsByAowId: signal<boolean>(false),
+      showReportResultModal: signal<boolean>(false)
     } as any;
 
     // Mock ActivatedRoute

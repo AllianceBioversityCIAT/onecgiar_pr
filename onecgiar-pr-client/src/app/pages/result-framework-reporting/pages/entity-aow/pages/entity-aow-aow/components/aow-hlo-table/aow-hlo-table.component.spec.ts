@@ -12,16 +12,22 @@ describe('AowHloTableComponent', () => {
   let mockActivatedRoute: any;
 
   beforeEach(async () => {
-    // Mock EntityAowService
+    const mockShowReportResultModal = signal<boolean>(false);
+    const mockCurrentResultToReport = signal<any>({});
+
     mockEntityAowService = {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
       tocResultsByAowId: signal<any[]>([]),
-      isLoadingTocResultsByAowId: signal<boolean>(false)
+      isLoadingTocResultsByAowId: signal<boolean>(false),
+      showReportResultModal: mockShowReportResultModal,
+      currentResultToReport: mockCurrentResultToReport
     } as any;
 
-    // Mock ActivatedRoute
+    jest.spyOn(mockShowReportResultModal, 'set');
+    jest.spyOn(mockCurrentResultToReport, 'set');
+
     mockActivatedRoute = {
       params: of({ aowId: 'test-aow-id' })
     };
@@ -94,7 +100,6 @@ describe('AowHloTableComponent', () => {
       const initialColumns = component.columnOrder();
       const newColumns = [...initialColumns, { title: 'Test', attr: 'test' }];
 
-      // This should not affect the original signal
       expect(component.columnOrder()).toEqual(initialColumns);
       expect(component.columnOrder()).not.toEqual(newColumns);
     });
@@ -157,6 +162,143 @@ describe('AowHloTableComponent', () => {
     it('should handle very large numbers', () => {
       const result = component.getProgress('999999%');
       expect(result).toBe(999999);
+    });
+  });
+
+  describe('openReportResultModal', () => {
+    it('should filter indicators by currentItemId and update service signals', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' },
+          { indicator_id: 'indicator-3', name: 'Indicator 3', type_value: 'Impact indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-2';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }]
+      });
+    });
+
+    it('should handle item with no matching indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }
+        ]
+      };
+      const currentItemId = 'non-existent-indicator';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      });
+    });
+
+    it('should handle item with empty indicators array', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      };
+      const currentItemId = 'any-indicator';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      });
+    });
+
+    it('should handle item with undefined indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result'
+      };
+      const currentItemId = 'any-indicator';
+
+      expect(() => {
+        component.openReportResultModal(mockItem, currentItemId);
+      }).toThrow();
+    });
+
+    it('should preserve all item properties except indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        description: 'Test Description',
+        status: 'active',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-1';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        description: 'Test Description',
+        status: 'active',
+        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' }]
+      });
+    });
+
+    it('should handle multiple indicators with same indicator_id', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_value: 'Outcome indicator' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Impact indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-1';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_value: 'Outcome indicator' }
+        ]
+      });
+    });
+
+    it('should always set showReportResultModal to true regardless of item content', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      };
+      const currentItemId = 'any-indicator';
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledTimes(1);
     });
   });
 });

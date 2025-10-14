@@ -33,6 +33,7 @@ export class EntityAowComponent implements OnInit {
     const subPath = aowIndex !== -1 ? currentUrl.substring(aowIndex) : currentUrl;
 
     const found = this.entityAowService.sideBarItems().find(item => item.itemLink === subPath);
+
     if (found) {
       return found.label;
     }
@@ -40,7 +41,7 @@ export class EntityAowComponent implements OnInit {
       if (item.isTree && Array.isArray(item.items)) {
         const subItem = item.items.find((sub: any) => sub.itemLink === subPath);
         if (subItem) {
-          return subItem.label;
+          return `${subItem.label} - ${subItem.name}`;
         }
       }
     }

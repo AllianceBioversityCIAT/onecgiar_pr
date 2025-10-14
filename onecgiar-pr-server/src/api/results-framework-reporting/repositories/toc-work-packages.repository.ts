@@ -19,6 +19,8 @@ interface toc_result_row {
   target_value_sum: number | null;
   actual_achieved_value_sum: number | null;
   progress_percentage: string | null;
+  result_type_id?: number | null;
+  result_level_id?: number | null;
 }
 
 export interface toc_result_response {
@@ -38,6 +40,8 @@ export interface toc_result_response {
     target_value_sum: number | null;
     actual_achieved_value_sum?: number | null;
     progress_percentage?: string | null;
+    result_type_id?: number | null;
+    result_level_id?: number | null;
   }>;
 }
 
@@ -71,7 +75,13 @@ export class TocResultsRepository {
         tri.location,
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         0 AS actual_achieved_value_sum,
-        '50%' AS progress_percentage
+        '50%' AS progress_percentage,
+        CASE
+          WHEN tri.type_value LIKE '%knowledge%' THEN 6
+          WHEN tri.type_value LIKE '%innovation%' THEN 7
+          ELSE NULL
+        END AS result_type_id,
+        CAST(4 AS SIGNED) AS result_level_id
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?
@@ -132,6 +142,12 @@ export class TocResultsRepository {
             target_value_sum: row.target_value_sum,
             actual_achieved_value_sum: row.actual_achieved_value_sum,
             progress_percentage: row.progress_percentage,
+            result_type_id: row.result_type_id
+              ? Number(row.result_type_id)
+              : null,
+            result_level_id: row.result_level_id
+              ? Number(row.result_level_id)
+              : null,
           });
         }
       }
