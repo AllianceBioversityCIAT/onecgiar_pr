@@ -1,0 +1,194 @@
+<p-dialog
+  #reportResultDialog
+  [modal]="true"
+  [visible]="entityAowService.showReportResultModal()"
+  styleClass="report-result-dialog"
+  [showHeader]="false">
+  <div class="report-result-header">
+    <span class="font-bold whitespace-nowrap">Report result</span>
+    <i class="material-icons-round" style="font-size: 20px; cursor: pointer" (click)="entityAowService.onCloseReportResultModal()">close</i>
+  </div>
+
+  <div class="report-result-content">
+    <div class="report-result-content_left">
+      <div class="report-result-content_left_header">
+        <p class="report-result-content_left_header_subtitle">
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }} / {{ entityAowService.currentAowSelected()?.code }} -
+          {{ entityAowService.currentAowSelected()?.name }}
+        </p>
+        <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
+        <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+      </div>
+      <div class="report-result-content_left_content">
+        <div class="report-result-content_left_content_indicator">
+          <span class="report-result-content_left_content_label">Indicator category: </span>
+          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_value }}</span>
+        </div>
+
+        @if (entityAowService.currentResultIsKnowledgeProduct()) {
+          <div>
+            <div class="mqap_sync_title">
+              <app-pr-input
+                [isStatic]="true"
+                placeholder="Handle..."
+                label="CGSpace link"
+                type="text"
+                labelDescInlineStyles="margin-top: 0 !important"
+                [(ngModel)]="createResultBody().handler">
+              </app-pr-input>
+
+              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() }">
+                <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
+              </div>
+            </div>
+            @if (mqapUrlError().status) {
+              <div class="error__link" [innerHTML]="mqapUrlError().message"></div>
+            }
+          </div>
+        }
+
+        <app-pr-input
+          [isStatic]="true"
+          [placeholder]="entityAowService.currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
+          label="Title"
+          type="text"
+          [description]="entityAowService.currentResultIsKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
+          labelDescInlineStyles="margin-top: 0 !important"
+          [(ngModel)]="createResultBody().result_name"
+          [maxWords]="30"
+          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
+          [autogenerate]="entityAowService.currentResultIsKnowledgeProduct()">
+        </app-pr-input>
+
+        <div class="separator"></div>
+
+        <app-pr-textarea
+          [isStatic]="true"
+          placeholder="Provide input here..."
+          [label]="
+            entityAowService.currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'
+          "
+          [(ngModel)]="createResultBody().toc_progressive_narrative"
+          type="text"
+          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
+          labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
+
+        <div>
+          <app-pr-field-header
+            label="Contributing Science Programs/Accelerators"
+            [required]="false"
+            [labelDescInlineStyles]="'margin-top: 0 !important'">
+          </app-pr-field-header>
+
+          <p-multiselect
+            [options]="allInitiatives()"
+            optionLabel="official_code"
+            placeholder="Select entity"
+            appendTo="body"
+            [(ngModel)]="entityAowService.selectedEntities"
+            [style]="{ width: '100%', height: '32px' }">
+            <ng-template let-entity #item>
+              <div class="flex items-center gap-2">
+                <div>{{ entity.official_code }} - {{ entity.name }}</div>
+              </div>
+            </ng-template>
+          </p-multiselect>
+
+          @if (entityAowService.selectedEntities().length > 0) {
+            <app-pr-field-header
+              label="Science Program(s) / Accelerator(s) selected"
+              [required]="false"
+              [labelDescInlineStyles]="'margin-top: 10px !important; font-weight: 300;'">
+            </app-pr-field-header>
+
+            <div class="selected_chips_container">
+              @for (entity of entityAowService.selectedEntities(); track $index) {
+                <div class="selected_chip">
+                  <div class="name">
+                    <span class="font-weight-600">{{ entity.official_code }} -</span> {{ entity.name }}
+                  </div>
+                  <i class="material-icons-round" style="font-size: 18px; cursor: pointer" (click)="removeEntityOption(entity)"> cancel </i>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div>
+          <app-pr-field-header
+            label="Contributing to W3 and/or bilateral projects"
+            [required]="false"
+            [labelDescInlineStyles]="'margin-top: 0 !important'">
+          </app-pr-field-header>
+
+          <app-alert-status
+            status="info"
+            description="If you don't find the funder you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list."
+            inlineStyles="margin: 0; margin-top: 10px;"></app-alert-status>
+
+          <p-multiselect
+            [options]="entityAowService.w3BilateralProjects()"
+            placeholder="Select an W3 and/or bilateral projects"
+            appendTo="body"
+            optionLabel="project_name"
+            [maxSelectedLabels]="1"
+            [(ngModel)]="entityAowService.selectedW3BilateralProjects"
+            [style]="{ width: '100%', height: '32px', marginTop: '10px' }">
+            <ng-template let-project #item>
+              <div class="flex items-center gap-2">
+                <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">{{ project.project_name }}</div>
+              </div>
+            </ng-template>
+          </p-multiselect>
+
+          @if (entityAowService.selectedW3BilateralProjects().length > 0) {
+            <div class="selected_bilateral_container">
+              @for (project of entityAowService.selectedW3BilateralProjects(); track $index) {
+                <div class="selected_bilateral_item">
+                  <div class="selected_bilateral_item_content">
+                    <p class="pr-body-1 font-weight-300">
+                      {{ project.project_name }}
+                    </p>
+                    <p class="pr-body-2 font-weight-300 italic">
+                      <span class="font-weight-500 normal">Grant title:</span> {{ project.project_summary }}
+                    </p>
+                  </div>
+                  <i
+                    class="material-icons-round"
+                    style="font-size: 20px; cursor: pointer; color: var(--pr-color-red-300)"
+                    (click)="removeBilateralProject(project)">
+                    delete
+                  </i>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
+          <app-pr-button
+            [verticalMargin]="0"
+            text="Create and continue"
+            (click)="createResult()"
+            [rotating]="creatingResult()"
+            [icon]="creatingResult() ? 'loop' : ''"></app-pr-button>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-result-content_right">
+      <h2 class="report-result-content_right_title">Existing results</h2>
+
+      <div class="report-result-content_right_content">
+        @for (item of entityAowService.existingResultsContributors(); track $index) {
+          <div class="report-result-content_right_content_item">
+            <i class="pi pi-book" style="font-size: 12px; color: var(--pr-color-neutral-200)"></i>
+            <p class="pr-body-2">
+              <span class="font-weight-600">{{ item.result_code }} -</span> {{ item.title }}
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</p-dialog>

@@ -14,6 +14,7 @@ import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-res
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
+import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -57,12 +58,14 @@ const mockResultsKnowledgeProductsService = {
 
 const mockResultsTocResultRepository = {
   findOne: jest.fn(),
+  find: jest.fn(),
   save: jest.fn(),
   update: jest.fn(),
 };
 
 const mockResultsTocResultIndicatorsRepository = {
   findOne: jest.fn(),
+  find: jest.fn(),
   save: jest.fn(),
 };
 
@@ -78,6 +81,10 @@ const mockResultRepository = {
 
 const mockResultsByProjectsService = {
   linkBilateralProjectToResult: jest.fn(),
+};
+
+const mockContributionToIndicatorResultsRepository = {
+  find: jest.fn(),
 };
 
 describe('ResultsFrameworkReportingService', () => {
@@ -128,6 +135,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultsByProjectsService,
           useValue: mockResultsByProjectsService,
+        },
+        {
+          provide: ContributionToIndicatorResultsRepository,
+          useValue: mockContributionToIndicatorResultsRepository,
         },
       ],
     }).compile();
@@ -625,9 +636,11 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findResultById.mockReset();
       mockTocResultsRepository.findIndicatorById.mockReset();
       mockResultsTocResultRepository.findOne.mockReset();
+      mockResultsTocResultRepository.find.mockReset();
       mockResultsTocResultRepository.save.mockReset();
       mockResultsTocResultRepository.update.mockReset();
       mockResultsTocResultIndicatorsRepository.findOne.mockReset();
+      mockResultsTocResultIndicatorsRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.save.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
@@ -652,7 +665,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
         id: 777,
         toc_results_id: 555,
-        toc_result_indicator_id: 'IND-1',
+        related_node_id: 'IND-1',
       });
       mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
         null,
@@ -662,7 +675,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 555,
-          toc_results: [{ toc_result_indicator_id: 777 }],
+          indicators: [{ indicator_id: 777 }],
         },
         user,
       );
@@ -677,13 +690,14 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockShareResultRequestService.resultRequest,
       ).not.toHaveBeenCalled();
+      // No bilateral project data provided -> should not call link service
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
-      ).toHaveBeenCalledWith(101, undefined, user.id);
+      ).not.toHaveBeenCalled();
       expect(response.response.tocResultLinkId).toBe(900);
     });
 
-    it('should create a knowledge product result and reuse existing ToC record', async () => {
+    it('should create a knowledge product result and reuse existing ToC record (single bilateral)', async () => {
       const kpPayload: any = {
         id: 202,
         result_data: baseResult,
@@ -706,7 +720,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
         id: 999,
         toc_results_id: 888,
-        toc_result_indicator_id: 'KP-99',
+        related_node_id: 'KP-99',
       });
       mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
         null,
@@ -720,7 +734,7 @@ describe('ResultsFrameworkReportingService', () => {
           },
           knowledge_product: kpPayload,
           toc_result_id: 888,
-          toc_results: [{ toc_result_indicator_id: 999 }],
+          indicators: [{ indicator_id: 999 }],
           contributors_result_toc_result: [
             {
               initiative_id: 20,
@@ -760,9 +774,187 @@ describe('ResultsFrameworkReportingService', () => {
       );
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
-      ).toHaveBeenCalledWith(202, '260', user.id);
+      ).toHaveBeenCalledWith(202, 260, user.id);
       expect(response.status).toBe(201);
       expect(response.response.knowledgeProduct).toEqual(kpPayload);
+    });
+
+    it('should link multiple bilateral projects when bilateral_projects array is provided', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 303 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({ id: 303 });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 777,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 444,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 5555,
+        toc_results_id: 777,
+        related_node_id: 'IND-Multi',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      const response: any = await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 777,
+          indicators: [{ indicator_id: 5555 }],
+          bilateral_projects: [
+            { project_id: 9001, project_name: 'Proj A' },
+            { project_id: '9002', project_name: 'Proj B' },
+            { project_id: 'invalid' }, // ignored
+          ],
+        } as any,
+        user,
+      );
+
+      expect(response.status).toBe(201);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenNthCalledWith(1, 303, 9001, user.id);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenNthCalledWith(2, 303, 9002, user.id);
+    });
+  });
+
+  describe('getExistingResultContributorsToIndicators', () => {
+    beforeEach(() => {
+      mockResultsTocResultRepository.find.mockReset();
+      mockResultsTocResultIndicatorsRepository.find.mockReset();
+      mockHandlersError.returnErrorRes.mockClear();
+    });
+
+    it('should return contributors when matches are found', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 11,
+          result_id: 101,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Alpha',
+            result_code: 'RES-101',
+            result_type_id: 2,
+          },
+        },
+        {
+          result_toc_result_id: 12,
+          result_id: 102,
+          toc_result_id: 5,
+          obj_results: {
+            title: 'Result Beta',
+            result_code: 'RES-102',
+            result_type_id: 3,
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 11 },
+      ]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(5, 'IND-55');
+
+      expect(mockResultsTocResultRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            toc_result_id: 5,
+            is_active: true,
+          }),
+        }),
+      );
+      expect(
+        mockResultsTocResultIndicatorsRepository.find,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            toc_results_indicator_id: 'IND-55',
+            is_active: true,
+          }),
+        }),
+      );
+      expect(result.status).toBe(200);
+      expect(result.response.contributors).toEqual([
+        {
+          result_id: 101,
+          title: 'Result Alpha',
+          result_code: 'RES-101',
+        },
+      ]);
+      expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
+    });
+
+    it('should return empty contributors when no indicators linked', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 21,
+          result_id: 303,
+          toc_result_id: 8,
+          obj_results: {
+            title: 'Result Gamma',
+            result_code: 'RES-303',
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(8, 'IND-99');
+
+      expect(result.status).toBe(200);
+      expect(result.response.contributors).toEqual([]);
+    });
+
+    it('should propagate errors through handlers when invalid id provided', async () => {
+      const result = await service.getExistingResultContributorsToIndicators(
+        'abc',
+        'IND-3',
+      );
+
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 400,
+        }),
+        debug: true,
+      });
+    });
+
+    it('should handle missing indicator identifier', async () => {
+      const result = await service.getExistingResultContributorsToIndicators(
+        9,
+        '',
+      );
+
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+    });
+
+    it('should return not found when no contribution exists', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([]);
+
+      const result = await service.getExistingResultContributorsToIndicators(
+        10,
+        'IND-1',
+      );
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 404,
+        }),
+        debug: true,
+      });
     });
   });
 });

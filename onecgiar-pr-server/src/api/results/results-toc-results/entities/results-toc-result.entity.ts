@@ -36,11 +36,11 @@ export class ResultsTocResult {
   })
   result_id: number;
 
-  @ManyToOne(() => Result, (r) => r.id)
+  @ManyToOne(() => Result, (r) => r.obj_results_toc_result)
   @JoinColumn({
     name: 'results_id',
   })
-  results_id: number;
+  obj_results: Result;
 
   // ! Remove
   @ManyToOne(() => ClarisaActionAreaOutcome, (caao) => caao.id, {

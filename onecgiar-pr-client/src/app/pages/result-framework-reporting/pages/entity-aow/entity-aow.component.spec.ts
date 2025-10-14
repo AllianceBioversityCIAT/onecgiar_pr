@@ -103,8 +103,8 @@ describe('EntityAowComponent', () => {
           isTree: true,
           label: 'By AOW',
           items: [
-            { label: 'AOW1', itemLink: '/aow/AOW1' },
-            { label: 'AOW2', itemLink: '/aow/AOW2' }
+            { label: 'AOW1', name: 'Area of Work 1', itemLink: '/aow/AOW1' },
+            { label: 'AOW2', name: 'Area of Work 2', itemLink: '/aow/AOW2' }
           ]
         }
       ]);
@@ -112,7 +112,7 @@ describe('EntityAowComponent', () => {
 
       const result = component.getCurrentRoute();
 
-      expect(result).toBe('AOW1');
+      expect(result).toBe('AOW1 - Area of Work 1');
     });
 
     it('should return label when URL does not contain /aow/ but matches nested tree item exactly', () => {
@@ -122,8 +122,8 @@ describe('EntityAowComponent', () => {
           isTree: true,
           label: 'By AOW',
           items: [
-            { label: 'AOW1', itemLink: '/aow/AOW1' },
-            { label: 'AOW2', itemLink: '/aow/AOW2' }
+            { label: 'AOW1', name: 'Area of Work 1', itemLink: '/aow/AOW1' },
+            { label: 'AOW2', name: 'Area of Work 2', itemLink: '/aow/AOW2' }
           ]
         }
       ]);
@@ -131,7 +131,7 @@ describe('EntityAowComponent', () => {
 
       const result = component.getCurrentRoute();
 
-      expect(result).toBe('AOW2');
+      expect(result).toBe('AOW2 - Area of Work 2');
     });
 
     it('should return empty string when URL contains /aow/ but no matching item found in tree', () => {
@@ -215,19 +215,19 @@ describe('EntityAowComponent', () => {
         {
           isTree: true,
           label: 'By AOW',
-          items: [{ label: 'AOW1', itemLink: '/aow/AOW1' }]
+          items: [{ label: 'AOW1', name: 'Area of Work 1', itemLink: '/aow/AOW1' }]
         },
         {
           isTree: true,
           label: 'By Category',
-          items: [{ label: 'AOW1', itemLink: '/aow/AOW1' }]
+          items: [{ label: 'AOW1', name: 'Area of Work 1', itemLink: '/aow/AOW1' }]
         }
       ]);
       Object.defineProperty(router, 'url', { value: '/entity/123/aow/AOW1' });
 
       const result = component.getCurrentRoute();
 
-      expect(result).toBe('AOW1');
+      expect(result).toBe('AOW1 - Area of Work 1');
     });
 
     it('should handle empty URL gracefully', () => {

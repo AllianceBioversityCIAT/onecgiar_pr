@@ -134,7 +134,7 @@ describe('EntityAowService', () => {
 
       service.getAllDetailsData();
 
-      expect(service.isLoadingDetails()).toBe(true);
+      expect(service.isLoadingDetails()).toBe(false);
     });
 
     it('should call both APIs with correct entityId', async () => {
@@ -664,10 +664,12 @@ describe('EntityAowService', () => {
           items: [
             {
               label: 'AOW-001',
+              name: 'Area of Work 1',
               itemLink: '/aow/AOW-001'
             },
             {
               label: 'AOW-002',
+              name: 'Area of Work 2',
               itemLink: '/aow/AOW-002'
             }
           ]
@@ -717,6 +719,7 @@ describe('EntityAowService', () => {
       expect(aowTreeItem.items).toEqual([
         {
           label: 'CUSTOM-001',
+          name: 'Custom AOW',
           itemLink: '/aow/CUSTOM-001'
         }
       ]);

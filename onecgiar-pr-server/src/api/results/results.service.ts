@@ -1213,26 +1213,12 @@ export class ResultsService {
           override?.initiativeShortName ??
           current?.initiativeShortName ??
           undefined,
-        portfolioId:
-          override?.portfolioId !== undefined
-            ? override.portfolioId
-            : current?.portfolioId,
-        portfolioName:
-          override?.portfolioName !== undefined
-            ? override.portfolioName
-            : current?.portfolioName,
+        portfolioId: override?.portfolioId ?? current?.portfolioId,
+        portfolioName: override?.portfolioName ?? current?.portfolioName,
         portfolioAcronym:
-          override?.portfolioAcronym !== undefined
-            ? override.portfolioAcronym
-            : current?.portfolioAcronym,
-        entityTypeCode:
-          override?.entityTypeCode !== undefined
-            ? override.entityTypeCode
-            : current?.entityTypeCode,
-        entityTypeName:
-          override?.entityTypeName !== undefined
-            ? override.entityTypeName
-            : current?.entityTypeName,
+          override?.portfolioAcronym ?? current?.portfolioAcronym,
+        entityTypeCode: override?.entityTypeCode ?? current?.entityTypeCode,
+        entityTypeName: override?.entityTypeName ?? current?.entityTypeName,
       };
       metadata.set(initiativeId, merged);
       return merged;

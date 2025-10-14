@@ -19,6 +19,7 @@ describe('ResultsFrameworkReportingController', () => {
             getWorkPackagesByProgramAndArea: jest.fn(),
             getProgramIndicatorContributionSummary: jest.fn(),
             createResultFromFramework: jest.fn(),
+            getExistingResultContributorsToIndicators: jest.fn(),
           },
         },
         {
@@ -121,6 +122,20 @@ describe('ResultsFrameworkReportingController', () => {
       controller.createResultFromFramework({} as any, { id: 1 } as any);
 
       expect(reportingService.createResultFromFramework).toHaveBeenCalled();
+    });
+  });
+
+  describe('getExistingResultContributorsAndPartners', () => {
+    it('should delegate to reporting service', () => {
+      reportingService.getExistingResultContributorsToIndicators.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getExistingResultContributorsAndPartners(55, 'IND-7');
+
+      expect(
+        reportingService.getExistingResultContributorsToIndicators,
+      ).toHaveBeenCalledWith(55, 'IND-7');
     });
   });
 });

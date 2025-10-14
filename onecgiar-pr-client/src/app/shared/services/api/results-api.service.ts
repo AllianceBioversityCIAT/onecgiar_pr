@@ -1237,4 +1237,18 @@ export class ResultsApiService {
   GET_IndicatorContributionSummary(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
   }
+
+  GET_W3BilateralProjects(tocResultId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
+  }
+
+  POST_createResult(body: any) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
+  }
+
+  GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
+    );
+  }
 }

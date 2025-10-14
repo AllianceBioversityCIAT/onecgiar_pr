@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -19,6 +20,7 @@ import { ResultsKnowledgeProductDto } from '../results/results-knowledge-product
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
+import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -35,6 +37,7 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
+    private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -412,7 +415,7 @@ export class ResultsFrameworkReportingService {
         await this.upsertTocIndicators(
           primaryTocRecord.result_toc_result_id,
           resolvedTocResultId,
-          payload.toc_results ?? [],
+          payload.indicators ?? [],
           user.id,
         );
       }
@@ -437,12 +440,30 @@ export class ResultsFrameworkReportingService {
           );
         }
       }
-
-      await this._resultsByProjectsService.linkBilateralProjectToResult(
-        createdResultId,
-        payload.bilateral_project?.project_id,
-        user.id,
-      );
+      if (
+        Array.isArray((payload as any).bilateral_projects) &&
+        (payload as any).bilateral_projects.length
+      ) {
+        for (const project of (payload as any).bilateral_projects) {
+          const projectIdNum = Number(project?.project_id);
+          if (Number.isFinite(projectIdNum) && projectIdNum > 0) {
+            await this._resultsByProjectsService.linkBilateralProjectToResult(
+              createdResultId,
+              projectIdNum,
+              user.id,
+            );
+          }
+        }
+      } else if (payload.bilateral_project?.project_id) {
+        const singleProjectId = Number(payload.bilateral_project.project_id);
+        if (Number.isFinite(singleProjectId) && singleProjectId > 0) {
+          await this._resultsByProjectsService.linkBilateralProjectToResult(
+            createdResultId,
+            singleProjectId,
+            user.id,
+          );
+        }
+      }
 
       return {
         response: {
@@ -469,7 +490,7 @@ export class ResultsFrameworkReportingService {
     }
 
     for (const indicator of indicators) {
-      const indicatorId = Number(indicator.toc_result_indicator_id);
+      const indicatorId = Number(indicator.indicator_id);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
         throw {
           response: {},
@@ -501,7 +522,7 @@ export class ResultsFrameworkReportingService {
         await this._resultsTocResultIndicatorsRepository.findOne({
           where: {
             results_toc_results_id: resultTocResultId,
-            toc_results_indicator_id: indicatorRow.toc_result_indicator_id,
+            toc_results_indicator_id: indicatorRow.related_node_id,
             is_active: true,
           },
         });
@@ -512,7 +533,7 @@ export class ResultsFrameworkReportingService {
 
       await this._resultsTocResultIndicatorsRepository.save({
         results_toc_results_id: resultTocResultId,
-        toc_results_indicator_id: indicatorRow.toc_result_indicator_id,
+        toc_results_indicator_id: indicatorRow.related_node_id,
         created_by: userId,
         last_updated_by: userId,
         is_active: true,
@@ -680,6 +701,117 @@ export class ResultsFrameworkReportingService {
       return {
         response: bilateralProjects,
         message: 'Bilateral projects retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getExistingResultContributorsToIndicators(
+    resultTocResultId: string | number,
+    tocResultIndicatorId: string,
+  ) {
+    try {
+      const parsedResultTocResultId = Number(resultTocResultId);
+
+      if (
+        !Number.isFinite(parsedResultTocResultId) ||
+        parsedResultTocResultId <= 0
+      ) {
+        throw {
+          response: {},
+          message: 'Invalid resultTocResultId provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!tocResultIndicatorId || `${tocResultIndicatorId}`.trim() === '') {
+        throw {
+          response: {},
+          message: 'Invalid tocResultIndicatorId provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const resultContributionExists =
+        await this._resultsTocResultRepository.find({
+          relations: {
+            obj_results: true,
+          },
+          where: {
+            toc_result_id: parsedResultTocResultId,
+            is_active: true,
+            obj_results: { is_active: true },
+          },
+          select: {
+            result_toc_result_id: true,
+            result_id: true,
+            toc_result_id: true,
+            obj_results: {
+              title: true,
+              result_code: true,
+              result_type_id: true,
+            },
+          },
+        });
+
+      if (!resultContributionExists || resultContributionExists.length === 0) {
+        throw {
+          response: {},
+          message:
+            'No result contribution record was found with the provided resultTocResultId.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const tocResultIdsWithIndicator = resultContributionExists.map(
+        (contrib) => contrib.result_toc_result_id,
+      );
+
+      const indicatorsForResults =
+        await this._resultsTocResultIndicatorsRepository.find({
+          where: {
+            results_toc_results_id: In(tocResultIdsWithIndicator),
+            toc_results_indicator_id: tocResultIndicatorId,
+            is_active: true,
+          },
+          select: ['results_toc_results_id'],
+        });
+
+      if (!indicatorsForResults || indicatorsForResults.length === 0) {
+        return {
+          response: {
+            contributors: [],
+            resultTocResultId: parsedResultTocResultId,
+            tocResultIndicatorId,
+          },
+          message: 'No contributions found for the specified indicator.',
+          status: HttpStatus.OK,
+        };
+      }
+
+      const contributingTocResultIds = indicatorsForResults.map(
+        (ind) => ind.results_toc_results_id,
+      );
+
+      const contributors = resultContributionExists
+        .filter((contrib) =>
+          contributingTocResultIds.includes(contrib.result_toc_result_id),
+        )
+        .map((contrib) => ({
+          result_id: contrib.result_id,
+          title: contrib.obj_results?.title,
+          result_code: contrib.obj_results?.result_code,
+        }));
+
+      return {
+        response: {
+          contributors,
+          resultTocResultId: parsedResultTocResultId,
+          tocResultIndicatorId,
+        },
+        message: 'Existing result contributors retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

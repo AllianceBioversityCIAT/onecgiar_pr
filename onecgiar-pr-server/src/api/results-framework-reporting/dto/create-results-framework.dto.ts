@@ -8,7 +8,7 @@ export class ResultsFrameworkTocIndicatorDto {
     description:
       'Identifier of the ToC indicator (Integration DB primary key).',
   })
-  toc_result_indicator_id: number;
+  indicator_id: number | string;
 }
 
 export class ResultsFrameworkBilateralProjectDto {
@@ -72,7 +72,7 @@ export class CreateResultsFrameworkResultDto {
     description:
       'List of ToC indicators (from the Integration catalogue) that the result contributes to.',
   })
-  toc_results?: ResultsFrameworkTocIndicatorDto[];
+  indicators?: ResultsFrameworkTocIndicatorDto[];
 
   @ApiProperty({
     required: false,
@@ -88,4 +88,12 @@ export class CreateResultsFrameworkResultDto {
     description: 'Bilateral project information linked to the result.',
   })
   bilateral_project?: ResultsFrameworkBilateralProjectDto;
+
+  @ApiProperty({
+    required: false,
+    type: () => [ResultsFrameworkBilateralProjectDto],
+    description:
+      'List of bilateral projects linked to the result. If provided, supersedes bilateral_project.',
+  })
+  bilateral_projects?: ResultsFrameworkBilateralProjectDto[];
 }
