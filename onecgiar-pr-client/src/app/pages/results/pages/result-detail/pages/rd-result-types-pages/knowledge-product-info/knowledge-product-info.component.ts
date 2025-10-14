@@ -89,6 +89,12 @@ export class KnowledgeProductInfoComponent implements OnInit {
     const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
     mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
 
+    if (mapped.source === 'CGSPACE') {
+      mapped.handle = `https://cgspace.cgiar.org/handle11/${response.handle}`;
+    } else if (mapped.source === 'MELSPACE') {
+      mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
+    }
+
     this.fair_data = this.filterOutObject(response.fair_data);
 
     const journalArticle: boolean = (response.type ?? '').toLocaleLowerCase().includes('journal article');
