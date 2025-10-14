@@ -150,8 +150,6 @@ export class ResultsKnowledgeProductsService {
 
       const confidenceThreshold = +globalParameter.value;
 
-      console.log('Justo antes de llamar a CGSpace');
-
       const cgspaceResponse = await this.findOnCGSpace(
         resultKnowledgeProduct.handle,
         user,
