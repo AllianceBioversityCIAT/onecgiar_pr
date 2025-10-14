@@ -1237,4 +1237,8 @@ export class ResultsApiService {
   GET_IndicatorContributionSummary(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
   }
+
+  GET_W3BilateralProjects(tocResultId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
+  }
 }

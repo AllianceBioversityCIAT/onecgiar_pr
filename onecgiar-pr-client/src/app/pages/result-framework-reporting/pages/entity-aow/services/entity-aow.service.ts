@@ -20,7 +20,9 @@ export class EntityAowService {
   entityAows = signal<Unit[]>([]);
   indicatorSummaries = signal<any[]>([]);
   isLoadingDetails = signal<boolean>(false);
-
+  w3BilateralProjects = signal<any[]>([]);
+  selectedW3BilateralProjects = signal<any[]>([]);
+  selectedEntities = signal<any[]>([]);
   sideBarItems = signal<any[]>([]);
 
   tocResultsByAowId = signal<any[]>([]);
@@ -99,5 +101,24 @@ export class EntityAowService {
       this.tocResultsByAowId.set(response?.tocResults ?? []);
       this.isLoadingTocResultsByAowId.set(false);
     });
+  }
+
+  getW3BilateralProjects() {
+    this.api.resultsSE.GET_W3BilateralProjects(this.currentResultToReport()?.id).subscribe(response => {
+      this.w3BilateralProjects.set(
+        response?.response.map(item => ({
+          ...item,
+          optionLabel: `${item.project_id} - ${item.project_name}`
+        }))
+      );
+    });
+  }
+
+  onCloseReportResultModal() {
+    this.showReportResultModal.set(false);
+    this.currentResultToReport.set({});
+    this.w3BilateralProjects.set([]);
+    this.selectedW3BilateralProjects.set([]);
+    this.selectedEntities.set([]);
   }
 }

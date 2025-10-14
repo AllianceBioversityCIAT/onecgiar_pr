@@ -4,9 +4,7 @@ import { EntityAowService } from '../../../../services/entity-aow.service';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 
 export interface ColumnOrder {
   title: string;
@@ -18,7 +16,7 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [CommonModule, TableModule, ProgressBarModule, ButtonModule, DialogModule, CustomFieldsModule, MultiSelectModule],
+  imports: [CommonModule, TableModule, ProgressBarModule, ButtonModule, AowHloCreateModalComponent],
   templateUrl: './aow-hlo-table.component.html',
   styleUrl: './aow-hlo-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -37,18 +35,10 @@ export class AowHloTableComponent {
 
   isKnowledgeProduct = signal<boolean>(true);
 
-  GET_mqapValidation = () => {
-    console.log('GET_mqapValidation');
-  };
-
   getProgress(value: string): number {
     const progress = value.split('%')[0];
 
     return Number(progress);
-  }
-
-  removeOption(option: any) {
-    console.log('removeOption', option);
   }
 
   openReportResultModal(item: any, currentItemId: string) {
