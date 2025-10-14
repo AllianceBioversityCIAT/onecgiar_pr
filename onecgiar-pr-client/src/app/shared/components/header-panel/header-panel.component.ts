@@ -10,7 +10,6 @@ import { AvatarModule } from 'primeng/avatar';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { CommonModule } from '@angular/common';
-import { FormatTimeAgoModule } from '../../pipes/format-time-ago/format-time-ago.module';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
 import { NavigationBarComponent } from '../navigation-bar/navigation-bar.component';
@@ -25,7 +24,6 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
     AvatarModule,
     SatPopoverModule,
     OverlayBadgeModule,
-    FormatTimeAgoModule,
     PopUpNotificationItemComponent,
     TawkComponent,
     NavigationBarComponent,
@@ -50,6 +48,7 @@ export class HeaderPanelComponent implements OnInit {
       this.resultsNotificationsSE.get_updates_notifications();
       this.resultsNotificationsSE.get_updates_pop_up_notifications();
     });
+    this.api.dataControlSE.getCurrentPhases().subscribe();
   }
 
   getInitiativeSeparatedByPortfolio() {

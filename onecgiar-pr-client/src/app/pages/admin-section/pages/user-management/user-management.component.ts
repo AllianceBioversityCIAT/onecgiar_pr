@@ -247,7 +247,6 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
           role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
         }));
-        this.manageUserModal.updateDisableOptions();
         this.loadingUserRole.set(false);
       },
       error: error => {
@@ -258,7 +257,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   fillUserFormToEdit(user: AddUser) {
     return new Promise(resolve => {
-      const { firstName, lastName, emailAddress, isCGIAR } = user;
+      const { firstName, lastName, emailAddress, isCGIAR, createdByFirstName, createdByLastName, createdByEmail } = user;
       setTimeout(() => {
         this.manageUserModal.addUserForm.set({
           is_cgiar: isCGIAR,
@@ -268,7 +267,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           email: emailAddress,
           role_platform: 2, // Marked as guest by default (2)
           role_assignments: [],
-          activate: true
+          activate: true,
+          created_by: `${createdByFirstName} ${createdByLastName} (${createdByEmail})`
         });
         resolve(true);
       }, 500);

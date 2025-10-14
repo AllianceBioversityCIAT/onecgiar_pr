@@ -1,0 +1,49 @@
+<div class="framework-reporting_welcome">Welcome, {{ this.api.authSE.localStorageUser?.user_name }}!</div>
+
+<div class="framework-reporting_container">
+  <div class="framework-reporting_left">
+    <div class="framework-reporting_left_header">
+      <h1 class="framework-reporting_left_header_title">Your innovative digital reporting solution</h1>
+      <p class="framework-reporting_left_header_description">Welcome to PRMS! Explore, create, and manage your projects and results with ease.</p>
+    </div>
+
+    <div class="framework-reporting_left_content">
+      <div class="framework-reporting_left_content_mySPs">
+        <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
+
+        <div class="framework-reporting_left_content_mySPs_items">
+          @for (item of mySPsList(); track $index) {
+            <app-result-framework-reporting-card-item [item]="item" />
+          }
+        </div>
+      </div>
+
+      <div class="framework-reporting_left_content_otherSPs">
+        <div class="framework-reporting_left_content_header">
+          <h2 class="framework-reporting_left_content_title">Other Science Programs/Accelerators</h2>
+          <p class="framework-reporting_left_content_desc">
+            Explore other Science Programs and Accelerators driving research, innovation, and impact.
+          </p>
+        </div>
+
+        <div class="framework-reporting_left_content_otherSPs_items">
+          @for (item of otherSPsList(); track $index) {
+            <app-result-framework-reporting-card-item [item]="item" />
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="framework-reporting_right">
+    <div class="framework-reporting_right_header">
+      <h2 class="framework-reporting_right_header_title">Recent activity</h2>
+    </div>
+
+    <div class="framework-reporting_right_content">
+      @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
+        <app-result-framework-reporting-recent-item [item]="item" />
+      }
+    </div>
+  </div>
+</div>

@@ -9,6 +9,7 @@ import { SocketManagementModule } from '../../shared/microservices/socket-manage
 import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { VersioningModule } from '../versioning/versioning.module';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 
 @Module({
   controllers: [NotificationController],
@@ -19,6 +20,7 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     NotificationRepository,
     UserRepository,
     HandlersError,
+    ResultByInitiativesRepository,
   ],
   exports: [NotificationService],
   imports: [SocketManagementModule, ShareResultRequestModule, VersioningModule],
