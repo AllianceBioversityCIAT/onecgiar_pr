@@ -52,6 +52,7 @@ import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recove
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
+import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_components/impact_areas_scores_components.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ResultsValidationModuleModule,
     DynamodbLogsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
+    ImpactAreasScoresComponentsModule,
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
