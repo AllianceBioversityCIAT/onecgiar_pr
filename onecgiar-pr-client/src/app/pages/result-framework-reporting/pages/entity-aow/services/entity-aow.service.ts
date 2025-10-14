@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Initiative, Unit } from '../../entity-details/interfaces/entity-details.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { forkJoin } from 'rxjs';
@@ -12,6 +12,10 @@ export class EntityAowService {
   entityId = signal<string>('');
   aowId = signal<string>('');
 
+  currentAowSelected = computed(() => {
+    return this.entityAows().find(item => item.code === this.aowId());
+  });
+
   entityDetails = signal<Initiative>({} as Initiative);
   entityAows = signal<Unit[]>([]);
   indicatorSummaries = signal<any[]>([]);
@@ -22,7 +26,11 @@ export class EntityAowService {
   tocResultsByAowId = signal<any[]>([]);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
-  showReportResultModal = signal<boolean>(true);
+  showReportResultModal = signal<boolean>(false);
+  currentResultToReport = signal<any>({});
+  currentResultIsKnowledgeProduct = computed(() => {
+    return this.currentResultToReport()?.indicators?.[0]?.type_value === 'Number of knowledge products';
+  });
 
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
@@ -75,6 +83,7 @@ export class EntityAowService {
         isOpen: true,
         items: this.entityAows().map(aow => ({
           label: aow.code,
+          name: aow.name,
           itemLink: `/aow/${aow.code}`
         }))
       }

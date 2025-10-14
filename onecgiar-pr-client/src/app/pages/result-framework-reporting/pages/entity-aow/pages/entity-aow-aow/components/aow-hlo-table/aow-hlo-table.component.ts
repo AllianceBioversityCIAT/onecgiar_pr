@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -49,5 +49,15 @@ export class AowHloTableComponent {
 
   removeOption(option: any) {
     console.log('removeOption', option);
+  }
+
+  openReportResultModal(item: any, currentItemId: string) {
+    const selectedCurrentItem = {
+      ...item,
+      indicators: item.indicators.filter((indicator: any) => indicator.id === currentItemId)
+    };
+
+    this.entityAowService.showReportResultModal.set(true);
+    this.entityAowService.currentResultToReport.set(selectedCurrentItem);
   }
 }

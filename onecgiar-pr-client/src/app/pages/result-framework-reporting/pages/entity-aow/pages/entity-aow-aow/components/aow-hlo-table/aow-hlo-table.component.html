@@ -36,7 +36,7 @@
               style="border: none; box-shadow: none !important"
               [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
 
-            <span style="font-weight: bold">{{ item.result_title }}: {{ item.result_title }}</span>
+            <span style="font-weight: bold">{{ item.result_title }}</span>
           </div>
 
           <div style="display: flex; justify-content: flex-start; align-items: center; gap: 5px; cursor: not-allowed">
@@ -76,7 +76,12 @@
         </td>
         <td>
           <div class="tab-content_actions">
-            <button pButton label="Report result" type="button" class="pr-body-3 tab-content_actions_button"></button>
+            <button
+              pButton
+              label="Report result"
+              type="button"
+              class="pr-body-3 tab-content_actions_button"
+              (click)="openReportResultModal(item, result.id)"></button>
             <button pButton label="View results" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
             <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
           </div>
@@ -97,7 +102,8 @@
   [modal]="true"
   [visible]="entityAowService.showReportResultModal()"
   styleClass="report-result-dialog"
-  [showHeader]="false">
+  [showHeader]="false"
+  (onHide)="entityAowService.currentResultToReport.set({})">
   <div class="report-result-header">
     <span class="font-bold whitespace-nowrap">Report result</span>
     <i class="material-icons-round" style="font-size: 20px; cursor: pointer" (click)="entityAowService.showReportResultModal.set(false)">close</i>
@@ -106,17 +112,20 @@
   <div class="report-result-content">
     <div class="report-result-content_left">
       <div class="report-result-content_left_header">
-        <p class="report-result-content_left_header_subtitle">SP01-Breeding for Tomorrow / AOW04-Breeding Resources</p>
-        <p class="report-result-content_left_header_title">HLO - Improved knowledge sharing on climate adaptation</p>
-        <p class="report-result-content_left_header_desc">Number of climate adaptation knowledge products developed</p>
+        <p class="report-result-content_left_header_subtitle">
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }} / {{ entityAowService.currentAowSelected()?.code }} -
+          {{ entityAowService.currentAowSelected()?.name }}
+        </p>
+        <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
+        <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
       </div>
       <div class="report-result-content_left_content">
         <div class="report-result-content_left_content_indicator">
           <span class="report-result-content_left_content_label">Indicator category: </span>
-          <span class="report-result-content_left_content_value">Knowledge product</span>
+          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_value }}</span>
         </div>
 
-        @if (isKnowledgeProduct()) {
+        @if (entityAowService.currentResultIsKnowledgeProduct()) {
           <div class="mqap_sync_title">
             <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text" labelDescInlineStyles="margin-top: 0 !important">
             </app-pr-input>
@@ -129,13 +138,13 @@
 
         <app-pr-input
           [isStatic]="true"
-          [placeholder]="isKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
+          [placeholder]="entityAowService.currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
           label="Title"
           type="text"
-          [description]="isKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
+          [description]="entityAowService.currentResultIsKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
           labelDescInlineStyles="margin-top: 0 !important"
           [maxWords]="30"
-          [autogenerate]="isKnowledgeProduct()">
+          [autogenerate]="entityAowService.currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
         <div class="separator"></div>
@@ -143,7 +152,9 @@
         <app-pr-textarea
           [isStatic]="true"
           placeholder="Provide input here..."
-          [label]="isKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
+          [label]="
+            entityAowService.currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'
+          "
           type="text"
           [readOnly]="true"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
