@@ -175,10 +175,12 @@
       <h2 class="report-result-content_right_title">Existing results</h2>
 
       <div class="report-result-content_right_content">
-        @for (item of [1, 2, 3, 4, 5]; track $index) {
+        @for (item of entityAowService.existingResultsContributors(); track $index) {
           <div class="report-result-content_right_content_item">
             <i class="pi pi-book" style="font-size: 12px; color: var(--pr-color-neutral-200)"></i>
-            <p class="pr-body-2"><span class="font-weight-600">100 -</span> Community-Based approaches to agricultural development</p>
+            <p class="pr-body-2">
+              <span class="font-weight-600">{{ item.result_code }} -</span> {{ item.title }}
+            </p>
           </div>
         }
       </div>

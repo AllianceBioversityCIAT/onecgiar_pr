@@ -25,6 +25,8 @@ export class EntityAowService {
   selectedEntities = signal<any[]>([]);
   sideBarItems = signal<any[]>([]);
 
+  existingResultsContributors = signal<any[]>([]);
+
   tocResultsByAowId = signal<any[]>([]);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
@@ -107,6 +109,14 @@ export class EntityAowService {
     this.api.resultsSE.GET_W3BilateralProjects(this.currentResultToReport()?.toc_result_id).subscribe(response => {
       this.w3BilateralProjects.set(response?.response ?? []);
     });
+  }
+
+  getExistingResultsContributors() {
+    this.api.resultsSE
+      .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
+      .subscribe(response => {
+        this.existingResultsContributors.set(response?.response?.contributors ?? []);
+      });
   }
 
   onCloseReportResultModal() {

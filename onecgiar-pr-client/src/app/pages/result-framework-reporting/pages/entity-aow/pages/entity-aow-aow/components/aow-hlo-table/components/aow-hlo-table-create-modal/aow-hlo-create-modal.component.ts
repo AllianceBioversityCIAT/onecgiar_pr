@@ -41,6 +41,7 @@ export class AowHloCreateModalComponent implements OnInit {
 
   ngOnInit() {
     this.entityAowService.getW3BilateralProjects();
+    this.entityAowService.getExistingResultsContributors();
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
       this.allInitiatives.set(response);
     });
