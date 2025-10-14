@@ -53,9 +53,7 @@ export class ResultsKnowledgeProductMapper {
         ? mqapResponseDto['Country ISO code']
         : (mqapResponseDto?.Countries ?? []);
 
-    console.log('Country codes from MQAP:', countryCodes);
-
-    knowledgeProductDto.repo = mqapResponseDto?.repo;
+    knowledgeProductDto.repo = mqapResponseDto?.repo?.toUpperCase();
 
     knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
@@ -101,8 +99,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = knowledgeProductDto.repo;
-    console.log('Metadata source from MQAP:', knowledgeProductDto.repo);
+    metadataCGSpace.source = knowledgeProductDto.repo.toUpperCase();
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
@@ -137,7 +134,7 @@ export class ResultsKnowledgeProductMapper {
       const metadataWoS: ResultsKnowledgeProductMetadataDto =
         new ResultsKnowledgeProductMetadataDto();
 
-      metadataWoS.source = mqapDOIData.source;
+      metadataWoS.source = mqapDOIData.source.toUpperCase();
 
       if (mqapDOIData.is_oa) {
         metadataWoS.accessibility = mqapDOIData.is_oa
@@ -432,11 +429,17 @@ export class ResultsKnowledgeProductMapper {
     });
 
     knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
-      ? knowledgeProductDto.metadata[0]
+      ? {
+          ...knowledgeProductDto.metadata[0],
+          source: knowledgeProductDto.metadata[0]?.source?.toUpperCase(),
+        }
       : null;
-    
+
     knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
-      ? knowledgeProductDto.metadata[1]
+      ? {
+          ...knowledgeProductDto.metadata[1],
+          source: knowledgeProductDto.metadata[1]?.source?.toUpperCase(),
+        }
       : null;
 
     const altmetric =
