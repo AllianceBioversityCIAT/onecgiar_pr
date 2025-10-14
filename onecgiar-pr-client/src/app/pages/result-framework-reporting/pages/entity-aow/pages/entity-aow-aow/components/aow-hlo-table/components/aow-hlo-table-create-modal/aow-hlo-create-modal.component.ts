@@ -26,7 +26,7 @@ export class AowHloCreateModalComponent implements OnInit {
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
-    handler: 'https://hdl.handle.net/10568/176149',
+    handler: '',
     result_name: '',
     toc_progressive_narrative: ''
   });
@@ -36,6 +36,8 @@ export class AowHloCreateModalComponent implements OnInit {
     status: false,
     message: ''
   });
+
+  creatingResult = signal<boolean>(false);
 
   ngOnInit() {
     this.entityAowService.getW3BilateralProjects();
@@ -110,6 +112,8 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   createResult() {
+    this.creatingResult.set(true);
+
     const body = {
       result: {
         result_type_id: this.entityAowService.currentResultToReport().indicators[0].result_type_id,
@@ -126,6 +130,15 @@ export class AowHloCreateModalComponent implements OnInit {
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
 
-    console.log(body);
+    this.api.resultsSE.POST_createResult(body).subscribe({
+      next: resp => {
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        this.creatingResult.set(false);
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.creatingResult.set(false);
+      }
+    });
   }
 }

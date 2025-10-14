@@ -1241,4 +1241,8 @@ export class ResultsApiService {
   GET_W3BilateralProjects(tocResultId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
+
+  POST_createResult(body: any) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
+  }
 }

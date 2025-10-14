@@ -130,7 +130,8 @@
             [options]="entityAowService.w3BilateralProjects()"
             placeholder="Select an W3 and/or bilateral projects"
             appendTo="body"
-            optionLabel="optionLabel"
+            optionLabel="project_name"
+            [maxSelectedLabels]="1"
             [(ngModel)]="entityAowService.selectedW3BilateralProjects"
             [style]="{ width: '100%', height: '32px', marginTop: '10px' }">
             <ng-template let-project #item>
@@ -164,8 +165,8 @@
           }
         </div>
 
-        <div class="report-result-content_left_content_actions">
-          <app-pr-button [verticalMargin]="0" text="Create and continue" (click)="createResult()"></app-pr-button>
+        <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
+          <app-pr-button [verticalMargin]="0" text="Create and continue" (click)="createResult()" [rotating]="creatingResult()"></app-pr-button>
         </div>
       </div>
     </div>
