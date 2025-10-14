@@ -404,7 +404,7 @@ export class Result {
   @OneToMany(() => ShareResultRequest, (ra) => ra.obj_result)
   obj_share_result: ShareResultRequest[];
 
-  @OneToMany(() => ResultsTocResult, (ra) => ra.results_id)
+  @OneToMany(() => ResultsTocResult, (ra) => ra.obj_results)
   obj_results_toc_result: ResultsTocResult[];
 
   @OneToMany(() => Notification, (ra) => ra.obj_result)

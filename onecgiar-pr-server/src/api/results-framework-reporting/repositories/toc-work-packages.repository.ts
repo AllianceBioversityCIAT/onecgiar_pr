@@ -173,7 +173,8 @@ export class TocResultsRepository {
       SELECT
         tri.id,
         tri.toc_results_id,
-        tri.toc_result_indicator_id
+        tri.toc_result_indicator_id,
+        tri.related_node_id
       FROM ${env.DB_TOC}.toc_results_indicators tri
       WHERE tri.id = ?
       LIMIT 1;
