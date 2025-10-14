@@ -87,8 +87,8 @@
     </div>
     @if (this.generalInfoBody.gender_tag_id == 3) {
       <app-pr-radio-button
-        [options]="this.scoreSE.genderTagScoreList"
-        optionLabel="full_name"
+        [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
+        optionLabel="name"
         optionValue="id"
         fieldRef="[general-info]-gender_impact_area_id"
         [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
@@ -111,8 +111,8 @@
     </div>
     @if (this.generalInfoBody.climate_change_tag_id == 3) {
       <app-pr-radio-button
-        [options]="this.scoreSE.genderTagScoreList"
-        optionLabel="full_name"
+        [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
+        optionLabel="name"
         optionValue="id"
         fieldRef="[general-info]-climate_impact_area_id"
         [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
@@ -135,8 +135,8 @@
     </div>
     @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
       <app-pr-radio-button
-        [options]="this.scoreSE.genderTagScoreList"
-        optionLabel="full_name"
+        [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
+        optionLabel="name"
         optionValue="id"
         fieldRef="[general-info]-nutrition_impact_area_id"
         [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
@@ -159,8 +159,8 @@
     </div>
     @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
       <app-pr-radio-button
-        [options]="this.scoreSE.genderTagScoreList"
-        optionLabel="full_name"
+        [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
+        optionLabel="name"
         optionValue="id"
         fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
         [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
@@ -183,8 +183,8 @@
     </div>
     @if (this.generalInfoBody.poverty_tag_level_id == 3) {
       <app-pr-radio-button
-        [options]="this.scoreSE.genderTagScoreList"
-        optionLabel="full_name"
+        [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
+        optionLabel="name"
         optionValue="id"
         fieldRef="[general-info]-poverty_impact_area_id"
         [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">

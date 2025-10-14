@@ -55,42 +55,46 @@ export class FieldsManagerService {
         label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
       },
       '[general-info]-gender_impact_area_id': {
-        label: this.scoresImpactAreaLabel
+        label: this.scoresImpactAreaLabel,
+        hide: this.isP22()
       },
       //? score 2
       '[general-info]-climate_change_tag_id': {
         label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score'
       },
       '[general-info]-climate_impact_area_id': {
-        label: this.scoresImpactAreaLabel
+        label: this.scoresImpactAreaLabel,
+        hide: this.isP22()
       },
       //? score 3
       '[general-info]-nutrition_tag_level_id': {
         label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`
       },
       '[general-info]-nutrition_impact_area_id': {
-        label: this.scoresImpactAreaLabel
+        label: this.scoresImpactAreaLabel,
+        hide: this.isP22()
       },
       //? score 4
       '[general-info]-environmental_biodiversity_tag_level_id': {
         label: `Environmental health and biodiversity ${this.isP25() ? 'tag' : 'score'}`
       },
       '[general-info]-environmental_biodiversity_impact_area_id': {
-        label: this.scoresImpactAreaLabel
+        label: this.scoresImpactAreaLabel,
+        hide: this.isP22()
       },
       //? score 5
       '[general-info]-poverty_tag_level_id': {
         label: `Poverty reduction, livelihoods and jobs ${this.isP25() ? 'tag' : 'score'}`
       },
       '[general-info]-poverty_impact_area_id': {
-        label: this.scoresImpactAreaLabel
+        label: this.scoresImpactAreaLabel,
+        hide: this.isP22()
       }
     };
     return fields;
   });
+
   constructor() {
-    // setInterval(() => {
-    //   this.portfolioAcronym.set(this.portfolioAcronym() === 'P22' ? 'P25' : 'P22');
-    // }, 1000);
+    //
   }
 }
