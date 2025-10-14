@@ -73,7 +73,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
     const mapped = new KnowledgeProductBodyMapped();
     mapped.warnings = response.warnings;
 
-    mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
     mapped.authors = response.authors?.map(m => m.name);
     mapped.type = response.type;
     mapped.doi = response.metadataCG?.doi;
@@ -89,8 +88,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
     const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
     mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
 
-    if (mapped.source === 'CGSPACE') {
-      mapped.handle = `https://cgspace.cgiar.org/handle11/${response.handle}`;
+    if (mapped.source === 'CGSpace') {
+      mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
     } else if (mapped.source === 'MELSPACE') {
       mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
     }
