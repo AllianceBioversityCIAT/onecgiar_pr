@@ -43,7 +43,7 @@ export class AowHloCreateModalComponent implements OnInit {
     this.entityAowService.getW3BilateralProjects();
     this.entityAowService.getExistingResultsContributors();
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
-      this.allInitiatives.set(response);
+      this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
     });
   }
 
