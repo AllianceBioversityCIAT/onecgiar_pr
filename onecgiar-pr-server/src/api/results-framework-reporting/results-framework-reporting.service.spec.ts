@@ -690,13 +690,14 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockShareResultRequestService.resultRequest,
       ).not.toHaveBeenCalled();
+      // No bilateral project data provided -> should not call link service
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
-      ).toHaveBeenCalledWith(101, undefined, user.id);
+      ).not.toHaveBeenCalled();
       expect(response.response.tocResultLinkId).toBe(900);
     });
 
-    it('should create a knowledge product result and reuse existing ToC record', async () => {
+    it('should create a knowledge product result and reuse existing ToC record (single bilateral)', async () => {
       const kpPayload: any = {
         id: 202,
         result_data: baseResult,
@@ -773,9 +774,57 @@ describe('ResultsFrameworkReportingService', () => {
       );
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
-      ).toHaveBeenCalledWith(202, '260', user.id);
+      ).toHaveBeenCalledWith(202, 260, user.id);
       expect(response.status).toBe(201);
       expect(response.response.knowledgeProduct).toEqual(kpPayload);
+    });
+
+    it('should link multiple bilateral projects when bilateral_projects array is provided', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 303 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({ id: 303 });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 777,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 444,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 5555,
+        toc_results_id: 777,
+        related_node_id: 'IND-Multi',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      const response: any = await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 777,
+          indicators: [{ indicator_id: 5555 }],
+          bilateral_projects: [
+            { project_id: 9001, project_name: 'Proj A' },
+            { project_id: '9002', project_name: 'Proj B' },
+            { project_id: 'invalid' }, // ignored
+          ],
+        } as any,
+        user,
+      );
+
+      expect(response.status).toBe(201);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenNthCalledWith(1, 303, 9001, user.id);
+      expect(
+        mockResultsByProjectsService.linkBilateralProjectToResult,
+      ).toHaveBeenNthCalledWith(2, 303, 9002, user.id);
     });
   });
 
