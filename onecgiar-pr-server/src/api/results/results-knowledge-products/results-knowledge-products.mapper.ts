@@ -430,15 +430,14 @@ export class ResultsKnowledgeProductMapper {
 
       return metadataDto;
     });
+
     knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
       ? knowledgeProductDto.metadata[0]
       : null;
-    console.log('Metadata source from entity:', knowledgeProductDto.metadataCG?.source);
-    console.log('Full metadata from entity:', knowledgeProductDto.metadata);
-    console.log('metadata (stringified):', JSON.stringify(knowledgeProductDto.metadata, null, 2));
-    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.find(
-      (m) => m.source !== 'MELSPACE',
-    );
+    
+    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
+      ? knowledgeProductDto.metadata[1]
+      : null;
 
     const altmetric =
       entity.result_knowledge_product_altmetric_array[0] ?? undefined;
