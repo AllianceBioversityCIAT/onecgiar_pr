@@ -396,7 +396,6 @@ export class TocResultsRepository extends Repository<TocResult> {
     init_id: number,
     toc_level: number,
   ) {
-    console.log(result_id, init_id, toc_level);
     const categoryMap = {
       1: 'OUTPUT',
       2: 'OUTCOME',
