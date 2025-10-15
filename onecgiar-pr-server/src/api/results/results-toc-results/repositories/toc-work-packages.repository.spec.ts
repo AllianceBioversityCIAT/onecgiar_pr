@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { env } from 'process';
 import { TocResultsRepository } from './toc-work-packages.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
 
 describe('TocResultsRepository', () => {
   const mockDataSource = {

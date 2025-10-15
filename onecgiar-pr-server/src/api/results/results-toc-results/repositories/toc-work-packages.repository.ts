@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { env } from 'process';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
 
 interface toc_result_row {
   toc_result_id: number;

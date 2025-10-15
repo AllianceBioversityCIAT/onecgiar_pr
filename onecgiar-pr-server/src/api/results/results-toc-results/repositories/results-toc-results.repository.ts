@@ -8,9 +8,9 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
-import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
+import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';

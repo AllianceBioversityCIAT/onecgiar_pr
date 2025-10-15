@@ -5,7 +5,7 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { TocResultsRepository } from '../results/results-toc-results/repositories/toc-work-packages.repository';
 import { ResultRepository } from '../results/result.repository';
 import { ResultsService } from '../results/results.service';
 import {

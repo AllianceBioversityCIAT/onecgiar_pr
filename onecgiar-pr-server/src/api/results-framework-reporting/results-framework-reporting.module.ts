@@ -10,7 +10,7 @@ import { ResultsModule } from '../results/results.module';
 import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-products/results-knowledge-products.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
-import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { TocResultsRepository } from '../results/results-toc-results/repositories/toc-work-packages.repository';
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
