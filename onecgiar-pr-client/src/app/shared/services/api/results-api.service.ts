@@ -27,6 +27,7 @@ export class ResultsApiService {
     public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
+  apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
@@ -181,15 +182,17 @@ export class ResultsApiService {
     );
   }
 
-  GET_generalInformationByResultId() {
+  GET_generalInformationByResultId(isV2: boolean = false) {
     return this.http
-      .get<any>(`${this.apiBaseUrl}get/general-information/result/${this.currentResultId}`)
+      .get<any>(`${isV2 ? this.apiBaseUrlV2 : this.apiBaseUrl}get/general-information/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
-  PATCH_generalInformation(body: GeneralInfoBody) {
+  PATCH_generalInformation(body: GeneralInfoBody, isV2: boolean = false) {
     this.saveButtonSE.showSaveSpinner();
-    return this.http.patch<any>(`${this.apiBaseUrl}create/general-information`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${isV2 ? this.apiBaseUrlV2 : this.apiBaseUrl}create/general-information`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_resultById() {

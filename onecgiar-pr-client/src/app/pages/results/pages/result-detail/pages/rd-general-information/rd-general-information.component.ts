@@ -48,7 +48,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
+    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
@@ -94,7 +94,8 @@ export class RdGeneralInformationComponent implements OnInit {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
+
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
       next: resp => {
         this.currentResultSE.GET_resultById();
         this.getSectionInformation();

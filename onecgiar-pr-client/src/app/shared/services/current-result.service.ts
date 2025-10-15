@@ -27,7 +27,6 @@ export class CurrentResultService {
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
         this.dataControlSE.currentResultSignal.set(response);
-        console.log(response);
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:

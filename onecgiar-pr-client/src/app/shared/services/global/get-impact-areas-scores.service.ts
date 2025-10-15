@@ -22,15 +22,12 @@ export class GetImpactAreasScoresService {
   povertyTagScoreList = signal<Score[]>([]);
 
   constructor() {
-    console.log('constructor');
-    console.clear();
     this.api.resultsSE.GET_impactAreasScoresComponentsAll().subscribe(({ response }) => {
       this.genderTagScoreList.set(response.filter(item => item.impact_area === 'Gender'));
       this.climateTagScoreList.set(response.filter(item => item.impact_area === 'Climate'));
       this.nutritionTagScoreList.set(response.filter(item => item.impact_area === 'Nutrition'));
       this.environmentalBiodiversityTagScoreList.set(response.filter(item => item.impact_area === 'Environmental'));
       this.povertyTagScoreList.set(response.filter(item => item.impact_area === 'Poverty'));
-      console.log('sisas', response);
     });
   }
 }

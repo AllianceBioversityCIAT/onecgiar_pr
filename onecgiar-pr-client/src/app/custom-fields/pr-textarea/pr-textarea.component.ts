@@ -52,9 +52,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
     private readonly wordCounterSE: WordCounterService,
     public rolesSE: RolesService,
     public dataControlSE: DataControlService
-  ) {
-    console.log(this.fieldsManager.fields());
-  }
+  ) {}
 
   get value() {
     if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
