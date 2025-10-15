@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
 import { DataControlService } from './data-control.service';
 enum Portfolios {
@@ -11,7 +11,7 @@ enum Portfolios {
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
 
-  portfolioAcronym = signal('P25');
+  portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
 
