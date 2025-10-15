@@ -261,6 +261,7 @@ export class NotificationService {
           resultId: resultIdNumber,
           resultCode: notification.obj_result?.result_code ?? null,
           resultTitle: notification.obj_result?.title ?? null,
+          phase: notification.obj_result?.version_id ?? null,
           initiativeId: ownerInitiative?.initiative_id ?? fallback?.id ?? null,
           initiativeName: initiative?.name ?? fallback?.initiative_name ?? null,
           initiativeOfficialCode:
@@ -314,9 +315,13 @@ export class NotificationService {
       .leftJoinAndSelect('resultInitiative.obj_initiative', 'initiative')
       .leftJoinAndSelect('notification.obj_notification_type', 'type')
       .leftJoinAndSelect('notification.obj_emitter_user', 'emitter')
-      .where('notification.notification_level = :levelId', {
-        levelId,
-      });
+      .where(
+        'notification.notification_level = :levelId AND result.is_active = :resultActive',
+        {
+          levelId,
+          resultActive: true,
+        },
+      );
   }
 
   private async getGlobalResultNotifications(

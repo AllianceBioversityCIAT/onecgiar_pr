@@ -54,7 +54,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 0px 30px 120px;
+  padding: 0px 30px 112px;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -85,6 +85,20 @@ p {
   flex-direction: column;
 }
 
+.under_construction_container {
+  padding: 20px;
+  position: relative;
+  border: 2px dashed var(--pr-color-yellow-300);
+  border-radius: 10px;
+}
+
+.under_construction_icon {
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  width: 40px;
+}
+
 .entity-details_card_header {
   display: flex;
   align-items: center;
@@ -113,6 +127,8 @@ p {
   flex-direction: column;
   gap: 20px;
   padding: 24px 30px;
+  overflow-y: auto;
+  max-height: 688px;
 }
 
 .entity-details_card_content_empty {

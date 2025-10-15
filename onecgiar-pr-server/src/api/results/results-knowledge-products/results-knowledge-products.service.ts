@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
@@ -51,6 +51,7 @@ import { EnvironmentExtractor } from '../../../shared/utils/environment-extracto
 
 @Injectable()
 export class ResultsKnowledgeProductsService {
+  private readonly _logger = new Logger(ResultsKnowledgeProductsService.name);
   private readonly _resultsKnowledgeProductRelations: FindOptionsRelations<ResultsKnowledgeProduct> =
     {
       result_knowledge_product_altmetric_array: true,
@@ -799,6 +800,15 @@ export class ResultsKnowledgeProductsService {
           message: 'Missing data needed to create a result',
           status: HttpStatus.BAD_REQUEST,
         };
+      }
+
+      if (resultsKnowledgeProductDto.handle) {
+        const existingKP = await this.validateKPExistanceByHandle(
+          resultsKnowledgeProductDto.handle,
+        );
+        if (existingKP) {
+          return existingKP;
+        }
       }
 
       const currentVersion: Version =

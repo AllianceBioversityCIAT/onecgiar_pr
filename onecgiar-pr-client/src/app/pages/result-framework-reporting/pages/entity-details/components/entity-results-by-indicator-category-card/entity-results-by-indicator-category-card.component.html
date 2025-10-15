@@ -1,11 +1,11 @@
 <div class="entity-results-by-indicator-category-card">
   <div class="entity-results-by-indicator-category-card_header">
     <div class="entity-results-by-indicator-category-card_header_content">
-      <i [class]="getIcon(item?.indicatorType)" style="font-size: 20px; color: var(--pr-color-neutral-200)"></i>
+      <i [class]="getIcon(item?.resultTypeId)" style="font-size: 20px; color: var(--pr-color-neutral-200)"></i>
 
       <div>
         <p class="entity-results-by-indicator-category-card_header_desc">Indicator category</p>
-        <p class="entity-results-by-indicator-category-card_header_title">{{ item?.indicatorName }}</p>
+        <p class="entity-results-by-indicator-category-card_header_title">{{ item?.resultTypeName }}</p>
       </div>
     </div>
 
@@ -18,17 +18,17 @@
   <div class="entity-results-by-indicator-category-card_results">
     <div class="entity-results-by-indicator-category-card_results_item">
       <div class="dot" style="background-color: var(--pr-color-blue-400); margin-right: 3px"></div>
-      Editing:<span class="font-weight-600">{{ item?.resultsEditing }}</span>
+      Editing:<span class="font-weight-600">{{ item?.editing }}</span>
     </div>
 
     <div class="entity-results-by-indicator-category-card_results_item">
       <div class="dot" style="background-color: var(--pr-color-blue-800); margin-right: 3px"></div>
-      Submitted:<span class="font-weight-600">{{ item?.resultsSubmitted }}</span>
+      Submitted:<span class="font-weight-600">{{ item?.submitted }}</span>
     </div>
 
     <div class="entity-results-by-indicator-category-card_results_item">
       <div class="dot" style="background-color: var(--pr-color-green-500); margin-right: 3px"></div>
-      Quality assessed:<span class="font-weight-600">{{ item?.resultsQualityAssessed }}</span>
+      Quality assessed:<span class="font-weight-600">{{ item?.qualityAssessed }}</span>
     </div>
   </div>
 </div>

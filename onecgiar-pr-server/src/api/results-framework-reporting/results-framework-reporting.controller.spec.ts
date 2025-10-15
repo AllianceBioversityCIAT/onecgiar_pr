@@ -17,6 +17,9 @@ describe('ResultsFrameworkReportingController', () => {
           useValue: {
             getGlobalUnitsByProgram: jest.fn(),
             getWorkPackagesByProgramAndArea: jest.fn(),
+            getProgramIndicatorContributionSummary: jest.fn(),
+            createResultFromFramework: jest.fn(),
+            getExistingResultContributorsToIndicators: jest.fn(),
           },
         },
         {
@@ -93,6 +96,46 @@ describe('ResultsFrameworkReportingController', () => {
       expect(
         reportingService.getWorkPackagesByProgramAndArea,
       ).toHaveBeenCalledWith('SP01', 'AOW01', '2024');
+    });
+  });
+
+  describe('getProgramIndicatorContributionSummary', () => {
+    it('should delegate to reporting service', () => {
+      reportingService.getProgramIndicatorContributionSummary.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getProgramIndicatorContributionSummary('SP05');
+
+      expect(
+        reportingService.getProgramIndicatorContributionSummary,
+      ).toHaveBeenCalledWith('SP05');
+    });
+  });
+
+  describe('createResultFromFramework', () => {
+    it('should delegate to reporting service', () => {
+      reportingService.createResultFromFramework.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.createResultFromFramework({} as any, { id: 1 } as any);
+
+      expect(reportingService.createResultFromFramework).toHaveBeenCalled();
+    });
+  });
+
+  describe('getExistingResultContributorsAndPartners', () => {
+    it('should delegate to reporting service', () => {
+      reportingService.getExistingResultContributorsToIndicators.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getExistingResultContributorsAndPartners(55, 'IND-7');
+
+      expect(
+        reportingService.getExistingResultContributorsToIndicators,
+      ).toHaveBeenCalledWith(55, 'IND-7');
     });
   });
 });

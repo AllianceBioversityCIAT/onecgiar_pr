@@ -39,6 +39,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() showDescription?: boolean = true;
   @Input() InlineStyles?: string = '';
   @Input() descInlineStyles?: string = '';
+  @Input() labelDescInlineStyles?: string = '';
 
   private _value: any;
   private beforeValue: string;

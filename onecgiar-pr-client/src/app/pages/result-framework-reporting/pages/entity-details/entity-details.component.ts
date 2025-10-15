@@ -73,6 +73,6 @@ export class EntityDetailsComponent implements OnInit {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
     });
-    this.entityAowService.getClarisaGlobalUnits();
+    this.entityAowService.getAllDetailsData();
   }
 }

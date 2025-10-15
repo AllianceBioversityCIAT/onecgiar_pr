@@ -33,6 +33,7 @@ import { ContributionToIndicatorResult } from '../../contribution-to-indicators/
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
 import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
+import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 
 @Entity()
 export class Result {
@@ -479,7 +480,7 @@ export class Result {
   @OneToMany(() => ShareResultRequest, (ra) => ra.obj_result)
   obj_share_result: ShareResultRequest[];
 
-  @OneToMany(() => ResultsTocResult, (ra) => ra.results_id)
+  @OneToMany(() => ResultsTocResult, (ra) => ra.obj_results)
   obj_results_toc_result: ResultsTocResult[];
 
   @OneToMany(() => Notification, (ra) => ra.obj_result)
@@ -490,4 +491,7 @@ export class Result {
 
   @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
   obj_result_qaed: ResultQaedLog[];
+
+  @OneToMany(() => ResultsByProjects, (rbp) => rbp.obj_result_project)
+  obj_result_by_project: ResultsByProjects[];
 }

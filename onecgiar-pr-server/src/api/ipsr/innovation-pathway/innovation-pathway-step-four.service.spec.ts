@@ -406,6 +406,7 @@ describe('InnovationPathwayStepFourService', () => {
         obj_result_notification: [],
         contribution_to_indicator_result_array: [],
         obj_result_qaed: [],
+        obj_result_by_project: [],
         lead_contact_person_id: 1,
         obj_lead_contact_person: {
           id: 1,
