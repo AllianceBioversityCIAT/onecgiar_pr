@@ -27,9 +27,10 @@
       display: flex;
       flex-direction: column;
       gap: 30px;
+
       .section_name {
-        font-size: 16px;
-        color: #808080;
+        @include fonts.pr-typography('h3');
+        color: var(--pr-color-accents-4);
         font-weight: 400;
       }
 
@@ -43,7 +44,7 @@
           color: var(--pr-color-primary-300);
           padding: 5px 10px;
           border-radius: 7px;
-          font-size: 12px;
+          @include fonts.pr-typography('body-2');
           span {
             color: var(--pr-color-secondary-100);
           }
