@@ -390,4 +390,120 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
   }
+
+  async $_getResultTocByConfigV2(
+    result_id: number,
+    init_id: number,
+    toc_level: number,
+  ) {
+    console.log(result_id, init_id, toc_level);
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[toc_level];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${toc_level}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.id = tr.wp_id
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.official_code = tr.official_code
+      WHERE tr.is_active > 0
+        AND ci.id = ?
+        AND tr.phase = (SELECT v.toc_pahse_id FROM \`result\` r
+                       INNER JOIN \`version\` v ON v.id = r.version_id
+                       WHERE r.id = ?
+                         AND r.is_active > 0
+                       LIMIT 1)
+        AND tr.category = ?
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    try {
+      const res = await this.query(queryData, [init_id, result_id, category]);
+      return res;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => _getResultTocByConfigV2 error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllTocResultsByInitiativeV2(initiativeId: number, tocLevel: number) {
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[tocLevel];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${tocLevel}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.id = tr.wp_id
+        AND wp.is_active > 0
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.toc_id = tr.id_toc_initiative
+      WHERE ci.id = ?
+        AND tr.category = ?
+        AND tr.is_active > 0
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    try {
+      const tocResult: TocResult[] = await this.query(queryData, [
+        initiativeId,
+        category,
+      ]);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

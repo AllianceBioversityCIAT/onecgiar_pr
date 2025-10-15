@@ -1,4 +1,7 @@
 import { forwardRef, Inject, Injectable, HttpStatus } from '@nestjs/common';
+import { In, Not } from 'typeorm';
+import { env } from 'process';
+import Handlebars from 'handlebars';
 import {
   ContributorResultTocResult,
   CreateResultsTocResultDto,
@@ -16,13 +19,9 @@ import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-are
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
-import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { In, Not } from 'typeorm';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
-import Handlebars from 'handlebars';
-import { env } from 'process';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { ConfigMessageDto } from '../../../shared/microservices/email-notification-management/dto/send-email.dto';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
@@ -48,7 +47,6 @@ export class ResultsTocResultsService {
     @Inject(forwardRef(() => ShareResultRequestService))
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
-    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
     private readonly _templateRepository: TemplateRepository,
@@ -568,7 +566,7 @@ export class ResultsTocResultsService {
           `SELECT
             DISTINCT tr.version_id
           FROM
-            Integration_information.toc_results tr
+            ${env.DB_TOC}}.toc_results tr
           WHERE
             tr.id_toc_initiative = ?
             AND tr.phase = (
@@ -1261,6 +1259,45 @@ export class ResultsTocResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getVersionIdV2(result_id: number, init: number) {
+    try {
+      const initiative = await this._clarisaInitiatives.findOne({
+        select: ['official_code'],
+        where: { id: init },
+      });
+
+      if (!initiative?.official_code) {
+        return {
+          response: { version_id: null },
+          message: 'Initiative not found or missing official code',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const versionResult = await this._resultsTocResultRepository.query(
+        `SELECT v.toc_pahse_id
+         FROM result r
+         JOIN version v ON r.version_id = v.id
+         WHERE r.id = ?
+         LIMIT 1`,
+        [result_id],
+      );
+
+      const version_id =
+        versionResult.length && versionResult[0].toc_pahse_id != null
+          ? versionResult[0].toc_pahse_id
+          : initiative.official_code;
+
+      return {
+        response: { version_id },
+        message: 'Version ID retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 }
