@@ -46,7 +46,7 @@ export interface toc_result_response {
 }
 
 @Injectable()
-export class TocResultsRepository {
+export class AoWBilateralRepository {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
@@ -156,7 +156,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -178,7 +178,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -202,7 +202,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -226,7 +226,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }

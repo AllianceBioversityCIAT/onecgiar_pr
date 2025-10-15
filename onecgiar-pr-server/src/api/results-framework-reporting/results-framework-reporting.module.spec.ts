@@ -8,7 +8,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
-import { TocResultsRepository } from '../results/results-toc-results/repositories/toc-work-packages.repository';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 
 describe('ResultsFrameworkReportingModule', () => {
   it('should wire controller metadata', () => {
@@ -30,7 +30,7 @@ describe('ResultsFrameworkReportingModule', () => {
         ClarisaGlobalUnitRepository,
         YearRepository,
         HandlersError,
-        TocResultsRepository,
+        AoWBilateralRepository,
       ]),
     );
   });
