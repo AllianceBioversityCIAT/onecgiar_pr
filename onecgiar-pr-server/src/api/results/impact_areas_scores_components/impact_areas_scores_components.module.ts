@@ -14,7 +14,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ImpactAreasScoresComponent } from './entities/impact_areas_scores_component.entity';
 import { JwtMiddleware } from '../../../auth/Middlewares/jwt.middleware';
 import { AuthModule } from '../../../auth/auth.module';
-import { ImpactAreasScoresComponentRepository } from './repositories/impactAreasScoresComponentRepository.repository';
+import { ImpactAreasScoresComponentRepository } from './repositories/impact_areas_scores_components.repository';
 
 @Module({
   controllers: [ImpactAreasScoresComponentsController],
@@ -25,7 +25,7 @@ import { ImpactAreasScoresComponentRepository } from './repositories/impactAreas
     ImpactAreasScoresComponentRepository,
   ],
   imports: [TypeOrmModule.forFeature([ImpactAreasScoresComponent]), AuthModule],
-  exports: [ImpactAreasScoresComponentRepository]
+  exports: [ImpactAreasScoresComponentRepository],
 })
 export class ImpactAreasScoresComponentsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -40,28 +40,38 @@ export class CreateGeneralInformationResultDto {
   @ApiProperty({ description: 'Gender tag identifier linked to the result.' })
   public gender_tag_id: number;
 
-  @ApiProperty({ description: 'Gender impact area component identifier linked to the result.' })
-  public gender_impact_area_id: number;
+  @ApiProperty({
+    description:
+      'Gender impact area component identifier linked to the result.',
+    required: false,
+  })
+  public gender_impact_area_id?: number;
 
   @ApiProperty({
     description: 'Climate change tag identifier linked to the result.',
+    required: false,
   })
-  public climate_change_tag_id: number;
+  public climate_change_tag_id?: number;
 
   @ApiProperty({
-    description: 'Climate change impact area component identifier linked to the result.',
+    description:
+      'Climate change impact area component identifier linked to the result.',
+    required: false,
   })
-  public climate_impact_area_id: number;
+  public climate_impact_area_id?: number;
 
   @ApiProperty({
     description: 'Nutrition tag identifier linked to the result.',
+    required: false,
   })
-  public nutrition_tag_level_id: number;
+  public nutrition_tag_level_id?: number;
 
   @ApiProperty({
-    description: 'Nutrition impact area component identifier linked to the result.',
+    description:
+      'Nutrition impact area component identifier linked to the result.',
+    required: false,
   })
-  public nutrition_impact_area_id: number;
+  public nutrition_impact_area_id?: number;
 
   @ApiProperty({
     description:
@@ -78,7 +88,10 @@ export class CreateGeneralInformationResultDto {
   @ApiProperty({ description: 'Poverty tag identifier linked to the result.' })
   public poverty_tag_level_id: number;
 
-  @ApiProperty({ description: 'Poverty impact area component identifier linked to the result.' })
+  @ApiProperty({
+    description:
+      'Poverty impact area component identifier linked to the result.',
+  })
   public poverty_impact_area_id: number;
 
   @ApiProperty({

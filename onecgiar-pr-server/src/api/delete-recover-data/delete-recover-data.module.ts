@@ -189,7 +189,12 @@ import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_score
     InitiativeEntityMapRepository,
     RoleByUserRepository,
   ],
-  imports: [HttpModule, PrmsTablesTypesModule, SharePointModule, ImpactAreasScoresComponentsModule],
+  imports: [
+    HttpModule,
+    PrmsTablesTypesModule,
+    SharePointModule,
+    ImpactAreasScoresComponentsModule,
+  ],
   exports: [
     EvidencesService,
     ResultInstitutionsBudgetRepository,

@@ -74,14 +74,14 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
-import { In, IsNull, Repository } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
 import {
   NotificationLevelEnum,
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
-import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impactAreasScoresComponentRepository.repository';
+import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 
 @Injectable()
 export class ResultsService {
@@ -425,10 +425,11 @@ export class ResultsService {
       }
 
       let genderTagComponent = null;
-      if (Number(genderTag?.id) === 3){
-        genderTagComponent = await this._impactAreasScoresComponentRepository.findOne({
-          where: { id: resultGeneralInformation.gender_impact_area_id },
-        });
+      if (Number(genderTag?.id) === 3) {
+        genderTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: resultGeneralInformation.gender_impact_area_id },
+          });
         if (!genderTagComponent) {
           throw {
             response: {},
@@ -450,10 +451,11 @@ export class ResultsService {
       }
 
       let climateTagComponent = null;
-      if (Number(climateTag?.id) === 3){
-        climateTagComponent = await this._impactAreasScoresComponentRepository.findOne({
-          where: { id: resultGeneralInformation.climate_impact_area_id },
-        });
+      if (Number(climateTag?.id) === 3) {
+        climateTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: resultGeneralInformation.climate_impact_area_id },
+          });
         if (!climateTagComponent) {
           throw {
             response: {},
@@ -475,10 +477,11 @@ export class ResultsService {
       }
 
       let nutritionTagComponent = null;
-      if (Number(nutritionTag?.id) === 3){
-        nutritionTagComponent = await this._impactAreasScoresComponentRepository.findOne({
-          where: { id: resultGeneralInformation.nutrition_impact_area_id },
-        });
+      if (Number(nutritionTag?.id) === 3) {
+        nutritionTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: resultGeneralInformation.nutrition_impact_area_id },
+          });
         if (!nutritionTagComponent) {
           throw {
             response: {},
@@ -503,7 +506,7 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3){
+      if (Number(environmentalBiodiversityTag?.id) === 3) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
@@ -513,7 +516,8 @@ export class ResultsService {
         if (!environmentalBiodiversityTagComponent) {
           throw {
             response: {},
-            message: 'The Environmental or/and biodiversity tag component does not exist',
+            message:
+              'The Environmental or/and biodiversity tag component does not exist',
             status: HttpStatus.NOT_FOUND,
           };
         }
@@ -531,10 +535,11 @@ export class ResultsService {
       }
 
       let povertyTagComponent = null;
-        if (Number(povertyTag?.id) === 3){
-        povertyTagComponent = await this._impactAreasScoresComponentRepository.findOne({
-          where: { id: resultGeneralInformation.poverty_impact_area_id },
-        });
+      if (Number(povertyTag?.id) === 3) {
+        povertyTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: resultGeneralInformation.poverty_impact_area_id },
+          });
         if (!povertyTagComponent) {
           throw {
             response: {},
@@ -700,14 +705,16 @@ export class ResultsService {
           : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
-        climate_impact_area_id:
-          resultGeneralInformation.climate_impact_area_id ? climateTagComponent.id : null,
+        climate_impact_area_id: resultGeneralInformation.climate_impact_area_id
+          ? climateTagComponent.id
+          : null,
         nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
           ? nutritionTag.id
           : null,
-        nutrition_impact_area_id: resultGeneralInformation.nutrition_impact_area_id
-          ? nutritionTagComponent.id
-          : null,
+        nutrition_impact_area_id:
+          resultGeneralInformation.nutrition_impact_area_id
+            ? nutritionTagComponent.id
+            : null,
         environmental_biodiversity_tag_level_id:
           resultGeneralInformation.environmental_biodiversity_tag_level_id
             ? environmentalBiodiversityTag.id
