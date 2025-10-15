@@ -742,9 +742,12 @@ describe('ResultsFrameworkReportingService', () => {
               result_toc_results: [],
             },
           ],
-          bilateral_project: {
-            project_id: '260',
-          },
+          bilateral_project: [
+            {
+              project_id: '260',
+              project_name: 'Test Project',
+            },
+          ],
         },
         user,
       );
@@ -779,7 +782,7 @@ describe('ResultsFrameworkReportingService', () => {
       expect(response.response.knowledgeProduct).toEqual(kpPayload);
     });
 
-    it('should link multiple bilateral projects when bilateral_projects array is provided', async () => {
+    it('should link multiple bilateral projects when bilateral_project array is provided', async () => {
       mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
         status: 201,
         response: { id: 303 },
@@ -806,7 +809,7 @@ describe('ResultsFrameworkReportingService', () => {
           result: baseResult,
           toc_result_id: 777,
           indicators: [{ indicator_id: 5555 }],
-          bilateral_projects: [
+          bilateral_project: [
             { project_id: 9001, project_name: 'Proj A' },
             { project_id: '9002', project_name: 'Proj B' },
             { project_id: 'invalid' }, // ignored

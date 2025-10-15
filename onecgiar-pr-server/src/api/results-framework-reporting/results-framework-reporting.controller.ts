@@ -25,6 +25,7 @@ import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.inter
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 @ApiTags('Results Framework and Reporting')
+@UseInterceptors(ResponseInterceptor)
 export class ResultsFrameworkReportingController {
   constructor(
     private readonly resultsFrameworkReportingService: ResultsFrameworkReportingService,
