@@ -482,4 +482,37 @@ export class ResultsController {
   getCentersByResultId(@Param('resultId') resultId: number) {
     return this.resultsService.getCenters(resultId);
   }
+
+  @Version('2')
+  @Patch('create/general-information')
+  @ApiOperation({
+    summary: 'Update general information',
+    description:
+      'Creates or updates the general information section of a result.',
+  })
+  @ApiBody({ type: CreateGeneralInformationResultDto })
+  @ApiOkResponse({ description: 'General information saved.' })
+  createGeneralInformationV2(
+    @Body()
+    createGeneralInformationResultDto: CreateGeneralInformationResultDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.createResultGeneralInformation(
+      createGeneralInformationResultDto,
+      user,
+    );
+  }
+
+  @Version('2')
+  @Get('get/general-information/result/:id')
+  @ApiOperation({
+    summary: 'Get general information by result',
+    description:
+      'Returns the general information section for the specified result id.',
+  })
+  @ApiParam({ name: 'id', type: Number, required: true })
+  @ApiOkResponse({ description: 'General information retrieved.' })
+  getGeneralInformationByResultV2(@Param('id') id: number) {
+    return this.resultsService.getGeneralInformation(id);
+  }
 }

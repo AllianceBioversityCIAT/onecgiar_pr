@@ -86,6 +86,7 @@ import { NotificationTypeRepository } from '../notification/repositories/notific
 import { NotificationRepository } from '../notification/repositories/notification.respository';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
 import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
 
 @Module({
@@ -143,6 +144,7 @@ import { ResultsByProjectsModule } from './results_by_projects/results_by_projec
     ResultFoldersModule,
     AdUsersModule,
     NotificationModule,
+    ImpactAreasScoresComponentsModule,
     ResultsByProjectsModule,
   ],
   providers: [

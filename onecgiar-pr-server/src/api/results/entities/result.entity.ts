@@ -32,6 +32,7 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
+import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 
 @Entity()
@@ -102,6 +103,21 @@ export class Result {
   obj_gender_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'gender_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  gender_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'gender_impact_area_id',
+  })
+  obj_gender_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'climate_change_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -113,6 +129,21 @@ export class Result {
     name: 'climate_change_tag_level_id',
   })
   obj_climate_change_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'climate_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  climate_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'climate_impact_area_id',
+  })
+  obj_climate_impact_area!: ImpactAreasScoresComponent;
 
   @Column({
     name: 'nutrition_tag_level_id',
@@ -128,6 +159,21 @@ export class Result {
   obj_nutrition_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'nutrition_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  nutrition_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'nutrition_impact_area_id',
+  })
+  obj_nutrition_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'environmental_biodiversity_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -141,6 +187,21 @@ export class Result {
   obj_environmental_biodiversity_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'environmental_biodiversity_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  environmental_biodiversity_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'environmental_biodiversity_impact_area_id',
+  })
+  obj_environmental_biodiversity_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'poverty_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -152,6 +213,21 @@ export class Result {
     name: 'poverty_tag_level_id',
   })
   obj_poverty_tag_level_id!: GenderTagLevel;
+
+  @Column({
+    name: 'poverty_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  poverty_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'poverty_impact_area_id',
+  })
+  obj_poverty_impact_area!: ImpactAreasScoresComponent;
 
   @Column({
     name: 'is_active',

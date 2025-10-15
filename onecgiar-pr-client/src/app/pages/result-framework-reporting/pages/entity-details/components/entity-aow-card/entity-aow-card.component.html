@@ -10,8 +10,12 @@
     </div>
 
     <div
+      #entityAowCardHeaderActions
+      type="button"
       class="entity-aow-card_header_actions"
-      routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}/aow/{{ item.code }}">
+      routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}/aow/{{ item.code }}"
+      (keydown.space)="$event.preventDefault(); entityAowCardHeaderActions.click()"
+      (keydown.enter)="entityAowCardHeaderActions.click()">
       <p>View details</p>
       <i class="pi pi-arrow-right" style="font-size: 12px"></i>
     </div>
