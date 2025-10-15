@@ -77,9 +77,10 @@ export class AoWBilateralRepository {
         0 AS actual_achieved_value_sum,
         '50%' AS progress_percentage,
         CASE
+          WHEN tri.type_value LIKE '%capacity%' THEN 5
           WHEN tri.type_value LIKE '%knowledge%' THEN 6
-          WHEN tri.type_value LIKE '%innovation%' THEN 7
-          ELSE NULL
+          WHEN tri.type_value LIKE '%development%' THEN 7
+          ELSE 8
         END AS result_type_id,
         CAST(4 AS SIGNED) AS result_level_id
       FROM ${env.DB_TOC}.toc_work_packages wp
