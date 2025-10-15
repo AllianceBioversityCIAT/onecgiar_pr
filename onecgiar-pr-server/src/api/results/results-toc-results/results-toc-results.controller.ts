@@ -89,4 +89,21 @@ export class ResultsTocResultsController {
   ) {
     return this.resultsTocResultsService.getVersionIdV2(resultId, initiativeId);
   }
+
+  @Version('2')
+  @Get('get/indicator/:id/result/:resultId/initiative/:initiativeId')
+  @ApiOperation({
+    summary: 'Get result ToC Indicators and Targets by Result and Initiative',
+  })
+  findIndicatorByTocV2(
+    @Param('id') id: number,
+    @Param('resultId') resultId: number,
+    @Param('initiativeId') initiativeId: number,
+  ) {
+    return this.resultsTocResultsService.getTocResultIndicatorByResultTocIdV2(
+      resultId,
+      id,
+      initiativeId,
+    );
+  }
 }

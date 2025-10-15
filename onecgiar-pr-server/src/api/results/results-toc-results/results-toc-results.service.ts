@@ -1300,4 +1300,87 @@ export class ResultsTocResultsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async getTocResultIndicatorByResultTocIdV2(
+    resultIdToc: number,
+    toc_result_id: number,
+    init: number,
+  ) {
+    try {
+      let isSdg = null;
+      let isImpactArea = null;
+      let is_sdg_action_impact = null;
+      const result = await this._resultsTocResultRepository.query(`
+      SELECT
+          rtr.is_sdg_action_impact
+      FROM
+          results_toc_result rtr
+      WHERE
+          rtr.results_id = ${resultIdToc}
+          AND rtr.initiative_id = ${init}
+          AND rtr.toc_result_id = ${toc_result_id}
+          AND rtr.is_active = TRUE
+      `);
+      if (result.length != 0) {
+        isSdg = result[0].isSdg;
+        isImpactArea = result[0].isImpactArea;
+        is_sdg_action_impact = result[0].is_sdg_action_impact;
+      } else {
+        is_sdg_action_impact = false;
+      }
+      const informationIndicator =
+        await this._resultsTocResultRepository.getResultTocResultByResultId(
+          resultIdToc,
+          toc_result_id,
+          init,
+        );
+      const impactAreas =
+        await this._resultsTocResultRepository.getImpactAreaTargetsToc(
+          resultIdToc,
+          toc_result_id,
+          init,
+        );
+      const sdgTargets =
+        await this._resultsTocResultRepository.getSdgTargetsToc(
+          resultIdToc,
+          toc_result_id,
+          init,
+        );
+      const actionAreaOutcome =
+        await this._resultsTocResultRepository.getActionAreaOutcome(
+          resultIdToc,
+          toc_result_id,
+          init,
+        );
+      const extra_info = await this._resultsTocResultRepository.getWpExtraInfoV2(
+        resultIdToc,
+        toc_result_id,
+        init,
+      );
+      const wp_info =
+        await this._resultsTocResultRepository.getWpInformation(toc_result_id);
+
+      return {
+        response: {
+          initiative: init,
+          resultId: resultIdToc,
+          informationIndicator,
+          impactAreas,
+          sdgTargets,
+          actionAreaOutcome,
+          isSdg: isSdg,
+          isImpactArea: isImpactArea,
+          is_sdg_action_impact: is_sdg_action_impact,
+          wpinformation: {
+            extraInformation: extra_info[0],
+            wp_info,
+          },
+        },
+        message: 'The toc data indicator is successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }
