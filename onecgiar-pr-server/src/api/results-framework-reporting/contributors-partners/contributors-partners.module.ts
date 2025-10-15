@@ -7,6 +7,8 @@ import { ResultByInitiativesRepository } from '../../results/results_by_inititia
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
+import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
 
 @Module({
   controllers: [ContributorsPartnersController],
@@ -19,6 +21,6 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
     ResultsCenterRepository,
     ResultsByProjectsRepository,
   ],
-  imports: [],
+  imports: [ResultsByInstitutionsModule, ResultsTocResultsModule],
 })
 export class ContributorsPartnersModule {}

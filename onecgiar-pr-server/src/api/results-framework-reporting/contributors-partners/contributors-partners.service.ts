@@ -6,6 +6,12 @@ import { ResultsCenterRepository } from '../../results/results-centers/results-c
 import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
+import { ResultsByInstitutionsService } from '../../results/results_by_institutions/results_by_institutions.service';
+import { CreateResultsTocResultV2Dto } from '../../results/results-toc-results/dto/create-results-toc-result-v2.dto';
+import { SavePartnersV2Dto } from '../../results/results_by_institutions/dto/save-partners-v2.dto';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 
 @Injectable()
 export class ContributorsPartnersService {
@@ -16,6 +22,8 @@ export class ContributorsPartnersService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
+    private readonly _resultsTocResultsService: ResultsTocResultsService,
+    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
   ) {}
 
   async getContributorsPartnersByResultId(resultId: number) {
@@ -81,6 +89,8 @@ export class ContributorsPartnersService {
           resultId,
         );
 
+      console.log(bilateralProjects);
+
       return {
         response: {
           result_id: resultId,
@@ -100,6 +110,81 @@ export class ContributorsPartnersService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async updateTocMappingV2(
+    resultId: number,
+    dto: CreateResultsTocResultV2Dto,
+    user: TokenDto,
+  ) {
+    dto.result_id = resultId;
+    return this._resultsTocResultsService.createTocMappingV2(dto, user);
+  }
+
+  async updatePartnersV2(
+    resultId: number,
+    dto: SavePartnersV2Dto,
+    user: TokenDto,
+  ) {
+    dto.result_id = resultId;
+    return this._resultsByInstitutionsService.savePartnersInstitutionsByResultV2(
+      dto,
+      user,
+    );
+  }
+
+  async updateContributorsAndPartners(
+    resultId: number,
+    payload: UpdateContributorsPartnersDto,
+    user: TokenDto,
+  ) {
+    try {
+      if (!payload?.toc_mapping && !payload?.partners) {
+        return {
+          response: {},
+          message: 'No payload provided to update.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const response: Record<string, any> = {};
+      const statuses: number[] = [];
+      const messages: string[] = [];
+
+      if (payload.toc_mapping) {
+        const tocRes = await this.updateTocMappingV2(
+          resultId,
+          payload.toc_mapping,
+          user,
+        );
+        response['toc_mapping'] = tocRes.response;
+        statuses.push(tocRes.status ?? HttpStatus.OK);
+        if (tocRes.message) messages.push(tocRes.message);
+      }
+
+      if (payload.partners) {
+        const partnersRes = await this.updatePartnersV2(
+          resultId,
+          payload.partners,
+          user,
+        );
+        response['partners'] = partnersRes.response;
+        statuses.push(partnersRes.status ?? HttpStatus.OK);
+        if (partnersRes.message) messages.push(partnersRes.message);
+      }
+
+      const status = statuses.length
+        ? statuses.reduce((max, curr) => (curr > max ? curr : max), statuses[0])
+        : HttpStatus.OK;
+
+      return {
+        response,
+        message: messages.join(' | ') || 'Contributors and partners updated.',
+        status,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }
