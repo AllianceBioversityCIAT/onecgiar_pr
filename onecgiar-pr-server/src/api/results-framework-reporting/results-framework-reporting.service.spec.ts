@@ -46,6 +46,7 @@ const mockTocResultsRepository = {
   findByCompositeCode: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
+  findUnitAcronymsByProgram: jest.fn(),
 };
 
 const mockResultsService = {
@@ -71,12 +72,14 @@ const mockResultsTocResultIndicatorsRepository = {
 
 const mockShareResultRequestService = {
   resultRequest: jest.fn(),
+  findUnitAcronymsByProgram: jest.fn(),
 };
 
 const mockResultRepository = {
   getIndicatorContributionSummaryByProgram: jest.fn(),
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
+  findUnitAcronymsByProgram: jest.fn(),
 };
 
 const mockResultsByProjectsService = {
@@ -185,6 +188,9 @@ describe('ResultsFrameworkReportingService', () => {
           parentId: 100,
         },
       ]);
+      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
+        new Set(['PR-001-A']),
+      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-001');
 
@@ -246,10 +252,64 @@ describe('ResultsFrameworkReportingService', () => {
         portfolioId: 3,
       });
       mockClarisaGlobalUnitRepository.find.mockResolvedValue([]);
+      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
+        new Set([]),
+      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-002');
 
       expect(result.status).toBe(200);
+    });
+
+    it('should filter out units whose code does not exist in ToC work packages', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 7,
+        official_code: 'PR-010',
+        name: 'Program 10',
+        short_name: 'P10',
+      });
+      mockRoleByUserRepository.findOne.mockResolvedValue({ id: 1 });
+      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+      mockClarisaGlobalUnitRepository.findOne.mockResolvedValue({
+        id: 300,
+        code: 'PR-010',
+        name: 'Program Node 10',
+        composeCode: 'PR-010-ROOT',
+        year: 2025,
+        level: 1,
+        portfolioId: 3,
+      });
+      mockClarisaGlobalUnitRepository.find.mockResolvedValue([
+        {
+          id: 301,
+          code: 'PR-010-A',
+          name: 'Child A',
+          composeCode: 'PR-010-ROOT-A',
+          year: 2025,
+          level: 2,
+          parentId: 300,
+        },
+        {
+          id: 302,
+          code: 'PR-010-B',
+          name: 'Child B',
+          composeCode: 'PR-010-ROOT-B',
+          year: 2025,
+          level: 2,
+          parentId: 300,
+        },
+      ]);
+      // Only A exists in ToC
+      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
+        new Set(['PR-010-A']),
+      );
+
+      const result = await service.getGlobalUnitsByProgram(user, 'PR-010');
+
+      expect(result.status).toBe(200);
+      const respAny: any = result.response;
+      expect(respAny.units).toHaveLength(1);
+      expect(respAny.units[0]).toMatchObject({ code: 'PR-010-A' });
     });
 
     it('should return handler error when programId missing', async () => {
@@ -261,6 +321,9 @@ describe('ResultsFrameworkReportingService', () => {
     it('should map repository errors through handlers error', async () => {
       const thrown = { status: 500, message: 'unexpected' };
       mockClarisaInitiativesRepository.findOne.mockRejectedValueOnce(thrown);
+      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
+        new Set([]),
+      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-003');
       expect(result.status).toBe(500);
