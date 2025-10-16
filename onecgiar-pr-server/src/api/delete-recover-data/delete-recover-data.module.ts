@@ -94,6 +94,7 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
 import { MQAPService } from '../m-qap/m-qap.service';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_scores_components/impact_areas_scores_components.module';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -188,7 +189,12 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
     InitiativeEntityMapRepository,
     RoleByUserRepository,
   ],
-  imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
+  imports: [
+    HttpModule,
+    PrmsTablesTypesModule,
+    SharePointModule,
+    ImpactAreasScoresComponentsModule,
+  ],
   exports: [
     EvidencesService,
     ResultInstitutionsBudgetRepository,

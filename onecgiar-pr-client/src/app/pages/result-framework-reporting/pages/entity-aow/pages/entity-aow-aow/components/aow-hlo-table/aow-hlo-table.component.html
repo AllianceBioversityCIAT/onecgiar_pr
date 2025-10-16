@@ -1,0 +1,102 @@
+<p-table
+  id="tocResultsByAowIdTable"
+  styleClass="p-datatable-gridlines p-datatable-sm"
+  [value]="entityAowService.tocResultsByAowId()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId()"
+  sortField="result_title"
+  [sortOrder]="1"
+  responsiveLayout="scroll"
+  dataKey="result_title"
+  sortMode="single"
+  rowGroupMode="subheader"
+  groupRowsBy="result_title">
+  <ng-template pTemplate="header">
+    <tr>
+      @for (column of columnOrder(); track column.attr) {
+        <th [pSortableColumn]="column.attr" [id]="column.attr">
+          @if (!column.hideSortIcon) {
+            <p-sortIcon [field]="column.attr"></p-sortIcon>
+          }
+          {{ column.title }}
+        </th>
+      }
+      <th id="actions">Actions</th>
+    </tr>
+  </ng-template>
+
+  <ng-template #groupheader let-item let-rowIndex="rowIndex" let-expanded="expanded">
+    <tr>
+      <td colspan="8" style="background: var(--pr-color-primary-25); border-bottom: 1px solid var(--pr-color-secondary-50)">
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-right: 20px">
+          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" pRipple [pRowToggler]="item">
+            <button
+              type="button"
+              pButton
+              class="p-button-text p-button-rounded"
+              style="border: none; box-shadow: none !important"
+              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+
+            <span style="font-weight: bold">{{ item.result_title }}</span>
+          </div>
+
+          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 5px; cursor: not-allowed">
+            <span class="material-icons-round text-primary-300" style="font-size: 16px"> mail </span>
+
+            <p class="pr-body-3 text-primary-300 font-weight-400" style="white-space: nowrap">View associated bilateral projects</p>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template #expandedrow let-item>
+    @for (result of item.indicators; track $index) {
+      <tr>
+        <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
+        <td>
+          <div class="tab-content_chip">
+            {{ result.type_value }}
+          </div>
+        </td>
+        <td style="text-align: center">{{ result.target_value_sum }}</td>
+        <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
+        <td>
+          <div class="tab-content_progress">
+            <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
+            <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
+          </div>
+        </td>
+        <td>
+          <div
+            class="tab-content_chip in-progress"
+            style="width: max-content"
+            [ngClass]="{ achieved: getProgress(result.progress_percentage) >= 90 }">
+            In progress
+          </div>
+        </td>
+        <td>
+          <div class="tab-content_actions">
+            <button
+              pButton
+              label="Report result"
+              type="button"
+              class="pr-body-3 tab-content_actions_button"
+              (click)="openReportResultModal(item, result.indicator_id)"></button>
+            <button pButton label="View results" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
+            <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
+          </div>
+        </td>
+      </tr>
+    }
+  </ng-template>
+
+  <ng-template #emptymessage>
+    <tr style="height: 200px">
+      <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+@if (entityAowService.showReportResultModal()) {
+  <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+}

@@ -1,5 +1,10 @@
 @if (this.preventFieldRender()) {
-  <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"> </app-pr-field-header>
+  <app-pr-field-header
+    [label]="this.label"
+    [description]="this.description"
+    [required]="this.required"
+    [labelDescInlineStyles]="labelDescInlineStyles">
+  </app-pr-field-header>
   <div
     [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
     class="pr-field"

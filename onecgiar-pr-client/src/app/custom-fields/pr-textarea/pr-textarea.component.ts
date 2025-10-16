@@ -32,6 +32,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() fieldRef: string | number;
 
   fieldsManager = inject(FieldsManagerService);
+  @Input() labelDescInlineStyles?: string = '';
 
   private _value: string;
   private beforeValue: string;

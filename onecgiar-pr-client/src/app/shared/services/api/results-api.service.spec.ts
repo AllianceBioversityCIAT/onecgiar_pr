@@ -3682,4 +3682,46 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_ScienceProgramsProgress', () => {
+    it('should call GET_ScienceProgramsProgress and return expected data', done => {
+      service.GET_ScienceProgramsProgress().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_RecentActivity', () => {
+    it('should call GET_RecentActivity and return expected data', done => {
+      service.GET_RecentActivity().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/notification/recent-activity`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ClarisaGlobalUnits', () => {
+    it('should call GET_ClarisaGlobalUnits and return expected data', done => {
+      service.GET_ClarisaGlobalUnits('SP01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=SP01`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
 });
