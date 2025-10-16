@@ -14,7 +14,7 @@ import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { Between, In } from 'typeorm';
+import { Between, In, Like } from 'typeorm';
 import { submissionRepository } from '../results/submissions/submissions.repository';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
@@ -26,6 +26,14 @@ import { ResultCountry } from '../results/result-countries/entities/result-count
 import { Year } from '../results/years/entities/year.entity';
 import { YearRepository } from '../results/years/year.repository';
 import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
+import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
+import { ResultByIntitutionsRepository } from '../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
+import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { EvidencesService } from '../results/evidences/evidences.service';
+import { EvidencesRepository } from '../results/evidences/evidences.repository';
+import { Evidence } from '../results/evidences/entities/evidence.entity';
+import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 
 @Injectable()
 export class BilateralService {
@@ -45,6 +53,11 @@ export class BilateralService {
         private readonly _resultCountryRepository: ResultCountryRepository,
         private readonly _clarisaSubnationalAreasRepository: ClarisaSubnationalScopeRepository,
         private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
+        private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+        private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
+        private readonly _evidencesRepository: EvidencesRepository,
+        private readonly _evidencesService: EvidencesService,
+        private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     ) {}
 
     async create(bilateralDto: CreateBilateralDto, isAdmin?: boolean, versionId?: number) {
@@ -89,7 +102,7 @@ export class BilateralService {
         this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
         await this.handleRegions(newResultHeader, scope, regions);
-        await this.handleCountries(newResultHeader, countries, scope.id, userId);
+        await this.handleCountries(newResultHeader, countries, subnational_areas, scope.id, userId);
 
         await this._resultRepository.save({
             ...newResultHeader,
@@ -97,6 +110,119 @@ export class BilateralService {
         });
 
         // === (Pendiente) Instituciones ===
+        const { contributing_center, contributing_partners } = bilateralDto;
+
+        const allInstitutions = [
+            ...(contributing_center || []),
+            ...(contributing_partners || []),
+        ];
+
+        await this.handleInstitutions(newResultHeader.id, allInstitutions, userId);
+
+        await this.handleEvidence(newResultHeader.id, bilateralDto.evidence, userId);
+    }
+
+    private async handleEvidence(resultId, evidence, userId) {
+
+        const evidencesArray = evidence.filter(e => !!e?.link);
+        const testDuplicate = evidencesArray.map((e) => e.link);
+        if (new Set(testDuplicate).size !== testDuplicate.length) {
+            throw {
+            response: {},
+            message: 'Duplicate links found in the evidence',
+            status: HttpStatus.BAD_REQUEST,
+            };
+        }
+
+        const long: number =
+            evidencesArray.length > 6 ? 6 : evidencesArray.length;
+        for (let index = 0; index < long; index++) {
+            const evidence = evidencesArray[index];
+
+            evidence.link = await this._evidencesService.getHandleFromRegularLink(evidence.link);
+
+            const newEvidence = new Evidence();
+            newEvidence.created_by = userId;
+            newEvidence.description = evidence?.description ?? null;
+            newEvidence.link = evidence.link;
+            newEvidence.result_id = resultId;
+
+            const hasQuery = (evidence.link ?? '').indexOf('?');
+            const linkSplit = (evidence.link ?? '')
+            .slice(0, hasQuery != -1 ? hasQuery : evidence.link?.length)
+            .split('/');
+            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
+            const knowledgeProduct =
+            await this._resultsKnowledgeProductsRepository.findOne({
+                where: { handle: Like(handleId) },
+                relations: { result_object: true },
+            });
+
+            if (knowledgeProduct) {
+            newEvidence.knowledge_product_related =
+                knowledgeProduct.result_object.id;
+            }
+
+            await this._evidencesRepository.save(newEvidence);
+        }
+    }
+
+    private async handleInstitutions(resultId, institutions, userId) {
+
+        const institutionIds = institutions.map(r => r.institution_id).filter(Boolean);
+        const names = institutions.map(r => r.name).filter(Boolean);
+        const acronyms = institutions.map(r => r.iso_alpha_3).filter(Boolean);
+
+        const whereConditions = [
+            ...(institutionIds.length ? [{ id: In(institutionIds) }] : []),
+            ...(names.length ? [{ name: In(names) }] : []),
+            ...(acronyms.length ? [{ acronym: In(acronyms) }] : []),
+        ];
+
+        const foundInstitutions = whereConditions.length
+            ? await this._clarisaInstitutionsRepository.find({ where: whereConditions })
+            : [];
+        
+        const mappedInstitutions = foundInstitutions.map(
+            (institution) => ({
+                institutions_id: institution.id,
+            }),
+        );
+
+        await this._resultByIntitutionsRepository.updateInstitutions(
+            resultId,
+            mappedInstitutions,
+            userId,
+            false,
+            [InstitutionRoleEnum.ACTOR],
+        );
+        const saveInstitutions: ResultsByInstitution[] = [];
+        for (
+            let index = 0;
+            index < institutions.length;
+            index++
+        ) {
+            const isInstitutions =
+            await this._resultByIntitutionsRepository.getResultByInstitutionExists(
+                resultId,
+                institutions[index].institutions_id,
+                InstitutionRoleEnum.ACTOR,
+            );
+            if (!isInstitutions) {
+            const institutionsNew: ResultsByInstitution =
+                new ResultsByInstitution();
+            institutionsNew.created_by = userId;
+            institutionsNew.institution_roles_id = 1;
+            institutionsNew.institutions_id =
+                institutions[index].institutions_id;
+            institutionsNew.last_updated_by = userId;
+            institutionsNew.result_id = resultId;
+            institutionsNew.is_active = true;
+            saveInstitutions.push(institutionsNew);
+            }
+        }
+        await this._resultByIntitutionsRepository.save(saveInstitutions);
     }
 
     private async findSubmittedByUser({ email, submitted_date, name }: SubmittedByDto) {
@@ -211,7 +337,7 @@ export class BilateralService {
         return scopeId;
     }
 
-    private async handleCountries(result, countries, scopeId, userId) {
+    private async handleCountries(result, countries, subnational_areas, scopeId, userId) {
         const hasCountries = Array.isArray(countries) && countries.length > 0;
 
         // Caso sin países válidos o alcance global/regional sin detalle
@@ -249,7 +375,7 @@ export class BilateralService {
         await this._resultCountryRepository.updateCountries(result.id, foundCountryIds);
 
         const resultCountryArray = await this.handleResultCountryArray(result, foundCountries);
-        await this.handleSubnationals(resultCountryArray, foundCountries, scopeId, userId);
+        await this.handleSubnationals(resultCountryArray, subnational_areas, scopeId, userId);
 
         result.has_countries = true;
     }
@@ -274,23 +400,30 @@ export class BilateralService {
         return resultCountryArray;
     }
 
-    private async handleSubnationals(resultCountryArray, countries, geoScopeId, userId) {
+    private async handleSubnationals(resultCountryArray, subnational_areas, geoScopeId, userId) {
         if (geoScopeId !== 5) return;
 
-        const ids = countries.map(r => r.id).filter(Boolean);
-        const names = countries.map(r => r.name).filter(Boolean);
-        const isoAlpha3s = countries.map(r => r.iso_alpha_3).filter(Boolean);
-        const isoAlpha2s = countries.map(r => r.iso_alpha_2).filter(Boolean);
+        const ids = subnational_areas.map(r => r.id).filter(Boolean);
+        const names = subnational_areas.map(r => r.name).filter(Boolean);
 
         const whereConditions = [
             ...(ids.length ? [{ id: In(ids) }] : []),
             ...(names.length ? [{ name: In(names) }] : []),
-            ...(isoAlpha3s.length ? [{ iso_alpha_3: In(isoAlpha3s) }] : []),
-            ...(isoAlpha2s.length ? [{ iso_alpha_2: In(isoAlpha2s) }] : []),
         ];
 
-        const foundCountries = whereConditions.length
-            ? await this._clarisaCountriesRepository.find({ where: whereConditions })
-            : [];
+        const foundSubnationalAreas = whereConditions.length
+            ? await this._clarisaSubnationalAreasRepository.find({ where: whereConditions })
+            : [];        
+
+        const foundCountryIds = foundSubnationalAreas.map(c => c.code);
+
+        await Promise.all(
+            resultCountryArray.map(async rc => {
+                await Promise.all([
+                    this._resultCountrySubnationalRepository.bulkUpdateSubnational(rc.result_country_id, foundCountryIds, userId),
+                    this._resultCountrySubnationalRepository.upsertSubnational(rc.result_country_id, foundCountryIds, userId),
+                ]);
+            }),
+        );
     }
 }
