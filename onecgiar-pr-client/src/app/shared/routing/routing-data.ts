@@ -1,7 +1,6 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
 import { CheckAdminGuard } from '../guards/check-admin.guard';
-
 export const routingApp: PrRoute[] = [
   {
     prName: 'Results Framework & Reporting',

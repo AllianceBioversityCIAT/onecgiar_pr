@@ -1,12 +1,9 @@
 <div class="lead-contact-container">
   <div class="contact-select-wrapper">
     <app-pr-input
-      placeholder="Search for a person (min 4 characters)"
-      label="Lead contact person"
+      fieldRef="[general-info]-lead_contact_person"
       type="text"
-      [description]="leadContactPersonTextInfo()"
       [disabled]="isContactLocked"
-      [required]="false"
       [(ngModel)]="userSearchService.searchQuery"
       (input)="onSearchInput($event)"
       (blur)="onContactBlur()"

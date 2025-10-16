@@ -1,5 +1,6 @@
 import { CurrentResultService } from './current-result.service';
 import { of, throwError } from 'rxjs';
+import { fakeAsync, tick } from '@angular/core/testing';
 
 describe('CurrentResultService', () => {
   let service: CurrentResultService;
@@ -30,7 +31,10 @@ describe('CurrentResultService', () => {
     };
 
     mockDataControlService = {
-      currentResult: null
+      currentResult: null,
+      currentResultSignal: {
+        set: jest.fn()
+      }
     };
 
     mockRouter = {
@@ -81,7 +85,7 @@ describe('CurrentResultService', () => {
     });
   });
 
-  it('should handle is_phase_open = 1 when getting result by id', async () => {
+  it('should handle is_phase_open = 1 when getting result by id', fakeAsync(() => {
     const response = {
       result_level_name: 'level1',
       result_level_id: 'id1',
@@ -93,12 +97,13 @@ describe('CurrentResultService', () => {
 
     mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
 
-    await service.GET_resultById();
+    service.GET_resultById();
+    tick();
 
     expect(mockApiService.rolesSE.readOnly).toBe(true);
-  });
+  }));
 
-  it('should handle is_phase_open = 1 and status_id = 1 when getting result by id', async () => {
+  it('should handle is_phase_open = 1 and status_id = 1 when getting result by id', fakeAsync(() => {
     const response = {
       result_level_name: 'level1',
       result_level_id: 'id1',
@@ -110,8 +115,9 @@ describe('CurrentResultService', () => {
 
     mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
 
-    await service.GET_resultById();
+    service.GET_resultById();
+    tick();
 
     expect(mockApiService.rolesSE.readOnly).toBe(false);
-  });
+  }));
 });

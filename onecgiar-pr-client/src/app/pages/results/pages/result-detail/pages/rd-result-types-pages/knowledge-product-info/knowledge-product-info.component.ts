@@ -28,7 +28,9 @@ export class KnowledgeProductInfoComponent implements OnInit {
     public api: ApiService,
     public rolesSE: RolesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Knowledge product information');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();

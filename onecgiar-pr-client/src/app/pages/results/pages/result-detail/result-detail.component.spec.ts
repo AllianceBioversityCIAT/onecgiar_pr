@@ -9,7 +9,6 @@ import { NoEditContainerComponent } from './components/no-edit-container/no-edit
 import { PartnersRequestComponent } from './components/partners-request/partners-request.component';
 import { UnsubmitModalComponent } from './components/unsubmit-modal/unsubmit-modal.component';
 import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
-import { ResultTitleComponent } from './components/result-title/result-title.component';
 import { PhaseSwitcherComponent } from '../../../../shared/components/phase-switcher/phase-switcher.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
@@ -94,7 +93,6 @@ describe('ResultDetailComponent', () => {
         PartnersRequestComponent,
         UnsubmitModalComponent,
         SubmissionModalComponent,
-        ResultTitleComponent,
         PhaseSwitcherComponent,
         PanelMenuComponent,
         PrButtonComponent,

@@ -1,53 +1,83 @@
-<app-detail-section-title sectionName="Policy change information"></app-detail-section-title>
-
 <div class="detail_container">
-    <app-alert-status description="Please fill in the following required fields for this indicator category.">
-    </app-alert-status>
+  <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
-    <app-alert-status [description]="policyTypeDescriptions()">
-    </app-alert-status>
+  <app-alert-status [description]="policyTypeDescriptions()"> </app-alert-status>
 
-    <div class="auto_fit_container">
-        <app-pr-select [options]="this.policyControlListSE.policyTypesList" label="Policy type"
-            description="Select policy type" optionLabel="name" optionValue="id" placeholder="Select policy type"
-            [(ngModel)]="innovationUseInfoBody.policy_type_id">
-        </app-pr-select>
-
-        <app-pr-input label="USD amount" type="currency" description="USD amount" placeholder="0"
-            *ngIf="innovationUseInfoBody.policy_type_id == 1" [required]="false"
-            [(ngModel)]="innovationUseInfoBody.amount">
-        </app-pr-input>
-
-        <app-pr-select [options]="[{id:1,name:'Confirmed'},{id:2,name:'Estimated'},{id:3,name:'Unknown'}]"
-            *ngIf="innovationUseInfoBody.policy_type_id == 1" label="Status" description="Select Status"
-            optionLabel="name" optionValue="id" placeholder="Select stage" [required]="false"
-            [(ngModel)]="innovationUseInfoBody.status_amount">
-        </app-pr-select>
-    </div>
-
-    <app-pr-select [options]="policyChangeQuestions.optionsWithAnswers" [label]="policyChangeQuestions.question_text"
-        optionLabel="question_text" optionValue="result_question_id" placeholder="Select an answer"
-        [(ngModel)]="this.relatedTo" (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
+  <div class="auto_fit_container">
+    <app-pr-select
+      [options]="this.policyControlListSE.policyTypesList"
+      label="Policy type"
+      description="Select policy type"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Select policy type"
+      [(ngModel)]="innovationUseInfoBody.policy_type_id">
     </app-pr-select>
 
-    <!-- Don't delete this code, it's for future use
+    <app-pr-input
+      label="USD amount"
+      type="currency"
+      description="USD amount"
+      placeholder="0"
+      *ngIf="innovationUseInfoBody.policy_type_id == 1"
+      [required]="false"
+      [(ngModel)]="innovationUseInfoBody.amount">
+    </app-pr-input>
+
+    <app-pr-select
+      [options]="[
+        { id: 1, name: 'Confirmed' },
+        { id: 2, name: 'Estimated' },
+        { id: 3, name: 'Unknown' }
+      ]"
+      *ngIf="innovationUseInfoBody.policy_type_id == 1"
+      label="Status"
+      description="Select Status"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Select stage"
+      [required]="false"
+      [(ngModel)]="innovationUseInfoBody.status_amount">
+    </app-pr-select>
+  </div>
+
+  <app-pr-select
+    [options]="policyChangeQuestions.optionsWithAnswers"
+    [label]="policyChangeQuestions.question_text"
+    optionLabel="question_text"
+    optionValue="result_question_id"
+    placeholder="Select an answer"
+    [(ngModel)]="this.relatedTo"
+    (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
+  </app-pr-select>
+
+  <!-- Don't delete this code, it's for future use
         <app-pr-radio-button [options]="this.relatedToEngagementOptions" optionLabel="label" optionValue="value"
         label="Is this capacity development or policy change result related to any engagement activity or event?"
         [(ngModel)]="innovationUseInfoBody.result_related_engagement">
     </app-pr-radio-button> -->
 
-    <app-pr-select [options]="this.policyControlListSE.policyStages" label="Stage" description="Select stage"
-        optionLabel="full_name" optionValue="id" placeholder="Select stage"
-        [(ngModel)]="innovationUseInfoBody.policy_stage_id">
-    </app-pr-select>
+  <app-pr-select
+    [options]="this.policyControlListSE.policyStages"
+    label="Stage"
+    description="Select stage"
+    optionLabel="full_name"
+    optionValue="id"
+    placeholder="Select stage"
+    [(ngModel)]="innovationUseInfoBody.policy_stage_id">
+  </app-pr-select>
 
-    <app-pr-multi-select [options]="this.institutionsService.institutionsList"
-        label="Whose policy is this? (Implementing organizations)" selectedLabel="Organization"
-        selectedOptionLabel="full_name"
-        description="Select min 1, max 3 organizations <br> If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list."
-        optionLabel="full_name" optionValue="institutions_id" placeholder="Select organization(s)"
-        [(ngModel)]="this.innovationUseInfoBody.institutions">
-    </app-pr-multi-select>
+  <app-pr-multi-select
+    [options]="this.institutionsService.institutionsList"
+    label="Whose policy is this? (Implementing organizations)"
+    selectedLabel="Organization"
+    selectedOptionLabel="full_name"
+    description="Select min 1, max 3 organizations <br> If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list."
+    optionLabel="full_name"
+    optionValue="institutions_id"
+    placeholder="Select organization(s)"
+    [(ngModel)]="this.innovationUseInfoBody.institutions">
+  </app-pr-multi-select>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

@@ -31,6 +31,7 @@ import { InnovationControlListService } from '../../../../../../../shared/servic
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
+import { signal } from '@angular/core';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -247,6 +248,7 @@ describe('InnovationDevInfoComponent', () => {
         readOnly: false
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Innovation development information'),
         currentResult: {
           portfolio: 'P25'
         }

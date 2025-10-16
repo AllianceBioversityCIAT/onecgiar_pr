@@ -25,7 +25,9 @@ export class InnovationDevInfoComponent implements OnInit {
     public innovationControlListSE: InnovationControlListService,
     private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
     private terminologyService: TerminologyService
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Innovation Development information');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();
@@ -117,9 +119,9 @@ export class InnovationDevInfoComponent implements OnInit {
 
   alertInfoText2() {
     return `Please make sure you provide evidence/documentation that support the current innovation readiness level.<br>
-    * Evidence are inputted in the "Evidence" section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/evidences?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>    
+    * Evidence are inputted in the "Evidence" section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/evidences?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>
     <br><br>
-    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation. 
+    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation.
     <br><br>
     Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
   }

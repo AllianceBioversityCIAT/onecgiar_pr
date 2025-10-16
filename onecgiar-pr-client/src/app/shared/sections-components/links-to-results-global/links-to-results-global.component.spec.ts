@@ -6,6 +6,7 @@ import { ResultsListService } from '../../../pages/results/pages/results-outlet/
 import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
+import { signal } from '@angular/core';
 
 describe('LinksToResultsGlobalComponent', () => {
   let component: LinksToResultsGlobalComponent;
@@ -62,6 +63,7 @@ describe('LinksToResultsGlobalComponent', () => {
         POST_resultsLinked: jest.fn().mockReturnValue(of({}))
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Links to results'),
         currentResult: {
           result_type_id: 1
         }

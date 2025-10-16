@@ -110,10 +110,7 @@ export class PrSelectComponent implements ControlValueAccessor {
     }
   }
 
-  // cont = 0;
   get optionsIntance() {
-    // this.cont++;
-    // console.log('mero event', this.cont);
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
 

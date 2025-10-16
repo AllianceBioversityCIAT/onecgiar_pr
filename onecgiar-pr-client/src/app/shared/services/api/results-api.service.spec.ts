@@ -410,6 +410,11 @@ describe('ResultsApiService', () => {
         discontinued_options: [],
         is_replicated: false,
         result_code: 200,
+        gender_impact_area_id: 1,
+        climate_impact_area_id: 1,
+        nutrition_impact_area_id: 1,
+        environmental_biodiversity_impact_area_id: 1,
+        poverty_impact_area_id: 1,
         lead_contact_person_data: {
           cn: 'John Doe',
           displayName: 'John Doe',

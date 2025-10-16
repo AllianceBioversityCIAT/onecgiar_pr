@@ -99,11 +99,6 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     });
   }
 
-  leadContactPersonTextInfo() {
-    return `For more precise results, we recommend searching by email or username. 
-    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
-  }
-
   onSearchInput(event: any): void {
     if (this.isContactLocked) return;
 

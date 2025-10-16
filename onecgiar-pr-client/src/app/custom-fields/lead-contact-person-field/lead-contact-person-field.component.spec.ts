@@ -364,16 +364,6 @@ describe('LeadContactPersonFieldComponent', () => {
       });
     });
 
-    describe('leadContactPersonTextInfo', () => {
-      it('should return descriptive text for lead contact person field', () => {
-        const result = component.leadContactPersonTextInfo();
-
-        expect(result).toContain('For more precise results, we recommend searching by email or username.');
-        expect(result).toContain('<strong>Examples:</strong>');
-        expect(result).toContain('j.smith@cgiar.org; jsmith; JSmith');
-      });
-    });
-
     describe('searchSubject subscription - validation scenarios', () => {
       beforeEach(() => {
         jest.useFakeTimers();
@@ -697,7 +687,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
     it('should hide selected contact info when not locked', () => {
       component.isContactLocked = false;
-              mockUserSearchService.selectedUser = mockJohnDoe;
+      mockUserSearchService.selectedUser = mockJohnDoe;
 
       fixture.detectChanges();
 
