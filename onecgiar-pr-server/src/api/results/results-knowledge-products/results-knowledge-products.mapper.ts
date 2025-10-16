@@ -99,7 +99,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = knowledgeProductDto.repo.toUpperCase();
+    metadataCGSpace.source = knowledgeProductDto.repo?.toUpperCase();
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
@@ -134,7 +134,7 @@ export class ResultsKnowledgeProductMapper {
       const metadataWoS: ResultsKnowledgeProductMetadataDto =
         new ResultsKnowledgeProductMetadataDto();
 
-      metadataWoS.source = mqapDOIData.source.toUpperCase();
+      metadataWoS.source = mqapDOIData.source?.toUpperCase();
 
       if (mqapDOIData.is_oa) {
         metadataWoS.accessibility = mqapDOIData.is_oa
