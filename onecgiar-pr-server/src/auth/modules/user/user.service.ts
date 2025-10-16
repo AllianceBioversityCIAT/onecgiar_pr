@@ -24,6 +24,7 @@ import {
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserStatus } from './enum/user-status.enum';
 import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
@@ -487,8 +488,7 @@ export class UserService {
       relations: ['obj_user', 'obj_initiative'],
     });
 
-    if (existingLead){
-
+    if (existingLead) {
       if (existingLead.user === updatedUserId) {
         return;
       }
@@ -1072,6 +1072,11 @@ export class UserService {
         );
       }
 
+      await this.sendUserStatusChangedEmail({
+        user,
+        newStatus: UserStatus.ACTIVE,
+      });
+
       return {
         response: { id: user.id, email: user.email },
         message: 'User activated successfully',
@@ -1085,8 +1090,80 @@ export class UserService {
           status: HttpStatus.OK,
         };
       }
-      return this.deactivateUserCompletely(user, currentUser);
+      const deactivationResult = await this.deactivateUserCompletely(
+        user,
+        currentUser,
+      );
+
+      await this.sendUserStatusChangedEmail({
+        user,
+        newStatus: UserStatus.INACTIVE,
+      });
+
+      return deactivationResult;
     }
+  }
+
+  private async sendUserStatusChangedEmail(params: {
+    user: User;
+    newStatus: UserStatus;
+  }): Promise<void> {
+    const { user, newStatus } = params;
+
+    const templateName = EmailTemplate.STATUS_UPDATE;
+
+    const templateDB = await this._templateRepository.findOne({
+      where: { name: templateName },
+    });
+
+    if (!templateDB) {
+      this._logger.warn(
+        `Email template ${templateName} not found. Skipping notification.`,
+      );
+      return;
+    }
+
+    const compiledTemplate = handlebars.compile(templateDB.template);
+
+    const isActivated = newStatus === UserStatus.ACTIVE;
+
+    const new_roles_assigned_per_entity = isActivated
+      ? (user.obj_role_by_user?.map((rbu) => ({
+          initiative_code: rbu.obj_initiative?.id ?? '',
+          initiative_name: rbu.obj_initiative?.name ?? '',
+          role_name: rbu.obj_role?.description ?? '',
+        })) ?? [])
+      : [];
+
+    const emailData = {
+      userName: `${user.first_name} ${user.last_name}`.trim(),
+      account_activated: isActivated,
+      account_deactivated: !isActivated,
+      new_roles_assigned_per_entity,
+    };
+
+    /*     const technicalTeamEmailsRecord =
+      await this._globalParametersRepository.findOne({
+        where: { name: 'technical_team_email' },
+        select: { value: true },
+      }); */
+
+    await this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
+      },
+      emailBody: {
+        subject: `PRMS - Your Account Has Been ${newStatus}`,
+        to: [user.email],
+        cc: [],
+        bcc: 'n.higuita@cgiar.org',
+        message: {
+          text: `Your account has been ${newStatus.toLowerCase()}.`,
+          socketFile: compiledTemplate(emailData),
+        },
+      },
+    });
   }
 
   private async deactivateUserCompletely(
