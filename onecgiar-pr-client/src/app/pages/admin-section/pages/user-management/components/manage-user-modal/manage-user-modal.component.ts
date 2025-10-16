@@ -118,10 +118,14 @@ export class ManageUserModalComponent {
       .filter(entityId => entityId !== null);
 
     // Filter within each group's entities array
-    return this.entities().map(group => ({
-      ...group,
-      entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
-    }));
+    const order: Record<string, number> = { P25: 0, P22: 1 };
+
+    return this.entities()
+      .map(group => ({
+        ...group,
+        entities: group.entities.filter(e => !selectedEntities.includes(e.initiative_id))
+      }))
+      .sort((a, b) => (order[a?.name] ?? 2) - (order[b?.name] ?? 2));
   }
 
   onRoleEntityChange(event: number, index: number): void {
