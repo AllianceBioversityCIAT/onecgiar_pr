@@ -32,8 +32,8 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
-import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
+import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 
 @Entity()
 export class Result {

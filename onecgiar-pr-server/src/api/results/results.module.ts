@@ -86,8 +86,8 @@ import { NotificationTypeRepository } from '../notification/repositories/notific
 import { NotificationRepository } from '../notification/repositories/notification.respository';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
-import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
 import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
+import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
 
 @Module({
   controllers: [ResultsController],
@@ -144,8 +144,8 @@ import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_compone
     ResultFoldersModule,
     AdUsersModule,
     NotificationModule,
-    ResultsByProjectsModule,
     ImpactAreasScoresComponentsModule,
+    ResultsByProjectsModule,
   ],
   providers: [
     ResultsService,
