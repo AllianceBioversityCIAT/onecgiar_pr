@@ -24,7 +24,7 @@ import {
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
-import {UserStatus} from './enum/user-status.enum';
+import { UserStatus } from './enum/user-status.enum';
 import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
@@ -488,8 +488,7 @@ export class UserService {
       relations: ['obj_user', 'obj_initiative'],
     });
 
-    if (existingLead){
-
+    if (existingLead) {
       if (existingLead.user === updatedUserId) {
         return;
       }
@@ -1076,7 +1075,6 @@ export class UserService {
       await this.sendUserStatusChangedEmail({
         user,
         newStatus: UserStatus.ACTIVE,
-        changedBy: currentUser,
       });
 
       return {
@@ -1100,7 +1098,6 @@ export class UserService {
       await this.sendUserStatusChangedEmail({
         user,
         newStatus: UserStatus.INACTIVE,
-        changedBy: currentUser,
       });
 
       return deactivationResult;
@@ -1110,9 +1107,8 @@ export class UserService {
   private async sendUserStatusChangedEmail(params: {
     user: User;
     newStatus: UserStatus;
-    changedBy: User;
   }): Promise<void> {
-    const { user, newStatus, changedBy } = params;
+    const { user, newStatus } = params;
 
     const templateName = EmailTemplate.STATUS_UPDATE;
 
@@ -1132,11 +1128,11 @@ export class UserService {
     const isActivated = newStatus === UserStatus.ACTIVE;
 
     const new_roles_assigned_per_entity = isActivated
-      ? user.obj_role_by_user?.map((rbu) => ({
+      ? (user.obj_role_by_user?.map((rbu) => ({
           initiative_code: rbu.obj_initiative?.id ?? '',
           initiative_name: rbu.obj_initiative?.name ?? '',
           role_name: rbu.obj_role?.description ?? '',
-        })) ?? []
+        })) ?? [])
       : [];
 
     const emailData = {
@@ -1146,11 +1142,11 @@ export class UserService {
       new_roles_assigned_per_entity,
     };
 
-    const technicalTeamEmailsRecord =
+    /*     const technicalTeamEmailsRecord =
       await this._globalParametersRepository.findOne({
         where: { name: 'technical_team_email' },
         select: { value: true },
-      });
+      }); */
 
     await this._emailNotificationManagementService.sendEmail({
       from: {
