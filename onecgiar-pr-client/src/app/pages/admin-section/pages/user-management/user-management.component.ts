@@ -205,7 +205,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   columns: UserColumn[] = [
     { label: 'User name', key: 'firstName', width: '200px' },
     { label: 'Email', key: 'emailAddress', width: '300px' },
-    { label: 'Entities', key: 'entities', width: '120px' },
+    { label: 'Platform role', key: 'appRole', width: '200px' },
+    { label: 'Reporting roles', key: 'entities', width: '120px' },
     { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
     { label: 'User creation date', key: 'userCreationDate', width: '180px' },
     { label: 'Status', key: 'status', width: '120px' },
@@ -256,7 +257,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   fillUserFormToEdit(user: AddUser) {
     return new Promise(resolve => {
-      const { firstName, lastName, emailAddress, isCGIAR } = user;
+      const { firstName, lastName, emailAddress, isCGIAR, createdByFirstName, createdByLastName, createdByEmail } = user;
       setTimeout(() => {
         this.manageUserModal.addUserForm.set({
           is_cgiar: isCGIAR,
@@ -266,7 +267,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           email: emailAddress,
           role_platform: 2, // Marked as guest by default (2)
           role_assignments: [],
-          activate: true
+          activate: true,
+          created_by: `${createdByFirstName} ${createdByLastName} (${createdByEmail})`
         });
         resolve(true);
       }, 500);

@@ -152,11 +152,11 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 5px;
   @include fonts.pr-typography('body-2');
   font-weight: 600;
-  background-color: #fff7d6; // Amarillo claro
-  color: #b59f3b; // Amarillo oscuro
+  background-color: var(--pr-color-yellow-50);
+  color: var(--pr-color-yellow-300);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border: none;
@@ -166,6 +166,11 @@
 
   span {
     line-height: 1;
+  }
+
+  &.admin-role {
+    background-color: var(--pr-color-primary-50);
+    color: var(--pr-color-secondary-200);
   }
 }
 
@@ -371,14 +376,14 @@
     z-index: 1;
     pointer-events: none;
     border-radius: 3px;
-    height: 38px;
+    height: 36px;
     color: white !important;
   }
 
   .p-multiselect .p-multiselect-label {
-    color: var(--pr-color-accents-3);
+    display: flex;
     align-items: center;
-    height: 38px;
+    height: 36px;
   }
 
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item {

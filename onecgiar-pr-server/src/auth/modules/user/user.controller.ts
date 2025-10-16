@@ -21,11 +21,9 @@ import {
 } from '../../../shared/decorators/user-token.decorator';
 import {
   ApiTags,
-  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiBearerAuth,
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
@@ -33,12 +31,6 @@ import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users')
-@ApiBearerAuth('JWT')
-@ApiHeader({
-  name: 'auth',
-  description: 'JWT token required for authentication',
-  required: true,
-})
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class UserController {
